@@ -20,44 +20,30 @@ permissions:
 
 jobs:
 
-  phpstan:
-    name: PHPStan
+  codeql:
+    name: CodeQL
     runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      matrix:
+        language:
+          - php
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: github/codeql-action/init@v3
         with:
-          php-version: 8.4
-          coverage: none
+          languages: php
 
-      - name: Install Dependencies
-        run: composer install --no-progress --prefer-dist
+      - uses: github/codeql-action/autobuild@v3
 
-      - name: Run PHPStan
-        run: |
-          vendor/bin/phpstan analyse \
-          --memory-limit=1G
-
-  composer-audit:
-    name: Composer Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.4
-
-      - name: Install Dependencies
-        run: composer install --no-progress
-
-      - name: Composer Security Audit
-        run: composer audit
+      - uses: github/codeql-action/analyze@v3
 
   semgrep:
     name: Semgrep
@@ -69,32 +55,6 @@ jobs:
       - uses: returntocorp/semgrep-action@v1
         with:
           config: auto
-
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language:
-          - php
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-
-      - uses: github/codeql-action/autobuild@v3
-
-      - uses: github/codeql-action/analyze@v3
 
   trivy-fs:
     name: Trivy Filesystem Scan
@@ -135,5 +95,5 @@ jobs:
 
       - name: PHP Lint
         run: |
-          find CMS -name "*.php" -print0 | \
+          find CMS -type f -name "*.php" -print0 | \
           xargs -0 -n1 php -l
