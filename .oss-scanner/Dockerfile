@@ -3,18 +3,13 @@ FROM php:8.4-cli
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    zip \
     libzip-dev \
-    libicu-dev \
-    libxml2-dev \
-    libonig-dev \
     default-mysql-client
 
 RUN docker-php-ext-install \
     pdo \
-    pdo_mysql \
-    mysqli \
-    intl \
-    zip
+    pdo_mysql
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -22,11 +17,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN composer install \
-    --no-interaction \
-    --prefer-dist \
-    --optimize-autoloader
+RUN composer install --no-interaction --prefer-dist
 
-RUN php -l index.php
+RUN find CMS -name "*.php" -exec php -l {} \;
 
 CMD ["/bin/bash"]
