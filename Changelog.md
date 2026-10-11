@@ -14,12 +14,12 @@
 
 ---
 
-### Unveröffentlicht — 11.10.2026
+### v3.4.22 — 11.10.2026
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
-| – | 🔴 fix | Installer / Schema | `CREATE TABLE pages` enthielt `page_template` und `page_meta_json` doppelt. MariaDB/MySQL brach mit Fehler 1060 ab, Neuinstallationen hatten keine Tabelle `cms_pages` (Seiten, Seitensuche, HTML-Sitemap mit HTTP 500). |
-| – | 🔴 fix | Blog / Autorenseiten | Riesige Seitenwerte (`/blog?p=…`, `/author/…?page=…`) liefen als Float-`OFFSET` ins SQL und endeten mit HTTP 500. Die Blog-Übersicht begrenzt auf die letzte Seite, überzählige Autorenseiten liefern wie Kategorie- und Tag-Archive HTTP 404. |
+| **3.4.22** | 🔴 fix | Installer / Schema | `CREATE TABLE pages` enthielt `page_template` und `page_meta_json` doppelt. MariaDB/MySQL brach mit Fehler 1060 ab, Neuinstallationen hatten keine Tabelle `cms_pages` (Seiten, Seitensuche, HTML-Sitemap mit HTTP 500). |
+| **3.4.22** | 🔴 fix | Blog / Autorenseiten | Riesige Seitenwerte (`/blog?p=…`, `/author/…?page=…`) liefen als Float-`OFFSET` ins SQL und endeten mit HTTP 500. Die Blog-Übersicht begrenzt auf die letzte Seite, überzählige Autorenseiten liefern wie Kategorie- und Tag-Archive HTTP 404. |
 
 ---
 
