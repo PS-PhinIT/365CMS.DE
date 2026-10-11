@@ -152,8 +152,6 @@ class SchemaManager
                 page_meta_json TEXT DEFAULT NULL,
                 author_id INT UNSIGNED,
                 category_id INT UNSIGNED DEFAULT NULL,
-                page_template VARCHAR(80) DEFAULT NULL,
-                page_meta_json TEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
