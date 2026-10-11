@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 use CMS\Auth;
 use CMS\Security;
 use CMS\Services\CoreModuleService;
+use CMS\Services\EditorJsService;
 
 const CMS_ADMIN_HUB_SITES_READ_CAPABILITY = 'manage_settings';
 const CMS_ADMIN_HUB_SITES_WRITE_CAPABILITY = 'manage_settings';
@@ -211,6 +212,11 @@ function cms_admin_hub_sites_view_config(HubSitesModule $module, string $viewAct
             $data = $module->getEditData($id, cms_admin_hub_sites_pull_form_state());
             $aiTranslationEnabled = !class_exists(CoreModuleService::class)
                 || CoreModuleService::getInstance()->isModuleEnabled('ai_services');
+            $pageAssets = EditorJsService::getInstance()->getPageAssets();
+            $pageAssets['css'] = $pageAssets['css'] ?? [];
+            $pageAssets['js'] = $pageAssets['js'] ?? [];
+            $pageAssets['css'][] = cms_asset_url('css/admin-hub-site-edit.css');
+            $pageAssets['js'][] = cms_asset_url('js/admin-hub-site-edit.js');
 
             return [
                 'data' => $data,
@@ -226,17 +232,7 @@ function cms_admin_hub_sites_view_config(HubSitesModule $module, string $viewAct
                         ? '/admin/ai-translate-editorjs'
                         : '',
                 ],
-                'pageAssets' => [
-                    'css' => [
-                        cms_asset_url('suneditor/css/suneditor.min.css'),
-                        cms_asset_url('css/admin-hub-site-edit.css'),
-                    ],
-                    'js' => [
-                        cms_asset_url('suneditor/suneditor.min.js'),
-                        cms_asset_url('suneditor/lang/de.js'),
-                        cms_asset_url('js/admin-hub-site-edit.js'),
-                    ],
-                ],
+                'pageAssets' => $pageAssets,
                 'view' => __DIR__ . '/views/hub/edit.php',
             ];
         })(),

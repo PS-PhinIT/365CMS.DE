@@ -107,7 +107,7 @@ final class SiteTableHubRenderer
             'meta_description' => $this->buildHubMetaDescription(
                 trim((string) ($localizedSettings['hub_hero_text'] ?? '')) !== ''
                     ? (string) $localizedSettings['hub_hero_text']
-                    : (string) ($table['description'] ?? '')
+                    : (string) ($localizedSettings['hub_description'] ?? $table['description'] ?? '')
             ),
             'updated_at' => (string) ($table['updated_at'] ?? ''),
         ];
@@ -128,7 +128,8 @@ final class SiteTableHubRenderer
         $template = (string) ($templateProfile['base_template'] ?? $templateKey ?: 'general-it');
         $pageSlug = trim((string) ($settings['hub_slug'] ?? ''));
         $heroTitle = trim((string) ($settings['hub_hero_title'] ?? '')) ?: (string) ($table['name'] ?? 'Hub Site');
-        $heroText = trim((string) ($settings['hub_hero_text'] ?? '')) ?: trim((string) ($table['description'] ?? ''));
+        $heroText = trim((string) ($settings['hub_hero_text'] ?? ''))
+            ?: trim((string) ($settings['hub_description'] ?? $table['description'] ?? ''));
         if ($heroText === '') {
             $heroText = trim((string) ($templateProfile['summary'] ?? ''));
         }
@@ -235,6 +236,11 @@ final class SiteTableHubRenderer
 
     private function buildHubMetaDescription(string $value): string
     {
+        $editorPayload = json_decode($value, true);
+        if (is_array($editorPayload) && isset($editorPayload['blocks']) && is_array($editorPayload['blocks'])) {
+            $value = \CMS\Services\EditorJsRenderer::getInstance()->render($editorPayload);
+        }
+
         $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
 
         return mb_substr($plain, 0, 320);
@@ -693,6 +699,11 @@ final class SiteTableHubRenderer
             return '';
         }
 
+        $editorPayload = json_decode($value, true);
+        if (is_array($editorPayload) && isset($editorPayload['blocks']) && is_array($editorPayload['blocks'])) {
+            return $this->renderEditorJsSummary($editorPayload, $currentTableId);
+        }
+
         $placeholders = [];
         $prepared = (string) preg_replace_callback(
             '/\[(?:site-table|table|hub-site)\s+id\s*=\s*["\']?(\d+)["\']?\s*\/?\]/i',
@@ -721,6 +732,51 @@ final class SiteTableHubRenderer
                 $replacement,
                 $html
             );
+        }
+
+        return trim($html);
+    }
+
+    private function renderEditorJsSummary(array $payload, int $currentTableId): string
+    {
+        $placeholders = [];
+        $replaceShortcodes = function (&$node) use (&$replaceShortcodes, &$placeholders, $currentTableId): void {
+            if (!is_array($node)) {
+                return;
+            }
+
+            foreach ($node as &$value) {
+                if (is_array($value)) {
+                    $replaceShortcodes($value);
+                    continue;
+                }
+                if (!is_string($value)) {
+                    continue;
+                }
+
+                $value = (string) preg_replace_callback(
+                    '/\[(?:site-table|table|hub-site)\s+id\s*=\s*["\']?(\d+)["\']?\s*\/?\]/i',
+                    static function (array $matches) use (&$placeholders, $currentTableId): string {
+                        $targetTableId = (int) ($matches[1] ?? 0);
+                        if ($targetTableId <= 0 || $targetTableId === $currentTableId) {
+                            return '';
+                        }
+
+                        $token = '%%CMS_HUB_CARD_CONTENT_' . count($placeholders) . '%%';
+                        $placeholders[$token] = \CMS\Services\SiteTableService::getInstance()->renderTableById($targetTableId);
+
+                        return $token;
+                    },
+                    $value
+                );
+            }
+            unset($value);
+        };
+        $replaceShortcodes($payload);
+        $html = \CMS\Services\EditorJsRenderer::getInstance()->render($payload);
+
+        foreach ($placeholders as $token => $replacement) {
+            $html = str_replace($token, $replacement, $html);
         }
 
         return trim($html);

@@ -1,68 +1,25 @@
 /* 365CMS Core – HubSites Admin Editor */
 
-.sun-editor-edit ul,
-.sun-editor-edit ol,
-.sun-editor .sun-editor-editable ul,
-.sun-editor .sun-editor-editable ol {
-    margin: 0.85rem 0;
-    padding-left: 1.6rem;
-    padding-inline-start: 1.6rem;
-    list-style-position: outside;
+.hub-editorjs-holder {
+    --editorjs-content-width: 100%;
+    --editorjs-content-padding-x: 12px;
+    min-height: 180px;
+    padding: .75rem 1rem;
+    border: 1px solid var(--tblr-border-color, #e6e7e9);
+    border-radius: .375rem;
+    background: var(--tblr-bg-surface, #fff);
 }
 
-.sun-editor-edit ul,
-.sun-editor .sun-editor-editable ul {
-    list-style-type: disc;
+.hub-editorjs-holder .codex-editor {
+    padding-bottom: 1rem;
 }
 
-.sun-editor-edit ol,
-.sun-editor .sun-editor-editable ol {
-    list-style-type: decimal;
+.hub-editorjs-holder .ce-block__content,
+.hub-editorjs-holder .ce-toolbar__content {
+    max-width: 100%;
 }
 
-.sun-editor-edit ul ul,
-.sun-editor-edit ul ol,
-.sun-editor-edit ol ul,
-.sun-editor-edit ol ol,
-.sun-editor .sun-editor-editable ul ul,
-.sun-editor .sun-editor-editable ul ol,
-.sun-editor .sun-editor-editable ol ul,
-.sun-editor .sun-editor-editable ol ol {
-    margin-top: 0.35rem;
-    margin-bottom: 0.35rem;
-    padding-left: 1.35rem;
-    padding-inline-start: 1.35rem;
-}
-
-.sun-editor-edit ul ul,
-.sun-editor .sun-editor-editable ul ul {
-    list-style-type: circle;
-}
-
-.sun-editor-edit ul ul ul,
-.sun-editor .sun-editor-editable ul ul ul {
-    list-style-type: square;
-}
-
-.sun-editor-edit li,
-.sun-editor .sun-editor-editable li {
-    margin: 0.18rem 0;
-    line-height: 1.65;
-}
-
-.sun-editor-edit blockquote,
-.sun-editor .sun-editor-editable blockquote {
-    margin: 0.9rem 0;
-    padding: 0.75rem 1rem;
-    border-left: 4px solid #0d9488;
-    background: #f8fafc;
-    color: #334155;
-}
-
-.sun-editor-edit p,
-.sun-editor-edit div,
-.sun-editor .sun-editor-editable p,
-.sun-editor .sun-editor-editable div {
+.hub-editorjs-holder [contenteditable="true"] {
     line-height: 1.65;
 }
 

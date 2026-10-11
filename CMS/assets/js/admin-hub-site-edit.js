@@ -23,6 +23,19 @@
         console[type === 'danger' ? 'error' : 'log'](message);
     }
 
+    function log(level, message, details) {
+        var method = level === 'error' ? 'error' : 'log';
+
+        if (typeof console === 'undefined' || typeof console[method] !== 'function') {
+            return;
+        }
+        if (typeof details === 'undefined') {
+            console[method]('[Hub-Site-Editor] ' + String(message || ''));
+            return;
+        }
+        console[method]('[Hub-Site-Editor] ' + String(message || ''), details);
+    }
+
     function absoluteUrlFromPath(path) {
         var normalizedPath = String(path || '').trim();
 
@@ -193,10 +206,56 @@
         return /<table\b/i.test(source) || /\[[^\]]*\]/.test(source);
     }
 
+    function extractHubEditorText(value) {
+        var parsed;
+        var chunks = [];
+        var textKeys = ['text', 'caption', 'title', 'message', 'code', 'html', 'content', 'description', 'label'];
+
+        try {
+            parsed = JSON.parse(String(value || ''));
+        } catch (_error) {
+            return null;
+        }
+        if (!parsed || !Array.isArray(parsed.blocks)) {
+            return null;
+        }
+
+        function collect(node) {
+            if (!node || typeof node !== 'object') {
+                return;
+            }
+            if (Array.isArray(node)) {
+                node.forEach(collect);
+                return;
+            }
+            Object.keys(node).forEach(function (key) {
+                var child = node[key];
+                if (textKeys.indexOf(key) !== -1 && typeof child === 'string') {
+                    chunks.push(child);
+                } else if (child && typeof child === 'object') {
+                    collect(child);
+                }
+            });
+        }
+
+        parsed.blocks.forEach(function (block) {
+            collect(block && block.data);
+        });
+        return chunks.join(' ');
+    }
+
     function hasTranslatableHubContent(value) {
         var source = String(value || '').trim();
+        var editorText;
 
-        if (source === '' || hasExcludedHubTranslationContent(source)) {
+        if (source === '') {
+            return false;
+        }
+        editorText = extractHubEditorText(source);
+        if (editorText !== null) {
+            source = editorText;
+        }
+        if (hasExcludedHubTranslationContent(source)) {
             return false;
         }
         source = source.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ');
@@ -204,7 +263,10 @@
     }
 
     function hasHubFieldContent(value) {
-        return String(value || '').trim() !== '';
+        var source = String(value || '').trim();
+        var editorText = extractHubEditorText(source);
+
+        return (editorText !== null ? editorText : source).trim() !== '';
     }
 
     function createHubCopyButton(sourceKey, targetKey, index, sourceValue) {
@@ -516,7 +578,7 @@
         return wrapper;
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function initializeHubSiteEditor() {
         var form = document.getElementById('hubSiteForm');
         var siteConfig = parseJsonInput('hubSiteConfigInput', {});
         var templateProfiles = parseJsonInput('hubTemplateProfilesInput', {});
@@ -539,6 +601,10 @@
         var activeLanguage = 'de';
         var summaryEditors = new Map();
         var summaryEditorsInitTimer = null;
+        var editorSubmitReady = false;
+        var editorSubmitPending = false;
+        var pendingEditorCleanup = Promise.resolve();
+        var editorGeneration = 0;
         var dragCard = null;
 
         if (!form) {
@@ -754,27 +820,24 @@
         }
 
         function destroySummaryEditors() {
+            editorGeneration += 1;
             summaryEditors.forEach(function (editor, key) {
                 var textarea = document.getElementById(key);
 
-                // Formularfelder liegen außerhalb des neu gerenderten Kartencontainers und behalten ihren Editor.
-                // SunEditor 3 initialisiert asynchron; ein sofortiges destroy() bricht die Initialisierung ab.
                 if (textarea && textarea.dataset.source === 'form' && textarea.isConnected && !container.contains(textarea)) {
                     return;
                 }
 
                 try {
-                    if (editor && typeof editor.getContents === 'function') {
-                        if (textarea) {
-                            textarea.value = editor.getContents();
-                        }
-                    }
-
                     if (editor && typeof editor.destroy === 'function') {
-                        editor.destroy();
+                        pendingEditorCleanup = pendingEditorCleanup.then(function () {
+                            return editor.destroy();
+                        }).catch(function (error) {
+                            log('error', 'EditorJS konnte beim Aktualisieren des Hub-Editors nicht beendet werden.', error);
+                        });
                     }
-                } catch (_error) {
-                    // Editor cleanup should never block the form UI.
+                } catch (error) {
+                    log('error', 'EditorJS konnte beim Aktualisieren des Hub-Editors nicht beendet werden.', error);
                 }
 
                 summaryEditors.delete(key);
@@ -782,20 +845,27 @@
         }
 
         function initSummaryEditors() {
-            // Mehrere render()-Aufrufe im selben Durchlauf erzeugen die Editoren nur einmal;
-            // SunEditor 3 meldet sonst E_INIT_FAIL für sofort wieder zerstörte Instanzen.
+            var generation = editorGeneration;
             if (summaryEditorsInitTimer !== null) {
                 window.clearTimeout(summaryEditorsInitTimer);
             }
 
             summaryEditorsInitTimer = window.setTimeout(function () {
                 summaryEditorsInitTimer = null;
-                createSummaryEditors();
+                pendingEditorCleanup.then(function () {
+                    if (generation === editorGeneration) {
+                        createSummaryEditors();
+                    }
+                });
             }, 0);
         }
 
         function createSummaryEditors() {
-            if (!form || typeof window.SUNEDITOR === 'undefined') {
+            if (!form) {
+                return;
+            }
+            if (typeof window.createCmsEditor !== 'function') {
+                log('error', 'EditorJS-Laufzeit für den Hub-Site-Editor wurde nicht geladen.');
                 return;
             }
 
@@ -817,6 +887,9 @@
             var source = textarea.dataset.source || 'cards';
             var isFormField = source === 'form';
             var targetCollection = source === 'feature' ? featureCards : cards;
+            var targetRecord = !isFormField ? targetCollection[index] : null;
+            var holder;
+            var instance;
 
             if (!id || summaryEditors.has(id)) {
                 return;
@@ -827,72 +900,110 @@
             }
 
             try {
-                // SunEditor 3: Plugins explizit übergeben, Inhalt per `value`, Änderungen per `events.onChange`.
-                var pluginNames = ['blockStyle', 'list', 'align', 'link'];
-                var plugins = {};
-                pluginNames.forEach(function (name) {
-                    if (window.SUNEDITOR.plugins && window.SUNEDITOR.plugins[name]) {
-                        plugins[name] = window.SUNEDITOR.plugins[name];
-                    }
-                });
+                holder = document.createElement('div');
+                holder.id = id + 'EditorJs';
+                holder.className = 'editorjs-holder hub-editorjs-holder';
+                holder.setAttribute('aria-label', textarea.getAttribute('aria-label') || 'Hub-Texteditor');
+                textarea.insertAdjacentElement('beforebegin', holder);
+                textarea.hidden = true;
 
-                var instance = window.SUNEDITOR.create(textarea, {
-                    lang: window.SUNEDITOR_LANG && window.SUNEDITOR_LANG.de ? window.SUNEDITOR_LANG.de : undefined,
-                    value: textarea.value || '',
-                    width: '100%',
-                    height: isFormField ? '220' : '180',
-                    minHeight: isFormField ? '180px' : '140px',
-                    plugins: plugins,
-                    statusbar: true,
-                    statusbar_resizeEnable: true,
-                    statusbar_showPathLabel: false,
-                    charCounter: false,
-                    buttonList: [
-                        ['undo', 'redo'],
-                        ['blockStyle'],
-                        ['bold', 'italic', 'underline'],
-                        ['list', 'outdent', 'indent', 'align'],
-                        ['link'],
-                        ['removeFormat']
-                    ],
-                    blockStyle: { items: ['p', 'div', 'blockquote'] },
-                    defaultLine: 'p',
-                    attributeWhitelist: {
-                        '*': 'style|class',
-                        a: 'href|target|rel|title'
-                    },
-                    events: {
-                        onChange: function (params) {
-                            var contents = params && typeof params.data === 'string' ? params.data : instance.$.html.get();
-
-                            if (!isFormField) {
-                                targetCollection[index][key] = contents;
+                instance = window.createCmsEditor(
+                    holder.id,
+                    textarea.value || '',
+                    String(siteConfig.mediaUploadUrl || '/api/media'),
+                    String(siteConfig.mediaToken || ''),
+                    {
+                        onChange: function (data) {
+                            textarea.value = JSON.stringify(data);
+                            if (targetRecord) {
+                                targetRecord[key] = textarea.value;
                                 sync();
                             }
-
-                            textarea.value = contents;
+                            if (isFormField) {
+                                updateStaticAiTranslationButtons();
+                            }
+                        },
+                        onError: function (error, context) {
+                            log('error', 'EditorJS-Hubfeld konnte nicht initialisiert werden.', {
+                                field: id,
+                                context: context,
+                                error: error
+                            });
                         }
                     }
-                });
+                );
 
-                // Adapter mit der bisherigen getContents()/destroy()-Schnittstelle für Submit und Cleanup.
                 var editor = {
                     getContents: function () {
-                        return instance.$.html.get();
+                        return textarea.value || '';
                     },
                     setContents: function (contents) {
-                        instance.setContents(contents);
-                        textarea.value = contents;
+                        textarea.value = String(contents || '');
+                        if (!instance || !instance.blocks || typeof instance.blocks.render !== 'function') {
+                            return Promise.resolve(textarea.value);
+                        }
+
+                        var normalized = typeof window.cmsNormalizeEditorJsData === 'function'
+                            ? window.cmsNormalizeEditorJsData(textarea.value)
+                            : { blocks: [{ type: 'paragraph', data: { text: textarea.value } }] };
+                        return Promise.resolve(instance.isReady)
+                            .then(function () {
+                                return instance.blocks.render(normalized);
+                            })
+                            .then(function () {
+                                return editor.save();
+                            });
+                    },
+                    save: function () {
+                        if (!instance || typeof instance.save !== 'function') {
+                            return Promise.resolve(textarea.value || '');
+                        }
+                        return Promise.resolve(instance.isReady).then(function () {
+                            return instance.save();
+                        }).then(function (data) {
+                            textarea.value = JSON.stringify(data);
+                            if (targetRecord) {
+                                targetRecord[key] = textarea.value;
+                                sync();
+                            }
+                            return textarea.value;
+                        });
                     },
                     destroy: function () {
-                        instance.destroy();
-                        textarea.style.display = '';
+                        return Promise.resolve(instance && instance.isReady).then(function () {
+                            return editor.save();
+                        }).catch(function (error) {
+                            log('error', 'EditorJS-Inhalt konnte vor dem Neuaufbau nicht gesichert werden.', {
+                                field: id,
+                                error: error
+                            });
+                        }).then(function () {
+                            if (instance && typeof instance.destroy === 'function') {
+                                return Promise.resolve(instance.destroy()).catch(function (error) {
+                                    log('error', 'EditorJS konnte beim Neuaufbau nicht beendet werden.', {
+                                        field: id,
+                                        error: error
+                                    });
+                                });
+                            }
+                        }).then(function () {
+                            if (holder && holder.parentNode) {
+                                holder.parentNode.removeChild(holder);
+                            }
+                            if (textarea.isConnected) {
+                                textarea.hidden = false;
+                            }
+                        });
                     }
                 };
 
                 summaryEditors.set(id, editor);
-            } catch (_error) {
-                textarea.style.display = 'block';
+            } catch (error) {
+                if (holder && holder.parentNode) {
+                    holder.parentNode.removeChild(holder);
+                }
+                textarea.hidden = false;
+                log('error', 'EditorJS-Hubfeld konnte nicht erstellt werden.', { field: id, error: error });
             }
         }
 
@@ -1229,10 +1340,12 @@
             var editor = field && field.id ? summaryEditors.get(field.id) : null;
 
             if (editor && typeof editor.setContents === 'function') {
-                editor.setContents(value);
-            } else if (field) {
+                return editor.setContents(value);
+            }
+            if (field) {
                 field.value = value;
             }
+            return Promise.resolve(String(value || ''));
         }
 
         function updateStaticAiTranslationButtons() {
@@ -1252,23 +1365,40 @@
             });
         }
 
-        function requestHubFieldTranslation(sourceText) {
+        function requestHubFieldTranslation(sourceText, richTextTarget) {
             var body = new FormData();
+            var editorData;
+            var input = String(sourceText || '');
+            var isEditorPayload = false;
 
             if (!aiTranslationButtonsEnabled || !siteConfig.aiTranslationUrl || !siteConfig.aiTranslationToken) {
                 return Promise.reject(new Error('Die KI-Übersetzung ist derzeit nicht verfügbar.'));
             }
-            if (!String(sourceText || '').trim()) {
-                return Promise.reject(new Error('Das englische Zielfeld ist leer.'));
+            if (!input.trim()) {
+                return Promise.reject(new Error('Das deutsche Quellfeld ist leer.'));
+            }
+
+            try {
+                editorData = JSON.parse(input);
+                isEditorPayload = Boolean(editorData && Array.isArray(editorData.blocks));
+            } catch (_error) {
+                editorData = null;
+            }
+
+            if (!isEditorPayload) {
+                editorData = typeof window.cmsNormalizeEditorJsData === 'function'
+                    ? window.cmsNormalizeEditorJsData(input)
+                    : { blocks: [{ type: 'paragraph', data: { text: input } }] };
+            }
+            if (!richTextTarget) {
+                editorData = { blocks: [{ type: 'paragraph', data: { text: input } }] };
             }
 
             body.append('csrf_token', siteConfig.aiTranslationToken);
             body.append('content_type', 'editorjs');
             body.append('source_locale', 'de');
             body.append('target_locale', 'en');
-            body.append('editor_data', JSON.stringify({
-                blocks: [{ type: 'paragraph', data: { text: String(sourceText) } }]
-            }));
+            body.append('editor_data', JSON.stringify(editorData));
 
             return fetch(siteConfig.aiTranslationUrl, {
                 method: 'POST',
@@ -1282,19 +1412,25 @@
                         throw new Error(result && result.error ? result.error : 'Die Übersetzung konnte nicht erstellt werden.');
                     }
 
-                    var blocks = result.translation
+                    var contentData = result.translation
                         && result.translation.content_data
                         && Array.isArray(result.translation.content_data.blocks)
-                        ? result.translation.content_data.blocks
-                        : [];
-                    var translatedText = blocks[0] && blocks[0].data
-                        ? blocks[0].data.text
+                        ? result.translation.content_data
                         : null;
 
-                    if (typeof translatedText !== 'string' || !translatedText.trim()) {
+                    if (!contentData || contentData.blocks.length === 0) {
                         throw new Error('Der Übersetzungsdienst hat keinen übersetzten Feldinhalt geliefert.');
                     }
 
+                    if (richTextTarget) {
+                        return JSON.stringify(contentData);
+                    }
+
+                    var firstBlock = contentData.blocks[0];
+                    var translatedText = firstBlock && firstBlock.data ? firstBlock.data.text : null;
+                    if (typeof translatedText !== 'string' || !translatedText.trim()) {
+                        throw new Error('Der Übersetzungsdienst hat keinen übersetzten Feldinhalt geliefert.');
+                    }
                     return translatedText;
                 });
             });
@@ -1319,6 +1455,10 @@
                 if (!targetName) {
                     return Promise.reject(new Error('Das Zielfeld der Hub-Kachel wurde nicht angegeben.'));
                 }
+                sourceText = String(cards[index][button.dataset.sourceKey || ''] || '');
+                if (!hasTranslatableHubContent(sourceText)) {
+                    return Promise.reject(new Error('Das deutsche Quellfeld der Hub-Kachel ist leer.'));
+                }
 
                 var cardTarget = targetName === 'summary_en'
                     ? document.getElementById('hub-card-summary-en-' + index)
@@ -1335,18 +1475,18 @@
                 if (!cardTargetField) {
                     return Promise.reject(new Error('Das englische Zielfeld der Hub-Kachel wurde nicht gefunden.'));
                 }
-                sourceText = getHubEditorValue(cardTargetField);
-                if (!hasTranslatableHubContent(sourceText)) {
-                    return Promise.reject(new Error('Das englische Zielfeld ist leer.'));
-                }
 
-                return requestHubFieldTranslation(sourceText).then(function (translatedText) {
-                    setHubEditorValue(cardTargetField, translatedText);
-                    cardTargetField.dispatchEvent(new Event('input', { bubbles: true }));
-                    cards[index][targetName] = translatedText;
-                    sync();
-                    render();
-                    return translatedText;
+                return requestHubFieldTranslation(
+                    sourceText,
+                    cardTargetField.matches('textarea[data-editor="hub-richtext"], textarea[data-editor="hub-summary"]')
+                ).then(function (translatedText) {
+                    return setHubEditorValue(cardTargetField, translatedText).then(function () {
+                        cardTargetField.dispatchEvent(new Event('input', { bubbles: true }));
+                        cards[index][targetName] = cardTargetField.value || translatedText;
+                        sync();
+                        render();
+                        return translatedText;
+                    });
                 });
             }
 
@@ -1359,16 +1499,20 @@
                 return Promise.reject(new Error('Quell- oder Zielfeld für die Übersetzung wurde nicht gefunden.'));
             }
 
-            sourceText = getHubEditorValue(targetField);
+            sourceText = getHubEditorValue(sourceField);
 
             if (!hasTranslatableHubContent(sourceText)) {
-                return Promise.reject(new Error('Das englische Zielfeld ist leer.'));
+                return Promise.reject(new Error('Das deutsche Quellfeld ist leer.'));
             }
 
-            return requestHubFieldTranslation(sourceText).then(function (translatedText) {
-                setHubEditorValue(targetField, translatedText);
-                targetField.dispatchEvent(new Event('input', { bubbles: true }));
-                return translatedText;
+            return requestHubFieldTranslation(
+                sourceText,
+                targetField.matches('textarea[data-editor="hub-richtext"], textarea[data-editor="hub-summary"]')
+            ).then(function (translatedText) {
+                return setHubEditorValue(targetField, translatedText).then(function () {
+                    targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                    return translatedText;
+                });
             });
         }
 
@@ -1403,11 +1547,12 @@
                     return Promise.reject(new Error('Das deutsche Quellfeld ist leer.'));
                 }
 
-                setHubEditorValue(targetField, sourceText);
-                targetField.dispatchEvent(new Event('input', { bubbles: true }));
-                cards[index][targetName] = sourceText;
-                sync();
-                return Promise.resolve(sourceText);
+                return setHubEditorValue(targetField, sourceText).then(function () {
+                    targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                    cards[index][targetName] = targetField.value || sourceText;
+                    sync();
+                    return sourceText;
+                });
             }
 
             sourceName = button.dataset.sourceName || '';
@@ -1428,9 +1573,10 @@
                 return Promise.reject(new Error('Das deutsche Quellfeld ist leer.'));
             }
 
-            setHubEditorValue(targetField, sourceText);
-            targetField.dispatchEvent(new Event('input', { bubbles: true }));
-            return Promise.resolve(sourceText);
+            return setHubEditorValue(targetField, sourceText).then(function () {
+                targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                return sourceText;
+            });
         }
 
         form.addEventListener('click', function (event) {
@@ -1613,6 +1759,8 @@
             titleInput.addEventListener('input', updateSlugPreview);
         }
 
+        form.addEventListener('input', updateStaticAiTranslationButtons);
+
         languageToggleButtons.forEach(function (button) {
             button.addEventListener('click', function () {
                 setActiveLanguage(button.getAttribute('data-hub-lang-toggle') || 'de');
@@ -1649,8 +1797,37 @@
             });
         }
 
-        form.addEventListener('submit', function () {
-            prepareFormSubmission(true);
+        form.addEventListener('submit', function (event) {
+            if (editorSubmitReady) {
+                editorSubmitReady = false;
+                prepareFormSubmission(true);
+                return;
+            }
+
+            event.preventDefault();
+            if (editorSubmitPending) {
+                return;
+            }
+            editorSubmitPending = true;
+            Promise.all([pendingEditorCleanup].concat(Array.from(summaryEditors.values()).map(function (editor) {
+                return editor && typeof editor.save === 'function' ? editor.save() : Promise.resolve();
+            }))).then(function () {
+                prepareFormSubmission(true);
+                editorSubmitPending = false;
+                editorSubmitReady = true;
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                    window.setTimeout(function () {
+                        editorSubmitReady = false;
+                    }, 0);
+                    return;
+                }
+                form.submit();
+            }).catch(function (error) {
+                editorSubmitPending = false;
+                log('error', 'EditorJS-Hubinhalte konnten nicht für das Speichern vorbereitet werden.', error);
+                showAlert('danger', 'Ein EditorJS-Inhalt konnte nicht gespeichert werden. Bitte Eingaben prüfen und erneut versuchen.');
+            });
         });
 
         container.addEventListener('input', function (event) {
@@ -1780,5 +1957,11 @@
         applyStarterCardsIfNeeded(Boolean(siteConfig.isNew));
         setActiveLanguage('de');
         updateSlugPreview();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeHubSiteEditor, { once: true });
+    } else {
+        initializeHubSiteEditor();
+    }
 })();

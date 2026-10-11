@@ -43,6 +43,7 @@ class HubSitesModule
         'hub_feature_cards_json' => '[]',
         'hub_badge' => '',
         'hub_badge_en' => '',
+        'hub_description_en' => '',
         'hub_hero_title' => '',
         'hub_hero_title_en' => '',
         'hub_hero_text' => '',
@@ -222,6 +223,7 @@ class HubSitesModule
                 : '[]',
             'hub_badge' => $this->sanitizePlainText((string)($post['hub_badge'] ?? ''), 80),
             'hub_badge_en' => $this->sanitizePlainText((string)($post['hub_badge_en'] ?? ''), 80),
+            'hub_description_en' => $this->sanitizeRichText((string)($post['hub_description_en'] ?? ''), 4000),
             'hub_hero_title' => $this->sanitizePlainText((string)($post['hub_hero_title'] ?? ''), 160),
             'hub_hero_title_en' => $this->sanitizePlainText((string)($post['hub_hero_title_en'] ?? ''), 160),
             'hub_hero_text' => $this->sanitizeRichText((string)($post['hub_hero_text'] ?? ''), 4000),
@@ -298,8 +300,8 @@ class HubSitesModule
                 'title' => $title,
                 'title_en' => $this->sanitizePlainText((string)($card['title_en'] ?? ''), 160),
                 'url' => $url !== '' ? $url : '#',
-                'summary' => $this->truncateText((string)($card['summary'] ?? ''), 4000),
-                'summary_en' => $this->truncateText((string)($card['summary_en'] ?? ''), 4000),
+                'summary' => $this->sanitizeRichText((string)($card['summary'] ?? ''), 4000),
+                'summary_en' => $this->sanitizeRichText((string)($card['summary_en'] ?? ''), 4000),
                 'badge' => $this->sanitizePlainText((string)($card['badge'] ?? ''), 80),
                 'badge_en' => $this->sanitizePlainText((string)($card['badge_en'] ?? ''), 80),
                 'meta' => $this->sanitizePlainText((string)($card['meta'] ?? ''), 120),
@@ -526,10 +528,11 @@ class HubSitesModule
         $settings['hub_template'] = $this->normalizeTemplateChoice((string) ($settings['hub_template'] ?? 'general-it'));
         $settings['hub_badge'] = $this->sanitizePlainText((string) ($settings['hub_badge'] ?? ''), 80);
         $settings['hub_badge_en'] = $this->sanitizePlainText((string) ($settings['hub_badge_en'] ?? ''), 80);
+        $settings['hub_description_en'] = $this->sanitizeRichText((string) ($settings['hub_description_en'] ?? ''), 4000);
         $settings['hub_hero_title'] = $this->sanitizePlainText((string) ($settings['hub_hero_title'] ?? ''), 160);
         $settings['hub_hero_title_en'] = $this->sanitizePlainText((string) ($settings['hub_hero_title_en'] ?? ''), 160);
-        $settings['hub_hero_text'] = (string) ($formValues['hub_hero_text'] ?? ($settings['hub_hero_text'] ?? ''));
-        $settings['hub_hero_text_en'] = (string) ($formValues['hub_hero_text_en'] ?? ($settings['hub_hero_text_en'] ?? ''));
+        $settings['hub_hero_text'] = $this->sanitizeRichText((string) ($formValues['hub_hero_text'] ?? ($settings['hub_hero_text'] ?? '')), 4000);
+        $settings['hub_hero_text_en'] = $this->sanitizeRichText((string) ($formValues['hub_hero_text_en'] ?? ($settings['hub_hero_text_en'] ?? '')), 4000);
         $settings['hub_cta_label'] = $this->sanitizePlainText((string) ($settings['hub_cta_label'] ?? ''), 60);
         $settings['hub_cta_label_en'] = $this->sanitizePlainText((string) ($settings['hub_cta_label_en'] ?? ''), 60);
         $settings['hub_cta_url'] = (string) ($formValues['hub_cta_url'] ?? ($settings['hub_cta_url'] ?? ''));
@@ -787,8 +790,8 @@ class HubSitesModule
 
             $title = $this->sanitizePlainText((string)($item['title'] ?? ''), 160);
             $titleEn = $this->sanitizePlainText((string)($item['title_en'] ?? ''), 160);
-            $text = $this->truncateText((string)($item['text'] ?? ''), 4000);
-            $textEn = $this->truncateText((string)($item['text_en'] ?? ''), 4000);
+            $text = $this->sanitizeRichText((string)($item['text'] ?? ''), 4000);
+            $textEn = $this->sanitizeRichText((string)($item['text_en'] ?? ''), 4000);
             $imageUrl = $this->normalizeUrlValue((string)($item['image_url'] ?? ''), 500);
             $imageAlt = $this->sanitizePlainText((string)($item['image_alt'] ?? ''), 160);
             $imageAltEn = $this->sanitizePlainText((string)($item['image_alt_en'] ?? ''), 160);
@@ -820,6 +823,11 @@ class HubSitesModule
         $value = trim($value);
         if ($value === '') {
             return '';
+        }
+
+        $payload = json_decode($value, true);
+        if (is_array($payload) && isset($payload['blocks']) && is_array($payload['blocks'])) {
+            return \CMS\Services\EditorJsService::getInstance()->sanitize($value);
         }
 
         $sanitized = \CMS\Services\PurifierService::getInstance()->purify($value, 'table');

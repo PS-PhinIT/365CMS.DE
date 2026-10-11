@@ -127,7 +127,7 @@ $hubPublicEnPath = $hubPublicPath !== '' ? ContentLocalizationService::getInstan
                                 </div>
                                 <div class="form-hint">Der Slug wird beim Speichern automatisch aus dem Titel erzeugt und als öffentliche Route im `cms-default` Theme bereitgestellt. Schon vor dem ersten Speichern wird hier eine Live-Vorschau angezeigt.</div>
                             </div>
-                            <div class="mb-0">
+                            <div class="mb-0" data-lang-pane="de">
                                 <label class="form-label">Beschreibung</label>
                                 <textarea class="form-control" id="hubSiteDescriptionEditor" name="description" rows="4" data-editor="hub-richtext" data-source="form"><?php echo htmlspecialchars((string)($site['description'] ?? '')); ?></textarea>
                             </div>
@@ -220,6 +220,16 @@ $hubPublicEnPath = $hubPublicPath !== '' ? ContentLocalizationService::getInstan
                                     <div class="row g-3">
                                         <div class="col-12">
                                             <div class="alert alert-info mb-0">Die englische Hub-Site wird unter <code>/en/<?php echo htmlspecialchars((string)($settings['hub_slug'] ?? 'hub-site')); ?></code> ausgeliefert. URL und Kartenstruktur bleiben identisch.</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <label class="form-label mb-1">Hub description (EN)</label>
+                                                <button type="button" class="btn btn-outline-primary btn-sm mb-1" data-hub-copy-field data-source-name="description" data-target-name="hub_description_en">Aus DE kopieren</button>
+                                                <?php if ($aiTranslationEnabled): ?>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" data-hub-ai-translate-field data-source-name="description" data-target-name="hub_description_en">Mit KI übersetzen</button>
+                                                <?php endif; ?>
+                                            </div>
+                                            <textarea class="form-control" id="hubSiteDescriptionEditorEn" name="hub_description_en" rows="4" placeholder="English description for this hub." data-editor="hub-richtext" data-source="form"><?php echo htmlspecialchars((string)($settings['hub_description_en'] ?? '')); ?></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="d-flex align-items-center gap-2 flex-wrap">

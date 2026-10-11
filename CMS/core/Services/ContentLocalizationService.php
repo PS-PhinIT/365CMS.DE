@@ -171,7 +171,7 @@ final class ContentLocalizationService
     public function localizeHubSettings(array $settings, string $locale, array $context = []): array
     {
         if ($locale !== 'de') {
-            foreach (['hub_badge', 'hub_hero_title', 'hub_hero_text', 'hub_cta_label', 'hub_meta_audience', 'hub_meta_owner', 'hub_meta_update_cycle', 'hub_meta_focus', 'hub_meta_kpi'] as $key) {
+            foreach (['hub_badge', 'hub_description', 'hub_hero_title', 'hub_hero_text', 'hub_cta_label', 'hub_meta_audience', 'hub_meta_owner', 'hub_meta_update_cycle', 'hub_meta_focus', 'hub_meta_kpi'] as $key) {
                 $localizedKey = $key . '_' . $locale;
                 if (array_key_exists($localizedKey, $settings) && trim((string)($settings[$localizedKey] ?? '')) !== '') {
                     $settings[$key] = (string)$settings[$localizedKey];

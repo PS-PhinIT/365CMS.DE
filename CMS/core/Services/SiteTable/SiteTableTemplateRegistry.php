@@ -26,6 +26,7 @@ final class SiteTableTemplateRegistry
         'hub_feature_cards_json' => '[]',
         'hub_badge' => '',
         'hub_badge_en' => '',
+        'hub_description_en' => '',
         'hub_hero_title' => '',
         'hub_hero_title_en' => '',
         'hub_hero_text' => '',

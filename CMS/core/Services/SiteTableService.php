@@ -93,12 +93,22 @@ final class SiteTableService
 
     public function renderHubById(int $tableId): string
     {
-        $table = $this->repository->getTableById($tableId);
-        if ($table === null || !$this->isHubTable($table)) {
+        if ($tableId <= 0 || in_array($tableId, $this->renderStack, true)) {
             return '';
         }
 
-        return $this->hubRenderer->renderHubMarkup($table);
+        $this->renderStack[] = $tableId;
+
+        try {
+            $table = $this->repository->getTableById($tableId);
+            if ($table === null || !$this->isHubTable($table)) {
+                return '';
+            }
+
+            return $this->hubRenderer->renderHubMarkup($table);
+        } finally {
+            array_pop($this->renderStack);
+        }
     }
 
     public function getHubPageBySlug(string $slug, string $locale = 'de'): ?array
