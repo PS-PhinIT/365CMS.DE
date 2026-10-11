@@ -1,6 +1,6 @@
 # 365CMS
 
-> **Stand:** 2026-10-07 | **Version:** 3.4.00 (Changelog bis 3.4.20) | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
+> **Stand:** 2026-10-07 | **Version:** 3.4.00 (Changelog bis 3.4.22) | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
 
 ## English
 
