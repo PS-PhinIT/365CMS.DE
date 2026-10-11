@@ -600,10 +600,11 @@ final class ThemeRouter
         $prefix = $db->getPrefix();
         $locale = $this->getResolvedContentLocale();
         $localeFilter = $this->buildPostLocaleAvailabilityExpression('p', $locale);
-        $page = max(1, (int)($_GET['p'] ?? 1));
         $perPage = 9;
-        $offset = ($page - 1) * $perPage;
         $total = (int)$db->get_var("SELECT COUNT(*) FROM {$prefix}posts p WHERE " . \cms_post_publication_where('p') . " AND {$localeFilter}");
+        // Auf die letzte Seite begrenzen: Riesige ?p=-Werte liefen sonst als Float-OFFSET ins SQL (Syntaxfehler, HTTP 500).
+        $page = min(max(1, (int)($_GET['p'] ?? 1)), max(1, (int)ceil($total / $perPage)));
+        $offset = ($page - 1) * $perPage;
         $posts = $db->get_results(
             "SELECT p.*, c.name AS category_name, " . $this->categorySlugSelectExpression($locale) . ",
                     COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name
@@ -961,9 +962,7 @@ final class ThemeRouter
         $db = Database::instance();
         $prefix = $db->getPrefix();
         $locale = $this->getResolvedContentLocale();
-        $page = max(1, (int)($_GET['page'] ?? 1));
         $perPage = 10;
-        $offset = ($page - 1) * $perPage;
         $authorId = (int)($author['id'] ?? 0);
         $localeFilter = $this->buildPostLocaleAvailabilityExpression('p', $locale);
 
@@ -971,6 +970,15 @@ final class ThemeRouter
             "SELECT COUNT(*) FROM {$prefix}posts p WHERE p.author_id = ? AND " . \cms_post_publication_where('p') . " AND {$localeFilter}",
             [$authorId]
         );
+        $totalPages = max(1, (int)ceil($total / $perPage));
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        // Wie Kategorie-/Tag-Archive: überzählige Seiten sind 404. Riesige ?page=-Werte liefen sonst
+        // als Float-OFFSET ins SQL (Syntaxfehler, HTTP 500).
+        if ($page > $totalPages) {
+            $this->router->render404();
+            return;
+        }
+        $offset = ($page - 1) * $perPage;
 
         $posts = $db->get_results(
             "SELECT p.*, c.name AS category_name, " . $this->categorySlugSelectExpression($locale) . "
@@ -987,7 +995,7 @@ final class ThemeRouter
             'posts' => $posts,
             'total' => $total,
             'currentPage' => $page,
-            'totalPages' => max(1, (int)ceil($total / $perPage)),
+            'totalPages' => $totalPages,
             'perPage' => $perPage,
         ]);
     }
