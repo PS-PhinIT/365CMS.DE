@@ -19,6 +19,7 @@ COPY . .
 
 RUN composer install --no-interaction --prefer-dist
 
-RUN find CMS -name "*.php" -exec php -l {} \;
+RUN find CMS -type f -name "*.php" -print0 | \
+    xargs -0 -n1 php -l
 
 CMD ["/bin/bash"]
