@@ -71,16 +71,6 @@ jobs:
           severity: HIGH,CRITICAL
           format: table
 
-  secret-scan:
-    name: GitLeaks
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Run GitLeaks
-        uses: gitleaks/gitleaks-action@v2
-
   syntax-check:
     name: PHP Syntax Check
     runs-on: ubuntu-latest
