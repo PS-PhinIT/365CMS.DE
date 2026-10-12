@@ -84,6 +84,9 @@ jobs:
   syntax-check:
     name: PHP Syntax Check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.4', '8.5']
 
     steps:
       - uses: actions/checkout@v5
@@ -91,9 +94,13 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.4
+          php-version: ${{ matrix.php-version }}
 
       - name: PHP Lint
         run: |
-          find CMS -type f -name "*.php" -print0 | \
+          if [[ "${{ matrix.php-version }}" == "8.4" ]]; then
+            find CMS -type f -name "*.php" ! -name "bootstrap85.php" -print0
+          else
+            find CMS -type f -name "*.php" -print0
+          fi | \
           xargs -0 -n1 php -l
