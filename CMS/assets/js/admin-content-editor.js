@@ -3265,9 +3265,9 @@
         }
 
         function resolveTranslationOutput(aiTranslation, translation) {
-            var translatedData = translation && translation.content_data ? translation.content_data : null;
+            var translatedData = translation.content_data ? translation.content_data : null;
 
-            if (!translatedData && translation && typeof translation.content_json === 'string') {
+            if (!translatedData && typeof translation.content_json === 'string') {
                 try {
                     translatedData = JSON.parse(translation.content_json);
                 } catch (_error) {
@@ -3277,17 +3277,17 @@
 
             return {
                 title: aiTranslation.targetTitleId
-                    ? ((translation && typeof translation.title === 'string' && translation.title !== '')
+                    ? ((typeof translation.title === 'string' && translation.title !== '')
                         ? translation.title
                         : getFieldValue(aiTranslation.sourceTitleId))
                     : '',
                 slug: aiTranslation.targetSlugId
-                    ? ((translation && typeof translation.slug === 'string' && translation.slug !== '')
+                    ? ((typeof translation.slug === 'string' && translation.slug !== '')
                         ? translation.slug
                         : getFieldValue(aiTranslation.sourceSlugId))
                     : '',
                 excerpt: aiTranslation.targetExcerptId
-                    ? ((translation && typeof translation.excerpt === 'string' && translation.excerpt !== '')
+                    ? ((typeof translation.excerpt === 'string' && translation.excerpt !== '')
                         ? translation.excerpt
                         : getFieldValue(aiTranslation.sourceExcerptId))
                     : '',

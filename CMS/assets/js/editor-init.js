@@ -1980,7 +1980,7 @@
             return blocks;
         }
 
-        return /<(?:h[1-6]|ul|ol|blockquote|pre|table|tr|img|figure|hr)\b/i.test(String(html || ''))
+        return /<(?:h[1-6]|ul|ol|blockquote|pre|table|tr|img|figure|hr)\b/i.test(String(html))
             ? blocks
             : [];
     }
@@ -5609,7 +5609,7 @@
                         dispatchPluginState(holder, editor);
                     }
                 });
-                if (undoInstance && typeof undoInstance.initialize === 'function') {
+                if (typeof undoInstance.initialize === 'function') {
                     undoInstance.initialize(normalizedData || { blocks: [] });
                 }
                 editor.cmsPlugins.undo = undoInstance;

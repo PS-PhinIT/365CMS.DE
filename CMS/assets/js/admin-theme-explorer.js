@@ -72,12 +72,12 @@
             return;
         }
 
-        function setSubmittingState(pending) {
-            form.dataset.submitting = pending ? '1' : '0';
+        function setSubmittingState() {
+            form.dataset.submitting = '1';
 
             if (saveButton) {
-                saveButton.disabled = pending || saveButton.hasAttribute('data-disabled-permanently');
-                saveButton.setAttribute('aria-disabled', pending || saveButton.disabled ? 'true' : 'false');
+                saveButton.disabled = true;
+                saveButton.setAttribute('aria-disabled', 'true');
             }
         }
 
@@ -95,7 +95,7 @@
             var pendingText = String((config && config.savePendingText) || saveButton && saveButton.getAttribute('data-pending-text') || 'Speichert …');
 
             if (saveButton) {
-                setSubmittingState(true);
+                setSubmittingState();
                 saveButton.dataset.originalText = saveButton.dataset.originalText || saveButton.textContent;
                 saveButton.textContent = pendingText;
             }
