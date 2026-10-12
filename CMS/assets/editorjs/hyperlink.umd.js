@@ -533,7 +533,7 @@ var options = {};
 options.insert = "head";
 options.singleton = false;
 
-var update = api(content, options);
+api(content, options);
 
 
 
@@ -569,10 +569,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 var Hyperlink = /*#__PURE__*/function () {
   function Hyperlink(_ref) {
-    var data = _ref.data,
-        config = _ref.config,
-        api = _ref.api,
-        readOnly = _ref.readOnly;
+    var config = _ref.config,
+        api = _ref.api;
 
     _classCallCheck(this, Hyperlink);
 
@@ -718,7 +716,6 @@ var Hyperlink = /*#__PURE__*/function () {
   }, {
     key: "checkState",
     value: function checkState() {
-      var selection = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
       var anchorTag = this.selection.findParentTag('A');
 
       if (anchorTag) {
