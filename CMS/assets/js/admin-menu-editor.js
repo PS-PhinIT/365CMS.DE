@@ -459,30 +459,39 @@
             });
         }
 
-        function createFieldLabel(text) {
+        function createFieldLabel(text, forId) {
             var label = document.createElement('label');
             label.className = 'form-label small text-muted mb-1';
             label.textContent = text;
+            if (forId) {
+                label.htmlFor = forId;
+            }
             return label;
         }
 
-        function createTextInput(className, index, value, placeholder) {
+        function createTextInput(className, index, value, placeholder, id) {
             var input = document.createElement('input');
             input.type = 'text';
             input.className = className;
             input.dataset.index = String(index);
             input.value = String(value || '');
             input.placeholder = placeholder;
+            if (id) {
+                input.id = id;
+            }
             return input;
         }
 
-        function createTargetSelect(index, target) {
+        function createTargetSelect(index, target, id) {
             var select = document.createElement('select');
             var selfOption = document.createElement('option');
             var blankOption = document.createElement('option');
 
             select.className = 'form-select form-select-sm item-target';
             select.dataset.index = String(index);
+            if (id) {
+                select.id = id;
+            }
 
             selfOption.value = '_self';
             selfOption.textContent = 'Gleiches Fenster';
@@ -532,6 +541,7 @@
             var parentWrap = document.createElement('div');
             var parentSelect = document.createElement('select');
             var actions = document.createElement('div');
+            var fieldIdPrefix = 'menu-item-' + String(item.id || idx);
 
             itemNode.className = 'list-group-item d-flex align-items-start gap-3';
             itemNode.dataset.index = String(idx);
@@ -550,24 +560,25 @@
 
             row.className = 'row g-2';
 
-            textColumn.appendChild(createFieldLabel('Text'));
-            textColumn.appendChild(createTextInput('form-control form-control-sm item-title', idx, item.title, 'Menütext'));
+            textColumn.appendChild(createFieldLabel('Text', fieldIdPrefix + '-title'));
+            textColumn.appendChild(createTextInput('form-control form-control-sm item-title', idx, item.title, 'Menütext', fieldIdPrefix + '-title'));
 
-            urlColumn.appendChild(createFieldLabel('URL'));
-            urlColumn.appendChild(createTextInput('form-control form-control-sm item-url', idx, item.url, '/seite oder https://...'));
+            urlColumn.appendChild(createFieldLabel('URL', fieldIdPrefix + '-url'));
+            urlColumn.appendChild(createTextInput('form-control form-control-sm item-url', idx, item.url, '/seite oder https://...', fieldIdPrefix + '-url'));
 
-            targetColumn.appendChild(createFieldLabel('Ziel'));
-            targetColumn.appendChild(createTargetSelect(idx, item.target));
+            targetColumn.appendChild(createFieldLabel('Ziel', fieldIdPrefix + '-target'));
+            targetColumn.appendChild(createTargetSelect(idx, item.target, fieldIdPrefix + '-target'));
 
             row.appendChild(textColumn);
             row.appendChild(urlColumn);
             row.appendChild(targetColumn);
 
             parentWrap.className = 'mt-2';
-            parentWrap.appendChild(createFieldLabel('Unterpunkt von'));
+            parentWrap.appendChild(createFieldLabel('Unterpunkt von', fieldIdPrefix + '-parent'));
 
             parentSelect.className = 'form-select form-select-sm item-parent';
             parentSelect.dataset.index = String(idx);
+            parentSelect.id = fieldIdPrefix + '-parent';
             appendParentOptions(parentSelect, item.id, item.parent_id);
             parentWrap.appendChild(parentSelect);
 
@@ -577,7 +588,7 @@
             actions.className = 'd-flex flex-column gap-2';
             actions.appendChild(createActionButton('btn btn-sm btn-outline-secondary move-item-up', idx, '↑', 'Item nach oben verschieben'));
             actions.appendChild(createActionButton('btn btn-sm btn-outline-secondary move-item-down', idx, '↓', 'Item nach unten verschieben'));
-            actions.appendChild(createActionButton('btn btn-sm btn-outline-danger remove-item', idx, '×'));
+            actions.appendChild(createActionButton('btn btn-sm btn-outline-danger remove-item', idx, '×', 'Item entfernen'));
 
             itemNode.appendChild(dragHandle);
             itemNode.appendChild(content);

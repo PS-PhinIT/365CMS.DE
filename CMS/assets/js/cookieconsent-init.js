@@ -127,13 +127,15 @@
             return null;
         }
 
-        acceptedCategories = Array.isArray(decoded.categories)
-            ? decoded.categories.filter(function (value) {
-                return typeof value === 'string' && value.trim() !== '';
-            }).map(function (value) {
-                return value.trim();
-            })
-            : [];
+        acceptedCategories = normalizeAcceptedCategories(
+            Array.isArray(decoded.categories)
+                ? decoded.categories.filter(function (value) {
+                    return typeof value === 'string' && value.trim() !== '';
+                }).map(function (value) {
+                    return value.trim();
+                })
+                : []
+        );
 
         if (acceptedCategories.indexOf('necessary') === -1) {
             acceptedCategories.unshift('necessary');
@@ -506,6 +508,7 @@
             root: root,
             banner: banner,
             overlay: overlay,
+            modal: overlay.querySelector('[role="dialog"]'),
             checkboxes: function () {
                 return overlay.querySelectorAll('[data-cms-consent-checkbox]');
             }
@@ -524,6 +527,104 @@
         });
 
         return ui;
+    }
+
+    var lastFocusedBeforeModal = null;
+    var modalHadTemporaryTabindex = false;
+
+    function getModalFocusableElements(currentUi) {
+        if (!currentUi || !currentUi.modal) {
+            return [];
+        }
+
+        var nodes = currentUi.modal.querySelectorAll(
+            'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [contenteditable], [tabindex]:not([tabindex="-1"])'
+        );
+
+        return Array.prototype.filter.call(nodes, function (element) {
+            return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+        });
+    }
+
+    function handleModalKeydown(event) {
+        if (!modalOpen || !ui || !ui.modal) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closePreferences();
+            return;
+        }
+
+        if (event.key !== 'Tab') {
+            return;
+        }
+
+        var focusable = getModalFocusableElements(ui);
+        if (!focusable.length) {
+            event.preventDefault();
+            ui.modal.focus();
+            return;
+        }
+
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        var active = document.activeElement;
+
+        if (event.shiftKey) {
+            if (active === first || !ui.modal.contains(active)) {
+                event.preventDefault();
+                last.focus();
+            }
+            return;
+        }
+
+        if (active === last || !ui.modal.contains(active)) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    function focusModal(currentUi) {
+        if (!currentUi || !currentUi.modal) {
+            return;
+        }
+
+        lastFocusedBeforeModal = document.activeElement;
+
+        var closeButton = currentUi.modal.querySelector('[data-cms-consent-close], .cmp-cookie-close, button[aria-label="Close"]');
+        var focusable = getModalFocusableElements(currentUi);
+
+        if (closeButton && typeof closeButton.focus === 'function' && !closeButton.disabled) {
+            closeButton.focus();
+        } else if (focusable.length) {
+            focusable[0].focus();
+        } else {
+            if (!currentUi.modal.hasAttribute('tabindex')) {
+                currentUi.modal.setAttribute('tabindex', '-1');
+                modalHadTemporaryTabindex = true;
+            } else {
+                modalHadTemporaryTabindex = false;
+            }
+            currentUi.modal.focus();
+        }
+
+        document.addEventListener('keydown', handleModalKeydown, true);
+    }
+
+    function restoreFocusAfterModal() {
+        document.removeEventListener('keydown', handleModalKeydown, true);
+
+        if (ui && ui.modal && modalHadTemporaryTabindex) {
+            ui.modal.removeAttribute('tabindex');
+        }
+        modalHadTemporaryTabindex = false;
+
+        if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function' && document.contains(lastFocusedBeforeModal)) {
+            lastFocusedBeforeModal.focus();
+        }
+        lastFocusedBeforeModal = null;
     }
 
     function syncModalSelections() {
@@ -546,6 +647,7 @@
 
     function openPreferences() {
         var currentUi = ensureUi();
+        var wasOpen = modalOpen;
         if (!currentUi) {
             return;
         }
@@ -554,6 +656,9 @@
         modalOpen = true;
         currentUi.overlay.hidden = false;
         document.body.classList.add('cmp-cookie-modal-open');
+        if (!wasOpen) {
+            focusModal(currentUi);
+        }
     }
 
     function closePreferences() {
@@ -564,6 +669,7 @@
         modalOpen = false;
         ui.overlay.hidden = true;
         document.body.classList.remove('cmp-cookie-modal-open');
+        restoreFocusAfterModal();
     }
 
     function hideBannerIfNeeded() {
