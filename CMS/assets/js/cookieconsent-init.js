@@ -413,8 +413,6 @@
             dataset: { cmsConsentClose: '1' }
         });
         var essentialText = cfg.essentialText || cfg.rejectText || 'Nur Essenzielle';
-        var banner = document.createElement('div');
-        var overlay = document.createElement('div');
 
         root.id = 'cms-cookie-consent-root';
         root.style.setProperty('--cms-cc-primary', primaryColor);
