@@ -562,9 +562,7 @@
                 }
 
                 if (bootstrapModal) {
-                    if (bootstrapModal) {
-                        bootstrapModal.show();
-                    }
+                    bootstrapModal.show();
                 }
             });
         });
@@ -1181,7 +1179,6 @@
         var forms = document.querySelectorAll('[data-featured-replace-form="1"]');
         var toggleButtons = document.querySelectorAll('[data-featured-toggle="1"]');
         var panels = document.querySelectorAll('[data-featured-panel="1"]');
-        var cleanupRegistered = false;
         var activePanelId = '';
 
         if (!forms.length) {
@@ -1565,14 +1562,11 @@
             return true;
         }
 
-        if (!cleanupRegistered) {
-            window.addEventListener('pagehide', function () {
-                forms.forEach(function (form) {
-                    revokeFeaturedPreview(form);
-                });
+        window.addEventListener('pagehide', function () {
+            forms.forEach(function (form) {
+                revokeFeaturedPreview(form);
             });
-            cleanupRegistered = true;
-        }
+        });
 
         window.addEventListener('dragover', function (event) {
             if (!eventContainsFiles(event)) {

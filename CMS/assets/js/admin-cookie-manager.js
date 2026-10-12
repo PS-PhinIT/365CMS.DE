@@ -69,14 +69,14 @@
     }
 
     function fillCategoryForm(category) {
-        setValue('catId', category && category.id ? String(category.id) : '0');
-        setValue('catName', category && category.name ? category.name : '');
-        setValue('catSlug', category && category.slug ? category.slug : '');
-        setValue('catDesc', category && category.description ? category.description : '');
-        setValue('catScripts', category && category.scripts ? category.scripts : '');
-        setValue('catOrder', category && category.sort_order ? String(category.sort_order) : '0');
-        setChecked('catRequired', !!parseInt(category && category.is_required ? category.is_required : 0, 10));
-        setChecked('catActive', !!parseInt(category && category.is_active ? category.is_active : 0, 10));
+        setValue('catId', category.id ? String(category.id) : '0');
+        setValue('catName', category.name ? category.name : '');
+        setValue('catSlug', category.slug ? category.slug : '');
+        setValue('catDesc', category.description ? category.description : '');
+        setValue('catScripts', category.scripts ? category.scripts : '');
+        setValue('catOrder', category.sort_order ? String(category.sort_order) : '0');
+        setChecked('catRequired', !!parseInt(category.is_required ? category.is_required : 0, 10));
+        setChecked('catActive', !!parseInt(category.is_active ? category.is_active : 0, 10));
 
         var title = document.getElementById('catModalTitle');
         if (title) {
@@ -107,19 +107,19 @@
     }
 
     function fillServiceForm(service) {
-        setValue('serviceId', service && service.id ? String(service.id) : '0');
-        setValue('serviceName', service && service.name ? service.name : '');
-        setValue('serviceSlug', service && service.slug ? service.slug : '');
-        setValue('serviceProvider', service && service.provider ? service.provider : '');
-        setValue('serviceDescription', service && service.description ? service.description : '');
-        setValue('serviceCookies', service && service.cookie_names ? service.cookie_names : '');
-        setValue('serviceCode', service && service.code_snippet ? service.code_snippet : '');
-        setChecked('serviceEssential', !!parseInt(service && service.is_essential ? service.is_essential : 0, 10));
-        setChecked('serviceActive', !!parseInt(service && service.is_active ? service.is_active : 0, 10));
+        setValue('serviceId', service.id ? String(service.id) : '0');
+        setValue('serviceName', service.name ? service.name : '');
+        setValue('serviceSlug', service.slug ? service.slug : '');
+        setValue('serviceProvider', service.provider ? service.provider : '');
+        setValue('serviceDescription', service.description ? service.description : '');
+        setValue('serviceCookies', service.cookie_names ? service.cookie_names : '');
+        setValue('serviceCode', service.code_snippet ? service.code_snippet : '');
+        setChecked('serviceEssential', !!parseInt(service.is_essential ? service.is_essential : 0, 10));
+        setChecked('serviceActive', !!parseInt(service.is_active ? service.is_active : 0, 10));
 
         var categorySelect = document.getElementById('serviceCategory');
         if (categorySelect) {
-            categorySelect.value = service && service.category_slug ? service.category_slug : 'necessary';
+            categorySelect.value = service.category_slug ? service.category_slug : 'necessary';
         }
 
         var title = document.getElementById('serviceModalTitle');
