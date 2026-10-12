@@ -37,20 +37,7 @@
         return bootstrap.Modal.getOrCreateInstance(modalElement);
     }
 
-    function isSubmitControl(element, form) {
-        if (!element || !form || element.form !== form) {
-            return false;
-        }
-
-        if (element.tagName === 'BUTTON') {
-            return String(element.getAttribute('type') || element.type || 'submit').toLowerCase() === 'submit';
-        }
-
-        return element.tagName === 'INPUT'
-            && String(element.getAttribute('type') || element.type || '').toLowerCase() === 'submit';
-    }
-
-    function triggerNativeSubmit(form, submitter) {
+    function triggerNativeSubmit(form) {
         var temporarySubmitter;
 
         if (!form) {
@@ -58,17 +45,7 @@
         }
 
         if (typeof form.requestSubmit === 'function') {
-            if (isSubmitControl(submitter, form)) {
-                form.requestSubmit(submitter);
-                return;
-            }
-
             form.requestSubmit();
-            return;
-        }
-
-        if (isSubmitControl(submitter, form) && typeof submitter.click === 'function') {
-            submitter.click();
             return;
         }
 
@@ -87,7 +64,7 @@
             return;
         }
 
-        triggerNativeSubmit(form, null);
+        triggerNativeSubmit(form);
     }
 
     document.addEventListener('DOMContentLoaded', function () {
