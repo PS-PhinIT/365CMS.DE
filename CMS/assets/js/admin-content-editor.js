@@ -473,10 +473,8 @@
         var editorMutationState = {};
         var editorUiState = {};
         var editorInitWatchdogs = {};
-        var editorEmergencyFallbackTimers = {};
         var editorRuntimeRetryQueue = {};
         var EDITOR_INIT_WATCHDOG_MS = 5000;
-        var EDITOR_EMERGENCY_FALLBACK_MS = 1800;
 
         if (!config) {
             return;
@@ -1030,65 +1028,6 @@
                 pane.style.setProperty('display', 'block', 'important');
                 pane.style.setProperty('visibility', 'visible');
                 pane.style.setProperty('opacity', '1');
-            }
-        }
-
-        function clearEditorEmergencyFallback(definitionKey) {
-            if (!definitionKey || !editorEmergencyFallbackTimers[definitionKey]) {
-                return;
-            }
-
-            window.clearTimeout(editorEmergencyFallbackTimers[definitionKey]);
-            delete editorEmergencyFallbackTimers[definitionKey];
-        }
-
-        function scheduleEditorEmergencyFallback(definition, input) {
-            var definitionKey;
-            var holder;
-
-            if (!definition || !definition.key || !input) {
-                return;
-            }
-
-            definitionKey = definition.key;
-            clearEditorEmergencyFallback(definitionKey);
-
-            editorEmergencyFallbackTimers[definitionKey] = window.setTimeout(function () {
-                var currentEntry = editors[definitionKey];
-                var currentHolder = getElement(definition.holderId);
-                var hasRenderedEditor;
-                var hasFallbackTextarea;
-
-                delete editorEmergencyFallbackTimers[definitionKey];
-
-                if (!currentHolder) {
-                    return;
-                }
-
-                ensureHolderVisible(currentHolder);
-                hasRenderedEditor = !!currentHolder.querySelector('.codex-editor, .ce-block, .codex-editor__redactor');
-                hasFallbackTextarea = !!currentHolder.querySelector('textarea');
-
-                if (hasRenderedEditor || hasFallbackTextarea) {
-                    return;
-                }
-
-                if (currentEntry && currentEntry.ready) {
-                    return;
-                }
-
-                if (currentEntry && currentEntry.instance && hasEditorRuntime()) {
-                    // Runtime exists but rendering is still in-flight; leave loading visible and let watchdog decide.
-                    return;
-                }
-
-                logEditor('warn', 'EditorJS emergency visibility fallback triggered for "' + String(definition.holderId || '') + '".');
-                renderEditorUnavailableFallback(definition, input, 'empty-runtime');
-            }, EDITOR_EMERGENCY_FALLBACK_MS);
-
-            holder = getElement(definition.holderId);
-            if (holder) {
-                ensureHolderVisible(holder);
             }
         }
 
@@ -3727,7 +3666,6 @@
                 window.clearTimeout(editorInitWatchdogs[key]);
                 delete editorInitWatchdogs[key];
             }
-            clearEditorEmergencyFallback(key);
 
             delete editors[key];
         }
@@ -3874,7 +3812,6 @@
 
             if (createdInstance && createdInstance.isReady && typeof createdInstance.isReady.then === 'function') {
                 createdInstance.isReady.then(function () {
-                    clearEditorEmergencyFallback(definition.key);
                     if (editorInitWatchdogs[definition.key]) {
                         window.clearTimeout(editorInitWatchdogs[definition.key]);
                         delete editorInitWatchdogs[definition.key];
@@ -3889,7 +3826,6 @@
                     }
                 }).catch(function (error) {
                     var activeEntry = editors[definition.key];
-                    clearEditorEmergencyFallback(definition.key);
                     if (editorInitWatchdogs[definition.key]) {
                         window.clearTimeout(editorInitWatchdogs[definition.key]);
                         delete editorInitWatchdogs[definition.key];
@@ -3903,7 +3839,6 @@
                 });
             } else {
                 entry.ready = true;
-                clearEditorEmergencyFallback(definition.key);
                 if (editorInitWatchdogs[definition.key]) {
                     window.clearTimeout(editorInitWatchdogs[definition.key]);
                     delete editorInitWatchdogs[definition.key];

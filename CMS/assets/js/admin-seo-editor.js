@@ -377,11 +377,6 @@
         }
     }
 
-    function extractPlainText(raw, editorContainer) {
-        var analysis = analyzeContent(raw, editorContainer);
-        return analysis.plainText;
-    }
-
     function analyzeContent(raw, editorContainer) {
         var analysis = buildEmptyAnalysis();
         var source = String(raw || '').trim();
@@ -503,14 +498,6 @@
         return paragraphs.filter(function (paragraph) {
             return wordCount(paragraph) > maxWords;
         }).length;
-    }
-
-    function extractLinks(raw, editorContainer) {
-        return analyzeContent(raw, editorContainer).links;
-    }
-
-    function extractImageAltInfo(raw, editorContainer) {
-        return analyzeContent(raw, editorContainer).images;
     }
 
     function renderRuleList(rulesList, rules) {

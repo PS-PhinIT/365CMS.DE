@@ -735,15 +735,6 @@
         return (bytes / 1048576).toFixed(1) + ' MB';
     }
 
-    function escapeHtml(value) {
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
-
     function initCleanupModal() {
         if (!cleanupModal || !cleanupActionInput || !cleanupModalTitle || !cleanupModalText || !cleanupSubmit) {
             return;

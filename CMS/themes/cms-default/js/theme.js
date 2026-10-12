@@ -342,7 +342,6 @@
             if (!postBody) return;
             const { top, height } = postBody.getBoundingClientRect();
             const start    = top + window.scrollY;
-            const end      = start + height;
             const progress = Math.min(1, Math.max(0, (window.scrollY - start + window.innerHeight) / height));
             progressBar.style.width = `${(progress * 100).toFixed(1)}%`;
         }, { passive: true });
