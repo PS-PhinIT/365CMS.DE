@@ -61,11 +61,13 @@ if (function_exists('meridian_get_posts')) {
                     <h2><a href="<?php echo $hLink; ?>"><?php echo $hTitle; ?></a></h2>
                     <p class="excerpt"><?php echo $hExcerpt; ?></p>
                     <div class="post-meta">
+                        <?php if (meridian_show_author()): ?>
                         <div class="meta-author">
                             <div class="avatar-xs"><?php echo htmlspecialchars(mb_substr((string) $hAuthor, 0, 2), ENT_QUOTES, 'UTF-8'); ?></div>
                             <?php echo htmlspecialchars($hAuthor); ?>
                         </div>
                         <span class="meta-sep">·</span>
+                        <?php endif; ?>
                         <time class="meta-date"><?php echo $hDate; ?></time>
                         <span class="meta-sep">·</span>
                         <span class="meta-read"><?php echo $hRead; ?></span>

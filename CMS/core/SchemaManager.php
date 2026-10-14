@@ -61,8 +61,6 @@ class SchemaManager
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 last_login TIMESTAMP NULL,
-                INDEX idx_username (username),
-                INDEX idx_email (email),
                 INDEX idx_role (role)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -72,7 +70,6 @@ class SchemaManager
                 meta_key VARCHAR(255) NOT NULL,
                 meta_value LONGTEXT,
                 UNIQUE KEY uq_user_meta (user_id, meta_key),
-                INDEX idx_user_id (user_id),
                 INDEX idx_meta_key (meta_key),
                 FOREIGN KEY (user_id) REFERENCES {$p}users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
@@ -86,8 +83,7 @@ class SchemaManager
                 member_dashboard_access TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Zugriff auf Member-Dashboard',
                 sort_order INT NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_name (name)
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'settings' => "CREATE TABLE IF NOT EXISTS {$p}settings (
@@ -159,7 +155,6 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
-                INDEX idx_slug (slug),
                 INDEX idx_slug_en (slug_en),
                 INDEX idx_status (status),
                 INDEX idx_author (author_id),
@@ -222,7 +217,6 @@ class SchemaManager
                 cache_value LONGTEXT,
                 expires_at TIMESTAMP NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_key (cache_key),
                 INDEX idx_expires (expires_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -233,7 +227,6 @@ class SchemaManager
                 action VARCHAR(30) NOT NULL DEFAULT 'login',
                 attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_username (username),
-                INDEX idx_ip (ip_address),
                 INDEX idx_action (action),
                 INDEX idx_ip_action (ip_address, action),
                 INDEX idx_time (attempted_at)
@@ -253,7 +246,6 @@ class SchemaManager
                 installed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 activated_at TIMESTAMP NULL,
-                INDEX idx_slug (slug),
                 INDEX idx_active (is_active)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -276,7 +268,6 @@ class SchemaManager
                 user_id INT UNSIGNED NULL COMMENT 'Optional: User-spezifische Anpassungen',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_theme_slug (theme_slug),
                 INDEX idx_category (setting_category),
                 INDEX idx_key (setting_key),
                 INDEX idx_user_id (user_id),
@@ -311,7 +302,6 @@ class SchemaManager
                 sort_order INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_slug (slug),
                 INDEX idx_active (is_active),
                 INDEX idx_sort (sort_order)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
@@ -344,7 +334,6 @@ class SchemaManager
                 is_active BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_slug (slug),
                 INDEX idx_active (is_active)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -354,7 +343,6 @@ class SchemaManager
                 group_id INT NOT NULL,
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_user_group (user_id, group_id),
-                INDEX idx_user_id (user_id),
                 INDEX idx_group_id (group_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -365,7 +353,6 @@ class SchemaManager
                 current_count INT DEFAULT 0,
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_user_resource (user_id, resource_type),
-                INDEX idx_user_id (user_id),
                 INDEX idx_resource (resource_type)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -379,7 +366,6 @@ class SchemaManager
                 sort_order INT DEFAULT 0,
                 replacement_category_id INT UNSIGNED DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_slug (slug),
                 INDEX idx_slug_en (slug_en),
                 INDEX idx_parent (parent_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
@@ -411,9 +397,7 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
-                INDEX idx_slug (slug),
                 INDEX idx_slug_en (slug_en),
-                INDEX idx_status (status),
                 INDEX idx_author (author_id),
                 INDEX idx_category (category_id),
                 INDEX idx_published (published_at),
@@ -474,7 +458,6 @@ class SchemaManager
                 country VARCHAR(100) DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_order_number (order_number),
                 INDEX idx_user_id (user_id),
                 INDEX idx_plan_id (plan_id),
                 INDEX idx_status (status),
@@ -489,7 +472,6 @@ class SchemaManager
                 permanent TINYINT(1) DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_ip (ip_address),
                 INDEX idx_expires (expires_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -534,8 +516,7 @@ class SchemaManager
                 INDEX idx_page_slug (page_slug),
                 INDEX idx_user_id (user_id),
                 INDEX idx_session_id (session_id),
-                INDEX idx_visited_at (visited_at),
-                INDEX idx_date (visited_at)
+                INDEX idx_visited_at (visited_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'core_web_vitals' => "CREATE TABLE IF NOT EXISTS {$p}core_web_vitals (
@@ -674,7 +655,6 @@ class SchemaManager
                 last_error TEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_status (status),
                 INDEX idx_status_available (status, available_at),
                 INDEX idx_available_at (available_at),
                 INDEX idx_locked_at (locked_at),
@@ -716,7 +696,6 @@ class SchemaManager
                 post_id BIGINT UNSIGNED NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_user_post (user_id, post_id),
-                INDEX idx_user_id (user_id),
                 INDEX idx_post_id (post_id),
                 FOREIGN KEY (user_id) REFERENCES {$p}users(id) ON DELETE CASCADE,
                 FOREIGN KEY (post_id) REFERENCES {$p}posts(id) ON DELETE CASCADE
@@ -732,7 +711,6 @@ class SchemaManager
                 is_read TINYINT(1) NOT NULL DEFAULT 0,
                 read_at TIMESTAMP NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_user_id (user_id),
                 INDEX idx_is_read (is_read),
                 INDEX idx_type (type),
                 INDEX idx_user_created (user_id, created_at),
@@ -763,7 +741,6 @@ class SchemaManager
                 description TEXT,
                 post_count INT UNSIGNED NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_slug (slug),
                 INDEX idx_slug_en (slug_en)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Blog-Schlagwörter'",
 
@@ -772,7 +749,6 @@ class SchemaManager
                 post_id BIGINT UNSIGNED NOT NULL,
                 tag_id INT UNSIGNED NOT NULL,
                 UNIQUE KEY unique_post_tag (post_id, tag_id),
-                INDEX idx_post_id (post_id),
                 INDEX idx_tag_id (tag_id),
                 FOREIGN KEY (post_id) REFERENCES {$p}posts(id) ON DELETE CASCADE,
                 FOREIGN KEY (tag_id) REFERENCES {$p}post_tags(id) ON DELETE CASCADE
@@ -783,7 +759,6 @@ class SchemaManager
                 post_id BIGINT UNSIGNED NOT NULL,
                 category_id INT UNSIGNED NOT NULL,
                 UNIQUE KEY unique_post_category (post_id, category_id),
-                INDEX idx_post_id (post_id),
                 INDEX idx_category_id (category_id),
                 FOREIGN KEY (post_id) REFERENCES {$p}posts(id) ON DELETE CASCADE,
                 FOREIGN KEY (category_id) REFERENCES {$p}post_categories(id) ON DELETE CASCADE
@@ -1100,6 +1075,248 @@ class SchemaManager
         $this->ensureOrdersRuntimeSchema();
         $this->ensureAuditLogRuntimeSchema();
         $this->ensureUserMetaUniqueKey();
+        $this->ensureSiteTableSlugs();
+        $this->ensurePostLocaleColumns();
+        $this->dropRedundantIndexes();
+    }
+
+    /**
+     * Folgeaudit OFFEN-16: Hub-Sites werden über `site_tables.table_slug` (indiziert) gefunden.
+     * Ältere Datensätze führten den Slug teils nur in `settings_json.hub_slug`; er wird hier
+     * nach `table_slug` übernommen, und der Index wird bei per ALTER ergänzter Spalte nachgezogen.
+     */
+    private function ensureSiteTableSlugs(): void
+    {
+        $table = $this->prefix . 'site_tables';
+        if (preg_match('/^[a-zA-Z0-9_]+$/', $table) !== 1) {
+            return;
+        }
+
+        try {
+            $rows = $this->db->getPdo()->query(
+                "SELECT id, table_slug, JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) AS hub_slug
+                 FROM {$table}
+                 WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'"
+            )->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            error_log('SchemaManager::ensureSiteTableSlugs() read failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+            return;
+        }
+
+        foreach ($rows as $row) {
+            $hubSlug = trim((string) ($row['hub_slug'] ?? ''));
+            if ($hubSlug === '' || $hubSlug === 'null' || $hubSlug === (string) ($row['table_slug'] ?? '')) {
+                continue;
+            }
+
+            try {
+                $this->db->execute("UPDATE {$table} SET table_slug = ? WHERE id = ?", [$hubSlug, (int) $row['id']]);
+            } catch (\Throwable $e) {
+                error_log(sprintf(
+                    'SchemaManager::ensureSiteTableSlugs() Hub-Site %d: Slug "%s" konnte nicht übernommen werden: %s',
+                    (int) $row['id'],
+                    $this->sanitizeDiagnosticText($hubSlug, 191),
+                    $this->sanitizeDiagnosticText($e->getMessage())
+                ));
+            }
+        }
+
+        $indexes = $this->loadIndexes($table);
+        foreach ($indexes as $index) {
+            if (($index['columns'][0] ?? '') === 'table_slug') {
+                return;
+            }
+        }
+
+        try {
+            $this->db->getPdo()->exec("ALTER TABLE {$table} ADD UNIQUE KEY uniq_table_slug (table_slug)");
+        } catch (\Throwable) {
+            // Doppelte Slugs (Altbestand) verhindern den UNIQUE-Key – dann wenigstens ein normaler Index.
+            try {
+                $this->db->getPdo()->exec("ALTER TABLE {$table} ADD INDEX idx_table_slug (table_slug)");
+            } catch (\Throwable $e) {
+                error_log('SchemaManager::ensureSiteTableSlugs() index failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+            }
+        }
+    }
+
+    /**
+     * Folgeaudit OFFEN-14: Sprachverfügbarkeit von Beiträgen als gespeicherte generierte Spalten
+     * mit Index statt `CHAR_LENGTH(TRIM(content))` je Zeile und Abfrage. Die Spalten werden bei
+     * jedem Schreibzugriff von der Datenbank selbst berechnet; kein Schreibpfad muss sie pflegen.
+     * Die Option `posts_locale_columns` schaltet die Nutzung frei (ContentLocalizationService).
+     */
+    private function ensurePostLocaleColumns(): void
+    {
+        $table = $this->prefix . 'posts';
+        if (preg_match('/^[a-zA-Z0-9_]+$/', $table) !== 1) {
+            return;
+        }
+
+        $ready = false;
+        try {
+            $definitions = [];
+            foreach (['de', 'en'] as $locale) {
+                if (!$this->db->columnExists($table, 'has_locale_' . $locale)) {
+                    $definitions[] = 'ADD COLUMN has_locale_' . $locale . ' TINYINT(1) AS ('
+                        . Services\ContentLocalizationService::postLocaleAvailabilityExpression($locale)
+                        . ') STORED';
+                }
+            }
+
+            if ($definitions !== []) {
+                $this->db->getPdo()->exec("ALTER TABLE {$table} " . implode(', ', $definitions));
+            }
+
+            $ready = $this->db->columnExists($table, 'has_locale_de') && $this->db->columnExists($table, 'has_locale_en');
+        } catch (\Throwable $e) {
+            error_log('SchemaManager::ensurePostLocaleColumns() failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+        }
+
+        if ($ready) {
+            $existing = $this->loadIndexes($table);
+            foreach (['de', 'en'] as $locale) {
+                $name = 'idx_status_locale_' . $locale;
+                if (isset($existing[$name])) {
+                    continue;
+                }
+                try {
+                    $this->db->getPdo()->exec("ALTER TABLE {$table} ADD INDEX {$name} (status, has_locale_{$locale}, published_at)");
+                } catch (\Throwable $e) {
+                    error_log('SchemaManager::ensurePostLocaleColumns() index failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+                }
+            }
+        }
+
+        try {
+            $this->db->execute(
+                "INSERT INTO {$this->prefix}settings (option_name, option_value, autoload) VALUES (?, ?, 1)
+                 ON DUPLICATE KEY UPDATE option_value = ?, autoload = 1",
+                [Services\ContentLocalizationService::POST_LOCALE_COLUMNS_OPTION, $ready ? '1' : '0', $ready ? '1' : '0']
+            );
+        } catch (\Throwable $e) {
+            error_log('SchemaManager::ensurePostLocaleColumns() option failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+        }
+    }
+
+    /**
+     * Folgeaudit OFFEN-18: Indizes, die nur Präfix eines anderen Index oder Dublette eines
+     * UNIQUE-Index sind, kosten Schreibzeit und Speicher, ohne Abfragen zu beschleunigen.
+     * Neuinstallationen legen sie nicht mehr an; bestehende werden nur gelöscht, wenn ein
+     * anderer vollständiger Index dieselben führenden Spalten abdeckt (auch für Fremdschlüssel).
+     */
+    private const REDUNDANT_INDEXES = [
+        'users' => ['idx_username', 'idx_email'],
+        'user_meta' => ['idx_user_id'],
+        'roles' => ['idx_name'],
+        'pages' => ['idx_slug'],
+        'cache' => ['idx_key'],
+        'login_attempts' => ['idx_ip'],
+        'plugins' => ['idx_slug'],
+        'theme_customizations' => ['idx_theme_slug'],
+        'subscription_plans' => ['idx_slug'],
+        'user_groups' => ['idx_slug'],
+        'user_group_members' => ['idx_user_id'],
+        'subscription_usage' => ['idx_user_id'],
+        'post_categories' => ['idx_slug'],
+        'posts' => ['idx_slug', 'idx_status'],
+        'orders' => ['idx_order_number'],
+        'blocked_ips' => ['idx_ip'],
+        'page_views' => ['idx_date'],
+        'mail_queue' => ['idx_status'],
+        'favorites' => ['idx_user_id'],
+        'notifications' => ['idx_user_id'],
+        'post_tags' => ['idx_slug'],
+        'post_tag_rel' => ['idx_post_id'],
+        'post_category_rel' => ['idx_post_id'],
+        'security_log' => ['idx_ip'],
+    ];
+
+    private function dropRedundantIndexes(): void
+    {
+        foreach (self::REDUNDANT_INDEXES as $tableName => $indexNames) {
+            $table = $this->prefix . $tableName;
+            if (preg_match('/^[a-zA-Z0-9_]+$/', $table) !== 1) {
+                continue;
+            }
+
+            $indexes = $this->loadIndexes($table);
+            foreach ($indexNames as $name) {
+                if (!isset($indexes[$name]) || !$this->isIndexCoveredByAnother($name, $indexes)) {
+                    continue;
+                }
+
+                try {
+                    $this->db->getPdo()->exec("ALTER TABLE {$table} DROP INDEX `{$name}`");
+                    unset($indexes[$name]);
+                } catch (\Throwable $e) {
+                    error_log(sprintf(
+                        'SchemaManager::dropRedundantIndexes(%s.%s) failed: %s',
+                        $table,
+                        $name,
+                        $this->sanitizeDiagnosticText($e->getMessage())
+                    ));
+                }
+            }
+        }
+    }
+
+    /**
+     * @param array<string, array{columns: list<string>, unique: bool, partial: bool, btree: bool}> $indexes
+     */
+    private function isIndexCoveredByAnother(string $name, array $indexes): bool
+    {
+        $candidate = $indexes[$name];
+        if ($candidate['partial'] || !$candidate['btree'] || $candidate['unique'] || $candidate['columns'] === []) {
+            return false;
+        }
+
+        $count = count($candidate['columns']);
+        foreach ($indexes as $otherName => $other) {
+            if ($otherName === $name || $other['partial'] || !$other['btree']) {
+                continue;
+            }
+
+            if (count($other['columns']) >= $count && array_slice($other['columns'], 0, $count) === $candidate['columns']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string, array{columns: list<string>, unique: bool, partial: bool, btree: bool}>
+     */
+    private function loadIndexes(string $table): array
+    {
+        $indexes = [];
+
+        try {
+            $stmt = $this->db->getPdo()->query("SHOW INDEX FROM {$table}");
+            $rows = $stmt instanceof \PDOStatement ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (\Throwable) {
+            return [];
+        }
+
+        usort($rows, static fn (array $a, array $b): int => [(string) $a['Key_name'], (int) $a['Seq_in_index']] <=> [(string) $b['Key_name'], (int) $b['Seq_in_index']]);
+        foreach ($rows as $row) {
+            $key = (string) ($row['Key_name'] ?? '');
+            if ($key === '') {
+                continue;
+            }
+
+            $indexes[$key] ??= ['columns' => [], 'unique' => (int) ($row['Non_unique'] ?? 1) === 0, 'partial' => false, 'btree' => true];
+            $indexes[$key]['columns'][] = strtolower((string) ($row['Column_name'] ?? ''));
+            if (($row['Sub_part'] ?? null) !== null) {
+                $indexes[$key]['partial'] = true;
+            }
+            if (strtoupper((string) ($row['Index_type'] ?? 'BTREE')) !== 'BTREE') {
+                $indexes[$key]['btree'] = false;
+            }
+        }
+
+        return $indexes;
     }
 
     /**

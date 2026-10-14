@@ -76,7 +76,6 @@ final class SecurityRuntimeService
                 extra JSON DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_action (action),
-                INDEX idx_ip (ip_address),
                 INDEX idx_ip_created (ip_address, created_at),
                 INDEX idx_created (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"

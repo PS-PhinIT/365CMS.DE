@@ -1668,6 +1668,24 @@ function meridian_setting(string $section, string $key, mixed $default = null): 
     }
 }
 
+/**
+ * Sidebar in Listen-Ansichten: Customizer „Layout → Inhalts-Layout" (full_width = ohne Sidebar).
+ * Ein früher gespeichertes layout.show_sidebar = false gilt weiter.
+ */
+function meridian_show_sidebar(): bool
+{
+    if ((string) meridian_setting('layout', 'content_layout', 'with_sidebar') === 'full_width') {
+        return false;
+    }
+
+    return (bool) meridian_setting('layout', 'show_sidebar', true);
+}
+
+function meridian_show_author(): bool
+{
+    return (bool) meridian_setting('blog', 'show_author', true);
+}
+
 function meridian_build_base_post_content_expression(string $alias): string
 {
     return "(CHAR_LENGTH(TRIM(COALESCE({$alias}.content, ''))) > 0"
@@ -1694,6 +1712,12 @@ function meridian_post_locale_availability_expression(string $alias = 'p', ?stri
     try {
         $localization = \CMS\Services\ContentLocalizationService::getInstance();
         $resolvedLocale = $localization->normalizeLocale($locale ?? meridian_current_request_locale());
+
+        // Core ab 3.5.0: indizierte Spalten has_locale_* (mit gleichwertigem Fallback).
+        if (method_exists($localization, 'buildPostAvailabilitySql')) {
+            return $localization->buildPostAvailabilitySql($alias, $resolvedLocale);
+        }
+
         $baseContent = meridian_build_base_post_content_expression($alias);
         $englishLegacyOnly = meridian_build_legacy_english_only_post_expression($alias);
 

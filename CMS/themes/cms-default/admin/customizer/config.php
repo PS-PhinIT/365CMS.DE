@@ -81,11 +81,6 @@ return [
                 'default' => 'categories',
                 'description' => 'Bei "Sekundäres Menü" muss ein Menü der Position "Sekundäres Menü" (Admin → Menüs) zugewiesen sein.',
             ],
-            'mobile_menu_enabled' => [
-                'label' => 'Mobile Menü (Hamburger) aktivieren',
-                'type' => 'checkbox',
-                'default' => true,
-            ],
             'nav_font_size' => [
                 'label' => 'Navigation Schriftgröße (px)',
                 'description' => 'Schriftgröße der Hauptmenü-Links.',
@@ -127,6 +122,7 @@ return [
                     'full_width' => 'Volle Breite (keine Sidebar)',
                 ],
                 'default' => 'with_sidebar',
+                'description' => 'Gilt für Blog, Startseite, Archive, Kategorien, Schlagwörter und Autorenseiten.',
             ],
             'post_col_width' => [
                 'label' => 'Text-Spalten-Breite (px)',
@@ -396,12 +392,6 @@ return [
     'blog' => [
         'title' => '📰 Blog & Artikel',
         'sections' => [
-            'posts_per_page' => [
-                'label' => 'Artikel pro Seite',
-                'description' => 'Anzahl der Artikel auf der Blog-Übersichtsseite.',
-                'type' => 'number',
-                'default' => 12,
-            ],
             'show_hero_post' => [
                 'label' => 'Hero-Post anzeigen',
                 'description' => 'Den neuesten Artikel als großes Hero-Element oben darstellen.',
@@ -453,27 +443,11 @@ return [
                 'default' => 'posts',
                 'description' => 'Legt fest, was auf der Startseite angezeigt wird.',
             ],
-            'homepage_posts_count' => [
-                'label' => 'Anzahl Beiträge auf Startseite',
-                'type' => 'number',
-                'default' => 10,
-                'description' => 'Wie viele Artikel direkt auf der Startseite erscheinen.',
-            ],
             'homepage_show_hero' => [
                 'label' => 'Hero-Artikel anzeigen',
                 'type' => 'checkbox',
                 'default' => true,
                 'description' => 'Den ersten/angehefteten Beitrag groß als Hero darstellen.',
-            ],
-            'homepage_hero_type' => [
-                'label' => 'Hero-Artikel Quelle',
-                'type' => 'select',
-                'options' => [
-                    'latest' => 'Neuester Beitrag',
-                    'sticky' => 'Angehefteter Beitrag',
-                ],
-                'default' => 'latest',
-                'description' => 'Welcher Beitrag soll als Hero hervorgehoben werden?',
             ],
             'homepage_hero_title' => [
                 'label' => 'Hero Überschrift (optional)',

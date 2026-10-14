@@ -63,8 +63,7 @@ class TrackingService
             INDEX idx_page_slug (page_slug),
             INDEX idx_user_id (user_id),
             INDEX idx_session_id (session_id),
-            INDEX idx_visited_at (visited_at),
-            INDEX idx_date (visited_at)
+            INDEX idx_visited_at (visited_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         
         try {

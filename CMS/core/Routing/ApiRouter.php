@@ -131,6 +131,10 @@ final class ApiRouter
 
         $jwt = Services\JwtService::getInstance();
         $payload = $refreshToken !== '' ? $jwt->validateToken($refreshToken) : null;
+        if ($payload !== null && ($payload->type ?? '') === 'refresh' && Auth::isPreBindingApiToken($payload)) {
+            header('WWW-Authenticate: Bearer error="invalid_token", error_description="' . Auth::PRE_BINDING_TOKEN_HINT . '"');
+            $this->jsonError(401, 'Refresh-Token stammt von vor 3.5.0 und ist nicht mehr gültig. Bitte über POST /api/v1/auth/token neu anmelden.');
+        }
         if ($payload === null || ($payload->type ?? '') !== 'refresh' || !Auth::instance()->isValidApiTokenSubject($payload)) {
             $this->jsonError(401, 'Ungültiges oder abgelaufenes Refresh-Token.');
         }

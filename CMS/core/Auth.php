@@ -732,6 +732,14 @@ class Auth
             return false;
         }
 
+        if (self::isPreBindingApiToken($payload)) {
+            // Tokens von vor 3.5.0 tragen keinen `pwf`-Claim (Folgeaudit SEC-30/OFFEN-19).
+            if (!headers_sent()) {
+                header('WWW-Authenticate: Bearer error="invalid_token", error_description="' . self::PRE_BINDING_TOKEN_HINT . '"');
+            }
+            return false;
+        }
+
         $user = $this->getUserById((int) $payload->sub);
         if ($user === null || !self::matchesApiTokenBinding($user, $payload)) {
             return false;
@@ -783,6 +791,19 @@ class Auth
         $user = $userId > 0 ? $this->getUserById($userId) : null;
 
         return $user !== null && self::matchesApiTokenBinding($user, $payload);
+    }
+
+    /**
+     * Hinweis für API-Clients mit Tokens ohne Passwort-Bindung (ASCII, da auch als HTTP-Header genutzt).
+     */
+    public const PRE_BINDING_TOKEN_HINT = 'Token issued before 365CMS 3.5.0 without password binding; request a new token via POST /api/v1/auth/token';
+
+    /**
+     * Gültig signiertes Token ohne `pwf`-Claim, also vor 3.5.0 ausgestellt.
+     */
+    public static function isPreBindingApiToken(object $payload): bool
+    {
+        return !isset($payload->pwf) || !is_string($payload->pwf) || $payload->pwf === '';
     }
 
     private static function matchesApiTokenBinding(object $user, object $payload): bool

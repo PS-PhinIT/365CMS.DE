@@ -12,8 +12,6 @@ if (!defined('ABSPATH')) {
 
 final class SiteTableRepository
 {
-    private ?bool $hasTableSlugColumn = null;
-
     /**
      * Hub-Zeilen je Request: Router (404/Domain-Erkennung) und Hub-Renderer fragen die
      * Domain-Zuordnung mehrfach ab – ohne Cache je Aufruf ein Full-Scan inkl. rows_json.
@@ -37,10 +35,8 @@ final class SiteTableRepository
             return null;
         }
 
-        $selectSlug = $this->hasTableSlugColumn() ? ', table_slug' : ", '' AS table_slug";
-
         $row = $this->db->fetchOne(
-            "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at{$selectSlug}
+            "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at, table_slug
              FROM {$this->prefix}site_tables
              WHERE id = ? LIMIT 1",
             [$tableId]
@@ -59,19 +55,15 @@ final class SiteTableRepository
             return $this->hubBySlugCache[$slug];
         }
 
-        $selectSlug = $this->hasTableSlugColumn() ? ', table_slug' : ", '' AS table_slug";
-        $slugCondition = $this->hasTableSlugColumn()
-            ? "(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) = ? OR table_slug = ?)"
-            : "JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) = ?";
-        $params = $this->hasTableSlugColumn() ? [$slug, $slug] : [$slug];
-
+        // table_slug ist im Schema garantiert, indiziert und wird mit hub_slug abgeglichen
+        // (SchemaManager::ensureSiteTableSlugs()); Suche daher über den Index statt JSON_EXTRACT.
         $row = $this->db->fetchOne(
-            "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at{$selectSlug}
+            "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at, table_slug
              FROM {$this->prefix}site_tables
-             WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'
-               AND {$slugCondition}
+             WHERE table_slug = ?
+               AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'
              LIMIT 1",
-            $params
+            [$slug]
         );
 
         return $this->hubBySlugCache[$slug] = is_array($row) ? $this->hydrateTable($row) : null;
@@ -85,9 +77,8 @@ final class SiteTableRepository
         }
 
         if ($this->hubRowsCache === null) {
-            $selectSlug = $this->hasTableSlugColumn() ? ', table_slug' : ", '' AS table_slug";
             $rows = $this->db->fetchAll(
-                "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at{$selectSlug}
+                "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at, table_slug
                  FROM {$this->prefix}site_tables
                  WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'"
             );
@@ -149,22 +140,6 @@ final class SiteTableRepository
             'table_slug' => $tableSlug,
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ];
-    }
-
-    private function hasTableSlugColumn(): bool
-    {
-        if ($this->hasTableSlugColumn !== null) {
-            return $this->hasTableSlugColumn;
-        }
-
-        try {
-            $column = $this->db->get_var("SHOW COLUMNS FROM {$this->prefix}site_tables LIKE 'table_slug'");
-            $this->hasTableSlugColumn = $column !== null;
-        } catch (\Throwable) {
-            $this->hasTableSlugColumn = false;
-        }
-
-        return $this->hasTableSlugColumn;
     }
 
     private function normalizeDomainHost(string $value): string

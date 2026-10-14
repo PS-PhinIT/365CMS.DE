@@ -21,6 +21,13 @@ if (class_exists(__NAMESPACE__ . '\\ThemeManager', false)) {
 
 class ThemeManager
 {
+    /** Einstellungen, die der ThemeManager liest (Titel, Menü-Fallback, Favicon, Customizer-CSS). */
+    private const THEME_SETTING_KEYS = [
+        'site_title', 'site_name', 'site_description', 'site_menu', 'site_favicon',
+        'color_primary', 'color_secondary', 'color_bg', 'color_text',
+        'font_body', 'font_heading', 'font_family', 'font_size', 'font_size_base', 'font_line_height',
+    ];
+
     private static ?self $instance = null;
     private string $activeTheme;
     private string $themePath;
@@ -156,15 +163,14 @@ class ThemeManager
         $this->settings = [];
 
         try {
-            $db   = Database::instance();
-            $stmt = $db->query(
-                "SELECT option_name, option_value FROM {$db->getPrefix()}settings"
-                . " WHERE option_name LIKE 'color_%' OR option_name LIKE 'font_%' OR option_name LIKE 'site_%'"
-            );
-            while ($row = $stmt->fetch(\PDO::FETCH_OBJ)) {
-                $this->settings[$row->option_name] = $row->option_value;
+            // Feste Schlüssel über den Options-Cache statt Präfix-Abfrage (LIKE) am Cache vorbei.
+            $values = Services\OptionStore::getInstance()->getMany(self::THEME_SETTING_KEYS);
+            foreach ($values as $name => $value) {
+                if ($value !== null) {
+                    $this->settings[$name] = $value;
+                }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Logger::instance()->withChannel('theme')->warning('Theme settings could not be loaded.', [
                 'exception' => $e,
             ]);
@@ -1225,8 +1231,11 @@ class ThemeManager
             return '';
         }
 
-        $customStackKey = 'font_stack_' . $fontKey;
-        $customStack = trim((string) ($this->settings[$customStackKey] ?? ''));
+        try {
+            $customStack = trim((string) Services\OptionStore::getInstance()->get('font_stack_' . $fontKey, ''));
+        } catch (\Throwable) {
+            $customStack = '';
+        }
         if ($customStack !== '') {
             return $customStack;
         }

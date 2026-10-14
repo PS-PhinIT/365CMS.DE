@@ -103,7 +103,6 @@ class SubscriptionManager
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 
-                INDEX idx_slug (slug),
                 INDEX idx_active (is_active)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
@@ -147,8 +146,7 @@ class SubscriptionManager
                 is_active BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 
-                FOREIGN KEY (plan_id) REFERENCES {$prefix}subscription_plans(id) ON DELETE SET NULL,
-                INDEX idx_slug (slug)
+                FOREIGN KEY (plan_id) REFERENCES {$prefix}subscription_plans(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
         
@@ -162,7 +160,6 @@ class SubscriptionManager
                 
                 FOREIGN KEY (group_id) REFERENCES {$prefix}user_groups(id) ON DELETE CASCADE,
                 UNIQUE KEY unique_user_group (user_id, group_id),
-                INDEX idx_user_id (user_id),
                 INDEX idx_group_id (group_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
@@ -176,8 +173,7 @@ class SubscriptionManager
                 current_count INT DEFAULT 0,
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 
-                UNIQUE KEY unique_user_resource (user_id, resource_type),
-                INDEX idx_user_id (user_id)
+                UNIQUE KEY unique_user_resource (user_id, resource_type)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     }

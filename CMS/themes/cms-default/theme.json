@@ -118,19 +118,13 @@
 
     "navigation": {
       "label": "Navigation",
-      "description": "Untermenü, Kategorie-Leiste und mobiles Menü.",
+      "description": "Untermenü, Kategorie-Leiste und Schriftbild der Navigation.",
       "settings": {
         "header_bar_mode": {
           "label": "Leiste unter Header",
           "type": "select",
           "default": "categories",
           "description": "none = aus, categories = Kategorien automatisch, menu = Sekundäres Menü"
-        },
-        "mobile_menu_enabled": {
-          "label": "Mobiles Menü (Hamburger) aktivieren",
-          "type": "checkbox",
-          "default": true,
-          "description": "Hamburger-Menü auf kleinen Bildschirmen anzeigen"
         },
         "nav_font_size": {
           "label": "Navigation Schriftgröße (px)",
@@ -491,14 +485,6 @@
       "label": "Blog & Artikel",
       "description": "Darstellung der Artikelliste und einzelner Posts.",
       "settings": {
-        "posts_per_page": {
-          "label": "Artikel pro Seite",
-          "type": "number",
-          "default": 12,
-          "min": 4,
-          "max": 50,
-          "description": "Anzahl der Artikel auf der Blog-Übersichtsseite"
-        },
         "show_hero_post": {
           "label": "Hero-Post anzeigen",
           "type": "checkbox",
@@ -548,25 +534,11 @@
           "default": "posts",
           "description": "posts = Beitragsübersicht (Blog), landing = Statische Landing Page"
         },
-        "homepage_posts_count": {
-          "label": "Anzahl Beiträge auf Startseite",
-          "type": "number",
-          "default": 10,
-          "min": 1,
-          "max": 50,
-          "description": "Wie viele Artikel direkt auf der Startseite angezeigt werden"
-        },
         "homepage_show_hero": {
           "label": "Hero-Artikel anzeigen",
           "type": "checkbox",
           "default": true,
           "description": "Den ersten/gefeatured Beitrag groß als Hero darstellen"
-        },
-        "homepage_hero_type": {
-          "label": "Hero-Artikel Quelle",
-          "type": "select",
-          "default": "latest",
-          "description": "latest = neuester Beitrag, sticky = angehefteter Beitrag"
         },
         "homepage_hero_title": {
           "label": "Hero Überschrift (optional)",

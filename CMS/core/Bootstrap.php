@@ -646,75 +646,71 @@ class Bootstrap
                 }
             };
 
-            $shouldLoadPhotoSwipe = static function () use ($isCurrentHubFrontendRequest): bool {
-                try {
-                    $enabled = Services\ThemeCustomizer::instance()->get('performance', 'enable_photoswipe', true);
-                    if (!filter_var($enabled, FILTER_VALIDATE_BOOLEAN)) {
-                        return false;
+            // Ergebnis je Request merken: head (CSS) und body_end (Script) fragen beide (Folgeaudit PERF-22).
+            $photoSwipeDecision = null;
+            $shouldLoadPhotoSwipe = static function () use ($isCurrentHubFrontendRequest, &$photoSwipeDecision): bool {
+                return $photoSwipeDecision ??= (static function () use ($isCurrentHubFrontendRequest): bool {
+                    try {
+                        $enabled = Services\ThemeCustomizer::instance()->get('performance', 'enable_photoswipe', true);
+                        if (!filter_var($enabled, FILTER_VALIDATE_BOOLEAN)) {
+                            return false;
+                        }
+                    } catch (\Throwable) {
                     }
-                } catch (\Throwable) {
-                }
 
-                $requestUri = (string) (strtok($_SERVER['REQUEST_URI'] ?? '/', '?') ?: '/');
-                $path = $requestUri;
+                    $requestUri = (string) (strtok($_SERVER['REQUEST_URI'] ?? '/', '?') ?: '/');
+                    $path = $requestUri;
 
-                try {
-                    $context = Services\ContentLocalizationService::getInstance()->resolveRequestContext($requestUri);
-                    $baseUri = (string) ($context['base_uri'] ?? $requestUri);
-                    if ($baseUri !== '') {
-                        $path = $baseUri;
+                    try {
+                        $context = Services\ContentLocalizationService::getInstance()->resolveRequestContext($requestUri);
+                        $baseUri = (string) ($context['base_uri'] ?? $requestUri);
+                        if ($baseUri !== '') {
+                            $path = $baseUri;
+                        }
+                    } catch (\Throwable) {
                     }
-                } catch (\Throwable) {
-                }
 
-                if ($isCurrentHubFrontendRequest()) {
-                    return true;
-                }
-
-                if (
-                    in_array($path, ['/', '/blog', '/search', '/404', '/error', '/login', '/register', '/cms-login', '/cms-register', '/cms-password-forgot'], true)
-                    || str_starts_with($path, '/member')
-                    || str_starts_with($path, '/dashboard')
-                    || \cms_is_archive_request_path($path, 'category')
-                    || \cms_is_archive_request_path($path, 'tag')
-                    || str_starts_with($path, '/author/')
-                    || $path === '/authors'
-                    || $path === '/autoren'
-                ) {
-                    if ($path !== '/') {
-                        return false;
-                    }
-                }
-
-                if ($path === '/') {
-                    return false;
-                }
-
-                try {
-                    $postSlug = Services\PermalinkService::getInstance()->extractPostSlugFromPath($path);
-                    if (is_string($postSlug) && trim($postSlug) !== '') {
+                    if ($isCurrentHubFrontendRequest()) {
                         return true;
                     }
-                } catch (\Throwable) {
-                }
 
-                if (preg_match('#^/blog/[^/]+$#', $path) === 1) {
-                    return true;
-                }
+                    if (
+                        in_array($path, ['/', '/blog', '/search', '/404', '/error', '/login', '/register', '/cms-login', '/cms-register', '/cms-password-forgot'], true)
+                        || str_starts_with($path, '/member')
+                        || str_starts_with($path, '/dashboard')
+                        || \cms_is_archive_request_path($path, 'category')
+                        || \cms_is_archive_request_path($path, 'tag')
+                        || str_starts_with($path, '/author/')
+                        || $path === '/authors'
+                        || $path === '/autoren'
+                    ) {
+                        if ($path !== '/') {
+                            return false;
+                        }
+                    }
 
-                $slug = trim($path, '/');
-                if ($slug !== '' && !str_contains($slug, '/')) {
+                    if ($path === '/') {
+                        return false;
+                    }
+
                     try {
-                        if (Services\SiteTableService::getInstance()->hubExistsBySlug($slug)) {
+                        $postSlug = Services\PermalinkService::getInstance()->extractPostSlugFromPath($path);
+                        if (is_string($postSlug) && trim($postSlug) !== '') {
                             return true;
                         }
                     } catch (\Throwable) {
                     }
 
-                    return true;
-                }
+                    if (preg_match('#^/blog/[^/]+$#', $path) === 1) {
+                        return true;
+                    }
 
-                return false;
+                    // Einstufige Pfade (Seiten und Hub-Sites) laden PhotoSwipe immer; die frühere
+                    // Hub-Abfrage änderte das Ergebnis nicht und entfällt.
+                    $slug = trim($path, '/');
+
+                    return $slug !== '' && !str_contains($slug, '/');
+                })();
             };
 
             Hooks::addAction('body_end', static function (): void {
