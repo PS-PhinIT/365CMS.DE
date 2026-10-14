@@ -113,10 +113,10 @@ class Security
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'" . $this->getExtraCspSources('script-src'),
             "style-src 'self' 'nonce-{$nonce}' https://fonts.googleapis.com",
-            "img-src 'self' data: blob:" . $this->getExtraCspSources('img-src'),
+            "img-src 'self' data: blob:" . $this->getSiteOriginCspSource() . $this->getExtraCspSources('img-src'),
             "font-src 'self' data: https://fonts.gstatic.com",
             "connect-src 'self'" . $this->getExtraCspSources('connect-src'),
-            "media-src 'self' data: blob:",
+            "media-src 'self' data: blob:" . $this->getSiteOriginCspSource(),
             "object-src 'none'",
             "frame-ancestors 'none'",
             "base-uri 'self'",
@@ -180,6 +180,27 @@ class Security
     public function getAllowedScriptOrigins(): array
     {
         return array_keys($this->extraCspSources['script-src'] ?? []);
+    }
+
+    /**
+     * Medien-URLs werden aus SITE_URL/UPLOAD_URL gebaut. Läuft der Request über einen anderen Host
+     * (www-Alias, Hub-Alias-Domain), deckt 'self' diese Bilder nicht ab – daher den SITE_URL-Origin ergänzen.
+     */
+    private function getSiteOriginCspSource(): string
+    {
+        $parts = parse_url(defined('SITE_URL') ? (string) SITE_URL : '');
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true) || preg_match('/^[a-z0-9.-]+$/', $host) !== 1) {
+            return '';
+        }
+
+        $requestHost = strtolower(trim(explode(':', (string) ($_SERVER['HTTP_HOST'] ?? ''), 2)[0], '.'));
+        if ($requestHost === $host) {
+            return '';
+        }
+
+        return ' ' . $scheme . '://' . $host . (isset($parts['port']) ? ':' . (int) $parts['port'] : '');
     }
 
     private function getExtraCspSources(string $directive): string

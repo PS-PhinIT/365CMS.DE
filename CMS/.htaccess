@@ -170,6 +170,8 @@ AddDefaultCharset UTF-8
     AddType font/woff .woff
     AddType font/ttf .ttf
     AddType font/otf .otf
+    AddType image/avif .avif
+    AddType image/webp .webp
 </IfModule>
 
 # Kompression – Brotli (bevorzugt) + Gzip/Deflate als Fallback (M-09)
@@ -222,6 +224,7 @@ AddDefaultCharset UTF-8
     ExpiresByType image/gif            "access plus 1 year"
     ExpiresByType image/png            "access plus 1 year"
     ExpiresByType image/webp           "access plus 1 year"
+    ExpiresByType image/avif           "access plus 1 year"
     ExpiresByType image/svg+xml        "access plus 1 month"
     ExpiresByType image/x-icon         "access plus 1 year"
     ExpiresByType text/css             "access plus 1 month"
@@ -247,7 +250,7 @@ AddDefaultCharset UTF-8
     Header always set Cross-Origin-Resource-Policy "cross-origin" env=CMS_FONT_REQUEST
 
     # Statische Bild-Assets – 1 Jahr, immutable (nie geändert ohne neuen Namen)
-    <FilesMatch "\.(jpg|jpeg|gif|png|webp|ico|svg)$">
+    <FilesMatch "\.(jpg|jpeg|gif|png|webp|avif|ico|svg)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
 

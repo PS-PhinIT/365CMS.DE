@@ -14,6 +14,16 @@
 
 ---
 
+### v3.4.23 — 14.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.4.23** | 🔴 fix | Router / Domains | Der reine `www`-Alias (bzw. die Variante ohne `www`) des Hosts aus `SITE_URL` liefert bei GET/HEAD eine 301-Weiterleitung auf den Canonical-Host. Bisher lief die Seite auf beiden Hosts mit HTTP 200; Medien-URLs zeigten auf `SITE_URL`, die CSP `img-src 'self'` blockierte sie, und Chrome zeigte auf `www.` keine Bilder. Als Hub-Domain konfigurierte `www`-Hosts sind ausgenommen. |
+| **3.4.23** | 🛡️ security | CSP | `img-src` und `media-src` enthalten den `SITE_URL`-Origin, wenn der Request über einen anderen Host läuft (z. B. Hub-Alias-Domains). Uploads und Bilder von der Hauptdomain werden dort nicht mehr blockiert. |
+| **3.4.23** | 🔴 fix | .htaccess | Für `.avif` und `.webp` sind die MIME-Typen explizit gesetzt, inklusive Expires- und Cache-Control-Regeln für AVIF. AVIF wurde zuvor als `text/plain` ausgeliefert und wegen `nosniff` vom Browser verworfen. |
+
+---
+
 ### v3.4.22 — 11.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

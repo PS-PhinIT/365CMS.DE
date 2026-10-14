@@ -171,6 +171,10 @@ class Router
             return;
         }
 
+        if ($this->maybeRedirectWwwAliasHost()) {
+            return;
+        }
+
         if ($this->maybeRedirectHubAliasDomain($routingUri)) {
             return;
         }
@@ -520,6 +524,49 @@ class Router
 
         $this->redirect($target, 301);
         return true;
+    }
+
+    /**
+     * Leitet den reinen www-Alias (bzw. die Variante ohne www) per 301 auf den Host aus SITE_URL um.
+     * Sonst lädt die Seite auf dem Alias-Host, während Medien-URLs auf SITE_URL zeigen (CSP/Cookies/Duplicate Content).
+     */
+    private function maybeRedirectWwwAliasHost(): bool
+    {
+        if (!in_array($this->requestMethod, ['GET', 'HEAD'], true) || PHP_SAPI === 'cli') {
+            return false;
+        }
+
+        $siteUrl = rtrim((string) SITE_URL, '/');
+        $requestHost = $this->normalizeHost((string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $mainHost = $this->normalizeHost((string) (parse_url($siteUrl, PHP_URL_HOST) ?? ''));
+        if ($requestHost === '' || $mainHost === '' || $requestHost === $mainHost) {
+            return false;
+        }
+
+        if ($requestHost !== 'www.' . $mainHost && 'www.' . $requestHost !== $mainHost) {
+            return false;
+        }
+
+        // Explizit als Hub-Domain konfigurierte www-Hosts nicht umleiten.
+        try {
+            if (Services\SiteTableService::getInstance()->getHubPageByDomain($requestHost, $this->getRequestLocale()) !== null) {
+                return false;
+            }
+        } catch (\Throwable) {
+        }
+
+        $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        if ($requestUri === '' || $requestUri[0] !== '/' || preg_match('/[\r\n]/', $requestUri) === 1) {
+            $requestUri = '/';
+        }
+
+        if (headers_sent()) {
+            return false;
+        }
+
+        http_response_code(301);
+        header('Location: ' . $siteUrl . $requestUri, true, 301);
+        exit;
     }
 
     private function maybeRedirectHubAliasDomain(string $routingUri): bool
