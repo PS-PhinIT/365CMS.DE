@@ -134,14 +134,22 @@ include __DIR__ . '/partials/header.php';
                                         <button type="submit" class="btn btn-primary">TOTP einrichten</button>
                                     </form>
                                 <?php else: ?>
-                                    <form method="post" action="">
+                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="Neue Backup-Codes erzeugen? Die bisherigen Codes werden ungültig.">
                                         <input type="hidden" name="action" value="backup_generate">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
+                                        <div>
+                                            <label class="form-label" for="backup_current_password">Aktuelles Passwort</label>
+                                            <input class="form-control" id="backup_current_password" name="current_password" type="password" autocomplete="current-password" required>
+                                        </div>
                                         <button type="submit" class="btn btn-outline-primary">Backup-Codes erneuern</button>
                                     </form>
-                                    <form method="post" action="">
+                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="Zwei-Faktor-Authentifizierung wirklich deaktivieren?">
                                         <input type="hidden" name="action" value="totp_disable">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
+                                        <div>
+                                            <label class="form-label" for="mfa_disable_current_password">Aktuelles Passwort</label>
+                                            <input class="form-control" id="mfa_disable_current_password" name="current_password" type="password" autocomplete="current-password" required>
+                                        </div>
                                         <button type="submit" class="btn btn-outline-danger">MFA deaktivieren</button>
                                     </form>
                                 <?php endif; ?>
@@ -171,11 +179,15 @@ include __DIR__ . '/partials/header.php';
                                 <input type="hidden" name="client_data_json" value="">
                                 <input type="hidden" name="attestation_object" value="">
                                 <div class="row g-3 align-items-end">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label" for="credential_name">Bezeichnung</label>
                                         <input class="form-control" id="credential_name" name="credential_name" type="text" value="Mein Gerät">
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="passkey_current_password">Aktuelles Passwort</label>
+                                        <input class="form-control" id="passkey_current_password" name="current_password" type="password" autocomplete="current-password" required>
+                                    </div>
+                                    <div class="col-md-4">
                                         <button type="button" class="btn btn-primary" data-passkey-register>Passkey registrieren</button>
                                     </div>
                                 </div>
@@ -211,7 +223,7 @@ include __DIR__ . '/partials/header.php';
                                             <td><?= htmlspecialchars($credentialName) ?></td>
                                             <td><?= htmlspecialchars($credentialCreatedAt) ?></td>
                                             <td>
-                                                <form method="post" action="">
+                                                <form method="post" action="" data-cms-confirm="Passkey wirklich entfernen?">
                                                     <input type="hidden" name="action" value="passkey_delete">
                                                     <input type="hidden" name="credential_id" value="<?= $credentialRecordId ?>">
                                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_passkey'), ENT_QUOTES) ?>">

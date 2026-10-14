@@ -450,6 +450,13 @@ final class PublicRouter
             return;
         }
 
+        $reauth = Auth::instance()->verifyCurrentPassword((int)$_SESSION['user_id'], (string)($_POST['current_password'] ?? ''));
+        if ($reauth !== true) {
+            $_SESSION['error'] = (string)$reauth;
+            $this->router->redirect('/member/security');
+            return;
+        }
+
         Auth::instance()->disableMfa((int)$_SESSION['user_id']);
         $_SESSION['success'] = '2FA wurde deaktiviert.';
         $this->router->redirect('/member/security');

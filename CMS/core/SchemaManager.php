@@ -71,6 +71,7 @@ class SchemaManager
                 user_id INT UNSIGNED NOT NULL,
                 meta_key VARCHAR(255) NOT NULL,
                 meta_value LONGTEXT,
+                UNIQUE KEY uq_user_meta (user_id, meta_key),
                 INDEX idx_user_id (user_id),
                 INDEX idx_meta_key (meta_key),
                 FOREIGN KEY (user_id) REFERENCES {$p}users(id) ON DELETE CASCADE
@@ -1083,6 +1084,41 @@ class SchemaManager
 
         $this->ensureOrdersRuntimeSchema();
         $this->ensureAuditLogRuntimeSchema();
+        $this->ensureUserMetaUniqueKey();
+    }
+
+    /**
+     * Neuinstallationen erhielten den UNIQUE-Key uq_user_meta nur über die v6-Migration,
+     * die der Installer überspringt. Ohne ihn legt jedes `ON DUPLICATE KEY UPDATE`
+     * (MFA-Secret, Backup-Codes, Profilfelder) eine weitere Zeile an, und Lesezugriffe
+     * mit `LIMIT 1` liefern einen beliebigen – oft veralteten – Wert.
+     */
+    private function ensureUserMetaUniqueKey(): void
+    {
+        $table = $this->prefix . 'user_meta';
+
+        try {
+            $stmt = $this->db->getPdo()->query("SHOW INDEX FROM {$table} WHERE Key_name = 'uq_user_meta'");
+            $exists = $stmt instanceof \PDOStatement && $stmt->fetch(\PDO::FETCH_ASSOC) !== false;
+            if ($stmt instanceof \PDOStatement) {
+                $stmt->closeCursor();
+            }
+            if ($exists) {
+                return;
+            }
+
+            // Dubletten entfernen; der jüngste Eintrag (höchste ID) bleibt erhalten.
+            $this->db->getPdo()->exec(
+                "DELETE older FROM {$table} older
+                 INNER JOIN {$table} newer
+                    ON newer.user_id = older.user_id
+                   AND newer.meta_key = older.meta_key
+                   AND newer.id > older.id"
+            );
+            $this->db->getPdo()->exec("ALTER TABLE {$table} ADD UNIQUE KEY uq_user_meta (user_id, meta_key)");
+        } catch (\Throwable $e) {
+            error_log('SchemaManager::ensureUserMetaUniqueKey() failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+        }
     }
 
     private function ensureAuditLogRuntimeSchema(): void

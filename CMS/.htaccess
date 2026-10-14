@@ -63,6 +63,12 @@ ErrorDocument 429 /index.php
     RewriteRule ^uploads/.*\.(?:php[0-9]?|phtml|phar|shtml|cgi|pl|py|sh|bash|ksh|zsh|asp|aspx|jsp|jspx|js[pm]|war)$ - [F,L,NC]
     RewriteRule ^uploads/(?:.*?/)?\. - [F,L,NC]
 
+    # Private Uploads: Mitglieder-Dateien werden ausschließlich über /media-file
+    # (MediaDeliveryService mit Besitzer-/Admin-Prüfung) ausgeliefert, Import-Quellen
+    # des WordPress-Importers nur serverseitig gelesen.
+    RewriteRule ^uploads/(?:member|import)(?:/|$) - [F,L,NC]
+    RewriteRule ^plugins/cms-importer/(?:reports|wp_import|wp_import_files)(?:/|$) - [F,L,NC]
+
     # Public uploads must remain directly reachable by URL (media library,
     # public downloads and FontManager self-hosted fonts/CSS). Executables and
     # hidden files are blocked above before this passthrough can match.

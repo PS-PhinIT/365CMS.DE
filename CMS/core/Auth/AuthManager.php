@@ -26,9 +26,19 @@ use CMS\Auth\MFA\BackupCodesManager;
 use CMS\Auth\Passkey\WebAuthnAdapter;
 use CMS\Auth\LDAP\LdapAuthProvider;
 use CMS\AuditLogger;
+use CMS\Database;
+use CMS\Security;
 
 final class AuthManager
 {
+    /** Gültigkeit einer ausstehenden Zwei-Faktor-Prüfung nach dem Passwort-Login (Sekunden). */
+    private const MFA_PENDING_TTL = 600;
+    /** Fehlversuche je Passwort-Login, danach muss das Passwort erneut eingegeben werden. */
+    private const MFA_MAX_ATTEMPTS_PER_LOGIN = 5;
+    /** Fehlversuche je IP im Zeitfenster MFA_IP_WINDOW. */
+    private const MFA_MAX_ATTEMPTS_PER_IP = 20;
+    private const MFA_IP_WINDOW = 900;
+
     private static ?self $instance = null;
 
     private Auth $sessionAuth;
@@ -202,6 +212,8 @@ final class AuthManager
         if ($this->sessionAuth->isMfaEnabled($userId)) {
             $_SESSION['mfa_pending_user_id'] = $userId;
             $_SESSION['mfa_pending_remember'] = '0';
+            $_SESSION['mfa_pending_since'] = time();
+            $_SESSION['mfa_failed_attempts'] = 0;
             return 'MFA_REQUIRED';
         }
 
@@ -235,14 +247,26 @@ final class AuthManager
             return 'Keine MFA-Verifizierung ausstehend.';
         }
 
-        // Zuerst TOTP prüfen
-        if ($this->totp()->verifyCode($userId, $code)) {
+        // Ausstehende Zwei-Faktor-Prüfung läuft nach 10 Minuten ab.
+        $pendingSince = (int)($_SESSION['mfa_pending_since'] ?? 0);
+        if ($pendingSince <= 0 || $pendingSince < time() - self::MFA_PENDING_TTL) {
+            $this->clearMfaPending();
+            return 'Die Zwei-Faktor-Prüfung ist abgelaufen. Bitte erneut anmelden.';
+        }
+
+        $clientIp = Security::getClientIp();
+        if (!Security::checkDbRateLimit($clientIp, 'mfa_verify', self::MFA_MAX_ATTEMPTS_PER_IP, self::MFA_IP_WINDOW)) {
+            return 'Zu viele Versuche. Bitte in einigen Minuten erneut versuchen.';
+        }
+
+        // Zuerst TOTP prüfen (ein bereits verwendeter Code wird nicht erneut akzeptiert)
+        if (preg_match('/^\d{6}$/', $code) === 1 && $this->totp()->verifyCode($userId, $code) && $this->claimTotpCode($userId, $code)) {
             $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
             if ($this->sessionAuth->completeLoginForUserId($userId, $remember)) {
                 return true;
             }
 
-            unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember']);
+            $this->clearMfaPending();
             return 'Anmeldung konnte nicht abgeschlossen werden.';
         }
 
@@ -250,7 +274,7 @@ final class AuthManager
         if ($this->backupCodes()->verify($userId, $code)) {
             $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
             if (!$this->sessionAuth->completeLoginForUserId($userId, $remember)) {
-                unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember']);
+                $this->clearMfaPending();
                 return 'Anmeldung konnte nicht abgeschlossen werden.';
             }
 
@@ -277,7 +301,56 @@ final class AuthManager
             'warning'
         );
 
+        Security::recordDbRateLimitAttempt($clientIp, 'mfa_verify', 'user:' . $userId);
+        $failedAttempts = (int)($_SESSION['mfa_failed_attempts'] ?? 0) + 1;
+        $_SESSION['mfa_failed_attempts'] = $failedAttempts;
+        if ($failedAttempts >= self::MFA_MAX_ATTEMPTS_PER_LOGIN) {
+            // Nach mehreren Fehlversuchen muss das Passwort erneut eingegeben werden
+            // (dort greift das Login-Rate-Limit).
+            $this->clearMfaPending();
+            return 'Zu viele ungültige Codes. Bitte erneut anmelden.';
+        }
+
         return 'Ungültiger Code.';
+    }
+
+    private function clearMfaPending(): void
+    {
+        unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember'], $_SESSION['mfa_pending_since'], $_SESSION['mfa_failed_attempts']);
+    }
+
+    /**
+     * Merkt sich einen akzeptierten TOTP-Code für die Dauer des Prüffensters (±1 Schritt),
+     * damit ein mitgelesener Code nicht erneut verwendet werden kann.
+     */
+    private function claimTotpCode(int $userId, string $code): bool
+    {
+        try {
+            $db = Database::instance();
+            $hash = hash_hmac('sha256', $userId . ':' . $code, defined('AUTH_KEY') ? (string)AUTH_KEY : 'cms-totp');
+            $stored = (string)($db->get_var(
+                "SELECT meta_value FROM {$db->getPrefix()}user_meta WHERE user_id = ? AND meta_key = 'mfa_last_totp' LIMIT 1",
+                [$userId]
+            ) ?? '');
+
+            if ($stored !== '' && str_contains($stored, '|')) {
+                [$storedHash, $storedAt] = explode('|', $stored, 2);
+                if (hash_equals($storedHash, $hash) && (int)$storedAt > time() - 120) {
+                    return false;
+                }
+            }
+
+            $db->execute(
+                "INSERT INTO {$db->getPrefix()}user_meta (user_id, meta_key, meta_value)
+                 VALUES (?, 'mfa_last_totp', ?)
+                 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)",
+                [$userId, $hash . '|' . time()]
+            );
+        } catch (\Throwable) {
+            // Ohne Speicher keine Replay-Sperre, Anmeldung aber nicht blockieren.
+        }
+
+        return true;
     }
 
     // ── Provider-Status ──────────────────────────────────────────────────────

@@ -88,7 +88,7 @@ include __DIR__ . '/partials/header.php';
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('privacy_action'), ENT_QUOTES) ?>">
                     <button type="submit" class="btn btn-outline-primary w-100">Meine Daten exportieren</button>
                 </form>
-                <form method="post" action="">
+                <form method="post" action="" data-cms-confirm="Löschung deines Kontos wirklich anfordern?">
                     <input type="hidden" name="action" value="privacy_delete_request">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('privacy_action'), ENT_QUOTES) ?>">
                     <button type="submit" class="btn btn-outline-danger w-100">Account-Löschung anfordern</button>

@@ -1,0 +1,10 @@
+# Import-Berichte enthalten Site- und Metadaten und werden nur über den
+# geschützten Admin-Download ausgeliefert.
+Options -Indexes
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order Allow,Deny
+    Deny from all
+</IfModule>

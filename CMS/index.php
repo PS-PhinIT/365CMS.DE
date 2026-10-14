@@ -86,7 +86,19 @@ $isAuthEntryPath = static function (): bool {
     return preg_match('#^/(?:[a-z]{2}(?:-[a-z]{2})?/)?(?:cms-login|login)$#i', $path) === 1;
 };
 
-$resolveConfiguredSessionGcLifetime = static function (): int {
+// Ergebnis wird 10 Minuten unter cache/ zwischengespeichert: Vorher öffnete jeder
+// Request hierfür eine zweite Datenbankverbindung (PerformanceModule löscht die
+// Datei beim Speichern der Sitzungs-Timeouts).
+$sessionGcLifetimeCacheFile = __DIR__ . '/cache/session_gc_lifetime.cache';
+$resolveConfiguredSessionGcLifetime = static function () use ($sessionGcLifetimeCacheFile): int {
+    $cachedMtime = @filemtime($sessionGcLifetimeCacheFile);
+    if ($cachedMtime !== false && $cachedMtime > time() - 600) {
+        $cachedValue = (int) @file_get_contents($sessionGcLifetimeCacheFile);
+        if ($cachedValue >= 300) {
+            return $cachedValue;
+        }
+    }
+
     $adminLifetime = 28_800;
     $memberLifetime = 2_592_000;
 
@@ -136,7 +148,13 @@ $resolveConfiguredSessionGcLifetime = static function (): int {
         return max($adminLifetime, $memberLifetime);
     }
 
-    return max(300, $adminLifetime, $memberLifetime);
+    $resolvedLifetime = max(300, $adminLifetime, $memberLifetime);
+    $cacheDir = dirname($sessionGcLifetimeCacheFile);
+    if (is_dir($cacheDir) || @mkdir($cacheDir, 0755, true)) {
+        @file_put_contents($sessionGcLifetimeCacheFile, (string) $resolvedLifetime, LOCK_EX);
+    }
+
+    return $resolvedLifetime;
 };
 
 $sessionGcMaxLifetime = $resolveConfiguredSessionGcLifetime();

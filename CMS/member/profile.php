@@ -71,6 +71,11 @@ include __DIR__ . '/partials/header.php';
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
+                    <div class="col-md-6">
+                        <label class="form-label" for="profile_current_password">Aktuelles Passwort</label>
+                        <input class="form-control" id="profile_current_password" name="current_password" type="password" autocomplete="current-password" aria-describedby="profile_current_password_hint">
+                        <div class="form-hint" id="profile_current_password_hint">Nur erforderlich, wenn du deine E-Mail-Adresse änderst.</div>
+                    </div>
                 </div>
             </div>
             <div class="card-footer text-end">
