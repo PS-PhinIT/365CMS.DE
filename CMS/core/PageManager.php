@@ -36,14 +36,13 @@ class PageManager
     {
         $this->db = Database::instance();
         $this->prefix = $this->db->getPrefix();
-        $this->ensureColumns();
-        $this->ensureRevisionColumns();
+        $this->db->runSchemaOnce('page_manager', __FILE__, fn (): bool => $this->ensureColumns() && $this->ensureRevisionColumns());
     }
 
     /**
      * Migrate: add hide_title column if missing (safe for existing installs)
      */
-    private function ensureColumns(): void
+    private function ensureColumns(): bool
     {
         try {
             $columns = [
@@ -71,13 +70,16 @@ class PageManager
             Logger::instance()->withChannel('pages')->warning('Page schema compatibility columns could not be ensured.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
 
     /**
      * Migrate: expand page revision snapshots for DE/EN compare views.
      */
-    private function ensureRevisionColumns(): void
+    private function ensureRevisionColumns(): bool
     {
         try {
             $this->db->query("CREATE TABLE IF NOT EXISTS {$this->prefix}page_revisions (
@@ -121,7 +123,10 @@ class PageManager
             Logger::instance()->withChannel('pages')->warning('Page revision compatibility columns could not be ensured.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
     
     /**

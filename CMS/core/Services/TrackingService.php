@@ -40,13 +40,13 @@ class TrackingService
     private function __construct()
     {
         $this->db = Database::instance();
-        $this->createTrackingTable();
+        $this->db->runSchemaOnce('tracking', __FILE__, fn (): bool => $this->createTrackingTable());
     }
     
     /**
      * Create tracking table if not exists
      */
-    private function createTrackingTable(): void
+    private function createTrackingTable(): bool
     {
         $sql = "CREATE TABLE IF NOT EXISTS {$this->db->getPrefix()}page_views (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -73,7 +73,10 @@ class TrackingService
             Logger::instance()->withChannel('tracking')->warning('Tracking table could not be created.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
     
     /**

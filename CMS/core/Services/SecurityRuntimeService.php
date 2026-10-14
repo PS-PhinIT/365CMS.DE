@@ -36,7 +36,9 @@ final class SecurityRuntimeService
         $this->db = Database::instance();
         $this->prefix = $this->db->getPrefix();
         try {
-            $this->ensureTables();
+            $this->db->runSchemaOnce('security_runtime', __FILE__, function (): void {
+                $this->ensureTables();
+            });
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('security.runtime')->warning('Firewall-Runtime-Tabellen konnten nicht vorbereitet werden.', [
                 'exception' => $e::class,

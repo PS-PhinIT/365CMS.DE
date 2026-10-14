@@ -45,10 +45,10 @@ final class CoreWebVitalsService
     {
         $this->db = Database::instance();
         $this->prefix = $this->db->getPrefix();
-        $this->createTable();
+        $this->db->runSchemaOnce('core_web_vitals', __FILE__, fn (): bool => $this->createTable());
     }
 
-    private function createTable(): void
+    private function createTable(): bool
     {
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}core_web_vitals (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -80,7 +80,10 @@ final class CoreWebVitalsService
             Logger::instance()->withChannel('web-vitals')->warning('Core Web Vitals table could not be created.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
 
     public function renderTrackingScript(): void

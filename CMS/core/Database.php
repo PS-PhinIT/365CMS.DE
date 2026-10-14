@@ -510,6 +510,49 @@ class Database implements DatabaseInterface
         ) ?? 0) > 0;
     }
 
+    /**
+     * Führt eine idempotente Schema-Prüfung (CREATE TABLE IF NOT EXISTS, fehlende
+     * Spalten) nur einmal je Codestand aus statt bei jedem Request.
+     *
+     * Die Flag-Datei unter cache/ enthält einen Hash der Quelldatei; ändert ein
+     * Update die Tabellendefinition, läuft die Prüfung einmal erneut. Wirft der
+     * Callback eine Exception oder liefert er `false`, wird kein Flag geschrieben
+     * und die Prüfung beim nächsten Request wiederholt.
+     */
+    public function runSchemaOnce(string $key, string $sourceFile, callable $callback): void
+    {
+        $key = preg_replace('/[^a-z0-9_]/', '', strtolower($key)) ?? '';
+        if ($key === '' || !defined('ABSPATH')) {
+            $callback();
+            return;
+        }
+
+        $hash = is_file($sourceFile) ? @hash_file('crc32b', $sourceFile) : false;
+        $revision = is_string($hash) && $hash !== '' ? $hash : 'unknown';
+        $cacheDir = ABSPATH . 'cache';
+        $flagFile = $cacheDir . '/db_runtime_' . $key . '_' . $this->prefix . $revision . '.flag';
+
+        if (is_file($flagFile)) {
+            return;
+        }
+
+        if ($callback() === false) {
+            return;
+        }
+
+        if (!is_dir($cacheDir) && !@mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) {
+            return;
+        }
+
+        foreach (glob($cacheDir . '/db_runtime_' . $key . '_' . $this->prefix . '*.flag') ?: [] as $staleFlag) {
+            if ($staleFlag !== $flagFile) {
+                @unlink($staleFlag);
+            }
+        }
+
+        @file_put_contents($flagFile, date('Y-m-d H:i:s'), LOCK_EX);
+    }
+
     private function sanitizeDiagnosticText(string $value, int $maxLength = 500): string
     {
         $value = $this->maskInlineSecrets($value);

@@ -54,7 +54,9 @@ final class RedirectService
     {
         $this->db = Database::instance();
         $this->prefix = $this->db->getPrefix();
-        $this->ensureTables();
+        $this->db->runSchemaOnce('redirect_service', __FILE__, function (): void {
+            $this->ensureTables();
+        });
     }
 
     public function ensureTables(): void

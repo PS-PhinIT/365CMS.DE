@@ -797,19 +797,73 @@ class SchemaManager
     }
 
     /**
-     * Löscht die Schema-Flag-Datei, damit createTables() bei einer Reparatur
-     * das vollständige Schema erneut durchläuft.
+     * Löscht die Schema-Flag-Datei und alle Laufzeit-Flags (db_runtime_*.flag),
+     * damit createTables() und die Laufzeit-Schemaprüfungen der Services bei einer
+     * Reparatur erneut durchlaufen.
      */
     public function clearFlag(): void
     {
-        $flagFile = $this->getFlagFile();
+        $flagFiles = array_merge([$this->getFlagFile()], glob(ABSPATH . 'cache/db_runtime_*.flag') ?: []);
+        foreach (array_unique($flagFiles) as $flagFile) {
+            if (!file_exists($flagFile)) {
+                continue;
+            }
 
-        if (!file_exists($flagFile)) {
+            if (!@unlink($flagFile) && file_exists($flagFile)) {
+                error_log('SchemaManager::clearFlag() konnte Flag-Datei nicht löschen: ' . $flagFile);
+            }
+        }
+    }
+
+    /**
+     * Flag-Datei für die Laufzeit-Schemaprüfung (ensureRuntimeSchema()).
+     *
+     * Der Dateiname enthält einen Hash dieser Datei: Ein Update mit geänderten
+     * Laufzeit-Spalten erzeugt einen neuen Namen und löst die Prüfung genau einmal aus.
+     */
+    public function getRuntimeFlagFile(): string
+    {
+        static $revision = null;
+        if ($revision === null) {
+            $hash = @hash_file('crc32b', __FILE__);
+            $revision = is_string($hash) && $hash !== '' ? $hash : 'unknown';
+        }
+
+        return ABSPATH . 'cache/db_runtime_schema_' . self::SCHEMA_VERSION . '_' . $revision . '.flag';
+    }
+
+    /**
+     * Führt ensureRuntimeSchema() nur aus, wenn die Laufzeit-Flag-Datei fehlt.
+     * Vorher liefen bei jedem Request 11 CREATE TABLE, 2 ALTER TABLE … MODIFY
+     * und rund 27 information_schema-Abfragen.
+     */
+    private function ensureRuntimeSchemaOnce(): void
+    {
+        $runtimeFlag = $this->getRuntimeFlagFile();
+        if (file_exists($runtimeFlag)) {
             return;
         }
 
-        if (!@unlink($flagFile) && file_exists($flagFile)) {
-            error_log('SchemaManager::clearFlag() konnte Flag-Datei nicht löschen: ' . $flagFile);
+        $this->ensureRuntimeSchema();
+        $this->markRuntimeSchemaDone();
+    }
+
+    private function markRuntimeSchemaDone(): void
+    {
+        $runtimeFlag = $this->getRuntimeFlagFile();
+        $cacheDir = dirname($runtimeFlag);
+        if (!is_dir($cacheDir) && !@mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) {
+            return;
+        }
+
+        foreach (glob($cacheDir . '/db_runtime_schema_*.flag') ?: [] as $staleFlag) {
+            if ($staleFlag !== $runtimeFlag) {
+                @unlink($staleFlag);
+            }
+        }
+
+        if (@file_put_contents($runtimeFlag, date('Y-m-d H:i:s'), LOCK_EX) === false) {
+            error_log('SchemaManager: Laufzeit-Flag-Datei konnte nicht geschrieben werden: ' . $runtimeFlag);
         }
     }
 
@@ -821,7 +875,7 @@ class SchemaManager
     {
         $flagFile = $this->getFlagFile();
         if (file_exists($flagFile)) {
-            $this->ensureRuntimeSchema();
+            $this->ensureRuntimeSchemaOnce();
             return;
         }
 
@@ -842,6 +896,7 @@ class SchemaManager
         (new MigrationManager($this->db))->run();
         $this->ensureContentColumns();
         $this->ensureRuntimeSchema();
+        $this->markRuntimeSchemaDone();
 
         // Standard-Admin anlegen falls noch kein Admin existiert
         $this->createDefaultAdmin();
