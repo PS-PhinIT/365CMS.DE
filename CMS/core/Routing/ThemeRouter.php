@@ -1944,47 +1944,8 @@ final class ThemeRouter
 
     private function buildPostLocaleAvailabilityExpression(string $alias, string $locale): string
     {
-        $localization = Services\ContentLocalizationService::getInstance();
-        $locale = $localization->normalizeLocale($locale);
-        $baseContent = $this->buildBasePostContentExpression($alias);
-        $englishLegacyOnly = $this->buildLegacyEnglishOnlyPostExpression($alias);
-
-        if ($locale === '' || $locale === 'de') {
-            return "{$baseContent} AND NOT {$englishLegacyOnly}";
-        }
-
-        if (!in_array($locale, $localization->getContentLocales(), true)) {
-            return '1=1';
-        }
-
-        $localizedContent = $this->buildLocalizedPostContentExpression($alias, $locale);
-
-        if ($locale === 'en') {
-            return "({$localizedContent} OR {$englishLegacyOnly})";
-        }
-
-        return $localizedContent;
-    }
-
-    private function buildBasePostContentExpression(string $alias): string
-    {
-        return "(CHAR_LENGTH(TRIM(COALESCE({$alias}.content, ''))) > 0"
-            . " OR CHAR_LENGTH(TRIM(COALESCE({$alias}.excerpt, ''))) > 0"
-            . " OR CHAR_LENGTH(TRIM(COALESCE({$alias}.title, ''))) > 0)";
-    }
-
-    private function buildLocalizedPostContentExpression(string $alias, string $locale): string
-    {
-        return "(CHAR_LENGTH(TRIM(COALESCE({$alias}.content_{$locale}, ''))) > 0"
-            . " OR CHAR_LENGTH(TRIM(COALESCE({$alias}.excerpt_{$locale}, ''))) > 0"
-            . " OR CHAR_LENGTH(TRIM(COALESCE({$alias}.title_{$locale}, ''))) > 0)";
-    }
-
-    private function buildLegacyEnglishOnlyPostExpression(string $alias): string
-    {
-        $englishContent = $this->buildLocalizedPostContentExpression($alias, 'en');
-
-        return "(CHAR_LENGTH(TRIM(COALESCE({$alias}.slug_en, ''))) > 0 AND NOT {$englishContent})";
+        // Gespeicherte Spalten has_locale_* statt CHAR_LENGTH(TRIM(content)) je Zeile (Folgeaudit PERF-12/OFFEN-14).
+        return Services\ContentLocalizationService::getInstance()->buildPostAvailabilitySql($alias, $locale);
     }
 }
 }

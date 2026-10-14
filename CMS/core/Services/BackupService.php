@@ -283,8 +283,14 @@ class BackupService
 
             $dataStmt = $this->db->query("SELECT * FROM {$quotedTable}");
             $wroteRows = false;
+            // Generierte Spalten (z. B. posts.has_locale_*) berechnet die Datenbank selbst;
+            // Werte dafür lehnt MySQL beim Restore ab.
+            $generatedColumns = array_flip($this->getGeneratedColumns($table));
 
             while ($row = $dataStmt->fetch(\PDO::FETCH_ASSOC)) {
+                if ($generatedColumns !== []) {
+                    $row = array_diff_key($row, $generatedColumns);
+                }
                 $columns = implode(', ', array_map(fn (string $column): string => $this->quoteSqlIdentifier($column), array_keys($row)));
                 $values = array_map(fn ($value) => $this->createSqlValueLiteral($value), array_values($row));
                 $writer("INSERT INTO {$quotedTable} ({$columns}) VALUES (" . implode(', ', $values) . ");\n");
@@ -297,6 +303,27 @@ class BackupService
         }
 
         $writer("SET FOREIGN_KEY_CHECKS=1;\n");
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getGeneratedColumns(string $table): array
+    {
+        try {
+            $rows = $this->db->get_results(
+                "SELECT COLUMN_NAME AS column_name
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = ?
+                   AND (EXTRA LIKE '%GENERATED%' OR EXTRA LIKE '%PERSISTENT%' OR EXTRA LIKE '%VIRTUAL%')",
+                [$table]
+            ) ?: [];
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return array_values(array_map(static fn (object $row): string => (string) $row->column_name, $rows));
     }
 
     private function createSqlValueLiteral(mixed $value): string

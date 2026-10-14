@@ -71,6 +71,76 @@ final class ContentLocalizationService
         return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $locale) === 1 ? $locale : '';
     }
 
+    /** Option, die SchemaManager setzt, sobald die generierten Spalten `posts.has_locale_de/_en` existieren. */
+    public const POST_LOCALE_COLUMNS_OPTION = 'posts_locale_columns';
+
+    /**
+     * SQL-Bedingung „Beitrag ist in dieser Sprache verfügbar“ für Listen-, Archiv- und Tag-Abfragen.
+     *
+     * Für `de` und `en` nutzt sie die gespeicherten, indizierten Spalten `has_locale_de`/`has_locale_en`
+     * (siehe SchemaManager::ensurePostLocaleColumns()); ohne diese Spalten fällt sie auf den
+     * gleichwertigen Ausdruck über die Inhaltsspalten zurück.
+     */
+    public function buildPostAvailabilitySql(string $alias, string $locale): string
+    {
+        $locale = $this->normalizeLocale($locale);
+        if ($locale === '') {
+            $locale = 'de';
+        }
+
+        if ($locale !== 'de' && !in_array($locale, $this->getContentLocales(), true)) {
+            return '1=1';
+        }
+
+        if (($locale === 'de' || $locale === 'en') && $this->hasPostLocaleColumns()) {
+            return self::columnPrefix($alias) . 'has_locale_' . $locale . ' = 1';
+        }
+
+        return self::postLocaleAvailabilityExpression($locale, $alias);
+    }
+
+    /**
+     * Ausdruck über die Inhaltsspalten; dient als Definition der generierten Spalten und als Fallback.
+     *
+     * - `de`: deutscher Inhalt vorhanden und kein reiner Alt-Beitrag mit nur englischem Slug
+     * - `en`: englischer Inhalt vorhanden oder englischer Slug gesetzt
+     * - andere Sprachen: Inhalt in `*_{locale}` vorhanden
+     */
+    public static function postLocaleAvailabilityExpression(string $locale, string $alias = ''): string
+    {
+        $p = self::columnPrefix($alias);
+        $filled = static fn (string $column): string => "CHAR_LENGTH(TRIM(COALESCE({$p}{$column}, ''))) > 0";
+        $content = static fn (string $suffix): string => '(' . $filled('content' . $suffix)
+            . ' OR ' . $filled('excerpt' . $suffix)
+            . ' OR ' . $filled('title' . $suffix) . ')';
+
+        if ($locale === '' || $locale === 'de') {
+            return '(' . $content('') . ' AND NOT (' . $filled('slug_en') . ' AND NOT ' . $content('_en') . '))';
+        }
+
+        if ($locale === 'en') {
+            return '(' . $content('_en') . ' OR ' . $filled('slug_en') . ')';
+        }
+
+        return $content('_' . $locale);
+    }
+
+    private function hasPostLocaleColumns(): bool
+    {
+        try {
+            return OptionStore::getInstance()->get(self::POST_LOCALE_COLUMNS_OPTION) === '1';
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private static function columnPrefix(string $alias): string
+    {
+        $alias = trim($alias);
+
+        return $alias !== '' ? rtrim($alias, '.') . '.' : '';
+    }
+
     public function getAlternateLocale(string $currentLocale): string
     {
         $currentLocale = $this->normalizeLocale($currentLocale);

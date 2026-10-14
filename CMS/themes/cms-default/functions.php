@@ -1694,6 +1694,12 @@ function meridian_post_locale_availability_expression(string $alias = 'p', ?stri
     try {
         $localization = \CMS\Services\ContentLocalizationService::getInstance();
         $resolvedLocale = $localization->normalizeLocale($locale ?? meridian_current_request_locale());
+
+        // Core ab 3.5.0: indizierte Spalten has_locale_* (mit gleichwertigem Fallback).
+        if (method_exists($localization, 'buildPostAvailabilitySql')) {
+            return $localization->buildPostAvailabilitySql($alias, $resolvedLocale);
+        }
+
         $baseContent = meridian_build_base_post_content_expression($alias);
         $englishLegacyOnly = meridian_build_legacy_english_only_post_expression($alias);
 
