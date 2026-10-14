@@ -124,9 +124,13 @@ final class TranslationService
         $available = $this->getAvailableLocales();
 
         try {
-            $value = (string) (OptionStore::getInstance()->get('setting_language') ?? '');
-            if ($value !== '' && in_array($value, $available, true)) {
-                return $value;
+            // `language` schreibt Einstellungen → Allgemein; `setting_language` ist ein Altschlüssel.
+            $options = OptionStore::getInstance();
+            foreach (['language', 'setting_language'] as $optionName) {
+                $value = (string) ($options->get($optionName) ?? '');
+                if ($value !== '' && in_array($value, $available, true)) {
+                    return $value;
+                }
             }
         } catch (\Throwable) {
             // Fallback zu Default

@@ -1198,16 +1198,10 @@ class PluginMarketplaceModule
 
     private function upsertSetting(string $key, string $value): void
     {
-        $updated = $this->db->execute(
-            "UPDATE {$this->prefix}settings SET option_value = ? WHERE option_name = ?",
-            [$value, $key]
+        $this->db->execute(
+            "INSERT INTO {$this->prefix}settings (option_name, option_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
+            [$key, $value]
         );
-
-        if ($updated === 0) {
-            $this->db->execute(
-                "INSERT INTO {$this->prefix}settings (option_name, option_value) VALUES (?, ?)",
-                [$key, $value]
-            );
-        }
     }
 }

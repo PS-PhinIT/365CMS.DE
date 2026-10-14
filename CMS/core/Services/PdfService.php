@@ -306,7 +306,7 @@ final class PdfService
                 $purifier = PurifierService::getInstance();
                 // Nur Body-Content sanitieren, nicht das gesamte Dokument
                 if (preg_match('/<body[^>]*>(.*)<\/body>/si', $html, $matches)) {
-                    $cleanBody = $purifier->sanitize($matches[1]);
+                    $cleanBody = $purifier->purify($matches[1], 'hub');
                     return str_replace($matches[1], $cleanBody, $html);
                 }
             } catch (\Throwable) {

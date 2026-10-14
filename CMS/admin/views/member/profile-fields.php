@@ -112,11 +112,11 @@ $currentIncompleteSamples = is_array($profileFieldCompatibility['current_incompl
                                         <div class="card card-sm h-100">
                                             <div class="card-body">
                                                 <div class="form-check mb-2">
-                                                    <input type="checkbox" class="form-check-input" name="profile_fields[<?php echo htmlspecialchars((string)$key); ?>]" value="1" data-profile-field-checkbox data-profile-field-key="<?php echo htmlspecialchars((string)$key, ENT_QUOTES); ?>" <?php echo in_array($key, $selectedProfileFields, true) ? 'checked' : ''; ?> <?php echo $isLockedRequired ? 'checked disabled' : ''; ?>>
+                                                    <input type="checkbox" class="form-check-input" id="profileField-<?php echo htmlspecialchars((string)$key, ENT_QUOTES); ?>" name="profile_fields[<?php echo htmlspecialchars((string)$key); ?>]" value="1" data-profile-field-checkbox data-profile-field-key="<?php echo htmlspecialchars((string)$key, ENT_QUOTES); ?>" <?php echo in_array($key, $selectedProfileFields, true) ? 'checked' : ''; ?> <?php echo $isLockedRequired ? 'checked disabled' : ''; ?>>
                                                     <?php if ($isLockedRequired): ?>
                                                         <input type="hidden" name="profile_fields[<?php echo htmlspecialchars((string)$key); ?>]" value="1">
                                                     <?php endif; ?>
-                                                    <span class="form-check-label fw-semibold"><?php echo htmlspecialchars((string)($field['label'] ?? $key)); ?></span>
+                                                    <label class="form-check-label fw-semibold" for="profileField-<?php echo htmlspecialchars((string)$key, ENT_QUOTES); ?>"><?php echo htmlspecialchars((string)($field['label'] ?? $key)); ?></label>
                                                 </div>
                                                 <div class="text-muted small mb-2"><?php echo htmlspecialchars((string)($field['description'] ?? '')); ?></div>
                                                 <label class="form-check form-switch mb-0">

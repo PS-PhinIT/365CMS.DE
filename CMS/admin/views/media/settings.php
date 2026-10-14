@@ -182,11 +182,11 @@ $s = is_array($settings) ? $settings : [];
                                     }
                                 ?>
                                     <div class="col-sm-6 col-md-3 mb-3">
-                                        <label class="form-label fw-bold"><?php echo htmlspecialchars($label); ?></label>
+                                        <label class="form-label fw-bold" for="thumb-size-<?php echo htmlspecialchars($wKey, ENT_QUOTES); ?>"><?php echo htmlspecialchars($label); ?></label>
                                         <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" name="<?php echo htmlspecialchars($wKey, ENT_QUOTES); ?>" value="<?php echo (int)($s[$wKey] ?? 0); ?>" min="<?php echo (int)($constraints['thumbnail_min'] ?? 50); ?>" max="<?php echo (int)($constraints['thumbnail_max'] ?? 6000); ?>" inputmode="numeric" placeholder="B">
+                                            <input type="number" class="form-control" id="thumb-size-<?php echo htmlspecialchars($wKey, ENT_QUOTES); ?>" aria-label="<?php echo htmlspecialchars($label . ' – Breite', ENT_QUOTES); ?>" name="<?php echo htmlspecialchars($wKey, ENT_QUOTES); ?>" value="<?php echo (int)($s[$wKey] ?? 0); ?>" min="<?php echo (int)($constraints['thumbnail_min'] ?? 50); ?>" max="<?php echo (int)($constraints['thumbnail_max'] ?? 6000); ?>" inputmode="numeric" placeholder="B">
                                             <span class="input-group-text">×</span>
-                                            <input type="number" class="form-control" name="<?php echo htmlspecialchars($hKey, ENT_QUOTES); ?>" value="<?php echo (int)($s[$hKey] ?? 0); ?>" min="<?php echo (int)($constraints['thumbnail_min'] ?? 50); ?>" max="<?php echo (int)($constraints['thumbnail_max'] ?? 6000); ?>" inputmode="numeric" placeholder="H">
+                                            <input type="number" class="form-control" aria-label="<?php echo htmlspecialchars($label . ' – Höhe', ENT_QUOTES); ?>" name="<?php echo htmlspecialchars($hKey, ENT_QUOTES); ?>" value="<?php echo (int)($s[$hKey] ?? 0); ?>" min="<?php echo (int)($constraints['thumbnail_min'] ?? 50); ?>" max="<?php echo (int)($constraints['thumbnail_max'] ?? 6000); ?>" inputmode="numeric" placeholder="H">
                                         </div>
                                     </div>
                                 <?php endforeach; ?>

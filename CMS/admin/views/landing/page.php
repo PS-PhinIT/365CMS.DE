@@ -174,8 +174,8 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                             <input type="hidden" name="active_tab" value="content">
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Titel</label>
-                                    <input type="text" name="title" class="form-control" required>
+                                    <label for="landing-feature-title" class="form-label">Titel</label>
+                                    <input id="landing-feature-title" type="text" name="title" class="form-control" required>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="fld-icon" class="form-label">Icon (CSS-Klasse)</label>
@@ -187,8 +187,8 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Beschreibung</label>
-                                <textarea name="description" class="form-control" rows="2"></textarea>
+                                <label for="landing-feature-description" class="form-label">Beschreibung</label>
+                                <textarea id="landing-feature-description" name="description" class="form-control" rows="2"></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm">Feature hinzufügen</button>
                         </form>

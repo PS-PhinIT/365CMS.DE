@@ -128,7 +128,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                         <option value="set_category">Kategorie setzen</option>
                         <option value="clear_category">Kategorie entfernen</option>
                     </select>
-                    <select name="bulk_category_id" id="bulkCategoryPages" class="form-select form-select-sm w-auto d-none">
+                    <select name="bulk_category_id" id="bulkCategoryPages" aria-label="Kategorie für ausgewählte Seiten wählen" class="form-select form-select-sm w-auto d-none">
                         <option value="0">Kategorie wählen…</option>
                         <?php foreach ($categories as $category): ?>
                             <option value="<?= (int)($category['id'] ?? 0) ?>"><?= htmlspecialchars((string)($category['option_label'] ?? $category['name'] ?? '')) ?></option>
@@ -226,7 +226,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                                 data-sort-status="<?= htmlspecialchars(strtolower((string)$pageStatusLabel), ENT_QUOTES, 'UTF-8') ?>"
                                 data-sort-updated="<?= (int)$pageUpdatedSort ?>">
                                 <td>
-                                    <input class="form-check-input" type="checkbox" name="ids[]" value="<?= $pageId ?>" form="bulkFormPages">
+                                    <input class="form-check-input" type="checkbox" name="ids[]" value="<?= $pageId ?>" form="bulkFormPages" aria-label="Seite #<?= $pageId ?> auswählen">
                                 </td>
                                 <td class="content-listing-table__title-cell">
                                     <a href="<?= $pagesAdminBaseUrl ?>?action=edit&id=<?= $pageId ?>" class="text-reset fw-medium">

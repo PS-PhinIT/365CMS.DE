@@ -121,7 +121,7 @@ $renderInlineToggleList = static function (array $items, string $emptyLabel, int
                 <div class="content-listing-toolbar__label">Filter &amp; Suche</div>
                 <div class="content-listing-filters">
                     <div class="content-listing-filters__group">
-                        <select class="form-select form-select-sm js-users-filter-role" data-users-base-url="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>">
+                        <select class="form-select form-select-sm js-users-filter-role" aria-label="Nach Rolle filtern" data-users-base-url="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>">
                             <option value="">Alle Rollen</option>
                             <?php foreach ($availableRoles as $role => $label): ?>
                                 <option value="<?php echo htmlspecialchars((string)$role); ?>" <?php if (($filter['role'] ?? '') === $role) echo 'selected'; ?>><?php echo htmlspecialchars((string)$label); ?></option>
@@ -129,7 +129,7 @@ $renderInlineToggleList = static function (array $items, string $emptyLabel, int
                         </select>
                     </div>
                     <div class="content-listing-filters__group">
-                        <select class="form-select form-select-sm js-users-filter-status" data-users-base-url="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>">
+                        <select class="form-select form-select-sm js-users-filter-status" aria-label="Nach Status filtern" data-users-base-url="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>">
                             <option value="">Alle Status</option>
                             <?php foreach ($availableStatuses as $status => $label): ?>
                                 <option value="<?php echo htmlspecialchars((string)$status); ?>" <?php if (($filter['status'] ?? '') === $status) echo 'selected'; ?>><?php echo htmlspecialchars((string)$label); ?></option>
@@ -140,7 +140,7 @@ $renderInlineToggleList = static function (array $items, string $emptyLabel, int
                         <form method="get" action="<?php echo htmlspecialchars($usersAdminPath); ?>" class="d-flex gap-2 js-users-search-form" data-users-base-url="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>">
                             <input type="hidden" name="role" value="<?php echo htmlspecialchars($filter['role']); ?>">
                             <input type="hidden" name="status" value="<?php echo htmlspecialchars($filter['status']); ?>">
-                            <input type="text" class="form-control form-control-sm js-users-search-input" name="q" value="<?php echo htmlspecialchars($filter['search']); ?>" placeholder="Suchen…">
+                            <input type="text" class="form-control form-control-sm js-users-search-input" name="q" aria-label="Benutzer suchen" value="<?php echo htmlspecialchars($filter['search']); ?>" placeholder="Suchen…">
                             <button type="submit" class="btn btn-sm btn-outline-secondary">Suchen</button>
                         </form>
                     </div>

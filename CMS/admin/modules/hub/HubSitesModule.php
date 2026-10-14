@@ -503,7 +503,7 @@ class HubSitesModule
         $site['table_name'] = (string) ($formValues['site_name'] ?? ($site['table_name'] ?? ''));
         $site['description'] = (string) ($formValues['description'] ?? ($site['description'] ?? ''));
 
-        $cards = \CMS\Json::decodeArray($formValues['cards_json'] ?? null, null);
+        $cards = \CMS\Json::decode($formValues['cards_json'] ?? null, true, null);
         if (is_array($cards)) {
             $site['cards'] = $cards;
         }
@@ -911,17 +911,6 @@ class HubSitesModule
             $context,
             'error'
         );
-    }
-
-    private function getExistingHubSettings(int $id): array
-    {
-        $row = $this->db->get_row("SELECT settings_json FROM {$this->prefix}site_tables WHERE id = ? LIMIT 1", [$id]);
-        if (!$row || empty($row->settings_json)) {
-            return self::DEFAULT_SETTINGS;
-        }
-
-        $decoded = \CMS\Json::decodeArray($row->settings_json ?? null, []);
-        return array_merge(self::DEFAULT_SETTINGS, is_array($decoded) ? $decoded : []);
     }
 
     /**

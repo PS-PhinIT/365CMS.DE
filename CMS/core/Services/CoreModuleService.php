@@ -469,16 +469,6 @@ final class CoreModuleService
         return !array_key_exists('toggleable', $definition) || !empty($definition['toggleable']);
     }
 
-    /** @return array<string, array<string, mixed>> */
-    private function getSortedDefinitions(): array
-    {
-        $definitions = self::MODULES;
-        uasort($definitions, static function (array $left, array $right): int {
-            return ((int) ($left['order'] ?? 999)) <=> ((int) ($right['order'] ?? 999));
-        });
-
-        return $definitions;
-    }
 
     /** @param array<string, mixed> $definition */
     private function buildAdminModulePayload(string $slug, array $definition): array

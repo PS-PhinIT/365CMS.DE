@@ -88,16 +88,16 @@ $cookieManagerConfig = [
 
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Position</label>
-                                    <select name="cookie_banner_position" class="form-select">
+                                    <label for="fld-cookie_banner_position" class="form-label">Position</label>
+                                    <select id="fld-cookie_banner_position" name="cookie_banner_position" class="form-select">
                                         <?php foreach (['bottom' => 'Unten', 'top' => 'Oben', 'center' => 'Zentriert (Modal)'] as $v => $l): ?>
                                             <option value="<?php echo $v; ?>" <?php echo ($settings['cookie_banner_position'] ?? 'bottom') === $v ? 'selected' : ''; ?>><?php echo $l; ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Stil</label>
-                                    <select name="cookie_banner_style" class="form-select">
+                                    <label for="fld-cookie_banner_style" class="form-label">Stil</label>
+                                    <select id="fld-cookie_banner_style" name="cookie_banner_style" class="form-select">
                                         <?php foreach (['dark' => 'Dunkel', 'light' => 'Hell', 'custom' => 'Benutzerdefiniert'] as $v => $l): ?>
                                             <option value="<?php echo $v; ?>" <?php echo ($settings['cookie_banner_style'] ?? 'dark') === $v ? 'selected' : ''; ?>><?php echo $l; ?></option>
                                         <?php endforeach; ?>
@@ -109,28 +109,28 @@ $cookieManagerConfig = [
                                     <input type="color" id="cookie-primary-color" name="cookie_primary_color" class="form-control form-control-color" value="<?php echo htmlspecialchars($cookiePrimaryColor); ?>">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Akzeptieren-Button</label>
-                                    <input type="text" name="cookie_accept_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_accept_text'] ?? 'Akzeptieren'); ?>">
+                                    <label for="fld-cookie_accept_text" class="form-label">Akzeptieren-Button</label>
+                                    <input id="fld-cookie_accept_text" type="text" name="cookie_accept_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_accept_text'] ?? 'Akzeptieren'); ?>">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Ablehnen-Button</label>
-                                    <input type="text" name="cookie_reject_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_reject_text'] ?? 'Ablehnen'); ?>">
+                                    <label for="fld-cookie_reject_text" class="form-label">Ablehnen-Button</label>
+                                    <input id="fld-cookie_reject_text" type="text" name="cookie_reject_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_reject_text'] ?? 'Ablehnen'); ?>">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Nur Essenzielle-Button</label>
-                                    <input type="text" name="cookie_essential_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_essential_text'] ?? 'Nur Essenzielle'); ?>">
+                                    <label for="fld-cookie_essential_text" class="form-label">Nur Essenzielle-Button</label>
+                                    <input id="fld-cookie_essential_text" type="text" name="cookie_essential_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_essential_text'] ?? 'Nur Essenzielle'); ?>">
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label">Datenschutz-URL</label>
-                                    <input type="text" name="cookie_policy_url" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_policy_url'] ?? '/datenschutz'); ?>">
+                                    <label for="fld-cookie_policy_url" class="form-label">Datenschutz-URL</label>
+                                    <input id="fld-cookie_policy_url" type="text" name="cookie_policy_url" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_policy_url'] ?? '/datenschutz'); ?>">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Cookie-Laufzeit (Tage)</label>
-                                    <input type="number" name="cookie_lifetime_days" class="form-control" min="1" max="365" value="<?php echo (int)($settings['cookie_lifetime_days'] ?: 30); ?>">
+                                    <label for="fld-cookie_lifetime_days" class="form-label">Cookie-Laufzeit (Tage)</label>
+                                    <input id="fld-cookie_lifetime_days" type="number" name="cookie_lifetime_days" class="form-control" min="1" max="365" value="<?php echo (int)($settings['cookie_lifetime_days'] ?: 30); ?>">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Banner-Text</label>
-                                    <textarea name="cookie_banner_text" class="form-control" rows="3"><?php echo htmlspecialchars($settings['cookie_banner_text'] ?? ''); ?></textarea>
+                                    <label for="fld-cookie_banner_text" class="form-label">Banner-Text</label>
+                                    <textarea id="fld-cookie_banner_text" name="cookie_banner_text" class="form-control" rows="3"><?php echo htmlspecialchars($settings['cookie_banner_text'] ?? ''); ?></textarea>
                                 </div>
                                 <div class="col-12">
                                     <div class="alert alert-info mb-0">
@@ -167,16 +167,16 @@ $cookieManagerConfig = [
                                     </div>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label">Matomo-URL</label>
-                                    <input type="url" name="cookie_matomo_self_hosted_url" class="form-control" placeholder="https://analytics.deine-domain.de/" value="<?php echo htmlspecialchars($settings['cookie_matomo_self_hosted_url'] ?? ''); ?>">
+                                    <label for="fld-cookie_matomo_self_hosted_url" class="form-label">Matomo-URL</label>
+                                    <input id="fld-cookie_matomo_self_hosted_url" type="url" name="cookie_matomo_self_hosted_url" class="form-control" placeholder="https://analytics.deine-domain.de/" value="<?php echo htmlspecialchars($settings['cookie_matomo_self_hosted_url'] ?? ''); ?>">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Site-ID</label>
-                                    <input type="text" name="cookie_matomo_site_id" class="form-control" placeholder="z. B. 1" value="<?php echo htmlspecialchars(($settings['cookie_matomo_site_id'] ?? '') !== '' ? $settings['cookie_matomo_site_id'] : '1'); ?>">
+                                    <label for="fld-cookie_matomo_site_id" class="form-label">Site-ID</label>
+                                    <input id="fld-cookie_matomo_site_id" type="text" name="cookie_matomo_site_id" class="form-control" placeholder="z. B. 1" value="<?php echo htmlspecialchars(($settings['cookie_matomo_site_id'] ?? '') !== '' ? $settings['cookie_matomo_site_id'] : '1'); ?>">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Hosting-Region</label>
-                                    <input type="text" name="cookie_matomo_hosting_region" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_matomo_hosting_region'] ?? 'Deutschland / EU'); ?>">
+                                    <label for="fld-cookie_matomo_hosting_region" class="form-label">Hosting-Region</label>
+                                    <input id="fld-cookie_matomo_hosting_region" type="text" name="cookie_matomo_hosting_region" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_matomo_hosting_region'] ?? 'Deutschland / EU'); ?>">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-check form-switch mt-4">
@@ -197,8 +197,8 @@ $cookieManagerConfig = [
                                     </label>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Log-Löschung / Aufbewahrung (Tage)</label>
-                                    <input type="number" name="cookie_matomo_log_retention_days" class="form-control" min="1" max="3650" value="<?php echo (int)(($settings['cookie_matomo_log_retention_days'] ?? '') !== '' ? $settings['cookie_matomo_log_retention_days'] : 180); ?>">
+                                    <label for="fld-cookie_matomo_log_retention_days" class="form-label">Log-Löschung / Aufbewahrung (Tage)</label>
+                                    <input id="fld-cookie_matomo_log_retention_days" type="number" name="cookie_matomo_log_retention_days" class="form-control" min="1" max="3650" value="<?php echo (int)(($settings['cookie_matomo_log_retention_days'] ?? '') !== '' ? $settings['cookie_matomo_log_retention_days'] : 180); ?>">
                                     <div class="form-hint">Beispiel: 180 für 6 Monate oder 365 für 1 Jahr.</div>
                                 </div>
                                 <div class="col-md-6">
@@ -219,8 +219,8 @@ $cookieManagerConfig = [
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Zusätzlicher DSGVO-Hinweis</label>
-                                    <textarea name="cookie_matomo_dsgvo_note" class="form-control" rows="4" placeholder="Optionaler Hinweis für Besucher, z. B. zur Auftragsverarbeitung oder internen Richtlinien."><?php echo htmlspecialchars($settings['cookie_matomo_dsgvo_note'] ?? ''); ?></textarea>
+                                    <label for="fld-cookie_matomo_dsgvo_note" class="form-label">Zusätzlicher DSGVO-Hinweis</label>
+                                    <textarea id="fld-cookie_matomo_dsgvo_note" name="cookie_matomo_dsgvo_note" class="form-control" rows="4" placeholder="Optionaler Hinweis für Besucher, z. B. zur Auftragsverarbeitung oder internen Richtlinien."><?php echo htmlspecialchars($settings['cookie_matomo_dsgvo_note'] ?? ''); ?></textarea>
                                 </div>
                             </div>
 
@@ -366,7 +366,7 @@ $cookieManagerConfig = [
                                         <td><?php echo (int)$cat['is_active'] === 1 ? '<span class="badge bg-success">Aktiv</span>' : '<span class="badge bg-secondary">Inaktiv</span>'; ?></td>
                                         <td>
                                             <div class="dropdown">
-                                                <button class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></button>
+                                                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown" aria-label="Aktionen öffnen"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></button>
                                                 <div class="dropdown-menu dropdown-menu-end">
                                                     <button type="button" class="dropdown-item js-cookie-category-edit" data-cookie-category="<?php echo htmlspecialchars((string) json_encode($cat, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP), ENT_QUOTES); ?>">Bearbeiten</button>
                                                     <?php if (!(int)$cat['is_required']): ?>
@@ -430,7 +430,7 @@ $cookieManagerConfig = [
                                             <td class="text-secondary small"><?php echo htmlspecialchars((string)($service['cookie_names'] ?? '')); ?></td>
                                             <td>
                                                 <div class="dropdown">
-                                                    <button class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></button>
+                                                    <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown" aria-label="Aktionen öffnen"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></button>
                                                     <div class="dropdown-menu dropdown-menu-end">
                                                         <button type="button" class="dropdown-item js-cookie-service-edit" data-cookie-service="<?php echo htmlspecialchars((string) json_encode($service, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP), ENT_QUOTES); ?>">Bearbeiten</button>
                                                         <?php if (!(int)$service['is_essential']): ?>
@@ -481,27 +481,27 @@ $cookieManagerConfig = [
                 <input type="hidden" name="category_id" id="catId" value="0">
                 <div class="modal-header">
                     <h5 class="modal-title" id="catModalTitle">Kategorie hinzufügen</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Name</label>
+                        <label for="catName" class="form-label">Name</label>
                         <input type="text" name="category_name" id="catName" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Slug</label>
+                        <label for="catSlug" class="form-label">Slug</label>
                         <input type="text" name="category_slug" id="catSlug" class="form-control">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Beschreibung</label>
+                        <label for="catDesc" class="form-label">Beschreibung</label>
                         <textarea name="category_description" id="catDesc" class="form-control" rows="2"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Scripts (werden bei Zustimmung geladen)</label>
+                        <label for="catScripts" class="form-label">Scripts (werden bei Zustimmung geladen)</label>
                         <textarea name="category_scripts" id="catScripts" class="form-control" rows="3" placeholder="<script src='...'></script>"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Reihenfolge</label>
+                        <label for="catOrder" class="form-label">Reihenfolge</label>
                         <input type="number" name="sort_order" id="catOrder" class="form-control" value="0">
                     </div>
                     <div class="row">
@@ -537,24 +537,24 @@ $cookieManagerConfig = [
                 <input type="hidden" name="service_id" id="serviceId" value="0">
                 <div class="modal-header">
                     <h5 class="modal-title" id="serviceModalTitle">Service hinzufügen</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Name</label>
+                            <label for="serviceName" class="form-label">Name</label>
                             <input type="text" name="service_name" id="serviceName" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Slug</label>
+                            <label for="serviceSlug" class="form-label">Slug</label>
                             <input type="text" name="service_slug" id="serviceSlug" class="form-control">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Anbieter</label>
+                            <label for="serviceProvider" class="form-label">Anbieter</label>
                             <input type="text" name="service_provider" id="serviceProvider" class="form-control">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Kategorie</label>
+                            <label for="serviceCategory" class="form-label">Kategorie</label>
                             <select name="category_slug" id="serviceCategory" class="form-select">
                                 <?php foreach ($categories as $cat): ?>
                                     <option value="<?php echo htmlspecialchars($cat['slug']); ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
@@ -562,15 +562,15 @@ $cookieManagerConfig = [
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Beschreibung</label>
+                            <label for="serviceDescription" class="form-label">Beschreibung</label>
                             <textarea name="service_description" id="serviceDescription" class="form-control" rows="2"></textarea>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Cookie-Namen</label>
+                            <label for="serviceCookies" class="form-label">Cookie-Namen</label>
                             <input type="text" name="cookie_names" id="serviceCookies" class="form-control" placeholder="_ga, _gid, li_fat_id">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Code-Snippet / Einbettung</label>
+                            <label for="serviceCode" class="form-label">Code-Snippet / Einbettung</label>
                             <textarea name="code_snippet" id="serviceCode" class="form-control" rows="4" placeholder="<script src='...'></script>"></textarea>
                         </div>
                         <div class="col-md-6">

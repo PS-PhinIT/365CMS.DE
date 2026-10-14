@@ -82,14 +82,19 @@ final class ApiRouter
 
         $user = $auth->getCurrentUser();
         $userId = (int) ($user->id ?? 0);
+        $binding = $auth->apiTokenBinding($userId);
+        if ($binding === null) {
+            $this->jsonError(401, 'Anmeldung über die Weboberfläche erforderlich.');
+        }
+        $claims = ['pwf' => $binding];
         $jwt = Services\JwtService::getInstance();
 
         try {
             $payload = [
                 'token_type' => 'Bearer',
-                'access_token' => $jwt->generateToken($userId),
+                'access_token' => $jwt->generateToken($userId, $claims),
                 'expires_in' => $jwt->getTtl(),
-                'refresh_token' => $jwt->generateRefreshToken($userId),
+                'refresh_token' => $jwt->generateRefreshToken($userId, $claims),
             ];
         } catch (\Throwable) {
             $this->jsonError(503, 'JWT ist nicht konfiguriert.');
@@ -126,7 +131,7 @@ final class ApiRouter
 
         $jwt = Services\JwtService::getInstance();
         $payload = $refreshToken !== '' ? $jwt->validateToken($refreshToken) : null;
-        if ($payload === null || ($payload->type ?? '') !== 'refresh' || !Auth::instance()->isActiveUserId((int) ($payload->sub ?? 0))) {
+        if ($payload === null || ($payload->type ?? '') !== 'refresh' || !Auth::instance()->isValidApiTokenSubject($payload)) {
             $this->jsonError(401, 'Ungültiges oder abgelaufenes Refresh-Token.');
         }
 
@@ -134,7 +139,7 @@ final class ApiRouter
         header('Cache-Control: no-store');
         echo json_encode([
             'token_type' => 'Bearer',
-            'access_token' => $jwt->generateToken((int) $payload->sub),
+            'access_token' => $jwt->generateToken((int) $payload->sub, ['pwf' => (string) $payload->pwf]),
             'expires_in' => $jwt->getTtl(),
         ]);
         exit;

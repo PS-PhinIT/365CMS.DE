@@ -120,32 +120,8 @@ class Database implements DatabaseInterface
         (new MigrationManager($this))->repairTables();
     }
 
-    /**
-     * @deprecated Verwende MigrationManager::run() direkt.
-     *             Besteht nur noch für eventuelle externe Aufrufe.
-     */
-    private function migrateColumns(): void
-    {
-        (new MigrationManager($this))->run();
-    }
 
-    /**
-     * @deprecated Verwende SchemaManager::createTables() direkt.
-     *             Besteht nur noch für eventuelle externe Aufrufe.
-     */
-    private function createTables(): void
-    {
-        (new SchemaManager($this))->createTables();
-    }
 
-    /**
-     * @internal Wird von SchemaManager aufgerufen; nicht mehr direkt in Database.
-     * @deprecated Kein direkter Aufruf mehr – via SchemaManager.
-     */
-    private function createDefaultAdmin(): void
-    {
-        // Wird von SchemaManager::createTables() übernommen
-    }
     
     /**
      * Prepare statement

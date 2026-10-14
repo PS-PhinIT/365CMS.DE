@@ -66,8 +66,8 @@ $viewerContent = $viewerLines === [] ? 'Keine lesbaren Einträge für die gewäh
                 </table>
             </div>
             <div class="card-body border-top">
-                <label class="form-label">Log-Inhalt (read-only)</label>
-                <textarea class="form-control font-monospace" rows="12" readonly><?php echo htmlspecialchars($viewerContent, ENT_QUOTES, 'UTF-8'); ?></textarea>
+                <label for="logChannelViewerContent" class="form-label">Log-Inhalt (read-only)</label>
+                <textarea id="logChannelViewerContent" class="form-control font-monospace" rows="12" readonly><?php echo htmlspecialchars($viewerContent, ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
         </div>
 

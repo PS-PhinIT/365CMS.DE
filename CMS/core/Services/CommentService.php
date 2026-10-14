@@ -533,86 +533,8 @@ class CommentService
         return !empty($result['rejected']);
     }
 
-    /** @return array<string,string> */
-    private function loadAntispamSettings(): array
-    {
-        $placeholders = implode(',', array_fill(0, count(self::ANTISPAM_SETTING_KEYS), '?'));
-        $rows = $this->db->get_results(
-            "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name IN ({$placeholders})",
-            self::ANTISPAM_SETTING_KEYS
-        ) ?: [];
 
-        $settings = [
-            'antispam_enabled' => '0',
-            'antispam_honeypot' => '1',
-            'antispam_min_time' => '3',
-            'antispam_max_links' => '3',
-            'antispam_block_empty_ua' => '1',
-        ];
 
-        foreach ($rows as $row) {
-            $name = (string)($row->option_name ?? '');
-            if (array_key_exists($name, $settings)) {
-                $settings[$name] = (string)($row->option_value ?? '');
-            }
-        }
-
-        return $settings;
-    }
-
-    private function countLinks(string $content): int
-    {
-        $count = preg_match_all('/https?:\/\//i', $content, $matches);
-        if ($count === false) {
-            return 0;
-        }
-
-        return $count;
-    }
-
-    private function matchesSpamBlacklist(string $email, string $ipAddress, string $authorName, string $content): bool
-    {
-        try {
-            $rows = $this->db->get_results(
-                "SELECT type, value FROM {$this->prefix}spam_blacklist ORDER BY id DESC LIMIT 1000"
-            ) ?: [];
-        } catch (\Throwable) {
-            return false;
-        }
-        if ($rows === []) {
-            return false;
-        }
-
-        $haystack = $this->lowerUtf8($authorName . "\n" . strip_tags($content));
-        $email = strtolower($email);
-        $emailDomain = str_contains($email, '@') ? substr(strrchr($email, '@') ?: '', 1) : '';
-
-        foreach ($rows as $row) {
-            $type = (string)($row->type ?? '');
-            $value = trim((string)($row->value ?? ''));
-            if ($value === '') {
-                continue;
-            }
-
-            if ($type === 'ip' && $ipAddress !== '' && hash_equals($value, $ipAddress)) {
-                return true;
-            }
-
-            if ($type === 'email' && hash_equals(strtolower($value), $email)) {
-                return true;
-            }
-
-            if ($type === 'domain' && $emailDomain !== '' && hash_equals(strtolower($value), $emailDomain)) {
-                return true;
-            }
-
-            if ($type === 'word' && $this->containsUtf8($haystack, $this->lowerUtf8($value))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     private function lowerUtf8(string $value): string
     {

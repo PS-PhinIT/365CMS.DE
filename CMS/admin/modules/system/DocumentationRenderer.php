@@ -317,7 +317,7 @@ final class DocumentationRenderer
             $lines = array_slice($lines, 0, self::MAX_LINES);
         }
 
-        $rows = array_map(fn (string $line): array => $this->normalizeCsvRow(str_getcsv($line)), $lines);
+        $rows = array_map(fn (string $line): array => $this->normalizeCsvRow(str_getcsv($line, ',', '"', '')), $lines);
         $header = array_shift($rows) ?: [];
 
         $html = '<div class="table-responsive"><table class="table table-bordered table-striped table-sm">';

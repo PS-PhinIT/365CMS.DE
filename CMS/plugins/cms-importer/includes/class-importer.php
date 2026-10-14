@@ -32,6 +32,7 @@ define('CMS_IMPORTER_SERVICE_CLASSES_LOADED', true);
 
 require_once __DIR__ . '/trait-importer-reporting.php';
 require_once __DIR__ . '/trait-importer-preview.php';
+require_once __DIR__ . '/trait-importer-content.php';
 
 // ── Datenbankschicht ──────────────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ class CMS_Importer_Service
 {
     use CMS_Importer_Service_Reporting_Trait;
     use CMS_Importer_Service_Preview_Trait;
+    use CMS_Importer_Service_Content_Trait;
 
     /** Status-Mapping WP → CMS */
     private const STATUS_MAP = [

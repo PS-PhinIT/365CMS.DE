@@ -1414,17 +1414,6 @@ final class SeoSuiteModule
 		return $authority;
 	}
 
-	private function extractSameSitePathFromUrl(string $url): string
-	{
-		$authority = $this->normalizeComparableAuthority($url);
-		if ($authority === '' || !in_array($authority, $this->getKnownSiteAuthorities(), true)) {
-			return '';
-		}
-
-		$path = (string)parse_url($url, PHP_URL_PATH);
-		return trim($path) !== '' ? $path : '/';
-	}
-
 	private function normalizeAuditRows(array $auditRows): array
 	{
 		return array_map(static function (array $row): array {

@@ -86,7 +86,7 @@ $passwordPolicyTesterConfig = [
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
             <input type="hidden" name="action" value="save">
             <div class="cms-settings-actions">
-                <span class="text-secondary small me-auto">Registrierung und Authentifizierung zentral steuern; technische Provider bleiben schreibgeschuetzt.</span>
+                <span class="text-secondary small me-auto">Registrierung und Authentifizierung zentral steuern; technische Provider bleiben schreibgeschützt.</span>
                 <button type="submit" class="btn btn-primary">Einstellungen speichern</button>
             </div>
 

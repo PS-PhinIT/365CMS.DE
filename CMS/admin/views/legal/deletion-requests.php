@@ -129,7 +129,7 @@ $statusBadges = ['pending' => 'bg-warning', 'processing' => 'bg-blue', 'complete
                                     <td class="text-secondary"><?php echo htmlspecialchars($r['completed_at'] ?? '-'); ?></td>
                                     <td class="table-actions content-listing-table__actions-cell">
                                         <div class="dropdown">
-                                            <button class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown">
+                                            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown" aria-label="Aktionen öffnen">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-end">
@@ -166,7 +166,7 @@ $statusBadges = ['pending' => 'bg-warning', 'processing' => 'bg-blue', 'complete
                         <input type="hidden" name="id" id="rejectDelId" value="0">
                         <div class="modal-header">
                             <h5 class="modal-title">Löschantrag ablehnen</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                         </div>
                         <div class="modal-body">
                             <div class="mb-3">

@@ -28,9 +28,9 @@ $entries = is_array($logs['operational_audit_entries'] ?? null) ? $logs['operati
         <div class="card">
             <div class="card-body border-bottom">
                 <div class="row g-2">
-                    <div class="col-md-5"><input type="search" class="form-control" id="opLogSearch" placeholder="Suche in Aktion oder Meldung..."></div>
+                    <div class="col-md-5"><input type="search" class="form-control" id="opLogSearch" aria-label="Betriebsprotokoll durchsuchen" placeholder="Suche in Aktion oder Meldung..."></div>
                     <div class="col-md-3">
-                        <select class="form-select" id="opLogArea">
+                        <select class="form-select" id="opLogArea" aria-label="Nach Bereich filtern">
                             <option value="">Bereich (alle)</option>
                             <option value="system">System</option>
                             <option value="backup">Backup</option>
@@ -41,7 +41,7 @@ $entries = is_array($logs['operational_audit_entries'] ?? null) ? $logs['operati
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" id="opLogLevel">
+                        <select class="form-select" id="opLogLevel" aria-label="Nach Level filtern">
                             <option value="">Level (alle)</option>
                             <option value="info">Info</option>
                             <option value="warning">Warning</option>
@@ -50,7 +50,7 @@ $entries = is_array($logs['operational_audit_entries'] ?? null) ? $logs['operati
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" id="opLogRange">
+                        <select class="form-select" id="opLogRange" aria-label="Zeitraum wählen">
                             <option value="1">Heute</option>
                             <option value="7" selected>7 Tage</option>
                             <option value="30">30 Tage</option>

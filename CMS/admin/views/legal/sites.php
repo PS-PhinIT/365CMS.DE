@@ -659,7 +659,7 @@ $legalSitesConfig = [
                                     <span class="text-secondary small">|</span>
                                     <button type="button" class="btn btn-sm btn-outline-primary" data-legal-view-mode="preview" data-legal-view-target="legal-<?php echo htmlspecialchars($key); ?>">Vorschau</button>
                                 </div>
-                                <label class="form-label">Inhalt (HTML)</label>
+                                <label for="legal-<?php echo htmlspecialchars($key); ?>" class="form-label">Inhalt (HTML)</label>
                                 <textarea name="<?php echo htmlspecialchars($key); ?>" id="legal-<?php echo htmlspecialchars($key); ?>" class="form-control" rows="12" data-legal-html-source><?php echo htmlspecialchars($p['content'] ?? ''); ?></textarea>
                                 <div class="legal-sites-html-preview d-none" data-legal-html-preview></div>
                                 <?php if (!empty($constraints['max_legal_html_length']) || $templateType !== ''): ?>
@@ -677,8 +677,8 @@ $legalSitesConfig = [
                                 <?php endif; ?>
                             </div>
                             <div class="col-12 col-xl-4">
-                                <label class="form-label">Zugewiesene Seite</label>
-                                <select name="<?php echo htmlspecialchars($pageIdKeys[$key] ?? ''); ?>" class="form-select">
+                                <label for="legal-page-<?php echo htmlspecialchars($key, ENT_QUOTES); ?>" class="form-label">Zugewiesene Seite</label>
+                                <select id="legal-page-<?php echo htmlspecialchars($key, ENT_QUOTES); ?>" name="<?php echo htmlspecialchars($pageIdKeys[$key] ?? ''); ?>" class="form-select">
                                     <option value="0">– Keine Seite –</option>
                                     <?php foreach ($allPages as $pg): ?>
                                         <option value="<?php echo (int)$pg['id']; ?>" <?php echo ($assigned[$pageIdKeys[$key] ?? ''] ?? '') == $pg['id'] ? 'selected' : ''; ?>>

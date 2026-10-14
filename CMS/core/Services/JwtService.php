@@ -136,9 +136,9 @@ final class JwtService
      *
      * @return string Signierter JWT-String (Standard: 30 Tage gültig)
      */
-    public function generateRefreshToken(int $userId): string
+    public function generateRefreshToken(int $userId, array $extraClaims = []): string
     {
-        return $this->generateToken($userId, ['type' => 'refresh'], 86400 * 30);
+        return $this->generateToken($userId, array_merge($extraClaims, ['type' => 'refresh']), 86400 * 30);
     }
 
     /**

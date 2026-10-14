@@ -853,7 +853,7 @@ final class MemberController
     private function sanitizeMemberMediaItemName(string $name): string
     {
         $name = trim(strip_tags($name));
-        if ($name === '' || preg_match('/[\\\/\:\*\?"<>\|]/', $name) === 1) {
+        if ($name === '' || preg_match('#[\\\\/:*?"<>|\x00-\x1F]#', $name) === 1) {
             return '';
         }
 

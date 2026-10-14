@@ -147,10 +147,10 @@ if (!defined('ABSPATH')) {
                 </div>
                 <div class="col-md-4"><label for="fld-hub_card_meta_layout" class="form-label">Meta-Layout</label><select id="fld-hub_card_meta_layout" class="form-select" name="hub_card_meta_layout"><option value="split" <?php echo (($cardDesign['meta_layout'] ?? 'split') === 'split') ? 'selected' : ''; ?>>Links / Rechts</option><option value="stacked" <?php echo (($cardDesign['meta_layout'] ?? '') === 'stacked') ? 'selected' : ''; ?>>Gestapelt</option></select></div>
                 <div class="col-md-4">
-                    <label class="form-label">Card-Rundung (px)</label>
+                    <label for="fld-template_card_radius" class="form-label">Card-Rundung (px)</label>
                     <div class="hub-card-radius-control" data-hub-card-radius-control>
                         <div class="input-group input-group-sm">
-                            <input type="number" class="form-control" name="template_card_radius" min="0" max="48" step="1" value="<?php echo (int)($cardDesign['card_radius'] ?? 20); ?>" data-hub-card-radius-number>
+                            <input id="fld-template_card_radius" type="number" class="form-control" name="template_card_radius" min="0" max="48" step="1" value="<?php echo (int)($cardDesign['card_radius'] ?? 20); ?>" data-hub-card-radius-number>
                             <span class="input-group-text">px</span>
                         </div>
                         <input type="range" class="form-range mt-2" min="0" max="48" step="1" value="<?php echo (int)($cardDesign['card_radius'] ?? 20); ?>" aria-label="Card-Rundung als Slider" data-hub-card-radius-range>
@@ -161,25 +161,25 @@ if (!defined('ABSPATH')) {
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Card-Reihenabstand (px)</label>
+                    <label for="fld-template_card_row_gap" class="form-label">Card-Reihenabstand (px)</label>
                     <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" name="template_card_row_gap" min="30" max="160" step="1" value="<?php echo (int)($cardDesign['card_row_gap'] ?? 30); ?>">
+                        <input id="fld-template_card_row_gap" type="number" class="form-control" name="template_card_row_gap" min="30" max="160" step="1" value="<?php echo (int)($cardDesign['card_row_gap'] ?? 30); ?>">
                         <span class="input-group-text">px</span>
                     </div>
                     <div class="form-hint">Mindestens 30 px. Gilt als Template-Default für vertikale Abstände zwischen HubSite-Card-Reihen.</div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Featured-Bildbreite (%)</label>
+                    <label for="fld-template_feature_image_width" class="form-label">Featured-Bildbreite (%)</label>
                     <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" name="template_feature_image_width" min="20" max="60" step="1" value="<?php echo (int)($cardDesign['feature_image_width'] ?? 34); ?>">
+                        <input id="fld-template_feature_image_width" type="number" class="form-control" name="template_feature_image_width" min="20" max="60" step="1" value="<?php echo (int)($cardDesign['feature_image_width'] ?? 34); ?>">
                         <span class="input-group-text">%</span>
                     </div>
                     <div class="form-hint">Desktop-Breite des Bildbereichs in Featured-Kacheln. 34 % ist der PHINIT-Standard.</div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Featured-Bildhöhe (px)</label>
+                    <label for="fld-template_feature_image_height" class="form-label">Featured-Bildhöhe (px)</label>
                     <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" name="template_feature_image_height" min="160" max="520" step="10" value="<?php echo (int)($cardDesign['feature_image_height'] ?? 260); ?>">
+                        <input id="fld-template_feature_image_height" type="number" class="form-control" name="template_feature_image_height" min="160" max="520" step="10" value="<?php echo (int)($cardDesign['feature_image_height'] ?? 260); ?>">
                         <span class="input-group-text">px</span>
                     </div>
                     <div class="form-hint">Mindesthöhe der Featured-Kachel am Desktop. Das Bild wird mittig ausgerichtet.</div>

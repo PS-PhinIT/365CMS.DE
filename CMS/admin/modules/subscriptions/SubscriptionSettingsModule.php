@@ -436,7 +436,7 @@ class SubscriptionSettingsModule
 
     private function failResult(string $action, string $message, \Throwable $e): SubscriptionSettingsActionResult
     {
-        Logger::error($message, [
+        Logger::instance()->error($message, [
             'module' => 'SubscriptionSettingsModule',
             'action' => $action,
             'exception' => $e::class,

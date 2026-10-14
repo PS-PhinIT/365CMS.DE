@@ -866,10 +866,6 @@ final class PublicRouter
         $_SESSION['auth_form_old'][$page] = $values;
     }
 
-    private function getSafePostLoginRedirect(mixed $candidate): string
-    {
-        return $this->normalizeAllowedRedirectTarget($candidate);
-    }
 
     private function resolveSuccessfulLoginRedirect(string $redirectTarget): string
     {
