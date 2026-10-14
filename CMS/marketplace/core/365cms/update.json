@@ -2,12 +2,12 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "3.4.00",
+  "version": "3.5.0",
   "min_php": "8.4",
-  "released": "2026-09-05",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.4.0-update.zip",
+  "released": "2026-10-14",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "c943da5370f02e7964d0d1d7396f0996f5bde01c1da844102a00d18cc6d24614",
-  "notes": "Release-Stand 3.4.00: AI Services erzwingt im Adminbereich zentral Provider-Policy, HTTPS-/Ollama-Egress-Schutz, atomare Quotas, Retry/Fallback, Healthchecks und CSP-konforme Admin-Assets; es gibt keine Public-AI-Routen oder automatische Veröffentlichung.",
+  "checksum_sha256": "0532755052115547c918eaddee19ba3e85e8ea89991b27b5417a3dd6d67117ee",
+  "notes": "Release-Stand 3.5.0: Proxy-/CDN-fähige Client-IP (Standard cloudflare, Hoster-CDNs wie Hostinger per Ein-Klick-Freigabe unter Sicherheit > Firewall), cookie-lose cachebare anonyme Seiten (Lazy Sessions), Feed-Cache, schlankere Suche, statische 404 für fehlende Assets, Benachrichtigung der alten E-Mail-Adresse, optionale Log-Aufbewahrung sowie alle offenen Empfehlungen des Audits vom 14.10.2026.",
   "critical": false
 }
