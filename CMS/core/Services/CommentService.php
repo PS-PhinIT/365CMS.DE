@@ -453,8 +453,20 @@ class CommentService
         return strlen($value);
     }
 
+    /**
+     * Globaler Schalter „Kommentare aktivieren“ (Einstellungen → Allgemein); Standard: an.
+     */
+    public function areCommentsEnabledGlobally(): bool
+    {
+        return (string) (OptionStore::getInstance()->get('comments_enabled') ?? '1') !== '0';
+    }
+
     private function isCommentablePost(int $postId): bool
     {
+        if (!$this->areCommentsEnabledGlobally()) {
+            return false;
+        }
+
         $row = $this->db->get_row(
             "SELECT id, status, allow_comments
              FROM {$this->prefix}posts

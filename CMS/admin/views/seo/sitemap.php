@@ -270,7 +270,7 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                                 </div>
                             </form>
                             <?php if (!empty($indexing['google_access_token_available'])): ?>
-                                <form method="post" class="mt-2">
+                                <form method="post" class="mt-2" data-cms-confirm="Gespeichertes Google-Token wirklich entfernen?">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                                     <input type="hidden" name="action" value="clear_google_access_token">
                                     <button class="btn btn-sm btn-outline-danger" type="submit">Gespeichertes Token entfernen</button>
@@ -359,7 +359,7 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                         <h3 class="card-title">Google: URL aus Index entfernen</h3>
                     </div>
                     <div class="card-body">
-                        <form method="post" class="row g-3">
+                        <form method="post" class="row g-3" data-cms-confirm="URL wirklich bei Google zur Entfernung aus dem Index melden?">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                             <input type="hidden" name="action" value="delete_google_url">
                             <div class="col-md-7">

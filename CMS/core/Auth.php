@@ -297,6 +297,8 @@ class Auth
         if ($this->isMfaEnabled((int)$user->id)) {
             $_SESSION['mfa_pending_user_id'] = (int)$user->id;
             $_SESSION['mfa_pending_remember'] = $remember ? '1' : '0';
+            $_SESSION['mfa_pending_since'] = time();
+            $_SESSION['mfa_failed_attempts'] = 0;
             return 'MFA_REQUIRED';
         }
 
@@ -792,6 +794,43 @@ class Auth
         ]);
     }
 
+    /**
+     * Erneute Bestätigung mit dem aktuellen Passwort für sicherheitskritische Änderungen
+     * (MFA deaktivieren, Backup-Codes erneuern, Passkey hinzufügen, E-Mail ändern).
+     * Fehlversuche zählen je IP (10 in 15 Minuten), damit eine übernommene Sitzung das
+     * Passwort nicht durchprobieren kann.
+     */
+    public function verifyCurrentPassword(int $userId, string $password): bool|string
+    {
+        if ($userId <= 0 || $password === '') {
+            return 'Bitte das aktuelle Passwort eingeben.';
+        }
+
+        $clientIp = Security::getClientIp();
+        if (!Security::checkDbRateLimit($clientIp, 'reauth', 10, 900)) {
+            return 'Zu viele Fehlversuche. Bitte in einigen Minuten erneut versuchen.';
+        }
+
+        $db = Database::instance();
+        $hash = (string)($db->get_var("SELECT password FROM {$db->getPrefix()}users WHERE id = ? LIMIT 1", [$userId]) ?? '');
+        if ($hash !== '' && Security::verifyPassword($password, $hash)) {
+            return true;
+        }
+
+        Security::recordDbRateLimitAttempt($clientIp, 'reauth', 'user:' . $userId);
+        AuditLogger::instance()->log(
+            AuditLogger::CAT_SECURITY,
+            'reauth_failed',
+            'Passwortbestätigung fehlgeschlagen.',
+            'user',
+            $userId,
+            [],
+            'warning'
+        );
+
+        return 'Das aktuelle Passwort ist nicht korrekt.';
+    }
+
     // ── H-02: TOTP / MFA ─────────────────────────────────────────────────────
 
     /**
@@ -1076,7 +1115,7 @@ class Auth
         $_SESSION['user_role'] = $user->role;
         $_SESSION['session_start_time'] = time();
         $this->touchSessionRegistry((int) $user->id, $this->getConfiguredSessionLifetime((string) ($user->role ?? 'member')), time(), true);
-        unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember']);
+        unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember'], $_SESSION['mfa_pending_since'], $_SESSION['mfa_failed_attempts']);
 
         $this->refreshSessionCookie((string) ($user->role ?? 'member'), $remember);
         $this->bindCurrentSessionToDeviceCookie((int)$user->id);

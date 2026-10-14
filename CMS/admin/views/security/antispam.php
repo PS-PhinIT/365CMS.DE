@@ -115,14 +115,14 @@ $typeLabels = ['word' => 'Wort', 'email' => 'E-Mail', 'ip' => 'IP-Adresse', 'dom
                             </label>
 
                             <div class="mb-3">
-                                <label class="form-label">Min. Ausfüllzeit (Sekunden)</label>
-                                <input type="number" name="antispam_min_time" class="form-control" min="0" max="60" value="<?php echo (int)($settings['antispam_min_time'] ?: 3); ?>">
+                                <label for="fld-antispam_min_time" class="form-label">Min. Ausfüllzeit (Sekunden)</label>
+                                <input id="fld-antispam_min_time" type="number" name="antispam_min_time" class="form-control" min="0" max="60" value="<?php echo (int)($settings['antispam_min_time'] ?: 3); ?>">
                                 <small class="form-hint">Formulare die schneller ausgefüllt werden, gelten als Spam.</small>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Max. Links pro Beitrag</label>
-                                <input type="number" name="antispam_max_links" class="form-control" min="0" max="50" value="<?php echo (int)($settings['antispam_max_links'] ?: 3); ?>">
+                                <label for="fld-antispam_max_links" class="form-label">Max. Links pro Beitrag</label>
+                                <input id="fld-antispam_max_links" type="number" name="antispam_max_links" class="form-control" min="0" max="50" value="<?php echo (int)($settings['antispam_max_links'] ?: 3); ?>">
                             </div>
 
                             <div class="alert alert-info mb-3">

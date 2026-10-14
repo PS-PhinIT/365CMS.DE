@@ -1021,6 +1021,15 @@ final class MemberController
             }
         }
 
+        // Die E-Mail-Adresse ist der Kanal für Passwort-Resets: Änderung nur mit aktuellem Passwort.
+        if (strcasecmp($data['email'], (string)($currentUser->email ?? '')) !== 0) {
+            $reauth = \CMS\Auth::instance()->verifyCurrentPassword($this->getUserId(), (string)($_POST['current_password'] ?? ''));
+            if ($reauth !== true) {
+                $this->flash('danger', 'E-Mail-Adresse nicht geändert: ' . (string)$reauth);
+                $this->redirect('/member/profile');
+            }
+        }
+
         $result = $this->memberService->updateProfile($this->getUserId(), $data);
         $this->upsertUserMeta('location', trim((string)($_POST['location'] ?? '')));
         $this->upsertUserMeta('social', $social);
@@ -1171,6 +1180,11 @@ final class MemberController
         $body = trim((string)($_POST['body'] ?? ''));
         $parentId = (int)($_POST['parent_id'] ?? 0);
 
+        if ($this->messageService->isSendRateLimited($this->getUserId())) {
+            $this->flash('danger', 'Du hast in kurzer Zeit sehr viele Nachrichten gesendet. Bitte warte einige Minuten.');
+            $this->redirect('/member/messages');
+        }
+
         $result = $recipientId > 0
             ? $this->messageService->send($this->getUserId(), $recipientId, $subject, $body, $parentId > 0 ? $parentId : null)
             : false;
@@ -1304,6 +1318,16 @@ final class MemberController
             }
 
             $this->redirect('/member/security');
+        }
+
+        // Sicherheitskritische Änderungen erfordern das aktuelle Passwort: Eine übernommene
+        // Sitzung soll MFA nicht abschalten oder eigene Passkeys/Backup-Codes anlegen können.
+        if (in_array($action, ['totp_disable', 'backup_generate', 'passkey_register'], true)) {
+            $reauth = \CMS\Auth::instance()->verifyCurrentPassword($userId, (string)($_POST['current_password'] ?? ''));
+            if ($reauth !== true) {
+                $this->flash('danger', (string)$reauth);
+                $this->redirect('/member/security');
+            }
         }
 
         if ($action === 'totp_start') {

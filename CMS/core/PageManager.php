@@ -36,14 +36,13 @@ class PageManager
     {
         $this->db = Database::instance();
         $this->prefix = $this->db->getPrefix();
-        $this->ensureColumns();
-        $this->ensureRevisionColumns();
+        $this->db->runSchemaOnce('page_manager', __FILE__, fn (): bool => $this->ensureColumns() && $this->ensureRevisionColumns());
     }
 
     /**
      * Migrate: add hide_title column if missing (safe for existing installs)
      */
-    private function ensureColumns(): void
+    private function ensureColumns(): bool
     {
         try {
             $columns = [
@@ -71,13 +70,16 @@ class PageManager
             Logger::instance()->withChannel('pages')->warning('Page schema compatibility columns could not be ensured.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
 
     /**
      * Migrate: expand page revision snapshots for DE/EN compare views.
      */
-    private function ensureRevisionColumns(): void
+    private function ensureRevisionColumns(): bool
     {
         try {
             $this->db->query("CREATE TABLE IF NOT EXISTS {$this->prefix}page_revisions (
@@ -121,7 +123,10 @@ class PageManager
             Logger::instance()->withChannel('pages')->warning('Page revision compatibility columns could not be ensured.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
     
     /**
@@ -295,7 +300,9 @@ class PageManager
 
         // Platzhalter im Suchbegriff wörtlich nehmen („%“ lieferte sonst alle Seiten).
         $term = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query) . '%';
-        $stmt = $this->db->prepare("SELECT * FROM {$this->prefix}pages WHERE (title LIKE ? ESCAPE '!' OR content LIKE ? ESCAPE '!' OR title_en LIKE ? ESCAPE '!' OR content_en LIKE ? ESCAPE '!') AND status = 'published' ORDER BY created_at DESC LIMIT 20");
+        // Öffentliche Suche: geplante Seiten (published_at in der Zukunft) und interne Spalten
+        // wie page_meta_json/author_id nicht ausliefern.
+        $stmt = $this->db->prepare("SELECT id, slug, slug_en, title, title_en, excerpt, content, content_en, featured_image, meta_title, meta_description, status, created_at, updated_at, published_at FROM {$this->prefix}pages WHERE (title LIKE ? ESCAPE '!' OR content LIKE ? ESCAPE '!' OR title_en LIKE ? ESCAPE '!' OR content_en LIKE ? ESCAPE '!') AND status = 'published' AND (published_at IS NULL OR published_at <= NOW()) ORDER BY created_at DESC LIMIT 20");
         $stmt->execute([$term, $term, $term, $term]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }

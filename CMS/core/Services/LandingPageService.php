@@ -376,26 +376,6 @@ class LandingPageService
         return $merged;
     }
 
-    private function upgradeLegacyFooterDefaults(): void
-    {
-        $footer = $this->getFooter();
-        $legacyContent = '<p>Kontaktieren Sie uns für weitere Informationen.</p>';
-        $currentContent = trim((string)($footer['content'] ?? ''));
-
-        if ($currentContent !== $legacyContent) {
-            return;
-        }
-
-        $defaultFooter = $this->getDefaultFooter();
-        $this->updateFooter([
-            'footer_content' => $defaultFooter['content'],
-            'footer_button_text' => $defaultFooter['button_text'],
-            'footer_button_url' => $defaultFooter['button_url'],
-            'footer_copyright' => $defaultFooter['copyright'],
-            'show_footer' => true,
-        ]);
-    }
-
     // ── Plugin Override System ────────────────────────────────────────────────
 
     /**

@@ -20,6 +20,10 @@ const CMS_ADMIN_FIREWALL_ALLOWED_ACTIONS = [
     'delete_rule',
     'toggle_rule',
     'set_rule_mode',
+    'save_proxy_settings',
+    'trust_proxy_candidate',
+    'dismiss_proxy_candidate',
+    'clear_proxy_candidates',
 ];
 
 const CMS_ADMIN_FIREWALL_ACTION_CAPABILITIES = [
@@ -29,6 +33,10 @@ const CMS_ADMIN_FIREWALL_ACTION_CAPABILITIES = [
     'delete_rule' => 'manage_settings',
     'toggle_rule' => 'manage_settings',
     'set_rule_mode' => 'manage_settings',
+    'save_proxy_settings' => 'manage_settings',
+    'trust_proxy_candidate' => 'manage_settings',
+    'dismiss_proxy_candidate' => 'manage_settings',
+    'clear_proxy_candidates' => 'manage_settings',
 ];
 
 function cms_admin_firewall_normalize_action(mixed $action): string
@@ -64,6 +72,10 @@ function cms_admin_firewall_handle_action(FirewallModule $module, string $action
         'delete_rule' => $module->deleteRule(cms_admin_firewall_normalize_positive_id($post['id'] ?? 0)),
         'toggle_rule' => $module->toggleRule(cms_admin_firewall_normalize_positive_id($post['id'] ?? 0)),
         'set_rule_mode' => $module->setRuleMode(cms_admin_firewall_normalize_positive_id($post['id'] ?? 0), (string)($post['target_mode'] ?? '')),
+        'save_proxy_settings' => $module->saveProxySettings($post),
+        'trust_proxy_candidate' => $module->trustProxyCandidate((string)($post['network'] ?? '')),
+        'dismiss_proxy_candidate' => $module->dismissProxyCandidate((string)($post['network'] ?? '')),
+        'clear_proxy_candidates' => $module->clearProxyCandidates(),
         default => ['success' => false, 'error' => 'Firewall-Aktion konnte nicht verarbeitet werden.'],
     };
 }

@@ -334,7 +334,7 @@ class MediaModule
         );
 
         $items = $this->service->getItems($path);
-        if ($items instanceof \WP_Error) {
+        if ($items instanceof WP_Error) {
             $this->logWpError('media.library.items_failed', $items, [
                 'operation' => 'list_items',
                 'path' => $path,

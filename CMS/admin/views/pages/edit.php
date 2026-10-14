@@ -413,7 +413,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                         </div>
                         <div class="card-body flex-fill">
                             <div class="mb-3">
-                                <label class="form-label">Status</label>
+                                <label for="pageStatusSelect" class="form-label">Status</label>
                                 <select name="status" class="form-select" id="pageStatusSelect">
                                     <option value="draft"<?= $pageStatusValue === 'draft' ? ' selected' : '' ?>>Entwurf</option>
                                     <option value="published"<?= $pageStatusValue === 'published' ? ' selected' : '' ?>>Veröffentlicht</option>
@@ -552,12 +552,12 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 <small class="form-hint">Nur für SEO-Metadaten: Kommagetrennte Begriffe werden im Head als Keywords ausgegeben, aber nicht sichtbar auf der Seite angezeigt.</small>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Meta-Titel</label>
+                                <label for="pageMetaTitle" class="form-label">Meta-Titel</label>
                                 <input type="text" name="meta_title" class="form-control" id="pageMetaTitle" placeholder="SEO-Titel (Standard: Seitentitel)" maxlength="70" value="<?= htmlspecialchars($pageMetaTitleValue) ?>">
                                 <small class="form-hint"><span id="metaTitleCount">0</span>/70 Zeichen</small>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Meta-Beschreibung</label>
+                                <label for="pageMetaDescription" class="form-label">Meta-Beschreibung</label>
                                 <textarea name="meta_description" class="form-control" rows="3" id="pageMetaDescription" placeholder="Kurze Beschreibung für Suchmaschinen…" maxlength="160"><?= htmlspecialchars($pageMetaDescriptionValue) ?></textarea>
                                 <small class="form-hint"><span id="metaDescriptionCount">0</span>/160 Zeichen</small>
                             </div>

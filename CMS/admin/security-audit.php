@@ -14,7 +14,7 @@ use CMS\Auth;
 use CMS\Security;
 use CMS\Services\CoreModuleService;
 
-const CMS_ADMIN_SECURITY_AUDIT_ALLOWED_ACTIONS = ['run_audit', 'clear_log'];
+const CMS_ADMIN_SECURITY_AUDIT_ALLOWED_ACTIONS = ['run_audit', 'clear_log', 'save_log_retention'];
 
 function cms_admin_security_audit_normalize_action(mixed $action): string
 {
@@ -46,6 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             case 'clear_log':
                 $result = $module->clearLog();
+                break;
+            case 'save_log_retention':
+                $result = $module->saveLogRetention($_POST);
                 break;
             default:
                 $result = ['success' => false, 'error' => 'Unbekannte Aktion.'];

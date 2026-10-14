@@ -1551,6 +1551,23 @@ class SystemInfoModule
     }
 
     /** @return array<string, mixed> */
+    private function formatBytesLabel(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 1, ',', '.') . ' GB';
+        }
+
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 1, ',', '.') . ' MB';
+        }
+
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 1, ',', '.') . ' KB';
+        }
+
+        return $bytes . ' B';
+    }
+
     private function buildWarningCenterEntry(
         string $id,
         string $source,

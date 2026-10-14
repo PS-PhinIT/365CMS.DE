@@ -25,9 +25,10 @@ final class ApiRouter
 {
     private const API_SEARCH_MAX_LENGTH = 120;
     private const WEB_VITALS_MAX_BODY_BYTES = 8192;
-    private const WEB_VITALS_RATE_CACHE_MAX_BYTES = 65536;
+    private const WEB_VITALS_RATE_CACHE_MAX_BYTES = 262144;
     private const WEB_VITALS_RATE_LIMIT_WINDOW_SECONDS = 60;
     private const WEB_VITALS_RATE_LIMIT_MAX_REQUESTS = 40;
+    private const WEB_VITALS_RATE_LIMIT_IP_FACTOR = 3;
     private const WEB_VITALS_ALLOWED_EFFECTIVE_TYPES = ['slow-2g', '2g', '3g', '4g', '5g', 'unknown', ''];
     private const WEB_VITALS_ALLOWED_NAVIGATION_TYPES = ['navigate', 'reload', 'back_forward', 'prerender', 'unknown', ''];
 
@@ -604,45 +605,90 @@ final class ApiRouter
     private function consumeWebVitalsRateLimitToken(): bool
     {
         $window = (int) floor(time() / self::WEB_VITALS_RATE_LIMIT_WINDOW_SECONDS);
-        $ip = trim((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        $ip = Security::getClientIp();
         $session = session_id();
         $userAgent = trim((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
         $fingerprint = hash('sha256', $ip . '|' . $session . '|' . mb_substr($userAgent, 0, 180));
+        // Zusätzlich ein reines IP-Kontingent: Wechselnde User-Agents/Sessions dürfen das Limit
+        // nicht aushebeln (sonst beliebig viele Telemetrie-INSERTs pro Client).
+        $ipKey = $window . ':ip:' . hash('sha256', $ip);
+        $key = $window . ':' . $fingerprint;
         $cacheFile = rtrim((string) sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
             . '365cms-web-vitals-rate-' . hash('sha256', ABSPATH) . '.json';
 
-        $buckets = [];
-        if (is_file($cacheFile) && (int) (filesize($cacheFile) ?: 0) <= self::WEB_VITALS_RATE_CACHE_MAX_BYTES) {
-            $raw = @file_get_contents($cacheFile);
-            $decoded = is_string($raw) ? json_decode($raw, true) : null;
-            if (is_array($decoded)) {
-                $buckets = $decoded;
-            }
-        }
-
-        $key = $window . ':' . $fingerprint;
-        $count = isset($buckets[$key]) ? (int) $buckets[$key] : 0;
-        if ($count >= self::WEB_VITALS_RATE_LIMIT_MAX_REQUESTS) {
+        $handle = @fopen($cacheFile, 'c+');
+        if ($handle === false) {
             return false;
         }
-        $buckets[$key] = $count + 1;
 
-        $minWindow = $window - 2;
-        foreach (array_keys($buckets) as $bucketKey) {
-            $parts = explode(':', (string) $bucketKey, 2);
-            $bucketWindow = isset($parts[0]) ? (int) $parts[0] : 0;
-            if ($bucketWindow < $minWindow) {
-                unset($buckets[$bucketKey]);
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                return false;
             }
-        }
 
-        $encoded = json_encode($buckets, JSON_UNESCAPED_SLASHES);
-        if (is_string($encoded)) {
-            @file_put_contents($cacheFile, $encoded, LOCK_EX);
+            $hardLimit = self::WEB_VITALS_RATE_CACHE_MAX_BYTES * 2;
+            $raw = stream_get_contents($handle, $hardLimit + 1);
+            $buckets = [];
+            if (is_string($raw) && $raw !== '' && strlen($raw) <= $hardLimit) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $buckets = $decoded;
+                }
+            }
+
+            $minWindow = $window - 2;
+            foreach (array_keys($buckets) as $bucketKey) {
+                $parts = explode(':', (string) $bucketKey, 2);
+                $bucketWindow = isset($parts[0]) ? (int) $parts[0] : 0;
+                if ($bucketWindow < $minWindow) {
+                    unset($buckets[$bucketKey]);
+                }
+            }
+
+            $count = isset($buckets[$key]) ? (int) $buckets[$key] : 0;
+            $ipCount = isset($buckets[$ipKey]) ? (int) $buckets[$ipKey] : 0;
+            if ($count >= self::WEB_VITALS_RATE_LIMIT_MAX_REQUESTS
+                || $ipCount >= self::WEB_VITALS_RATE_LIMIT_MAX_REQUESTS * self::WEB_VITALS_RATE_LIMIT_IP_FACTOR
+            ) {
+                return false;
+            }
+
+            $isKnownClient = isset($buckets[$key], $buckets[$ipKey]);
+            $buckets[$key] = $count + 1;
+            $buckets[$ipKey] = $ipCount + 1;
+
+            $encoded = json_encode($buckets, JSON_UNESCAPED_SLASHES);
+            if (is_string($encoded) && strlen($encoded) > self::WEB_VITALS_RATE_CACHE_MAX_BYTES) {
+                // Tabelle voll: zuerst Vorfenster verwerfen. Bleibt sie voll, werden nur Clients
+                // ohne Bucket im aktuellen Fenster abgewiesen – bekannte Clients zählen weiter
+                // (bis zur harten Grenze), damit wenige Angreifer nicht alle Besucher sperren und
+                // ein Flood das Limit nicht durch Überlauf aufhebt.
+                foreach (array_keys($buckets) as $bucketKey) {
+                    if ((int) explode(':', (string) $bucketKey, 2)[0] < $window) {
+                        unset($buckets[$bucketKey]);
+                    }
+                }
+                $encoded = json_encode($buckets, JSON_UNESCAPED_SLASHES);
+                if (is_string($encoded) && strlen($encoded) > self::WEB_VITALS_RATE_CACHE_MAX_BYTES && !$isKnownClient) {
+                    return false;
+                }
+            }
+
+            if (!is_string($encoded) || strlen($encoded) > $hardLimit) {
+                return false;
+            }
+
+            ftruncate($handle, 0);
+            rewind($handle);
+            fwrite($handle, $encoded);
+            fflush($handle);
             @chmod($cacheFile, 0600);
-        }
 
-        return true;
+            return true;
+        } finally {
+            @flock($handle, LOCK_UN);
+            fclose($handle);
+        }
     }
 
     private function normalizeWebVitalsPayload(array $payload): ?array

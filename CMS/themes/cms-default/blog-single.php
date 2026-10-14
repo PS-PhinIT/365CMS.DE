@@ -58,7 +58,8 @@ if (is_string($pTags)) {
 $showRelated  = (bool) meridian_setting('blog', 'show_related_posts', true);
 $showComments = (bool) meridian_setting('blog', 'show_comments', true);
 $showViews    = (bool) meridian_setting('blog', 'show_views', false);
-$postAllowsComments = (int) ($post->allow_comments ?? 1) === 1;
+$postAllowsComments = (int) ($post->allow_comments ?? 1) === 1
+  && (!class_exists('\CMS\Services\CommentService') || \CMS\Services\CommentService::getInstance()->areCommentsEnabledGlobally());
 $currentUser = class_exists('\CMS\Auth') ? \CMS\Auth::getCurrentUser() : null;
 $isLoggedInCommentAuthor = isset($currentUser->id) && (int) ($currentUser->id ?? 0) > 0;
 

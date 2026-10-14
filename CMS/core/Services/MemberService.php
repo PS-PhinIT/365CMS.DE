@@ -61,6 +61,53 @@ class MemberService
     // ── Profil ────────────────────────────────────────────────────────────────
 
     /**
+     * Informiert die bisherige Adresse über eine E-Mail-Änderung (Kontoübernahme-Warnung).
+     * Die neue Adresse wird nur maskiert genannt.
+     */
+    private function notifyPreviousEmailAddress(int $userId, string $previousEmail, string $newEmail): void
+    {
+        $siteName = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
+        $siteUrl = defined('SITE_URL') ? rtrim((string) SITE_URL, '/') : '';
+        $at = strrpos($newEmail, '@');
+        $maskedNew = $at === false
+            ? '***'
+            : mb_substr($newEmail, 0, 1) . '***' . substr($newEmail, $at);
+
+        $body = "Hallo,\n\n"
+            . "die E-Mail-Adresse deines Kontos bei {$siteName} wurde soeben von dieser Adresse auf {$maskedNew} geändert.\n"
+            . 'Zeitpunkt: ' . date('d.m.Y H:i') . "\n"
+            . 'IP-Adresse: ' . Security::getClientIp() . "\n\n"
+            . "Warst du das nicht, antworte bitte umgehend auf diese Nachricht oder wende dich an den Betreiber"
+            . ($siteUrl !== '' ? " ({$siteUrl})" : '') . ". Ändere außerdem dein Passwort.\n\n"
+            . "Diese Nachricht wurde automatisch an deine bisherige Adresse gesendet.\n";
+
+        $sent = false;
+        try {
+            $sent = MailService::getInstance()->sendPlain($previousEmail, '[' . $siteName . '] E-Mail-Adresse deines Kontos geändert', $body);
+        } catch (\Throwable $e) {
+            \CMS\Logger::instance()->withChannel('member.profile')->warning('Hinweis an bisherige E-Mail-Adresse konnte nicht versendet werden.', [
+                'user_id' => $userId,
+                'exception' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            \CMS\AuditLogger::instance()->log(
+                \CMS\AuditLogger::CAT_USER,
+                'user.email_changed',
+                $sent
+                    ? 'E-Mail-Adresse im Mitgliederbereich geändert; bisherige Adresse benachrichtigt.'
+                    : 'E-Mail-Adresse im Mitgliederbereich geändert; Hinweis an bisherige Adresse konnte nicht versendet werden.',
+                'user',
+                $userId,
+                ['notice_sent' => $sent],
+                'warning'
+            );
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
      * Profildaten aktualisieren.
      *
      * @param int   $userId
@@ -103,10 +150,17 @@ class MemberService
             if ($conflict) {
                 return 'E-Mail-Adresse wird bereits verwendet.';
             }
+            $previousEmail = (string) ($this->db->get_var(
+                "SELECT email FROM {$this->prefix}users WHERE id = ?",
+                [$userId]
+            ) ?? '');
             $this->db->execute(
                 "UPDATE {$this->prefix}users SET email = ? WHERE id = ?",
                 [$email, $userId]
             );
+            if ($previousEmail !== '' && strcasecmp($previousEmail, (string) $email) !== 0) {
+                $this->notifyPreviousEmailAddress($userId, $previousEmail, (string) $email);
+            }
         }
 
         if (array_key_exists('display_name', $data)) {

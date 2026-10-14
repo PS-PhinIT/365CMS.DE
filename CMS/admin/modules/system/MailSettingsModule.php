@@ -36,6 +36,11 @@ final class MailSettingsActionResult
     {
     }
 
+    public static function failure(string $error): self
+    {
+        return new self(['success' => false, 'error' => $error]);
+    }
+
     public function isSuccess(): bool
     {
         return !empty($this->data['success']);

@@ -116,8 +116,8 @@ $hubPublicEnPath = $hubPublicPath !== '' ? ContentLocalizationService::getInstan
                         <div class="card-header"><h3 class="card-title">Basisdaten</h3></div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label required">Name</label>
-                                <input type="text" class="form-control" name="site_name" value="<?php echo htmlspecialchars((string)($site['table_name'] ?? '')); ?>" required>
+                                <label for="fld-site_name" class="form-label required">Name</label>
+                                <input id="fld-site_name" type="text" class="form-control" name="site_name" value="<?php echo htmlspecialchars((string)($site['table_name'] ?? '')); ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Öffentlicher Slug</label>
@@ -128,12 +128,12 @@ $hubPublicEnPath = $hubPublicPath !== '' ? ContentLocalizationService::getInstan
                                 <div class="form-hint">Der Slug wird beim Speichern automatisch aus dem Titel erzeugt und als öffentliche Route im `cms-default` Theme bereitgestellt. Schon vor dem ersten Speichern wird hier eine Live-Vorschau angezeigt.</div>
                             </div>
                             <div class="mb-0" data-lang-pane="de">
-                                <label class="form-label">Beschreibung</label>
+                                <label for="hubSiteDescriptionEditor" class="form-label">Beschreibung</label>
                                 <textarea class="form-control" id="hubSiteDescriptionEditor" name="description" rows="4" data-editor="hub-richtext" data-source="form"><?php echo htmlspecialchars((string)($site['description'] ?? '')); ?></textarea>
                             </div>
                             <div class="mt-3">
-                                <label class="form-label">Zusatzdomains</label>
-                                <textarea class="form-control" name="hub_domains" rows="4" placeholder="hub.example.de&#10;thema.example.org"><?php echo htmlspecialchars($hubDomainsInput); ?></textarea>
+                                <label for="fld-hub_domains" class="form-label">Zusatzdomains</label>
+                                <textarea id="fld-hub_domains" class="form-control" name="hub_domains" rows="4" placeholder="hub.example.de&#10;thema.example.org"><?php echo htmlspecialchars($hubDomainsInput); ?></textarea>
                                 <div class="form-hint">Eine Domain pro Zeile. Nur zusätzliche Domains/Subdomains, die auf die Startseite zeigen. Die Hauptdomain <code><?php echo htmlspecialchars($mainDomainHost); ?></code> ist hier ausdrücklich tabu.</div>
                             </div>
                         </div>
@@ -144,7 +144,7 @@ $hubPublicEnPath = $hubPublicPath !== '' ? ContentLocalizationService::getInstan
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label">Template-Profil</label>
+                                    <label for="hubTemplateSelect" class="form-label">Template-Profil</label>
                                     <select class="form-select" name="hub_template" id="hubTemplateSelect">
                                         <?php foreach ($templateOptions as $value => $label): ?>
                                             <option value="<?php echo htmlspecialchars((string)$value); ?>" <?php echo (($settings['hub_template'] ?? '') === $value) ? 'selected' : ''; ?>><?php echo htmlspecialchars((string)$label); ?></option>
@@ -153,66 +153,66 @@ $hubPublicEnPath = $hubPublicPath !== '' ? ContentLocalizationService::getInstan
                                     <div class="form-hint">Layouts, Header-Links und Designvorgaben bearbeitest du zentral im Tab <strong>Templates</strong>. Beim Neuanlegen werden die Starter-Kacheln des gewählten Templates automatisch übernommen.</div>
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">Card-Rundung (px)</label>
-                                    <input type="number" class="form-control" name="hub_card_radius" min="0" max="48" step="1" value="<?php echo htmlspecialchars((string)($settings['hub_card_radius'] ?? ''), ENT_QUOTES); ?>" placeholder="Template">
+                                    <label for="fld-hub_card_radius" class="form-label">Card-Rundung (px)</label>
+                                    <input id="fld-hub_card_radius" type="number" class="form-control" name="hub_card_radius" min="0" max="48" step="1" value="<?php echo htmlspecialchars((string)($settings['hub_card_radius'] ?? ''), ENT_QUOTES); ?>" placeholder="Template">
                                     <div class="form-hint">Leer = Wert aus dem Template-Profil. 0 = eckig, 48 = sehr rund.</div>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">Card-Reihenabstand (px)</label>
-                                    <input type="number" class="form-control" name="hub_card_row_gap" min="30" max="160" step="1" value="<?php echo htmlspecialchars((string)($settings['hub_card_row_gap'] ?? ''), ENT_QUOTES); ?>" placeholder="Template / 30">
+                                    <label for="fld-hub_card_row_gap" class="form-label">Card-Reihenabstand (px)</label>
+                                    <input id="fld-hub_card_row_gap" type="number" class="form-control" name="hub_card_row_gap" min="30" max="160" step="1" value="<?php echo htmlspecialchars((string)($settings['hub_card_row_gap'] ?? ''), ENT_QUOTES); ?>" placeholder="Template / 30">
                                     <div class="form-hint">Leer = Template-Wert. Gesetzte Werte werden auf mindestens 30 px normalisiert.</div>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">Featured-Bildbreite (%)</label>
-                                    <input type="number" class="form-control" name="hub_feature_image_width" min="20" max="60" step="1" value="<?php echo htmlspecialchars((string)($settings['hub_feature_image_width'] ?? ''), ENT_QUOTES); ?>" placeholder="Template / 34">
+                                    <label for="fld-hub_feature_image_width" class="form-label">Featured-Bildbreite (%)</label>
+                                    <input id="fld-hub_feature_image_width" type="number" class="form-control" name="hub_feature_image_width" min="20" max="60" step="1" value="<?php echo htmlspecialchars((string)($settings['hub_feature_image_width'] ?? ''), ENT_QUOTES); ?>" placeholder="Template / 34">
                                     <div class="form-hint">Leer = Template-Wert. Steuert Desktop-Breite des Bildbereichs in Featured-Kacheln.</div>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">Featured-Bildhöhe (px)</label>
-                                    <input type="number" class="form-control" name="hub_feature_image_height" min="160" max="520" step="10" value="<?php echo htmlspecialchars((string)($settings['hub_feature_image_height'] ?? ''), ENT_QUOTES); ?>" placeholder="Template / 260">
+                                    <label for="fld-hub_feature_image_height" class="form-label">Featured-Bildhöhe (px)</label>
+                                    <input id="fld-hub_feature_image_height" type="number" class="form-control" name="hub_feature_image_height" min="160" max="520" step="10" value="<?php echo htmlspecialchars((string)($settings['hub_feature_image_height'] ?? ''), ENT_QUOTES); ?>" placeholder="Template / 260">
                                     <div class="form-hint">Leer = Template-Wert. Steuert die sichtbare Mindesthöhe von Featured-Kacheln.</div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">CTA URL</label>
-                                    <input type="text" class="form-control" name="hub_cta_url" value="<?php echo htmlspecialchars((string)($settings['hub_cta_url'] ?? '')); ?>" placeholder="/themen">
+                                    <label for="fld-hub_cta_url" class="form-label">CTA URL</label>
+                                    <input id="fld-hub_cta_url" type="text" class="form-control" name="hub_cta_url" value="<?php echo htmlspecialchars((string)($settings['hub_cta_url'] ?? '')); ?>" placeholder="/themen">
                                 </div>
                                 <div class="col-12" data-lang-pane="de">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Themen-Badge</label>
-                                            <input type="text" class="form-control" name="hub_badge" value="<?php echo htmlspecialchars((string)($settings['hub_badge'] ?? '')); ?>" placeholder="z. B. Microsoft 365">
+                                            <label for="fld-hub_badge" class="form-label">Themen-Badge</label>
+                                            <input id="fld-hub_badge" type="text" class="form-control" name="hub_badge" value="<?php echo htmlspecialchars((string)($settings['hub_badge'] ?? '')); ?>" placeholder="z. B. Microsoft 365">
                                         </div>
                                         <div class="col-12">
-                                            <label class="form-label">Hero-Titel</label>
-                                            <input type="text" class="form-control" name="hub_hero_title" value="<?php echo htmlspecialchars((string)($settings['hub_hero_title'] ?? '')); ?>" placeholder="Wenn leer, wird der Name der Hub Site verwendet">
+                                            <label for="fld-hub_hero_title" class="form-label">Hero-Titel</label>
+                                            <input id="fld-hub_hero_title" type="text" class="form-control" name="hub_hero_title" value="<?php echo htmlspecialchars((string)($settings['hub_hero_title'] ?? '')); ?>" placeholder="Wenn leer, wird der Name der Hub Site verwendet">
                                         </div>
                                         <div class="col-12">
-                                            <label class="form-label">Hero-Text</label>
+                                            <label for="hubHeroTextEditorDe" class="form-label">Hero-Text</label>
                                             <textarea class="form-control" id="hubHeroTextEditorDe" name="hub_hero_text" rows="5" placeholder="Ein kurzer Einleitungstext für diese Hub-Site." data-editor="hub-richtext" data-source="form"><?php echo htmlspecialchars((string)($settings['hub_hero_text'] ?? '')); ?></textarea>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">CTA Text</label>
-                                            <input type="text" class="form-control" name="hub_cta_label" value="<?php echo htmlspecialchars((string)($settings['hub_cta_label'] ?? '')); ?>" placeholder="z. B. Alle Themen ansehen">
+                                            <label for="fld-hub_cta_label" class="form-label">CTA Text</label>
+                                            <input id="fld-hub_cta_label" type="text" class="form-control" name="hub_cta_label" value="<?php echo htmlspecialchars((string)($settings['hub_cta_label'] ?? '')); ?>" placeholder="z. B. Alle Themen ansehen">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Meta: Zielgruppe</label>
-                                            <input type="text" class="form-control" name="hub_meta_audience" value="<?php echo htmlspecialchars((string)($settings['hub_meta_audience'] ?? '')); ?>">
+                                            <label for="fld-hub_meta_audience" class="form-label">Meta: Zielgruppe</label>
+                                            <input id="fld-hub_meta_audience" type="text" class="form-control" name="hub_meta_audience" value="<?php echo htmlspecialchars((string)($settings['hub_meta_audience'] ?? '')); ?>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Meta: Verantwortlich</label>
-                                            <input type="text" class="form-control" name="hub_meta_owner" value="<?php echo htmlspecialchars((string)($settings['hub_meta_owner'] ?? '')); ?>">
+                                            <label for="fld-hub_meta_owner" class="form-label">Meta: Verantwortlich</label>
+                                            <input id="fld-hub_meta_owner" type="text" class="form-control" name="hub_meta_owner" value="<?php echo htmlspecialchars((string)($settings['hub_meta_owner'] ?? '')); ?>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Meta: Update-Zyklus</label>
-                                            <input type="text" class="form-control" name="hub_meta_update_cycle" value="<?php echo htmlspecialchars((string)($settings['hub_meta_update_cycle'] ?? '')); ?>">
+                                            <label for="fld-hub_meta_update_cycle" class="form-label">Meta: Update-Zyklus</label>
+                                            <input id="fld-hub_meta_update_cycle" type="text" class="form-control" name="hub_meta_update_cycle" value="<?php echo htmlspecialchars((string)($settings['hub_meta_update_cycle'] ?? '')); ?>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Meta: Fokus</label>
-                                            <input type="text" class="form-control" name="hub_meta_focus" value="<?php echo htmlspecialchars((string)($settings['hub_meta_focus'] ?? '')); ?>">
+                                            <label for="fld-hub_meta_focus" class="form-label">Meta: Fokus</label>
+                                            <input id="fld-hub_meta_focus" type="text" class="form-control" name="hub_meta_focus" value="<?php echo htmlspecialchars((string)($settings['hub_meta_focus'] ?? '')); ?>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Meta: KPI</label>
-                                            <input type="text" class="form-control" name="hub_meta_kpi" value="<?php echo htmlspecialchars((string)($settings['hub_meta_kpi'] ?? '')); ?>">
+                                            <label for="fld-hub_meta_kpi" class="form-label">Meta: KPI</label>
+                                            <input id="fld-hub_meta_kpi" type="text" class="form-control" name="hub_meta_kpi" value="<?php echo htmlspecialchars((string)($settings['hub_meta_kpi'] ?? '')); ?>">
                                         </div>
                                     </div>
                                 </div>

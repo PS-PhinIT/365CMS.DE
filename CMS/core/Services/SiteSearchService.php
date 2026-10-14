@@ -275,7 +275,24 @@ final class SiteSearchService
         $dateExpression = $source['date'] !== []
             ? 'COALESCE(' . implode(', ', array_map(static fn(string $column): string => "{$alias}.{$column}", $source['date'])) . ')'
             : "{$alias}.id";
-        $sql = "SELECT {$alias}.* FROM {$source['table']} {$alias}"
+        // Projektion: Bei Quellen mit LONGTEXT-Inhalt nur ID und die Suchspalten laden (nicht z. B. die
+        // jeweils andere Sprachfassung oder JSON-Metadaten aller 400 Kandidaten). Vollständige Zeilen
+        // lädt hydrate() später nur für die nach rank() verbleibenden Treffer.
+        $projected = $source['content'] !== [];
+        if ($projected) {
+            $columns = array_values(array_unique(array_merge(
+                ['id'],
+                $source['title'],
+                $source['excerpt'],
+                $source['content'],
+                $source['date']
+            )));
+            $selectList = implode(', ', array_map(static fn(string $column): string => "{$alias}.{$column}", $columns));
+        } else {
+            $selectList = "{$alias}.*";
+        }
+
+        $sql = "SELECT {$selectList} FROM {$source['table']} {$alias}"
             . " WHERE ({$source['where']}) AND " . implode(' AND ', $conditions)
             . " ORDER BY {$dateExpression} DESC LIMIT " . self::CANDIDATE_LIMIT;
 
@@ -301,10 +318,79 @@ final class SiteSearchService
 
             $row['_search_score'] = self::scoreFolded($title, $excerpt, $body, $parsed['terms']);
             $row['_search_date'] = self::firstValue($row, $source['date']);
+            if ($projected) {
+                // Inhalt wird nur zum Abgleich gebraucht; hydrate() lädt ihn für die Endtreffer neu.
+                foreach ($source['content'] as $column) {
+                    unset($row[$column]);
+                }
+                $row['_search_table'] = $source['table'];
+            }
             $hits[] = $row;
         }
 
         return $hits;
+    }
+
+    /**
+     * Lädt für projizierte Treffer aus searchTable() (Marker `_search_table`) die vollständigen Zeilen –
+     * nach rank(), also nur für die tatsächlich angezeigten Treffer. Felder des Treffers (z. B. `_type`,
+     * `_search_score`) bleiben erhalten; inzwischen gelöschte Zeilen entfallen.
+     *
+     * @param list<array<string, mixed>> $results
+     * @return list<array<string, mixed>>
+     */
+    public function hydrate(array $results): array
+    {
+        $idsByTable = [];
+        foreach ($results as $result) {
+            $table = (string) ($result['_search_table'] ?? '');
+            $id = (int) ($result['id'] ?? 0);
+            if ($table !== '' && $id > 0 && preg_match('/^[A-Za-z0-9_]+$/', $table) === 1) {
+                $idsByTable[$table][$id] = $id;
+            }
+        }
+
+        if ($idsByTable === []) {
+            return $results;
+        }
+
+        $rowsByTable = [];
+        foreach ($idsByTable as $table => $ids) {
+            $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+            try {
+                $stmt = $this->db->prepare("SELECT * FROM {$table} WHERE id IN ({$placeholders})");
+                $rows = $stmt !== false && $stmt->execute(array_values($ids)) ? ($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []) : [];
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('search')->warning('Seitensuche: Treffer konnten nicht geladen werden.', [
+                    'table' => $table,
+                    'exception' => $e,
+                ]);
+                $rows = [];
+            }
+
+            foreach ($rows as $row) {
+                $rowsByTable[$table][(int) ($row['id'] ?? 0)] = $row;
+            }
+        }
+
+        $hydrated = [];
+        foreach ($results as $result) {
+            $table = (string) ($result['_search_table'] ?? '');
+            if ($table === '') {
+                $hydrated[] = $result;
+                continue;
+            }
+
+            $full = $rowsByTable[$table][(int) ($result['id'] ?? 0)] ?? null;
+            if ($full === null) {
+                continue;
+            }
+
+            unset($result['_search_table']);
+            $hydrated[] = array_replace($full, $result);
+        }
+
+        return $hydrated;
     }
 
     // ──────────────────────────────────────────────────────────

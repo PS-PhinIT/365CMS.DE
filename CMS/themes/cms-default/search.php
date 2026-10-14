@@ -90,6 +90,8 @@ $searchSortOptions = [
                 <?php if ($totalPages > 1): ?>
                     &ensp;·&ensp; Seite <?php echo $currentPage; ?> von <?php echo $totalPages; ?>
                 <?php endif; ?>
+            <?php elseif (!empty($search_notice)): ?>
+                <?php echo htmlspecialchars((string) $search_notice, ENT_QUOTES, 'UTF-8'); ?>
             <?php elseif ($query): ?>
                 Keine Ergebnisse für „<?php echo $query; ?>"
             <?php endif; ?>

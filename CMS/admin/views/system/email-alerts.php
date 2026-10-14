@@ -51,20 +51,20 @@ $securityLastSent = is_array($securityAlerts['last_sent'] ?? null) ? $securityAl
 							<div class="row">
 								<div class="col-md-6">
 									<div class="mb-3">
-										<label class="form-label">Empfänger-E-Mail</label>
-										<input class="form-control" type="email" name="monitor_alert_email" value="<?php echo htmlspecialchars((string)($settings['monitor_alert_email'] ?? '')); ?>">
+										<label for="fld-monitor_alert_email" class="form-label">Empfänger-E-Mail</label>
+										<input id="fld-monitor_alert_email" class="form-control" type="email" name="monitor_alert_email" value="<?php echo htmlspecialchars((string)($settings['monitor_alert_email'] ?? '')); ?>">
 									</div>
 								</div>
 								<div class="col-md-3">
 									<div class="mb-3">
-										<label class="form-label">Antwortzeit-Schwelle (ms)</label>
-										<input class="form-control" type="number" min="100" name="monitor_response_threshold_ms" value="<?php echo htmlspecialchars((string)($settings['monitor_response_threshold_ms'] ?? '800')); ?>">
+										<label for="fld-monitor_response_threshold_ms" class="form-label">Antwortzeit-Schwelle (ms)</label>
+										<input id="fld-monitor_response_threshold_ms" class="form-control" type="number" min="100" name="monitor_response_threshold_ms" value="<?php echo htmlspecialchars((string)($settings['monitor_response_threshold_ms'] ?? '800')); ?>">
 									</div>
 								</div>
 								<div class="col-md-3">
 									<div class="mb-3">
-										<label class="form-label">Disk-Warnung ab (%)</label>
-										<input class="form-control" type="number" min="1" max="99" name="monitor_disk_threshold_percent" value="<?php echo htmlspecialchars((string)($settings['monitor_disk_threshold_percent'] ?? '85')); ?>">
+										<label for="fld-monitor_disk_threshold_percent" class="form-label">Disk-Warnung ab (%)</label>
+										<input id="fld-monitor_disk_threshold_percent" class="form-control" type="number" min="1" max="99" name="monitor_disk_threshold_percent" value="<?php echo htmlspecialchars((string)($settings['monitor_disk_threshold_percent'] ?? '85')); ?>">
 									</div>
 								</div>
 							</div>
@@ -100,14 +100,14 @@ $securityLastSent = is_array($securityAlerts['last_sent'] ?? null) ? $securityAl
 							<div class="row">
 								<div class="col-md-4">
 									<div class="mb-3">
-										<label class="form-label">Betrachtungsfenster (Min.)</label>
-										<input class="form-control" type="number" min="5" max="1440" name="security_alert_window_minutes" value="<?php echo htmlspecialchars((string)($settings['security_alert_window_minutes'] ?? '60')); ?>">
+										<label for="fld-security_alert_window_minutes" class="form-label">Betrachtungsfenster (Min.)</label>
+										<input id="fld-security_alert_window_minutes" class="form-control" type="number" min="5" max="1440" name="security_alert_window_minutes" value="<?php echo htmlspecialchars((string)($settings['security_alert_window_minutes'] ?? '60')); ?>">
 									</div>
 								</div>
 								<div class="col-md-4">
 									<div class="mb-3">
-										<label class="form-label">Cooldown (Min.)</label>
-										<input class="form-control" type="number" min="15" max="10080" name="security_alert_cooldown_minutes" value="<?php echo htmlspecialchars((string)($settings['security_alert_cooldown_minutes'] ?? '180')); ?>">
+										<label for="fld-security_alert_cooldown_minutes" class="form-label">Cooldown (Min.)</label>
+										<input id="fld-security_alert_cooldown_minutes" class="form-control" type="number" min="15" max="10080" name="security_alert_cooldown_minutes" value="<?php echo htmlspecialchars((string)($settings['security_alert_cooldown_minutes'] ?? '180')); ?>">
 									</div>
 								</div>
 							</div>
@@ -115,20 +115,20 @@ $securityLastSent = is_array($securityAlerts['last_sent'] ?? null) ? $securityAl
 							<div class="row">
 								<div class="col-md-4">
 									<div class="mb-3">
-										<label class="form-label">Login-Brute-Force ab</label>
-										<input class="form-control" type="number" min="1" max="10000" name="security_alert_bruteforce_threshold" value="<?php echo htmlspecialchars((string)($settings['security_alert_bruteforce_threshold'] ?? '15')); ?>">
+										<label for="fld-security_alert_bruteforce_threshold" class="form-label">Login-Brute-Force ab</label>
+										<input id="fld-security_alert_bruteforce_threshold" class="form-control" type="number" min="1" max="10000" name="security_alert_bruteforce_threshold" value="<?php echo htmlspecialchars((string)($settings['security_alert_bruteforce_threshold'] ?? '15')); ?>">
 									</div>
 								</div>
 								<div class="col-md-4">
 									<div class="mb-3">
-										<label class="form-label">AntiSpam-Spitze ab</label>
-										<input class="form-control" type="number" min="1" max="10000" name="security_alert_antispam_threshold" value="<?php echo htmlspecialchars((string)($settings['security_alert_antispam_threshold'] ?? '10')); ?>">
+										<label for="fld-security_alert_antispam_threshold" class="form-label">AntiSpam-Spitze ab</label>
+										<input id="fld-security_alert_antispam_threshold" class="form-control" type="number" min="1" max="10000" name="security_alert_antispam_threshold" value="<?php echo htmlspecialchars((string)($settings['security_alert_antispam_threshold'] ?? '10')); ?>">
 									</div>
 								</div>
 								<div class="col-md-4">
 									<div class="mb-3">
-										<label class="form-label">Firewall-Blocks ab</label>
-										<input class="form-control" type="number" min="1" max="10000" name="security_alert_firewall_threshold" value="<?php echo htmlspecialchars((string)($settings['security_alert_firewall_threshold'] ?? '10')); ?>">
+										<label for="fld-security_alert_firewall_threshold" class="form-label">Firewall-Blocks ab</label>
+										<input id="fld-security_alert_firewall_threshold" class="form-control" type="number" min="1" max="10000" name="security_alert_firewall_threshold" value="<?php echo htmlspecialchars((string)($settings['security_alert_firewall_threshold'] ?? '10')); ?>">
 									</div>
 								</div>
 							</div>
@@ -150,8 +150,8 @@ $securityLastSent = is_array($securityAlerts['last_sent'] ?? null) ? $securityAl
 							<input type="hidden" name="action" value="send_monitoring_test_email">
 
 							<div>
-								<label class="form-label">Test-E-Mail an</label>
-								<input class="form-control" type="email" name="test_email_recipient" value="<?php echo htmlspecialchars((string)($settings['monitor_alert_email'] ?? '')); ?>" placeholder="monitoring@example.com">
+								<label for="fld-test_email_recipient" class="form-label">Test-E-Mail an</label>
+								<input id="fld-test_email_recipient" class="form-control" type="email" name="test_email_recipient" value="<?php echo htmlspecialchars((string)($settings['monitor_alert_email'] ?? '')); ?>" placeholder="monitoring@example.com">
 							</div>
 
 							<button type="submit" class="btn btn-outline-primary">Test-E-Mail senden</button>

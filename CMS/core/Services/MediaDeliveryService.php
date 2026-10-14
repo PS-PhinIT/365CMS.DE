@@ -275,6 +275,19 @@ final class MediaDeliveryService
             exit;
         }
 
+        // Zugriffsprüfung ist erledigt: Session-Lock vor dem (ggf. langen) Streamen freigeben,
+        // sonst blockieren große Downloads/Video-Ranges alle weiteren Requests derselben Sitzung.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        // Lazy Session (index.php) puffert die Ausgabe – Dateien nicht im Speicher sammeln.
+        if (defined('CMS_SESSION_DEFERRED')) {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+        }
+
         $this->streamFile($absolutePath, $rangeStart, $rangeEnd);
         exit;
     }

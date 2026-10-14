@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
 
 use CMS\AuditLogger;
 use CMS\Logger;
+use CMS\Services\TrustedProxyService;
 
 class FirewallModule
 {
@@ -27,7 +28,18 @@ class FirewallModule
         'firewall_simulation_preview_hours',
     ];
 
-    private const SUPPORTED_ACTIONS = ['save_settings', 'apply_baseline_profile', 'add_rule', 'delete_rule', 'toggle_rule', 'set_rule_mode'];
+    private const SUPPORTED_ACTIONS = [
+        'save_settings',
+        'apply_baseline_profile',
+        'add_rule',
+        'delete_rule',
+        'toggle_rule',
+        'set_rule_mode',
+        'save_proxy_settings',
+        'trust_proxy_candidate',
+        'dismiss_proxy_candidate',
+        'clear_proxy_candidates',
+    ];
 
     private const BASELINE_PROFILES = [
         'development' => [
@@ -177,7 +189,130 @@ class FirewallModule
             'recent_blocks' => array_map(fn($r) => (array)$r, $recentBlocks),
             'simulation'    => $simulationPreview,
             'baseline'      => $this->buildBaselineData($settings, $normalizedRules, $simulationPreview, $recentBlocks),
+            'proxy'         => $this->buildProxyData(),
         ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function buildProxyData(): array
+    {
+        TrustedProxyService::reset();
+        $config = TrustedProxyService::config();
+        $resolved = TrustedProxyService::resolve();
+        $stored = (string)($this->db->get_var(
+            "SELECT option_value FROM {$this->prefix}settings WHERE option_name = ? LIMIT 1",
+            [TrustedProxyService::OPTION_KEY]
+        ) ?? '');
+
+        return [
+            'spec' => (string)$config['spec'],
+            'source' => (string)$config['source'],
+            'stored' => $stored,
+            'constant_locked' => defined('CMS_TRUSTED_PROXIES'),
+            'trust_any' => (bool)$config['any'],
+            'remote_addr' => (string)$resolved['remote'],
+            'client_ip' => (string)$resolved['ip'],
+            'via_proxy' => (bool)$resolved['via_proxy'],
+            'header' => (string)$resolved['header'],
+            'request_headers' => TrustedProxyService::currentForwardHeaders(),
+            'candidates' => TrustedProxyService::getCandidates(),
+        ];
+    }
+
+    public function saveProxySettings(array $post): array
+    {
+        if (defined('CMS_TRUSTED_PROXIES')) {
+            return ['success' => false, 'error' => 'CMS_TRUSTED_PROXIES ist in config/app.php gesetzt und hat Vorrang. Bitte dort ändern.'];
+        }
+
+        $spec = TrustedProxyService::normalizeSpec((string)($post['trusted_proxies'] ?? ''));
+        if ($spec === null) {
+            return ['success' => false, 'error' => 'Ungültiger Eintrag. Erlaubt sind IPs, CIDR-Bereiche (IPv4 /8–/32, IPv6 /16–/128) sowie auto, private, cloudflare, * und off.'];
+        }
+
+        return $this->storeProxySpec($spec, 'firewall.proxy.save', 'Proxy-/CDN-Einstellung gespeichert');
+    }
+
+    public function trustProxyCandidate(string $network): array
+    {
+        if (defined('CMS_TRUSTED_PROXIES')) {
+            return ['success' => false, 'error' => 'CMS_TRUSTED_PROXIES ist in config/app.php gesetzt. Netz dort ergänzen: ' . $this->sanitizeText($network, 64)];
+        }
+
+        $network = trim($network);
+        $known = array_column(TrustedProxyService::getCandidates(), 'network');
+        if (!in_array($network, $known, true) || !TrustedProxyService::isValidRange($network)) {
+            return ['success' => false, 'error' => 'Unbekanntes oder ungültiges Proxy-Netz.'];
+        }
+
+        $current = trim((string)($this->db->get_var(
+            "SELECT option_value FROM {$this->prefix}settings WHERE option_name = ? LIMIT 1",
+            [TrustedProxyService::OPTION_KEY]
+        ) ?? ''));
+        if ($current === '') {
+            $current = TrustedProxyService::DEFAULT_SPEC;
+        }
+
+        $spec = TrustedProxyService::normalizeSpec($current . ', ' . $network);
+        if ($spec === null) {
+            return ['success' => false, 'error' => 'Die bestehende Proxy-Einstellung ist ungültig. Bitte zuerst korrigieren.'];
+        }
+
+        $result = $this->storeProxySpec($spec, 'firewall.proxy.trust_candidate', 'Proxy-Netz als vertrauenswürdig übernommen: ' . $network);
+        if (!empty($result['success'])) {
+            TrustedProxyService::removeCandidate($network);
+            $result['message'] = 'Proxy-Netz ' . $network . ' wird jetzt als vertrauenswürdig behandelt.';
+        }
+
+        return $result;
+    }
+
+    public function dismissProxyCandidate(string $network): array
+    {
+        TrustedProxyService::removeCandidate(trim($network));
+
+        return ['success' => true, 'message' => 'Eintrag aus der Erkennungsliste entfernt.'];
+    }
+
+    public function clearProxyCandidates(): array
+    {
+        TrustedProxyService::clearCandidates();
+
+        return ['success' => true, 'message' => 'Erkennungsliste geleert.'];
+    }
+
+    private function storeProxySpec(string $spec, string $auditAction, string $auditMessage): array
+    {
+        try {
+            $key = TrustedProxyService::OPTION_KEY;
+            $exists = $this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}settings WHERE option_name = ?", [$key]);
+            if ($exists) {
+                $this->db->update('settings', ['option_value' => $spec], ['option_name' => $key]);
+            } else {
+                $this->db->insert('settings', ['option_name' => $key, 'option_value' => $spec]);
+            }
+            TrustedProxyService::reset();
+
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                $auditAction,
+                $auditMessage,
+                'setting',
+                null,
+                [$key => $spec],
+                'warning'
+            );
+
+            return ['success' => true, 'message' => 'Proxy-/CDN-Einstellung gespeichert.'];
+        } catch (\Throwable $e) {
+            $this->logFailure('firewall.proxy.save_failed', 'Proxy-/CDN-Einstellung konnte nicht gespeichert werden.', [
+                'exception' => $e::class,
+            ]);
+
+            return ['success' => false, 'error' => 'Proxy-/CDN-Einstellung konnte nicht gespeichert werden.'];
+        }
     }
 
     public function saveSettings(array $post): array

@@ -241,7 +241,7 @@ $areaRows = [
     </div>
 </div>
 
-<script>
+<script <?= \CMS\Security::instance()->nonceAttr() ?>>
 (function () {
     const body = document.getElementById('logsActivityBody');
     if (!body) return;

@@ -104,6 +104,11 @@ $cookieManagerConfig = [
                                     </select>
                                 </div>
                                 <div class="col-md-6">
+                                    <?php $cookiePrimaryColor = preg_match('/^#[a-f0-9]{6}$/i', (string)($settings['cookie_primary_color'] ?? '')) === 1 ? (string)$settings['cookie_primary_color'] : '#3b82f6'; ?>
+                                    <label class="form-label" for="cookie-primary-color">Akzentfarbe (Buttons)</label>
+                                    <input type="color" id="cookie-primary-color" name="cookie_primary_color" class="form-control form-control-color" value="<?php echo htmlspecialchars($cookiePrimaryColor); ?>">
+                                </div>
+                                <div class="col-md-6">
                                     <label class="form-label">Akzeptieren-Button</label>
                                     <input type="text" name="cookie_accept_text" class="form-control" value="<?php echo htmlspecialchars($settings['cookie_accept_text'] ?? 'Akzeptieren'); ?>">
                                 </div>

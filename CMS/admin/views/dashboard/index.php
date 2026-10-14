@@ -107,14 +107,17 @@ if (!function_exists('dashboardUrl')) {
         $normalized = trim($url);
 
         if ($normalized === '') {
-            return $fallback;
+            $normalized = $fallback;
         }
 
         if ($normalized[0] !== '/' || str_starts_with($normalized, '//') || preg_match('/[\x00-\x1F\x7F]/', $normalized) === 1) {
-            return $fallback;
+            $normalized = $fallback;
         }
 
-        return $normalized;
+        // Interne Pfade relativ zur Installationsbasis auflösen (Unterverzeichnis-Installationen).
+        $siteUrl = defined('SITE_URL') ? rtrim((string) SITE_URL, '/') : '';
+
+        return $siteUrl . $normalized;
     }
 }
 
@@ -159,11 +162,11 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                             <?= htmlspecialchars((string) ($link['label'] ?? 'Aktion')) ?>
                         </a>
                     <?php endforeach; ?>
-                    <a href="/admin/pages?action=new" class="btn btn-primary d-none d-sm-inline-block">
+                    <a href="<?= htmlspecialchars(dashboardUrl('/admin/pages?action=new')) ?>" class="btn btn-primary d-none d-sm-inline-block">
                         <?= dashIcon('file-plus') ?>
                         Neue Seite
                     </a>
-                    <a href="/admin/posts?action=new" class="btn btn-outline-primary d-none d-sm-inline-block">
+                    <a href="<?= htmlspecialchars(dashboardUrl('/admin/posts?action=new')) ?>" class="btn btn-outline-primary d-none d-sm-inline-block">
                         <?= dashIcon('pencil-plus') ?>
                         Neuer Beitrag
                     </a>
@@ -367,7 +370,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                 </div>
                 <h3 class="mb-2">Aktuelle Prioritaeten</h3>
                 <p class="text-secondary mb-0">
-                    Schnellaktionen und Aktivitaetszusammenfassung statt doppelter Kennzahlen.
+                    Schnellaktionen und Aktivitätszusammenfassung statt doppelter Kennzahlen.
                 </p>
 
                 <div class="dashboard-work-grid mt-4">
@@ -376,7 +379,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                             <div class="dashboard-section-label mb-0 dashboard-context-label">Schnellaktionen</div>
                             <span class="dashboard-context-icon"><?= dashIcon('file-plus') ?></span>
                         </div>
-                        <p class="dashboard-context-sub">Direkte Einstiege fuer wiederkehrende Aufgaben.</p>
+                        <p class="dashboard-context-sub">Direkte Einstiege für wiederkehrende Aufgaben.</p>
                         <?php if ($favoriteShortcuts !== []): ?>
                             <div class="dashboard-work-action-list">
                                 <?php foreach (array_slice($favoriteShortcuts, 0, 4) as $shortcut): ?>
@@ -388,15 +391,15 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                             </div>
                         <?php else: ?>
                             <div class="dashboard-context-sub">Keine Schnellaktionen gespeichert.</div>
-                            <div class="dashboard-empty-hint">Gueltiger Leerzustand - Favoriten koennen jederzeit hinzugefuegt werden.</div>
+                            <div class="dashboard-empty-hint">Noch keine Favoriten – sie können jederzeit hinzugefügt werden.</div>
                         <?php endif; ?>
                     </div>
                     <div class="dashboard-context-tile">
                         <div class="dashboard-context-header">
-                            <div class="dashboard-section-label mb-0 dashboard-context-label">Letzte Aktivitaet</div>
+                            <div class="dashboard-section-label mb-0 dashboard-context-label">Letzte Aktivität</div>
                             <span class="dashboard-context-icon"><?= dashIcon('activity') ?></span>
                         </div>
-                        <p class="dashboard-context-sub">Zuletzt ausgefuehrte Aktionen im System.</p>
+                        <p class="dashboard-context-sub">Zuletzt ausgeführte Aktionen im System.</p>
                         <?php if ($activityEntries !== []): ?>
                             <ul class="dashboard-context-detail-list">
                                 <?php foreach (array_slice($activityEntries, 0, 4) as $entry): ?>
@@ -407,16 +410,16 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                                 <?php endforeach; ?>
                             </ul>
                         <?php else: ?>
-                            <div class="dashboard-context-sub">Keine neuen Aktivitaeten vorhanden.</div>
-                            <div class="dashboard-empty-hint">Gueltiger Leerzustand - neue Ereignisse erscheinen automatisch.</div>
+                            <div class="dashboard-context-sub">Keine neuen Aktivitäten vorhanden.</div>
+                            <div class="dashboard-empty-hint">Neue Ereignisse erscheinen hier automatisch.</div>
                         <?php endif; ?>
                     </div>
                     <div class="dashboard-context-tile">
                         <div class="dashboard-context-header">
-                            <div class="dashboard-section-label mb-0 dashboard-context-label">Offene Prioritaeten</div>
+                            <div class="dashboard-section-label mb-0 dashboard-context-label">Offene Prioritäten</div>
                             <span class="dashboard-context-icon"><?= dashIcon('alert-triangle') ?></span>
                         </div>
-                        <p class="dashboard-context-sub">Themen mit noetigem Handlungsbedarf.</p>
+                        <p class="dashboard-context-sub">Themen mit nötigem Handlungsbedarf.</p>
                         <?php if ($attentionItems !== []): ?>
                             <ul class="dashboard-context-detail-list">
                                 <?php foreach (array_slice($attentionItems, 0, 4) as $item): ?>
@@ -428,8 +431,8 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                                 <?php endforeach; ?>
                             </ul>
                         <?php else: ?>
-                            <div class="dashboard-context-sub">0 offene Prioritaeten.</div>
-                            <div class="dashboard-empty-hint">Gueltiger Leerzustand - aktuell ist kein Eingreifen noetig.</div>
+                            <div class="dashboard-context-sub">0 offene Prioritäten.</div>
+                            <div class="dashboard-empty-hint">Aktuell ist kein Eingreifen nötig.</div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -502,7 +505,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                         <?php else: ?>
                             <div class="list-group-item dashboard-empty-state">
                                 <div class="text-secondary">Aktuell gibt es keine offenen Prioritaeten.</div>
-                                <div class="dashboard-empty-hint">Alles ruhig - derzeit ist kein Eingreifen noetig.</div>
+                                <div class="dashboard-empty-hint">Alles ruhig – derzeit ist kein Eingreifen nötig.</div>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -538,7 +541,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                                 <?php endforeach; ?>
                             </div>
                             <div class="card-footer">
-                                <a href="/admin/orders" class="btn btn-outline-primary w-100">
+                                <a href="<?= htmlspecialchars(dashboardUrl('/admin/orders')) ?>" class="btn btn-outline-primary w-100">
                                     <?= dashIcon('shopping-cart') ?>
                                     Bestellungen öffnen
                                 </a>
@@ -685,7 +688,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                     </table>
                 </div>
                 <div class="card-footer py-2">
-                    <a href="/admin/logs" class="btn btn-sm btn-outline-secondary">Alle Aktivitäten anzeigen</a>
+                    <a href="<?= htmlspecialchars(dashboardUrl('/admin/logs')) ?>" class="btn btn-sm btn-outline-secondary">Alle Aktivitäten anzeigen</a>
                 </div>
             <?php else: ?>
                 <div class="card-body">

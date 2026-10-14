@@ -261,16 +261,16 @@ $renderSparkline = static function (array $points, string $strokeColor, string $
 						<p class="text-secondary mb-3">Der Systembereich kann den vorhandenen Cron jetzt auf mehreren Wegen starten: direkt im Core ohne HTTP/TLS, per Loopback gegen <code>/cron.php</code> oder via Admin-Ajax ohne Seitenreload.</p>
 						<div class="row g-3">
 							<div class="col-md-4">
-								<label class="form-label">Task</label>
-								<select name="cron_task" class="form-select">
+								<label for="fld-cron_task" class="form-label">Task</label>
+								<select id="fld-cron_task" name="cron_task" class="form-select">
 									<?php foreach ($runnerTasks as $task): ?>
 										<option value="<?php echo htmlspecialchars((string) $task, ENT_QUOTES); ?>" <?php echo $runnerDefaultTask === (string) $task ? 'selected' : ''; ?>><?php echo htmlspecialchars((string) $task); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</div>
 							<div class="col-md-4">
-								<label class="form-label">Limit</label>
-								<input type="number" name="cron_limit" class="form-control" min="1" max="100" value="<?php echo (int) $runnerDefaultLimit; ?>">
+								<label for="fld-cron_limit" class="form-label">Limit</label>
+								<input id="fld-cron_limit" type="number" name="cron_limit" class="form-control" min="1" max="100" value="<?php echo (int) $runnerDefaultLimit; ?>">
 							</div>
 							<div class="col-md-4">
 								<label class="form-label d-block">Optionen</label>

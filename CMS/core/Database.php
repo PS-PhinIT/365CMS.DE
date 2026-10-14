@@ -209,6 +209,27 @@ class Database implements DatabaseInterface
             && class_exists(Services\OptionStore::class, false)) {
             Services\OptionStore::getInstance()->flush();
         }
+
+        // RSS-Feed-Cache (Routing\ThemeRouter::serveRssFeed) bei Änderungen an Beiträgen/Kategorien verwerfen;
+        // der Aufrufzähler (`views = views + 1`) zählt nicht als Inhaltsänderung.
+        if (preg_match('/`?' . preg_quote($this->prefix, '/') . '(?:posts|post_categories)`?(?![a-z0-9_])/i', $sql) === 1
+            && preg_match('/^\s*UPDATE\s+\S+\s+SET\s+views\s*=\s*views\s*\+\s*1\s+WHERE/i', $sql) !== 1) {
+            self::invalidateFeedCache();
+        }
+    }
+
+    /**
+     * Löscht die zwischengespeicherten RSS-Feeds (cache/feed/*.xml).
+     */
+    public static function invalidateFeedCache(): void
+    {
+        if (!defined('ABSPATH')) {
+            return;
+        }
+
+        foreach (glob(rtrim((string) ABSPATH, '/\\') . '/cache/feed/*.xml') ?: [] as $file) {
+            @unlink($file);
+        }
     }
 
     /**
@@ -508,6 +529,49 @@ class Database implements DatabaseInterface
                AND COLUMN_NAME = ?',
             [$table, $column]
         ) ?? 0) > 0;
+    }
+
+    /**
+     * Führt eine idempotente Schema-Prüfung (CREATE TABLE IF NOT EXISTS, fehlende
+     * Spalten) nur einmal je Codestand aus statt bei jedem Request.
+     *
+     * Die Flag-Datei unter cache/ enthält einen Hash der Quelldatei; ändert ein
+     * Update die Tabellendefinition, läuft die Prüfung einmal erneut. Wirft der
+     * Callback eine Exception oder liefert er `false`, wird kein Flag geschrieben
+     * und die Prüfung beim nächsten Request wiederholt.
+     */
+    public function runSchemaOnce(string $key, string $sourceFile, callable $callback): void
+    {
+        $key = preg_replace('/[^a-z0-9_]/', '', strtolower($key)) ?? '';
+        if ($key === '' || !defined('ABSPATH')) {
+            $callback();
+            return;
+        }
+
+        $hash = is_file($sourceFile) ? @hash_file('crc32b', $sourceFile) : false;
+        $revision = is_string($hash) && $hash !== '' ? $hash : 'unknown';
+        $cacheDir = ABSPATH . 'cache';
+        $flagFile = $cacheDir . '/db_runtime_' . $key . '_' . $this->prefix . $revision . '.flag';
+
+        if (is_file($flagFile)) {
+            return;
+        }
+
+        if ($callback() === false) {
+            return;
+        }
+
+        if (!is_dir($cacheDir) && !@mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) {
+            return;
+        }
+
+        foreach (glob($cacheDir . '/db_runtime_' . $key . '_' . $this->prefix . '*.flag') ?: [] as $staleFlag) {
+            if ($staleFlag !== $flagFile) {
+                @unlink($staleFlag);
+            }
+        }
+
+        @file_put_contents($flagFile, date('Y-m-d H:i:s'), LOCK_EX);
     }
 
     private function sanitizeDiagnosticText(string $value, int $maxLength = 500): string

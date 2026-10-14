@@ -513,7 +513,7 @@ $fontManagerConfig = [
                 <div class="card-body">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Überschriften-Schrift</label>
+                            <label for="headingFontSelect" class="form-label">Überschriften-Schrift</label>
                             <select name="heading_font" class="form-select" id="headingFontSelect">
                                 <?php foreach ($systemFonts as $key => $label): ?>
                                     <option value="<?php echo htmlspecialchars($key); ?>" <?php echo $headingFont === $key ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
@@ -521,7 +521,7 @@ $fontManagerConfig = [
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Text-Schrift</label>
+                            <label for="bodyFontSelect" class="form-label">Text-Schrift</label>
                             <select name="body_font" class="form-select" id="bodyFontSelect">
                                 <?php foreach ($systemFonts as $key => $label): ?>
                                     <option value="<?php echo htmlspecialchars($key); ?>" <?php echo $bodyFont === $key ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
@@ -534,12 +534,12 @@ $fontManagerConfig = [
                     <?php endif; ?>
                     <div class="row">
                         <div class="col-md-6">
-                            <label class="form-label">Basis-Schriftgröße (px)</label>
-                                <input type="number" name="font_size" class="form-control" value="<?php echo (int)$fontSize; ?>" min="<?php echo (int)($constraints['font_size_min'] ?? 12); ?>" max="<?php echo (int)($constraints['font_size_max'] ?? 24); ?>" step="1" inputmode="numeric">
+                            <label for="fld-font_size" class="form-label">Basis-Schriftgröße (px)</label>
+                                <input id="fld-font_size" type="number" name="font_size" class="form-control" value="<?php echo (int)$fontSize; ?>" min="<?php echo (int)($constraints['font_size_min'] ?? 12); ?>" max="<?php echo (int)($constraints['font_size_max'] ?? 24); ?>" step="1" inputmode="numeric">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Zeilenhöhe</label>
-                            <input type="number" name="line_height" class="form-control" value="<?php echo htmlspecialchars($lineHeight); ?>" min="<?php echo htmlspecialchars((string)($constraints['line_height_min'] ?? '1.0')); ?>" max="<?php echo htmlspecialchars((string)($constraints['line_height_max'] ?? '2.5')); ?>" step="0.1" inputmode="decimal">
+                            <label for="fld-line_height" class="form-label">Zeilenhöhe</label>
+                            <input id="fld-line_height" type="number" name="line_height" class="form-control" value="<?php echo htmlspecialchars($lineHeight); ?>" min="<?php echo htmlspecialchars((string)($constraints['line_height_min'] ?? '1.0')); ?>" max="<?php echo htmlspecialchars((string)($constraints['line_height_max'] ?? '2.5')); ?>" step="0.1" inputmode="decimal">
                         </div>
                     </div>
                     <div class="form-check form-switch mt-3">
@@ -568,8 +568,8 @@ $fontManagerConfig = [
                         <input type="hidden" name="action" value="download_google_font">
                         <div class="row g-2 align-items-end">
                             <div class="col">
-                                <label class="form-label">Google Font Name</label>
-                                <input type="text" name="google_font_family" class="form-control" placeholder="z.B. Inter, Roboto, Open Sans" required maxlength="<?php echo (int)($constraints['google_font_family_max_length'] ?? 120); ?>" pattern="[a-zA-Z0-9 ]+" title="Nur Buchstaben, Zahlen und Leerzeichen" autocomplete="off" spellcheck="false">
+                                <label for="fld-google_font_family" class="form-label">Google Font Name</label>
+                                <input id="fld-google_font_family" type="text" name="google_font_family" class="form-control" placeholder="z.B. Inter, Roboto, Open Sans" required maxlength="<?php echo (int)($constraints['google_font_family_max_length'] ?? 120); ?>" pattern="[a-zA-Z0-9 ]+" title="Nur Buchstaben, Zahlen und Leerzeichen" autocomplete="off" spellcheck="false">
                                 <small class="form-hint">Exakter Name von <a href="https://fonts.google.com" target="_blank" rel="noopener noreferrer">fonts.google.com</a>; pro Import maximal <?php echo (int)($constraints['download_remote_file_limit'] ?? 20); ?> Font-Dateien, je Datei bis <?php echo htmlspecialchars((string)($constraints['download_remote_file_byte_limit_label'] ?? '5,0 MB')); ?>, ausschließlich von <?php echo htmlspecialchars((string)($constraints['allowed_remote_hosts_label'] ?? 'fonts.googleapis.com, fonts.gstatic.com')); ?>.</small>
                             </div>
                             <div class="col-auto">

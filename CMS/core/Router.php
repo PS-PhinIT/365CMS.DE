@@ -753,27 +753,10 @@ class Router
         $ttl = 300;
 
         try {
-            $db = Database::instance();
-            $rows = $db->get_results(
-                "SELECT option_name, option_value FROM {$db->getPrefix()}settings WHERE option_name IN ('perf_page_cache', 'perf_html_cache_ttl')"
-            ) ?: [];
-
-            $pageCacheEnabled = true;
-            $configuredTtl = $ttl;
-
-            foreach ($rows as $row) {
-                $name = (string) ($row->option_name ?? '');
-                $value = (string) ($row->option_value ?? '');
-
-                if ($name === 'perf_page_cache') {
-                    $pageCacheEnabled = $value !== '0';
-                    continue;
-                }
-
-                if ($name === 'perf_html_cache_ttl') {
-                    $configuredTtl = (int) $value;
-                }
-            }
+            // Über den OptionStore: die Autoload-Optionen sind meist schon geladen (keine Extra-Abfrage).
+            $options = Services\OptionStore::getInstance()->getMany(['perf_page_cache', 'perf_html_cache_ttl']);
+            $pageCacheEnabled = (string) ($options['perf_page_cache'] ?? '1') !== '0';
+            $configuredTtl = isset($options['perf_html_cache_ttl']) ? (int) $options['perf_html_cache_ttl'] : $ttl;
 
             if (!$pageCacheEnabled) {
                 return 0;
@@ -846,7 +829,7 @@ class Router
                 'request_host' => (string)($_SERVER['HTTP_HOST'] ?? ''),
                 'request_method' => $this->requestMethod,
                 'referrer_url' => (string)($_SERVER['HTTP_REFERER'] ?? ''),
-                'ip_address' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+                'ip_address' => Security::getClientIp(),
                 'user_agent' => (string)($_SERVER['HTTP_USER_AGENT'] ?? ''),
             ]);
             $this->notFoundLogged = true;

@@ -142,8 +142,8 @@ if (!array_key_exists($browserCacheTtl, $browserCacheTtlOptions)) {
                             </label>
 
                             <div class="mb-3">
-                                <label class="form-label">Bildauslieferung Cache-TTL</label>
-                                <select class="form-select" name="perf_browser_cache_ttl">
+                                <label for="fld-perf_browser_cache_ttl" class="form-label">Bildauslieferung Cache-TTL</label>
+                                <select id="fld-perf_browser_cache_ttl" class="form-select" name="perf_browser_cache_ttl">
                                     <?php foreach ($browserCacheTtlOptions as $ttlValue => $ttlLabel): ?>
                                         <option value="<?php echo htmlspecialchars((string) $ttlValue, ENT_QUOTES); ?>" <?php echo $browserCacheTtl === (string) $ttlValue ? 'selected' : ''; ?>><?php echo htmlspecialchars((string) $ttlLabel, ENT_QUOTES); ?></option>
                                     <?php endforeach; ?>
@@ -151,8 +151,8 @@ if (!array_key_exists($browserCacheTtl, $browserCacheTtlOptions)) {
                                 <div class="form-text">Steuert die Browser-Cache-Dauer für öffentlich ausgelieferte Medien über <code>/media-file</code> und direkte <code>/uploads</code>-Bilder per Upload-<code>.htaccess</code>. Standard sind 7 Tage.</div>
                             </div>
                             <div class="mb-0">
-                                <label class="form-label">HTML-/Seiten-Cache TTL (Sekunden)</label>
-                                <input type="number" min="0" max="86400" step="1" class="form-control" name="perf_html_cache_ttl" value="<?php echo htmlspecialchars((string)($settings['perf_html_cache_ttl'] ?? '300')); ?>">
+                                <label for="fld-perf_html_cache_ttl" class="form-label">HTML-/Seiten-Cache TTL (Sekunden)</label>
+                                <input id="fld-perf_html_cache_ttl" type="number" min="0" max="86400" step="1" class="form-control" name="perf_html_cache_ttl" value="<?php echo htmlspecialchars((string)($settings['perf_html_cache_ttl'] ?? '300')); ?>">
                             </div>
                         </div>
                     </div>
@@ -165,13 +165,13 @@ if (!array_key_exists($browserCacheTtl, $browserCacheTtlOptions)) {
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label">Admin-Session Timeout (Sekunden)</label>
-                                <input type="number" min="300" max="604800" step="1" class="form-control" name="perf_session_timeout_admin" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_admin'] ?? '28800')); ?>" data-timeout-human>
+                                <label for="fld-perf_session_timeout_admin" class="form-label">Admin-Session Timeout (Sekunden)</label>
+                                <input id="fld-perf_session_timeout_admin" type="number" min="300" max="604800" step="1" class="form-control" name="perf_session_timeout_admin" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_admin'] ?? '28800')); ?>" data-timeout-human>
                                 <div class="performance-timeout-hint" data-timeout-hint-for="perf_session_timeout_admin"></div>
                             </div>
                             <div class="mb-0">
-                                <label class="form-label">Member-Session Timeout (Sekunden)</label>
-                                <input type="number" min="300" max="31536000" step="1" class="form-control" name="perf_session_timeout_member" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_member'] ?? '2592000')); ?>" data-timeout-human>
+                                <label for="fld-perf_session_timeout_member" class="form-label">Member-Session Timeout (Sekunden)</label>
+                                <input id="fld-perf_session_timeout_member" type="number" min="300" max="31536000" step="1" class="form-control" name="perf_session_timeout_member" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_member'] ?? '2592000')); ?>" data-timeout-human>
                                 <div class="performance-timeout-hint" data-timeout-hint-for="perf_session_timeout_member"></div>
                             </div>
                         </div>

@@ -872,6 +872,10 @@ class Bootstrap
                 throw new \RuntimeException('SEO-Sitemap-Bundle konnte nicht aktualisiert werden.');
             }
         }, 20);
+        // Aufbewahrungsfristen für Besucher-/Telemetriedaten, 404-Monitor und Tages-Logdateien.
+        Hooks::addAction('cms_cron_daily', static function (): void {
+            Services\DataRetentionService::getInstance()->run();
+        }, 40);
 
         // Warmup erst nach der Antwort: opcache_compile_file() darf weder bereits geladene noch im
         // weiteren Request noch einzubindende Klassen-Dateien ein zweites Mal deklarieren.

@@ -36,7 +36,9 @@ final class SecurityRuntimeService
         $this->db = Database::instance();
         $this->prefix = $this->db->getPrefix();
         try {
-            $this->ensureTables();
+            $this->db->runSchemaOnce('security_runtime', __FILE__, function (): void {
+                $this->ensureTables();
+            });
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('security.runtime')->warning('Firewall-Runtime-Tabellen konnten nicht vorbereitet werden.', [
                 'exception' => $e::class,
@@ -75,6 +77,7 @@ final class SecurityRuntimeService
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_action (action),
                 INDEX idx_ip (ip_address),
+                INDEX idx_ip_created (ip_address, created_at),
                 INDEX idx_created (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
@@ -84,6 +87,16 @@ final class SecurityRuntimeService
             'rule_mode',
             "ALTER TABLE {$this->prefix}firewall_rules ADD COLUMN rule_mode VARCHAR(20) NOT NULL DEFAULT 'enforce' AFTER rule_type"
         );
+
+        // Rate-Limit-Zählung filtert nach IP und Zeitfenster.
+        $indexStmt = $this->db->getPdo()->query("SHOW INDEX FROM {$this->prefix}security_log WHERE Key_name = 'idx_ip_created'");
+        $hasIndex = $indexStmt instanceof \PDOStatement && $indexStmt->fetch(\PDO::FETCH_ASSOC) !== false;
+        if ($indexStmt instanceof \PDOStatement) {
+            $indexStmt->closeCursor();
+        }
+        if (!$hasIndex) {
+            $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}security_log ADD INDEX idx_ip_created (ip_address, created_at)");
+        }
     }
 
     public function handleRequest(): void
@@ -92,12 +105,15 @@ final class SecurityRuntimeService
             return;
         }
 
+        // Client-IP immer einmal auflösen: erkennt unbekannte vorgelagerte Proxys/CDNs (Hoster-CDN)
+        // auch bei deaktivierter Firewall; das Ergebnis wird pro Request zwischengespeichert.
+        $ip = Security::getClientIp();
+
         $settings = $this->loadFirewallSettings();
         if (($settings['firewall_enabled'] ?? '0') !== '1') {
             return;
         }
 
-        $ip = Security::getClientIp();
         $uri = $this->sanitizeLogText((string)($_SERVER['REQUEST_URI'] ?? '/'), 1000);
         $userAgent = $this->sanitizeLogText((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 500);
 
@@ -150,12 +166,6 @@ final class SecurityRuntimeService
             'firewall_block_duration',
             'firewall_log_enabled',
         ];
-        $placeholders = implode(',', array_fill(0, count($keys), '?'));
-        $rows = $this->db->get_results(
-            "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name IN ({$placeholders})",
-            $keys
-        ) ?: [];
-
         $settings = [
             'firewall_enabled' => '0',
             'firewall_rate_limit' => (string)self::DEFAULT_RATE_LIMIT,
@@ -164,10 +174,9 @@ final class SecurityRuntimeService
             'firewall_log_enabled' => '0',
         ];
 
-        foreach ($rows as $row) {
-            $name = (string)($row->option_name ?? '');
-            if (array_key_exists($name, $settings)) {
-                $settings[$name] = (string)($row->option_value ?? '');
+        foreach (OptionStore::getInstance()->getMany($keys) as $name => $value) {
+            if ($value !== null && array_key_exists($name, $settings)) {
+                $settings[$name] = $value;
             }
         }
 
@@ -186,7 +195,8 @@ final class SecurityRuntimeService
              LIMIT " . self::MAX_RULES
         ) ?: [];
 
-        $country = strtoupper($this->sanitizeLogText((string)($_SERVER['HTTP_CF_IPCOUNTRY'] ?? $_SERVER['HTTP_X_APPENGINE_COUNTRY'] ?? ''), 2));
+        // Länder-Header nur von vertrauenswürdigen Proxys/CDNs – direkt gesendet wären sie beliebig fälschbar.
+        $country = TrustedProxyService::countryCode();
 
         foreach ($rows as $row) {
             $ruleId = (int)($row->id ?? 0);
@@ -283,8 +293,9 @@ final class SecurityRuntimeService
             "DELETE FROM {$this->prefix}firewall_rules WHERE rule_type = 'block_ip' AND reason = ? AND expires_at IS NOT NULL AND expires_at <= NOW()",
             ['Automatisches Rate-Limit']
         );
+        // In Blöcken löschen: ein einziges DELETE über Hunderttausende Zeilen sperrt die Tabelle lange.
         $this->db->execute(
-            "DELETE FROM {$this->prefix}security_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)"
+            "DELETE FROM {$this->prefix}security_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) LIMIT 5000"
         );
     }
 
@@ -293,16 +304,21 @@ final class SecurityRuntimeService
     {
         $action = $status === 429 ? 'rate_limited' : 'blocked';
         $extra['status'] = $status;
-        $this->logSecurityEvent($action, $ip, $uri, $userAgent, $rule, $extra);
-        AuditLogger::instance()->log(
-            AuditLogger::CAT_SECURITY,
-            'firewall.request.' . $action,
-            $message,
-            'ip',
-            null,
-            ['ip' => $ip, 'rule' => $rule, 'uri' => $this->sanitizeLogText($uri, 180)],
-            'warning'
-        );
+
+        // Eine bereits gesperrte IP erzeugt höchstens einen Protokolleintrag je Regel und Minute;
+        // vorher schrieb jede Anfrage einer Flut zwei Zeilen (security_log + audit_log).
+        if (!$this->wasRecentlyLogged($ip, $action, $rule)) {
+            $this->logSecurityEvent($action, $ip, $uri, $userAgent, $rule, $extra);
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                'firewall.request.' . $action,
+                $message,
+                'ip',
+                null,
+                ['ip' => $ip, 'rule' => $rule, 'uri' => $this->sanitizeLogText($uri, 180)],
+                'warning'
+            );
+        }
 
         if (!headers_sent()) {
             http_response_code($status);
@@ -315,6 +331,24 @@ final class SecurityRuntimeService
 
         echo $status === 429 ? 'Too many requests.' : 'Request blocked.';
         exit;
+    }
+
+    private function wasRecentlyLogged(string $ip, string $action, string $rule): bool
+    {
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+
+        try {
+            return $this->db->get_var(
+                "SELECT 1 FROM {$this->prefix}security_log
+                 WHERE ip_address = ? AND created_at >= ? AND action = ? AND rule_matched = ?
+                 LIMIT 1",
+                [$ip, date('Y-m-d H:i:s', time() - 60), $action, $this->sanitizeLogText($rule, 255)]
+            ) !== null;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /** @param array<string,mixed> $extra */

@@ -188,6 +188,22 @@ $brokenLinkNotes = is_array($brokenLinkReport['notes'] ?? null) ? $brokenLinkRep
                             <?php endif; ?>
                         </div>
 
+                        <?php $legacyHeaderCode = (string)($settings['seo_custom_header_code'] ?? ''); ?>
+                        <?php if (trim($legacyHeaderCode) !== ''): ?>
+                            <div class="col-12">
+                                <div class="alert alert-warning mb-2" role="alert">
+                                    <strong>Eigener Header-Code (Altbestand):</strong> Dieser Code wird weiterhin unverändert in den <code>&lt;head&gt;</code> aller Seiten ausgegeben.
+                                    Neuer Head-Code wird im Theme-Customizer unter <em>Erweitert</em> gepflegt. Inline-Skripte ohne Nonce blockiert die Content-Security-Policy.
+                                </div>
+                                <label class="form-label" for="seo-legacy-header-code">Aktueller Inhalt (nur Anzeige)</label>
+                                <textarea class="form-control font-monospace" id="seo-legacy-header-code" rows="4" readonly><?= htmlspecialchars($legacyHeaderCode) ?></textarea>
+                                <label class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="clear_legacy_header_code" value="1">
+                                    <span class="form-check-label">Diesen Header-Code beim Speichern entfernen</span>
+                                </label>
+                            </div>
+                        <?php endif; ?>
+
                         <div class="col-12">
                             <button class="btn btn-primary" type="submit">Technische SEO speichern</button>
                         </div>

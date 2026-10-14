@@ -1870,6 +1870,11 @@ final class PerformanceModule
                 }
             }
 
+            if (array_key_exists('perf_session_timeout_admin', $settingsToSave) || array_key_exists('perf_session_timeout_member', $settingsToSave)) {
+                // index.php hält die Session-GC-Lebensdauer 10 Minuten im Cache.
+                @unlink(ABSPATH . 'cache/session_gc_lifetime.cache');
+            }
+
             if ($action === 'save_media_settings' || array_key_exists('perf_webp_uploads', $settingsToSave) || array_key_exists('perf_strip_exif', $settingsToSave)) {
                 $mediaService = MediaService::getInstance();
                 $mediaSettings = $mediaService->getSettings();

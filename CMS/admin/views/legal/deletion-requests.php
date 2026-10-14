@@ -170,8 +170,8 @@ $statusBadges = ['pending' => 'bg-warning', 'processing' => 'bg-blue', 'complete
                         </div>
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label">Begründung (DSGVO Art. 17 Abs. 3)</label>
-                                <textarea name="reject_reason" class="form-control" rows="3" required placeholder="z.B. gesetzliche Aufbewahrungspflicht"></textarea>
+                                <label for="fld-reject_reason" class="form-label">Begründung (DSGVO Art. 17 Abs. 3)</label>
+                                <textarea id="fld-reject_reason" name="reject_reason" class="form-control" rows="3" required placeholder="z.B. gesetzliche Aufbewahrungspflicht"></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">

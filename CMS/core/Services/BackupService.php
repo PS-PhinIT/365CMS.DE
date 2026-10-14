@@ -500,13 +500,10 @@ class BackupService
                 }
             }
             
-            // Use AWS SDK if available, otherwise use REST API
-            if (class_exists('Aws\S3\S3Client')) {
-                return $this->uploadToS3WithSDK($backupPath, $s3Config);
-            } else {
-                return $this->uploadToS3WithREST($backupPath, $s3Config);
-            }
-        } catch (\Exception $e) {
+            // Upload über die signierte REST-API (SigV4). Ein SDK-Pfad war referenziert,
+            // aber nie implementiert und führte bei installiertem AWS-SDK zu einem Fatal Error.
+            return $this->uploadToS3WithREST($backupPath, $s3Config);
+        } catch (\Throwable $e) {
             Logger::instance()->withChannel('backup')->error('Backup upload to S3 failed.', [
                 'backup_path' => $backupPath,
                 'exception' => $e,

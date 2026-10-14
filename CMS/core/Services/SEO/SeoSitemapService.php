@@ -91,7 +91,11 @@ final class SeoSitemapService
 
     public function generateRobotsTxt(): string
     {
-        $customContent = $this->metaService->getSetting('robots_txt_content');
+        $customContent = trim($this->metaService->getSetting('robots_txt_content'));
+        if ($customContent === '') {
+            // Feld „robots.txt“ unter Einstellungen → Allgemein (bisher gespeichert, aber nie ausgewertet).
+            $customContent = trim((string) (\CMS\Services\OptionStore::getInstance()->get('robots_txt') ?? ''));
+        }
         if ($customContent !== '') {
             return $customContent;
         }

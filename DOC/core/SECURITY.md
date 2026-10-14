@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Sicherheitsmodell
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
-Security is layered: transport (HTTPS redirect strategy, HSTS), response headers and a nonce-based CSP with Trusted Types (`CMS\Security`), hardened sessions (HttpOnly, Secure, SameSite=Strict, strict mode, ID regeneration, role-based lifetimes, device binding), authentication with rate limiting, MFA (TOTP, backup codes), passkeys and LDAP (`CMS\Auth`, `CMS\Auth\AuthManager`), per-action one-time CSRF tokens (1 h TTL, 20 per action), a global CSRF guard for public POST requests, an application firewall (`SecurityRuntimeService`), anti-spam, prepared statements, HTML sanitising (HTMLPurifier, Editor.js sanitizer), upload validation, encrypted secrets (`SettingsService`, AES-256-CBC) and audit logging.
+Security is layered: transport (HTTPS redirect strategy, HSTS), response headers and a nonce-based CSP with Trusted Types (`CMS\Security`), hardened sessions (HttpOnly, Secure, SameSite=Strict, strict mode, ID regeneration, role-based lifetimes, device binding), authentication with rate limiting, MFA (TOTP, backup codes), passkeys and LDAP (`CMS\Auth`, `CMS\Auth\AuthManager`), per-action one-time CSRF tokens (1 h TTL, 20 per action), a global CSRF guard for public POST requests, proxy/CDN-aware client IP detection (`TrustedProxyService`, default `cloudflare`; unknown CDN networks such as Hostinger's are detected and can be approved with one click, highlighted when the admin's own request came through them), an application firewall (`SecurityRuntimeService`), anti-spam, prepared statements, HTML sanitising (HTMLPurifier, Editor.js sanitizer), upload validation, encrypted secrets (`SettingsService`, AES-256-CBC) and audit logging.
 
 ## Deutsch
 
@@ -15,7 +15,7 @@ Security is layered: transport (HTTPS redirect strategy, HSTS), response headers
 | `CMS_HTTPS_REDIRECT_STRATEGY` | `upstream` | wer HTTP→HTTPS umleitet: vorgelagerter Proxy/Webserver (`upstream`), Apache-`.htaccess` oder Core-PHP; `disabled` möglich |
 | `CMS_HSTS_MODE` | `https-only` | HSTS nur bei HTTPS-Anfragen |
 | `CMS_HSTS_MAX_AGE` | 31536000 | Gültigkeit in Sekunden |
-| `CMS_TRUSTED_PROXIES` | nicht gesetzt | seit 3.4.12: Komma-Liste vertrauenswürdiger Proxy-IPs/CIDR (IPv4/IPv6). Nur wenn `REMOTE_ADDR` darin liegt, ermittelt `Security::getClientIp()` die Client-IP aus `X-Forwarded-For` (von rechts, erste nicht vertrauenswürdige Adresse). Ohne Konstante gilt `REMOTE_ADDR`. Betrifft Rate-Limits, Firewall, Audit-Log |
+| `CMS_TRUSTED_PROXIES` | nicht gesetzt (= `cloudflare`) | Komma-Liste vertrauenswürdiger Proxys/CDNs: IPs, CIDR (IPv4 /8–/32, IPv6 /16–/128) und Schlüsselwörter `cloudflare`, `private` (lokaler Reverse Proxy, der `X-Forwarded-For` selbst setzt), `auto` (`private` + `cloudflare`), `*`, `off`. Eine gesetzte Konstante hat Vorrang vor der Admin-Einstellung (*Sicherheit → Firewall → Proxy / CDN & Client-IP*, Option `security_trusted_proxies`); leerer Wert = `off`. Details: Abschnitt 7a. Betrifft Rate-Limits, Firewall, Audit-Log |
 
 HTTPS wird auch hinter Proxys erkannt (`X-Forwarded-Proto`, `X-Forwarded-SSL`, `Front-End-Https`, Port 443).
 
@@ -49,6 +49,7 @@ trusted-types cms365 default sanitize-html dompurify; require-trusted-types-for 
 - Laufzeiten je Rolle: Admin 8 h (`perf_session_timeout_admin`), Mitglied 30 Tage (`perf_session_timeout_member`); abgelaufene Sessions werden beim Laden verworfen.
 - Session-Bindung an ein HMAC-signiertes Geräte-Cookie (`cms_device`, 2 h, enthält Benutzer-ID, Zeitstempel und Hash der Session-ID) erschwert Session-Diebstahl.
 - Cookie-Domain wird bei Alias-/Hub-Domains bewusst host-only gesetzt (`CMS/index.php`).
+- Seit 3.5.0 startet die Session für anonyme GET-/HEAD-Seiten erst, wenn sie gebraucht wird (Formular-Token, Login, Warenkorb): kein `Set-Cookie`, Antwort bleibt `public` und damit CDN-cachebar. Wird `$_SESSION` im Request beschrieben, startet `index.php` die Session am Ende des Requests und schaltet die Antwort auf `private`. Sofort gestartet wird bei vorhandenem Session- oder `cms_device`-Cookie, allen Nicht-GET-Anfragen, CLI sowie unter `/admin`, `/member`, `/api`, `/install`, Login/Registrierung/Passwort-Reset/MFA, `/order`, `/checkout`. Abschalten: `define('CMS_LAZY_SESSIONS', false);`.
 
 ### 5. Authentifizierung
 
@@ -88,6 +89,16 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - **Anti-Spam** für Formulare ([../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md)).
 - **Sichere Weiterleitungen**: `Router::redirect()` und Login-Redirects lassen nur interne/erlaubte Ziele zu.
 - **Ausgehende Requests** (`Http\Client`): Host-Allowlists für Updates/Marketplace/KI, HTTPS-Pflicht für Cloud-Ziele, keine privaten Netze außer explizit freigegebenen (Ollama).
+
+### 7a. Client-IP hinter Proxy oder CDN (`TrustedProxyService`, seit 3.5.0)
+
+- `Security::getClientIp()` liefert die IP aus `TrustedProxyService::clientIp()`. Weiterleitungs-Header werden **nur** ausgewertet, wenn `REMOTE_ADDR` vertrauenswürdig ist.
+- Reihenfolge: `CF-Connecting-IP` (nur bei Cloudflare-Adressen) → `X-Forwarded-For` von rechts, vertrauenswürdige Hops werden übersprungen → `Forwarded` (RFC 7239) → `X-Real-IP` → `True-Client-IP`. Ports werden entfernt.
+- `*` vertraut jedem direkten Gegenüber und nimmt den ersten nicht vertrauenswürdigen Hop von rechts. Nur verwenden, wenn der Server ausschließlich über das CDN erreichbar ist – sonst kann jeder Besucher seine IP fälschen.
+- **Standard `cloudflare`:** Ohne Einstellung werden nur die offiziellen Cloudflare-Netze vertraut, weil Cloudflare die Header selbst setzt. Private Netze (`private`) sind bewusst Opt-in: Ein lokaler nginx, der nur `X-Real-IP` setzt und ein vom Client mitgeschicktes `X-Forwarded-For` durchreicht, würde sonst gefälschte IPs übernehmen.
+- **Unbekannte CDN-Adressen (z. B. Hostinger-CDN):** Kommt eine Anfrage mit Weiterleitungs-Headern von einer nicht vertrauenswürdigen Adresse (öffentlich oder privat), merkt sich das CMS deren Netz (IPv4 /24, IPv6 /48) samt Anzahl Beobachtungen und anonymisierter Client-Stichprobe in `cache/trusted_proxy_candidates.json` (max. 30 Netze, 14 Tage, Schreibzugriff höchstens einmal pro Minute). Die Firewall-Seite zeigt die Kandidaten; **Vertrauen** übernimmt das Netz mit einem Klick. Verlässliches Signal ist nur die eigene Admin-Anfrage: Kam sie über ein solches Netz, ist es als **Ihre Anfrage** markiert und das Sicherheits-Audit warnt. Beobachtungen und Client-Anzahl stammen aus Request-Headern und sind fälschbar; sie lösen keine Empfehlung aus. Eine automatische Übernahme gibt es bewusst nicht, weil gefälschte Header sonst Rate-Limits aushebeln würden.
+- Ersetzt der Webserver `REMOTE_ADDR` bereits selbst (z. B. LiteSpeed mit „Use Client IP in Header“), entstehen keine Kandidaten; die Diagnose auf der Firewall-Seite zeigt `REMOTE_ADDR`, Header und die ermittelte IP der aktuellen Anfrage.
+- Länder-Header (`CF-IPCountry`, `X-Country-Code`, …) für die Firewall-Regel `block_country` gelten nur bei Anfragen über einen vertrauenswürdigen Proxy (`TrustedProxyService::countryCode()`).
 
 ### 8. Daten
 

@@ -22,6 +22,10 @@ if (!defined('ABSPATH')) {
 
 class MessageService
 {
+    /** Max. Nachrichten je Absender im Zeitfenster. */
+    public const SEND_LIMIT_MAX = 30;
+    public const SEND_LIMIT_WINDOW = 600;
+
     private static ?self $instance = null;
     private Database $db;
     private string $prefix;
@@ -160,6 +164,31 @@ class MessageService
             return false;
         }
 
+        if ($this->isSendRateLimited($senderId)) {
+            return false;
+        }
+
+        // Antworten nur in Threads, an denen Absender und Empfänger beteiligt sind –
+        // sonst ließen sich Nachrichten in fremde Konversationen einschleusen.
+        if ($parentId !== null && $parentId > 0) {
+            $parent = $this->db->get_row(
+                "SELECT id, parent_id, sender_id, recipient_id FROM {$this->prefix}messages WHERE id = ? LIMIT 1",
+                [$parentId]
+            );
+            if (!$parent) {
+                return false;
+            }
+
+            $participants = [(int) $parent->sender_id, (int) $parent->recipient_id];
+            if (!in_array($senderId, $participants, true) || !in_array($recipientId, $participants, true)) {
+                return false;
+            }
+
+            $parentId = (int) ($parent->parent_id ?: $parent->id);
+        } else {
+            $parentId = null;
+        }
+
         $this->db->insert('messages', [
             'sender_id'    => $senderId,
             'recipient_id' => $recipientId,
@@ -170,6 +199,19 @@ class MessageService
 
         $newId = $this->db->lastInsertId();
         return $newId ? (int) $newId : false;
+    }
+
+    /**
+     * Versandlimit je Absender (Spam-/Flood-Schutz für das Mitglieder-Postfach).
+     */
+    public function isSendRateLimited(int $senderId): bool
+    {
+        $recent = (int) $this->db->get_var(
+            "SELECT COUNT(*) FROM {$this->prefix}messages WHERE sender_id = ? AND created_at > (NOW() - INTERVAL ? SECOND)",
+            [$senderId, self::SEND_LIMIT_WINDOW]
+        );
+
+        return $recent >= self::SEND_LIMIT_MAX;
     }
 
     // ── Status-Aktionen ───────────────────────────────────────────────────────

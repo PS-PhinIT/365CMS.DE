@@ -478,25 +478,25 @@ if (empty($summary['translation_ready'])) {
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Standard-Quellsprache</label>
-                                <input type="text" class="form-control" name="default_source_locale" value="<?php echo htmlspecialchars((string) ($translation['default_source_locale'] ?? 'de')); ?>">
+                                <label for="fld-default_source_locale" class="form-label">Standard-Quellsprache</label>
+                                <input id="fld-default_source_locale" type="text" class="form-control" name="default_source_locale" value="<?php echo htmlspecialchars((string) ($translation['default_source_locale'] ?? 'de')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Standard-Zielsprache</label>
-                                <input type="text" class="form-control" name="default_target_locale" value="<?php echo htmlspecialchars((string) ($translation['default_target_locale'] ?? 'en')); ?>">
+                                <label for="fld-default_target_locale" class="form-label">Standard-Zielsprache</label>
+                                <input id="fld-default_target_locale" type="text" class="form-control" name="default_target_locale" value="<?php echo htmlspecialchars((string) ($translation['default_target_locale'] ?? 'en')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Erlaubte Zielsprachen</label>
-                                <input type="text" class="form-control" name="allowed_target_locales" value="<?php echo htmlspecialchars(implode(',', (array) ($translation['allowed_target_locales'] ?? ['en']))); ?>">
+                                <label for="fld-allowed_target_locales" class="form-label">Erlaubte Zielsprachen</label>
+                                <input id="fld-allowed_target_locales" type="text" class="form-control" name="allowed_target_locales" value="<?php echo htmlspecialchars(implode(',', (array) ($translation['allowed_target_locales'] ?? ['en']))); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Unterstützte Blocktypen</label>
-                                <input type="text" class="form-control" name="supported_block_types" value="<?php echo htmlspecialchars(implode(',', (array) ($translation['supported_block_types'] ?? []))); ?>">
+                                <label for="fld-supported_block_types" class="form-label">Unterstützte Blocktypen</label>
+                                <input id="fld-supported_block_types" type="text" class="form-control" name="supported_block_types" value="<?php echo htmlspecialchars(implode(',', (array) ($translation['supported_block_types'] ?? []))); ?>">
                                 <div class="form-text">Aktive EditorJS-Blocktypen sind u. a. paragraph, header, list/checklist, image, table, attaches, linkTool, warning, alert, accordion, imageGallery und mediaText. Strukturblöcke wie spacer, delimiter, embed, code und raw werden erhalten; übersetzt werden nur sichere Textsegmente.</div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Ergebnis-Modus</label>
-                                <select class="form-select" name="result_mode">
+                                <label for="fld-result_mode" class="form-label">Ergebnis-Modus</label>
+                                <select id="fld-result_mode" class="form-select" name="result_mode">
                                     <?php foreach ($resultModes as $modeValue => $modeLabel): ?>
                                         <option value="<?php echo htmlspecialchars($modeValue, ENT_QUOTES); ?>" <?php echo $isSelected((string) ($translation['result_mode'] ?? 'localized-field'), $modeValue); ?>><?php echo htmlspecialchars($modeLabel); ?></option>
                                     <?php endforeach; ?>
@@ -775,7 +775,7 @@ if (empty($summary['translation_ready'])) {
                     <div class="card-body">
                         <div class="row g-3" id="aiProviderForm" data-provider-catalog="<?php echo htmlspecialchars((string) json_encode($providerCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>" data-provider-values="<?php echo htmlspecialchars((string) json_encode($providerValuesByType, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>">
                             <div class="col-md-6">
-                                <label class="form-label">Aktiver Provider</label>
+                                <label for="aiProviderType" class="form-label">Aktiver Provider</label>
                                 <select class="form-select" name="active_provider_type" id="aiProviderType">
                                     <?php foreach ($providerCatalog as $providerType => $catalogEntry): ?>
                                         <option value="<?php echo htmlspecialchars((string) $providerType, ENT_QUOTES); ?>" <?php echo $isSelected($activeProviderType, (string) $providerType); ?>><?php echo htmlspecialchars((string) ($catalogEntry['label'] ?? $providerType)); ?></option>
@@ -808,23 +808,23 @@ if (empty($summary['translation_ready'])) {
                                 <div class="form-hint">Wird nur nach einem transienten Fehler und erneutem Policy-/Quota-Check genutzt.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Anzeigename</label>
+                                <label for="aiProviderLabel" class="form-label">Anzeigename</label>
                                 <input type="text" class="form-control" name="provider_label" id="aiProviderLabel" maxlength="120" value="<?php echo htmlspecialchars((string) ($activeProvider['label'] ?? $activeProviderLabel), ENT_QUOTES); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Modell</label>
+                                <label for="aiProviderModel" class="form-label">Modell</label>
                                 <input type="text" class="form-control" name="provider_model" id="aiProviderModel" maxlength="120" value="<?php echo htmlspecialchars((string) ($activeProvider['default_model'] ?? ''), ENT_QUOTES); ?>">
                             </div>
                             <div class="col-12" data-provider-field="endpoint">
-                                <label class="form-label">Endpoint</label>
+                                <label for="aiProviderEndpoint" class="form-label">Endpoint</label>
                                 <input type="url" class="form-control" name="provider_endpoint" id="aiProviderEndpoint" maxlength="255" value="<?php echo htmlspecialchars((string) ($activeProvider['endpoint'] ?? ''), ENT_QUOTES); ?>" placeholder="https://...">
                             </div>
                             <div class="col-md-6" data-provider-field="deployment">
-                                <label class="form-label">Deployment</label>
+                                <label for="aiProviderDeployment" class="form-label">Deployment</label>
                                 <input type="text" class="form-control" name="provider_deployment" id="aiProviderDeployment" maxlength="120" value="<?php echo htmlspecialchars((string) ($activeProvider['deployment'] ?? ''), ENT_QUOTES); ?>" placeholder="Azure Deployment-Name">
                             </div>
                             <div class="col-md-6" data-provider-field="api_version">
-                                <label class="form-label">API-Version</label>
+                                <label for="aiProviderApiVersion" class="form-label">API-Version</label>
                                 <input type="text" class="form-control" name="provider_api_version" id="aiProviderApiVersion" maxlength="120" value="<?php echo htmlspecialchars((string) ($activeProvider['api_version'] ?? ''), ENT_QUOTES); ?>" placeholder="2024-10-21">
                             </div>
                             <div class="col-md-6">
@@ -833,7 +833,7 @@ if (empty($summary['translation_ready'])) {
                                 <div class="form-hint">Gilt für Übersetzungsziele und für SEO-/Content-Entwürfe in der jeweiligen Editorsprache. Für AI-Buttons im deutschen Editor muss <code>de</code> enthalten sein.</div>
                             </div>
                             <div class="col-md-6" data-provider-field="internal_hosts">
-                                <label class="form-label">Erlaubte interne Ollama-Hosts</label>
+                                <label for="aiProviderAllowedInternalHosts" class="form-label">Erlaubte interne Ollama-Hosts</label>
                                 <input type="text" class="form-control" name="provider_allowed_internal_hosts" id="aiProviderAllowedInternalHosts" value="<?php echo htmlspecialchars(implode(',', (array) ($activeProvider['allowed_internal_hosts'] ?? [])), ENT_QUOTES); ?>" placeholder="127.0.0.1,localhost">
                                 <div class="form-hint">Nur für Ollama. Private Ziele sind ausschließlich über diese exakte Allowlist erlaubt.</div>
                             </div>
@@ -844,8 +844,8 @@ if (empty($summary['translation_ready'])) {
                                 </label>
                             </div>
                             <div class="col-12" data-provider-field="secret">
-                                <label class="form-label" id="aiProviderSecretLabel"><?php echo htmlspecialchars((string) ($activeProvider['secret_label'] ?? 'API-Key')); ?></label>
-                                <input type="password" class="form-control" name="provider_secret" value="" placeholder="Leer lassen = gespeichertes Secret behalten" autocomplete="new-password" spellcheck="false" autocapitalize="off" autocorrect="off">
+                                <label for="fld-provider_secret" class="form-label" id="aiProviderSecretLabel"><?php echo htmlspecialchars((string) ($activeProvider['secret_label'] ?? 'API-Key')); ?></label>
+                                <input id="fld-provider_secret" type="password" class="form-control" name="provider_secret" value="" placeholder="Leer lassen = gespeichertes Secret behalten" autocomplete="new-password" spellcheck="false" autocapitalize="off" autocorrect="off">
                                 <div class="form-hint">Aktuell gespeichert: <span id="aiProviderSecretState"><?php echo !empty($activeProvider['secret_configured']) ? 'Ja' : 'Nein'; ?></span></div>
                                 <label class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" name="clear_provider_secret" value="1">
@@ -903,16 +903,16 @@ if (empty($summary['translation_ready'])) {
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Logging-Modus</label>
-                                <select class="form-select" name="logging_mode">
+                                <label for="fld-logging_mode" class="form-label">Logging-Modus</label>
+                                <select id="fld-logging_mode" class="form-select" name="logging_mode">
                                     <?php foreach ($loggingModes as $modeValue => $modeLabel): ?>
                                         <option value="<?php echo htmlspecialchars($modeValue, ENT_QUOTES); ?>" <?php echo $isSelected((string) ($logging['logging_mode'] ?? 'technical'), $modeValue); ?>><?php echo htmlspecialchars($modeLabel); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Aufbewahrung (Tage)</label>
-                                <input type="number" class="form-control" name="retention_days" min="1" max="3650" value="<?php echo (int) ($logging['retention_days'] ?? 30); ?>">
+                                <label for="fld-retention_days" class="form-label">Aufbewahrung (Tage)</label>
+                                <input id="fld-retention_days" type="number" class="form-control" name="retention_days" min="1" max="3650" value="<?php echo (int) ($logging['retention_days'] ?? 30); ?>">
                             </div>
                             <div class="col-md-6"><?php $renderSwitch('store_content_hashes', 'Content-Hashes speichern', !empty($logging['store_content_hashes'])); ?></div>
                             <div class="col-md-6"><?php $renderSwitch('store_request_metrics', 'Request-Metriken speichern', !empty($logging['store_request_metrics'])); ?></div>
@@ -933,32 +933,32 @@ if (empty($summary['translation_ready'])) {
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Max. Zeichen pro Anfrage</label>
-                                <input type="number" class="form-control" name="max_chars_per_request" min="250" max="250000" value="<?php echo (int) ($quotas['max_chars_per_request'] ?? 12000); ?>">
+                                <label for="fld-max_chars_per_request" class="form-label">Max. Zeichen pro Anfrage</label>
+                                <input id="fld-max_chars_per_request" type="number" class="form-control" name="max_chars_per_request" min="250" max="250000" value="<?php echo (int) ($quotas['max_chars_per_request'] ?? 12000); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Max. Blöcke pro Anfrage</label>
-                                <input type="number" class="form-control" name="max_blocks_per_request" min="1" max="500" value="<?php echo (int) ($quotas['max_blocks_per_request'] ?? 40); ?>">
+                                <label for="fld-max_blocks_per_request" class="form-label">Max. Blöcke pro Anfrage</label>
+                                <input id="fld-max_blocks_per_request" type="number" class="form-control" name="max_blocks_per_request" min="1" max="500" value="<?php echo (int) ($quotas['max_blocks_per_request'] ?? 40); ?>">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Timeout (Sekunden)</label>
-                                <input type="number" class="form-control" name="timeout_seconds" min="5" max="300" value="<?php echo (int) ($quotas['timeout_seconds'] ?? 25); ?>">
+                                <label for="fld-timeout_seconds" class="form-label">Timeout (Sekunden)</label>
+                                <input id="fld-timeout_seconds" type="number" class="form-control" name="timeout_seconds" min="5" max="300" value="<?php echo (int) ($quotas['timeout_seconds'] ?? 25); ?>">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Retry Count</label>
-                                <input type="number" class="form-control" name="retry_count" min="0" max="2" value="<?php echo (int) ($quotas['retry_count'] ?? 1); ?>">
+                                <label for="fld-retry_count" class="form-label">Retry Count</label>
+                                <input id="fld-retry_count" type="number" class="form-control" name="retry_count" min="0" max="2" value="<?php echo (int) ($quotas['retry_count'] ?? 1); ?>">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Anfragen pro Nutzer / Tag</label>
-                                <input type="number" class="form-control" name="daily_requests_per_user" min="1" max="5000" value="<?php echo (int) ($quotas['daily_requests_per_user'] ?? 40); ?>">
+                                <label for="fld-daily_requests_per_user" class="form-label">Anfragen pro Nutzer / Tag</label>
+                                <input id="fld-daily_requests_per_user" type="number" class="form-control" name="daily_requests_per_user" min="1" max="5000" value="<?php echo (int) ($quotas['daily_requests_per_user'] ?? 40); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Zeichen pro Nutzer / Tag</label>
-                                <input type="number" class="form-control" name="daily_chars_per_user" min="500" max="2000000" value="<?php echo (int) ($quotas['daily_chars_per_user'] ?? 120000); ?>">
+                                <label for="fld-daily_chars_per_user" class="form-label">Zeichen pro Nutzer / Tag</label>
+                                <input id="fld-daily_chars_per_user" type="number" class="form-control" name="daily_chars_per_user" min="500" max="2000000" value="<?php echo (int) ($quotas['daily_chars_per_user'] ?? 120000); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Anfragen pro Provider / Monat</label>
-                                <input type="number" class="form-control" name="monthly_requests_per_provider" min="10" max="1000000" value="<?php echo (int) ($quotas['monthly_requests_per_provider'] ?? 5000); ?>">
+                                <label for="fld-monthly_requests_per_provider" class="form-label">Anfragen pro Provider / Monat</label>
+                                <input id="fld-monthly_requests_per_provider" type="number" class="form-control" name="monthly_requests_per_provider" min="10" max="1000000" value="<?php echo (int) ($quotas['monthly_requests_per_provider'] ?? 5000); ?>">
                             </div>
                         </div>
                     </div>

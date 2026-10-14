@@ -139,40 +139,6 @@
         return true;
     }
 
-    function copyInputValue(input) {
-        var value = '';
-        var copied = false;
-
-        if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) {
-            return Promise.reject(new Error('Kein kopierbares Eingabefeld gefunden.'));
-        }
-
-        value = String(input.value || '').trim();
-        if (!value) {
-            return Promise.reject(new Error('Es gibt keinen Link zum Kopieren.'));
-        }
-
-        if (window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            return navigator.clipboard.writeText(value);
-        }
-
-        input.focus();
-        input.select();
-        if (typeof input.setSelectionRange === 'function') {
-            input.setSelectionRange(0, value.length);
-        }
-
-        try {
-            copied = document.execCommand('copy');
-        } catch (error) {
-            copied = false;
-        }
-
-        return copied
-            ? Promise.resolve()
-            : Promise.reject(new Error('Link konnte nicht automatisch kopiert werden.'));
-    }
-
     function clearElement(element) {
         if (!element) {
             return;
@@ -609,36 +575,6 @@
 
         modalElement.addEventListener('hidden.bs.modal', function () {
             activeContext = null;
-        });
-    }
-
-    function initCopyInputButtons() {
-        document.querySelectorAll('[data-copy-input-target]').forEach(function (button) {
-            var defaultLabel = String(button.textContent || '').trim() || 'Kopieren';
-            var successLabel = String(button.dataset.copySuccessLabel || 'Kopiert').trim() || 'Kopiert';
-
-            button.addEventListener('click', function () {
-                var selector = button.dataset.copyInputTarget || '';
-                var input = selector ? document.querySelector(selector) : null;
-
-                copyInputValue(input).then(function () {
-                    button.textContent = successLabel;
-
-                    if (button._copyResetTimer) {
-                        window.clearTimeout(button._copyResetTimer);
-                    }
-
-                    button._copyResetTimer = window.setTimeout(function () {
-                        button.textContent = defaultLabel;
-                    }, 1600);
-                }).catch(function (error) {
-                    showMessage('danger', error && error.message ? error.message : 'Link konnte nicht kopiert werden.');
-                    if (input && (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) {
-                        input.focus();
-                        input.select();
-                    }
-                });
-            });
         });
     }
 
@@ -1873,7 +1809,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         initNativeUploader();
         initMediaPickers();
-        initCopyInputButtons();
         initMediaLibraryActions();
         initMediaCategoryActions();
         initFeaturedMediaReplace();

@@ -320,7 +320,7 @@ Shipped `CMS/.htaccess` does not use `<Directory>` blocks (invalid in `.htaccess
 
 The private cache area stays blocked except public CSS/JS produced by `AssetOptimizerService` under `cache/optimized-assets/<hash>.min.css` and `cache/optimized-assets/<hash>.min.js`.
 
-Public uploads remain direct URLs. `.htaccess` blocks executable uploads and hidden files, but allows normal files under `uploads/`. Local FontManager fonts under `uploads/fonts/` set WOFF/WOFF2/TTF/OTF MIME types so browsers load them with `X-Content-Type-Options: nosniff`.
+Public uploads remain direct URLs. `.htaccess` blocks executable uploads and hidden files, but allows normal files under `uploads/`. Exception: `uploads/member/` (private member files, delivered only through `/media-file` with an owner check) and `uploads/import/` (importer sources) are blocked. Local FontManager fonts under `uploads/fonts/` set WOFF/WOFF2/TTF/OTF MIME types so browsers load them with `X-Content-Type-Options: nosniff`.
 
 ### Nginx
 
@@ -332,7 +332,33 @@ location / {
 }
 ```
 
-Do not serve `config/`, `logs/`, `cache/`, `backups/`, or `core/` as static files.
+Do not serve `config/`, `logs/`, `cache/`, `backups/`, or `core/` as static files. Nginx ignores `.htaccess`, so the private paths must be mirrored explicitly:
+
+```nginx
+# Private runtime paths, bundled libraries and installer internals
+location ~ ^/cache/optimized-assets/[a-f0-9]{24}\.min\.(?:css|js)$ { try_files $uri =404; }
+location ~ ^/(?:config|core|logs|backups|cache|vendor)(?:/|$) { return 403; }
+location ~ ^/install/.+\.php$ { return 403; }
+location ~ /\.(?!well-known/) { return 403; }
+location ~ \.(?:bak|old|orig|save|swp|swo|tmp|dist)$ { return 403; }
+
+# Private uploads (served only via /media-file) and importer sources/reports
+location ~ ^/uploads/(?:member|import)(?:/|$) { return 403; }
+location ~ ^/plugins/cms-importer/(?:reports|wp_import|wp_import_files)(?:/|$) { return 403; }
+
+# Never execute scripts from uploads or asset folders
+location ~ ^/(?:uploads|assets)/.*\.(?:php[0-9]?|phtml|phar)$ { return 403; }
+```
+
+Missing static files under `assets/`, `themes/`, `plugins/` and `uploads/` are answered by `.htaccess` with a plain 404 (since 3.5.0), so bot scans for old asset URLs no longer boot the CMS. Nginx equivalent (place after the blocking rules above):
+
+```nginx
+location ~* ^/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$ {
+    try_files $uri =404;
+}
+```
+
+Nginx evaluates regex locations in order: keep these rules above your `location ~ \.php$` FastCGI handler and the `cache/optimized-assets` rule before the generic private-path rule.
 
 **Deutsch**
 
@@ -348,7 +374,7 @@ Die ausgelieferte `CMS/.htaccess` nutzt keine `<Directory>`-Blöcke (im `.htacce
 
 Der private Cache bleibt gesperrt, ausgenommen öffentliche CSS-/JS-Dateien von `AssetOptimizerService` unter `cache/optimized-assets/<hash>.min.css` und `cache/optimized-assets/<hash>.min.js`.
 
-Öffentliche Uploads bleiben direkte URLs. Die `.htaccess` blockiert ausführbare Uploads und versteckte Dateien, lässt normale Dateien unter `uploads/` aber durch. Für lokale FontManager-Schriften unter `uploads/fonts/` werden WOFF/WOFF2/TTF/OTF-MIME-Typen gesetzt, damit Browser sie auch mit `X-Content-Type-Options: nosniff` laden.
+Öffentliche Uploads bleiben direkte URLs. Die `.htaccess` blockiert ausführbare Uploads und versteckte Dateien, lässt normale Dateien unter `uploads/` aber durch. Ausnahme: `uploads/member/` (private Mitglieder-Dateien, nur über `/media-file` mit Besitzerprüfung) und `uploads/import/` (Importer-Quellen) sind gesperrt. Für lokale FontManager-Schriften unter `uploads/fonts/` werden WOFF/WOFF2/TTF/OTF-MIME-Typen gesetzt, damit Browser sie auch mit `X-Content-Type-Options: nosniff` laden.
 
 ### Nginx
 
@@ -360,7 +386,33 @@ location / {
 }
 ```
 
-`config/`, `logs/`, `cache/`, `backups/` und `core/` nicht als statische Dateien ausliefern.
+`config/`, `logs/`, `cache/`, `backups/` und `core/` nicht als statische Dateien ausliefern. Nginx wertet keine `.htaccess` aus, deshalb müssen die privaten Pfade ausdrücklich nachgebildet werden:
+
+```nginx
+# Private Runtime-Pfade, gebündelte Libraries und Installer-Interna
+location ~ ^/cache/optimized-assets/[a-f0-9]{24}\.min\.(?:css|js)$ { try_files $uri =404; }
+location ~ ^/(?:config|core|logs|backups|cache|vendor)(?:/|$) { return 403; }
+location ~ ^/install/.+\.php$ { return 403; }
+location ~ /\.(?!well-known/) { return 403; }
+location ~ \.(?:bak|old|orig|save|swp|swo|tmp|dist)$ { return 403; }
+
+# Private Uploads (nur über /media-file) sowie Importer-Quellen/-Berichte
+location ~ ^/uploads/(?:member|import)(?:/|$) { return 403; }
+location ~ ^/plugins/cms-importer/(?:reports|wp_import|wp_import_files)(?:/|$) { return 403; }
+
+# Skripte aus uploads/ und assets/ nie ausführen
+location ~ ^/(?:uploads|assets)/.*\.(?:php[0-9]?|phtml|phar)$ { return 403; }
+```
+
+Fehlende statische Dateien unter `assets/`, `themes/`, `plugins/` und `uploads/` beantwortet die `.htaccess` seit 3.5.0 direkt mit einer schlanken 404, damit Bot-Scans nach alten Asset-URLs nicht jedes Mal das CMS starten. Nginx-Gegenstück (nach den Sperrregeln oben einfügen):
+
+```nginx
+location ~* ^/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$ {
+    try_files $uri =404;
+}
+```
+
+Nginx prüft Regex-Locations in Reihenfolge: Diese Regeln über dem `location ~ \.php$`-FastCGI-Handler platzieren und die `cache/optimized-assets`-Regel vor der allgemeinen Sperrregel.
 
 ---
 

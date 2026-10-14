@@ -54,15 +54,15 @@ $formatBytes = static function (int $bytes): string {
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Admin Timeout (Sek.)</label>
-                                    <input class="form-control" type="number" min="300" max="604800" step="1" name="perf_session_timeout_admin" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_admin'] ?? '28800')); ?>" data-timeout-human>
+                                    <label for="fld-perf_session_timeout_admin" class="form-label">Admin Timeout (Sek.)</label>
+                                    <input id="fld-perf_session_timeout_admin" class="form-control" type="number" min="300" max="604800" step="1" name="perf_session_timeout_admin" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_admin'] ?? '28800')); ?>" data-timeout-human>
                                     <div class="performance-timeout-hint" data-timeout-hint-for="perf_session_timeout_admin"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Member Timeout (Sek.)</label>
-                                    <input class="form-control" type="number" min="300" max="31536000" step="1" name="perf_session_timeout_member" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_member'] ?? '2592000')); ?>" data-timeout-human>
+                                    <label for="fld-perf_session_timeout_member" class="form-label">Member Timeout (Sek.)</label>
+                                    <input id="fld-perf_session_timeout_member" class="form-control" type="number" min="300" max="31536000" step="1" name="perf_session_timeout_member" value="<?php echo htmlspecialchars((string)($settings['perf_session_timeout_member'] ?? '2592000')); ?>" data-timeout-human>
                                     <div class="performance-timeout-hint" data-timeout-hint-for="perf_session_timeout_member"></div>
                                 </div>
                             </div>

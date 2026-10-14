@@ -269,39 +269,39 @@ $packageHistorySeverityMeta = static function (string $severity): array {
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Testphase (Tage)</label>
-                                        <input type="number" name="trial_days" class="form-control" min="1" value="<?= (int)($settings['trial_days'] ?? 14) ?>">
+                                        <label for="fld-trial_days" class="form-label">Testphase (Tage)</label>
+                                        <input id="fld-trial_days" type="number" name="trial_days" class="form-control" min="1" value="<?= (int)($settings['trial_days'] ?? 14) ?>">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Kulanzzeit (Tage)</label>
-                                        <input type="number" name="grace_period_days" class="form-control" min="0" value="<?= (int)($settings['grace_period_days'] ?? 3) ?>">
+                                        <label for="fld-grace_period_days" class="form-label">Kulanzzeit (Tage)</label>
+                                        <input id="fld-grace_period_days" type="number" name="grace_period_days" class="form-control" min="0" value="<?= (int)($settings['grace_period_days'] ?? 3) ?>">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Kündigungsfrist (Tage)</label>
-                                        <input type="number" name="cancellation_period_days" class="form-control" min="0" value="<?= (int)($settings['cancellation_period_days'] ?? 0) ?>">
+                                        <label for="fld-cancellation_period_days" class="form-label">Kündigungsfrist (Tage)</label>
+                                        <input id="fld-cancellation_period_days" type="number" name="cancellation_period_days" class="form-control" min="0" value="<?= (int)($settings['cancellation_period_days'] ?? 0) ?>">
                                     </div>
                                 </div>
 
                                 <div class="col-md-4">
-                                    <label class="form-label">Zahlungsmethoden</label>
-                                    <select name="payment_methods" class="form-select">
+                                    <label for="fld-payment_methods" class="form-label">Zahlungsmethoden</label>
+                                    <select id="fld-payment_methods" name="payment_methods" class="form-select">
                                         <?php foreach (['invoice' => 'Rechnung', 'stripe' => 'Stripe', 'paypal' => 'PayPal', 'all' => 'Alle'] as $value => $label): ?>
                                             <option value="<?= $value ?>" <?= ($settings['payment_methods'] ?? 'invoice') === $value ? 'selected' : '' ?>><?= $label ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Rechnungspräfix</label>
-                                    <input type="text" name="invoice_prefix" class="form-control" value="<?= htmlspecialchars($settings['invoice_prefix'] ?? 'INV-') ?>">
+                                    <label for="fld-invoice_prefix" class="form-label">Rechnungspräfix</label>
+                                    <input id="fld-invoice_prefix" type="text" name="invoice_prefix" class="form-control" value="<?= htmlspecialchars($settings['invoice_prefix'] ?? 'INV-') ?>">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Nächste Rechnungsnummer</label>
-                                    <input type="number" name="invoice_next_number" class="form-control" min="1" value="<?= (int)($settings['invoice_next_number'] ?? 1001) ?>">
+                                    <label for="fld-invoice_next_number" class="form-label">Nächste Rechnungsnummer</label>
+                                    <input id="fld-invoice_next_number" type="number" name="invoice_next_number" class="form-control" min="1" value="<?= (int)($settings['invoice_next_number'] ?? 1001) ?>">
                                 </div>
 
                                 <div class="col-md-4">
-                                    <label class="form-label">Steuersatz (%)</label>
-                                    <input type="number" name="tax_rate" class="form-control" min="0" max="100" value="<?= (int)($settings['tax_rate'] ?? 19) ?>">
+                                    <label for="fld-tax_rate" class="form-label">Steuersatz (%)</label>
+                                    <input id="fld-tax_rate" type="number" name="tax_rate" class="form-control" min="0" max="100" value="<?= (int)($settings['tax_rate'] ?? 19) ?>">
                                 </div>
                                 <div class="col-md-4 d-flex align-items-end">
                                     <label class="form-check form-switch mb-3">
@@ -310,17 +310,17 @@ $packageHistorySeverityMeta = static function (string $severity): array {
                                     </label>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Ablaufhinweis (Tage vorher)</label>
-                                    <input type="number" name="notification_before_expiry" class="form-control" min="0" value="<?= (int)($settings['notification_before_expiry'] ?? 7) ?>">
+                                    <label for="fld-notification_before_expiry" class="form-label">Ablaufhinweis (Tage vorher)</label>
+                                    <input id="fld-notification_before_expiry" type="number" name="notification_before_expiry" class="form-control" min="0" value="<?= (int)($settings['notification_before_expiry'] ?? 7) ?>">
                                 </div>
 
                                 <div class="col-md-6">
-                                    <label class="form-label">Benachrichtigungs-E-Mail</label>
-                                    <input type="email" name="notification_email" class="form-control" value="<?= htmlspecialchars($settings['notification_email'] ?? '') ?>">
+                                    <label for="fld-notification_email" class="form-label">Benachrichtigungs-E-Mail</label>
+                                    <input id="fld-notification_email" type="email" name="notification_email" class="form-control" value="<?= htmlspecialchars($settings['notification_email'] ?? '') ?>">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">AGB-Seite</label>
-                                    <select name="terms_page_id" class="form-select">
+                                    <label for="fld-terms_page_id" class="form-label">AGB-Seite</label>
+                                    <select id="fld-terms_page_id" name="terms_page_id" class="form-select">
                                         <option value="0">– Keine –</option>
                                         <?php foreach ($pages as $page): ?>
                                             <option value="<?= (int)$page['id'] ?>" <?= (int)($settings['terms_page_id'] ?? 0) === (int)$page['id'] ? 'selected' : '' ?>><?= htmlspecialchars($page['title']) ?></option>
@@ -328,8 +328,8 @@ $packageHistorySeverityMeta = static function (string $severity): array {
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">Widerrufs-Seite</label>
-                                    <select name="cancellation_page_id" class="form-select">
+                                    <label for="fld-cancellation_page_id" class="form-label">Widerrufs-Seite</label>
+                                    <select id="fld-cancellation_page_id" name="cancellation_page_id" class="form-select">
                                         <option value="0">– Keine –</option>
                                         <?php foreach ($pages as $page): ?>
                                             <option value="<?= (int)$page['id'] ?>" <?= (int)($settings['cancellation_page_id'] ?? 0) === (int)$page['id'] ? 'selected' : '' ?>><?= htmlspecialchars($page['title']) ?></option>
@@ -382,48 +382,48 @@ $packageHistorySeverityMeta = static function (string $severity): array {
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-8">
-                            <label class="form-label required">Paketname</label>
+                            <label for="pkg-name" class="form-label required">Paketname</label>
                             <input type="text" name="name" id="pkg-name" class="form-control" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Slug</label>
+                            <label for="pkg-slug" class="form-label">Slug</label>
                             <input type="text" name="slug" id="pkg-slug" class="form-control" placeholder="auto">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label required">Preis / Monat</label>
+                            <label for="pkg-price_monthly" class="form-label required">Preis / Monat</label>
                             <input type="number" name="price_monthly" id="pkg-price_monthly" class="form-control" step="0.01" min="0" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Preis / Jahr</label>
+                            <label for="pkg-price_yearly" class="form-label">Preis / Jahr</label>
                             <input type="number" name="price_yearly" id="pkg-price_yearly" class="form-control" step="0.01" min="0" value="0">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Sortierung</label>
+                            <label for="pkg-sort_order" class="form-label">Sortierung</label>
                             <input type="number" name="sort_order" id="pkg-sort_order" class="form-control" min="0" value="0">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Beschreibung</label>
+                            <label for="pkg-description" class="form-label">Beschreibung</label>
                             <textarea name="description" id="pkg-description" class="form-control" rows="2"></textarea>
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Experts-Limit</label>
+                            <label for="pkg-limit_experts" class="form-label">Experts-Limit</label>
                             <input type="number" name="limit_experts" id="pkg-limit_experts" class="form-control" value="-1">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Firmen-Limit</label>
+                            <label for="pkg-limit_companies" class="form-label">Firmen-Limit</label>
                             <input type="number" name="limit_companies" id="pkg-limit_companies" class="form-control" value="-1">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Events-Limit</label>
+                            <label for="pkg-limit_events" class="form-label">Events-Limit</label>
                             <input type="number" name="limit_events" id="pkg-limit_events" class="form-control" value="-1">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Speaker-Limit</label>
+                            <label for="pkg-limit_speakers" class="form-label">Speaker-Limit</label>
                             <input type="number" name="limit_speakers" id="pkg-limit_speakers" class="form-control" value="-1">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Speicher (MB)</label>
+                            <label for="pkg-limit_storage_mb" class="form-label">Speicher (MB)</label>
                             <input type="number" name="limit_storage_mb" id="pkg-limit_storage_mb" class="form-control" value="1000" min="0">
                         </div>
 

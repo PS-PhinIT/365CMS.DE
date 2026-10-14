@@ -127,7 +127,7 @@ usort($checks, static function (array $left, array $right): int {
     </div>
 </div>
 
-<script>
+<script <?= \CMS\Security::instance()->nonceAttr() ?>>
 (function () {
     const body = document.getElementById('securityAuditLogBody');
     if (!body) return;

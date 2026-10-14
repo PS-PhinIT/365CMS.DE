@@ -206,12 +206,13 @@ final class SiteTableTableRenderer
         }
 
         fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, array_map(fn(array $col): string => (string) ($col['label'] ?? ''), $columns), ';');
+        // Formel-Injection (=, +, -, @) in Tabellenkalkulationen verhindern.
+        fputcsv($out, array_map(fn(array $col): string => \CMS\Services\CsvExchange::sanitizeCell((string) ($col['label'] ?? '')), $columns), ';');
         foreach ($rows as $row) {
             $line = [];
             foreach ($columns as $index => $column) {
                 $label = (string) ($column['label'] ?? ('Spalte ' . ($index + 1)));
-                $line[] = (string) ($row[$label] ?? '');
+                $line[] = \CMS\Services\CsvExchange::sanitizeCell((string) ($row[$label] ?? ''));
             }
             fputcsv($out, $line, ';');
         }

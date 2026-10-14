@@ -115,6 +115,15 @@ class CMS_Importer_Admin
         $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
             && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
+        // Bericht-Download-Links (page.php/log.php) zeigen per GET auf diese Seite.
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && (string) ($_GET['action'] ?? '') === 'download_report') {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            $this->handle_download_report();
+            exit;
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_ajax) {
             // Bereits gepufferten Admin-Layout-HTML verwerfen
             while (ob_get_level() > 0) {
@@ -410,7 +419,10 @@ class CMS_Importer_Admin
         } else {
             header('Content-Type: text/html; charset=utf-8');
             header('Content-Disposition: inline; filename="' . $filename . '"');
+            // Importierte Inhalte im Bericht dürfen kein Skript im Admin-Origin ausführen.
+            header('Content-Security-Policy: sandbox; default-src \'none\'; style-src \'unsafe-inline\'; img-src data:');
         }
+        header('X-Content-Type-Options: nosniff');
         header('Content-Length: ' . filesize($path));
         readfile($path);
         exit;
@@ -776,13 +788,14 @@ class CMS_Importer_Admin
             file_put_contents($indexFile, '');
         }
 
+        // Import-Dateien (WXR/XML/JSON mit Autor-E-Mails, Entwürfen usw.) werden nur
+        // serverseitig gelesen und dürfen nie direkt per URL abrufbar sein.
         $htaccessFile = $normalizedDir . '.htaccess';
-        if (!is_file($htaccessFile)) {
-            $rules = "Options -Indexes\n"
-                . "<FilesMatch \"\\.(php[0-9]?|phtml|phar|shtml|cgi|pl|py|sh|bash|ksh|zsh|asp|aspx|jsp|jspx|js[pm])$\">\n"
-                . "    Require all denied\n"
-                . "</FilesMatch>\n";
-
+        $rules = "Options -Indexes\n"
+            . "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
+            . "<IfModule !mod_authz_core.c>\n    Order Allow,Deny\n    Deny from all\n</IfModule>\n";
+        $existing = is_file($htaccessFile) ? (string) file_get_contents($htaccessFile) : '';
+        if ($existing !== $rules) {
             file_put_contents($htaccessFile, $rules);
         }
     }

@@ -283,7 +283,7 @@ final class InstallerController
             'site_name' => ($isReinstall && $this->existingConfig !== false) ? ($this->existingConfig['site_name'] ?? 'IT Expert Network') : 'IT Expert Network',
             'site_url' => $this->service->autoDetectUrl(),
             'admin_email' => ($isReinstall && $this->existingConfig !== false) ? ($this->existingConfig['admin_email'] ?? '') : '',
-            'debug_mode' => true,
+            'debug_mode' => false,
             'core_modules' => $defaultCoreModules,
         ];
 

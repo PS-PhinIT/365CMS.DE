@@ -165,15 +165,15 @@ $legalSitesConfig = [
                             <div class="border rounded p-3 bg-light-subtle">
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-4">
-                                        <label class="form-label">Profiltyp</label>
+                                        <label for="legalProfileEntityType" class="form-label">Profiltyp</label>
                                         <select name="legal_profile_entity_type" id="legalProfileEntityType" class="form-select">
                                             <option value="company" <?php echo ($profile['legal_profile_entity_type'] ?? 'company') === 'company' ? 'selected' : ''; ?>>Firma</option>
                                             <option value="private" <?php echo ($profile['legal_profile_entity_type'] ?? 'company') === 'private' ? 'selected' : ''; ?>>Privat</option>
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">DACH-Vorlagenprofil</label>
-                                        <select name="legal_template_profile" class="form-select">
+                                        <label for="fld-legal_template_profile" class="form-label">DACH-Vorlagenprofil</label>
+                                        <select id="fld-legal_template_profile" name="legal_template_profile" class="form-select">
                                             <?php foreach ($templateProfiles as $profileKey => $templateProfile): ?>
                                                 <option value="<?php echo htmlspecialchars((string) $profileKey); ?>" <?php echo $activeTemplateProfile === (string) $profileKey ? 'selected' : ''; ?>>
                                                     <?php echo htmlspecialchars((string)($templateProfile['label'] ?? $profileKey)); ?>
@@ -199,24 +199,24 @@ $legalSitesConfig = [
                                 <div class="subheader mb-2">Unternehmen</div>
                                 <div class="row g-3">
                                     <div class="col-md-6" data-required-for="company">
-                                        <label class="form-label">Firma / Name <span class="text-danger js-required-indicator">*</span></label>
-                                        <input type="text" name="legal_profile_company_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_company_name'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_company_name" class="form-label">Firma / Name <span class="text-danger js-required-indicator">*</span></label>
+                                        <input id="fld-legal_profile_company_name" type="text" name="legal_profile_company_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_company_name'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6" data-required-for="company">
-                                        <label class="form-label">Rechtsform <span class="text-danger js-required-indicator">*</span></label>
-                                        <input type="text" name="legal_profile_legal_form" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_legal_form'] ?? ''); ?>" placeholder="z. B. GmbH, e.K., Einzelunternehmen">
+                                        <label for="fld-legal_profile_legal_form" class="form-label">Rechtsform <span class="text-danger js-required-indicator">*</span></label>
+                                        <input id="fld-legal_profile_legal_form" type="text" name="legal_profile_legal_form" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_legal_form'] ?? ''); ?>" placeholder="z. B. GmbH, e.K., Einzelunternehmen">
                                     </div>
                                     <div class="col-md-6" data-required-for="private">
-                                        <label class="form-label">Vor- und Nachname <span class="text-danger js-required-indicator">*</span></label>
-                                        <input type="text" name="legal_profile_owner_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_owner_name'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_owner_name" class="form-label">Vor- und Nachname <span class="text-danger js-required-indicator">*</span></label>
+                                        <input id="fld-legal_profile_owner_name" type="text" name="legal_profile_owner_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_owner_name'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Geschäftsführung</label>
-                                        <input type="text" name="legal_profile_managing_director" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_managing_director'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_managing_director" class="form-label">Geschäftsführung</label>
+                                        <input id="fld-legal_profile_managing_director" type="text" name="legal_profile_managing_director" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_managing_director'] ?? ''); ?>">
                                     </div>
                                     <div class="col-12">
-                                        <label class="form-label">Inhaltlich verantwortlich</label>
-                                        <input type="text" name="legal_profile_content_responsible" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_content_responsible'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_content_responsible" class="form-label">Inhaltlich verantwortlich</label>
+                                        <input id="fld-legal_profile_content_responsible" type="text" name="legal_profile_content_responsible" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_content_responsible'] ?? ''); ?>">
                                     </div>
                                 </div>
                             </div>
@@ -227,32 +227,32 @@ $legalSitesConfig = [
                                 <div class="subheader mb-2">Adresse & Kontakt</div>
                                 <div class="row g-3">
                                     <div class="col-12">
-                                        <label class="form-label">Straße / Hausnummer <span class="text-danger">*</span></label>
-                                        <input type="text" name="legal_profile_street" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_street'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_street" class="form-label">Straße / Hausnummer <span class="text-danger">*</span></label>
+                                        <input id="fld-legal_profile_street" type="text" name="legal_profile_street" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_street'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">PLZ <span class="text-danger">*</span></label>
-                                        <input type="text" name="legal_profile_postal_code" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_postal_code'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_postal_code" class="form-label">PLZ <span class="text-danger">*</span></label>
+                                        <input id="fld-legal_profile_postal_code" type="text" name="legal_profile_postal_code" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_postal_code'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Ort <span class="text-danger">*</span></label>
-                                        <input type="text" name="legal_profile_city" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_city'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_city" class="form-label">Ort <span class="text-danger">*</span></label>
+                                        <input id="fld-legal_profile_city" type="text" name="legal_profile_city" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_city'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Land <span class="text-danger">*</span></label>
-                                        <input type="text" name="legal_profile_country" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_country'] ?? 'Deutschland'); ?>">
+                                        <label for="fld-legal_profile_country" class="form-label">Land <span class="text-danger">*</span></label>
+                                        <input id="fld-legal_profile_country" type="text" name="legal_profile_country" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_country'] ?? 'Deutschland'); ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">E-Mail <span class="text-danger">*</span></label>
-                                        <input type="email" name="legal_profile_email" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_email'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_email" class="form-label">E-Mail <span class="text-danger">*</span></label>
+                                        <input id="fld-legal_profile_email" type="email" name="legal_profile_email" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_email'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Telefon</label>
-                                        <input type="text" name="legal_profile_phone" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_phone'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_phone" class="form-label">Telefon</label>
+                                        <input id="fld-legal_profile_phone" type="text" name="legal_profile_phone" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_phone'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Website</label>
-                                        <input type="url" name="legal_profile_website" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_website'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_website" class="form-label">Website</label>
+                                        <input id="fld-legal_profile_website" type="url" name="legal_profile_website" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_website'] ?? ''); ?>">
                                     </div>
                                 </div>
                             </div>
@@ -263,16 +263,16 @@ $legalSitesConfig = [
                                 <div class="subheader mb-2">Register & Pflichtangaben</div>
                                 <div class="row g-3">
                                     <div class="col-md-6" data-recommended-for="company">
-                                        <label class="form-label">Registergericht</label>
-                                        <input type="text" name="legal_profile_register_court" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_register_court'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_register_court" class="form-label">Registergericht</label>
+                                        <input id="fld-legal_profile_register_court" type="text" name="legal_profile_register_court" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_register_court'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6" data-recommended-for="company">
-                                        <label class="form-label">Registernummer</label>
-                                        <input type="text" name="legal_profile_register_number" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_register_number'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_register_number" class="form-label">Registernummer</label>
+                                        <input id="fld-legal_profile_register_number" type="text" name="legal_profile_register_number" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_register_number'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6" data-recommended-for="company">
-                                        <label class="form-label">USt.-ID</label>
-                                        <input type="text" name="legal_profile_vat_id" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_vat_id'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_vat_id" class="form-label">USt.-ID</label>
+                                        <input id="fld-legal_profile_vat_id" type="text" name="legal_profile_vat_id" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_vat_id'] ?? ''); ?>">
                                     </div>
                                 </div>
                             </div>
@@ -283,28 +283,28 @@ $legalSitesConfig = [
                                 <div class="subheader mb-2">Datenschutz-Setup</div>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Hosting-Anbieter</label>
-                                        <input type="text" name="legal_profile_hosting_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_hosting_provider'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_hosting_provider" class="form-label">Hosting-Anbieter</label>
+                                        <input id="fld-legal_profile_hosting_provider" type="text" name="legal_profile_hosting_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_hosting_provider'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Hosting-Adresse</label>
-                                        <input type="text" name="legal_profile_hosting_address" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_hosting_address'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_hosting_address" class="form-label">Hosting-Adresse</label>
+                                        <input id="fld-legal_profile_hosting_address" type="text" name="legal_profile_hosting_address" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_hosting_address'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Datenschutz-Kontakt</label>
-                                        <input type="text" name="legal_profile_privacy_contact_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_privacy_contact_name'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_privacy_contact_name" class="form-label">Datenschutz-Kontakt</label>
+                                        <input id="fld-legal_profile_privacy_contact_name" type="text" name="legal_profile_privacy_contact_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_privacy_contact_name'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Datenschutz-E-Mail</label>
-                                        <input type="email" name="legal_profile_privacy_contact_email" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_privacy_contact_email'] ?? ''); ?>">
+                                        <label for="fld-legal_profile_privacy_contact_email" class="form-label">Datenschutz-E-Mail</label>
+                                        <input id="fld-legal_profile_privacy_contact_email" type="email" name="legal_profile_privacy_contact_email" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_privacy_contact_email'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Analyse-Tool</label>
-                                        <input type="text" name="legal_profile_analytics_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_analytics_name'] ?? ''); ?>" placeholder="z. B. Matomo, GA4">
+                                        <label for="fld-legal_profile_analytics_name" class="form-label">Analyse-Tool</label>
+                                        <input id="fld-legal_profile_analytics_name" type="text" name="legal_profile_analytics_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_analytics_name'] ?? ''); ?>" placeholder="z. B. Matomo, GA4">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Zahlungsanbieter</label>
-                                        <input type="text" name="legal_profile_payment_providers" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_payment_providers'] ?? ''); ?>" placeholder="z. B. Stripe, PayPal">
+                                        <label for="fld-legal_profile_payment_providers" class="form-label">Zahlungsanbieter</label>
+                                        <input id="fld-legal_profile_payment_providers" type="text" name="legal_profile_payment_providers" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_payment_providers'] ?? ''); ?>" placeholder="z. B. Stripe, PayPal">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-check mb-2">
@@ -314,24 +314,24 @@ $legalSitesConfig = [
                                         <div class="text-secondary small">Geeignet, wenn kein aktiver Cookie-Manager benötigt wird und nur technisch notwendige Cookies bzw. sehr wenige technische Verbindungen eingesetzt werden.</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Notwendiges Cookie</label>
-                                        <input type="text" name="legal_profile_essential_cookie_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_essential_cookie_name'] ?? 'PHPSESSID'); ?>" placeholder="z. B. PHPSESSID">
+                                        <label for="fld-legal_profile_essential_cookie_name" class="form-label">Notwendiges Cookie</label>
+                                        <input id="fld-legal_profile_essential_cookie_name" type="text" name="legal_profile_essential_cookie_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_essential_cookie_name'] ?? 'PHPSESSID'); ?>" placeholder="z. B. PHPSESSID">
                                     </div>
                                     <div class="col-md-8">
-                                        <label class="form-label">Zweck des Cookies</label>
-                                        <input type="text" name="legal_profile_essential_cookie_purpose" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_essential_cookie_purpose'] ?? ''); ?>" placeholder="z. B. Speichert Sitzungs- und Sicherheitseinstellungen">
+                                        <label for="fld-legal_profile_essential_cookie_purpose" class="form-label">Zweck des Cookies</label>
+                                        <input id="fld-legal_profile_essential_cookie_purpose" type="text" name="legal_profile_essential_cookie_purpose" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_essential_cookie_purpose'] ?? ''); ?>" placeholder="z. B. Speichert Sitzungs- und Sicherheitseinstellungen">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Zusätzlicher technischer Dienst</label>
-                                        <input type="text" name="legal_profile_additional_service_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_additional_service_name'] ?? ''); ?>" placeholder="z. B. CDN, Karten-API, Video-Dienst">
+                                        <label for="fld-legal_profile_additional_service_name" class="form-label">Zusätzlicher technischer Dienst</label>
+                                        <input id="fld-legal_profile_additional_service_name" type="text" name="legal_profile_additional_service_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_additional_service_name'] ?? ''); ?>" placeholder="z. B. CDN, Karten-API, Video-Dienst">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Anbieter / Zielsystem</label>
-                                        <input type="text" name="legal_profile_additional_service_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_additional_service_provider'] ?? ''); ?>" placeholder="z. B. eigener Server, Cloudflare, Vimeo">
+                                        <label for="fld-legal_profile_additional_service_provider" class="form-label">Anbieter / Zielsystem</label>
+                                        <input id="fld-legal_profile_additional_service_provider" type="text" name="legal_profile_additional_service_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_additional_service_provider'] ?? ''); ?>" placeholder="z. B. eigener Server, Cloudflare, Vimeo">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Zweck der Verbindung</label>
-                                        <input type="text" name="legal_profile_additional_service_purpose" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_additional_service_purpose'] ?? ''); ?>" placeholder="z. B. Auslieferung statischer Assets oder Video-Embed">
+                                        <label for="fld-legal_profile_additional_service_purpose" class="form-label">Zweck der Verbindung</label>
+                                        <input id="fld-legal_profile_additional_service_purpose" type="text" name="legal_profile_additional_service_purpose" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_additional_service_purpose'] ?? ''); ?>" placeholder="z. B. Auslieferung statischer Assets oder Video-Embed">
                                     </div>
                                 </div>
                             </div>
@@ -391,8 +391,8 @@ $legalSitesConfig = [
                                             <div class="fw-semibold mb-2">Newsletter</div>
                                             <div class="row g-3">
                                                 <div class="col-md-6">
-                                                    <label class="form-label">Newsletter-Anbieter</label>
-                                                    <input type="text" name="legal_profile_newsletter_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_newsletter_provider'] ?? ''); ?>" placeholder="z. B. Brevo, Mailchimp, CleverReach">
+                                                    <label for="fld-legal_profile_newsletter_provider" class="form-label">Newsletter-Anbieter</label>
+                                                    <input id="fld-legal_profile_newsletter_provider" type="text" name="legal_profile_newsletter_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_newsletter_provider'] ?? ''); ?>" placeholder="z. B. Brevo, Mailchimp, CleverReach">
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="text-secondary small pt-md-4">Wenn gesetzt, wird der Anbieter direkt im Datenschutztext genannt.</div>
@@ -406,8 +406,8 @@ $legalSitesConfig = [
                                             <div class="fw-semibold mb-2">Analytics / Reichweitenmessung</div>
                                             <div class="row g-3 align-items-end">
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Self-Hosted Analytics?</label>
-                                                    <select name="legal_profile_analytics_self_hosted" class="form-select">
+                                                    <label for="fld-legal_profile_analytics_self_hosted" class="form-label">Self-Hosted Analytics?</label>
+                                                    <select id="fld-legal_profile_analytics_self_hosted" name="legal_profile_analytics_self_hosted" class="form-select">
                                                         <option value="0" <?php echo ($profile['legal_profile_analytics_self_hosted'] ?? '0') === '0' ? 'selected' : ''; ?>>Nein</option>
                                                         <option value="1" <?php echo ($profile['legal_profile_analytics_self_hosted'] ?? '0') === '1' ? 'selected' : ''; ?>>Ja</option>
                                                     </select>
@@ -424,8 +424,8 @@ $legalSitesConfig = [
                                             <div class="fw-semibold mb-2">Externe Medien / Drittinhalte</div>
                                             <div class="row g-3">
                                                 <div class="col-md-6">
-                                                    <label class="form-label">Verwendete Anbieter</label>
-                                                    <input type="text" name="legal_profile_external_media_providers" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_external_media_providers'] ?? ''); ?>" placeholder="z. B. YouTube, Vimeo, Google Maps">
+                                                    <label for="fld-legal_profile_external_media_providers" class="form-label">Verwendete Anbieter</label>
+                                                    <input id="fld-legal_profile_external_media_providers" type="text" name="legal_profile_external_media_providers" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_external_media_providers'] ?? ''); ?>" placeholder="z. B. YouTube, Vimeo, Google Maps">
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="text-secondary small pt-md-4">Diese Anbieter werden im Datenschutztext bei den externen Inhalten erwähnt.</div>
@@ -439,16 +439,16 @@ $legalSitesConfig = [
                                             <div class="fw-semibold mb-2">Webfonts</div>
                                             <div class="row g-3">
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Bereitstellung</label>
-                                                    <select name="legal_profile_webfonts_source" class="form-select">
+                                                    <label for="fld-legal_profile_webfonts_source" class="form-label">Bereitstellung</label>
+                                                    <select id="fld-legal_profile_webfonts_source" name="legal_profile_webfonts_source" class="form-select">
                                                         <option value="local" <?php echo ($profile['legal_profile_webfonts_source'] ?? 'local') === 'local' ? 'selected' : ''; ?>>Lokal</option>
                                                         <option value="external" <?php echo ($profile['legal_profile_webfonts_source'] ?? 'local') === 'external' ? 'selected' : ''; ?>>Externer Anbieter</option>
                                                         <option value="mixed" <?php echo ($profile['legal_profile_webfonts_source'] ?? 'local') === 'mixed' ? 'selected' : ''; ?>>Gemischt</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-md-8">
-                                                    <label class="form-label">Anbieter / Quelle</label>
-                                                    <input type="text" name="legal_profile_webfonts_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_webfonts_provider'] ?? ''); ?>" placeholder="z. B. Google Fonts, Bunny Fonts">
+                                                    <label for="fld-legal_profile_webfonts_provider" class="form-label">Anbieter / Quelle</label>
+                                                    <input id="fld-legal_profile_webfonts_provider" type="text" name="legal_profile_webfonts_provider" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_webfonts_provider'] ?? ''); ?>" placeholder="z. B. Google Fonts, Bunny Fonts">
                                                 </div>
                                             </div>
                                         </div>
@@ -475,12 +475,12 @@ $legalSitesConfig = [
                                             <div class="text-secondary small mb-2">Bei journalistisch-redaktionell gestalteten Angeboten (Magazin, Blog, News) muss im Impressum zusätzlich ein Verantwortlicher mit Namen und Anschrift benannt werden.</div>
                                             <div class="row g-3">
                                                 <div class="col-md-6">
-                                                    <label class="form-label">Name (Vor- und Nachname)</label>
-                                                    <input type="text" name="legal_profile_mstv_responsible_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_mstv_responsible_name'] ?? ''); ?>">
+                                                    <label for="fld-legal_profile_mstv_responsible_name" class="form-label">Name (Vor- und Nachname)</label>
+                                                    <input id="fld-legal_profile_mstv_responsible_name" type="text" name="legal_profile_mstv_responsible_name" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_mstv_responsible_name'] ?? ''); ?>">
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label class="form-label">Anschrift</label>
-                                                    <input type="text" name="legal_profile_mstv_responsible_address" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_mstv_responsible_address'] ?? ''); ?>" placeholder="z. B. Musterstraße 1, 12345 Musterstadt">
+                                                    <label for="fld-legal_profile_mstv_responsible_address" class="form-label">Anschrift</label>
+                                                    <input id="fld-legal_profile_mstv_responsible_address" type="text" name="legal_profile_mstv_responsible_address" class="form-control" value="<?php echo htmlspecialchars($profile['legal_profile_mstv_responsible_address'] ?? ''); ?>" placeholder="z. B. Musterstraße 1, 12345 Musterstadt">
                                                 </div>
                                                 <div class="col-12">
                                                     <div class="text-secondary small">Bleiben Name oder Anschrift leer, greift das Impressum ersatzweise auf „Inhaltlich verantwortlich“ bzw. die oben hinterlegte Geschäftsanschrift zurück.</div>
@@ -501,16 +501,16 @@ $legalSitesConfig = [
                                 <div class="subheader mb-2">AGB & Widerruf</div>
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">Zielgruppe AGB</label>
-                                        <select name="legal_profile_terms_scope" class="form-select">
+                                        <label for="fld-legal_profile_terms_scope" class="form-label">Zielgruppe AGB</label>
+                                        <select id="fld-legal_profile_terms_scope" name="legal_profile_terms_scope" class="form-select">
                                             <option value="b2c" <?php echo ($profile['legal_profile_terms_scope'] ?? 'b2c') === 'b2c' ? 'selected' : ''; ?>>B2C</option>
                                             <option value="b2b" <?php echo ($profile['legal_profile_terms_scope'] ?? 'b2c') === 'b2b' ? 'selected' : ''; ?>>B2B</option>
                                             <option value="mixed" <?php echo ($profile['legal_profile_terms_scope'] ?? 'b2c') === 'mixed' ? 'selected' : ''; ?>>B2C + B2B</option>
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Vertragsart</label>
-                                        <select name="legal_profile_contract_type" class="form-select">
+                                        <label for="fld-legal_profile_contract_type" class="form-label">Vertragsart</label>
+                                        <select id="fld-legal_profile_contract_type" name="legal_profile_contract_type" class="form-select">
                                             <option value="services" <?php echo ($profile['legal_profile_contract_type'] ?? 'services') === 'services' ? 'selected' : ''; ?>>Dienstleistung</option>
                                             <option value="goods" <?php echo ($profile['legal_profile_contract_type'] ?? 'services') === 'goods' ? 'selected' : ''; ?>>Warenverkauf</option>
                                             <option value="digital" <?php echo ($profile['legal_profile_contract_type'] ?? 'services') === 'digital' ? 'selected' : ''; ?>>Digitale Inhalte</option>
@@ -518,8 +518,8 @@ $legalSitesConfig = [
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Rücksendekosten</label>
-                                        <select name="legal_profile_return_costs" class="form-select">
+                                        <label for="fld-legal_profile_return_costs" class="form-label">Rücksendekosten</label>
+                                        <select id="fld-legal_profile_return_costs" name="legal_profile_return_costs" class="form-select">
                                             <option value="customer" <?php echo ($profile['legal_profile_return_costs'] ?? 'customer') === 'customer' ? 'selected' : ''; ?>>Kunde trägt Kosten</option>
                                             <option value="merchant" <?php echo ($profile['legal_profile_return_costs'] ?? 'customer') === 'merchant' ? 'selected' : ''; ?>>Unternehmen trägt Kosten</option>
                                         </select>

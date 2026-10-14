@@ -40,13 +40,13 @@ class TrackingService
     private function __construct()
     {
         $this->db = Database::instance();
-        $this->createTrackingTable();
+        $this->db->runSchemaOnce('tracking', __FILE__, fn (): bool => $this->createTrackingTable());
     }
     
     /**
      * Create tracking table if not exists
      */
-    private function createTrackingTable(): void
+    private function createTrackingTable(): bool
     {
         $sql = "CREATE TABLE IF NOT EXISTS {$this->db->getPrefix()}page_views (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -73,7 +73,10 @@ class TrackingService
             Logger::instance()->withChannel('tracking')->warning('Tracking table could not be created.', [
                 'exception' => $e,
             ]);
+            return false;
         }
+
+        return true;
     }
     
     /**
@@ -100,7 +103,7 @@ class TrackingService
                 'page_title' => $pageTitle,
                 'user_id'    => $userId,
                 'session_id' => session_id(),
-                'ip_address' => self::anonymizeIp($_SERVER['REMOTE_ADDR'] ?? ''),
+                'ip_address' => self::anonymizeIp(\CMS\Security::getClientIp()),
                 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
                 'referrer'   => $_SERVER['HTTP_REFERER'] ?? '',
             ]) !== false;

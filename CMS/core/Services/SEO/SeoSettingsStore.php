@@ -31,6 +31,26 @@ final class SeoSettingsStore
         return $this->getSetting('custom_header_code', '');
     }
 
+    /**
+     * X-/Twitter-Handle ohne "@" aus SEO → Social (Fallback: früherer Schlüssel twitter_site).
+     * Akzeptiert "@name", "name" und Profil-URLs von x.com bzw. twitter.com.
+     */
+    public function getTwitterHandle(): string
+    {
+        $profile = trim($this->getSetting('social_twitter_profile', ''));
+        if ($profile === '') {
+            $profile = trim($this->getSetting('twitter_site', ''));
+        }
+
+        if (preg_match('#^https?://(?:www\.|mobile\.)?(?:x|twitter)\.com/@?([A-Za-z0-9_]{1,15})/?(?:[?\#].*)?$#i', $profile, $match) === 1
+            || preg_match('/^@?([A-Za-z0-9_]{1,15})$/', $profile, $match) === 1
+        ) {
+            return $match[1];
+        }
+
+        return '';
+    }
+
     public function getHomepageTitle(string $default = ''): string
     {
         return $this->getSetting('homepage_title', $default);

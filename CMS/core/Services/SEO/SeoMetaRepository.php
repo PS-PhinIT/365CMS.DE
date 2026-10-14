@@ -15,7 +15,13 @@ final class SeoMetaRepository
         private readonly DatabaseInterface $db,
         private readonly string $prefix
     ) {
-        $this->ensureSeoMetaTable();
+        if ($this->db instanceof \CMS\Database) {
+            $this->db->runSchemaOnce('seo_meta', __FILE__, function (): void {
+                $this->ensureSeoMetaTable();
+            });
+        } else {
+            $this->ensureSeoMetaTable();
+        }
     }
 
     public function getContentMeta(string $contentType, int $contentId): array
