@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Second pass over release 3.5.0 after the full audit of the same day. It covered security, speed, best practice, bugs, broken references and the GUI. 43 findings were recorded. In 3.5.0, 38 were fixed completely and 3 in part (PERF-12, PERF-17, PERF-22); 2 remain open (FUN-34, PERF-18). One finding (SEC-30) changes behaviour for API clients: JWTs are now bound to the password, and tokens issued before 3.5.0 must be fetched again. The open parts are optimisations without a functional defect and are listed as recommendations OFFEN-14 … OFFEN-18; OFFEN-19 is an operator note for API clients.
+Second pass over release 3.5.0 after the full audit of the same day. It covered security, speed, best practice, bugs, broken references and the GUI. 43 findings were recorded, and all of them are fixed in 3.5.0. At first, 38 were fixed completely, 3 in part (PERF-12, PERF-17, PERF-22) and 2 stayed open (FUN-34, PERF-18). The remaining parts were listed as recommendations OFFEN-14 … OFFEN-19 and have since been implemented in 3.5.0 as well. One finding (SEC-30) changes behaviour for API clients: JWTs are now bound to the password, and tokens issued before 3.5.0 must be fetched again. Such tokens are now rejected with a clear hint (`WWW-Authenticate` header, error text on refresh).
 
 The fixes with the most impact were:
 
@@ -62,7 +62,7 @@ Schwere: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 | FUN-31 | `TranslationService` las nur den Altschlüssel `setting_language` | 🟡 | ✅ 3.5.0 |
 | FUN-32 | `upsertSetting()` der Marketplaces prüfte `PDOStatement === 0` (nie wahr) | 🟡 | ✅ 3.5.0 – `INSERT … ON DUPLICATE KEY UPDATE` |
 | FUN-33 | Hub-Sites: ungültiges Karten-JSON konnte bestehende Karten verwerfen | 🟡 | ✅ 3.5.0 |
-| FUN-34 | Customizer-Optionen (u. a. `content_layout`) werden gespeichert, aber im Theme nicht gelesen | ⚪ | Empfehlung OFFEN-17 |
+| FUN-34 | Customizer-Optionen (u. a. `content_layout`) werden gespeichert, aber im Theme nicht gelesen | ⚪ | ✅ 3.5.0 – drei Optionen umgesetzt, vier entfernt (OFFEN-17) |
 
 #### Verweise und Best Practice
 
@@ -83,17 +83,17 @@ Schwere: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 
 | ID | Befund | Schwere | Status |
 |---|---|---|---|
-| PERF-12 | Sprachverfügbarkeit von Beiträgen über `CHAR_LENGTH(TRIM(content))` (LONGTEXT-Scan) in Archiv- und Tag-Abfragen | 🟡 | teilweise – Tag-Übersicht einmal je Request; Rest Empfehlung OFFEN-14 |
+| PERF-12 | Sprachverfügbarkeit von Beiträgen über `CHAR_LENGTH(TRIM(content))` (LONGTEXT-Scan) in Archiv- und Tag-Abfragen | 🟡 | ✅ 3.5.0 – Tag-Übersicht einmal je Request; generierte Spalten `has_locale_de`/`has_locale_en` mit Index (OFFEN-14) |
 | PERF-13 | `SeoAnalysisService::getSetting()` mit eigener Abfrage je Schlüssel (~20 je Beitragsseite) | 🟠 | ✅ 3.5.0 – Options-Cache; SEO-Meta je Inhalt einmal pro Request |
 | PERF-14 | Unbekannte `/tag/…`-URL lud alle getaggten Beiträge mit `p.*` (Bot-Last) | 🟠 | ✅ 3.5.0 – Legacy-Fallback liest zuerst nur `id`/`tags`, Volltext nur für Treffer |
 | PERF-15 | `ThemeManager::hasUnsafeCode()` tokenisierte die ~90 KB `functions.php` bei jedem Request | 🟡 | ✅ 3.5.0 – Ergebnis je Dateiinhalt (SHA-256) in `cache/` |
 | PERF-16 | Startseite fragte im Landing-Modus alle Blog-Daten ab; Tag-Wolke lud alle `posts.tags` | 🟡 | ✅ 3.5.0 |
-| PERF-17 | Einstellungen am Options-Cache vorbei (`CmsAuthPageService`, Schriften in `Bootstrap`, `ThemeManager::loadSettings`) | 🟡 | ✅ 3.5.0 für Auth-Seiten und Schriften; `ThemeManager` (Präfix-Abfrage) Empfehlung OFFEN-15 |
-| PERF-18 | `SiteTableRepository`: `SHOW COLUMNS` je Instanz, `JSON_EXTRACT … OR table_slug` ohne Index | ⚪ | Empfehlung OFFEN-16 |
+| PERF-17 | Einstellungen am Options-Cache vorbei (`CmsAuthPageService`, Schriften in `Bootstrap`, `ThemeManager::loadSettings`) | 🟡 | ✅ 3.5.0 für Auth-Seiten und Schriften; `ThemeManager` über `OptionStore::getMany()` (OFFEN-15) |
+| PERF-18 | `SiteTableRepository`: `SHOW COLUMNS` je Instanz, `JSON_EXTRACT … OR table_slug` ohne Index | ⚪ | ✅ 3.5.0 – `table_slug` mit Unique-Index garantiert (OFFEN-16) |
 | PERF-19 | `ThemeCustomizer::setTheme()` lud das bereits geladene Theme erneut | ⚪ | ✅ 3.5.0 |
 | PERF-20 | Fallback-Template fragte die nicht vorhandene Spalte `is_sticky` ab (Fehlerabfrage je Aufruf) | ⚪ | ✅ 3.5.0 |
 | PERF-21 | Aufrufzähler schrieb auch bei HEAD, Prefetch und Crawlern | 🟡 | ✅ 3.5.0 |
-| PERF-22 | Plattform-Check dekodierte bei jedem Request sechs `composer.json`; PhotoSwipe-Prüfung doppelt; redundante Indizes | ⚪ | ✅ 3.5.0 für den Plattform-Check; Rest Empfehlung OFFEN-18 |
+| PERF-22 | Plattform-Check dekodierte bei jedem Request sechs `composer.json`; PhotoSwipe-Prüfung doppelt; redundante Indizes | ⚪ | ✅ 3.5.0 – Plattform-Check; PhotoSwipe-Prüfung einmal je Request, 26 redundante Indizes entfernt (OFFEN-18) |
 
 #### GUI und Barrierefreiheit
 
@@ -114,20 +114,22 @@ Kein Befund nach Prüfung:
 - Der Status `private` für Beiträge existiert (`PostsModule`). Die Prüfung in `ThemeRouter` ist also korrekt.
 - Anker hinter Überschriften mit HTML-Kommentar (`DOC/assets/README.md`) funktionieren auf GitHub.
 
-### Empfehlungen (ohne Funktionsfehler)
+### Empfehlungen (umgesetzt in 3.5.0)
 
-| ID | Bereich | Empfehlung |
-|---|---|---|
-| OFFEN-14 | Performance | Die Sprachverfügbarkeit (`content_en` befüllt) als persistierte Spalte oder generierte Spalte mit Index führen, statt `CHAR_LENGTH(TRIM(content))` je Abfrage zu berechnen. |
-| OFFEN-15 | Performance | `ThemeManager::loadSettings()` (Präfix-Abfrage `color_%`/`font_%`/`site_%`) auf feste Schlüssel über `OptionStore::getMany()` umstellen. |
-| OFFEN-16 | Performance | `site_tables.table_slug` im Schema garantieren, dann `SHOW COLUMNS` und den `JSON_EXTRACT`-Fallback entfernen. |
-| OFFEN-17 | Funktion | Ungenutzte Customizer-Optionen (`content_layout` u. a.) im Theme auswerten oder aus `config.php` entfernen. |
-| OFFEN-18 | Performance | Die PhotoSwipe-Asset-Prüfung nur einmal auswerten und redundante Indizes (Präfix eines zusammengesetzten Index) prüfen. |
-| OFFEN-19 | Betrieb | API-Clients nach dem Update auf 3.5.0 neu anmelden lassen. Tokens ohne `pwf` werden abgelehnt (SEC-30). |
+| ID | Bereich | Empfehlung | Umsetzung 3.5.0 |
+|---|---|---|---|
+| OFFEN-14 | Performance | Die Sprachverfügbarkeit (`content_en` befüllt) als persistierte Spalte oder generierte Spalte mit Index führen, statt `CHAR_LENGTH(TRIM(content))` je Abfrage zu berechnen. | ✅ Generierte Spalten `posts.has_locale_de`/`has_locale_en` (`STORED`) mit Indizes `idx_status_locale_de`/`_en` (`status`, Sprache, `published_at`). Bestehende Installationen erhalten sie beim ersten Request nach dem Update. `ContentLocalizationService::buildPostAvailabilitySql()` bildet die Bedingung zentral für `ThemeRouter` und Theme; ohne die Spalten gilt der bisherige Ausdruck. Das Backup lässt generierte Spalten im Dump aus. |
+| OFFEN-15 | Performance | `ThemeManager::loadSettings()` (Präfix-Abfrage `color_%`/`font_%`/`site_%`) auf feste Schlüssel über `OptionStore::getMany()` umstellen. | ✅ Feste Schlüsselliste `ThemeManager::THEME_SETTING_KEYS` über `OptionStore::getMany()`; Schrift-Stacks über `OptionStore::get()`. Keine eigene Abfrage mehr. |
+| OFFEN-16 | Performance | `site_tables.table_slug` im Schema garantieren, dann `SHOW COLUMNS` und den `JSON_EXTRACT`-Fallback entfernen. | ✅ Laufzeit-Schema gleicht `table_slug` mit `hub_slug` ab und legt `uniq_table_slug` an. `SiteTableRepository` sucht Hubs nur noch über `table_slug` (Index); `SHOW COLUMNS` und der `JSON_EXTRACT`-Vergleich entfallen. |
+| OFFEN-17 | Funktion | Ungenutzte Customizer-Optionen (`content_layout` u. a.) im Theme auswerten oder aus `config.php` entfernen. | ✅ Umgesetzt: `layout.content_layout` (volle Breite ohne Sidebar in Blog, Startseite, Archiv, Kategorie, Schlagwort, Autor), `layout.show_back_to_top` (Button „Zurück nach oben“), `blog.show_author` (Autor in Artikel, Autorenbox und Hero). Entfernt: `navigation.mobile_menu_enabled` (Hamburger ist die einzige mobile Navigation), `blog.posts_per_page` (doppelt zu *Einstellungen → Allgemein*), `homepage.homepage_posts_count` und `homepage.homepage_hero_type` (festes Startseiten-Layout). |
+| OFFEN-18 | Performance | Die PhotoSwipe-Asset-Prüfung nur einmal auswerten und redundante Indizes (Präfix eines zusammengesetzten Index) prüfen. | ✅ PhotoSwipe-Entscheidung je Request gemerkt (CSS im Head und Script am Seitenende); die wirkungslose Hub-Abfrage entfällt. 26 Indizes, die Präfix eines `UNIQUE`- oder zusammengesetzten Index sind, aus Schema und Service-Tabellen entfernt; bestehende Installationen löschen sie einmalig, wenn ein abdeckender Index vorhanden ist. |
+| OFFEN-19 | Betrieb | API-Clients nach dem Update auf 3.5.0 neu anmelden lassen. Tokens ohne `pwf` werden abgelehnt (SEC-30). | ✅ Tokens ohne `pwf` erhalten bei der Bearer-Anmeldung einen `WWW-Authenticate`-Header (`invalid_token` mit Hinweis auf `POST /api/v1/auth/token`); `POST /api/v1/auth/refresh` nennt den Grund im JSON-Feld `error`. Betreiber müssen Clients weiterhin neu anmelden lassen. |
 
 ### Hinweise für Betreiber
 
 - **API:** Nach dem Update müssen sich alle Clients mit Bearer-Token ein neues Token holen (`POST /api/v1/auth/token`). Eine spätere Passwortänderung entwertet die Tokens des Kontos.
+- **Datenbank:** Der erste Request nach dem Update ergänzt `posts.has_locale_de`/`has_locale_en` samt Indizes, gleicht `site_tables.table_slug` ab und entfernt redundante Indizes. Auf großen `posts`-Tabellen dauert das einmalig etwas länger.
+- **Theme-Customizer:** Die Optionen *Mobiles Menü*, *Artikel pro Seite* (Theme), *Anzahl Beiträge auf Startseite* und *Hero-Artikel Quelle* entfallen; sie hatten keine Wirkung. Die Anzahl der Beiträge je Seite steht unter *Einstellungen → Allgemein*.
 - **Importer:** Das Plugin `cms-importer` funktioniert erst mit 3.5.0 wieder (Beitrags- und Seitenimport, Vorschau).
 - **Cache:** Neue Merker unter `CMS/cache/`:
   - `theme_scan_*.ok` für den Theme-Scan
