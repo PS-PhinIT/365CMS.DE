@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Beispielbericht WordPress-Import
-> **Stand:** 2026-09-14 | **Version:** 3.4.00 | **Status:** Reference example | **Update:** 2026-09-14
+> **Stand:** 2026-09-14 | **Version:** 3.5.0 | **Status:** Reference example | **Update:** 2026-09-14
 
 ## English
 

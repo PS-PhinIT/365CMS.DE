@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Beiträge, Kategorien und Tags
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Routen:** `/admin/posts`, `/admin/post-categories`, `/admin/post-tags` | **CSRF-Aktion:** `admin_posts`
 
 ## English (summary)

@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Audit 2026-10-03 – Fehlende und unvollständige Funktionen
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.14) | Übersicht: [README.md](README.md)
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | Übersicht: [README.md](README.md)
 
 ## English (summary)
 
-All twelve "known gaps" from `DOC/core/STATUS.md` were re-verified against the code; seven were fixed in this audit (maintenance mode, settings save overwriting manual constants, `/order` route, `/health` route, storage limit lookup, member upload token, bulk delete semantics) and the marketplace manifests were updated. In 3.4.13 the JWT API login (opt-in), the documentation sync UI and the WordPress asset functions were added and dead code was removed. Runtime tests additionally uncovered and fixed a contact form that always returned 404 and a fresh-install 500 on `/blog` caused by missing post language columns. Still open: the frozen runtime version (a release decision).
+All twelve "known gaps" from `DOC/core/STATUS.md` were re-verified against the code; seven were fixed in this audit (maintenance mode, settings save overwriting manual constants, `/order` route, `/health` route, storage limit lookup, member upload token, bulk delete semantics) and the marketplace manifests were updated. In 3.5.0 the JWT API login (opt-in), the documentation sync UI and the WordPress asset functions were added and dead code was removed. Runtime tests additionally uncovered and fixed a contact form that always returned 404 and a fresh-install 500 on `/blog` caused by missing post language columns. Still open: the frozen runtime version (a release decision).
 
 ## Deutsch
 
@@ -48,7 +48,7 @@ Unter Diagnose → Health-Check ist `monitor_health_endpoint_path` (Standard `/h
 
 `UserService::bulkAction()` behandelte `delete` wie `hard_delete`. **Fix:** `delete` = Soft-Delete (Status inaktiv), `hard_delete` = endgültig. Die Admin-Oberfläche bietet unverändert nur „Dauerhaft löschen“ (`hard_delete`).
 
-### Mit 3.4.13 behoben
+### Mit 3.5.0 behoben
 
 #### FUN-13 🟠 Kontaktformular nie absendbar (Laufzeittest)
 
@@ -82,7 +82,7 @@ Karte „Doku-Sync“ mit Status und Button (Aktion `sync_docs`, nur `manage_sys
 
 | ID | Schwere | Befund | Fundstelle | Empfehlung |
 |---|---|---|---|---|
-| FUN-12 | 🟡 | `Version::CURRENT` bleibt `3.4.00`, obwohl seit dem Release Code-Fixes (3.4.01–3.4.13, inkl. Schema v23) ausgeliefert werden. Update-Prüfung, Marketplace-`requires_cms` und Support können Installationen nicht unterscheiden. | `CMS/core/Version.php`, `CMS/update.json`, `CMS/marketplace/core/365cms/update.json` | Release-Entscheidung des Maintainers: `Version::CURRENT`, `RELEASE_DATE`, beide `update.json` (Download-URL, SHA-256) und die Release-Pakete unter `RELEASE/` gemeinsam anheben. Nicht im Audit geändert, weil `update.json` auf ein konkretes ZIP mit Prüfsumme zeigt. **Erledigt in 3.5.0:** `Version::CURRENT = '3.5.0'`, beide `update.json` und `RELEASE/365CMS-3.5.0-*` gemeinsam angehoben. |
+| FUN-12 | 🟡 | `Version::CURRENT` bleibt `3.4.00`, obwohl seit dem Release Code-Fixes (3.5.0, inkl. Schema v23) ausgeliefert werden. Update-Prüfung, Marketplace-`requires_cms` und Support können Installationen nicht unterscheiden. | `CMS/core/Version.php`, `CMS/update.json`, `CMS/marketplace/core/365cms/update.json` | Release-Entscheidung des Maintainers: `Version::CURRENT`, `RELEASE_DATE`, beide `update.json` (Download-URL, SHA-256) und die Release-Pakete unter `RELEASE/` gemeinsam anheben. Nicht im Audit geändert, weil `update.json` auf ein konkretes ZIP mit Prüfsumme zeigt. **Erledigt in 3.5.0:** `Version::CURRENT = '3.5.0'`, beide `update.json` und `RELEASE/365CMS-3.5.0-*` gemeinsam angehoben. |
 
 ### Status der Tabelle „Bekannte Lücken“ (`DOC/core/STATUS.md`)
 
@@ -93,11 +93,11 @@ Karte „Doku-Sync“ mit Status und Button (Aktion `sync_docs`, nur `manage_sys
 | 3 | `/order` 404 | ✅ FUN-03 |
 | 4 | PHP-Check 8.2 statt 8.4 | ✅ SEC-05 |
 | 5 | `checkLimit('storage')`, Free-Fallback | ✅ FUN-05 |
-| 6 | `DesignSettingsModule` toter Code | ✅ FUN-11 (3.4.13) |
-| 7 | Doku-Sync ohne UI | ✅ FUN-09 (3.4.13) |
+| 6 | `DesignSettingsModule` toter Code | ✅ FUN-11 (3.5.0) |
+| 7 | Doku-Sync ohne UI | ✅ FUN-09 (3.5.0) |
 | 8 | Sammelaktion `delete` = `hard_delete` | ✅ FUN-07 |
 | 9 | `/health` ohne Route | ✅ FUN-04 |
-| 10 | JWT nicht verdrahtet | ✅ FUN-08 (3.4.13) |
+| 10 | JWT nicht verdrahtet | ✅ FUN-08 (3.5.0) |
 | 11 | Veraltete Marketplace-Manifeste | ✅ REF-02 |
 | 12 | Member-Upload-Token | ✅ FUN-06 |
 

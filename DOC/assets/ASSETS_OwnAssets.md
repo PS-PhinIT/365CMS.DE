@@ -1,5 +1,5 @@
 # ASSETS OwnAssets – Roadmap für Eigenersatz
-> **Stand:** 2026-10-04 | **Version:** 3.4.19 | **Status:** Aktuell
+> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Status:** Aktuell
 
 ## Zielbild
 
@@ -26,7 +26,7 @@ Bereits entfernte oder nicht mehr führende Legacy-Assets aus früheren Laufzeit
 
 | Asset | Status in 2.9.1 | Rolle heute | Empfehlung | Priorität | Ziel für Eigenlösung |
 |---|---|---|---|---|---|
-| `gridjs` | **erledigt** – in 3.4.02 aus `CMS/assets/` entfernt | Admin-Listen werden serverseitig gerendert, ohne Grid.js | – | – | umgesetzt |
+| `gridjs` | **erledigt** – in 3.5.0 aus `CMS/assets/` entfernt | Admin-Listen werden serverseitig gerendert, ohne Grid.js | – | – | umgesetzt |
 | `photoswipe` | aktiv | Frontend-Lightbox | durch eigene Lightbox-Komponente ablösen | P2 | `cms-lightbox.js` + schlanke CSS-Komponente |
 | `melbahja-seo` | aktiv | Schema, Sitemap, SEO-Helfer | Funktionen schrittweise in Core-Services überführen | P2 | eigene `Seo*Service`-/`Sitemap*Service`-Bausteine |
 
@@ -39,7 +39,7 @@ Diese Pakete liegen bereits im Staging-Bereich, sind aber **nicht** automatisch 
 | Asset | Status heute | Empfehlung | Priorität | Warum |
 |---|---|---|---|---|
 | `symfony/ai-platform` | Basis jetzt zusätzlich produktiv unter `CMS/assets/ai-platform`, Provider-/Bridge-Stack weiter in Bewertung | **nicht selbst nachbauen**, sondern nur über klaren Core-Adapter einführen | P4 | experimentelles Framework, viele zusätzliche Symfony-Abhängigkeiten, provider- und bridge-lastig |
-| `msgraph-sdk-php` | nicht mehr im Bestand (Staging-Ordner `ASSETS/` entfernt, Diagnose-Eintrag seit 3.4.19 weg) | bei Bedarf nur über isolierte Services einführen | P4 | große Provider-SDK-Fläche; der Graph-Mailversand nutzt eigene HTTP-Aufrufe |
+| `msgraph-sdk-php` | nicht mehr im Bestand (Staging-Ordner `ASSETS/` entfernt, Diagnose-Eintrag seit 3.5.0 weg) | bei Bedarf nur über isolierte Services einführen | P4 | große Provider-SDK-Fläche; der Graph-Mailversand nutzt eigene HTTP-Aufrufe |
 
 ### Was das für 365CMS bedeutet
 
@@ -55,7 +55,7 @@ Diese Pakete liegen bereits im Staging-Bereich, sind aber **nicht** automatisch 
 
 Diese Bibliotheken sind aktiv, aber funktional gut durch 365CMS-eigene UI-Bausteine ersetzbar:
 
-1. ~~`gridjs`~~ (in 3.4.02 entfernt)
+1. ~~`gridjs`~~ (in 3.5.0 entfernt)
 2. `photoswipe`
 
 **Empfohlene Eigenmodule:**
@@ -88,7 +88,7 @@ Neue Pakete aus `/ASSETS` sollten künftig zuerst in eine von drei Klassen einso
 
 ### `gridjs`
 
-- **Status:** erledigt. Grid.js wurde in 3.4.02 aus `CMS/assets/` entfernt, die historische README unter `DOC/assets/gridjs/` in 3.4.19.
+- **Status:** erledigt. Grid.js wurde in 3.5.0 aus `CMS/assets/` entfernt, die historische README unter `DOC/assets/gridjs/` in 3.5.0.
 
 ### `photoswipe`
 

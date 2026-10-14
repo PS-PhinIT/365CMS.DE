@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Theme-Menüs
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/menu-editor` (Alt-Route `/admin/menus` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_menu_editor`
 
 ## English (summary)

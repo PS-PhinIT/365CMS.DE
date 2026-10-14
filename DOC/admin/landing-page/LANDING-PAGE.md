@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Landingpage
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/landing-page` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_landing_page`
 
 ## English (summary)

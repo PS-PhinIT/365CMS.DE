@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: INSTALLATION
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.09) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 
 ## Table of contents | Inhaltsverzeichnis
 

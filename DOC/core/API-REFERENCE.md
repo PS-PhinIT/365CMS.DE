@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – API-Referenz
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.14) | **Status:** Stable
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
-The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRouter.php`) and – for the generic `pages` endpoint – handled by `CMS\Api`. Requests below `/api` run in runtime mode `api` (`Cache-Control: no-store`). Authentication is the regular CMS session cookie; admin endpoints additionally require role `admin` and a capability, state-changing admin endpoints a CSRF token. There is no public write API and no CORS configuration. Since 3.4.13 API clients can optionally authenticate with `Authorization: Bearer <JWT>` when `JWT_SECRET` (≥ 32 characters) is set; tokens are issued only to an existing, fully logged-in session (`POST /api/v1/auth/token`) and renewed via `POST /api/v1/auth/refresh`. CSRF-protected endpoints still require their CSRF token.
+The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRouter.php`) and – for the generic `pages` endpoint – handled by `CMS\Api`. Requests below `/api` run in runtime mode `api` (`Cache-Control: no-store`). Authentication is the regular CMS session cookie; admin endpoints additionally require role `admin` and a capability, state-changing admin endpoints a CSRF token. There is no public write API and no CORS configuration. Since 3.5.0 API clients can optionally authenticate with `Authorization: Bearer <JWT>` when `JWT_SECRET` (≥ 32 characters) is set; tokens are issued only to an existing, fully logged-in session (`POST /api/v1/auth/token`) and renewed via `POST /api/v1/auth/refresh`. CSRF-protected endpoints still require their CSRF token.
 
 ## Deutsch
 
@@ -12,7 +12,7 @@ The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRout
 
 | Methode | Route | Zugriff | Antwort |
 |---|---|---|---|
-| GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"3.4.00"}` |
+| GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"3.5.0"}` |
 | GET | `/api/v1/pages?q=<suche>` | angemeldet | `{"data":[…]}` – Seitensuche (`PageManager::search()`, leere Suche → leere Liste) |
 | GET | `/api/v1/pages/:slug` | angemeldet | `{"data":{…}}` oder `404 {"error":"Page not found"}` |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft | `204` |
@@ -67,7 +67,7 @@ const res = await fetch('/api/upload', { method: 'POST', body, credentials: 'sam
 
 Plugins registrieren Routen im Hook `register_routes`. Für JSON-Endpunkte unter `/api/…` gilt: Modus `api` (no-store), eigene Authentifizierung/Capability-Prüfung, CSRF für schreibende Browser-Requests, Antwort mit `json_encode(…, JSON_UNESCAPED_UNICODE)`. Siehe [../admin/ADMIN-API-AJAX.md](../admin/ADMIN-API-AJAX.md) und [../workflow/API-INTEGRATION-WORKFLOW.md](../workflow/API-INTEGRATION-WORKFLOW.md).
 
-### JWT-Anmeldung (seit 3.4.13)
+### JWT-Anmeldung (seit 3.5.0)
 
 - **Aktivierung:** nur wenn `JWT_SECRET` in `config/app.php` gesetzt ist (mindestens 32 Zeichen). Der `AUTH_KEY`-Fallback von `JwtService` schaltet die API-Anmeldung **nicht** frei. Ohne Secret antworten die Token-Routen mit 404.
 - **Token holen:** `POST /api/v1/auth/token` aus einer angemeldeten Browser-Session (Login inkl. MFA) mit gleicher Herkunft. Ein reiner Passwort-Login per API ist bewusst nicht vorgesehen, weil er die Zwei-Faktor-Anmeldung umgehen würde.

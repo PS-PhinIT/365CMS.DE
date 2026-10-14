@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Architektur
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Schema:** v23 | **PHP:** ≥ 8.4
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Schema:** v23 | **PHP:** ≥ 8.4
 
 ## English (summary)
 

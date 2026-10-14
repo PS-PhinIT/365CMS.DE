@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Sicherheits-Audit
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/security-audit` | **Capability:** `manage_settings` | **Core-Modul:** `security`
 
 ## English (summary)
@@ -14,7 +14,7 @@
 | Prüfpunkt | Was geprüft wird |
 |---|---|
 | HTTPS aktiv | `SITE_URL` bzw. aktuelle Anfrage über HTTPS |
-| PHP-Version | Seit 3.4.12 `ok` ab `CMS_MIN_PHP_VERSION` (8.4), `warning` bei 8.2–8.3, sonst `critical`. |
+| PHP-Version | Seit 3.5.0 `ok` ab `CMS_MIN_PHP_VERSION` (8.4), `warning` bei 8.2–8.3, sonst `critical`. |
 | `install.php` entfernt | Installer nach der Einrichtung nicht mehr erreichbar |
 | Debug-Modus | `CMS_DEBUG` in Produktion aus |
 | Uploads-Schutz (.htaccess) | `CMS/uploads/.htaccess` vorhanden (siehe [../media/MEDIA.md](../media/MEDIA.md)) |

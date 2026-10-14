@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Gesamtaudit 2026-10-14
 
-> **Stand:** 2026-10-14 | **Version:** 3.5.0 (Befunde 3.4.25, offene Empfehlungen 3.5.0) | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
 
 ## English (summary)
 
-Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mass requests and bot traffic, missing functions, broken references, GUI defects and operational topics. The checklist was compiled from OWASP Top 10:2025 and current website/CMS audit checklists (see [PRUEFKATALOG.md](PRUEFKATALOG.md)). 54 findings were recorded; 41 were fixed in changelog entry `3.4.25`; the 13 open recommendations (OFFEN-01 … OFFEN-13) were implemented in release `3.5.0`, together with proxy/CDN-aware client IP detection for host CDNs with unknown addresses (e.g. Hostinger). The most important fixes:
+Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mass requests and bot traffic, missing functions, broken references, GUI defects and operational topics. The checklist was compiled from OWASP Top 10:2025 and current website/CMS audit checklists (see [PRUEFKATALOG.md](PRUEFKATALOG.md)). 54 findings were recorded; all of them – 41 direct fixes and the 13 recommendations OFFEN-01 … OFFEN-13 – are part of release `3.5.0`, together with proxy/CDN-aware client IP detection for host CDNs with unknown addresses (e.g. Hostinger). The most important fixes:
 
 - The second factor at login could be brute-forced without limit and accepted replayed TOTP codes.
 - Fresh installs lacked the unique key on `user_meta`, so MFA secrets and profile fields were duplicated.
@@ -79,47 +79,47 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 
 | ID | Bereich | Befund | Schwere | Status |
 |---|---|---|---|---|
-| SEC-16 | Sicherheit | Zweiter Faktor (TOTP/Backup-Code) ohne Versuchslimit und ohne Ablauf; TOTP-Codes wiederverwendbar | 🔴 | ✅ 3.4.25 |
-| SEC-17 | Sicherheit | Neuinstallationen ohne `UNIQUE(user_id, meta_key)` auf `user_meta`: MFA- und Profilwerte werden dupliziert, veraltete Secrets gelesen | 🟠 | ✅ 3.4.25 |
-| SEC-18 | Sicherheit | MFA abschalten, Backup-Codes erneuern, Passkey registrieren und E-Mail ändern ohne aktuelles Passwort | 🟠 | ✅ 3.4.25 |
-| SEC-19 | Sicherheit | Private Uploads (`uploads/member`, `uploads/import`) und Importer-Berichte per URL abrufbar | 🟠 | ✅ 3.4.25 |
-| SEC-20 | Sicherheit | Installer setzt `debug_mode` standardmäßig auf aktiv | 🟡 | ✅ 3.4.25 |
-| SEC-21 | Sicherheit | Nachrichten: Antwort in fremde Threads möglich, kein Sendelimit (Spam) | 🟠 | ✅ 3.4.25 |
-| SEC-22 | Sicherheit | `REMOTE_ADDR` statt `Security::getClientIp()` in fünf Diensten | 🟡 | ✅ 3.4.25 |
-| SEC-23 | Sicherheit | Öffentlicher Checkout akzeptiert `billing=lifetime` | 🟡 | ✅ 3.4.25 |
-| SEC-24 | Sicherheit | CSV-Export der Seitentabellen ohne Formel-Schutz | 🟡 | ✅ 3.4.25 |
-| SEC-25 | Sicherheit | Admin-`cmsAlert()` setzt den Meldungstext per `innerHTML` | 🟡 | ✅ 3.4.25 |
-| SEC-26 | Sicherheit | CI-Actions nicht auf Commit-SHA fixiert (`trivy-action@master`) | 🟡 | ✅ 3.4.25 |
-| SEC-27 | Sicherheit | Seiten-Suche liefert Seiten mit `published_at` in der Zukunft | 🟡 | ✅ 3.4.25 |
-| PERF-07 | Performance | Laufzeit-Schemaprüfungen in jedem Request | 🔴 | ✅ 3.4.25 |
-| PERF-08 | Performance | Zweite PDO-Verbindung je Request für die Session-GC-Lebensdauer | 🟠 | ✅ 3.4.25 |
-| PERF-09 | Performance | Einzelabfragen auf `settings` (Router-Cache-TTL, Firewall-Einstellungen) | 🟡 | ✅ 3.4.25 |
-| PERF-10 | Performance | Theme-Kategorien und Hub-Tabellen mehrfach je Request geladen | 🟡 | ✅ 3.4.25 |
-| PERF-11 | Performance | Seiten-Suche mit `SELECT *` | ⚪ | ✅ 3.4.25 |
-| LAST-01 | Last | Firewall schreibt je blockierter Anfrage zwei Zeilen; Zählung ohne Index; Bereinigung in einem einzigen DELETE | 🟠 | ✅ 3.4.25 |
-| LAST-02 | Last | Öffentliche Suche ohne Rate-Limit (LIKE über LONGTEXT) | 🟠 | ✅ 3.4.25 |
-| LAST-03 | Last | Web-Vitals-Endpunkt: Race Condition im Datei-Limiter, Limit per User-Agent-Wechsel umgehbar, fail-open bei voller Datei | 🟡 | ✅ 3.4.25 |
-| LAST-04 | Last | 404-Monitor ohne Obergrenze und Pfadlänge (Zufalls-URLs füllen die Tabelle) | 🟠 | ✅ 3.4.25 |
-| LAST-05 | Last | Keine Aufbewahrungsfrist für `page_views`, `core_web_vitals`, `not_found_logs` und Tageslogs | 🟠 | ✅ 3.4.25 |
-| LAST-06 | Last | Medienauslieferung hält die Session-Sperre während des Streamings; parallele Requests desselben Nutzers warten | 🟡 | ✅ 3.4.25 |
-| FUN-21 | Funktion | Einstellung „Kommentare aktivieren“ wird nie ausgewertet | 🟠 | ✅ 3.4.25 |
-| FUN-22 | Funktion | `robots.txt`-Inhalt aus *Einstellungen → Allgemein* wird nicht verwendet | 🟡 | ✅ 3.4.25 |
-| FUN-23 | Funktion | Kategorie-Beschreibung wird nicht gespeichert; Felder „Farbe“ und „Sofort veröffentlichen“ ohne Wirkung | 🟡 | ✅ 3.4.25 |
-| FUN-24 | Funktion | Tag-Beschreibung wird nicht gespeichert; „Sofort veröffentlichen“ ohne Wirkung | 🟡 | ✅ 3.4.25 |
-| FUN-25 | Funktion | Importer-Link „Bericht herunterladen“ ohne Handler | 🟡 | ✅ 3.4.25 |
-| REF-06 | Verweis | `\WP_Error` im Namespace-Code von `MediaModule` | 🟠 | ✅ 3.4.25 |
-| REF-07 | Verweis | `use WP_Error;` in `StatusService` | 🟠 | ✅ 3.4.25 |
-| REF-08 | Verweis | `SystemInfoModule` ruft nicht vorhandenes `formatBytesLabel()` auf | 🟠 | ✅ 3.4.25 |
-| REF-09 | Verweis | `MailSettingsActionResult::failure()` existiert nicht | 🟡 | ✅ 3.4.25 |
-| REF-10 | Verweis | `BackupService` ruft nicht vorhandenes `uploadToS3WithSDK()` auf | 🟠 | ✅ 3.4.25 |
-| REF-11 | Verweis | Installer übergeht `MigrationManager`, deshalb fehlen bei Neuinstallation Schlüssel, die nur per Migration angelegt werden | 🟡 | ✅ 3.4.25 (siehe SEC-17) |
-| GUI-01 | GUI | Inline-Skripte in vier Log-Ansichten ohne CSP-Nonce, Filter und Umschalter blockiert | 🟠 | ✅ 3.4.25 |
-| GUI-02 | GUI | Destruktive Admin-Aktionen ohne Bestätigung | 🟡 | ✅ 3.4.25 |
-| GUI-03 | GUI | Destruktive Aktionen im Mitgliederbereich ohne Bestätigung | 🟡 | ✅ 3.4.25 |
-| GUI-04 | GUI | ASCII-Umlaute und Entwicklertexte im Dashboard | ⚪ | ✅ 3.4.25 |
-| GUI-05 | GUI | Bestätigungsdialog ohne Dialog-Semantik | 🟡 | ✅ 3.4.25 |
-| GUI-06 | GUI | Such-Rate-Limit ohne sichtbaren Hinweis | ⚪ | ✅ 3.4.25 |
-| GUI-07 | GUI | Formulare verlieren die Beschreibung nach einem Validierungsfehler | ⚪ | ✅ 3.4.25 |
+| SEC-16 | Sicherheit | Zweiter Faktor (TOTP/Backup-Code) ohne Versuchslimit und ohne Ablauf; TOTP-Codes wiederverwendbar | 🔴 | ✅ 3.5.0 |
+| SEC-17 | Sicherheit | Neuinstallationen ohne `UNIQUE(user_id, meta_key)` auf `user_meta`: MFA- und Profilwerte werden dupliziert, veraltete Secrets gelesen | 🟠 | ✅ 3.5.0 |
+| SEC-18 | Sicherheit | MFA abschalten, Backup-Codes erneuern, Passkey registrieren und E-Mail ändern ohne aktuelles Passwort | 🟠 | ✅ 3.5.0 |
+| SEC-19 | Sicherheit | Private Uploads (`uploads/member`, `uploads/import`) und Importer-Berichte per URL abrufbar | 🟠 | ✅ 3.5.0 |
+| SEC-20 | Sicherheit | Installer setzt `debug_mode` standardmäßig auf aktiv | 🟡 | ✅ 3.5.0 |
+| SEC-21 | Sicherheit | Nachrichten: Antwort in fremde Threads möglich, kein Sendelimit (Spam) | 🟠 | ✅ 3.5.0 |
+| SEC-22 | Sicherheit | `REMOTE_ADDR` statt `Security::getClientIp()` in fünf Diensten | 🟡 | ✅ 3.5.0 |
+| SEC-23 | Sicherheit | Öffentlicher Checkout akzeptiert `billing=lifetime` | 🟡 | ✅ 3.5.0 |
+| SEC-24 | Sicherheit | CSV-Export der Seitentabellen ohne Formel-Schutz | 🟡 | ✅ 3.5.0 |
+| SEC-25 | Sicherheit | Admin-`cmsAlert()` setzt den Meldungstext per `innerHTML` | 🟡 | ✅ 3.5.0 |
+| SEC-26 | Sicherheit | CI-Actions nicht auf Commit-SHA fixiert (`trivy-action@master`) | 🟡 | ✅ 3.5.0 |
+| SEC-27 | Sicherheit | Seiten-Suche liefert Seiten mit `published_at` in der Zukunft | 🟡 | ✅ 3.5.0 |
+| PERF-07 | Performance | Laufzeit-Schemaprüfungen in jedem Request | 🔴 | ✅ 3.5.0 |
+| PERF-08 | Performance | Zweite PDO-Verbindung je Request für die Session-GC-Lebensdauer | 🟠 | ✅ 3.5.0 |
+| PERF-09 | Performance | Einzelabfragen auf `settings` (Router-Cache-TTL, Firewall-Einstellungen) | 🟡 | ✅ 3.5.0 |
+| PERF-10 | Performance | Theme-Kategorien und Hub-Tabellen mehrfach je Request geladen | 🟡 | ✅ 3.5.0 |
+| PERF-11 | Performance | Seiten-Suche mit `SELECT *` | ⚪ | ✅ 3.5.0 |
+| LAST-01 | Last | Firewall schreibt je blockierter Anfrage zwei Zeilen; Zählung ohne Index; Bereinigung in einem einzigen DELETE | 🟠 | ✅ 3.5.0 |
+| LAST-02 | Last | Öffentliche Suche ohne Rate-Limit (LIKE über LONGTEXT) | 🟠 | ✅ 3.5.0 |
+| LAST-03 | Last | Web-Vitals-Endpunkt: Race Condition im Datei-Limiter, Limit per User-Agent-Wechsel umgehbar, fail-open bei voller Datei | 🟡 | ✅ 3.5.0 |
+| LAST-04 | Last | 404-Monitor ohne Obergrenze und Pfadlänge (Zufalls-URLs füllen die Tabelle) | 🟠 | ✅ 3.5.0 |
+| LAST-05 | Last | Keine Aufbewahrungsfrist für `page_views`, `core_web_vitals`, `not_found_logs` und Tageslogs | 🟠 | ✅ 3.5.0 |
+| LAST-06 | Last | Medienauslieferung hält die Session-Sperre während des Streamings; parallele Requests desselben Nutzers warten | 🟡 | ✅ 3.5.0 |
+| FUN-21 | Funktion | Einstellung „Kommentare aktivieren“ wird nie ausgewertet | 🟠 | ✅ 3.5.0 |
+| FUN-22 | Funktion | `robots.txt`-Inhalt aus *Einstellungen → Allgemein* wird nicht verwendet | 🟡 | ✅ 3.5.0 |
+| FUN-23 | Funktion | Kategorie-Beschreibung wird nicht gespeichert; Felder „Farbe“ und „Sofort veröffentlichen“ ohne Wirkung | 🟡 | ✅ 3.5.0 |
+| FUN-24 | Funktion | Tag-Beschreibung wird nicht gespeichert; „Sofort veröffentlichen“ ohne Wirkung | 🟡 | ✅ 3.5.0 |
+| FUN-25 | Funktion | Importer-Link „Bericht herunterladen“ ohne Handler | 🟡 | ✅ 3.5.0 |
+| REF-06 | Verweis | `\WP_Error` im Namespace-Code von `MediaModule` | 🟠 | ✅ 3.5.0 |
+| REF-07 | Verweis | `use WP_Error;` in `StatusService` | 🟠 | ✅ 3.5.0 |
+| REF-08 | Verweis | `SystemInfoModule` ruft nicht vorhandenes `formatBytesLabel()` auf | 🟠 | ✅ 3.5.0 |
+| REF-09 | Verweis | `MailSettingsActionResult::failure()` existiert nicht | 🟡 | ✅ 3.5.0 |
+| REF-10 | Verweis | `BackupService` ruft nicht vorhandenes `uploadToS3WithSDK()` auf | 🟠 | ✅ 3.5.0 |
+| REF-11 | Verweis | Installer übergeht `MigrationManager`, deshalb fehlen bei Neuinstallation Schlüssel, die nur per Migration angelegt werden | 🟡 | ✅ 3.5.0 (siehe SEC-17) |
+| GUI-01 | GUI | Inline-Skripte in vier Log-Ansichten ohne CSP-Nonce, Filter und Umschalter blockiert | 🟠 | ✅ 3.5.0 |
+| GUI-02 | GUI | Destruktive Admin-Aktionen ohne Bestätigung | 🟡 | ✅ 3.5.0 |
+| GUI-03 | GUI | Destruktive Aktionen im Mitgliederbereich ohne Bestätigung | 🟡 | ✅ 3.5.0 |
+| GUI-04 | GUI | ASCII-Umlaute und Entwicklertexte im Dashboard | ⚪ | ✅ 3.5.0 |
+| GUI-05 | GUI | Bestätigungsdialog ohne Dialog-Semantik | 🟡 | ✅ 3.5.0 |
+| GUI-06 | GUI | Such-Rate-Limit ohne sichtbaren Hinweis | ⚪ | ✅ 3.5.0 |
+| GUI-07 | GUI | Formulare verlieren die Beschreibung nach einem Validierungsfehler | ⚪ | ✅ 3.5.0 |
 | OFFEN-01 … OFFEN-13 | diverse | Empfehlungen aus diesem Audit | – | ✅ 3.5.0, siehe unten |
 
 ### Empfehlungen (umgesetzt in 3.5.0)

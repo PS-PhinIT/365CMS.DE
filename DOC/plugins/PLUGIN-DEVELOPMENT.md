@@ -1,4 +1,4 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.4.00 (Changelog bis 3.4.08)
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
 > **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02 (Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 
@@ -420,7 +420,7 @@ Vor dem Aktivieren durchsucht `PluginManager::securityScanPlugin()` die PHP-Date
 - Ausgabe/Validierung: `esc_html`, `esc_attr`, `esc_url`, `esc_textarea`, `esc_js`, `wp_kses_post`, `sanitize_text_field`, `sanitize_email`, `sanitize_key`, `sanitize_title`, `absint`, `wp_unslash`
 - Optionen: `get_option`, `update_option`; Daten: `wp_parse_args`, `wp_json_encode`, `maybe_serialize`
 - Antworten: `wp_send_json_success`, `wp_send_json_error`, `wp_redirect`, `wp_safe_redirect`, `wp_die`
-- Assets: `plugins_url`; seit 3.4.13 laden `wp_register_style/script`, `wp_enqueue_style/script`, `wp_dequeue_*` und `wp_localize_script` tatsächlich: Styles und Header-Scripts erscheinen im Hook `head` bzw. `admin_head`, Footer-Scripts (`$in_footer = true`) und alles nach `head` Eingereihte in `body_end`. Abhängigkeiten werden aufgelöst, `$ver` hängt `?ver=` an, alle Tags tragen den CSP-Nonce, `javascript:`/`data:`-URLs werden verworfen, `wp_localize_script` akzeptiert nur gültige JS-Bezeichner. Externe Hosts müssen weiterhin in der CSP erlaubt sein
+- Assets: `plugins_url`; seit 3.5.0 laden `wp_register_style/script`, `wp_enqueue_style/script`, `wp_dequeue_*` und `wp_localize_script` tatsächlich: Styles und Header-Scripts erscheinen im Hook `head` bzw. `admin_head`, Footer-Scripts (`$in_footer = true`) und alles nach `head` Eingereihte in `body_end`. Abhängigkeiten werden aufgelöst, `$ver` hängt `?ver=` an, alle Tags tragen den CSP-Nonce, `javascript:`/`data:`-URLs werden verworfen, `wp_localize_script` akzeptiert nur gültige JS-Bezeichner. Externe Hosts müssen weiterhin in der CSP erlaubt sein
 - Rechte: `current_user_can()`; Datenbank: globales `$wpdb` (`CMS_WPDB_Compat`) mit `prepare`, `get_row`, `get_results`, `get_var`, `insert`, `update`, `delete`, `query`, `esc_like`
 
 Sie erleichtern die Portierung, ersetzen aber nicht die Core-APIs (`CMS\Hooks`, `CMS\Database`, `CMS\Security`).

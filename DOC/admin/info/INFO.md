@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Diagnose-Übersicht (Info)
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/info` (Alt-Routen `/admin/system`, `/admin/system-info` leiten um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)

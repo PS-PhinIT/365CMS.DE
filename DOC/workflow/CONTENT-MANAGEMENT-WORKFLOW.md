@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Content Management
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 > **Quellen:** `CMS/admin/pages.php`, `CMS/admin/posts.php`, `CMS/admin/modules/pages/PagesModule.php`, `CMS/admin/modules/posts/PostsModule.php`, `CMS/admin/views/pages/`, `CMS/admin/views/posts/`, `CMS/core/PageManager.php`, `CMS/core/Services/EditorJsService.php`, `CMS/includes/functions/options-runtime.php`
 
 ## English (summary)
@@ -25,7 +25,7 @@ Der Adminbereich setzt zusätzlich die Rolle `admin` voraus (`Auth::isAdmin()`);
 2. **Inhalt:** Editor.js-Blöcke (Absatz, Überschrift, Liste, Bild, Tabelle, Code, Zitat …). Bilder über die Medienauswahl oder Upload (`/api/media`, Token `editorjs_media`).
 3. **Einordnung:** Hauptkategorie + weitere Kategorien, Tags (kommagetrennt), Auszug (Teaser für Archive, Feeds, Suche).
 4. **Beitragsbild** über den Featured-Image-Picker; Referenzen werden normalisiert.
-5. **SEO:** Meta-Titel/-Beschreibung (Platzhalter wie `%title%`, `%%sitename%%` werden seit 3.4.08 bei der Ausgabe aufgelöst); erweiterte Felder (Canonical, Robots, OG, Schema-Typ, Sitemap) nur bei aktivem Modul `seo`.
+5. **SEO:** Meta-Titel/-Beschreibung (Platzhalter wie `%title%`, `%%sitename%%` werden seit 3.5.0 bei der Ausgabe aufgelöst); erweiterte Felder (Canonical, Robots, OG, Schema-Typ, Sitemap) nur bei aktivem Modul `seo`.
 6. **Englische Fassung (optional):** Sprachumschalter DE/EN (`switch_locale`, rendert ohne Speichern neu) oder „DE → EN kopieren“ (`copy_de_to_en`, nach dem ersten Speichern). KI-Übersetzung über `/admin/ai-translate-editorjs`, wenn das Modul `ai_services` aktiv ist.
 7. **Speichern als Entwurf** (`status = draft`) – jede Speicherung legt einen Eintrag in `cms_post_revisions` an.
 8. **Vorschau/Prüfung:** Revisionsvergleich im Editor, Medien-Check (`/admin/media?tab=check`) für fehlende Beitragsbilder.

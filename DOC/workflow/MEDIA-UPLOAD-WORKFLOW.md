@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Medien-Upload
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 > **Quellen:** `CMS/admin/media.php`, `CMS/admin/modules/media/MediaModule.php`, `CMS/core/Services/MediaService.php`, `CMS/core/Services/Media/UploadHandler.php`, `CMS/core/Services/Media/ImageProcessor.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/MediaDeliveryService.php`, `CMS/core/Services/EditorJsService.php`
 
 ## English (summary)
@@ -73,7 +73,7 @@ Fehler liefern `{"error":"…","new_token":"…"}` und werden über den Logger p
 
 ### Bekannter Hinweis
 
-Das Mitglieder-Medienmodul unter `/member/media` erzeugt sein Upload-Token seit 3.4.12 mit der Aktion `media_action`, die `/api/upload` prüft (vorher scheiterte der erste Upload mit `upload.invalid_csrf`; siehe [member/MEMBER-SECURITY.md](../member/MEMBER-SECURITY.md)). Uploads mit Doppelendungen wie `datei.php.jpg` werden seit 3.4.12 abgelehnt.
+Das Mitglieder-Medienmodul unter `/member/media` erzeugt sein Upload-Token seit 3.5.0 mit der Aktion `media_action`, die `/api/upload` prüft (vorher scheiterte der erste Upload mit `upload.invalid_csrf`; siehe [member/MEMBER-SECURITY.md](../member/MEMBER-SECURITY.md)). Uploads mit Doppelendungen wie `datei.php.jpg` werden seit 3.5.0 abgelehnt.
 
 ## Verwandte Dokumente
 

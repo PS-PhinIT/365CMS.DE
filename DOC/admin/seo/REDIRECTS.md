@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Weiterleitungen & 404-Monitor
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Routen:** `/admin/redirect-manager`, `/admin/not-found-monitor` | **Capability:** `manage_settings` | **Core-Modul:** `seo`
 
 ## English (summary)

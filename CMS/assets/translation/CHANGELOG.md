@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Asset – Translation Changelog
-> **Stand:** 2026-09-14 | **Version:** 3.4.00 | **Status:** Historical asset record | **Update:** 2026-09-14
+> **Stand:** 2026-09-14 | **Version:** 3.5.0 | **Status:** Historical asset record | **Update:** 2026-09-14
 
 ## English
 

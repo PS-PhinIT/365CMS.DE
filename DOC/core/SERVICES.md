@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Service-Schicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -45,10 +45,10 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 | Service | Aufgabe |
 |---|---|
-| `SiteSearchService` | Seitensuche `/search`: Vorauswahl per LIKE, Prüfung auf sichtbaren Text, Relevanz-/Datumssortierung, Plugin-Treffer (seit 3.4.06) |
+| `SiteSearchService` | Seitensuche `/search`: Vorauswahl per LIKE, Prüfung auf sichtbaren Text, Relevanz-/Datumssortierung, Plugin-Treffer (seit 3.5.0) |
 | `SearchService` | TNTSearch-Volltextindex für Plugins (`search_register_indices`) |
 | `SEOService` + `SEO\…` | Head-Ausgabe (Meta, OG, Twitter, Canonical, Hreflang), Schema.org, Sitemaps, Analytics-Einbindung, Einstellungen, Audit |
-| `SeoAnalysisService` | SEO-/Lesbarkeitsanalyse im Editor, Auflösung von Titel-Variablen (`%title%`, `%%sitename%%`, seit 3.4.08) |
+| `SeoAnalysisService` | SEO-/Lesbarkeitsanalyse im Editor, Auflösung von Titel-Variablen (`%title%`, `%%sitename%%`, seit 3.5.0) |
 | `SeoBrokenLinkService` | stündlicher Broken-Link-Scan |
 | `SeoTrendService` | SEO-Kennzahlen-Verlauf |
 | `SitemapService` | Sitemap-Erzeugung mit `melbahja/seo` |

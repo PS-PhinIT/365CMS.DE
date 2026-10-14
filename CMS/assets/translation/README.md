@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Asset – Translation
-> **Stand:** 2026-09-14 | **Version:** 3.4.00 | **Status:** Stable | **Update:** 2026-09-14
+> **Stand:** 2026-09-14 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-09-14
 
 ## English
 

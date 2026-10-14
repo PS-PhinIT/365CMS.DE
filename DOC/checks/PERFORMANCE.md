@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Audit 2026-10-03 – Geschwindigkeit
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.14) | Übersicht: [README.md](README.md)
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | Übersicht: [README.md](README.md)
 
 ## English (summary)
 
-No severe bottleneck was found in the request path. Recent releases already removed render-blocking scripts (3.4.11) and throttled the OPcache deploy scan. Fixed in this audit: N+1 setting queries in the default theme (cookie banner, contact block) and a duplicated font-setting query. Fixed in 3.4.13: a central per-request options cache (`OptionStore`), schema v23 with a composite index for blog listings and without a redundant settings index, and removal of an unbounded unused helper.
+No severe bottleneck was found in the request path. Recent releases already removed render-blocking scripts (3.5.0) and throttled the OPcache deploy scan. Fixed in this audit: N+1 setting queries in the default theme (cookie banner, contact block) and a duplicated font-setting query. Fixed in 3.5.0: a central per-request options cache (`OptionStore`), schema v23 with a composite index for blog listings and without a redundant settings index, and removal of an unbounded unused helper.
 
 ## Deutsch
 
@@ -12,8 +12,8 @@ No severe bottleneck was found in the request path. Recent releases already remo
 
 | Prüfpunkt | Ergebnis |
 |---|---|
-| Render-blockierende Skripte | Seit 3.4.11 lädt das Frontend DOMPurify per `defer`, Trusted-Types-Runtime inline mit Nonce. |
-| OPcache-Warmup | Deploy-Signatur wird seit 3.4.11 höchstens alle 10 Minuten berechnet. |
+| Render-blockierende Skripte | Seit 3.5.0 lädt das Frontend DOMPurify per `defer`, Trusted-Types-Runtime inline mit Nonce. |
+| OPcache-Warmup | Deploy-Signatur wird seit 3.5.0 höchstens alle 10 Minuten berechnet. |
 | Theme-/Plugin-Ermittlung | `scandir()` in `ThemeManager::getActiveThemeSlug()` nur, wenn der aktive Theme-Ordner fehlt; Plugin-Bootstrap lädt nur aktive Plugins. |
 | Rate-Limit-Tabelle | `login_attempts` hat `idx_ip_action` und `idx_time`; Bereinigung mit Wahrscheinlichkeit 1:20 pro Prüfung. |
 | Kommentar-, Such- und Archivlisten | Paginierung über begrenzte `LIMIT/OFFSET`-Werte; Suche mit Kandidatenlimit (`SiteSearchService::CANDIDATE_LIMIT`). |
@@ -32,7 +32,7 @@ No severe bottleneck was found in the request path. Recent releases already remo
 
 `isLocalFontsEnabled()` wurde pro Seitenaufruf zweimal ausgeführt (`outputLocalFonts()` und `shouldLoadExternalFonts()`). **Fix:** Ergebnis wird pro Request in der Theme-Instanz gehalten.
 
-### Mit 3.4.13 behoben
+### Mit 3.5.0 behoben
 
 #### PERF-03 🟠 Zentraler Options-Cache `OptionStore`
 
@@ -46,7 +46,7 @@ Zusätzlich gemerkt bzw. umgestellt: `CmsAuthPageService::getSettings()` (lief b
 
 **Gemessen** (MariaDB General Log, gleiche Datenbank, PHP-Entwicklungsserver, Median aus 15 Aufrufen):
 
-| Seite | Abfragen gesamt `main` → 3.4.13 | davon `cms_settings` | Antwortzeit `main` → 3.4.13 |
+| Seite | Abfragen gesamt `main` → 3.5.0 | davon `cms_settings` | Antwortzeit `main` → 3.5.0 |
 |---|---|---|---|
 | `/` | 122 → 58 | 74 → 10 | 54 ms → 36 ms |
 | `/blog` | 125 → 63 | 72 → 10 | 57 ms → 43 ms |

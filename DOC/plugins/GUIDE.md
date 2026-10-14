@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Plugins – Quick Start
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 > **Kurzbeschreibung:** Beginner-friendly and technical quick start for creating, loading, activating, and maintaining a 365CMS plugin in the current runtime.
 
 ## English

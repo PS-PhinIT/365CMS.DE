@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Diagnose & Protokolle
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Routen:** `/admin/diagnose`, `/admin/monitor-assets`, `/admin/cms-logs`, `/admin/logs`, `/admin/logs/{operational,security-audit,php-errors,channels}` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)

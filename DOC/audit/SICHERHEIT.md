@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Twelve security findings, all fixed in `3.4.25`:
+Twelve security findings, all fixed in `3.5.0`:
 
 - **Second factor:** The MFA step had no attempt limit, no expiry and accepted replayed TOTP codes.
 - **Duplicate MFA data:** Fresh installs lacked the unique key on `user_meta`, which produced duplicate MFA secrets.
@@ -42,7 +42,7 @@ Twelve security findings, all fixed in `3.4.25`:
 - **CSRF:** Alle neuen Formulare (Re-Auth, Kategorie-/Tag-Beschreibung) laufen über die bestehende Token-Prüfung.
 - **CSP:** Durchgängig Nonce und Trusted Types. Neue Inline-Skripte tragen `nonceAttr()`.
 - **Sessions:** Regeneration bei Login; nach Passwortwechsel werden andere Sessions beendet (Folgeaudit 2026-10-07).
-- **Uploads:** Doppelendungen und gefährliche Endungen sind seit 3.4.12 gesperrt.
+- **Uploads:** Doppelendungen und gefährliche Endungen sind seit 3.5.0 gesperrt.
 
 ### Zunächst offene Empfehlungen (umgesetzt in 3.5.0, siehe [README.md](README.md))
 

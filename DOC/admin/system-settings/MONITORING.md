@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Monitoring, Cron & Benachrichtigungen
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Routen:** `/admin/monitor-response-time`, `/admin/monitor-cron-status`, `/admin/monitor-disk-usage`, `/admin/monitor-scheduled-tasks`, `/admin/monitor-health-check`, `/admin/monitor-email-alerts`, `/admin/monitor-warnings` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)
@@ -29,7 +29,7 @@ The monitoring pages belong to the sidebar group *Diagnose* and are rendered by 
 | `monitor_alert_email` | leer (Admin-E-Mail) | Empfänger |
 | `monitor_response_threshold_ms` | 800 | Alarm bei langsamer Antwort |
 | `monitor_disk_threshold_percent` | 85 | Alarm bei Speicherbelegung |
-| `monitor_health_endpoint_enabled` / `_path` | aus / `/health` | Health-Endpunkt mitprüfen. Seit 3.4.12 stellt der Core `GET /health` bereit (JSON `status`/`database`, nur bei aktivierter Option, sonst 404); ein abweichender Pfad muss vom Webserver oder einem Plugin bereitgestellt werden |
+| `monitor_health_endpoint_enabled` / `_path` | aus / `/health` | Health-Endpunkt mitprüfen. Seit 3.5.0 stellt der Core `GET /health` bereit (JSON `status`/`database`, nur bei aktivierter Option, sonst 404); ein abweichender Pfad muss vom Webserver oder einem Plugin bereitgestellt werden |
 | `security_email_notifications_enabled` | aus | Sicherheitsalarme |
 | `security_alert_bruteforce_threshold` | 15 | fehlgeschlagene Logins im Fenster |
 | `security_alert_antispam_threshold` | 10 | Anti-Spam-Ablehnungen im Fenster |

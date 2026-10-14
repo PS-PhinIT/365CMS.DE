@@ -23,7 +23,7 @@ define('MERIDIAN_THEME_DIR',     THEME_PATH . 'cms-default/');
 define('MERIDIAN_THEME_URL',     \CMS\ThemeManager::instance()->getThemeUrl());
 
 /**
- * Liest eine Option aus `settings` – über den Core-Options-Cache (ab 3.4.12),
+ * Liest eine Option aus `settings` – über den Core-Options-Cache (ab 3.5.0),
  * auf älteren Cores per Einzelabfrage.
  */
 function meridian_option(string $name, ?string $default = null): ?string

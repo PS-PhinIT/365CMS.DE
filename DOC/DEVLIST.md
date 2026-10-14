@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: DEVLIST
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.09) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -223,7 +223,7 @@ Themes: `realpath()` path checks, `functions.php` scan, rollback to `DEFAULT_THE
 
 Plugins: activation checks bootstrap file, dependencies, and dangerous patterns (`eval`, `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, …).
 
-3.4.00 AI path: admin-only, no public AI routes, no automatic publish, provider policy, HTTPS / Ollama egress rules, atomic quotas (`ai_quota_usage`), CSP-compliant admin JS.
+3.5.0 AI path: admin-only, no public AI routes, no automatic publish, provider policy, HTTPS / Ollama egress rules, atomic quotas (`ai_quota_usage`), CSP-compliant admin JS.
 
 **Deutsch**
 
@@ -245,7 +245,7 @@ Themes: `realpath()`-Pfadprüfung, Scan von `functions.php`, Rollback auf `DEFAU
 
 Plugins: Aktivierung prüft Bootstrap-Datei, Abhängigkeiten und gefährliche Muster (`eval`, `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, …).
 
-AI-Pfad 3.4.00: nur Admin, keine Public-AI-Routen, keine automatische Veröffentlichung, Provider-Policy, HTTPS-/Ollama-Egress, atomare Quotas (`ai_quota_usage`), CSP-konformes Admin-JS.
+AI-Pfad 3.5.0: nur Admin, keine Public-AI-Routen, keine automatische Veröffentlichung, Provider-Policy, HTTPS-/Ollama-Egress, atomare Quotas (`ai_quota_usage`), CSP-konformes Admin-JS.
 
 ---
 
@@ -371,7 +371,7 @@ Domain logic lives in `CMS/core/Services/`. Inventory: [CMSFILESTRUCTUR.md](CMSF
 
 Keep constructors free of hidden side effects. One service, one job. Views should not reimplement service contracts.
 
-AI services in 3.4.00 are admin-only: policy, quotas, retry/fallback, health checks, no public routes.
+AI services in 3.5.0 are admin-only: policy, quotas, retry/fallback, health checks, no public routes.
 
 **Deutsch**
 
@@ -379,7 +379,7 @@ Fachlogik liegt in `CMS/core/Services/`. Inventar: [CMSFILESTRUCTUR.md](CMSFILES
 
 Konstruktoren ohne versteckte Seiteneffekte. Ein Service, eine Aufgabe. Views sollen Service-Verträge nicht neu implementieren.
 
-AI-Services in 3.4.00 sind admin-only: Policy, Quotas, Retry/Fallback, Healthchecks, keine Public-Routen.
+AI-Services in 3.5.0 sind admin-only: Policy, Quotas, Retry/Fallback, Healthchecks, keine Public-Routen.
 
 ---
 
@@ -695,7 +695,7 @@ Working model for this project:
 
 **Repo ↔ runtime file under `CMS/` ↔ deploy ↔ live check**
 
-Version source of truth: `CMS/core/Version.php` (`3.4.00`). Changelog may list later dated rows; do not confuse changelog headings with `Version::CURRENT`.
+Version source of truth: `CMS/core/Version.php` (`3.5.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version.
 
 **Deutsch**
 
@@ -707,4 +707,4 @@ Arbeitsmodell dieses Projekts:
 
 **Repo ↔ Runtime-Datei unter `CMS/` ↔ Deploy ↔ Live-Prüfung**
 
-Versionsquelle: `CMS/core/Version.php` (`3.4.00`). Das Changelog kann später datierte Zeilen enthalten; Changelog-Überschriften nicht mit `Version::CURRENT` verwechseln.
+Versionsquelle: `CMS/core/Version.php` (`3.5.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen.

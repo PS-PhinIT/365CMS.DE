@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/users` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_users`
 
 ## English (summary)
@@ -35,7 +35,7 @@ User accounts are managed at `/admin/users` (`CMS/admin/users.php` → `CMS/admi
 |---|---|
 | `activate` | Status `active` |
 | `deactivate` | Status `inactive` (Login gesperrt, Daten bleiben erhalten) |
-| `delete` | Soft-Delete: Status `inactive` (seit 3.4.12; vorher endgültig) |
+| `delete` | Soft-Delete: Status `inactive` (seit 3.5.0; vorher endgültig) |
 | `hard_delete` | Benutzer **endgültig** löschen (einzige Löschaktion in der Oberfläche) |
 
 Der eigene Account wird bei Sammelaktionen immer übersprungen; nicht (mehr) existierende IDs führen zu einer Fehlermeldung.

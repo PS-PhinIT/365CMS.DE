@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – API-Integration
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 > **Quellen:** `CMS/core/Routing/ApiRouter.php`, `CMS/core/Api.php`, `CMS/core/Router.php`, `CMS/core/Bootstrap.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/JwtService.php`
 
 ## English (summary)
@@ -12,7 +12,7 @@ This workflow describes how to consume the shipped JSON endpoints and how a plug
 
 | Methode | Route | Zugriff |
 |---|---|---|
-| GET | `/api/v1/status` | öffentlich – `{"status":"ok","version":"3.4.00"}` |
+| GET | `/api/v1/status` | öffentlich – `{"status":"ok","version":"3.5.0"}` |
 | GET | `/api/v1/pages?q=…`, `/api/v1/pages/:slug` | angemeldet |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft, max. 8 KB |
 | GET | `/api/v1/admin/posts`, `/pages`, `/users`, `/mail/logs` | Admin + Capability |

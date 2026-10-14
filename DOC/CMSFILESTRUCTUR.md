@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: CMSFILESTRUCTUR
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.09) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -162,7 +162,7 @@ Root-Klassen in `CMS/core/`:
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT = '3.4.00'`)
+- `Version.php` (`CURRENT = '3.5.0'`)
 - `WP_Error.php`
 
 Subdirectories:
@@ -371,7 +371,7 @@ Present under `CMS/assets/` (not every inner file listed):
 
 `ai-platform`, `bacon-qr-code`, `Carbon`, `clock`, `cron`, `css`, `dasprid-enum`, `doctrine-deprecations`, `doctrine-lexer`, `dompurify`, `editorjs`, `egulias-email-validator`, `event-dispatcher`, `htmlpurifier`, `images`, `js`, `ldaprecord`, `mailer`, `melbahja-seo`, `mime`, `oskarstark-enum-helper`, `photoswipe`, `php-jwt`, `phpdocumentor-reflection-common`, `phpdocumentor-reflection-docblock`, `phpdocumentor-type-resolver`, `phpstan-phpdoc-parser`, `polyfill-ctype`, `polyfill-intl-grapheme`, `polyfill-intl-idn`, `polyfill-intl-normalizer`, `polyfill-mbstring`, `polyfill-uuid`, `property-access`, `property-info`, `psr`, `serializer`, `string`, `suneditor`, `symfony-contracts`, `tabler`, `tabler-icons`, `tntsearchhelper`, `tntsearchsrc`, `translation`, `twofactorauth`, `type-info`, `uid`, `webauthn`, `webmozart-assert`, `yaml`, `autoload.php`
 
-These folders were **not** found under `CMS/assets/` (older docs mentioned them): `cookieconsent`, `elfinder`, `filepond`, `msgraph`. Removed in 3.4.02 as unused: `gridjs`, `simplepielibrary`, `simplepiesrc`. Init scripts such as `assets/js/cookieconsent-init.js` still exist.
+These folders were **not** found under `CMS/assets/` (older docs mentioned them): `cookieconsent`, `elfinder`, `filepond`, `msgraph`. Removed in 3.5.0 as unused: `gridjs`, `simplepielibrary`, `simplepiesrc`. Init scripts such as `assets/js/cookieconsent-init.js` still exist.
 
 ---
 

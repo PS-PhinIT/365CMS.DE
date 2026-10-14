@@ -12,7 +12,7 @@
 ## Verwendung in 365CMS
 
 - direkte Nutzung in `CMS/core/Services/SearchService.php` (`search()`, `searchAll()`, Plugin-Indizes über `search_register_indices`)
-- Die Seitensuche `/search` nutzt seit 3.4.06 `CMS/core/Services/SiteSearchService.php` (alle Suchbegriffe müssen im sichtbaren Text vorkommen, Sortierung nach Relevanz oder Datum) und nicht mehr den TNTSearch-Index: Dieser enthält das Editor.js-JSON und verknüpft Suchbegriffe mit ODER.
+- Die Seitensuche `/search` nutzt seit 3.5.0 `CMS/core/Services/SiteSearchService.php` (alle Suchbegriffe müssen im sichtbaren Text vorkommen, Sortierung nach Relevanz oder Datum) und nicht mehr den TNTSearch-Index: Dieser enthält das Editor.js-JSON und verknüpft Suchbegriffe mit ODER.
 
 ## Website / GitHub
 

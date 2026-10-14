@@ -1,4 +1,4 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.4.00 (Changelog bis 3.4.08)
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
 > **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02
 > **Kurzbeschreibung:** User and technical reference for the AI-related JavaScript, the bundled Symfony AI Platform library, autoloading, licensing, and asset maintenance boundaries.
 
@@ -39,7 +39,7 @@ The relevant integration points are:
 | `CMS/admin/ai-page.php` | AI admin route shell, actions, capabilities, and CSRF |
 | `CMS/core/VendorRegistry.php` | Inventory entry „Symfony AI Platform“ (diagnostics in `/admin/monitor-assets`) |
 
-**Current usage (3.4.00):** the CMS provider adapters in `CMS/core/Services/AI/` implement their own `AiProviderInterface` and HTTP calls via `CMS\Http\Client`; they do not import `Symfony\AI\Platform` classes directly. The bundled platform is registered and inventoried as the foundation for future adapters and for plugins that want to use it.
+**Current usage (3.5.0):** the CMS provider adapters in `CMS/core/Services/AI/` implement their own `AiProviderInterface` and HTTP calls via `CMS\Http\Client`; they do not import `Symfony\AI\Platform` classes directly. The bundled platform is registered and inventoried as the foundation for future adapters and for plugins that want to use it.
 
 ### Maintenance and security rules
 
@@ -80,7 +80,7 @@ Die relevanten Integrationspunkte sind:
 | `CMS/admin/ai-page.php` | Admin-Routes, Actions, Capabilities und CSRF |
 | `CMS/core/VendorRegistry.php` | Inventareintrag „Symfony AI Platform“ (Diagnose unter `/admin/monitor-assets`) |
 
-**Aktuelle Nutzung (3.4.00):** Die CMS-Provider-Adapter in `CMS/core/Services/AI/` implementieren ein eigenes `AiProviderInterface` und sprechen die Provider über `CMS\Http\Client` an; sie importieren keine `Symfony\AI\Platform`-Klassen direkt. Die gebündelte Plattform ist registriert und inventarisiert – als Grundlage für künftige Adapter und für Plugins, die sie nutzen möchten.
+**Aktuelle Nutzung (3.5.0):** Die CMS-Provider-Adapter in `CMS/core/Services/AI/` implementieren ein eigenes `AiProviderInterface` und sprechen die Provider über `CMS\Http\Client` an; sie importieren keine `Symfony\AI\Platform`-Klassen direkt. Die gebündelte Plattform ist registriert und inventarisiert – als Grundlage für künftige Adapter und für Plugins, die sie nutzen möchten.
 
 ### Wartungs- und Sicherheitsregeln
 
