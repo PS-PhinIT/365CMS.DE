@@ -29,6 +29,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
             </div>
             <div class="admin-section-toolbar__actions">
                 <a href="<?= htmlspecialchars('/admin/not-found-monitor') ?>" class="btn btn-outline-primary">Zum 404-Monitor</a>
+                <a href="<?= htmlspecialchars('/admin/redirect-manager?export=csv') ?>" class="btn btn-outline-primary">CSV exportieren</a>
                 <button type="button" class="btn btn-primary js-create-redirect">Erweitert anlegen</button>
             </div>
         </div>
@@ -101,6 +102,33 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                     <div class="col-12">
                         <label class="form-label" for="quick-notes">Notiz</label>
                         <input type="text" class="form-control" id="quick-notes" name="notes" placeholder="z. B. Relaunch, Tippfehler, Kampagnen-URL">
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title mb-1">CSV-Import</h3>
+                    <div class="text-secondary small">Weiterleitungen massenweise anlegen oder anpassen – z. B. mit dem CSV-Export des 404-Monitors oder dem Export dieser Seite.</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
+                    <input type="hidden" name="action" value="import_redirects">
+                    <div class="col-md-8 col-lg-6">
+                        <label class="form-label" for="redirect-csv-file">CSV-Datei</label>
+                        <input type="file" class="form-control" id="redirect-csv-file" name="redirect_csv" accept=".csv,text/csv" required>
+                        <div class="form-hint">
+                            Spalten: <code>redirect_id;source_path;site_scope;target_url;redirect_type;is_active;notes</code> (maximal 2 MB / 5.000 Zeilen).
+                            Zeilen ohne <code>target_url</code> werden übersprungen. Vorhandene Regeln werden über <code>redirect_id</code> oder Quelle + Site aktualisiert, alle übrigen neu angelegt.
+                            Als Ziel genügt ein Slug wie <code>neuer-slug</code>.
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-3">
+                        <button type="submit" class="btn btn-primary w-100">CSV importieren</button>
                     </div>
                 </form>
             </div>

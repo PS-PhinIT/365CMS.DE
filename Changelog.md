@@ -14,6 +14,15 @@
 
 ---
 
+### v3.4.24 — 14.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.4.24** | 🟢 feat | SEO / 404-Monitor | *CSV exportieren* lädt das 404-Protokoll (bis 20.000 Pfade, ohne IP-Adresse und User-Agent) im Importformat der Weiterleitungen herunter. |
+| **3.4.24** | 🟢 feat | SEO / Weiterleitungen | Bestehende Weiterleitungen lassen sich als CSV exportieren und per CSV-Import (bis 2 MB / 5.000 Zeilen) massenweise anlegen oder ändern. Zeilen ohne Ziel werden übersprungen, vorhandene Regeln über `redirect_id` bzw. Quelle + Site aktualisiert, fehlerhafte Zeilen mit Zeilennummer gemeldet. |
+
+---
+
 ### v3.4.23 — 14.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

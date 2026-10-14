@@ -7,8 +7,9 @@
 
 Redirect rules are managed at `/admin/redirect-manager` (`CMS/admin/redirect-manager.php` → `CMS/admin/modules/seo/RedirectManagerModule.php` → `CMS\Services\RedirectService`). The router checks every request against `cms_redirect_rules` (`Router` → `RedirectService::findRedirect()`); unmatched requests that end in a 404 are logged in `cms_not_found_logs` and listed at `/admin/not-found-monitor`, where a redirect can be created directly.
 
-- Redirect actions: `save_redirect`, `delete_redirect`, `delete_redirects_by_slug`, `toggle_redirect`, `clear_logs`.
+- Redirect actions: `save_redirect`, `delete_redirect`, `delete_redirects_by_slug`, `toggle_redirect`, `clear_logs`, `import_redirects` (CSV upload).
 - 404 monitor actions: `save_redirect`, `clear_logs`.
+- CSV export: `GET /admin/redirect-manager?export=csv` (rules) and `GET /admin/not-found-monitor?export=csv` (404 log). Both start with the import columns, so a 404 export can be completed with targets and re-imported as redirects.
 - Types: `301` (default) and `302`. Optional site scope (host) per rule.
 
 ## Deutsch
@@ -28,6 +29,31 @@ Pro Kombination aus Quelle und Site-Scope ist nur **eine** Regel erlaubt. Jede R
 
 `delete_redirects_by_slug` entfernt alle Regeln, die auf einen bestimmten Slug zeigen (z. B. nach dem Löschen eines Beitrags).
 
+### CSV-Export und -Import
+
+| Funktion | Ort | Inhalt |
+|---|---|---|
+| 404-Export | *404-Monitor → CSV exportieren* (`/admin/not-found-monitor?export=csv`) | bis zu 20.000 404-Pfade, sortiert nach Hits; IP-Adresse und User-Agent werden **nicht** exportiert |
+| Weiterleitungs-Export | *Weiterleitungen → CSV exportieren* (`/admin/redirect-manager?export=csv`) | alle Regeln inkl. `hits` und `last_hit_at` |
+| Import | *Weiterleitungen → CSV-Import* (Aktion `import_redirects`) | CSV bis 2 MB / 5.000 Datensätze |
+
+Beide Exporte sind UTF-8 mit BOM und Semikolon getrennt (Excel-kompatibel) und beginnen mit den Importspalten:
+
+`redirect_id;source_path;site_scope;target_url;redirect_type;is_active;notes`
+
+Der 404-Export ergänzt `request_host;hit_count;first_seen_at;last_seen_at;referrer_url`, der Weiterleitungs-Export `hits;last_hit_at`. Diese Zusatzspalten ignoriert der Import.
+
+**Ablauf 404 → Weiterleitungen:** 404-CSV exportieren, in `target_url` den Ziel-Slug (z. B. `neuer-slug` → `/neuer-slug`) oder eine absolute URL eintragen und die Datei unter *Weiterleitungen* importieren.
+
+Importregeln:
+
+- Pflichtspalten sind `source_path` und `target_url`; deutsche Spaltennamen (`Quelle`, `Ziel`, `Site`, `Typ`, `Aktiv`, `Notiz`) werden ebenfalls erkannt. Trennzeichen `;`, `,` oder Tab werden automatisch erkannt, Windows-1252-Dateien nach UTF-8 umgewandelt.
+- Zeilen ohne `target_url` werden übersprungen.
+- Vorhandene Regeln werden über `redirect_id` oder – ohne ID – über Quelle + `site_scope` gefunden und aktualisiert; unveränderte Regeln werden nicht angefasst. Alle anderen Zeilen legen neue Regeln an.
+- `site_scope`: leer bzw. `global` = alle Sites, sonst `host:domain.tld` oder `path:/hub-pfad`. `redirect_type`: `301` oder `302`. `is_active`: `1`/`0` bzw. `ja`/`nein`. Fehlt eine Spalte, bleibt bei bestehenden Regeln der bisherige Wert erhalten.
+- Jede Zeile wird wie im Formular geprüft (gültige Quelle und Ziel, keine Selbstweiterleitung, keine Dubletten). Fehlerhafte Zeilen werden mit Zeilennummer gemeldet, gültige Zeilen trotzdem übernommen.
+- Exporte und Importe werden im Audit-Log protokolliert (`seo.redirects.export.csv`, `seo.not_found.export.csv`, `seo.redirects.import.csv`).
+
 ### Automatische Weiterleitungen
 
 Ist unter *SEO → Technisches SEO* `auto_redirect_slug` aktiv, legt `RedirectService::createAutomaticRedirect()` bei einer Slug-Änderung von Seiten/Beiträgen eine 301-Regel vom alten auf den neuen Pfad an (Notiz „Automatisch bei Slug-Änderung angelegt“).
@@ -37,6 +63,7 @@ Ist unter *SEO → Technisches SEO* `auto_redirect_slug` aktiv, legt `RedirectSe
 - Liste der nicht gefundenen Pfade mit Host, Methode, Referrer, Anzahl, erstem und letztem Auftreten.
 - Direkt aus einer Zeile eine Weiterleitung anlegen (`save_redirect`).
 - `clear_logs` leert das Protokoll.
+- *CSV exportieren* lädt das Protokoll im Importformat der Weiterleitungen herunter (siehe oben).
 
 **Nicht protokolliert** werden: `/`, Pfade unter `/admin`, `/member`, `/api`, `/assets`, `/uploads`, `/vendor`, statische Dateien (`.css`, `.js`, Bilder, Schriften, `.pdf`, `.xml`, `.txt` …) sowie `/favicon.ico`, `/robots.txt`, `/sitemap.xml`.
 
