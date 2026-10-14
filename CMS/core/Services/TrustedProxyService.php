@@ -6,9 +6,11 @@
  *   - `CMS_TRUSTED_PROXIES` in config/app.php oder Option `security_trusted_proxies`
  *     (Admin → Sicherheit → Firewall → „Proxy / CDN & Client-IP“).
  *   - Einträge: einzelne IPs, CIDR-Bereiche (IPv4/IPv6) und Schlüsselwörter
- *       `auto`       = `private` + `cloudflare` (Standard, wenn nichts gesetzt ist)
- *       `private`    = Loopback, RFC1918, CGNAT (100.64.0.0/10), IPv6-ULA
- *       `cloudflare` = mitgelieferte Cloudflare-Netze (nutzt CF-Connecting-IP)
+ *       `cloudflare` = mitgelieferte Cloudflare-Netze (Standard, wenn nichts gesetzt ist;
+ *                      Cloudflare überschreibt CF-Connecting-IP/X-Forwarded-For selbst)
+ *       `private`    = Loopback, RFC1918, CGNAT (100.64.0.0/10), IPv6-ULA – nur setzen, wenn
+ *                      der lokale Proxy X-Forwarded-For selbst ergänzt/überschreibt
+ *       `auto`       = `private` + `cloudflare`
  *       `*`          = jedem direkten Gegenüber vertrauen (nur, wenn der Server
  *                      ausschließlich über das CDN erreichbar ist!)
  *       `off`        = Weiterleitungs-Header nie auswerten (nur REMOTE_ADDR)
@@ -16,9 +18,11 @@
  * Hoster mit eigenem CDN (z. B. Hostinger) nennen ihre Edge-Adressen oft nicht. Erreicht
  * eine Anfrage den Server über eine nicht vertrauenswürdige öffentliche Adresse mit
  * Weiterleitungs-Headern, wird deren Netz (IPv4 /24, IPv6 /48) als Kandidat unter
- * cache/ protokolliert. Administratoren übernehmen erkannte Netze mit einem Klick; eine
- * automatische Übernahme gibt es bewusst nicht (sonst könnte jeder Angreifer sich durch
- * gefälschte Header selbst zum „Proxy“ machen und Rate-Limits umgehen).
+ * cache/ protokolliert. Als verlässliches Signal gilt nur die eigene Admin-Anfrage: Kommt
+ * sie über ein solches Netz, wird es in der Firewall-Ansicht hervorgehoben und kann mit
+ * einem Klick übernommen werden. Header-Angaben (Clients, Beobachtungen) sind fälschbar;
+ * eine automatische Übernahme gibt es deshalb bewusst nicht (sonst könnte jeder Angreifer
+ * sich durch gefälschte Header selbst zum „Proxy“ machen und Rate-Limits umgehen).
  *
  * @package 365CMS
  */
@@ -34,7 +38,7 @@ if (!defined('ABSPATH')) {
 final class TrustedProxyService
 {
     public const OPTION_KEY = 'security_trusted_proxies';
-    public const DEFAULT_SPEC = 'auto';
+    public const DEFAULT_SPEC = 'cloudflare';
 
     private const CANDIDATE_FILE = 'trusted_proxy_candidates.json';
     private const CANDIDATE_LIMIT = 30;
@@ -95,6 +99,9 @@ final class TrustedProxyService
 
     private static bool $candidateNoted = false;
 
+    /** Netz des nicht vertrauenswürdigen Weiterleiters der aktuellen Anfrage ('' = keiner). */
+    private static string $currentCandidate = '';
+
     /**
      * Echte Client-IP der aktuellen Anfrage (pro Request zwischengespeichert).
      */
@@ -139,6 +146,19 @@ final class TrustedProxyService
         self::$config = null;
         self::$resolved = null;
         self::$candidateNoted = false;
+        self::$currentCandidate = '';
+    }
+
+    /**
+     * Netz (/24 bzw. /48), über das die aktuelle Anfrage mit Weiterleitungs-Headern von einer
+     * nicht vertrauenswürdigen Adresse kam. Für Admin-Anfragen ist das ein nicht fälschbarer
+     * Hinweis auf ein vorgelagertes Hoster-CDN – anders als Header-Inhalte fremder Anfragen.
+     */
+    public static function currentRequestCandidate(): string
+    {
+        self::resolve();
+
+        return self::$currentCandidate;
     }
 
     /**
@@ -402,13 +422,22 @@ final class TrustedProxyService
     /**
      * Erkannte, noch nicht vertrauenswürdige Proxy-Netze (neueste zuerst).
      *
-     * @return list<array{network:string,first_seen:int,last_seen:int,observations:int,distinct_clients:int,headers:list<string>,trusted:bool}>
+     * `current_request` = die aktuelle (Admin-)Anfrage kam selbst über dieses Netz.
+     *
+     * @return list<array{network:string,first_seen:int,last_seen:int,observations:int,distinct_clients:int,headers:list<string>,trusted:bool,current_request:bool}>
      */
     public static function getCandidates(): array
     {
         $config = self::config();
+        $current = self::currentRequestCandidate();
+        $candidates = self::loadCandidates();
+        if ($current !== '' && !isset($candidates[$current])) {
+            $now = time();
+            $candidates[$current] = ['first_seen' => $now, 'last_seen' => $now, 'observations' => 1, 'headers' => self::presentForwardHeaders(), 'samples' => []];
+        }
+
         $result = [];
-        foreach (self::loadCandidates() as $network => $entry) {
+        foreach ($candidates as $network => $entry) {
             $address = explode('/', (string) $network, 2)[0];
             $result[] = [
                 'network' => (string) $network,
@@ -418,10 +447,11 @@ final class TrustedProxyService
                 'distinct_clients' => count((array) ($entry['samples'] ?? [])),
                 'headers' => array_values(array_map('strval', (array) ($entry['headers'] ?? []))),
                 'trusted' => self::isTrusted($address, $config, false),
+                'current_request' => $current !== '' && $current === (string) $network,
             ];
         }
 
-        usort($result, static fn(array $a, array $b): int => $b['last_seen'] <=> $a['last_seen']);
+        usort($result, static fn(array $a, array $b): int => [$b['current_request'], $b['last_seen']] <=> [$a['current_request'], $a['last_seen']]);
 
         return $result;
     }
@@ -556,8 +586,8 @@ final class TrustedProxyService
 
     /**
      * Merkt ein unbekanntes Proxy-Netz vor. Gespeichert werden nur Netz, Header-Namen,
-     * Zeitstempel und gekürzte Hashes anonymisierter Client-Adressen (Anzahl verschiedener
-     * Clients als Plausibilitätsmerkmal: CDN = viele, einzelner Angreifer = wenige).
+     * Zeitstempel und gekürzte Hashes anonymisierter Client-Adressen. Die Client-Anzahl stammt
+     * aus Request-Headern und ist daher nur ein Diagnosewert, kein Vertrauensmerkmal.
      *
      * @param list<string> $headers
      */
@@ -568,18 +598,17 @@ final class TrustedProxyService
         }
         self::$candidateNoted = true;
 
-        // Private Adressen sind bereits über `private`/`auto` abgedeckt bzw. bewusst ausgeschlossen.
-        if (filter_var($proxyIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        // Auch private Adressen (lokaler nginx/Load Balancer) werden erfasst, seit `private`
+        // nicht mehr standardmäßig vertraut wird.
+        // IPv6-Loopback nicht auf ::/48 erweitern (würde IPv4-gemappte Adressen einschließen).
+        $network = $proxyIp === '::1' ? '::1/128' : self::networkFor($proxyIp);
+        if ($network === '' || !self::isValidRange($network)) {
             return;
         }
+        self::$currentCandidate = $network;
 
         $file = self::candidateFile();
         if ($file === '') {
-            return;
-        }
-
-        $network = self::networkFor($proxyIp);
-        if ($network === '') {
             return;
         }
 

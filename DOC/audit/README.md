@@ -155,8 +155,8 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 
   Die Fristen lassen sich über den Filter `cms_data_retention_days` anpassen (Wert `0` = nicht löschen; sonst gelten mindestens 7 und höchstens 3650 Tage).
 - **Reverse Proxy / CDN (ab 3.5.0):** Die Rate-Limits (Suche, Web-Vitals, MFA, Re-Auth, Nachrichten, Firewall) zählen je Client-IP.
-  - Ohne Einstellung gilt `auto`: private Netze (lokaler Reverse Proxy, Docker, Load Balancer) und Cloudflare werden automatisch erkannt.
-  - **Host-CDN mit unbekannten Adressen (z. B. Hostinger):** Unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* erscheinen erkannte Proxy-Netze mit Anzahl Beobachtungen und verschiedener Clients. Mit **Vertrauen** übernehmen. Das Sicherheits-Audit und die Warnzentrale melden solche Netze. Alternativ `*` setzen, wenn der Server **nur** über das CDN erreichbar ist.
+  - Ohne Einstellung gilt `cloudflare`: Cloudflare wird automatisch erkannt. Hinter einem lokalen Reverse Proxy, Docker oder Load Balancer `private` (bzw. `auto`) setzen, wenn dieser `X-Forwarded-For` selbst ergänzt oder überschreibt.
+  - **Host-CDN mit unbekannten Adressen (z. B. Hostinger):** Unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* erscheinen erkannte Proxy-Netze. Das Netz, über das Ihr eigener Seitenaufruf kam, ist als **Ihre Anfrage** markiert – mit **Vertrauen** übernehmen. Das Sicherheits-Audit warnt in diesem Fall. Andere Netze nur nach Bestätigung durch den Hoster übernehmen (Header-Angaben sind fälschbar). Alternativ `*` setzen, wenn der Server **nur** über das CDN erreichbar ist.
   - Erscheint dort kein Kandidat und zeigt die Diagnose bereits unterschiedliche Besucher-IPs, schreibt der Webserver (z. B. LiteSpeed) die echte IP schon selbst in `REMOTE_ADDR` – dann ist nichts zu tun.
   - `CMS_TRUSTED_PROXIES` in `config/app.php` hat Vorrang vor der Admin-Einstellung; Schlüsselwörter und Header-Reihenfolge in [../core/SECURITY.md](../core/SECURITY.md) (Abschnitt 7a).
 - **nginx:** Die `.htaccess`-Regeln greifen hier nicht. Die Sperren für `uploads/member`, `uploads/import` und die Importer-Verzeichnisse stehen in [../INSTALLATION.md](../INSTALLATION.md).

@@ -352,7 +352,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
         $proxySourceLabels = [
             'constant' => 'Konstante CMS_TRUSTED_PROXIES (config/app.php)',
             'option' => 'Admin-Einstellung',
-            'default' => 'Standard (auto)',
+            'default' => 'Standard (cloudflare)',
         ];
         $proxyLocked = !empty($proxy['constant_locked']);
         ?>
@@ -373,7 +373,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                     <dt class="col-sm-5">Quelle</dt>
                                     <dd class="col-sm-7"><?php echo htmlspecialchars($proxySourceLabels[(string)($proxy['source'] ?? 'default')] ?? 'Standard', ENT_QUOTES, 'UTF-8'); ?></dd>
                                     <dt class="col-sm-5">Wirksam</dt>
-                                    <dd class="col-sm-7"><code><?php echo htmlspecialchars((string)($proxy['spec'] ?? 'auto'), ENT_QUOTES, 'UTF-8'); ?></code></dd>
+                                    <dd class="col-sm-7"><code><?php echo htmlspecialchars((string)($proxy['spec'] ?? 'cloudflare'), ENT_QUOTES, 'UTF-8'); ?></code></dd>
                                     <dt class="col-sm-5">REMOTE_ADDR (diese Anfrage)</dt>
                                     <dd class="col-sm-7"><code><?php echo htmlspecialchars((string)($proxy['remote_addr'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></code></dd>
                                     <dt class="col-sm-5">Ermittelte Client-IP</dt>
@@ -405,9 +405,9 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                     <input type="hidden" name="action" value="save_proxy_settings">
                                     <div class="mb-3">
                                         <label class="form-label" for="firewallTrustedProxies">Vertrauenswürdige Proxys / CDN-Netze</label>
-                                        <input type="text" id="firewallTrustedProxies" name="trusted_proxies" class="form-control" maxlength="4000" placeholder="auto" value="<?php echo htmlspecialchars((string)($proxyLocked ? ($proxy['spec'] ?? '') : ($proxy['stored'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" aria-describedby="firewallTrustedProxiesHint" <?php echo $proxyLocked ? 'disabled' : ''; ?>>
+                                        <input type="text" id="firewallTrustedProxies" name="trusted_proxies" class="form-control" maxlength="4000" placeholder="cloudflare" value="<?php echo htmlspecialchars((string)($proxyLocked ? ($proxy['spec'] ?? '') : ($proxy['stored'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" aria-describedby="firewallTrustedProxiesHint" <?php echo $proxyLocked ? 'disabled' : ''; ?>>
                                         <small class="form-hint" id="firewallTrustedProxiesHint">
-                                            Kommagetrennt: IPs, CIDR-Bereiche sowie <code>auto</code> (private Netze + Cloudflare, Standard), <code>private</code>, <code>cloudflare</code>, <code>*</code> (allen direkten Gegenstellen vertrauen) und <code>off</code> (nur REMOTE_ADDR).
+                                            Kommagetrennt: IPs, CIDR-Bereiche sowie <code>cloudflare</code> (Standard), <code>private</code> (lokaler Reverse Proxy, der X-Forwarded-For selbst setzt), <code>auto</code> (private Netze + Cloudflare), <code>*</code> (allen direkten Gegenstellen vertrauen) und <code>off</code> (nur REMOTE_ADDR).
                                             <?php if ($proxyLocked): ?><br>Gesperrt: Die Konstante <code>CMS_TRUSTED_PROXIES</code> in <code>config/app.php</code> hat Vorrang.<?php endif; ?>
                                         </small>
                                     </div>
@@ -425,7 +425,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                         </form>
                                     <?php endif; ?>
                                 </div>
-                                <p class="text-secondary small">Anfragen mit Weiterleitungs-Headern von unbekannten öffentlichen Adressen werden hier gesammelt (Netz /24 bzw. /48, max. 14 Tage, keine Besucher-IPs). Ein Hoster-CDN zeigt viele Beobachtungen und viele verschiedene Clients; einzelne Firmen-Proxys oder gefälschte Header nur wenige. Nur Netze übernehmen, die nachweislich zum CDN/Hoster gehören (z. B. per WHOIS prüfen).</p>
+                                <p class="text-secondary small">Anfragen mit Weiterleitungs-Headern von nicht vertrauenswürdigen Adressen werden hier gesammelt (Netz /24 bzw. /48, max. 14 Tage, keine Besucher-IPs). Verlässlich ist nur die Markierung <strong>Ihre Anfrage</strong>: Ihr eigener Seitenaufruf kam über dieses Netz – typisch für ein Hoster-CDN wie Hostinger. Beobachtungen und Clients stammen aus Request-Headern und können von Angreifern beliebig erzeugt werden; andere Netze nur übernehmen, wenn sie nachweislich zum CDN/Hoster gehören (z. B. per WHOIS oder Auskunft des Hosters).</p>
                                 <?php if ($proxyCandidates === []): ?>
                                     <div class="text-secondary">Keine unbekannten Proxys erkannt.</div>
                                 <?php else: ?>
@@ -436,7 +436,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                                     <th scope="col">Netz</th>
                                                     <th scope="col">Header</th>
                                                     <th scope="col" class="text-end">Beobachtungen</th>
-                                                    <th scope="col" class="text-end">Clients</th>
+                                                    <th scope="col" class="text-end">Clients <span class="text-secondary fw-normal">(lt. Header)</span></th>
                                                     <th scope="col">Zuletzt</th>
                                                     <th scope="col"><span class="visually-hidden">Aktionen</span></th>
                                                 </tr>
@@ -445,7 +445,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                                 <?php foreach ($proxyCandidates as $candidate): ?>
                                                     <?php $candidateNetwork = (string)($candidate['network'] ?? ''); ?>
                                                     <tr>
-                                                        <td><code><?php echo htmlspecialchars($candidateNetwork, ENT_QUOTES, 'UTF-8'); ?></code><?php if (!empty($candidate['trusted'])): ?> <span class="badge bg-success-lt">vertraut</span><?php endif; ?></td>
+                                                        <td><code><?php echo htmlspecialchars($candidateNetwork, ENT_QUOTES, 'UTF-8'); ?></code><?php if (!empty($candidate['trusted'])): ?> <span class="badge bg-success-lt">vertraut</span><?php endif; ?><?php if (!empty($candidate['current_request'])): ?> <span class="badge bg-blue-lt">Ihre Anfrage</span><?php endif; ?></td>
                                                         <td class="small"><?php echo htmlspecialchars(implode(', ', (array)($candidate['headers'] ?? [])), ENT_QUOTES, 'UTF-8'); ?></td>
                                                         <td class="text-end"><?php echo (int)($candidate['observations'] ?? 0); ?></td>
                                                         <td class="text-end"><?php $distinctClients = (int)($candidate['distinct_clients'] ?? 0); echo $distinctClients >= 25 ? '25+' : $distinctClients; ?></td>
@@ -457,7 +457,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                                                         <input type="hidden" name="action" value="trust_proxy_candidate">
                                                                         <input type="hidden" name="network" value="<?php echo htmlspecialchars($candidateNetwork, ENT_QUOTES, 'UTF-8'); ?>">
-                                                                        <button type="submit" class="btn btn-sm btn-success">Vertrauen</button>
+                                                                        <button type="submit" class="btn btn-sm <?php echo !empty($candidate['current_request']) ? 'btn-success' : 'btn-outline-warning'; ?>"<?php if (empty($candidate['current_request'])): ?> title="Nicht über Ihre eigene Anfrage bestätigt – nur übernehmen, wenn das Netz nachweislich zum CDN/Hoster gehört."<?php endif; ?>>Vertrauen</button>
                                                                     </form>
                                                                 <?php endif; ?>
                                                                 <form method="post">

@@ -732,7 +732,7 @@ class Security
      *
      * Weiterleitungs-Header (X-Forwarded-For, Forwarded, X-Real-IP, CF-Connecting-IP …) werden nur
      * ausgewertet, wenn REMOTE_ADDR ein vertrauenswürdiger Proxy ist: `CMS_TRUSTED_PROXIES` bzw. die
-     * Firewall-Einstellung „Proxy / CDN“, Standard `auto` (private Netze + Cloudflare). Details und
+     * Firewall-Einstellung „Proxy / CDN“, Standard `cloudflare`. Details und
      * Hoster-CDNs mit unbekannten Adressen: siehe Services\TrustedProxyService.
      */
     public static function getClientIp(): string

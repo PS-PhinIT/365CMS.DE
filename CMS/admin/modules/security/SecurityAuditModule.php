@@ -401,18 +401,21 @@ class SecurityAuditModule
 
         // Hoster-CDNs (z. B. Hostinger) mit unbekannten Edge-Adressen: ohne vertrauenswürdigen Proxy
         // teilen sich alle Besucher hinter derselben Edge-Adresse Rate-Limits und Sperren.
-        $proxyCandidates = array_values(array_filter(
+        // Nur die eigene Admin-Anfrage ist ein verlässliches Signal; Header-Statistiken fremder
+        // Anfragen sind fälschbar und lösen deshalb keine Übernahme-Empfehlung aus.
+        $currentProxyNetwork = \CMS\Services\TrustedProxyService::currentRequestCandidate();
+        $loggedProxyNetworks = count(array_filter(
             \CMS\Services\TrustedProxyService::getCandidates(),
             static fn(array $candidate): bool => empty($candidate['trusted'])
-                && (int) ($candidate['observations'] ?? 0) >= 10
-                && (int) ($candidate['distinct_clients'] ?? 0) >= 5
         ));
         $checks[] = $this->buildCheck(
             'Proxy/CDN vor dem Server',
-            $proxyCandidates === [] ? 'ok' : 'warning',
-            $proxyCandidates === []
-                ? 'Keine unbekannten vorgelagerten Proxys mit vielen Clients erkannt; Client-IPs werden korrekt ermittelt.'
-                : 'Anfragen kommen über nicht vertrauenswürdige Proxy-Netze (' . implode(', ', array_slice(array_column($proxyCandidates, 'network'), 0, 3)) . '). Unter Firewall → „Proxy / CDN & Client-IP“ prüfen und übernehmen, sonst teilen sich Besucher Rate-Limits.'
+            $currentProxyNetwork === '' ? 'ok' : 'warning',
+            $currentProxyNetwork !== ''
+                ? 'Ihre eigene Anfrage kam über das nicht vertrauenswürdige Weiterleitungs-Netz ' . $currentProxyNetwork . '. Ist das das CDN bzw. der Proxy Ihres Hosters (z. B. Hostinger), unter Firewall → „Proxy / CDN & Client-IP“ übernehmen – sonst teilen sich Besucher Rate-Limits und Sperren.'
+                : ($loggedProxyNetworks > 0
+                    ? 'Die eigene Anfrage kam direkt bzw. über einen vertrauenswürdigen Proxy. ' . $loggedProxyNetworks . ' weitere Netz(e) mit Weiterleitungs-Headern protokolliert (unbestätigt, Header können gefälscht sein).'
+                    : 'Die eigene Anfrage kam direkt bzw. über einen vertrauenswürdigen Proxy; Client-IPs werden korrekt ermittelt.')
         );
 
         return $checks;
