@@ -361,7 +361,7 @@ final class FeatureUsageService
 
     private function buildFallbackSessionId(): string
     {
-        $raw = (string) ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . (string) ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|' . date('Y-m-d');
+        $raw = TrustedProxyService::clientIp() . '|' . (string) ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|' . date('Y-m-d');
         return 'fallback-' . substr(hash('sha256', $raw), 0, 40);
     }
 

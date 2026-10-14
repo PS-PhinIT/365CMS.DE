@@ -714,87 +714,15 @@ class Security
     }
     
     /**
-     * Get client IP address (static wrapper)
+     * Echte Client-IP (pro Request zwischengespeichert).
+     *
+     * Weiterleitungs-Header (X-Forwarded-For, Forwarded, X-Real-IP, CF-Connecting-IP …) werden nur
+     * ausgewertet, wenn REMOTE_ADDR ein vertrauenswürdiger Proxy ist: `CMS_TRUSTED_PROXIES` bzw. die
+     * Firewall-Einstellung „Proxy / CDN“, Standard `auto` (private Netze + Cloudflare). Details und
+     * Hoster-CDNs mit unbekannten Adressen: siehe Services\TrustedProxyService.
      */
     public static function getClientIp(): string
     {
-        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
-
-        // Validate IP
-        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-            return '0.0.0.0';
-        }
-
-        // Opt-in: hinter einem Reverse Proxy (CMS_TRUSTED_PROXIES = "10.0.0.1, 10.0.0.0/8")
-        // die echte Client-IP aus X-Forwarded-For übernehmen. Ohne Konstante bleibt REMOTE_ADDR maßgeblich,
-        // damit der Header nicht gefälscht werden kann.
-        $trusted = defined('CMS_TRUSTED_PROXIES') ? trim((string) CMS_TRUSTED_PROXIES) : '';
-        if ($trusted === '') {
-            return $ip;
-        }
-
-        $trustedList = array_values(array_filter(array_map('trim', explode(',', $trusted))));
-        if (!self::ipMatchesAny($ip, $trustedList)) {
-            return $ip;
-        }
-
-        $forwarded = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
-        if ($forwarded === '') {
-            return $ip;
-        }
-
-        // Von rechts nach links: erste Adresse, die kein vertrauenswürdiger Proxy ist.
-        $hops = array_reverse(array_map('trim', explode(',', $forwarded)));
-        foreach ($hops as $hop) {
-            if (!filter_var($hop, FILTER_VALIDATE_IP)) {
-                break;
-            }
-            if (!self::ipMatchesAny($hop, $trustedList)) {
-                return $hop;
-            }
-        }
-
-        return $ip;
-    }
-
-    /**
-     * @param list<string> $ranges Einzel-IPs oder CIDR-Bereiche (IPv4/IPv6)
-     */
-    private static function ipMatchesAny(string $ip, array $ranges): bool
-    {
-        $ipBin = @inet_pton($ip);
-        if ($ipBin === false) {
-            return false;
-        }
-
-        foreach ($ranges as $range) {
-            [$subnet, $bits] = array_pad(explode('/', $range, 2), 2, null);
-            $subnetBin = @inet_pton((string) $subnet);
-            if ($subnetBin === false || strlen($subnetBin) !== strlen($ipBin)) {
-                continue;
-            }
-
-            $maxBits = strlen($ipBin) * 8;
-            $bits = $bits === null ? $maxBits : (int) $bits;
-            if ($bits < 0 || $bits > $maxBits) {
-                continue;
-            }
-
-            $bytes = intdiv($bits, 8);
-            $rest = $bits % 8;
-            if (substr($ipBin, 0, $bytes) !== substr($subnetBin, 0, $bytes)) {
-                continue;
-            }
-            if ($rest === 0) {
-                return true;
-            }
-
-            $mask = (0xFF << (8 - $rest)) & 0xFF;
-            if ((ord($ipBin[$bytes]) & $mask) === (ord($subnetBin[$bytes]) & $mask)) {
-                return true;
-            }
-        }
-
-        return false;
+        return Services\TrustedProxyService::clientIp();
     }
 }

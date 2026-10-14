@@ -345,6 +345,142 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
             </div>
         </div>
 
+        <?php
+        $proxy = is_array($d['proxy'] ?? null) ? $d['proxy'] : [];
+        $proxyCandidates = is_array($proxy['candidates'] ?? null) ? $proxy['candidates'] : [];
+        $proxyRequestHeaders = is_array($proxy['request_headers'] ?? null) ? $proxy['request_headers'] : [];
+        $proxySourceLabels = [
+            'constant' => 'Konstante CMS_TRUSTED_PROXIES (config/app.php)',
+            'option' => 'Admin-Einstellung',
+            'default' => 'Standard (auto)',
+        ];
+        $proxyLocked = !empty($proxy['constant_locked']);
+        ?>
+        <div class="row row-cards mb-4" id="proxy-cdn">
+            <div class="col-12">
+                <div class="card security-panel-card">
+                    <div class="card-header">
+                        <div class="card-title-wrap">
+                            <p class="card-eyebrow">Client-IP</p>
+                            <h3 class="card-title">Proxy / CDN & Client-IP</h3>
+                            <div class="card-title-meta">Hinter einem CDN oder Reverse Proxy (Cloudflare, Hoster-CDN wie Hostinger, Load Balancer) sieht der Server nur die Proxy-Adresse. Ohne vertrauenswürdigen Proxy teilen sich Besucher Rate-Limits und Sperren.</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-lg-5">
+                                <dl class="row mb-3 small">
+                                    <dt class="col-sm-5">Quelle</dt>
+                                    <dd class="col-sm-7"><?php echo htmlspecialchars($proxySourceLabels[(string)($proxy['source'] ?? 'default')] ?? 'Standard', ENT_QUOTES, 'UTF-8'); ?></dd>
+                                    <dt class="col-sm-5">Wirksam</dt>
+                                    <dd class="col-sm-7"><code><?php echo htmlspecialchars((string)($proxy['spec'] ?? 'auto'), ENT_QUOTES, 'UTF-8'); ?></code></dd>
+                                    <dt class="col-sm-5">REMOTE_ADDR (diese Anfrage)</dt>
+                                    <dd class="col-sm-7"><code><?php echo htmlspecialchars((string)($proxy['remote_addr'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></code></dd>
+                                    <dt class="col-sm-5">Ermittelte Client-IP</dt>
+                                    <dd class="col-sm-7"><code><?php echo htmlspecialchars((string)($proxy['client_ip'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></code>
+                                        <?php if (!empty($proxy['via_proxy'])): ?>
+                                            <span class="badge bg-success-lt">über <?php echo htmlspecialchars((string)($proxy['header'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <?php endif; ?>
+                                    </dd>
+                                    <dt class="col-sm-5">Weiterleitungs-Header</dt>
+                                    <dd class="col-sm-7">
+                                        <?php if ($proxyRequestHeaders === []): ?>
+                                            <span class="text-secondary">keine</span>
+                                        <?php else: ?>
+                                            <?php foreach ($proxyRequestHeaders as $headerName => $headerValue): ?>
+                                                <div><code><?php echo htmlspecialchars((string)$headerName, ENT_QUOTES, 'UTF-8'); ?>: <?php echo htmlspecialchars((string)$headerValue, ENT_QUOTES, 'UTF-8'); ?></code></div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </dd>
+                                </dl>
+
+                                <?php if (!empty($proxy['trust_any'])): ?>
+                                    <div class="alert alert-warning" role="alert">
+                                        <strong>*</strong> vertraut jedem direkten Gegenüber. Das ist nur sicher, wenn der Server ausschließlich über das CDN erreichbar ist – sonst können Angreifer ihre IP per Header frei wählen und Rate-Limits umgehen.
+                                    </div>
+                                <?php endif; ?>
+
+                                <form method="post">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" name="action" value="save_proxy_settings">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="firewallTrustedProxies">Vertrauenswürdige Proxys / CDN-Netze</label>
+                                        <input type="text" id="firewallTrustedProxies" name="trusted_proxies" class="form-control" maxlength="4000" placeholder="auto" value="<?php echo htmlspecialchars((string)($proxyLocked ? ($proxy['spec'] ?? '') : ($proxy['stored'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" aria-describedby="firewallTrustedProxiesHint" <?php echo $proxyLocked ? 'disabled' : ''; ?>>
+                                        <small class="form-hint" id="firewallTrustedProxiesHint">
+                                            Kommagetrennt: IPs, CIDR-Bereiche sowie <code>auto</code> (private Netze + Cloudflare, Standard), <code>private</code>, <code>cloudflare</code>, <code>*</code> (allen direkten Gegenstellen vertrauen) und <code>off</code> (nur REMOTE_ADDR).
+                                            <?php if ($proxyLocked): ?><br>Gesperrt: Die Konstante <code>CMS_TRUSTED_PROXIES</code> in <code>config/app.php</code> hat Vorrang.<?php endif; ?>
+                                        </small>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" <?php echo $proxyLocked ? 'disabled' : ''; ?>>Proxy-Einstellung speichern</button>
+                                </form>
+                            </div>
+                            <div class="col-lg-7">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                    <h4 class="mb-0">Erkannte, nicht vertrauenswürdige Proxys</h4>
+                                    <?php if ($proxyCandidates !== []): ?>
+                                        <form method="post">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                            <input type="hidden" name="action" value="clear_proxy_candidates">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Liste leeren</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="text-secondary small">Anfragen mit Weiterleitungs-Headern von unbekannten öffentlichen Adressen werden hier gesammelt (Netz /24 bzw. /48, max. 14 Tage, keine Besucher-IPs). Ein Hoster-CDN zeigt viele Beobachtungen und viele verschiedene Clients; einzelne Firmen-Proxys oder gefälschte Header nur wenige. Nur Netze übernehmen, die nachweislich zum CDN/Hoster gehören (z. B. per WHOIS prüfen).</p>
+                                <?php if ($proxyCandidates === []): ?>
+                                    <div class="text-secondary">Keine unbekannten Proxys erkannt.</div>
+                                <?php else: ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-vcenter card-table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Netz</th>
+                                                    <th scope="col">Header</th>
+                                                    <th scope="col" class="text-end">Beobachtungen</th>
+                                                    <th scope="col" class="text-end">Clients</th>
+                                                    <th scope="col">Zuletzt</th>
+                                                    <th scope="col"><span class="visually-hidden">Aktionen</span></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($proxyCandidates as $candidate): ?>
+                                                    <?php $candidateNetwork = (string)($candidate['network'] ?? ''); ?>
+                                                    <tr>
+                                                        <td><code><?php echo htmlspecialchars($candidateNetwork, ENT_QUOTES, 'UTF-8'); ?></code><?php if (!empty($candidate['trusted'])): ?> <span class="badge bg-success-lt">vertraut</span><?php endif; ?></td>
+                                                        <td class="small"><?php echo htmlspecialchars(implode(', ', (array)($candidate['headers'] ?? [])), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                        <td class="text-end"><?php echo (int)($candidate['observations'] ?? 0); ?></td>
+                                                        <td class="text-end"><?php $distinctClients = (int)($candidate['distinct_clients'] ?? 0); echo $distinctClients >= 25 ? '25+' : $distinctClients; ?></td>
+                                                        <td class="small"><?php echo htmlspecialchars(date('d.m.Y H:i', (int)($candidate['last_seen'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                        <td class="text-end">
+                                                            <div class="d-flex justify-content-end gap-1">
+                                                                <?php if (!$proxyLocked && empty($candidate['trusted'])): ?>
+                                                                    <form method="post">
+                                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                                                        <input type="hidden" name="action" value="trust_proxy_candidate">
+                                                                        <input type="hidden" name="network" value="<?php echo htmlspecialchars($candidateNetwork, ENT_QUOTES, 'UTF-8'); ?>">
+                                                                        <button type="submit" class="btn btn-sm btn-success">Vertrauen</button>
+                                                                    </form>
+                                                                <?php endif; ?>
+                                                                <form method="post">
+                                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                                                    <input type="hidden" name="action" value="dismiss_proxy_candidate">
+                                                                    <input type="hidden" name="network" value="<?php echo htmlspecialchars($candidateNetwork, ENT_QUOTES, 'UTF-8'); ?>">
+                                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Verwerfen</button>
+                                                                </form>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row row-deck row-cards mb-4">
             <div class="col-lg-6">
                 <div class="card security-panel-card h-100">

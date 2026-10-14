@@ -350,6 +350,22 @@ class SecurityAuditModule
                 : 'Editor.js Alt-Bundles oder riskante Tool-Konfigurationen sind weiterhin aktiv.'
         );
 
+        // Hoster-CDNs (z. B. Hostinger) mit unbekannten Edge-Adressen: ohne vertrauenswürdigen Proxy
+        // teilen sich alle Besucher hinter derselben Edge-Adresse Rate-Limits und Sperren.
+        $proxyCandidates = array_values(array_filter(
+            \CMS\Services\TrustedProxyService::getCandidates(),
+            static fn(array $candidate): bool => empty($candidate['trusted'])
+                && (int) ($candidate['observations'] ?? 0) >= 10
+                && (int) ($candidate['distinct_clients'] ?? 0) >= 5
+        ));
+        $checks[] = $this->buildCheck(
+            'Proxy/CDN vor dem Server',
+            $proxyCandidates === [] ? 'ok' : 'warning',
+            $proxyCandidates === []
+                ? 'Keine unbekannten vorgelagerten Proxys mit vielen Clients erkannt; Client-IPs werden korrekt ermittelt.'
+                : 'Anfragen kommen über nicht vertrauenswürdige Proxy-Netze (' . implode(', ', array_slice(array_column($proxyCandidates, 'network'), 0, 3)) . '). Unter Firewall → „Proxy / CDN & Client-IP“ prüfen und übernehmen, sonst teilen sich Besucher Rate-Limits.'
+        );
+
         return $checks;
     }
 

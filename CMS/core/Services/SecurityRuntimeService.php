@@ -105,12 +105,15 @@ final class SecurityRuntimeService
             return;
         }
 
+        // Client-IP immer einmal auflösen: erkennt unbekannte vorgelagerte Proxys/CDNs (Hoster-CDN)
+        // auch bei deaktivierter Firewall; das Ergebnis wird pro Request zwischengespeichert.
+        $ip = Security::getClientIp();
+
         $settings = $this->loadFirewallSettings();
         if (($settings['firewall_enabled'] ?? '0') !== '1') {
             return;
         }
 
-        $ip = Security::getClientIp();
         $uri = $this->sanitizeLogText((string)($_SERVER['REQUEST_URI'] ?? '/'), 1000);
         $userAgent = $this->sanitizeLogText((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 500);
 
@@ -192,7 +195,8 @@ final class SecurityRuntimeService
              LIMIT " . self::MAX_RULES
         ) ?: [];
 
-        $country = strtoupper($this->sanitizeLogText((string)($_SERVER['HTTP_CF_IPCOUNTRY'] ?? $_SERVER['HTTP_X_APPENGINE_COUNTRY'] ?? ''), 2));
+        // Länder-Header nur von vertrauenswürdigen Proxys/CDNs – direkt gesendet wären sie beliebig fälschbar.
+        $country = TrustedProxyService::countryCode();
 
         foreach ($rows as $row) {
             $ruleId = (int)($row->id ?? 0);
