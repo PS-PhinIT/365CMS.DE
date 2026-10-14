@@ -626,9 +626,10 @@ final class ApiRouter
                 return false;
             }
 
-            $raw = stream_get_contents($handle, self::WEB_VITALS_RATE_CACHE_MAX_BYTES + 1);
+            $hardLimit = self::WEB_VITALS_RATE_CACHE_MAX_BYTES * 2;
+            $raw = stream_get_contents($handle, $hardLimit + 1);
             $buckets = [];
-            if (is_string($raw) && $raw !== '' && strlen($raw) <= self::WEB_VITALS_RATE_CACHE_MAX_BYTES) {
+            if (is_string($raw) && $raw !== '' && strlen($raw) <= $hardLimit) {
                 $decoded = json_decode($raw, true);
                 if (is_array($decoded)) {
                     $buckets = $decoded;
@@ -652,13 +653,28 @@ final class ApiRouter
                 return false;
             }
 
+            $isKnownClient = isset($buckets[$key], $buckets[$ipKey]);
             $buckets[$key] = $count + 1;
             $buckets[$ipKey] = $ipCount + 1;
 
             $encoded = json_encode($buckets, JSON_UNESCAPED_SLASHES);
-            if (!is_string($encoded) || strlen($encoded) > self::WEB_VITALS_RATE_CACHE_MAX_BYTES) {
-                // Tabelle voll (viele verschiedene Clients): fail-closed statt Zurücksetzen,
-                // damit ein Flood das Limit nicht durch Überlauf aufhebt.
+            if (is_string($encoded) && strlen($encoded) > self::WEB_VITALS_RATE_CACHE_MAX_BYTES) {
+                // Tabelle voll: zuerst Vorfenster verwerfen. Bleibt sie voll, werden nur Clients
+                // ohne Bucket im aktuellen Fenster abgewiesen – bekannte Clients zählen weiter
+                // (bis zur harten Grenze), damit wenige Angreifer nicht alle Besucher sperren und
+                // ein Flood das Limit nicht durch Überlauf aufhebt.
+                foreach (array_keys($buckets) as $bucketKey) {
+                    if ((int) explode(':', (string) $bucketKey, 2)[0] < $window) {
+                        unset($buckets[$bucketKey]);
+                    }
+                }
+                $encoded = json_encode($buckets, JSON_UNESCAPED_SLASHES);
+                if (is_string($encoded) && strlen($encoded) > self::WEB_VITALS_RATE_CACHE_MAX_BYTES && !$isKnownClient) {
+                    return false;
+                }
+            }
+
+            if (!is_string($encoded) || strlen($encoded) > $hardLimit) {
                 return false;
             }
 

@@ -98,7 +98,7 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 | PERF-11 | Performance | Seiten-Suche mit `SELECT *` | ⚪ | ✅ 3.4.25 |
 | LAST-01 | Last | Firewall schreibt je blockierter Anfrage zwei Zeilen; Zählung ohne Index; Bereinigung in einem einzigen DELETE | 🟠 | ✅ 3.4.25 |
 | LAST-02 | Last | Öffentliche Suche ohne Rate-Limit (LIKE über LONGTEXT) | 🟠 | ✅ 3.4.25 |
-| LAST-03 | Last | Web-Vitals-Endpunkt: Race Condition im Datei-Limiter, nur globaler Bucket, fail-open | 🟡 | ✅ 3.4.25 |
+| LAST-03 | Last | Web-Vitals-Endpunkt: Race Condition im Datei-Limiter, Limit per User-Agent-Wechsel umgehbar, fail-open bei voller Datei | 🟡 | ✅ 3.4.25 |
 | LAST-04 | Last | 404-Monitor ohne Obergrenze und Pfadlänge (Zufalls-URLs füllen die Tabelle) | 🟠 | ✅ 3.4.25 |
 | LAST-05 | Last | Keine Aufbewahrungsfrist für `page_views`, `core_web_vitals`, `not_found_logs` und Tageslogs | 🟠 | ✅ 3.4.25 |
 | LAST-06 | Last | Medienauslieferung hält die Session-Sperre während des Streamings; parallele Requests desselben Nutzers warten | 🟡 | ✅ 3.4.25 |
