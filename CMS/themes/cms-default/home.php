@@ -121,7 +121,7 @@ $sidebarCats = meridian_get_categories(8);
 $tagCloud = meridian_get_tags(20);
 }
 
-$showSidebar      = (bool) meridian_setting('layout',   'show_sidebar',        true);
+$showSidebar      = meridian_show_sidebar();
 $showHero         = (bool) meridian_setting('blog',     'show_hero_post',      true)
                   && (bool) meridian_setting('homepage', 'homepage_show_hero',  true);
 $heroTitleOverride = (string) meridian_setting('homepage', 'homepage_hero_title',  '');
@@ -179,7 +179,7 @@ $numRecent        = count($recentSidebar);
         <p class="excerpt"><?php echo htmlspecialchars(meridian_excerpt($heroPost->excerpt, 200)); ?></p>
         <?php endif; ?>
         <div class="post-meta">
-            <?php if ($heroPost->author_name): ?>
+            <?php if ($heroPost->author_name && meridian_show_author()): ?>
             <div class="meta-author">
                 <div class="avatar-xs"><?php echo htmlspecialchars(meridian_author_initials($heroPost->author_name)); ?></div>
                 <?php echo htmlspecialchars($heroPost->author_name); ?>

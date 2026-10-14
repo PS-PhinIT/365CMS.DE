@@ -458,7 +458,6 @@ class ThemeCustomizer
                 updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
                 UNIQUE KEY uq_theme_setting (theme_slug, setting_category, setting_key, user_id),
-                KEY idx_theme_slug   (theme_slug),
                 KEY idx_user_id      (user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         } catch (\Throwable $e) {

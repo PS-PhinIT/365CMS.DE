@@ -1668,6 +1668,24 @@ function meridian_setting(string $section, string $key, mixed $default = null): 
     }
 }
 
+/**
+ * Sidebar in Listen-Ansichten: Customizer „Layout → Inhalts-Layout" (full_width = ohne Sidebar).
+ * Ein früher gespeichertes layout.show_sidebar = false gilt weiter.
+ */
+function meridian_show_sidebar(): bool
+{
+    if ((string) meridian_setting('layout', 'content_layout', 'with_sidebar') === 'full_width') {
+        return false;
+    }
+
+    return (bool) meridian_setting('layout', 'show_sidebar', true);
+}
+
+function meridian_show_author(): bool
+{
+    return (bool) meridian_setting('blog', 'show_author', true);
+}
+
 function meridian_build_base_post_content_expression(string $alias): string
 {
     return "(CHAR_LENGTH(TRIM(COALESCE({$alias}.content, ''))) > 0"

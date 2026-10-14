@@ -19,6 +19,7 @@ $col1Title      = meridian_setting('footer', 'col1_title', 'Rubriken');
 $col2Title      = meridian_setting('footer', 'col2_title', 'Ressourcen');
 $col3Title      = meridian_setting('footer', 'col3_title', 'Über');
 $copyrightText  = meridian_copyright(meridian_setting('footer', 'copyright_text', ''));
+$showBackToTop  = (bool) meridian_setting('layout', 'show_back_to_top', true);
 
 $socialLinks = [
     'twitter'   => meridian_setting('footer', 'social_twitter', ''),
@@ -166,6 +167,12 @@ $renderFooterMenuLinks = static function (array $items): void {
     </div>
   </div>
 </footer>
+
+<?php if ($showBackToTop): ?>
+<button type="button" id="scrollTop" class="scroll-top" aria-label="Zurück nach oben" title="Zurück nach oben">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+<?php endif; ?>
 
 <?php
 // theme.js und Cookie-Banner (before_footer) gibt der Core bereits vor footer.php aus;

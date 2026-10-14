@@ -24,7 +24,7 @@ $total       = $total       ?? 0;
 $currentPage = $currentPage ?? 1;
 $totalPages  = $totalPages  ?? 1;
 
-$showSidebar = (bool) meridian_setting('layout', 'show_sidebar', true);
+$showSidebar = meridian_show_sidebar();
 $activeCategory = htmlspecialchars($_GET['category'] ?? '');
 $activeTag      = htmlspecialchars($_GET['tag'] ?? '');
 $pageTitle      = 'Blog';
@@ -40,7 +40,7 @@ $sidebarCats   = meridian_get_categories(8);
 $tagCloud = meridian_get_tags(20); // [name, slug, count] – Links über den Slug
 ?>
 
-<div class="page-wrap">
+<div class="page-wrap<?php echo $showSidebar ? '' : ' page-wrap--no-sidebar'; ?>">
 
     <!-- Content Area -->
     <div class="content-main">

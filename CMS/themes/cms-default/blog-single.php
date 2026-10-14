@@ -58,6 +58,7 @@ if (is_string($pTags)) {
 $showRelated  = (bool) meridian_setting('blog', 'show_related_posts', true);
 $showComments = (bool) meridian_setting('blog', 'show_comments', true);
 $showViews    = (bool) meridian_setting('blog', 'show_views', false);
+$showAuthor   = meridian_show_author();
 $postAllowsComments = (int) ($post->allow_comments ?? 1) === 1
   && (!class_exists('\CMS\Services\CommentService') || \CMS\Services\CommentService::getInstance()->areCommentsEnabledGlobally());
 $currentUser = class_exists('\CMS\Auth') ? \CMS\Auth::getCurrentUser() : null;
@@ -135,6 +136,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
         <?php endif; ?>
 
         <div class="post-hero__meta">
+          <?php if ($showAuthor): ?>
           <div class="author-chip">
             <div class="avatar-sm"><?php echo htmlspecialchars($pAuthIni, ENT_QUOTES, 'UTF-8'); ?></div>
             <div>
@@ -142,6 +144,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
               <div class="role">Redaktion &amp; Autorenprofil</div>
             </div>
           </div>
+          <?php endif; ?>
 
           <div class="post-hero__meta-list">
             <?php if ($pDate !== ''): ?>
@@ -207,6 +210,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
     </div>
     <?php endif; ?>
 
+    <?php if ($showAuthor): ?>
     <div class="author-box-wrap">
       <div class="author-box author-box--elevated">
         <div class="author-avatar-lg"><?php echo htmlspecialchars($pAuthIni, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -218,6 +222,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
         </div>
       </div>
     </div>
+    <?php endif; ?>
 
     <?php if ($showRelated && !empty($relatedPosts)): ?>
     <section class="related-section" aria-labelledby="related-posts-heading">

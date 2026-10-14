@@ -51,7 +51,7 @@ if ($isOverview) {
 }
 $qSep = str_contains($baseUrl, '?') ? '&' : '?';
 
-$showSidebar   = (bool) meridian_setting('layout', 'show_sidebar', true);
+$showSidebar   = meridian_show_sidebar();
 $recentSidebar = meridian_get_recent_posts(5);
 $sidebarCats   = meridian_get_categories(8);
 $tagCloud      = meridian_get_tags(20); // [name, slug, count] – Links über den Slug
@@ -86,7 +86,7 @@ $tagCloud      = meridian_get_tags(20); // [name, slug, count] – Links über d
 
 <!-- Inhalt -->
 <div class="container" style="max-width:var(--max);margin:0 auto;padding:2rem 1.5rem;">
-    <div class="page-wrap<?php echo $showSidebar ? ' page-wrap--sidebar' : ''; ?>">
+    <div class="page-wrap<?php echo $showSidebar ? ' page-wrap--sidebar' : ' page-wrap--no-sidebar'; ?>">
 
         <div class="content-main">
             <?php if ($isOverview || !empty($posts)): ?>
