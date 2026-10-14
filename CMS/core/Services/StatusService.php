@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 }
 
 use CMS\Database;
-use WP_Error;
+use CMS\WP_Error;
 
 /**
  * Status Service - System Health & Maintenance

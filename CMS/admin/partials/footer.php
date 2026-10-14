@@ -49,7 +49,7 @@ $inlineJs   = $inlineJs ?? '';
     <?php endif; ?>
 
     <!-- Confirm Modal (global) -->
-    <div class="modal modal-blur fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal modal-blur fade" id="confirmModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" aria-describedby="confirmModalMessage" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content">
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
@@ -85,6 +85,7 @@ $inlineJs   = $inlineJs ?? '';
      * Globale Bestätigungsfunktion für destruktive Aktionen
      */
     function cmsConfirm(options) {
+        options = options && typeof options === 'object' ? options : {};
         const modal = document.getElementById('confirmModal');
         const fallbackConfirm = function() {
             const message = String(options && options.message ? options.message : '');
@@ -142,11 +143,23 @@ $inlineJs   = $inlineJs ?? '';
     function cmsAlert(type, message, container) {
         const wrapper = container || document.querySelector('.page-body .container-xl');
         if (!wrapper) return;
+        const allowedTypes = ['success', 'info', 'warning', 'danger', 'primary', 'secondary'];
         const alert = document.createElement('div');
-        alert.className = 'alert alert-' + type + ' alert-dismissible fade show';
+        alert.className = 'alert alert-' + (allowedTypes.indexOf(type) !== -1 ? type : 'info') + ' alert-dismissible fade show';
         alert.setAttribute('role', 'alert');
-        alert.innerHTML = '<div class="d-flex"><div>' + message + '</div></div>' +
-            '<a class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></a>';
+        // Meldungen als Text einfügen (keine HTML-Interpretation von Server-/Nutzerdaten).
+        const row = document.createElement('div');
+        row.className = 'd-flex';
+        const text = document.createElement('div');
+        text.textContent = String(message === undefined || message === null ? '' : message);
+        row.appendChild(text);
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'btn-close';
+        close.setAttribute('data-bs-dismiss', 'alert');
+        close.setAttribute('aria-label', 'Schließen');
+        alert.appendChild(row);
+        alert.appendChild(close);
         wrapper.prepend(alert);
         setTimeout(function() { alert.remove(); }, 8000);
     }

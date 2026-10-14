@@ -593,7 +593,7 @@ class PostsModule
     public function getCategoryAdminData(): array
     {
         $categories = $this->db->get_results(
-            "SELECT c.id, c.name, c.slug, c.slug_en, c.parent_id, c.sort_order, c.replacement_category_id,
+            "SELECT c.id, c.name, c.slug, c.slug_en, c.description, c.parent_id, c.sort_order, c.replacement_category_id,
                     (
                         SELECT COUNT(DISTINCT p2.id)
                         FROM {$this->prefix}posts p2
@@ -602,7 +602,7 @@ class PostsModule
                     ) AS assigned_post_count
              FROM {$this->prefix}post_categories c
              LEFT JOIN {$this->prefix}posts p ON p.category_id = c.id
-               GROUP BY c.id, c.name, c.slug, c.slug_en, c.parent_id, c.sort_order, c.replacement_category_id
+               GROUP BY c.id, c.name, c.slug, c.slug_en, c.description, c.parent_id, c.sort_order, c.replacement_category_id
              ORDER BY c.sort_order ASC, c.name ASC"
         ) ?: [];
 
@@ -624,10 +624,10 @@ class PostsModule
     public function getTagAdminData(int $editTagId = 0): array
     {
         $tags = $this->db->get_results(
-            "SELECT t.id, t.name, t.slug, t.slug_en, COUNT(ptr.post_id) AS post_count
+            "SELECT t.id, t.name, t.slug, t.slug_en, t.description, COUNT(ptr.post_id) AS post_count
              FROM {$this->prefix}post_tags t
              LEFT JOIN {$this->prefix}post_tag_rel ptr ON ptr.tag_id = t.id
-             GROUP BY t.id, t.name, t.slug, t.slug_en
+             GROUP BY t.id, t.name, t.slug, t.slug_en, t.description
              ORDER BY t.name ASC"
         ) ?: [];
 
@@ -1270,6 +1270,7 @@ class PostsModule
         $name = $this->sanitizePlainText((string)($post['cat_name'] ?? ''), 255);
         $slug = $this->normalizeSlug((string)($post['cat_slug'] ?? ''));
         $slugEn = $this->normalizeSlug((string)($post['cat_slug_en'] ?? ''));
+        $description = $this->sanitizePlainText((string)($post['cat_description'] ?? ''), 2000);
         $parentId = (int) ($post['parent_id'] ?? 0);
         $replacementCategoryId = (int) ($post['replacement_category_id'] ?? 0);
 
@@ -1328,8 +1329,8 @@ class PostsModule
         try {
             if ($id > 0) {
                 $this->db->execute(
-                    "UPDATE {$this->prefix}post_categories SET name = ?, slug = ?, slug_en = ?, parent_id = ?, replacement_category_id = ? WHERE id = ?",
-                    [$name, $slug, $slugEn !== '' ? $slugEn : null, $parentId > 0 ? $parentId : null, $replacementCategoryId > 0 ? $replacementCategoryId : null, $id]
+                    "UPDATE {$this->prefix}post_categories SET name = ?, slug = ?, slug_en = ?, description = ?, parent_id = ?, replacement_category_id = ? WHERE id = ?",
+                    [$name, $slug, $slugEn !== '' ? $slugEn : null, $description !== '' ? $description : null, $parentId > 0 ? $parentId : null, $replacementCategoryId > 0 ? $replacementCategoryId : null, $id]
                 );
                 $redirectDetails = $this->createLocalizedTaxonomyArchiveRedirects('category', $previousSlug, $slug, $previousSlugEn, $slugEn);
                 $this->clearContentCacheIfEnabled('post_category_update', $id);
@@ -1340,8 +1341,8 @@ class PostsModule
                 ];
             } else {
                 $this->db->execute(
-                    "INSERT INTO {$this->prefix}post_categories (name, slug, slug_en, parent_id, replacement_category_id) VALUES (?, ?, ?, ?, ?)",
-                    [$name, $slug, $slugEn !== '' ? $slugEn : null, $parentId > 0 ? $parentId : null, $replacementCategoryId > 0 ? $replacementCategoryId : null]
+                    "INSERT INTO {$this->prefix}post_categories (name, slug, slug_en, description, parent_id, replacement_category_id) VALUES (?, ?, ?, ?, ?, ?)",
+                    [$name, $slug, $slugEn !== '' ? $slugEn : null, $description !== '' ? $description : null, $parentId > 0 ? $parentId : null, $replacementCategoryId > 0 ? $replacementCategoryId : null]
                 );
                 $this->clearContentCacheIfEnabled('post_category_create', (int) $this->db->lastInsertId());
                 return ['success' => true, 'message' => 'Kategorie erstellt.'];
@@ -1767,6 +1768,7 @@ class PostsModule
         $name = $this->sanitizePlainText((string) ($post['tag_name'] ?? ''), 120);
         $slug = $this->normalizeSlug((string) ($post['tag_slug'] ?? ''));
         $slugEn = $this->normalizeSlug((string) ($post['tag_slug_en'] ?? ''));
+        $description = $this->sanitizePlainText((string) ($post['tag_description'] ?? ''), 2000);
 
         if ($name === '') {
             return ['success' => false, 'error' => 'Tag-Name darf nicht leer sein.'];
@@ -1799,8 +1801,8 @@ class PostsModule
         try {
             if ($id > 0) {
                 $this->db->execute(
-                    "UPDATE {$this->prefix}post_tags SET name = ?, slug = ?, slug_en = ? WHERE id = ?",
-                    [$name, $slug, $slugEn !== '' ? $slugEn : null, $id]
+                    "UPDATE {$this->prefix}post_tags SET name = ?, slug = ?, slug_en = ?, description = ? WHERE id = ?",
+                    [$name, $slug, $slugEn !== '' ? $slugEn : null, $description !== '' ? $description : null, $id]
                 );
 
                 $redirectDetails = $this->createLocalizedTaxonomyArchiveRedirects('tag', $previousSlug, $slug, $previousSlugEn, $slugEn);
@@ -1815,8 +1817,8 @@ class PostsModule
             }
 
             $this->db->execute(
-                "INSERT INTO {$this->prefix}post_tags (name, slug, slug_en) VALUES (?, ?, ?)",
-                [$name, $slug, $slugEn !== '' ? $slugEn : null]
+                "INSERT INTO {$this->prefix}post_tags (name, slug, slug_en, description) VALUES (?, ?, ?, ?)",
+                [$name, $slug, $slugEn !== '' ? $slugEn : null, $description !== '' ? $description : null]
             );
 
             $this->clearContentCacheIfEnabled('post_tag_create', (int) $this->db->lastInsertId());

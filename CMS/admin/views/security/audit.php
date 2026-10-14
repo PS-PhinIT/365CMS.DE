@@ -100,7 +100,7 @@ $statusBadge = ['ok' => 'bg-success', 'warning' => 'bg-warning', 'critical' => '
         <input type="hidden" name="action" value="run_audit">
         <button type="submit" class="btn btn-primary">Audit erneut ausführen</button>
     </form>
-    <form method="post">
+    <form method="post" data-cms-confirm="Sicherheits-Logs älter als 30 Tage endgültig löschen?">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>">
         <input type="hidden" name="action" value="clear_log">
         <button type="submit" class="btn btn-outline-secondary">Alte Logs bereinigen</button>

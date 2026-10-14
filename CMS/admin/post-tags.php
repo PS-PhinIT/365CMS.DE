@@ -46,6 +46,7 @@ function cms_admin_post_tags_store_form_state(array $post, string $message, arra
             'tag_name' => (string) ($post['tag_name'] ?? ''),
             'tag_slug' => (string) ($post['tag_slug'] ?? ''),
             'tag_slug_en' => (string) ($post['tag_slug_en'] ?? ''),
+            'tag_description' => mb_substr((string) ($post['tag_description'] ?? ''), 0, 2000),
         ],
     ];
 }

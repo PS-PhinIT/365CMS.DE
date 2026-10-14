@@ -1073,6 +1073,19 @@ class SchemaManager
             "ALTER TABLE {$this->prefix}post_tags ADD COLUMN slug_en VARCHAR(100) DEFAULT NULL AFTER slug"
         );
 
+        // Beschreibungen werden seit dem Gesamtaudit 2026-10-14 im Admin gespeichert.
+        $this->ensureColumnExists(
+            $this->prefix . 'post_categories',
+            'description',
+            "ALTER TABLE {$this->prefix}post_categories ADD COLUMN description TEXT AFTER slug_en"
+        );
+
+        $this->ensureColumnExists(
+            $this->prefix . 'post_tags',
+            'description',
+            "ALTER TABLE {$this->prefix}post_tags ADD COLUMN description TEXT AFTER slug_en"
+        );
+
         $ordersSql = self::getSchemaQueries($this->prefix, $this->charset)['orders'] ?? '';
         if ($ordersSql !== '') {
             try {

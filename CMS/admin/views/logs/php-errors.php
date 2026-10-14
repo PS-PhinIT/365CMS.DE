@@ -74,7 +74,7 @@ $previewEntries = array_slice($entries, 0, 10);
     </div>
 </div>
 
-<script>
+<script <?= \CMS\Security::instance()->nonceAttr() ?>>
 (function () {
     const toggle = document.getElementById('phpErrorToggle');
     if (!toggle) return;

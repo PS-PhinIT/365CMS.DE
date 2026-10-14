@@ -99,7 +99,7 @@ $entries = is_array($logs['operational_audit_entries'] ?? null) ? $logs['operati
     </div>
 </div>
 
-<script>
+<script <?= \CMS\Security::instance()->nonceAttr() ?>>
 (function () {
     const body = document.getElementById('opLogBody');
     if (!body) return;

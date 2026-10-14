@@ -15,6 +15,7 @@ $editTagId = (int) ($formValues['tag_id'] ?? ($editTag['id'] ?? 0));
 $editTagName = (string) ($formValues['tag_name'] ?? ($editTag['name'] ?? ''));
 $editTagSlug = (string) ($formValues['tag_slug'] ?? ($editTag['slug'] ?? ''));
 $editTagSlugEn = (string) ($formValues['tag_slug_en'] ?? ($editTag['slug_en'] ?? ''));
+$editTagDescription = (string) ($formValues['tag_description'] ?? ($editTag['description'] ?? ''));
 $isEditing = $editTagId > 0;
 $deleteTagOptions = array_values(array_filter(
     $tagOptions,
@@ -58,6 +59,7 @@ $panelState = [
         'tag_name' => $editTagName,
         'tag_slug' => $editTagSlug,
         'tag_slug_en' => $editTagSlugEn,
+        'tag_description' => $editTagDescription,
     ],
 ];
 $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES);
@@ -214,12 +216,8 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
             </div>
             <div class="mb-3">
                 <label class="form-label" for="postTagPanelDescription">Beschreibung</label>
-                <textarea class="form-control" id="postTagPanelDescription" rows="2" name="tag_description" data-taxonomy-field="tag_description"></textarea>
+                <textarea class="form-control" id="postTagPanelDescription" rows="2" name="tag_description" maxlength="2000" data-taxonomy-field="tag_description"><?php echo htmlspecialchars($editTagDescription, ENT_QUOTES); ?></textarea>
             </div>
-            <label class="form-check form-switch mb-0">
-                <input type="checkbox" class="form-check-input" name="publish_now" value="1" data-taxonomy-field="publish_now">
-                <span class="form-check-label">Sofort veröffentlichen</span>
-            </label>
         </div>
         <div class="taxonomy-slide-panel__footer">
             <button type="button" class="btn btn-outline-secondary" data-taxonomy-cancel>Abbrechen</button>

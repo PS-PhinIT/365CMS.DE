@@ -16,6 +16,7 @@ $editCategoryId = (int) ($formValues['cat_id'] ?? ($editCategory['id'] ?? 0));
 $editCategoryName = (string) ($formValues['cat_name'] ?? ($editCategory['name'] ?? ''));
 $editCategorySlug = (string) ($formValues['cat_slug'] ?? ($editCategory['slug'] ?? ''));
 $editCategorySlugEn = (string) ($formValues['cat_slug_en'] ?? ($editCategory['slug_en'] ?? ''));
+$editCategoryDescription = (string) ($formValues['cat_description'] ?? ($editCategory['description'] ?? ''));
 $editCategoryParentId = (int) ($formValues['parent_id'] ?? ($editCategory['parent_id'] ?? 0));
 $editCategoryReplacementId = (int) ($formValues['replacement_category_id'] ?? ($editCategory['replacement_category_id'] ?? 0));
 $isEditing = $editCategoryId > 0;
@@ -76,6 +77,7 @@ $panelState = [
         'cat_name' => $editCategoryName,
         'cat_slug' => $editCategorySlug,
         'cat_slug_en' => $editCategorySlugEn,
+        'cat_description' => $editCategoryDescription,
         'parent_id' => $editCategoryParentId,
         'replacement_category_id' => $editCategoryReplacementId,
     ],
@@ -269,7 +271,7 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
             </div>
             <div class="mb-3">
                 <label class="form-label" for="postCategoryPanelDescription">Beschreibung</label>
-                <textarea class="form-control" id="postCategoryPanelDescription" rows="3" name="cat_description" data-taxonomy-field="cat_description"></textarea>
+                <textarea class="form-control" id="postCategoryPanelDescription" rows="3" name="cat_description" maxlength="2000" data-taxonomy-field="cat_description"><?php echo htmlspecialchars($editCategoryDescription, ENT_QUOTES); ?></textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label" for="postCategoryPanelParent">Übergeordnete Kategorie</label>
@@ -284,14 +286,6 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="mb-3">
-                <label class="form-label" for="postCategoryPanelColor">Farbe</label>
-                <input type="color" class="form-control form-control-color" id="postCategoryPanelColor" name="cat_color" value="#2563eb" data-taxonomy-field="cat_color">
-            </div>
-            <label class="form-check form-switch mb-0">
-                <input type="checkbox" class="form-check-input" name="publish_now" value="1" data-taxonomy-field="publish_now">
-                <span class="form-check-label">Sofort veröffentlichen</span>
-            </label>
         </div>
         <div class="taxonomy-slide-panel__footer">
             <button type="button" class="btn btn-outline-secondary" data-taxonomy-cancel>Abbrechen</button>
