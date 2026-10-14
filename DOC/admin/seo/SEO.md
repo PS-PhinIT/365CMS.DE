@@ -17,7 +17,7 @@ Since 3.4.08 template variables in stored meta fields (`%title%`, `%%sitename%%`
 |---|---|---|
 | `/admin/seo-dashboard` | Übersicht: SEO-Score, Problemzähler, Sitemap-Status | – |
 | `/admin/seo-audit` | Inhalte mit SEO-Problemen, Einzelkorrektur | `save_audit_item` |
-| `/admin/seo-meta` | Titel-Format, Trenner, Startseite, Standard-Robots, Lesbarkeitsgrenzen | `save_meta_defaults`, `save_templates` |
+| `/admin/seo-meta` | Titel-Format, Trenner, Startseite, Standard-Robots, Lesbarkeitsgrenzen, CSV-Export/-Import der Beitrags-SEO-Metadaten | `save_meta_defaults`, `save_templates`, `import_post_meta_csv`; Export per GET `?export=posts_csv` |
 | `/admin/seo-social` | Open Graph / Twitter-Standards, Profile | `save_social_defaults` |
 | `/admin/seo-schema` | Strukturierte Daten (JSON-LD) | `save_schema_defaults` |
 | `/admin/seo-sitemap` | Sitemap-Einstellungen, IndexNow, Google Indexing API | `save_sitemap_settings`, `submit_indexing_urls`, `submit_recent_content_indexnow`, `delete_google_url`, `save_google_access_token`, `clear_google_access_token` |
@@ -38,6 +38,23 @@ Analysen (`/admin/analytics`), Weiterleitungen und 404-Monitor: siehe [ANALYTICS
 | Lesbarkeitsanalyse | Mindestwörter (`analysis_min_words`), max. Wörter je Satz/Absatz |
 
 **Template-Variablen** (Yoast `%%var%%` und Rank Math `%var%`): `title`, `sitename`, `sep`, `page`, `excerpt`, `category`, `currentyear` u. a. Unbekannte Variablen werden samt verwaister Trenner entfernt. Gilt für Meta-Titel, Meta-Beschreibung sowie OG-/Twitter-Titel und -Beschreibung – wichtig nach WordPress-Importen.
+
+#### Beitrags-SEO-Metadaten per CSV
+
+Die Karte *SEO-Metadaten der Beiträge per CSV* (bzw. der Button *Beitrags-Metadaten als CSV* in der Toolbar) exportiert alle Beiträge außer dem Papierkorb (max. 20.000) als UTF-8-CSV mit Semikolon. Nach dem Bearbeiten wird die Datei über dieselbe Karte wieder importiert (max. 5 MB / 5.000 Zeilen). Logik: `CMS\Services\SEO\PostSeoMetaCsvService`, CSV-Hilfen: `CMS\Services\CsvExchange`.
+
+| Spalten | Verhalten beim Import |
+|---|---|
+| `post_id`, `slug` | Zuordnung. Vorrang hat `post_id`; passt der Slug nicht zur ID, wird die Zeile abgelehnt. Ohne `post_id` wird über den Slug gesucht. |
+| `title`, `status`, `url` | Nur zur Orientierung, werden ignoriert. |
+| `meta_title`, `meta_description` | Spalten in `cms_posts` |
+| `focus_keyphrase`, `keywords`, `canonical_url`, `robots_index`, `robots_follow`, `og_title`, `og_description`, `og_image`, `twitter_card`, `twitter_title`, `twitter_description`, `twitter_image`, `schema_type`, `sitemap_priority`, `sitemap_changefreq`, `hreflang_group` | Spalten in `cms_seo_meta` |
+
+- Titel, Slug, Inhalt, Auszug, Status, Kategorien und `updated_at` der Beiträge bleiben unverändert.
+- Fehlt eine Spalte in der Datei, bleibt das Feld unverändert. Eine leere Zelle setzt das Feld auf den Standard zurück (bei `robots_index`/`robots_follow`: `1`).
+- Validierung: URLs müssen mit `/` beginnen oder `http(s)://` sein; `twitter_card` = `summary_large_image` oder `summary`; `schema_type` = `Article`, `BlogPosting` oder `NewsArticle`; `sitemap_priority` 0–1 (Komma oder Punkt); `sitemap_changefreq` = `always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`. Fehlerhafte Zeilen werden mit Zeilennummer gemeldet und übersprungen, der Rest wird übernommen.
+- Deutsche Spaltennamen (z. B. *Meta-Titel*, *Fokus-Keyphrase*, *Sitemap-Priorität*) sowie Komma- oder Tab-getrennte Dateien werden ebenfalls erkannt.
+- Export und Import werden im Audit-Log protokolliert (`seo.post_meta.export.csv`, `seo.post_meta.import.csv`). Nach Änderungen werden die Sitemaps und – sofern aktiviert – der Content-Cache invalidiert.
 
 ### Social (`/admin/seo-social`)
 

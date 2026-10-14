@@ -33,7 +33,7 @@ function cms_admin_seo_allowed_page_configs(): array
             'view_file' => __DIR__ . '/views/seo/meta.php',
             'page_title' => 'SEO Meta-Daten',
             'active_page' => 'seo-meta',
-            'actions' => ['save_meta_defaults', 'save_templates', 'regenerate_sitemap_bundle', 'save_robots'],
+            'actions' => ['save_meta_defaults', 'save_templates', 'import_post_meta_csv', 'regenerate_sitemap_bundle', 'save_robots'],
         ],
         'social' => [
             'route_path' => '/admin/seo-social',
@@ -204,6 +204,29 @@ $seoViewFile = $seoPageConfig['view_file'];
 $pageTitle = $seoPageConfig['page_title'];
 $activePage = $seoPageConfig['active_page'];
 
+if ($seoSection === 'meta' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_GET['export'] ?? null) === 'posts_csv') {
+    if (!cms_admin_seo_can_access_section($seoSection)
+        || (class_exists(CoreModuleService::class) && !CoreModuleService::getInstance()->isAdminPageEnabled($activePage))
+    ) {
+        header('Location: /');
+        exit;
+    }
+
+    require_once __DIR__ . '/modules/seo/SeoSuiteModule.php';
+
+    try {
+        (new SeoSuiteModule())->streamPostMetaCsvExport();
+    } catch (\Throwable $e) {
+        \CMS\Logger::instance()->withChannel('seo')->warning('CSV-Export der Beitrags-SEO-Metadaten fehlgeschlagen.', [
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
+        ]);
+        $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => 'Der CSV-Export konnte nicht erstellt werden.', 'details' => []];
+        header('Location: ' . $seoRoutePath);
+        exit;
+    }
+}
+
 $sectionPageConfig = [
     'section' => $seoSection,
     'route_path' => $seoRoutePath,
@@ -256,7 +279,9 @@ $sectionPageConfig = [
             ];
         }
 
-        $result = $module->handleAction($section, $action, $post);
+        $result = $action === 'import_post_meta_csv'
+            ? $module->importPostMetaCsv($_FILES['post_meta_csv'] ?? null)
+            : $module->handleAction($section, $action, $post);
         return is_array($result) ? $result : [
             'success' => false,
             'error' => 'Unbekannte Antwort.',

@@ -8,9 +8,11 @@ if (!defined('ABSPATH')) {
 use CMS\Database;
 use CMS\AuditLogger;
 use CMS\Services\AnalyticsService;
+use CMS\Services\CsvExchange;
 use CMS\Services\IndexingService;
 use CMS\Services\PermalinkService;
 use CMS\Services\RedirectService;
+use CMS\Services\SEO\PostSeoMetaCsvService;
 use CMS\Services\SEOService;
 use CMS\Services\SeoAnalysisService;
 use CMS\Services\SeoBrokenLinkService;
@@ -18,6 +20,8 @@ use CMS\Services\SeoTrendService;
 
 final class SeoSuiteModule
 {
+	private const POST_META_CSV_MAX_BYTES = 5 * 1024 * 1024;
+
 	private const META_DEFAULTS = [
 		'seo_site_title_format' => '%%title%% %%sep%% %%sitename%%',
 		'seo_title_separator' => '|',
@@ -216,6 +220,46 @@ final class SeoSuiteModule
 			'save_robots' => $this->saveRobotsTxt(),
 			default => ['success' => false, 'error' => 'Unbekannte SEO-Aktion für Bereich „' . $section . '“.'],
 		};
+	}
+
+	public function streamPostMetaCsvExport(): never
+	{
+		$rows = PostSeoMetaCsvService::getInstance()->getExportRows();
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.post_meta.export.csv',
+			'SEO-Metadaten der Beiträge wurden als CSV exportiert.',
+			'post',
+			null,
+			['format' => 'csv', 'rows' => count($rows)],
+			'info'
+		);
+
+		CsvExchange::stream('beitraege-seo-metadaten', PostSeoMetaCsvService::EXPORT_COLUMNS, $rows);
+	}
+
+	public function importPostMetaCsv(mixed $file): array
+	{
+		try {
+			$content = CsvExchange::readUploadedFile($file, self::POST_META_CSV_MAX_BYTES);
+		} catch (\InvalidArgumentException $e) {
+			return ['success' => false, 'error' => $e->getMessage()];
+		}
+
+		$result = PostSeoMetaCsvService::getInstance()->importFromCsv($content);
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.post_meta.import.csv',
+			'SEO-Metadaten der Beiträge wurden per CSV importiert.',
+			'post',
+			null,
+			array_merge(['format' => 'csv'], is_array($result['summary'] ?? null) ? $result['summary'] : []),
+			!empty($result['success']) ? 'info' : 'warning'
+		);
+
+		return $result;
 	}
 
 	public function regenerateSitemapBundle(): array

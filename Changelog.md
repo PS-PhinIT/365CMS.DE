@@ -20,6 +20,7 @@
 |---------|-----|---------|--------------|
 | **3.4.24** | 🟢 feat | SEO / 404-Monitor | *CSV exportieren* lädt das 404-Protokoll (bis 20.000 Pfade, ohne IP-Adresse und User-Agent) im Importformat der Weiterleitungen herunter. |
 | **3.4.24** | 🟢 feat | SEO / Weiterleitungen | Bestehende Weiterleitungen lassen sich als CSV exportieren und per CSV-Import (bis 2 MB / 5.000 Zeilen) massenweise anlegen oder ändern. Zeilen ohne Ziel werden übersprungen, vorhandene Regeln über `redirect_id` bzw. Quelle + Site aktualisiert, fehlerhafte Zeilen mit Zeilennummer gemeldet. |
+| **3.4.24** | 🟢 feat | SEO / Meta-Daten | Unter `/admin/seo-meta` lassen sich die SEO-Metadaten aller Beiträge (Meta-Titel/-Beschreibung, Fokus-Keyphrase, Canonical, Robots, Open Graph, Twitter, Schema-Typ, Sitemap, hreflang) als CSV exportieren und nach der Bearbeitung wieder importieren. Zuordnung über `post_id` bzw. Slug; Titel, Inhalt, Status und Änderungsdatum der Beiträge bleiben unberührt. |
 
 ---
 

@@ -561,7 +561,13 @@ final class RedirectService
         $summary = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => 0, 'failed' => 0];
 
         try {
-            $records = $this->parseRedirectCsv($csvContent);
+            $records = CsvExchange::parse(
+                $csvContent,
+                self::CSV_HEADER_ALIASES,
+                ['source_path', 'target_url'],
+                self::CSV_IMPORT_MAX_ROWS,
+                implode(';', self::CSV_IMPORT_COLUMNS)
+            );
         } catch (\InvalidArgumentException $e) {
             return ['success' => false, 'error' => $e->getMessage(), 'details' => [], 'summary' => $summary];
         }
@@ -623,7 +629,7 @@ final class RedirectService
             }
 
             $rawActive = trim((string)($record['is_active'] ?? ''));
-            $isActive = $rawActive !== '' ? $this->parseCsvBoolean($rawActive) : ($existing === null || (int)($existing['is_active'] ?? 0) === 1);
+            $isActive = $rawActive !== '' ? CsvExchange::parseBoolean($rawActive) : ($existing === null || (int)($existing['is_active'] ?? 0) === 1);
             if ($isActive === null) {
                 $fail($line, $source, 'Ungültiger Wert für is_active (erlaubt: 1/0, ja/nein).');
                 continue;
@@ -699,129 +705,6 @@ final class RedirectService
             'details' => [],
             'summary' => $summary,
         ];
-    }
-
-    /**
-     * @return array<int, array<string, string>> Datensätze, indiziert nach Tabellenzeile (Kopfzeile = 1)
-     */
-    private function parseRedirectCsv(string $content): array
-    {
-        if (str_starts_with($content, "\xEF\xBB\xBF")) {
-            $content = substr($content, 3);
-        }
-
-        if (preg_match('//u', $content) !== 1) {
-            $converted = function_exists('mb_convert_encoding')
-                ? mb_convert_encoding($content, 'UTF-8', 'Windows-1252')
-                : (function_exists('iconv') ? iconv('Windows-1252', 'UTF-8//IGNORE', $content) : false);
-            if (!is_string($converted) || preg_match('//u', $converted) !== 1) {
-                throw new \InvalidArgumentException('Die CSV-Datei konnte nicht gelesen werden. Bitte als UTF-8 speichern.');
-            }
-            $content = $converted;
-        }
-
-        if (trim($content) === '') {
-            throw new \InvalidArgumentException('Die CSV-Datei ist leer.');
-        }
-
-        $firstLine = preg_split('/\r\n|\r|\n/', $content, 2)[0] ?? '';
-        $delimiter = ';';
-        $bestCount = 0;
-        foreach ([';', ',', "\t"] as $candidate) {
-            $count = substr_count($firstLine, $candidate);
-            if ($count > $bestCount) {
-                $bestCount = $count;
-                $delimiter = $candidate;
-            }
-        }
-
-        $handle = fopen('php://temp', 'w+b');
-        if ($handle === false) {
-            throw new \InvalidArgumentException('Die CSV-Datei konnte nicht verarbeitet werden.');
-        }
-
-        try {
-            fwrite($handle, $content);
-            rewind($handle);
-
-            $header = fgetcsv($handle, 0, $delimiter, '"', '');
-            if (!is_array($header)) {
-                throw new \InvalidArgumentException('Die CSV-Datei enthält keine Kopfzeile.');
-            }
-
-            $columnMap = [];
-            foreach ($header as $index => $label) {
-                $field = $this->resolveCsvHeader((string)$label);
-                if ($field !== null && !in_array($field, $columnMap, true)) {
-                    $columnMap[$index] = $field;
-                }
-            }
-
-            if (!in_array('source_path', $columnMap, true) || !in_array('target_url', $columnMap, true)) {
-                throw new \InvalidArgumentException(
-                    'Die CSV-Datei benötigt mindestens die Spalten source_path und target_url. Erwartete Spalten: '
-                    . implode(';', self::CSV_IMPORT_COLUMNS)
-                );
-            }
-
-            $records = [];
-            $line = 1;
-            while (($cells = fgetcsv($handle, 0, $delimiter, '"', '')) !== false) {
-                $line++;
-                if ($cells === [null] || implode('', array_map(static fn ($cell): string => trim((string)$cell), $cells)) === '') {
-                    continue;
-                }
-
-                if (count($records) >= self::CSV_IMPORT_MAX_ROWS) {
-                    throw new \InvalidArgumentException(sprintf(
-                        'Die CSV-Datei enthält mehr als %d Datensätze. Bitte in mehrere Dateien aufteilen.',
-                        self::CSV_IMPORT_MAX_ROWS
-                    ));
-                }
-
-                $record = [];
-                foreach ($columnMap as $index => $field) {
-                    $record[$field] = (string)($cells[$index] ?? '');
-                }
-                $records[$line] = $record;
-            }
-        } finally {
-            fclose($handle);
-        }
-
-        if ($records === []) {
-            throw new \InvalidArgumentException('Die CSV-Datei enthält keine Datensätze.');
-        }
-
-        return $records;
-    }
-
-    private function resolveCsvHeader(string $label): ?string
-    {
-        $normalize = static fn (string $value): string => trim(
-            (string)preg_replace('/[\s\-]+/u', '_', strtolower(trim($value, " \t\n\r\0\x0B\"'"))),
-            '_'
-        );
-        $label = $normalize($label);
-
-        foreach (self::CSV_HEADER_ALIASES as $field => $aliases) {
-            if (in_array($label, $aliases, true)) {
-                return $field;
-            }
-        }
-
-        return null;
-    }
-
-    private function parseCsvBoolean(string $value): ?bool
-    {
-        $value = strtolower(trim($value));
-
-        return match (true) {
-            in_array($value, ['1', 'ja', 'j', 'yes', 'y', 'true', 'wahr', 'aktiv', 'active', 'x', 'on'], true) => true,
-            in_array($value, ['0', 'nein', 'n', 'no', 'false', 'falsch', 'inaktiv', 'inactive', 'off'], true) => false,
-            default => null,
-        };
     }
 
     private function normalizePath(string $path): string
