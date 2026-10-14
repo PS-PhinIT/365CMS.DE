@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – DSGVO-Anfragen (Auskunft & Löschung)
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/data-requests` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_data_requests` | **Core-Modul:** `legal`
 
 ## English (summary)

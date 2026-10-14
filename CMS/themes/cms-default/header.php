@@ -319,7 +319,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
       <a href="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . $accountPath, ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link"><span aria-hidden="true">👤</span> Mein Bereich</a>
       <form method="POST" action="<?php echo htmlspecialchars($logoutAction, ENT_QUOTES, 'UTF-8'); ?>" class="logout-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($logoutToken, ENT_QUOTES, 'UTF-8'); ?>">
-        <button type="submit" class="mobile-nav-link mobile-nav-link--button"><span aria-hidden="true">⬡</span> Logout</button>
+        <button type="submit" class="mobile-nav-link mobile-nav-link--button"><span aria-hidden="true">⬡</span> Abmelden</button>
       </form>
     <?php else: ?>
       <?php if ($showLoginBtn): ?>

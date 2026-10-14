@@ -168,9 +168,9 @@ $areaRows = [
             <div class="card-header"><h3 class="card-title mb-0">Letzte Aktivitäten</h3></div>
             <div class="card-body border-bottom">
                 <div class="row g-2">
-                    <div class="col-md-4"><input type="search" class="form-control" id="logsActivitySearch" placeholder="Suche in Aktionen oder Meldungen..."></div>
+                    <div class="col-md-4"><input type="search" class="form-control" id="logsActivitySearch" aria-label="Aktivitäten durchsuchen" placeholder="Suche in Aktionen oder Meldungen..."></div>
                     <div class="col-md-3">
-                        <select class="form-select" id="logsActivityArea">
+                        <select class="form-select" id="logsActivityArea" aria-label="Nach Bereich filtern">
                             <option value="">Bereich (alle)</option>
                             <option value="system">System</option>
                             <option value="auth">Auth</option>
@@ -180,7 +180,7 @@ $areaRows = [
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" id="logsActivityLevel">
+                        <select class="form-select" id="logsActivityLevel" aria-label="Nach Level filtern">
                             <option value="">Level (alle)</option>
                             <option value="info">Info</option>
                             <option value="warning">Warning</option>
@@ -188,7 +188,7 @@ $areaRows = [
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <select class="form-select" id="logsActivityRange">
+                        <select class="form-select" id="logsActivityRange" aria-label="Zeitraum wählen">
                             <option value="1">Heute</option>
                             <option value="7" selected>7 Tage</option>
                             <option value="30">30 Tage</option>

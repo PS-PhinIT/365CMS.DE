@@ -513,7 +513,7 @@ $additionalCategoryIds = array_values(array_filter(
                                         <input type="date" class="form-control" id="contentUpdatedDate" name="content_updated_date" value="<?php echo htmlspecialchars($contentUpdatedDate); ?>">
                                     </div>
                                     <div class="col-sm-5">
-                                        <input type="time" class="form-control" id="contentUpdatedTime" name="content_updated_time" value="<?php echo htmlspecialchars($contentUpdatedTime); ?>" step="60">
+                                        <input type="time" class="form-control" id="contentUpdatedTime" aria-label="Aktualisierungsuhrzeit (öffentlich sichtbar)" name="content_updated_time" value="<?php echo htmlspecialchars($contentUpdatedTime); ?>" step="60">
                                     </div>
                                 </div>
                                 <div class="form-hint">Optional. Leer lassen = kein „Aktualisiert am“-Hinweis im Artikel und kein Update-Badge in den Übersichten. Ausgefüllt = wird am Artikelende als „Aktualisiert am“ angezeigt.</div>

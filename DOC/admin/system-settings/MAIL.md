@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Mail & Azure OAuth2
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/mail-settings` (Tabs `transport`, `azure`, `graph`, `logs`, `queue`) | **Capability:** lesen `manage_settings` oder `manage_system`, schreiben `manage_settings` | **CSRF-Aktion:** `admin_mail_settings`
 
 ## English (summary)

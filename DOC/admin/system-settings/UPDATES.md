@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Updates
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/updates` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_updates`
 
 ## English (summary)
@@ -13,7 +13,7 @@
 
 | Bereich | Inhalt |
 |---|---|
-| Core | installierte Version (`CMS\Version::CURRENT`, derzeit `3.4.00`), verfügbare Version laut Update-Quelle, Release-Notizen, kritisch ja/nein |
+| Core | installierte Version (`CMS\Version::CURRENT`, derzeit `3.5.0`), verfügbare Version laut Update-Quelle, Release-Notizen, kritisch ja/nein |
 | Datenbank | installierte und Ziel-Schema-Version (`SchemaManager::SCHEMA_VERSION = v23`), Downgrade-Erkennung |
 | Plugins | installierte vs. verfügbare Versionen aus der Plugin-Registry |
 | Theme | aktives Theme vs. Marktplatz-Version |
@@ -43,10 +43,10 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
 {
   "slug": "365cms-core",
   "type": "core",
-  "version": "3.4.00",
-  "min_php": "8.4",
-  "released": "2026-09-05",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.4.0-update.zip",
+  "version": "3.5.0",
+  "min_php": "8.4.1",
+  "released": "2026-10-14",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
   "checksum_sha256": "<64 Hex-Zeichen>",
   "notes": "…",

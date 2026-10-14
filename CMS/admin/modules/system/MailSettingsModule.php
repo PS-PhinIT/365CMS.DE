@@ -352,7 +352,7 @@ class MailSettingsModule
             !empty($result['success']) ? 'info' : 'warning'
         );
 
-        return $result;
+        return new MailSettingsActionResult($result);
     }
 
     public function saveQueue(array $post): MailSettingsActionResult
@@ -415,7 +415,7 @@ class MailSettingsModule
             return $this->failResult('mail.queue.run_failed', 'Mail-Queue-Lauf konnte nicht gestartet werden.', $e);
         }
 
-        $result = $this->sanitizeActionResponse($result);
+        $result = $this->sanitizeActionResponse($result, ['processed', 'sent', 'failed']);
 
         AuditLogger::instance()->log(
             AuditLogger::CAT_SYSTEM,
@@ -427,7 +427,7 @@ class MailSettingsModule
             !empty($result['success']) ? 'info' : 'warning'
         );
 
-        return $result;
+        return new MailSettingsActionResult($result);
     }
 
     public function releaseQueueStale(): MailSettingsActionResult
@@ -494,7 +494,7 @@ class MailSettingsModule
             !empty($result['success']) ? 'info' : 'warning'
         );
 
-        return $result;
+        return new MailSettingsActionResult($result);
     }
 
     public function testGraphConnection(): MailSettingsActionResult
@@ -509,7 +509,7 @@ class MailSettingsModule
             return $this->failResult('setting.graph.test_failed', 'Microsoft-Graph-Verbindungstest fehlgeschlagen.', $e);
         }
 
-        $result = $this->sanitizeActionResponse($result, ['token_expires_at']);
+        $result = $this->sanitizeActionResponse($result, ['token_expires_at', 'organization']);
 
         AuditLogger::instance()->log(
             AuditLogger::CAT_SETTING,
@@ -524,7 +524,7 @@ class MailSettingsModule
             !empty($result['success']) ? 'info' : 'warning'
         );
 
-        return $result;
+        return new MailSettingsActionResult($result);
     }
 
     public function clearLogs(): MailSettingsActionResult
@@ -836,7 +836,7 @@ class MailSettingsModule
      * @param list<string> $allowedExtraKeys
      * @return array<string, mixed>
      */
-    private function sanitizeActionResponse(array $result, array $allowedExtraKeys = []): MailSettingsActionResult
+    private function sanitizeActionResponse(array $result, array $allowedExtraKeys = []): array
     {
         $sanitized = [
             'success' => !empty($result['success']),
@@ -856,6 +856,11 @@ class MailSettingsModule
             }
 
             $value = $result[$key];
+            if (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeExtraArray($value);
+                continue;
+            }
+
             if (is_string($value)) {
                 $sanitized[$key] = $this->sanitizeText($value, self::MAX_TEXT_LENGTH);
                 continue;
@@ -866,12 +871,32 @@ class MailSettingsModule
             }
         }
 
-        return new MailSettingsActionResult($sanitized);
+        return $sanitized;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     * @return array<array-key, mixed>
+     */
+    private function sanitizeExtraArray(array $values, int $depth = 0): array
+    {
+        $sanitized = [];
+        foreach ($values as $itemKey => $itemValue) {
+            if (is_string($itemValue)) {
+                $sanitized[$itemKey] = $this->sanitizeText($itemValue, self::MAX_TEXT_LENGTH);
+            } elseif (is_int($itemValue) || is_float($itemValue) || is_bool($itemValue) || $itemValue === null) {
+                $sanitized[$itemKey] = $itemValue;
+            } elseif (is_array($itemValue) && $depth < 1) {
+                $sanitized[$itemKey] = $this->sanitizeExtraArray($itemValue, $depth + 1);
+            }
+        }
+
+        return $sanitized;
     }
 
     private function failResult(string $action, string $message, \Throwable $e): MailSettingsActionResult
     {
-        Logger::error($message, [
+        Logger::instance()->error($message, [
             'module' => 'MailSettingsModule',
             'action' => $action,
             'exception' => $e::class,

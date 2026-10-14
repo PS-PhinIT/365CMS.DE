@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – API-Referenz
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.14) | **Status:** Stable
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -12,7 +12,7 @@ The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRout
 
 | Methode | Route | Zugriff | Antwort |
 |---|---|---|---|
-| GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"3.4.00"}` |
+| GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"3.5.0"}` |
 | GET | `/api/v1/pages?q=<suche>` | angemeldet | `{"data":[…]}` – Seitensuche (`PageManager::search()`, leere Suche → leere Liste) |
 | GET | `/api/v1/pages/:slug` | angemeldet | `{"data":{…}}` oder `404 {"error":"Page not found"}` |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft | `204` |
@@ -73,7 +73,7 @@ Plugins registrieren Routen im Hook `register_routes`. Für JSON-Endpunkte unter
 - **Token holen:** `POST /api/v1/auth/token` aus einer angemeldeten Browser-Session (Login inkl. MFA) mit gleicher Herkunft. Ein reiner Passwort-Login per API ist bewusst nicht vorgesehen, weil er die Zwei-Faktor-Anmeldung umgehen würde.
 - **Verwenden:** `Authorization: Bearer <access_token>` auf `/api/*`. `Router::dispatch()` ruft dafür `Auth::authenticateBearerToken()` auf; der Benutzer muss aktiv sein, Refresh-Tokens werden als Access-Token abgelehnt. Es entsteht keine Session.
 - **Erneuern:** `POST /api/v1/auth/refresh` mit `refresh_token` (Laufzeit 30 Tage). Das Konto muss weiterhin aktiv sein.
-- **Widerruf:** Tokens sind zustandslos. Sperren des Kontos (Status ≠ `active`) entwertet sie sofort; alle Tokens lassen sich durch Ändern von `JWT_SECRET` ungültig machen. Laufzeit über `JWT_TTL` (Standard 3600 s).
+- **Widerruf:** Tokens sind zustandslos. Sperren des Kontos (Status ≠ `active`) entwertet sie sofort. Seit 3.5.0 tragen Access- und Refresh-Token den Claim `pwf` (Fingerabdruck des aktuellen Passwort-Hashes): Eine Passwortänderung oder ein Passwort-Reset entwertet alle Tokens des Kontos; Tokens ohne `pwf` (ausgestellt vor 3.5.0) werden abgelehnt und müssen neu geholt werden. Alle Tokens lassen sich zusätzlich durch Ändern von `JWT_SECRET` ungültig machen. Laufzeit über `JWT_TTL` (Standard 3600 s).
 - Endpunkte mit CSRF-Pflicht (`/api/upload`, `/api/v1/admin/*/test`) verlangen auch bei Bearer-Anmeldung ihr CSRF-Token.
 
 ```bash

@@ -474,7 +474,7 @@ if ($modifiedFilter !== 'all') {
                                     <input type="hidden" name="confirm_member" value="1">
                                 <?php endif; ?>
                                 <div class="media-filters-primary">
-                                    <select class="form-select form-select-sm media-filter-category" name="category" data-media-auto-submit-select="1">
+                                    <select class="form-select form-select-sm media-filter-category" name="category" data-media-auto-submit-select="1" aria-label="Nach Kategorie filtern">
                                         <option value="">Alle Kategorien</option>
                                         <?php foreach ($categoryOptions as $cat): ?>
                                             <option value="<?php echo htmlspecialchars((string)($cat['slug'] ?? '')); ?>" <?php echo $category === ($cat['slug'] ?? '') ? 'selected' : ''; ?>>
@@ -482,7 +482,7 @@ if ($modifiedFilter !== 'all') {
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <select class="form-select form-select-sm media-filter-category" name="usage_filter" data-media-auto-submit-select="1">
+                                    <select class="form-select form-select-sm media-filter-category" name="usage_filter" data-media-auto-submit-select="1" aria-label="Nach Verwendung filtern">
                                         <?php foreach ($usageFilterOptions as $option): ?>
                                             <option value="<?php echo htmlspecialchars((string)($option['value'] ?? 'all')); ?>" <?php echo $usageFilter === ($option['value'] ?? 'all') ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars((string)($option['label'] ?? 'Alle Medien')); ?>
@@ -490,8 +490,8 @@ if ($modifiedFilter !== 'all') {
                                         <?php endforeach; ?>
                                     </select>
                                     <div class="input-group input-group-sm media-filter-search">
-                                        <input type="search" class="form-control" name="q" placeholder="Dateien suchen …" value="<?php echo htmlspecialchars($search); ?>" maxlength="<?php echo (int)($constraints['search_max_length'] ?? 120); ?>">
-                                        <button type="submit" class="btn btn-icon">
+                                        <input type="search" class="form-control" name="q" aria-label="Dateien suchen" placeholder="Dateien suchen …" value="<?php echo htmlspecialchars($search); ?>" maxlength="<?php echo (int)($constraints['search_max_length'] ?? 120); ?>">
+                                        <button type="submit" class="btn btn-icon" aria-label="Suchen">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
                                         </button>
                                     </div>
@@ -689,7 +689,7 @@ if ($modifiedFilter !== 'all') {
                                     <span class="badge bg-blue-lt"><span id="mediaBulkSelectedCount">0</span> ausgewählt</span>
                                 </div>
                                 <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center ms-lg-auto w-100 justify-content-lg-end">
-                                    <select class="form-select" id="mediaBulkAction" name="bulk_action" style="max-width: 15rem;">
+                                    <select class="form-select" id="mediaBulkAction" aria-label="Bulk-Aktion wählen" name="bulk_action" style="max-width: 15rem;">
                                         <option value="">Bulk-Aktion wählen …</option>
                                         <?php foreach ($bulkActions as $bulkAction): ?>
                                             <option value="<?php echo htmlspecialchars((string)($bulkAction['value'] ?? ''), ENT_QUOTES); ?>"><?php echo htmlspecialchars((string)($bulkAction['label'] ?? '')); ?></option>
@@ -707,12 +707,12 @@ if ($modifiedFilter !== 'all') {
                                         </button>
                                     <?php endif; ?>
                                     <div class="d-none" id="mediaBulkMoveWrap">
-                                        <select class="form-select" id="mediaBulkTarget" name="target_parent_path" style="min-width: 18rem; max-width: 24rem;">
+                                        <select class="form-select" id="mediaBulkTarget" aria-label="Zielordner wählen" name="target_parent_path" style="min-width: 18rem; max-width: 24rem;">
                                             <?php echo renderMoveTargetOptions($moveTargets, $path); ?>
                                         </select>
                                     </div>
                                     <div class="d-none" id="mediaBulkCategoryWrap">
-                                        <select class="form-select" id="mediaBulkCategory" name="category_slug" style="min-width: 16rem; max-width: 22rem;" disabled>
+                                        <select class="form-select" id="mediaBulkCategory" aria-label="Kategorie wählen" name="category_slug" style="min-width: 16rem; max-width: 22rem;" disabled>
                                             <option value="">Ohne Kategorie</option>
                                             <?php foreach ($categoryOptions as $cat): ?>
                                                 <option value="<?php echo htmlspecialchars((string)($cat['slug'] ?? ''), ENT_QUOTES); ?>">
@@ -726,6 +726,7 @@ if ($modifiedFilter !== 'all') {
                                             type="text"
                                             class="form-control"
                                             id="mediaBulkTags"
+                                            aria-label="Tags für ausgewählte Dateien"
                                             name="tag_list"
                                             placeholder="Tags, kommagetrennt"
                                             maxlength="<?php echo (int)(($constraints['tag_name_max_length'] ?? 40) * ($constraints['max_bulk_tags'] ?? 20)); ?>"
@@ -958,7 +959,7 @@ if ($modifiedFilter !== 'all') {
                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                                                     <input type="hidden" name="action" value="assign_category">
                                                     <input type="hidden" name="file_path" value="<?php echo htmlspecialchars((string)($file['path'] ?? '')); ?>">
-                                                    <select class="form-select form-select-sm" name="category_slug" data-media-auto-submit-select="1">
+                                                    <select class="form-select form-select-sm" name="category_slug" data-media-auto-submit-select="1" aria-label="Kategorie zuweisen">
                                                         <option value="">Ohne Kategorie</option>
                                                         <?php foreach ($categoryOptions as $cat): ?>
                                                             <option value="<?php echo htmlspecialchars((string)($cat['slug'] ?? '')); ?>" <?php echo (($file['category'] ?? '') === ($cat['slug'] ?? '')) ? 'selected' : ''; ?>>
@@ -1015,7 +1016,7 @@ if ($modifiedFilter !== 'all') {
             <input type="hidden" name="parent_path" value="<?php echo htmlspecialchars($path); ?>">
             <div class="modal-header">
                 <h5 class="modal-title">Neuer Ordner</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <div class="modal-body">
                 <label class="form-label" for="folderName">Ordnername</label>
@@ -1038,7 +1039,7 @@ if ($modifiedFilter !== 'all') {
             <input type="hidden" name="target_path" value="<?php echo htmlspecialchars($path); ?>">
             <div class="modal-header">
                 <h5 class="modal-title">Dateien hochladen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">

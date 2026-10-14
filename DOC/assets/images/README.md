@@ -1,6 +1,6 @@
 # Interne Bild-Assets
 
-> **Stand:** 2026-09-06 | **CMS-Version:** 3.4.00 | **Status:** Aktuell
+> **Stand:** 2026-09-06 | **CMS-Version:** 3.5.0 | **Status:** Aktuell
 
 ## Kurzbeschreibung
 

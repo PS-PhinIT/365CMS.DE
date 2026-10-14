@@ -91,20 +91,20 @@ if ($order !== []) {
 
                                         <div class="row g-2 mb-3">
                                             <div class="col-sm-8">
-                                                <label class="form-label small mb-1">Titel</label>
-                                                <input type="text" class="form-control form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][title]" maxlength="120" value="<?php echo htmlspecialchars((string)($widget['label'] ?? '')); ?>">
+                                                <label for="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-title" class="form-label small mb-1">Titel</label>
+                                                <input id="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-title" type="text" class="form-control form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][title]" maxlength="120" value="<?php echo htmlspecialchars((string)($widget['label'] ?? '')); ?>">
                                             </div>
                                             <div class="col-sm-4">
-                                                <label class="form-label small mb-1">Icon</label>
-                                                <input type="text" class="form-control form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][icon]" maxlength="16" value="<?php echo htmlspecialchars((string)($widget['icon'] ?? '🔌')); ?>">
+                                                <label for="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-icon" class="form-label small mb-1">Icon</label>
+                                                <input id="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-icon" type="text" class="form-control form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][icon]" maxlength="16" value="<?php echo htmlspecialchars((string)($widget['icon'] ?? '🔌')); ?>">
                                             </div>
                                             <div class="col-12">
-                                                <label class="form-label small mb-1">Beschreibung</label>
-                                                <textarea class="form-control form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][description]" rows="3" maxlength="255"><?php echo htmlspecialchars((string)($widget['description'] ?? '')); ?></textarea>
+                                                <label for="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-description" class="form-label small mb-1">Beschreibung</label>
+                                                <textarea id="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-description" class="form-control form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][description]" rows="3" maxlength="255"><?php echo htmlspecialchars((string)($widget['description'] ?? '')); ?></textarea>
                                             </div>
                                             <div class="col-sm-5">
-                                                <label class="form-label small mb-1">Akzentfarbe</label>
-                                                <input type="color" class="form-control form-control-color form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][color]" value="<?php echo htmlspecialchars((string)($widget['color'] ?? '#4f46e5')); ?>">
+                                                <label for="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-color" class="form-label small mb-1">Akzentfarbe</label>
+                                                <input id="plugin-widget-<?php echo htmlspecialchars($pluginSlug, ENT_QUOTES); ?>-color" type="color" class="form-control form-control-color form-control-sm" name="plugin_meta[<?php echo htmlspecialchars($pluginSlug); ?>][color]" value="<?php echo htmlspecialchars((string)($widget['color'] ?? '#4f46e5')); ?>">
                                             </div>
                                         </div>
 

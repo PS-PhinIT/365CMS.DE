@@ -192,6 +192,7 @@ if (!function_exists('cms_admin_warning_center_suppression_label')) {
                                                         <input
                                                             type="text"
                                                             name="warning_snooze_note"
+                                                            aria-label="Hinweis für die Wiedervorlage"
                                                             class="form-control mb-2"
                                                             maxlength="240"
                                                             placeholder="Optionaler Hinweis für die Wiedervorlage"

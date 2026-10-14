@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Audit 2026-10-03
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.14) | **Schema:** v23 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | **Schema:** v23 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`
 
 ## English (summary)
 

@@ -603,9 +603,17 @@ final class MediaDeliveryService
         return null;
     }
 
+    /**
+     * Private Bereiche: Mitglieder-Uploads (nur Eigentümer/Admin) und Importer-Quelldateien
+     * unter `import/` (nur Admin). Vergleich ohne Groß-/Kleinschreibung, damit Hosts mit
+     * case-insensitivem Dateisystem die Prüfung nicht per `Member/…` umgehen lassen.
+     */
     private function isPrivateMemberPath(string $relativePath): bool
     {
-        return $relativePath === 'member' || str_starts_with($relativePath, 'member/');
+        $path = strtolower($relativePath);
+
+        return $path === 'member' || str_starts_with($path, 'member/')
+            || $path === 'import' || str_starts_with($path, 'import/');
     }
 
     private function canAccessPrivateMemberPath(string $relativePath): bool
@@ -625,8 +633,9 @@ final class MediaDeliveryService
             return false;
         }
 
+        $path = strtolower($relativePath);
         $memberPrefix = 'member/user-' . $userId;
-        return $relativePath === $memberPrefix || str_starts_with($relativePath, $memberPrefix . '/');
+        return $path === $memberPrefix || str_starts_with($path, $memberPrefix . '/');
     }
 
     private function isInlineSafePath(string $relativePath): bool

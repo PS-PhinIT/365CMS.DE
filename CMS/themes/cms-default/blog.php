@@ -37,10 +37,7 @@ if ($activeCategory) {
 // Sidebar-Daten
 $recentSidebar = meridian_get_recent_posts(5);
 $sidebarCats   = meridian_get_categories(8);
-$tagCloud = array_values(array_filter(array_map(
-    static fn(array $tag): string => trim((string) ($tag['name'] ?? '')),
-    meridian_get_tags(20)
-), static fn(string $tag): bool => $tag !== ''));
+$tagCloud = meridian_get_tags(20); // [name, slug, count] – Links über den Slug
 ?>
 
 <div class="page-wrap">
@@ -203,8 +200,8 @@ $tagCloud = array_values(array_filter(array_map(
         <div>
             <div class="widget-title">Tags</div>
             <div class="tag-cloud">
-                <?php foreach ($tagCloud as $tag): ?>
-                <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', (string) ($tag)), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($tag); ?></a>
+                <?php foreach ($tagCloud as $tag): $tagLink = meridian_tag_link_data($tag); if ($tagLink['name'] === '') { continue; } ?>
+                <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', $tagLink['slug']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($tagLink['name'], ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php endforeach; ?>
             </div>
         </div>

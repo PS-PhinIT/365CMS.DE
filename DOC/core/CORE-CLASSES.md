@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Klassenübersicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -25,7 +25,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `AuditLogger` | `core/AuditLogger.php` | Audit-Log in `cms_audit_log` | `log()`, `loginSuccess()`, `loginFailed()`, `pluginAction()`, `themeSwitch()`, `userRoleChange()`, `backupAction()`, `getRecent()` |
 | `Debug` | `core/Debug.php` | Checkpoints und Query-Telemetrie bei `CMS_DEBUG` | `checkpoint()`, `query()` |
 | `Json` | `core/Json.php` | sichere JSON-Hilfen | `decodeArray()` u. a. |
-| `Version` | `core/Version.php` | `CURRENT = '3.4.00'`, `RELEASE_DATE = '2026-09-05'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
+| `Version` | `core/Version.php` | `CURRENT = '3.5.0'`, `RELEASE_DATE = '2026-10-14'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
 | `VendorRegistry` | `core/VendorRegistry.php` | Inventar und Laden gebündelter Bibliotheken | `loadAssetsAutoloader()`, `loadPackage()`, `getDiagnostics()` |
 | `WP_Error` | `core/WP_Error.php` | WordPress-kompatibles Fehlerobjekt | `get_error_code()`, `get_error_message()`, `get_error_data()`, `add()` |
 | `Api` | `core/Api.php` | generische JSON-API (Rate-Limit, `pages`, `users`) | `handleRequest()` |

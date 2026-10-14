@@ -72,7 +72,7 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                 <div class="form-group">
                     <label class="form-label" for="regEmail">E-Mail-Adresse</label>
                     <input type="email" id="regEmail" name="email" class="form-control"
-                           value=""
+                           value="<?php echo htmlspecialchars((string) (filter_var($_GET['email'] ?? '', FILTER_VALIDATE_EMAIL) ?: ''), ENT_QUOTES, 'UTF-8'); ?>"
                            autocomplete="email" required autofocus
                            placeholder="deine@email.de">
                 </div>

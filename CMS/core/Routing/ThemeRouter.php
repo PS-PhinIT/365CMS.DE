@@ -866,23 +866,19 @@ final class ThemeRouter
             return;
         }
 
-        $rows = $db->get_results(
-            "SELECT p.*, c.name AS category_name,
-                    COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name
-             FROM {$prefix}posts p
-             LEFT JOIN {$prefix}users u ON u.id = p.author_id
-             LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
-               WHERE " . \cms_post_publication_where('p') . " AND " . $this->buildPostLocaleAvailabilityExpression('p', $locale) . " AND p.tags IS NOT NULL AND p.tags != ''
-             ORDER BY COALESCE(p.published_at, p.created_at) DESC"
+        // Legacy-Fallback (Tags nur als Freitext in posts.tags): zuerst nur ID und Tag-Feld laden,
+        // Volltextzeilen anschließend nur für die passenden Beiträge (vorher lud jede unbekannte
+        // /tag/xyz-URL alle getaggten Beiträge samt Inhalt).
+        $publicationWhere = \cms_post_publication_where('p') . " AND " . $this->buildPostLocaleAvailabilityExpression('p', $locale);
+        $tagRows = $db->get_results(
+            "SELECT p.id, p.tags FROM {$prefix}posts p
+               WHERE {$publicationWhere} AND p.tags IS NOT NULL AND p.tags != ''"
         ) ?: [];
 
-        $allMatchingPosts = [];
-        $matchingPosts = [];
+        $matchingIds = [];
         $resolvedTagName = '';
-
-        foreach ($rows as $row) {
-            $post = (array) $row;
-            foreach ($this->archiveRepository->parsePostTags((string) ($post['tags'] ?? '')) as $tag) {
+        foreach ($tagRows as $tagRow) {
+            foreach ($this->archiveRepository->parsePostTags((string) ($tagRow->tags ?? '')) as $tag) {
                 if (($tag['slug'] ?? '') !== $normalizedSlug) {
                     continue;
                 }
@@ -891,13 +887,35 @@ final class ThemeRouter
                     $resolvedTagName = (string) ($tag['name'] ?? '');
                 }
 
-                $allMatchingPosts[] = (object) $post;
-
-                if ($this->matchesArchiveSearch($post, $query, $locale)) {
-                    $matchingPosts[] = (object) $post;
-                }
-
+                $matchingIds[] = (int) ($tagRow->id ?? 0);
                 break;
+            }
+        }
+
+        $rows = [];
+        if ($matchingIds !== []) {
+            $placeholders = implode(',', array_fill(0, count($matchingIds), '?'));
+            $rows = $db->get_results(
+                "SELECT p.*, c.name AS category_name,
+                        COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name
+                 FROM {$prefix}posts p
+                 LEFT JOIN {$prefix}users u ON u.id = p.author_id
+                 LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
+                   WHERE p.id IN ({$placeholders}) AND {$publicationWhere}
+                 ORDER BY COALESCE(p.published_at, p.created_at) DESC",
+                $matchingIds
+            ) ?: [];
+        }
+
+        $allMatchingPosts = [];
+        $matchingPosts = [];
+
+        foreach ($rows as $row) {
+            $post = (array) $row;
+            $allMatchingPosts[] = (object) $post;
+
+            if ($this->matchesArchiveSearch($post, $query, $locale)) {
+                $matchingPosts[] = (object) $post;
             }
         }
 
@@ -1198,7 +1216,7 @@ final class ThemeRouter
         $postData = $this->attachLegacyCompatibleTagsToPost($postData);
 
         $post = (object)$postData;
-        if (\cms_post_is_publicly_visible($postRow)) {
+        if (\cms_post_is_publicly_visible($postRow) && $this->shouldCountPostView()) {
             $db->execute("UPDATE {$prefix}posts SET views = views + 1 WHERE id = ?", [(int)$post->id]);
         }
 
@@ -1643,6 +1661,29 @@ final class ThemeRouter
         return '';
     }
 
+
+    /**
+     * Aufrufzähler nur für echte Seitenaufrufe: HEAD-Anfragen, Prefetch und Crawler/Monitoring
+     * schrieben sonst bei jedem Abruf in `posts` (Schreiblast, verfälschte „Beliebt“-Listen).
+     */
+    private function shouldCountPostView(): bool
+    {
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'GET') {
+            return false;
+        }
+
+        $purpose = strtolower((string) ($_SERVER['HTTP_SEC_PURPOSE'] ?? $_SERVER['HTTP_PURPOSE'] ?? $_SERVER['HTTP_X_MOZ'] ?? ''));
+        if ($purpose !== '' && str_contains($purpose, 'prefetch')) {
+            return false;
+        }
+
+        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        if ($userAgent === '') {
+            return false;
+        }
+
+        return preg_match('/bot|crawl|spider|slurp|scrape|preview|monitor|uptime|headless|lighthouse|curl|wget|python|java\/|go-http|okhttp|httpclient|facebookexternalhit|embedly/i', $userAgent) !== 1;
+    }
 
     /**
      * @param array<string,mixed> $postData

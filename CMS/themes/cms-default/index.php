@@ -42,9 +42,9 @@ if (function_exists('meridian_get_posts')) {
         <?php if ($heroPost): ?>
             <?php
             $hTitle   = htmlspecialchars($heroPost['title'] ?? '');
-            $hLink    = isset($heroPost['slug']) ? meridian_post_url($heroPost) : '#';
+            $hLink    = isset($heroPost['slug']) ? htmlspecialchars(meridian_post_url($heroPost), ENT_QUOTES, 'UTF-8') : '#';
             $hExcerpt = htmlspecialchars($heroPost['excerpt'] ?? '');
-            $hDate    = isset($heroPost['created_at']) ? date('d. M Y', strtotime($heroPost['created_at'])) : '';
+            $hDate    = meridian_format_date((string) ($heroPost['published_at'] ?? $heroPost['created_at'] ?? ''));
             $hCat     = $heroPost['category_name'] ?? 'Allgemein';
             $hAuthor  = $heroPost['author_name'] ?? 'Redaktion';
             $hRead    = isset($heroPost['read_time']) ? $heroPost['read_time'] . ' Min.' : '5 Min.';
@@ -62,7 +62,7 @@ if (function_exists('meridian_get_posts')) {
                     <p class="excerpt"><?php echo $hExcerpt; ?></p>
                     <div class="post-meta">
                         <div class="meta-author">
-                            <div class="avatar-xs"><?php echo substr($hAuthor, 0, 2); ?></div>
+                            <div class="avatar-xs"><?php echo htmlspecialchars(mb_substr((string) $hAuthor, 0, 2), ENT_QUOTES, 'UTF-8'); ?></div>
                             <?php echo htmlspecialchars($hAuthor); ?>
                         </div>
                         <span class="meta-sep">·</span>
@@ -81,9 +81,9 @@ if (function_exists('meridian_get_posts')) {
             <?php if (!empty($latestPosts)): ?>
                 <?php foreach ($latestPosts as $post): 
                     $pTitle  = htmlspecialchars($post['title'] ?? '');
-                    $pLink   = isset($post['slug']) ? meridian_post_url($post) : '#';
+                    $pLink   = isset($post['slug']) ? htmlspecialchars(meridian_post_url($post), ENT_QUOTES, 'UTF-8') : '#';
                     $pExcerpt= htmlspecialchars($post['excerpt'] ?? '');
-                    $pDate   = isset($post['created_at']) ? date('d. M Y', strtotime($post['created_at'])) : '';
+                    $pDate   = meridian_format_date((string) ($post['published_at'] ?? $post['created_at'] ?? ''));
                     $pCat    = $post['category_name'] ?? 'Blog';
                     $pRead   = isset($post['read_time']) ? $post['read_time'] . ' Min.' : '3 Min.';
                 ?>
@@ -131,9 +131,9 @@ if (function_exists('meridian_get_posts')) {
         <div class="card-grid">
             <?php foreach ($featurePosts as $post): 
                 $cTitle = htmlspecialchars($post['title'] ?? '');
-                $cLink  = isset($post['slug']) ? meridian_post_url($post) : '#';
+                $cLink  = isset($post['slug']) ? htmlspecialchars(meridian_post_url($post), ENT_QUOTES, 'UTF-8') : '#';
                 $cExcerpt = htmlspecialchars($post['excerpt'] ?? '');
-                $cDate  = isset($post['created_at']) ? date('d. M', strtotime($post['created_at'])) : '';
+                $cDate  = meridian_format_date((string) ($post['published_at'] ?? $post['created_at'] ?? ''));
                 $cCat   = $post['category_name'] ?? 'Tipp';
             ?>
             <div class="card">
@@ -164,8 +164,8 @@ if (function_exists('meridian_get_posts')) {
             <div class="widget-title">Newsletter</div>
             <h3>Kein Artikel verpassen</h3>
             <p>Praxiswissen direkt ins Postfach – kein Spam, jederzeit abbestellbar.</p>
-            <form action="<?php echo SITE_URL; ?>/newsletter/subscribe" method="POST">
-                <input type="email" name="email" placeholder="deine@email.de" required>
+            <form action="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>" method="GET">
+                <input type="email" name="email" placeholder="deine@email.de" required autocomplete="email" aria-label="E-Mail-Adresse für Newsletter">
                 <button type="submit">Jetzt abonnieren →</button>
             </form>
         </div>
@@ -181,7 +181,7 @@ if (function_exists('meridian_get_posts')) {
                 <a href="<?php echo htmlspecialchars(meridian_archive_url('category', (string) ($cat['slug'])), ENT_QUOTES, 'UTF-8'); ?>">
                     <?php echo htmlspecialchars($cat['name']); ?>
                 </a>
-                <span class="cat-count"><?php echo $cat['count'] ?? 0; ?></span>
+                <span class="cat-count"><?php echo (int) ($cat['count'] ?? 0); ?></span>
             </div>
             <?php endforeach; ?>
         </div>
@@ -199,8 +199,8 @@ if (function_exists('meridian_get_posts')) {
                 <div class="recent-num"><?php echo str_pad((string)$i++, 2, '0', STR_PAD_LEFT); ?></div>
                 <div class="recent-body">
                     <div class="rcat"><?php echo htmlspecialchars($rp['category_name'] ?? 'Blog'); ?></div>
-                    <a href="<?php echo htmlspecialchars(meridian_post_url($rp), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($rp['title']); ?></a>
-                    <time><?php echo isset($rp['created_at']) ? date('d. M Y', strtotime($rp['created_at'])) : ''; ?></time>
+                    <a href="<?php echo htmlspecialchars(meridian_post_url($rp), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string) ($rp['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <time><?php echo meridian_format_date((string) ($rp['published_at'] ?? $rp['created_at'] ?? '')); ?></time>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -215,12 +215,6 @@ if (function_exists('meridian_get_posts')) {
                foreach ($tags as $tag): ?>
                <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', (string) ($tag['slug'])), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($tag['name']); ?></a>
                <?php endforeach; ?>
-               <?php if(empty($tags)): ?>
-               <!-- Static fallback tags matching prototype -->
-               <a href="#">Exchange</a><a href="#">EWS</a><a href="#">Graph API</a>
-               <a href="#">PowerShell</a><a href="#">Entra ID</a><a href="#">DSGVO</a>
-               <a href="#">Security</a>
-               <?php endif; ?>
             </div>
         </div>
 

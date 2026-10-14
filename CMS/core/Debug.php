@@ -376,14 +376,15 @@ class Debug {
             return '';
         }
 
-        $reportTarget = '/admin/error-report';
+        $reportTarget = (defined('SITE_URL') ? rtrim((string) SITE_URL, '/') : '') . '/admin/error-report';
         $reportToken = class_exists('\\CMS\\Security') ? \CMS\Security::instance()->generateToken('admin_error_report') : '';
         $backTo = (string)($_SERVER['REQUEST_URI'] ?? '/admin/diagnose');
         
-        $html = '<div class="debug-panel" style="' . ($collapsed ? 'max-height: 50px; overflow: hidden;' : '') . '">';
-        $html .= '<div class="debug-header" onclick="this.parentElement.style.maxHeight=\'none\'; this.parentElement.style.overflow=\'visible\';" style="background: #1e293b; color: white; padding: 0.75rem; cursor: pointer; font-weight: 600;">';
-        $html .= '<i class="fas fa-bug"></i> Debug-Informationen (' . count(self::$logs) . ' Einträge) - Klick zum Ausklappen';
-        $html .= '</div>';
+        // <details>/<summary> statt Inline-onclick: funktioniert ohne JavaScript und unter der CSP.
+        $html = '<details class="debug-panel"' . ($collapsed ? '' : ' open') . '>';
+        $html .= '<summary class="debug-header" style="background: #1e293b; color: white; padding: 0.75rem; cursor: pointer; font-weight: 600;">';
+        $html .= '<i class="fas fa-bug" aria-hidden="true"></i> Debug-Informationen (' . count(self::$logs) . ' Einträge) – Klick zum Ausklappen';
+        $html .= '</summary>';
         $html .= '<div class="debug-content" style="background: #f8fafc; border: 2px solid #1e293b; padding: 1rem; font-family: monospace; font-size: 0.875rem;">';
         
         foreach (self::$logs as $entry) {
@@ -445,7 +446,7 @@ class Debug {
         }
         
         $html .= '</div>';
-        $html .= '</div>';
+        $html .= '</details>';
         
         return $html;
     }

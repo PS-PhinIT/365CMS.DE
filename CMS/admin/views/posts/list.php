@@ -134,7 +134,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                     </select>
                     <input type="text"
                            name="bulk_author_display_name"
-                           id="bulkAuthorDisplayNamePosts"
+                           id="bulkAuthorDisplayNamePosts" aria-label="Neuer Anzeigename für ausgewählte Beiträge"
                            class="form-control form-control-sm w-auto d-none"
                            maxlength="150"
                            placeholder="Neuer Anzeigename für ausgewählte Beiträge">
@@ -236,7 +236,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                                 data-sort-status="<?php echo htmlspecialchars(strtolower((string)$postStatusLabel), ENT_QUOTES, 'UTF-8'); ?>"
                                 data-sort-updated="<?php echo (int)$postUpdatedSort; ?>">
                                 <td>
-                                    <input class="form-check-input" type="checkbox" name="ids[]" value="<?php echo $postId; ?>" form="bulkFormPosts">
+                                    <input class="form-check-input" type="checkbox" name="ids[]" value="<?php echo $postId; ?>" form="bulkFormPosts" aria-label="Beitrag #<?php echo $postId; ?> auswählen">
                                 </td>
                                 <td class="content-listing-table__title-cell">
                                     <a href="/admin/posts?action=edit&id=<?php echo $postId; ?>" class="text-reset fw-medium">

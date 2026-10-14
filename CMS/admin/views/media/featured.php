@@ -111,6 +111,7 @@ if (!function_exists('cms_admin_media_render_featured_usage_list')) {
                             type="search"
                             class="form-control"
                             id="featuredMediaSearch"
+                            aria-label="Beitragsbilder durchsuchen"
                             name="q"
                             value="<?php echo htmlspecialchars($search); ?>"
                             maxlength="<?php echo (int)($constraints['search_max_length'] ?? 120); ?>"

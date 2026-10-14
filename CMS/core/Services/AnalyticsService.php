@@ -267,13 +267,20 @@ class AnalyticsService
         }
         
         // Linux: Read from /proc/stat
-        if (file_exists('/proc/stat')) {
-            $stat1 = file('/proc/stat');
-            sleep(1);
-            $stat2 = file('/proc/stat');
+        if (is_readable('/proc/stat')) {
+            $stat1 = @file('/proc/stat');
+            // Kurzes Messfenster statt sleep(1): blockierte den Admin-Request eine volle Sekunde.
+            usleep(200000);
+            $stat2 = @file('/proc/stat');
+            if (!is_array($stat1) || !is_array($stat2) || !isset($stat1[0], $stat2[0])) {
+                return 0.0;
+            }
             
-            $info1 = explode(' ', preg_replace('!cpu +!', '', $stat1[0]));
-            $info2 = explode(' ', preg_replace('!cpu +!', '', $stat2[0]));
+            $info1 = array_map('intval', explode(' ', (string) preg_replace('!cpu +!', '', $stat1[0])));
+            $info2 = array_map('intval', explode(' ', (string) preg_replace('!cpu +!', '', $stat2[0])));
+            if (count($info1) < 4 || count($info2) < 4) {
+                return 0.0;
+            }
             
             $dif = [];
             $dif['user'] = $info2[0] - $info1[0];
@@ -282,6 +289,9 @@ class AnalyticsService
             $dif['idle'] = $info2[3] - $info1[3];
             
             $total = array_sum($dif);
+            if ($total <= 0) {
+                return 0.0;
+            }
             $cpu = 100 - ($dif['idle'] * 100 / $total);
             
             return round($cpu, 1);

@@ -144,10 +144,10 @@ $renderFooterMenuLinks = static function (array $items): void {
       <?php if (!empty($footerAboutMenu)): ?>
         <?php $renderFooterMenuLinks($footerAboutMenu); ?>
       <?php else: ?>
-        <a href="<?php echo SITE_URL; ?>/about">Über uns</a>
-        <a href="<?php echo SITE_URL; ?>/contact">Kontakt</a>
-        <a href="<?php echo SITE_URL; ?>/impressum">Impressum</a>
-        <a href="<?php echo SITE_URL; ?>/datenschutz">Datenschutz</a>
+        <?php // Nur vorhandene Seiten verlinken (vorher feste Links auf /about, /impressum … auch ohne Seite → 404). ?>
+        <?php foreach (meridian_footer_fallback_links() as $aboutLink): ?>
+        <a href="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . (string) $aboutLink['url'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string) $aboutLink['label'], ENT_QUOTES, 'UTF-8'); ?></a>
+        <?php endforeach; ?>
       <?php endif; ?>
     </div>
 

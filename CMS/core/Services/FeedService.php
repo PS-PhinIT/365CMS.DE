@@ -881,7 +881,7 @@ final class FeedService
 
     private function isPrivateOrReservedIp(string $ip): bool
     {
-        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+        return HttpClient::isNonPublicIp($ip);
     }
 
     private function resolveHostIps(string $host): array
@@ -938,55 +938,8 @@ final class FeedService
         return $url;
     }
 
-    /**
-     * @return array{host:string,port:int,ip:string}|null
-     */
-    private function buildRemoteRequestTarget(string $url): ?array
-    {
-        $parts = parse_url($url);
-        if (!is_array($parts)) {
-            return null;
-        }
 
-        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = $this->normalizeHost((string) ($parts['host'] ?? ''));
-        if ($host === '' || !in_array($scheme, ['http', 'https'], true)) {
-            return null;
-        }
 
-        $port = isset($parts['port']) && is_int($parts['port'])
-            ? $parts['port']
-            : ($scheme === 'https' ? 443 : 80);
-
-        if ($port < 1 || $port > 65535) {
-            return null;
-        }
-
-        foreach ($this->resolveHostIps($host) as $ip) {
-            if ($ip !== '' && !$this->isPrivateOrReservedIp($ip)) {
-                return [
-                    'host' => $host,
-                    'port' => $port,
-                    'ip' => $ip,
-                ];
-            }
-        }
-
-        return null;
-    }
-
-    private function buildCurlResolveEntry(string $host, int $port, string $ip): string
-    {
-        $targetIp = str_contains($ip, ':') ? '[' . $ip . ']' : $ip;
-        return $host . ':' . $port . ':' . $targetIp;
-    }
-
-    private function extractRedirectLocationFromHeaderString(string $headerBlock): ?string
-    {
-        $headerLines = preg_split('/\r\n|\r|\n/', $headerBlock) ?: [];
-        $meta = $this->extractRedirectMetaFromHeaderLines($headerLines);
-        return $meta['location'];
-    }
 
     /**
      * @param array<int, string> $headerLines

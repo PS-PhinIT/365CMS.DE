@@ -859,24 +859,6 @@ class MediaService {
         $this->repository->saveMeta($meta);
     }
 
-    private function renameMetaPath(string $oldRelativePath, string $newRelativePath): void {
-        $meta = $this->loadMeta();
-        $oldRelativePath = trim(str_replace('\\', '/', $oldRelativePath), '/');
-        $newRelativePath = trim(str_replace('\\', '/', $newRelativePath), '/');
-        $updated = [];
-
-        foreach ($meta['files'] as $path => $data) {
-            if ($path === $oldRelativePath || str_starts_with($path, $oldRelativePath . '/')) {
-                $suffix = ltrim(substr($path, strlen($oldRelativePath)), '/');
-                $newPath = $newRelativePath . ($suffix !== '' ? '/' . $suffix : '');
-                $updated[$newPath] = $data;
-                unset($meta['files'][$path]);
-            }
-        }
-
-        $meta['files'] = array_merge($meta['files'], $updated);
-        $this->saveMeta($meta);
-    }
 
     public function syncUploadDirectoryPolicy(): bool|WP_Error
     {

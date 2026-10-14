@@ -75,9 +75,9 @@ $securityLastSent = is_array($securityAlerts['last_sent'] ?? null) ? $securityAl
 							</label>
 
 							<div class="mb-4">
-								<label class="form-label">Health-Endpunkt-Pfad</label>
+								<label for="fld-monitor_health_endpoint_path" class="form-label">Health-Endpunkt-Pfad</label>
 								<div class="form-hint mb-2">Nur lokale Pfade wie <code>/health</code> oder <code>/status/health</code>. Der Health-Check ruft diesen Pfad real gegen die eigene Installation auf.</div>
-								<input class="form-control" type="text" name="monitor_health_endpoint_path" value="<?php echo htmlspecialchars((string)($settings['monitor_health_endpoint_path'] ?? '/health')); ?>">
+								<input id="fld-monitor_health_endpoint_path" class="form-control" type="text" name="monitor_health_endpoint_path" value="<?php echo htmlspecialchars((string)($settings['monitor_health_endpoint_path'] ?? '/health')); ?>">
 							</div>
 
 							<hr class="my-4">

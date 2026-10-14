@@ -38,7 +38,7 @@ final class UploadHandler
         $path = trim($path, '/\\');
         $name = trim($name);
 
-        if ($name === '' || $name === '.' || $name === '..' || str_starts_with($name, '.') || preg_match('#[\\/:*?"<>|]#', $name) === 1) {
+        if ($name === '' || $name === '.' || $name === '..' || str_starts_with($name, '.') || preg_match('#[\\\\/:*?"<>|\x00-\x1F]#', $name) === 1) {
             return new WP_Error('invalid_folder_name', 'Ungültiger Ordnername');
         }
 
@@ -604,7 +604,7 @@ final class UploadHandler
     private function normalizeRenameTargetName(string $existingPath, string $newName): string|WP_Error
     {
         $newName = trim($newName);
-        if ($newName === '' || $newName === '.' || $newName === '..' || str_starts_with($newName, '.') || preg_match('/[\\\/\:\*\?"<>\|]/', $newName)) {
+        if ($newName === '' || $newName === '.' || $newName === '..' || str_starts_with($newName, '.') || preg_match('#[\\\\/:*?"<>|\x00-\x1F]#', $newName)) {
             return new WP_Error('invalid_name', 'Ungültiger Name');
         }
 

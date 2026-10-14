@@ -253,8 +253,9 @@ final class SeoAnalysisService
     private function getSetting(string $key, string $default = ''): string
     {
         try {
-            $row = $this->db->get_row("SELECT option_value FROM {$this->prefix}settings WHERE option_name = ? LIMIT 1", ['seo_' . $key]);
-            return $row ? (string)($row->option_value ?? $default) : $default;
+            // Über den Options-Cache: vorher eine eigene Abfrage je Schlüssel (20 je Beitragsseite,
+            // ~15.000 beim SEO-Audit mit 1.000 Zeilen).
+            return (string) (OptionStore::getInstance()->get('seo_' . $key, $default) ?? $default);
         } catch (\Throwable) {
             return $default;
         }

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: CMSFILESTRUCTUR
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.09) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -162,7 +162,7 @@ Root-Klassen in `CMS/core/`:
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT = '3.4.00'`)
+- `Version.php` (`CURRENT = '3.5.0'`)
 - `WP_Error.php`
 
 Subdirectories:
@@ -294,7 +294,6 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `home.php`
 - `index.php`
 - `login.php`
-- `meridan.html`
 - `page.php`
 - `register.php`
 - `search.php`

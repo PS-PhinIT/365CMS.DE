@@ -288,7 +288,7 @@ $groupField = static function (mixed $group, string $key, mixed $default = ''): 
             <input type="hidden" name="id" id="groupId">
             <div class="modal-header">
                 <h5 class="modal-title" id="groupModalTitle">Neue Gruppe</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">

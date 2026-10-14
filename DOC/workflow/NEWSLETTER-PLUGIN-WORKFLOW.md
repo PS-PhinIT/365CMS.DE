@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Newsletter-Plugin
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Nicht in der Runtime enthalten | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Nicht in der Runtime enthalten | **Update:** 2026-10-02
 > **Quellen:** `CMS/plugins/`, `CMS/core/PluginManager.php` (`PLUGIN_SLUG_ALIASES`), `CMS/core/Services/MailService.php`, `CMS/core/Services/MailQueueService.php`, `CMS/admin/modules/legal/LegalSitesModule.php`
 
 ## English (summary)
 
-No newsletter plugin ships with 365CMS 3.4.00. The core provides the building blocks: slug alias `cms-365netnewsletter → cms-newsletter`, `MailService` (SMTP or Microsoft Graph), `MailQueueService` with cron task `mail-queue`, and the legal-text generator profile fields `legal_profile_has_newsletter` / `legal_profile_newsletter_provider`, which add a newsletter section to the generated privacy policy. A newsletter plugin must implement double opt-in, unsubscribe and data-protection hooks itself.
+No newsletter plugin ships with 365CMS 3.5.0. The core provides the building blocks: slug alias `cms-365netnewsletter → cms-newsletter`, `MailService` (SMTP or Microsoft Graph), `MailQueueService` with cron task `mail-queue`, and the legal-text generator profile fields `legal_profile_has_newsletter` / `legal_profile_newsletter_provider`, which add a newsletter section to the generated privacy policy. A newsletter plugin must implement double opt-in, unsubscribe and data-protection hooks itself.
 
 ## Deutsch
 

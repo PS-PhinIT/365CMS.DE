@@ -384,31 +384,6 @@ class MailService
         return $email;
     }
 
-    private function dispatchMessage(string $to, string $subject, Email $email, callable $fallback, array $headers = []): bool
-    {
-        $config = $this->getEffectiveConfig();
-        $source = $this->resolveSource($headers);
-
-        if ($config['use_smtp']) {
-            $result = $this->sendViaSymfony($email, $config);
-            if (!empty($result['success'])) {
-                $this->logSuccess($to, $subject, $config, $result['message_id'] ?? null, $headers, $source);
-                return true;
-            }
-
-            $this->logFailure($to, $subject, (string) ($config['provider'] ?? 'smtp'), (string) ($result['error'] ?? 'Unbekannter SMTP-Fehler'), $headers, $source, $config);
-            return false;
-        }
-
-        $success = (bool) $fallback();
-        if ($success) {
-            $this->logSuccess($to, $subject, $config, null, $headers, $source);
-        } else {
-            $this->logFailure($to, $subject, 'mail', 'PHP mail() konnte die Nachricht nicht versenden.', $headers, $source, $config);
-        }
-
-        return $success;
-    }
 
     /**
      * @return array{success:bool,error?:string,transport?:string,provider?:string,source?:string,retryable?:bool,error_category?:string,recommended_delay?:int,message_id?:string}

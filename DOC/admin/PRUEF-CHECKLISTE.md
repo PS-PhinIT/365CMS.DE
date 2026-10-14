@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Prüf-Checkliste
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -39,7 +39,7 @@ Checklist for reviewing a change to the administration (core page, module, view 
 ### B. Smoke-Test nach Deployment / Update
 
 - [ ] `/admin` lädt, Sidebar vollständig, keine PHP-Warnungen im `/admin/logs/php-errors`.
-- [ ] `/admin/updates`: installierte = erwartete Core- und Schema-Version (`3.4.00`, `v23`); ggf. `run_database_update`.
+- [ ] `/admin/updates`: installierte = erwartete Core- und Schema-Version (`3.5.0`, `v23`); ggf. `run_database_update`.
 - [ ] `/admin/monitor-health-check` ohne kritische Befunde.
 - [ ] `/admin/security-audit` ausgeführt; `install.php` nicht erreichbar, Debug aus, HTTPS aktiv.
 - [ ] Seite und Beitrag speichern, Medien-Upload, Vorschau im Frontend.

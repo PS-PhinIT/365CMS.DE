@@ -259,7 +259,7 @@ class OrdersModule
         } catch (\RuntimeException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            Logger::error('Abo-Export konnte nicht erstellt werden.', [
+            Logger::instance()->error('Abo-Export konnte nicht erstellt werden.', [
                 'module' => 'OrdersModule',
                 'action' => 'orders.export_failed',
                 'export_type' => $exportType,
@@ -1016,7 +1016,7 @@ class OrdersModule
     {
         $sanitizedRow = array_map(fn (mixed $value): string => $this->sanitizeCsvCell($value), $row);
 
-        if (fputcsv($output, $sanitizedRow, self::CSV_DELIMITER) === false) {
+        if (fputcsv($output, $sanitizedRow, self::CSV_DELIMITER, '"', '') === false) {
             throw new \RuntimeException('CSV-Datensatz konnte nicht geschrieben werden.');
         }
     }
@@ -1140,7 +1140,7 @@ class OrdersModule
 
     private function failResult(string $action, string $message, \Throwable $e, array $context = []): OrdersActionResult
     {
-        Logger::error($message, [
+        Logger::instance()->error($message, [
             'module' => 'OrdersModule',
             'action' => $action,
             'exception' => $e::class,

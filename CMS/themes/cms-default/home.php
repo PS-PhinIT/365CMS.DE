@@ -15,6 +15,12 @@ if (!defined('ABSPATH')) {
 }
 
 // ── Daten laden ──────────────────────────────────────────────────────────────
+$homepageMode = (string) meridian_setting('homepage', 'homepage_mode', 'posts');
+$heroPost = null;
+$articleList = $cardPosts = $featurePosts = $recentSidebar = $sidebarCats = $tagCloud = [];
+
+// Landing-Modus braucht keine Blog-Daten – vorher liefen alle Abfragen trotzdem.
+if ($homepageMode !== 'landing') {
 $db   = \CMS\Database::instance();
 $pdo  = $db->getConnection();
 $prefix = $db->getPrefix();
@@ -111,29 +117,13 @@ $recentSidebar = meridian_get_recent_posts(5, $heroPost ? (int)$heroPost->id : 0
 // Sidebar: Kategorien
 $sidebarCats = meridian_get_categories(8);
 
-// Sidebar: Tags sammeln
-$tagCloud = [];
-try {
-    $stmt = $pdo->query("SELECT p.tags FROM {$prefix}posts p WHERE {$publishedWhere} AND p.tags IS NOT NULL AND p.tags != ''");
-    $tagRows = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-    $tagCounts = [];
-    foreach ($tagRows as $row) {
-        foreach (array_map('trim', explode(',', $row)) as $tag) {
-            if ($tag) {
-                $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
-            }
-        }
-    }
-    arsort($tagCounts);
-    $tagCloud = array_keys(array_slice($tagCounts, 0, 20));
-} catch (\Throwable $e) {
-    $tagCloud = [];
+// Sidebar: Tags (gezählte Tag-Tabelle statt alle posts.tags-Zeilen zu laden; Links über den Slug)
+$tagCloud = meridian_get_tags(20);
 }
 
 $showSidebar      = (bool) meridian_setting('layout',   'show_sidebar',        true);
 $showHero         = (bool) meridian_setting('blog',     'show_hero_post',      true)
                   && (bool) meridian_setting('homepage', 'homepage_show_hero',  true);
-$homepageMode     = (string) meridian_setting('homepage', 'homepage_mode',        'posts');
 $heroTitleOverride = (string) meridian_setting('homepage', 'homepage_hero_title',  '');
 $ctaText          = (string) meridian_setting('homepage', 'homepage_cta_text',    '');
 $ctaUrl           = (string) meridian_setting('homepage', 'homepage_cta_url',     '');
@@ -357,7 +347,7 @@ $numRecent        = count($recentSidebar);
         <h3>Kein Artikel verpassen</h3>
         <p>Die besten Artikel direkt in dein Postfach – kostenlos.</p>
         <form action="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>" method="GET">
-            <input type="email" name="email" placeholder="deine@email.de" required autocomplete="email">
+            <input type="email" name="email" placeholder="deine@email.de" required autocomplete="email" aria-label="E-Mail-Adresse für Newsletter">
             <button type="submit">Jetzt abonnieren →</button>
         </form>
     </div>
@@ -408,8 +398,8 @@ $numRecent        = count($recentSidebar);
         <div class="widget-title">Tags</div>
         <div class="tag-cloud">
             <?php foreach ($tagCloud as $tag): ?>
-            <a href="<?php echo SITE_URL . '/search?q=' . urlencode($tag); ?>">
-                <?php echo htmlspecialchars($tag); ?>
+            <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', (string) ($tag['slug'] !== '' ? $tag['slug'] : $tag['name'])), ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo htmlspecialchars((string) $tag['name'], ENT_QUOTES, 'UTF-8'); ?>
             </a>
             <?php endforeach; ?>
         </div>

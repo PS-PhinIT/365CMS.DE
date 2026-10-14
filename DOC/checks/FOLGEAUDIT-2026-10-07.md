@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Audit 2026-10-07
 
-> **Stand:** 2026-10-07 | **Version:** 3.4.00 (Changelog bis 3.4.20) | **Prüfumfang:** `CMS/` ohne `CMS/vendor/`, Standard-Theme `cms-default`, Laufzeitprüfung zusätzlich mit dem PhinIT-Theme | Übersicht: [README.md](README.md)
+> **Stand:** 2026-10-07 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/`, Standard-Theme `cms-default`, Laufzeitprüfung zusätzlich mit dem PhinIT-Theme | Übersicht: [README.md](README.md)
 
 ## English (summary)
 

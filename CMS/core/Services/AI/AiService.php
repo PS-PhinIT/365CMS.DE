@@ -420,22 +420,6 @@ final class AiService
         ];
     }
 
-    /** @param array<string, mixed> $providersConfig */
-    private function resolveGlobalProviderConfig(array $providersConfig): array
-    {
-        $activeProviderId = $this->sanitizeProviderId((string) ($providersConfig['active_provider_id'] ?? ''));
-        foreach ((array) ($providersConfig['entries'] ?? []) as $entry) {
-            if (!is_array($entry)) {
-                continue;
-            }
-
-            if ($this->sanitizeProviderId((string) ($entry['id'] ?? '')) === $activeProviderId) {
-                return $entry;
-            }
-        }
-
-        throw new \RuntimeException('Der globale AI-Provider ist nicht konfiguriert.');
-    }
 
     /** @param array<string, mixed> $features */
     private function assertAiEnabled(array $features): void
@@ -459,49 +443,7 @@ final class AiService
         }
     }
 
-    /** @param array<string, mixed> $features
-     *  @param array<string, mixed> $providerConfig
-     */
-    private function assertSeoMetadataEnabled(array $features, array $providerConfig): void
-    {
-        $this->assertAiEnabled($features);
 
-        if (empty($features['ai_seo_meta_enabled'])) {
-            throw new \RuntimeException('Die AI-SEO-Metadaten-Generierung ist aktuell global deaktiviert.');
-        }
-
-        if (empty($features['ai_editorjs_enabled'])) {
-            throw new \RuntimeException('Die Editor.js-Integration für AI ist aktuell deaktiviert.');
-        }
-
-        if (empty($providerConfig['seo_meta_enabled'])) {
-            throw new \RuntimeException('Der globale AI-Provider ist nicht für SEO-Metadaten freigegeben.');
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $features
-     * @param array<string, mixed> $providerConfig
-     */
-    private function assertContentDraftEnabled(array $features, array $providerConfig, string $task): void
-    {
-        $this->assertAiEnabled($features);
-
-        $isSummary = $task === 'summary';
-        if ($isSummary && empty($features['ai_summary_enabled'])) {
-            throw new \RuntimeException('AI-Zusammenfassungen sind aktuell global deaktiviert.');
-        }
-        if (!$isSummary && empty($features['ai_rewrite_enabled'])) {
-            throw new \RuntimeException('AI-Content-Entwürfe sind aktuell global deaktiviert.');
-        }
-
-        if ($isSummary && empty($providerConfig['summary_enabled'])) {
-            throw new \RuntimeException('Der globale AI-Provider ist nicht für Zusammenfassungen freigegeben.');
-        }
-        if (!$isSummary && empty($providerConfig['rewrite_enabled'])) {
-            throw new \RuntimeException('Der globale AI-Provider ist nicht für Content-Entwürfe freigegeben.');
-        }
-    }
 
     /** @param list<string> $allowedTargetLocales */
     private function assertTargetLocaleAllowed(string $targetLocale, array $allowedTargetLocales): void

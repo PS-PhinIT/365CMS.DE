@@ -1,9 +1,9 @@
 # 365CMS – Projektdokumentation | Abschnitt: README
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.09) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `3.4.00` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-09-05, `stable`), PHP 8.4+, schema `v23`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `3.5.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-10-14, `stable`), PHP 8.4+, schema `v23`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -28,14 +28,14 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | Dateien/Struktur sucht | [FILELIST.md](FILELIST.md) · [FILESTRUCTUR.md](FILESTRUCTUR.md) · [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) · [DEVLIST.md](DEVLIST.md) |
 | alle Dokumente sehen wollt | [INDEX.md](INDEX.md) |
 
-### Eckdaten 3.4.00
+### Eckdaten 3.5.0
 
-- `CMS/core/Version.php`: `CURRENT = '3.4.00'`, `RELEASE_DATE = '2026-09-05'`, `STATUS = 'stable'`
+- `CMS/core/Version.php`: `CURRENT = '3.5.0'`, `RELEASE_DATE = '2026-10-14'`, `STATUS = 'stable'`
 - `SchemaManager::SCHEMA_VERSION = 'v23'`, Tabellenpräfix `cms_`
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
-- Changelog-Einträge 3.4.01–3.4.09 sind Release-Notizen und ändern die Versionskonstante nicht ([../Changelog.md](../Changelog.md))
+- Release 3.5.0 bündelt alle Änderungen seit 3.4.00 (Zwischenstände 3.4.01–3.4.25 und Folgeaudit vom 14.10.2026) ([../Changelog.md](../Changelog.md))
 
 ### Dokumentationsbereiche
 

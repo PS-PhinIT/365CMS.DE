@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Analysen & Tracking
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/analytics` | **Capability:** `manage_settings` oder `view_analytics` | **CSRF-Aktion:** `admin_seo_suite` | **Core-Modul:** `seo`
 
 ## English (summary)

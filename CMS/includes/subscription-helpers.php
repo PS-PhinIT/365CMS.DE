@@ -186,7 +186,7 @@ function display_resource_limit_warning(string $resourceType, string $resourceLa
     if ($limit === 0) {
         echo '<div class="alert alert-danger" style="margin: 1rem 0; padding: 1rem; background: #fee2e2; color: #991b1b; border-radius: 8px;">';
         echo '<strong>⚠️ Feature nicht verfügbar:</strong> ' . htmlspecialchars($resourceLabel) . ' sind in Ihrem Abo-Paket nicht enthalten. ';
-        echo '<a href="' . SITE_URL . '/admin/subscriptions" style="color: #991b1b; text-decoration: underline;">Jetzt upgraden</a>';
+        echo '<a href="' . SITE_URL . '/member/subscription" style="color: #991b1b; text-decoration: underline;">Jetzt upgraden</a>';
         echo '</div>';
         return;
     }
@@ -197,7 +197,7 @@ function display_resource_limit_warning(string $resourceType, string $resourceLa
     if ($remaining <= 0) {
         echo '<div class="alert alert-danger" style="margin: 1rem 0; padding: 1rem; background: #fee2e2; color: #991b1b; border-radius: 8px;">';
         echo '<strong>🚫 Limit erreicht:</strong> Sie haben Ihr Limit von ' . $limit . ' ' . htmlspecialchars($resourceLabel) . ' erreicht. ';
-        echo '<a href="' . SITE_URL . '/admin/subscriptions" style="color: #991b1b; text-decoration: underline;">Abo upgraden</a>';
+        echo '<a href="' . SITE_URL . '/member/subscription" style="color: #991b1b; text-decoration: underline;">Abo upgraden</a>';
         echo '</div>';
     } elseif ($percentage >= 80) {
         echo '<div class="alert alert-warning" style="margin: 1rem 0; padding: 1rem; background: #fef3c7; color: #92400e; border-radius: 8px;">';
@@ -281,7 +281,7 @@ function display_upgrade_notice(string $message = ''): void
     echo '<div class="upgrade-notice" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; text-align: center;">';
     echo '<h3 style="margin: 0 0 1rem; font-size: 1.5rem;">🚀 Upgrade erforderlich</h3>';
     echo '<p style="margin: 0 0 1.5rem; font-size: 1.1rem;">' . htmlspecialchars($message) . '</p>';
-    echo '<a href="' . SITE_URL . '/admin/subscriptions" class="btn btn-light" style="background: white; color: #667eea; padding: 0.75rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">';
+    echo '<a href="' . SITE_URL . '/member/subscription" class="btn btn-light" style="background: white; color: #667eea; padding: 0.75rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">';
     echo 'Jetzt upgraden →';
     echo '</a>';
     echo '</div>';

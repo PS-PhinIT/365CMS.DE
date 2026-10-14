@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Übersicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Schema:** v23 | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Schema:** v23 | **Status:** Stable
 
 ## English (summary)
 
@@ -24,7 +24,7 @@ This folder documents the runtime core in `CMS/core/`: bootstrap and request lif
 
 ### Kernfakten
 
-- `CMS\Version::CURRENT = '3.4.00'`, Schema `v23`, PHP ≥ 8.4.
+- `CMS\Version::CURRENT = '3.5.0'`, Schema `v23`, PHP ≥ 8.4.1.
 - Einstieg `CMS/index.php` → `CMS\Bootstrap` → Modus `cli`/`api`/`admin`/`web` → `CMS\Router`.
 - Routing nach Präfix: `/api` → `ApiRouter`, `/admin` → `AdminRouter`, `/member`/`/dashboard` → `MemberRouter`, Rest → `PublicRouter` + `ThemeRouter`.
 - Erweiterung über `CMS\Hooks`, Plugins (`CMS/plugins/`) und Themes (`CMS/themes/`).

@@ -1,5 +1,5 @@
 # ASSET-Übersicht 365CMS
-> **Stand:** 2026-10-04 | **Version:** 3.4.00 | **Status:** Aktuell
+> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Status:** Aktuell
 
 ## Inhaltsverzeichnis
 - <a>Aktive Runtime-Bundles</a>

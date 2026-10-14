@@ -66,7 +66,7 @@ trusted-types cms365 default sanitize-html dompurify; require-trusted-types-for 
 | Passwort-Reset | Token in `cms_password_resets`, einmalig, Ablauf 60 min, Rate-Limits, konstante Antwortzeit |
 | Abmeldung | nur mit CSRF-Token `logout` |
 | Audit | `loginSuccess`, `loginFailed`, Rollenwechsel, Sperren |
-| API-Bearer (seit 3.4.13) | `Authorization: Bearer <JWT>` nur mit `JWT_SECRET` (≥ 32 Zeichen); Ausgabe nur an angemeldete Sessions (kein MFA-Bypass), Refresh-Tokens nicht als Access-Token nutzbar, Konto muss aktiv sein – siehe [API-REFERENCE.md](API-REFERENCE.md#jwt-anmeldung-seit-3413) |
+| API-Bearer (seit 3.4.13) | `Authorization: Bearer <JWT>` nur mit `JWT_SECRET` (≥ 32 Zeichen); Ausgabe nur an angemeldete Sessions (kein MFA-Bypass), Refresh-Tokens nicht als Access-Token nutzbar, Konto muss aktiv sein; seit 3.5.0 an den Passwort-Fingerabdruck gebunden (Claim `pwf`, Passwortänderung entwertet alle Tokens) – siehe [API-REFERENCE.md](API-REFERENCE.md#jwt-anmeldung-seit-3413) |
 
 Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/RBAC.md).
 

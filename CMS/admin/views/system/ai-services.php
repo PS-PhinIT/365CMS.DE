@@ -140,6 +140,7 @@ $renderSwitch = static function (string $name, string $label, bool $checked, str
 };
 $renderPromptTemplateForm = static function (string $action, array $template, string $title, string $description) use ($renderFormContext, $renderSwitch): void {
     $placeholders = array_values(array_filter(array_map('strval', (array) ($template['placeholders'] ?? []))));
+    $fieldPrefix = 'ai-' . preg_replace('/[^a-z0-9-]/i', '-', $action);
     ?>
     <form method="post" class="card h-100">
         <?php $renderFormContext($action); ?>
@@ -153,27 +154,27 @@ $renderPromptTemplateForm = static function (string $action, array $template, st
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-7">
-                    <label class="form-label">Anzeigename</label>
-                    <input type="text" class="form-control" name="prompt_label" maxlength="120" value="<?php echo htmlspecialchars((string) ($template['label'] ?? ''), ENT_QUOTES); ?>">
+                    <label for="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-label" class="form-label">Anzeigename</label>
+                    <input id="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-label" type="text" class="form-control" name="prompt_label" maxlength="120" value="<?php echo htmlspecialchars((string) ($template['label'] ?? ''), ENT_QUOTES); ?>">
                 </div>
                 <div class="col-md-5 d-flex align-items-end">
                     <?php $renderSwitch('prompt_enabled', 'Vorlage aktiv verwenden', !empty($template['enabled']), 'Bei Translation und SEO wirkt die Vorlage direkt in der Live-Pipeline; der Content Creator bleibt vorbereitet.'); ?>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">System-Prompt / Leitplanken</label>
-                    <textarea class="form-control" name="system_prompt" rows="6" maxlength="4000" spellcheck="false"><?php echo htmlspecialchars((string) ($template['system_prompt'] ?? '')); ?></textarea>
+                    <label for="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-system-prompt" class="form-label">System-Prompt / Leitplanken</label>
+                    <textarea id="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-system-prompt" class="form-control" name="system_prompt" rows="6" maxlength="4000" spellcheck="false"><?php echo htmlspecialchars((string) ($template['system_prompt'] ?? '')); ?></textarea>
                     <div class="form-hint">Serverseitig werden zusätzliche Pflichtregeln gegen Prompt Injection, Secret-Leaks und System-Prompt-Offenlegung angehängt.</div>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">User-Template / strukturierte Nutzdaten</label>
-                    <textarea class="form-control" name="user_template" rows="6" maxlength="4000" spellcheck="false"><?php echo htmlspecialchars((string) ($template['user_template'] ?? '')); ?></textarea>
+                    <label for="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-user-template" class="form-label">User-Template / strukturierte Nutzdaten</label>
+                    <textarea id="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-user-template" class="form-control" name="user_template" rows="6" maxlength="4000" spellcheck="false"><?php echo htmlspecialchars((string) ($template['user_template'] ?? '')); ?></textarea>
                     <?php if ($placeholders !== []): ?>
                         <div class="form-hint">Platzhalter: <?php echo htmlspecialchars(implode(', ', $placeholders)); ?></div>
                     <?php endif; ?>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Interne Notiz</label>
-                    <textarea class="form-control" name="prompt_notes" rows="3" maxlength="1000"><?php echo htmlspecialchars((string) ($template['notes'] ?? '')); ?></textarea>
+                    <label for="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-notes" class="form-label">Interne Notiz</label>
+                    <textarea id="<?php echo htmlspecialchars($fieldPrefix, ENT_QUOTES); ?>-notes" class="form-control" name="prompt_notes" rows="3" maxlength="1000"><?php echo htmlspecialchars((string) ($template['notes'] ?? '')); ?></textarea>
                     <div class="form-hint">Notizen werden gespeichert, aber nicht an Provider gesendet.</div>
                 </div>
                 <div class="col-12">
@@ -611,7 +612,7 @@ if (empty($summary['translation_ready'])) {
                             <button type="button" class="btn btn-outline-primary btn-sm" id="copyAiContentDraftButton">Entwurf kopieren</button>
                         </div>
                         <div class="card-body">
-                            <textarea class="form-control" id="aiContentDraftOutput" rows="12" readonly><?php echo htmlspecialchars((string) ($contentDraft['content'] ?? '')); ?></textarea>
+                            <textarea class="form-control" id="aiContentDraftOutput" aria-label="Content-Entwurf" rows="12" readonly><?php echo htmlspecialchars((string) ($contentDraft['content'] ?? '')); ?></textarea>
                         </div>
                     </div>
                 </div>

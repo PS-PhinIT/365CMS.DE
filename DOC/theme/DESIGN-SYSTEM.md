@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Theme – Design-System
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Referenz-Theme:** `cms-default` 1.0.9 („Meridian“)
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.0.9 („Meridian“)
 
 ## English (summary)
 

@@ -83,8 +83,8 @@ usort($checks, static function (array $left, array $right): int {
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h3 class="card-title mb-0">Audit-Log (letzte 50 Einträge)</h3>
                 <div class="d-flex gap-2 flex-wrap">
-                    <input type="search" class="form-control form-control-sm" id="securityAuditSearch" placeholder="Suche..." style="min-width: 180px;">
-                    <select class="form-select form-select-sm" id="securityAuditType">
+                    <input type="search" class="form-control form-control-sm" id="securityAuditSearch" aria-label="Audit-Log durchsuchen" placeholder="Suche..." style="min-width: 180px;">
+                    <select class="form-select form-select-sm" id="securityAuditType" aria-label="Nach Aktionstyp filtern">
                         <option value="">Aktionstyp: Alle</option>
                         <option value="login">Login</option>
                         <option value="error">Fehler</option>

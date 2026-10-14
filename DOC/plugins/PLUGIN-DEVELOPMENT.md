@@ -1,4 +1,4 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.4.00 (Changelog bis 3.4.08)
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
 > **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02 (Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 

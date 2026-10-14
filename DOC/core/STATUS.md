@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Implementierungsstatus
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.15) | **Schema:** v23 | **Status:** Stable
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | **Schema:** v23 | **Status:** Stable
 
 ## English (summary)
 
-Snapshot of the runtime state verified against the source code on 2026-10-02: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (3.4.01–3.4.13, which do not bump `Version::CURRENT`), and a list of known gaps and inconsistencies found while updating the documentation.
+Snapshot of the runtime state verified against the source code on 2026-10-02: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation.
 
 ## Deutsch
 
@@ -12,15 +12,15 @@ Snapshot of the runtime state verified against the source code on 2026-10-02: ve
 
 | Merkmal | Wert | Quelle |
 |---|---|---|
-| Core-Version | `3.4.00`, Release `2026-09-05`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
+| Core-Version | `3.5.0`, Release `2026-10-14`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
 | Schema | `v23` | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.0.9 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Einträge bis `3.4.13` (03.10.2026) | `Changelog.md` – historische Einträge ohne Änderung von `Version::CURRENT` |
+| Changelog | Zwischenstände `3.4.01`–`3.4.25` und Release `3.5.0` (14.10.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00` |
 
-### Änderungen seit 3.4.00 (laut Changelog)
+### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
 
 | Version | Schwerpunkt |
 |---|---|
@@ -80,7 +80,7 @@ Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)
 | 16 | DB-Rate-Limits zählten nie, wenn MySQL-Zeitzone ≠ PHP-Zeitzone | Login-/Reset-/API-Schutz wirkungslos | `Security::checkDbRateLimit()` | ✅ 3.4.13 – Sitzungszeitzone in `Database` |
 | 17 | `POST /contact` ohne Route | Kontaktformular immer 404 | `ThemeRouter` | ✅ 3.4.13 |
 | 18 | `posts.title_en/content_en/excerpt_en` nur über `/admin/posts` ergänzt | frische Installation: `/blog` 500 | `SchemaManager`, `PostsModule` | ✅ 3.4.13 – Schema v23 |
-| 15 | `Version::CURRENT` bleibt `3.4.00` trotz ausgelieferter Fixes | Installationen nicht unterscheidbar | `CMS/core/Version.php` | offen – Release-Entscheidung (Audit FUN-12) |
+| 15 | `Version::CURRENT` blieb `3.4.00` trotz ausgelieferter Fixes | Installationen nicht unterscheidbar | `CMS/core/Version.php` | ✅ 3.5.0 – `Version::CURRENT = 3.5.0` (Audit FUN-12) |
 
 ### Grundsatz dieser Dokumentation
 

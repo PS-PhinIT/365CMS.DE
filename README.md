@@ -1,6 +1,6 @@
 # 365CMS
 
-> **Stand:** 2026-10-07 | **Version:** 3.4.00 (Changelog bis 3.4.22) | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
 
 ## English
 
@@ -10,8 +10,8 @@
 
 | Key fact | Value |
 |---|---|
-| Core version | `3.4.00` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-09-05, status `stable`) |
-| PHP | `8.4+` (`CMS_MIN_PHP_VERSION`) |
+| Core version | `3.5.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-10-14, status `stable`) |
+| PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
 | Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v23` |
 | Shipped theme / plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress importer) |
 
@@ -30,7 +30,7 @@
 
 ### Requirements
 
-- PHP `8.4+` with `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
+- PHP `8.4.1+` with `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
 - MySQL- or MariaDB-compatible database
 - Web server (Apache with `.htaccess` or nginx with equivalent rules) serving `CMS/`
 - Writable `config/`, `uploads/`, `cache/`, `logs/`, `backups/`
@@ -58,6 +58,8 @@ Never ship installation-specific `config/`, `uploads/`, `cache/`, `logs/` or `ba
 | Admin panel | [`DOC/admin/README.md`](DOC/admin/README.md) |
 | Plugin / theme development | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | Workflows | [`DOC/workflow/`](DOC/workflow/) |
+| Audit reports | [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
+| Release packages | [`RELEASE/README-3.5.0.md`](RELEASE/README-3.5.0.md) |
 | Release history | [`Changelog.md`](Changelog.md) |
 | Community rules | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
 
@@ -73,8 +75,8 @@ Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](C
 
 | Eckdaten | Wert |
 |---|---|
-| Core-Version | `3.4.00` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-09-05, Status `stable`) |
-| PHP | `8.4+` (`CMS_MIN_PHP_VERSION`) |
+| Core-Version | `3.5.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-10-14, Status `stable`) |
+| PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
 | Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v23` |
 | Mitgeliefertes Theme / Plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress-Import) |
 
@@ -93,7 +95,7 @@ Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](C
 
 ### Voraussetzungen
 
-- PHP `8.4+` mit `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
+- PHP `8.4.1+` mit `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
 - MySQL- oder MariaDB-kompatible Datenbank
 - Webserver (Apache mit `.htaccess` oder nginx mit gleichwertigen Regeln), der `CMS/` ausliefert
 - Schreibrechte für `config/`, `uploads/`, `cache/`, `logs/`, `backups/`
@@ -112,7 +114,7 @@ Installationsspezifische Verzeichnisse (`config/`, `uploads/`, `cache/`, `logs/`
 
 ### Dokumentation
 
-Einstieg ist [`DOC/README.md`](DOC/README.md), die vollständige Liste steht in [`DOC/INDEX.md`](DOC/INDEX.md). Bekannte Abweichungen zwischen Code und erwartetem Verhalten sind in [`DOC/core/STATUS.md`](DOC/core/STATUS.md) („Bekannte Lücken“) gesammelt.
+Einstieg ist [`DOC/README.md`](DOC/README.md), die vollständige Liste steht in [`DOC/INDEX.md`](DOC/INDEX.md). Bekannte Abweichungen zwischen Code und erwartetem Verhalten sind in [`DOC/core/STATUS.md`](DOC/core/STATUS.md) („Bekannte Lücken“) gesammelt. Audit-Berichte: [`DOC/audit/README.md`](DOC/audit/README.md) (aktuell) und [`DOC/checks/README.md`](DOC/checks/README.md) (frühere Audits); Release-Pakete: [`RELEASE/README-3.5.0.md`](RELEASE/README-3.5.0.md).
 
 ### Mitwirken und Sicherheit
 

@@ -225,7 +225,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                             </div>
                             <div class="dashboard-primary-metric-value<?= $isZeroHighlight ? ' is-zero' : ' is-positive' ?>"><?= htmlspecialchars($highlightValue === '' ? '0' : $highlightValue) ?></div>
                             <?php if ($isZeroHighlight): ?>
-                                <p class="dashboard-primary-metric-empty mb-0"><?= htmlspecialchars((string) ($highlight['empty_hint'] ?? 'Keine neuen Eintraege')) ?></p>
+                                <p class="dashboard-primary-metric-empty mb-0"><?= htmlspecialchars((string) ($highlight['empty_hint'] ?? 'Keine neuen Einträge')) ?></p>
                             <?php endif; ?>
                             <p class="dashboard-primary-metric-hint mb-0"><?= htmlspecialchars((string) ($highlight['hint'] ?? '')) ?></p>
                         </a>
@@ -366,9 +366,9 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
             <div class="card-body">
                 <div class="d-flex align-items-center gap-2 text-secondary mb-2">
                     <?= dashIcon('activity') ?>
-                    <span class="dashboard-section-label">ZENTRALE ARBEITSUEBERSICHT</span>
+                    <span class="dashboard-section-label">ZENTRALE ARBEITSÜBERSICHT</span>
                 </div>
-                <h3 class="mb-2">Aktuelle Prioritaeten</h3>
+                <h3 class="mb-2">Aktuelle Prioritäten</h3>
                 <p class="text-secondary mb-0">
                     Schnellaktionen und Aktivitätszusammenfassung statt doppelter Kennzahlen.
                 </p>
@@ -461,7 +461,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                     <?php else: ?>
                         <div class="dashboard-empty-state">
                             <p class="text-secondary mb-1">Noch keine Favoriten gespeichert.</p>
-                            <p class="dashboard-empty-hint mb-0">Alles ruhig - du kannst Favoriten oben in "Dashboard personalisieren" auswaehlen.</p>
+                            <p class="dashboard-empty-hint mb-0">Alles ruhig – du kannst Favoriten oben in „Dashboard personalisieren“ auswählen.</p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -504,7 +504,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <div class="list-group-item dashboard-empty-state">
-                                <div class="text-secondary">Aktuell gibt es keine offenen Prioritaeten.</div>
+                                <div class="text-secondary">Aktuell gibt es keine offenen Prioritäten.</div>
                                 <div class="dashboard-empty-hint">Alles ruhig – derzeit ist kein Eingreifen nötig.</div>
                             </div>
                         <?php endif; ?>
@@ -549,7 +549,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                         <?php else: ?>
                             <div class="card-body dashboard-empty-state">
                                 <div class="text-secondary">Noch keine Bestellungen gefunden.</div>
-                                <div class="dashboard-empty-hint">Alles ruhig - neue Bestellungen erscheinen hier automatisch.</div>
+                                <div class="dashboard-empty-hint">Alles ruhig – neue Bestellungen erscheinen hier automatisch.</div>
                             </div>
                         <?php endif; ?>
                     </div>

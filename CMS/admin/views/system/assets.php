@@ -160,7 +160,7 @@ $assetPermissions = array_values(array_filter($permissions, static function ($pe
                 <div class="card h-100">
                     <div class="card-header"><h3 class="card-title">Asset-Libraries</h3></div>
                     <div class="card-body border-bottom pb-2">
-                        <input type="search" class="form-control" id="assetLibrarySearch" placeholder="Library suchen...">
+                        <input type="search" class="form-control" id="assetLibrarySearch" aria-label="Library suchen" placeholder="Library suchen...">
                         <div class="text-secondary small mt-2" id="assetLibraryCounter"><?php echo count($bundledLibraries); ?> von <?php echo count($bundledLibraries); ?> Libraries</div>
                     </div>
                     <div class="table-responsive">

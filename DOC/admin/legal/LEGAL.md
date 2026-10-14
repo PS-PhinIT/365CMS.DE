@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Rechtsseiten
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/legal-sites` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_legal_sites` | **Core-Modul:** `legal`
 
 ## English (summary)

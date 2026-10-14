@@ -24,11 +24,20 @@ final class SeoMetaRepository
         }
     }
 
+    /** @var array<string, array<string, mixed>> Pro Request gemerkte Metadaten (Head-Tags und Dokumenttitel lesen dieselbe Zeile). */
+    private array $contentMetaCache = [];
+
     public function getContentMeta(string $contentType, int $contentId): array
     {
         if ($contentId <= 0) {
             return $this->getDefaultMeta();
         }
+
+        return $this->contentMetaCache[$contentType . ':' . $contentId] ??= $this->loadContentMeta($contentType, $contentId);
+    }
+
+    private function loadContentMeta(string $contentType, int $contentId): array
+    {
 
         $row = $this->db->get_row(
             "SELECT * FROM {$this->prefix}seo_meta WHERE content_type = ? AND content_id = ? LIMIT 1",
@@ -62,6 +71,7 @@ final class SeoMetaRepository
 
     public function saveContentMeta(string $contentType, int $contentId, array $data): void
     {
+        unset($this->contentMetaCache[$contentType . ':' . $contentId]);
         if ($contentId <= 0) {
             return;
         }
@@ -104,7 +114,7 @@ final class SeoMetaRepository
 
     private function ensureSeoMetaTable(): void
     {
-        $this->db->getPdo()->exec(
+        $this->db->execute(
             "CREATE TABLE IF NOT EXISTS {$this->prefix}seo_meta (
                 id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 content_type VARCHAR(20) NOT NULL,
@@ -144,14 +154,13 @@ final class SeoMetaRepository
         ];
 
         foreach ($columns as $column => $sql) {
-            $stmt = $this->db->getPdo()->query("SHOW COLUMNS FROM {$this->prefix}seo_meta LIKE " . $this->db->getPdo()->quote($column));
-            $exists = $stmt instanceof \PDOStatement && $stmt->fetch(\PDO::FETCH_ASSOC) !== false;
-            if ($stmt instanceof \PDOStatement) {
-                $stmt->closeCursor();
-            }
+            // $column stammt aus der festen Liste oben (nur [a-z_]); DatabaseInterface kennt kein getPdo().
+            $stmt = $this->db->execute("SHOW COLUMNS FROM {$this->prefix}seo_meta LIKE '{$column}'");
+            $exists = $stmt->fetch(\PDO::FETCH_ASSOC) !== false;
+            $stmt->closeCursor();
 
             if (!$exists) {
-                $this->db->getPdo()->exec($sql);
+                $this->db->execute($sql);
             }
         }
     }

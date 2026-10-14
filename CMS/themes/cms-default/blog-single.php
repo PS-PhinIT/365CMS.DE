@@ -200,8 +200,8 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
     <div class="post-footer-bar post-footer-bar--detail">
       <span class="pf-label">Schlagwörter</span>
       <div class="pf-tags">
-        <?php foreach ($pTags as $tag): ?>
-        <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', (string) ((string) $tag)), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string) $tag, ENT_QUOTES, 'UTF-8'); ?></a>
+        <?php foreach ((is_array($post->tag_items ?? null) && $post->tag_items !== [] ? $post->tag_items : $pTags) as $tag): $tagLink = meridian_tag_link_data($tag); if ($tagLink['name'] === '') { continue; } ?>
+        <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', $tagLink['slug']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($tagLink['name'], ENT_QUOTES, 'UTF-8'); ?></a>
         <?php endforeach; ?>
       </div>
     </div>

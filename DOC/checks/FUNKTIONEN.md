@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Audit 2026-10-03 – Fehlende und unvollständige Funktionen
 
-> **Stand:** 2026-10-03 | **Version:** 3.4.00 (Changelog bis 3.4.14) | Übersicht: [README.md](README.md)
+> **Stand:** 2026-10-03 | **Version:** 3.5.0 | Übersicht: [README.md](README.md)
 
 ## English (summary)
 

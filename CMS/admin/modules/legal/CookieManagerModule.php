@@ -18,8 +18,6 @@ class CookieManagerModule
     private readonly \CMS\Database $db;
     private readonly string $prefix;
     /** @var array<string, true> */
-    private array $existingSettingNamesCache = [];
-    /** @var array<string, true> */
     private array $existingCategorySlugsCache = [];
 
     private const int MAX_CATEGORY_NAME_LENGTH = 100;
@@ -989,12 +987,6 @@ class CookieManagerModule
         return false;
     }
 
-    private function storeSetting(string $key, string $value): void
-    {
-        $this->upsertSetting($key, $value);
-        $this->existingSettingNamesCache[$key] = true;
-    }
-
     /** @param array<string, string> $values */
     private function storeSettings(array $values): void
     {
@@ -1004,7 +996,6 @@ class CookieManagerModule
 
         foreach ($values as $key => $value) {
             $this->upsertSetting((string)$key, (string)$value);
-            $this->existingSettingNamesCache[$key] = true;
         }
     }
 
@@ -1023,47 +1014,6 @@ class CookieManagerModule
         if ($stmt === false || !$stmt->execute([$key, $value])) {
             throw new \RuntimeException('Setting konnte nicht gespeichert werden: ' . $key);
         }
-    }
-
-    /** @param list<string> $keys */
-    private function warmSettingNamesCache(array $keys): void
-    {
-        $missing = [];
-        foreach ($keys as $key) {
-            if ($key !== '' && !isset($this->existingSettingNamesCache[$key])) {
-                $missing[] = $key;
-            }
-        }
-
-        if ($missing === []) {
-            return;
-        }
-
-        foreach ($this->getExistingSettingNames($missing) as $key => $exists) {
-            $this->existingSettingNamesCache[$key] = $exists;
-        }
-    }
-
-    /** @param list<string> $keys
-     *  @return array<string, true> */
-    private function getExistingSettingNames(array $keys): array
-    {
-        if ($keys === []) {
-            return [];
-        }
-
-        $placeholders = implode(',', array_fill(0, count($keys), '?'));
-        $rows = $this->db->get_results(
-            "SELECT option_name FROM {$this->prefix}settings WHERE option_name IN ({$placeholders})",
-            $keys
-        ) ?: [];
-
-        $existing = [];
-        foreach ($rows as $row) {
-            $existing[(string)$row->option_name] = true;
-        }
-
-        return $existing;
     }
 
     private function sanitizeOptionalUrl(string $url): string
@@ -1285,7 +1235,7 @@ class CookieManagerModule
     /** @param array<string, scalar|null> $context */
     private function logFailure(string $action, string $message, \Throwable $e, array $context = []): void
     {
-        Logger::error($message, [
+        Logger::instance()->error($message, [
             'module' => 'CookieManagerModule',
             'action' => $action,
             'exception' => $e::class,

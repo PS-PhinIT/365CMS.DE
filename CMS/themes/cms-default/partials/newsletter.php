@@ -16,13 +16,8 @@ if (!defined('ABSPATH')) {
 $nlTitle  = meridian_setting('newsletter', 'widget_title',    'Kein Artikel verpassen');
 $nlDesc   = meridian_setting('newsletter', 'widget_desc',     'Praxiswissen direkt ins Postfach – kein Spam, jederzeit abbestellbar.');
 $nlBtn    = meridian_setting('newsletter', 'widget_btn_text', 'Jetzt abonnieren →');
-$nlAction = SITE_URL . '/newsletter/subscribe';
-
-// CSRF-Token für Newsletter-Formular
-$nlCsrf = '';
-if (class_exists('\CMS\Security')) {
-    $nlCsrf = \CMS\Security::instance()->generateToken('newsletter');
-}
+// Es gibt keine Route /newsletter/subscribe – wie in home.php zur Registrierung weiterleiten (E-Mail wird dort vorbelegt).
+$nlAction = meridian_auth_url('register');
 ?>
 <div class="newsletter-widget sidebar-widget">
     <div class="widget-title">Newsletter</div>
@@ -30,8 +25,7 @@ if (class_exists('\CMS\Security')) {
     <?php if ($nlDesc): ?>
     <p style="font-size:.82rem;color:rgba(255,255,255,.75);margin:0 0 .9rem;line-height:1.5;"><?php echo htmlspecialchars($nlDesc, ENT_QUOTES, 'UTF-8'); ?></p>
     <?php endif; ?>
-    <form action="<?php echo htmlspecialchars($nlAction, ENT_QUOTES, 'UTF-8'); ?>" method="POST" class="newsletter-form" novalidate>
-        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($nlCsrf, ENT_QUOTES, 'UTF-8'); ?>">
+    <form action="<?php echo htmlspecialchars($nlAction, ENT_QUOTES, 'UTF-8'); ?>" method="GET" class="newsletter-form">
         <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
             <input type="email" name="email"
                    placeholder="deine@email.de"

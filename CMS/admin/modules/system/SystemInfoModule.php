@@ -1550,7 +1550,6 @@ class SystemInfoModule
         }
     }
 
-    /** @return array<string, mixed> */
     private function formatBytesLabel(int $bytes): string
     {
         if ($bytes >= 1073741824) {

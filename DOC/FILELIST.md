@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: FILELIST
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.09) | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -27,13 +27,13 @@
 
 This file is the **readable structure map**. It answers: where does something live, what does the running CMS load, and which paths matter when you change code.
 
-Product version in code: `3.4.00`. PHP: 8.4.1+. Schema: `v23`.
+Product version in code: `3.5.0`. PHP: 8.4.1+. Schema: `v23`.
 
 **Deutsch**
 
 Diese Datei ist die **lesbare Strukturkarte**. Sie beantwortet: wo liegt etwas, was lädt das laufende CMS, und welche Pfade zählen bei Änderungen.
 
-Produktversion im Code: `3.4.00`. PHP: 8.4.1+. Schema: `v23`.
+Produktversion im Code: `3.5.0`. PHP: 8.4.1+. Schema: `v23`.
 
 ### 1.1 Workspace context | Workspace-Kontext
 
@@ -188,7 +188,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | Media | `MediaService`, `MediaDeliveryService`, `FileUploadService`, `ImageService` |
 | Editor | `EditorJsService`, `EditorJsRenderer`, `EditorService` |
 | Landing | `LandingPageService` + `Services/Landing/` |
-| AI | `Services/AI/` (admin-only in 3.4.00) |
+| AI | `Services/AI/` (admin-only in 3.5.0) |
 | Member | `MemberService`, `MessageService` |
 | Ops | `BackupService`, `UpdateService`, `StatusService`, `SystemService` |
 

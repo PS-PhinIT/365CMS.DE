@@ -1670,37 +1670,7 @@ final class EditorJsRenderer
         return $escaped;
     }
 
-    private function renderPlainTextContent(string $text): string
-    {
-        $normalized = trim((string) preg_replace('/\r\n?/', "\n", $text));
-        if ($normalized === '') {
-            return '';
-        }
 
-        $paragraphs = preg_split('/\n{2,}/', $normalized) ?: [];
-        $html = '';
-
-        foreach ($paragraphs as $paragraph) {
-            $paragraph = trim($paragraph);
-            if ($paragraph === '') {
-                continue;
-            }
-
-            $html .= '<p>' . nl2br(htmlspecialchars($paragraph, ENT_QUOTES, 'UTF-8')) . '</p>';
-        }
-
-        return $html;
-    }
-
-    private function renderInlineTextContent(string $html): string
-    {
-        $sanitized = trim($this->sanitizeInline($html));
-        if ($sanitized === '') {
-            return '';
-        }
-
-        return '<p>' . $sanitized . '</p>';
-    }
 
     private function renderMediaTextContent(string $html): string
     {

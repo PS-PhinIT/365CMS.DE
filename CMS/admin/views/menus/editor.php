@@ -165,19 +165,19 @@ $menuEditorBaseUrl = '/admin/menu-editor';
                     <div class="card-body">
                         <div class="row g-2">
                             <div class="col-md-4">
-                                <input type="text" id="newItemTitle" class="form-control" placeholder="Titel" maxlength="255">
+                                <input type="text" id="newItemTitle" aria-label="Titel des Menüpunkts" class="form-control" placeholder="Titel" maxlength="255">
                             </div>
                             <div class="col-md-4">
-                                <input type="text" id="newItemUrl" class="form-control" placeholder="URL oder Slug (z.B. kontakt, /kontakt oder https://...)">
+                                <input type="text" id="newItemUrl" aria-label="URL oder Slug des Menüpunkts" class="form-control" placeholder="URL oder Slug (z.B. kontakt, /kontakt oder https://...)">
                                 <div class="form-hint mt-1">Für reine Elternpunkte kann das Feld zunächst leer bleiben; beim Speichern wird daraus automatisch ein Platzhalter.</div>
                             </div>
                             <div class="col-md-2">
-                                <select id="newItemParent" class="form-select">
+                                <select id="newItemParent" aria-label="Übergeordneter Menüpunkt" class="form-select">
                                     <option value="0">Hauptebene</option>
                                 </select>
                             </div>
                             <div class="col-md-1">
-                                <select id="newItemTarget" class="form-select">
+                                <select id="newItemTarget" aria-label="Linkziel" class="form-select">
                                     <option value="_self">Gleich</option>
                                     <option value="_blank">Neu</option>
                                 </select>

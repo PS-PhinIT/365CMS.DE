@@ -5,7 +5,7 @@
  * Erwartet folgende Variablen (optional, werden intern ermittelt falls nicht gesetzt):
  *   $recentSidebar – array, neueste Beiträge
  *   $sidebarCats   – array, Kategorien
- *   $tagCloud      – array, Tag-Strings
+ *   $tagCloud      – array, Tags als [name, slug] (Strings werden als Name behandelt)
  *
  * @package CMSv2\Themes\CmsDefault\Partials
  */
@@ -21,10 +21,7 @@ $sbCats   = $sidebarCats   ?? meridian_get_categories(8);
 $sbTags   = $tagCloud      ?? [];
 
 if (empty($sbTags)) {
-    $rawTags = meridian_get_tags(20);
-    foreach ($rawTags as $t) {
-        $sbTags[] = $t['name'];
-    }
+    $sbTags = meridian_get_tags(20);
 }
 ?>
 <aside class="sidebar" aria-label="Seiten-Seitenleiste">
@@ -91,11 +88,11 @@ if (empty($sbTags)) {
     <div class="sidebar-widget">
         <div class="widget-title">Tags</div>
         <div class="tag-cloud" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;">
-            <?php foreach ($sbTags as $tag): ?>
-            <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', (string) ($tag)), ENT_QUOTES, 'UTF-8'); ?>"
-               class="<?php echo (isset($_GET['tag']) && $_GET['tag'] === $tag) ? 'tag-active' : ''; ?>"
+            <?php foreach ($sbTags as $tag): $tagLink = meridian_tag_link_data($tag); if ($tagLink['name'] === '') { continue; } ?>
+            <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', $tagLink['slug']), ENT_QUOTES, 'UTF-8'); ?>"
+               class="<?php echo (isset($_GET['tag']) && $_GET['tag'] === $tagLink['slug']) ? 'tag-active' : ''; ?>"
                style="font-size:.78rem;padding:.25rem .65rem;border-radius:20px;background:var(--surface-tint);color:var(--ink-muted);text-decoration:none;transition:background .2s,color .2s;">
-                <?php echo htmlspecialchars($tag); ?>
+                <?php echo htmlspecialchars($tagLink['name'], ENT_QUOTES, 'UTF-8'); ?>
             </a>
             <?php endforeach; ?>
         </div>

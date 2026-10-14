@@ -118,7 +118,7 @@ $buildSiteTablesEditUrl = static fn (int $id): string => $siteTablesBaseUrl . '?
                                 <td class="text-secondary"><?php echo htmlspecialchars((string)($t['updated_label'] ?? '–')); ?></td>
                                 <td class="table-actions content-listing-table__actions-cell">
                                     <div class="dropdown">
-                                        <button class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown">
+                                        <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="dropdown" aria-label="Aktionen öffnen">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="12" cy="5" r="1"/></svg>
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-end">

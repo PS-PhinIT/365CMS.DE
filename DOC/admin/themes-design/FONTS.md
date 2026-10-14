@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Schriftverwaltung
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 > **Route:** `/admin/font-manager` (Alt-Route `/admin/fonts-local` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_font_manager`
 
 ## English (summary)

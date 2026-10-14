@@ -1251,12 +1251,6 @@ class ThemeMarketplaceModule
             && is_file($path . DIRECTORY_SEPARATOR . 'functions.php');
     }
 
-    private function determineTargetFolder(string $sourceDir, string $slug): string
-    {
-        $folder = $this->normalizeThemeKey(basename($sourceDir));
-        return $folder !== '' ? $folder : $slug;
-    }
-
     private function buildTemporaryThemePath(string $parentDir, string $prefix): string
     {
         $parentDir = rtrim($parentDir, '/\\');
@@ -1376,79 +1370,6 @@ class ThemeMarketplaceModule
         }
 
         @rmdir($lockPath);
-    }
-
-    private function validateZipEntries(\ZipArchive $zip, string $expectedSlug): bool
-    {
-        $expectedSlug = trim($expectedSlug, '/\\');
-        if ($expectedSlug === '') {
-            return false;
-        }
-
-        if ($zip->numFiles <= 0 || $zip->numFiles > self::MAX_ARCHIVE_ENTRIES) {
-            return false;
-        }
-
-        $allowedRoots = [$expectedSlug];
-        $hasAllowedRoot = false;
-        $totalUncompressedSize = 0;
-
-        for ($index = 0; $index < $zip->numFiles; $index++) {
-            $entryName = $zip->getNameIndex($index);
-            if (!is_string($entryName) || $entryName === '') {
-                return false;
-            }
-
-            $normalized = str_replace('\\', '/', $entryName);
-            $normalized = ltrim($normalized, '/');
-
-            if ($normalized === ''
-                || str_contains($normalized, '../')
-                || str_contains($normalized, '..\\')
-                || preg_match('/[\x00-\x1F\x7F]/', $normalized) === 1
-                || preg_match('~^[A-Za-z]:/~', $normalized) === 1
-            ) {
-                return false;
-            }
-
-            $stat = $zip->statIndex($index);
-            if (!is_array($stat)) {
-                return false;
-            }
-
-            $entrySize = (int) ($stat['size'] ?? 0);
-            if ($entrySize < 0) {
-                return false;
-            }
-
-            $totalUncompressedSize += $entrySize;
-            if ($totalUncompressedSize > self::MAX_ARCHIVE_UNCOMPRESSED_BYTES) {
-                return false;
-            }
-
-            $segments = array_values(array_filter(explode('/', rtrim($normalized, '/')), static fn (string $segment): bool => $segment !== ''));
-            if ($segments === []) {
-                continue;
-            }
-
-            foreach ($segments as $segment) {
-                if ($segment === '.' || $segment === '..') {
-                    return false;
-                }
-            }
-
-            if ($index === 0 && preg_match('/^[a-f0-9]{7,}$/i', $segments[0]) === 1) {
-                $allowedRoots[] = $segments[0];
-            }
-
-            if (!in_array($segments[0], $allowedRoots, true)) {
-                return false;
-            }
-
-            $hasAllowedRoot = true;
-        }
-
-        return $hasAllowedRoot;
     }
 
     private function normalizeRelativeCatalogPath(string $path): string
@@ -1629,16 +1550,10 @@ class ThemeMarketplaceModule
 
     private function upsertSetting(string $key, string $value): void
     {
-        $updated = $this->db->execute(
-            "UPDATE {$this->prefix}settings SET option_value = ? WHERE option_name = ?",
-            [$value, $key]
+        $this->db->execute(
+            "INSERT INTO {$this->prefix}settings (option_name, option_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
+            [$key, $value]
         );
-
-        if ($updated === 0) {
-            $this->db->execute(
-                "INSERT INTO {$this->prefix}settings (option_name, option_value) VALUES (?, ?)",
-                [$key, $value]
-            );
-        }
     }
 }

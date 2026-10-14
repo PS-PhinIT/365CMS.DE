@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Forum-Plugin
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Nicht in der Runtime enthalten | **Update:** 2026-10-02
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Nicht in der Runtime enthalten | **Update:** 2026-10-02
 > **Quellen:** `CMS/plugins/` (nur `cms-importer`), `CMS/core/PluginManager.php` (`PLUGIN_SLUG_ALIASES`), `CMS/marketplace/plugins/index.json`
 
 ## English (summary)
 
-No forum plugin ships with 365CMS 3.4.00: `CMS/plugins/` contains only `cms-importer`, and the marketplace catalog lists no forum entry. The core only knows the slug alias `cms-365netforum → cms-forum` in `PluginManager::PLUGIN_SLUG_ALIASES`, so an old active-plugin entry is mapped to `cms-forum`. This document therefore describes the **integration path** a forum plugin must follow, using only core APIs that exist today.
+No forum plugin ships with 365CMS 3.5.0: `CMS/plugins/` contains only `cms-importer`, and the marketplace catalog lists no forum entry. The core only knows the slug alias `cms-365netforum → cms-forum` in `PluginManager::PLUGIN_SLUG_ALIASES`, so an old active-plugin entry is mapped to `cms-forum`. This document therefore describes the **integration path** a forum plugin must follow, using only core APIs that exist today.
 
 ## Deutsch
 

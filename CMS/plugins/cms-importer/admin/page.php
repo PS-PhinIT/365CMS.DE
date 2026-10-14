@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin-Template: WordPress Importer Hauptseite
  *
@@ -230,7 +230,7 @@ $selectedAuthorDisplayName = htmlspecialchars($selected_author_display_name ?? '
                     <input type="hidden" name="author_display_name" value="<?php echo $selectedAuthorDisplayName; ?>" data-shared-author-display-target>
 
                     <!-- Verstecktes File-Input -->
-                          <input type="file" name="wxr_file" id="wxr_file"
+                          <input type="file" name="wxr_file" id="wxr_file" aria-label="WordPress-Exportdatei auswählen"
                               accept=".xml,.json,text/xml,application/xml,application/json,text/json"
                            hidden style="display:none">
 

@@ -1,6 +1,6 @@
 # Tabler Core
 
-> **Stand:** 2026-10-04 | **Version:** 3.4.18 | **Tabler:** 1.6.1 | **Tabler Icons:** 3.48.0
+> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Tabler:** 1.6.1 | **Tabler Icons:** 3.48.0
 
 ## Kurzbeschreibung
 

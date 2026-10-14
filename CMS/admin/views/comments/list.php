@@ -211,7 +211,7 @@ $actionClass = static function (string $variant): string {
                     <thead>
                         <tr>
                             <?php if ($canBulkActions): ?>
-                                <th class="w-1"><input class="form-check-input" type="checkbox" id="selectAll"></th>
+                                <th class="w-1"><input class="form-check-input" type="checkbox" id="selectAll" aria-label="Alle Kommentare auswählen"></th>
                             <?php endif; ?>
                             <th>Autor</th>
                             <th>Kommentar</th>
@@ -245,7 +245,7 @@ $actionClass = static function (string $variant): string {
                             <tr class="content-listing-table__row">
                                 <?php if ($canBulkActions): ?>
                                     <td>
-                                        <input class="form-check-input row-check" type="checkbox" name="ids[]" value="<?php echo $cId; ?>" form="bulkForm">
+                                        <input class="form-check-input row-check" type="checkbox" name="ids[]" value="<?php echo $cId; ?>" form="bulkForm" aria-label="Kommentar #<?php echo $cId; ?> auswählen">
                                     </td>
                                 <?php endif; ?>
                                 <td>
@@ -296,7 +296,7 @@ $actionClass = static function (string $variant): string {
                                 <?php if ($showActionColumn): ?>
                                     <td class="table-actions content-listing-table__actions-cell">
                                         <div class="dropdown">
-                                            <button class="btn btn-ghost-secondary btn-icon btn-sm comment-row-menu-trigger" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm comment-row-menu-trigger" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Aktionen öffnen">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="12" cy="5" r="1"/></svg>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-end">

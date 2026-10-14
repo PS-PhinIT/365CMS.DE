@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – API, AJAX und JSON-Endpunkte
 
-> **Stand:** 2026-10-02 | **Version:** 3.4.00 (Changelog bis 3.4.08) | **Status:** Stable
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
 
 ## English (summary)
 
-Admin screens are classic server-rendered forms (Post/Redirect/Get). Asynchronous calls use a small set of JSON endpoints: the REST-style routes of `CMS/core/Routing/ApiRouter.php` (`/api/v1/…`, `/api/upload`, `/api/media`), the protected AI endpoints under `/admin/ai-*`, plugin AJAX calls to `/admin/plugins/<plugin>/<page>` and a few module-specific AJAX actions (media processing jobs, dashboard preferences). All of them rely on the session login, server-side capability checks and CSRF tokens; JavaScript is never an authorization boundary. A Bearer/JWT login for the API is prepared (`JwtService`) but not wired into the routes in 3.4.00.
+Admin screens are classic server-rendered forms (Post/Redirect/Get). Asynchronous calls use a small set of JSON endpoints: the REST-style routes of `CMS/core/Routing/ApiRouter.php` (`/api/v1/…`, `/api/upload`, `/api/media`), the protected AI endpoints under `/admin/ai-*`, plugin AJAX calls to `/admin/plugins/<plugin>/<page>` and a few module-specific AJAX actions (media processing jobs, dashboard preferences). All of them rely on the session login, server-side capability checks and CSRF tokens; JavaScript is never an authorization boundary. A Bearer/JWT login for the API is prepared (`JwtService`) but not wired into the routes in 3.5.0.
 
 ## Deutsch
 
@@ -12,7 +12,7 @@ Admin screens are classic server-rendered forms (Post/Redirect/Get). Asynchronou
 
 | Methode & Pfad | Zugriff | Zweck |
 |---|---|---|
-| `GET /api/v1/status` | öffentlich | `{"status":"ok","version":"3.4.00"}` |
+| `GET /api/v1/status` | öffentlich | `{"status":"ok","version":"3.5.0"}` |
 | `GET /api/v1/pages` | angemeldet | Seitenliste/Suche (`CMS\Api`, Rate-Limit 60 Anfragen/60 s je IP) |
 | `GET /api/v1/pages/:slug` | angemeldet | einzelne Seite |
 | `POST /api/v1/analytics/web-vitals` | gleiche Herkunft | Core-Web-Vitals-Messung (Größen- und Rate-Limit, Antwort 204) |

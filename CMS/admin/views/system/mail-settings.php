@@ -97,10 +97,11 @@ $renderStatusCardHeader = static function (string $title, bool $configured) use 
     <?php
 };
 $renderReadonlyField = static function (string $label, string $value): void {
+    $fieldId = 'mail-readonly-' . substr(hash('sha256', $label), 0, 12);
     ?>
     <div class="mb-3">
-        <label class="form-label"><?php echo htmlspecialchars($label); ?></label>
-        <input type="text" class="form-control" value="<?php echo htmlspecialchars($value); ?>" readonly>
+        <label class="form-label" for="<?php echo htmlspecialchars($fieldId, ENT_QUOTES); ?>"><?php echo htmlspecialchars($label); ?></label>
+        <input type="text" class="form-control" id="<?php echo htmlspecialchars($fieldId, ENT_QUOTES); ?>" value="<?php echo htmlspecialchars($value); ?>" readonly>
     </div>
     <?php
 };
@@ -496,8 +497,8 @@ $queueLastRunText = !empty($queueLastRun['executed_at'])
                                 <input id="fld-queue_lock_timeout_seconds" type="number" class="form-control" name="queue_lock_timeout_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['lock_timeout_seconds'] ?? 900); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Cron-Token</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars((string) ($queueConfig['cron_token'] ?? '')); ?>" readonly>
+                                <label for="mailQueueCronToken" class="form-label">Cron-Token</label>
+                                <input id="mailQueueCronToken" type="text" class="form-control" value="<?php echo htmlspecialchars((string) ($queueConfig['cron_token'] ?? '')); ?>" readonly>
                                 <label class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" name="regenerate_queue_cron_token" value="1">
                                     <span class="form-check-label">Cron-Token beim Speichern neu erzeugen</span>

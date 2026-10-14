@@ -251,7 +251,7 @@ final class Client
             return $this->failure('HTTP-Request fehlgeschlagen: ' . $curlError, $status, $responseHeaders, '', $contentType);
         }
 
-        if (!$allowPrivateHosts && ($primaryIp === '' || !hash_equals($pinnedIp, $primaryIp) || $this->isPrivateOrReservedIp($primaryIp))) {
+        if (!$allowPrivateHosts && ($primaryIp === '' || !hash_equals($pinnedIp, $primaryIp) || self::isNonPublicIp($primaryIp))) {
             return $this->failure('HTTP-Request wurde durch den SSRF-Schutz blockiert.', $status, $responseHeaders, '', $contentType);
         }
 
@@ -309,48 +309,34 @@ final class Client
         ];
     }
 
-    private function isPrivateOrReservedIp(string $ip): bool
+    /**
+     * true, wenn die Adresse nicht öffentlich routbar ist (privat, reserviert, Loopback,
+     * Link-Local, CGNAT, NAT64, IPv4-mapped IPv6 …). Gemeinsamer SSRF-Filter für
+     * Http\Client, FeedService und UpdateService.
+     */
+    public static function isNonPublicIp(string $ip): bool
     {
-        return filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        ) === false;
+        $ip = strtolower(trim($ip, " \t\n\r\0\x0B[]"));
+
+        // IPv4-mapped/-kompatible IPv6-Adressen (::ffff:127.0.0.1, ::127.0.0.1) wie IPv4 prüfen.
+        if (preg_match('/^::(?:ffff:(?:0:)?)?(\d{1,3}(?:\.\d{1,3}){3})$/', $ip, $matches) === 1) {
+            $ip = $matches[1];
+        } elseif (preg_match('/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/', $ip, $matches) === 1) {
+            $high = hexdec($matches[1]);
+            $low = hexdec($matches[2]);
+            $ip = sprintf('%d.%d.%d.%d', $high >> 8, $high & 0xFF, $low >> 8, $low & 0xFF);
+        }
+
+        // NAT64 (64:ff9b::/96, 64:ff9b:1::/48) kann auf interne IPv4-Ziele zeigen.
+        if (str_starts_with($ip, '64:ff9b:')) {
+            return true;
+        }
+
+        // FILTER_FLAG_GLOBAL_RANGE schließt neben privaten/reservierten Netzen auch
+        // Shared Address Space (100.64.0.0/10), Dokumentations- und Benchmark-Netze aus.
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) === false;
     }
 
-    private function isSafeExternalUrl(string $url, bool $allowUnresolvedHosts = false): bool
-    {
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        if ($host === '') {
-            return false;
-        }
-
-        if (in_array($host, ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback'], true)) {
-            return false;
-        }
-
-        $resolvedIps = $this->resolveHostIps($host);
-        if ($resolvedIps === []) {
-            \CMS\Logger::instance()->withChannel('http-client')->warning('External HTTP request blocked because the host could not be resolved safely.', [
-                'host' => $host,
-                'url' => $this->sanitizeUrlForLog($url),
-            ]);
-            return $allowUnresolvedHosts;
-        }
-
-        foreach ($resolvedIps as $ip) {
-            if ($ip !== '' && $this->isPrivateOrReservedIp($ip)) {
-                \CMS\Logger::instance()->withChannel('http-client')->warning('External HTTP request blocked because the host resolved to a private IP.', [
-                    'host' => $host,
-                    'ip' => $ip,
-                    'url' => $this->sanitizeUrlForLog($url),
-                ]);
-                return false;
-            }
-        }
-
-        return true;
-    }
 
     private function resolveSafeExternalIp(string $url): string
     {
@@ -369,7 +355,7 @@ final class Client
         }
 
         foreach ($resolvedIps as $ip) {
-            if ($this->isPrivateOrReservedIp($ip)) {
+            if (self::isNonPublicIp($ip)) {
                 \CMS\Logger::instance()->withChannel('http-client')->warning('External HTTP request blocked because the host resolved to a private IP.', [
                     'host' => $host,
                     'ip' => $ip,

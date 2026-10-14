@@ -1,6 +1,6 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.4.00 (Changelog bis 3.4.08)
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
 > **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02 (Abgleich mit `MemberRouter`, `MemberController`, `PluginDashboardRegistry`)
-> **Kurzbeschreibung:** Referenz für Dashboard-Runtime, Bereiche, Widgets, Reihenfolge, Plugin-Integration und Normalisierung. Dokumentiert das Verhalten von Version 3.4.00 einschließlich der Admin-Vorschau.
+> **Kurzbeschreibung:** Referenz für Dashboard-Runtime, Bereiche, Widgets, Reihenfolge, Plugin-Integration und Normalisierung. Dokumentiert das Verhalten von Version 3.5.0 einschließlich der Admin-Vorschau.
 
 # 365CMS Member Dashboard
 

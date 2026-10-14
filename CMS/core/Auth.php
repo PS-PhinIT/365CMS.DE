@@ -733,7 +733,7 @@ class Auth
         }
 
         $user = $this->getUserById((int) $payload->sub);
-        if ($user === null) {
+        if ($user === null || !self::matchesApiTokenBinding($user, $payload)) {
             return false;
         }
 
@@ -755,6 +755,42 @@ class Auth
     public function isActiveUserId(int $userId): bool
     {
         return $userId > 0 && $this->getUserById($userId) !== null;
+    }
+
+    /**
+     * Bindungswert (`pwf`-Claim) für API-Tokens: leitet sich aus dem Passwort-Hash ab.
+     * Nach Passwortänderung oder -reset passen ausgestellte Access- und Refresh-Tokens
+     * nicht mehr und werden abgelehnt. `null`, wenn das Konto nicht aktiv ist.
+     */
+    public function apiTokenBinding(int $userId): ?string
+    {
+        $user = $userId > 0 ? $this->getUserById($userId) : null;
+        if ($user === null) {
+            return null;
+        }
+
+        $fingerprint = (string) ($user->password_fingerprint ?? '');
+
+        return $fingerprint === '' ? null : substr($fingerprint, 0, 32);
+    }
+
+    /**
+     * Prüft ein Refresh-/Access-Token-Payload gegen das aktive Konto (Status + Passwort-Bindung).
+     */
+    public function isValidApiTokenSubject(object $payload): bool
+    {
+        $userId = (int) ($payload->sub ?? 0);
+        $user = $userId > 0 ? $this->getUserById($userId) : null;
+
+        return $user !== null && self::matchesApiTokenBinding($user, $payload);
+    }
+
+    private static function matchesApiTokenBinding(object $user, object $payload): bool
+    {
+        $expected = substr((string) ($user->password_fingerprint ?? ''), 0, 32);
+        $given = is_string($payload->pwf ?? null) ? $payload->pwf : '';
+
+        return $expected !== '' && $given !== '' && hash_equals($expected, $given);
     }
 
     /**

@@ -264,6 +264,13 @@ class ThemeManager
             return false;
         }
 
+        // Ergebnis je Dateiinhalt merken: token_get_all() über die ~90 KB functions.php lief sonst bei jedem Request.
+        $cacheDir = defined('ABSPATH') ? ABSPATH . 'cache' : '';
+        $cleanFlag = $cacheDir !== '' ? $cacheDir . '/theme_scan_' . hash('sha256', $file . "\0" . $content) . '.ok' : '';
+        if ($cleanFlag !== '' && is_file($cleanFlag)) {
+            return false;
+        }
+
         try {
             $tokens = token_get_all($content, TOKEN_PARSE);
         } catch (\ParseError $e) {
@@ -284,6 +291,14 @@ class ThemeManager
                     return true;
                 }
             }
+        }
+
+        if ($cleanFlag !== '' && (is_dir($cacheDir) || @mkdir($cacheDir, 0755, true))) {
+            $existingFlags = glob($cacheDir . '/theme_scan_*.ok') ?: [];
+            if (count($existingFlags) >= 32) {
+                array_map('unlink', array_filter($existingFlags, 'is_file'));
+            }
+            @file_put_contents($cleanFlag, '', LOCK_EX);
         }
 
         return false;

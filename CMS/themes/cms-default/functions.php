@@ -755,7 +755,7 @@ HTML;
             'footer'  => [
                 ['label' => 'Impressum',   'url' => '/impressum',   'target' => '_self'],
                 ['label' => 'Datenschutz', 'url' => '/datenschutz', 'target' => '_self'],
-                ['label' => 'Kontakt',     'url' => '/kontakt',     'target' => '_self'],
+                ['label' => 'Kontakt',     'url' => '/contact',     'target' => '_self'],
             ],
             'footer_resources' => [
                 ['label' => 'Script-Bibliothek', 'url' => '/blog', 'target' => '_self'],
@@ -1415,6 +1415,69 @@ function meridian_archive_url(string $type, string $slug = ''): string
 }
 }
 
+if (!function_exists('meridian_footer_fallback_links')) {
+/**
+ * Fallback-Links für die Footer-Spalte „Über uns“, wenn kein Menü gepflegt ist.
+ * Seiten werden nur verlinkt, wenn sie veröffentlicht sind; `/contact` ist eine feste Route.
+ *
+ * @return list<array{label:string,url:string}>
+ */
+function meridian_footer_fallback_links(): array
+{
+    static $links = null;
+    if ($links !== null) {
+        return $links;
+    }
+
+    $pageExists = static function (string $slug): bool {
+        try {
+            $page = \CMS\PageManager::instance()->getPageBySlug($slug);
+            return $page !== null && ($page['status'] ?? '') === 'published';
+        } catch (\Throwable) {
+            return false;
+        }
+    };
+
+    $links = [];
+    foreach (['about', 'ueber-uns', 'ueber'] as $slug) {
+        if ($pageExists($slug)) {
+            $links[] = ['label' => 'Über uns', 'url' => '/' . $slug];
+            break;
+        }
+    }
+    $links[] = ['label' => 'Kontakt', 'url' => '/contact'];
+    foreach (['impressum' => 'Impressum', 'datenschutz' => 'Datenschutz'] as $slug => $label) {
+        if ($pageExists($slug)) {
+            $links[] = ['label' => $label, 'url' => '/' . $slug];
+        }
+    }
+
+    return $links;
+}
+}
+
+if (!function_exists('meridian_tag_link_data')) {
+/**
+ * Name und Archiv-Slug eines Tags. Akzeptiert Tag-Arrays (`name`/`title`, `slug`) und reine Namen;
+ * ohne Slug wird der Name wie im Router normalisiert (Links über den Namen führten bei eigenem Slug ins 404).
+ *
+ * @return array{name:string,slug:string}
+ */
+function meridian_tag_link_data(mixed $tag): array
+{
+    if (is_object($tag)) {
+        $tag = (array) $tag;
+    }
+    $name = is_array($tag) ? trim((string) ($tag['name'] ?? $tag['title'] ?? '')) : trim((string) $tag);
+    $slug = is_array($tag) ? trim((string) ($tag['slug'] ?? '')) : '';
+    if ($slug === '' && $name !== '') {
+        $slug = (new \CMS\Routing\ThemeArchiveRepository())->normalizeArchiveSlug($name);
+    }
+
+    return ['name' => $name, 'slug' => $slug];
+}
+}
+
 if (!function_exists('meridian_document_title')) {
 /**
  * Eindeutiger Dokumenttitel je URL statt überall nur des Website-Namens.
@@ -1823,12 +1886,19 @@ function meridian_load_categories(string $localeAvailability): array
  */
 function meridian_get_tags(int $limit = 30): array
 {
+    // Sidebar, Archiv-Templates und Startseite rufen die Tag-Übersicht mehrfach ab: je Request und Sprache einmal laden.
+    static $overviewCache = [];
+
     try {
-        $repository = new \CMS\Routing\ThemeArchiveRepository();
-        $items = $repository->getPublishedTagOverview(
-            meridian_current_request_locale(),
-            meridian_post_locale_availability_expression('p')
-        );
+        $locale = meridian_current_request_locale();
+        if (!isset($overviewCache[$locale])) {
+            $repository = new \CMS\Routing\ThemeArchiveRepository();
+            $overviewCache[$locale] = $repository->getPublishedTagOverview(
+                $locale,
+                meridian_post_locale_availability_expression('p')
+            );
+        }
+        $items = $overviewCache[$locale];
 
         if ($limit > 0) {
             $items = array_slice($items, 0, $limit);
@@ -1936,12 +2006,16 @@ function meridian_get_posts(array $args = []): array
         }
 
         // Sticky: Wenn is_sticky-Spalte existiert, bevorzuge angeheftete Beiträge
+        // (Kernschema hat keine is_sticky-Spalte; Prüfung einmal je Request statt fehlschlagender Abfrage.)
+        static $hasStickyColumn = null;
         if ($args['sticky'] === true) {
             try {
-                $db->execute("SELECT is_sticky FROM {$prefix}posts LIMIT 1");
-                $sql .= " AND p.is_sticky = 1";
+                $hasStickyColumn ??= $db->columnExists($prefix . 'posts', 'is_sticky');
             } catch (\Throwable $e) {
-                // is_sticky-Spalte existiert nicht – ignorieren
+                $hasStickyColumn = false;
+            }
+            if ($hasStickyColumn) {
+                $sql .= " AND p.is_sticky = 1";
             }
         }
 

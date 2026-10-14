@@ -221,19 +221,6 @@ class BackupService
         }
     }
     
-    /**
-     * Generate SQL dump
-     */
-    private function generateDatabaseDump(): string
-    {
-        $sql = '';
-
-        $this->writeDatabaseDumpToWriter(static function (string $chunk) use (&$sql): void {
-            $sql .= $chunk;
-        });
-
-        return $sql;
-    }
 
     private function writeDatabaseBackupFile(string $filepath, bool $compress): void
     {
@@ -1137,38 +1124,6 @@ class BackupService
         $this->removeDirectory($rollbackRoot);
     }
 
-    private function readBackupFileContents(string $filePath): string
-    {
-        $extension = strtolower((string) pathinfo($filePath, PATHINFO_EXTENSION));
-        if ($extension === 'gz') {
-            $handle = gzopen($filePath, 'rb');
-            if ($handle === false) {
-                throw new \RuntimeException('Komprimierter Backup-Dump konnte nicht gelesen werden.');
-            }
-
-            $content = '';
-            while (!gzeof($handle)) {
-                $chunk = gzread($handle, 8192);
-                if ($chunk === false) {
-                    gzclose($handle);
-                    throw new \RuntimeException('Komprimierter Backup-Dump konnte nicht vollständig gelesen werden.');
-                }
-
-                $content .= $chunk;
-            }
-
-            gzclose($handle);
-
-            return $content;
-        }
-
-        $content = file_get_contents($filePath);
-        if (!is_string($content)) {
-            throw new \RuntimeException('Backup-Dump konnte nicht gelesen werden.');
-        }
-
-        return $content;
-    }
 
     /**
      * @param array<string, string> $criticalTables
@@ -1231,10 +1186,6 @@ class BackupService
         }
     }
 
-    private function executeSqlBatch(string $sql): void
-    {
-        $this->executeSqlBatchOnConnection($this->db->getPdo(), $sql);
-    }
 
     private function executeSqlBatchOnConnection(\PDO $pdo, string $sql): void
     {
