@@ -117,7 +117,6 @@ AUDIT
 !/TESTS/security-baseline/run.php
 !/TESTS/ai-services/run.php
 !/TESTS/runtime-warning-regressions/run.php
-/DOC/audit/
 /STAGING/tests/
 */Test/*
 CMS/assets/translation/Test/

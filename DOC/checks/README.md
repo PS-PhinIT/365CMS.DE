@@ -10,7 +10,11 @@ Full code audit of 365CMS on 2026-10-03 covering security, performance, missing 
 
 ### Ablage
 
-Die Berichte liegen in `DOC/checks/`. Der Pfad `DOC/audit/` ist per `.gitignore` ausgeschlossen und wird nicht verwendet.
+Die Berichte der Audits vom 2026-10-03 und 2026-10-07 liegen in `DOC/checks/`. Das Gesamtaudit vom 2026-10-14 liegt in [`DOC/audit/`](../audit/README.md).
+
+### Gesamtaudit 2026-10-14
+
+[../audit/README.md](../audit/README.md) – Sicherheit, Geschwindigkeit, Massenanfragen/Bot-Last, fehlende Funktionen, Verweise und GUI (54 Befunde, 41 behoben mit Changelog `3.4.25`, 13 offene Empfehlungen). Die IDs setzen die Nummerierung fort (SEC-16 ff., PERF-07 ff., FUN-21 ff., REF-06 ff.); `LAST` und `GUI` sind neu.
 
 ### Folgeaudit 2026-10-07
 

@@ -14,6 +14,29 @@
 
 ---
 
+### v3.4.25 — 14.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.4.25** | 🛡️ security | Auth / Zwei-Faktor | Der zweite Faktor beim Login ist begrenzt: nach 5 falschen Codes ist erneut das Passwort nötig, zusätzlich 20 Fehlversuche je IP in 15 Minuten; eine ausstehende Prüfung verfällt nach 10 Minuten, ein bereits verwendeter TOTP-Code wird abgelehnt (SEC-16). |
+| **3.4.25** | 🛡️ security | Auth / Konto | MFA abschalten, Backup-Codes erneuern, Passkey registrieren und E-Mail ändern verlangen das aktuelle Passwort (`Auth::verifyCurrentPassword()`, 10 Fehlversuche je IP in 15 Minuten) (SEC-18). |
+| **3.4.25** | 🛡️ security | Datenbank / user_meta | `user_meta` erhält auch bei Neuinstallationen `UNIQUE(user_id, meta_key)`; vorhandene Dubletten werden beim Update bereinigt (jüngster Wert bleibt). Vorher legten MFA-Secrets, Backup-Codes und Profilfelder bei jedem Speichern eine weitere Zeile an (SEC-17). |
+| **3.4.25** | 🛡️ security | .htaccess / Uploads | `uploads/member/`, `uploads/import/` und die Importer-Verzeichnisse `reports/`, `wp_import/`, `wp_import_files/` sind nicht mehr per URL abrufbar; nginx-Regeln in `DOC/INSTALLATION.md`. Importberichte werden nur über den Admin mit `CSP: sandbox` ausgeliefert (SEC-19, FUN-25). |
+| **3.4.25** | 🛡️ security | Nachrichten | Antworten nur noch innerhalb eigener Threads; Sendelimit 30 Nachrichten je 10 Minuten (SEC-21). |
+| **3.4.25** | 🛡️ security | Diverses | Installer mit Debug-Modus aus als Standard (SEC-20), `Security::getClientIp()` statt `REMOTE_ADDR` in fünf Diensten (SEC-22), öffentlicher Checkout ohne `lifetime` (SEC-23), Formel-Schutz im CSV-Export der Seitentabellen (SEC-24), `cmsAlert()` ohne `innerHTML` (SEC-25), CI-Actions auf Commit-SHAs fixiert (SEC-26), geplante Seiten nicht mehr in der Suche (SEC-27). |
+| **3.4.25** | 🟠 perf | Datenbank / Schema | Laufzeit-Schemaprüfungen (`SHOW TABLES`, `CREATE TABLE IF NOT EXISTS`, `SHOW INDEX`) laufen einmal je Codestand statt in jedem Request (`Database::runSchemaOnce()`); die Session-Lebensdauer wird gecacht statt über eine zweite DB-Verbindung gelesen. Abfragen je Seitenaufruf: Startseite 61 → 15, Blog 63 → 17, 404 89 → 17 (PERF-07 bis PERF-11). |
+| **3.4.25** | 🛡️ security | Last / Firewall | Gesperrte IPs erzeugen höchstens einen Protokolleintrag je Regel und Minute statt zwei Zeilen je Anfrage; Index `idx_ip_created`, Bereinigung in Blöcken (LAST-01). |
+| **3.4.25** | 🛡️ security | Last / Suche, 404, Web Vitals | Suche: 30 Anfragen je Minute und IP, danach HTTP 429 mit Hinweis. 404-Monitor: Pfad max. 255 Zeichen, höchstens 20.000 Einträge. Web-Vitals-Limiter mit Dateisperre, IP-Kontingent und fail-closed (LAST-02 bis LAST-04). |
+| **3.4.25** | 🟢 feat | Datenschutz / Aufbewahrung | Neuer `DataRetentionService` (täglicher Cron): `page_views` 365 Tage, `core_web_vitals` und `not_found_logs` 90 Tage, Tageslogs 30 Tage; anpassbar über den Filter `cms_data_retention_days` (LAST-05). |
+| **3.4.25** | 🟠 perf | Medien | Die Session wird vor dem Datei-Streaming geschlossen; parallele Requests desselben Besuchers warten nicht mehr auf Downloads (LAST-06). |
+| **3.4.25** | 🔴 fix | Kommentare / SEO | Die Einstellung „Kommentare aktivieren“ und das Feld `robots.txt` unter *Einstellungen → Allgemein* werden ausgewertet (FUN-21, FUN-22). |
+| **3.4.25** | 🔴 fix | Beiträge / Taxonomien | Beschreibungen von Kategorien und Tags werden gespeichert und nach Validierungsfehlern wiederhergestellt; wirkungslose Felder („Farbe“, „Sofort veröffentlichen“) entfernt (FUN-23, FUN-24, GUI-07). |
+| **3.4.25** | 🔴 fix | Verweise | Fatal Errors in Fehlerpfaden behoben: `WP_Error`-Namespaces in `MediaModule`/`StatusService`, fehlende Methoden `SystemInfoModule::formatBytesLabel()`, `MailSettingsActionResult::failure()` und `BackupService::uploadToS3WithSDK()` (REF-06 bis REF-10). |
+| **3.4.25** | 🔴 fix | Admin / GUI | Inline-Skripte der Log-Ansichten mit CSP-Nonce (Filter und Umschalter funktionierten nicht), Bestätigungen vor destruktiven Aktionen in Admin und Mitgliederbereich, Umlaute im Dashboard, Bestätigungsdialog mit Dialog-Semantik (GUI-01 bis GUI-05). |
+| **3.4.25** | 🔵 docs | Audit | Gesamtaudit 2026-10-14 unter `DOC/audit/` (Prüfkatalog, Sicherheit, Performance/Last, Funktionen/Verweise, GUI) mit 13 offenen Empfehlungen; `/DOC/audit/` ist nicht mehr per `.gitignore` ausgeschlossen. |
+
+---
+
 ### v3.4.24 — 14.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

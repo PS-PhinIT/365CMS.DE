@@ -33,7 +33,7 @@ Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code is
 | Installation | [INSTALLATION.md](INSTALLATION.md) |
 | Root README | [../README.md](../README.md) |
 | Changelog | [../Changelog.md](../Changelog.md) |
-| Status / known gaps | [core/STATUS.md](core/STATUS.md), [checks/README.md](checks/README.md) |
+| Status / known gaps | [core/STATUS.md](core/STATUS.md), [checks/README.md](checks/README.md), [audit/README.md](audit/README.md) |
 
 ---
 
@@ -178,7 +178,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | Area / Bereich | Documents / Dokumente |
 |---|---|
 | Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md), [assets/ASSETS_NEW.md](assets/ASSETS_NEW.md), [assets/ASSETS_OwnAssets.md](assets/ASSETS_OwnAssets.md) |
-| Audits | Code audit 2026-10-03: [checks/README.md](checks/README.md) ([security](checks/SECURITY.md), [performance](checks/PERFORMANCE.md), [functions](checks/FUNKTIONEN.md), [references](checks/VERWEISE.md)); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
+| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md); code audit 2026-10-03: [checks/README.md](checks/README.md) ([security](checks/SECURITY.md), [performance](checks/PERFORMANCE.md), [functions](checks/FUNKTIONEN.md), [references](checks/VERWEISE.md)); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
 | Workflows | [workflow/](workflow/) |
 
 ### Workflows
