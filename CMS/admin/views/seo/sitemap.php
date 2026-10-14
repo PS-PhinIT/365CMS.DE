@@ -132,28 +132,28 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                             <input type="hidden" name="action" value="save_sitemap_settings">
 
                             <div class="col-md-6">
-                                <label class="form-label">Pages Priority</label>
-                                <input class="form-control" type="text" name="pages_priority" value="<?= htmlspecialchars((string) ($settings['pages_priority'] ?? '0.8')) ?>">
+                                <label for="seoSitemapPagesPriority" class="form-label">Pages Priority</label>
+                                <input id="seoSitemapPagesPriority" class="form-control" type="text" name="pages_priority" value="<?= htmlspecialchars((string) ($settings['pages_priority'] ?? '0.8')) ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Pages Changefreq</label>
-                                <input class="form-control" type="text" name="pages_changefreq" value="<?= htmlspecialchars((string) ($settings['pages_changefreq'] ?? 'weekly')) ?>">
+                                <label for="seoSitemapPagesChangefreq" class="form-label">Pages Changefreq</label>
+                                <input id="seoSitemapPagesChangefreq" class="form-control" type="text" name="pages_changefreq" value="<?= htmlspecialchars((string) ($settings['pages_changefreq'] ?? 'weekly')) ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Posts Priority</label>
-                                <input class="form-control" type="text" name="posts_priority" value="<?= htmlspecialchars((string) ($settings['posts_priority'] ?? '0.6')) ?>">
+                                <label for="seoSitemapPostsPriority" class="form-label">Posts Priority</label>
+                                <input id="seoSitemapPostsPriority" class="form-control" type="text" name="posts_priority" value="<?= htmlspecialchars((string) ($settings['posts_priority'] ?? '0.6')) ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Posts Changefreq</label>
-                                <input class="form-control" type="text" name="posts_changefreq" value="<?= htmlspecialchars((string) ($settings['posts_changefreq'] ?? 'monthly')) ?>">
+                                <label for="seoSitemapPostsChangefreq" class="form-label">Posts Changefreq</label>
+                                <input id="seoSitemapPostsChangefreq" class="form-control" type="text" name="posts_changefreq" value="<?= htmlspecialchars((string) ($settings['posts_changefreq'] ?? 'monthly')) ?>">
                             </div>
                             <div class="col-md-8">
-                                <label class="form-label">News-Publikation</label>
-                                <input class="form-control" type="text" name="news_publication_name" value="<?= htmlspecialchars((string) ($settings['seo_sitemap_news_publication_name'] ?? $settings['news_publication_name'] ?? '365CMS')) ?>">
+                                <label for="seoSitemapNewsPublicationName" class="form-label">News-Publikation</label>
+                                <input id="seoSitemapNewsPublicationName" class="form-control" type="text" name="news_publication_name" value="<?= htmlspecialchars((string) ($settings['seo_sitemap_news_publication_name'] ?? $settings['news_publication_name'] ?? '365CMS')) ?>">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">News-Sprache</label>
-                                <input class="form-control" type="text" name="news_language" value="<?= htmlspecialchars((string) ($settings['seo_sitemap_news_language'] ?? $settings['news_language'] ?? 'de')) ?>">
+                                <label for="seoSitemapNewsLanguage" class="form-label">News-Sprache</label>
+                                <input id="seoSitemapNewsLanguage" class="form-control" type="text" name="news_language" value="<?= htmlspecialchars((string) ($settings['seo_sitemap_news_language'] ?? $settings['news_language'] ?? 'de')) ?>">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-check">
@@ -263,7 +263,7 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                                 <input type="hidden" name="action" value="save_google_access_token">
                                 <div class="col-md-8">
-                                    <input class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
+                                    <input class="form-control" type="password" name="google_access_token" aria-label="Google Access-Token" autocomplete="off" placeholder="ya29...">
                                 </div>
                                 <div class="col-md-4">
                                     <button class="btn btn-outline-primary w-100" type="submit">Token speichern</button>
@@ -282,8 +282,8 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                             <input type="hidden" name="action" value="submit_indexing_urls">
                             <div class="col-12">
-                                <label class="form-label">URLs zur Übermittlung</label>
-                                <textarea class="form-control" name="urls" rows="6" placeholder="<?= htmlspecialchars($runtimeBaseUrl) ?>/&#10;<?= htmlspecialchars($runtimeBaseUrl) ?>/blog/beispiel-artikel"></textarea>
+                                <label for="seoIndexingUrls" class="form-label">URLs zur Übermittlung</label>
+                                <textarea id="seoIndexingUrls" class="form-control" name="urls" rows="6" placeholder="<?= htmlspecialchars($runtimeBaseUrl) ?>/&#10;<?= htmlspecialchars($runtimeBaseUrl) ?>/blog/beispiel-artikel"></textarea>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-check">
@@ -298,8 +298,8 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                                 </label>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Google Access-Token (optional)</label>
-                                <input class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
+                                <label for="seoIndexingGoogleAccessToken" class="form-label">Google Access-Token (optional)</label>
+                                <input id="seoIndexingGoogleAccessToken" class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
                                 <div class="form-hint">Nur für diese Aktion. Leer lassen, um automatisch das dauerhaft gespeicherte Token zu verwenden<?= !empty($indexing['google_access_token_available']) ? ' (aktuell vorhanden)' : ' (aktuell nicht vorhanden)' ?>.</div>
                             </div>
                             <div class="col-12">
@@ -328,8 +328,8 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                             <input type="hidden" name="action" value="submit_recent_content_indexnow">
                             <div class="col-md-8">
-                                <label class="form-label">Zeitraum</label>
-                                <select class="form-select" name="recent_content_range" <?= !$recentContentAnyTargetAvailable ? 'disabled' : '' ?>>
+                                <label for="seoRecentContentRange" class="form-label">Zeitraum</label>
+                                <select id="seoRecentContentRange" class="form-select" name="recent_content_range" <?= !$recentContentAnyTargetAvailable ? 'disabled' : '' ?>>
                                     <?php foreach ((array) ($indexing['recent_content_ranges'] ?? []) as $rangeKey => $rangeLabel): ?>
                                         <option value="<?= htmlspecialchars((string) $rangeKey) ?>"><?= htmlspecialchars((string) $rangeLabel) ?></option>
                                     <?php endforeach; ?>
@@ -363,12 +363,12 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                             <input type="hidden" name="action" value="delete_google_url">
                             <div class="col-md-7">
-                                <label class="form-label">URL</label>
-                                <input class="form-control" type="url" name="google_delete_url" placeholder="<?= htmlspecialchars($runtimeBaseUrl) ?>/veraltete-seite">
+                                <label for="seoGoogleDeleteUrl" class="form-label">URL</label>
+                                <input id="seoGoogleDeleteUrl" class="form-control" type="url" name="google_delete_url" placeholder="<?= htmlspecialchars($runtimeBaseUrl) ?>/veraltete-seite">
                             </div>
                             <div class="col-md-5">
-                                <label class="form-label">Google Access-Token (optional)</label>
-                                <input class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
+                                <label for="seoGoogleDeleteAccessToken" class="form-label">Google Access-Token (optional)</label>
+                                <input id="seoGoogleDeleteAccessToken" class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
                                 <div class="form-hint">Leer lassen, um das dauerhaft gespeicherte Token zu verwenden.</div>
                             </div>
                             <div class="col-12">

@@ -54,8 +54,8 @@ $renderer = $schema['renderer'] ?? [];
                             <div class="col-md-6"><label class="form-check"><input class="form-check-input" type="checkbox" name="howto_enabled" value="1" <?= !empty($settings['seo_schema_howto_enabled']) ? 'checked' : '' ?>><span class="form-check-label">HowTo</span></label></div>
                             <div class="col-md-6"><label class="form-check"><input class="form-check-input" type="checkbox" name="review_enabled" value="1" <?= !empty($settings['seo_schema_review_enabled']) ? 'checked' : '' ?>><span class="form-check-label">Review / Rating</span></label></div>
                             <div class="col-md-6"><label class="form-check"><input class="form-check-input" type="checkbox" name="event_enabled" value="1" <?= !empty($settings['seo_schema_event_enabled']) ? 'checked' : '' ?>><span class="form-check-label">Event</span></label></div>
-                            <div class="col-md-6"><label class="form-label">Organisation</label><input class="form-control" type="text" name="org_name" value="<?= htmlspecialchars((string) ($settings['seo_schema_org_name'] ?? '')) ?>"></div>
-                            <div class="col-12"><label class="form-label">Logo-URL</label><input class="form-control" type="text" name="org_logo" value="<?= htmlspecialchars((string) ($settings['seo_schema_org_logo'] ?? '')) ?>"></div>
+                            <div class="col-md-6"><label for="seoSchemaOrgName" class="form-label">Organisation</label><input id="seoSchemaOrgName" class="form-control" type="text" name="org_name" value="<?= htmlspecialchars((string) ($settings['seo_schema_org_name'] ?? '')) ?>"></div>
+                            <div class="col-12"><label for="seoSchemaOrgLogo" class="form-label">Logo-URL</label><input id="seoSchemaOrgLogo" class="form-control" type="text" name="org_logo" value="<?= htmlspecialchars((string) ($settings['seo_schema_org_logo'] ?? '')) ?>"></div>
                             <div class="col-12"><button class="btn btn-primary" type="submit">Schema-Defaults speichern</button></div>
                         </form>
                     </div>

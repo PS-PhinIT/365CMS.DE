@@ -24,11 +24,20 @@ final class SeoMetaRepository
         }
     }
 
+    /** @var array<string, array<string, mixed>> Pro Request gemerkte Metadaten (Head-Tags und Dokumenttitel lesen dieselbe Zeile). */
+    private array $contentMetaCache = [];
+
     public function getContentMeta(string $contentType, int $contentId): array
     {
         if ($contentId <= 0) {
             return $this->getDefaultMeta();
         }
+
+        return $this->contentMetaCache[$contentType . ':' . $contentId] ??= $this->loadContentMeta($contentType, $contentId);
+    }
+
+    private function loadContentMeta(string $contentType, int $contentId): array
+    {
 
         $row = $this->db->get_row(
             "SELECT * FROM {$this->prefix}seo_meta WHERE content_type = ? AND content_id = ? LIMIT 1",
@@ -62,6 +71,7 @@ final class SeoMetaRepository
 
     public function saveContentMeta(string $contentType, int $contentId, array $data): void
     {
+        unset($this->contentMetaCache[$contentType . ':' . $contentId]);
         if ($contentId <= 0) {
             return;
         }

@@ -90,13 +90,13 @@ Plugins tragen sich im Hook `member_dashboard_init` in die `CMS\Member\PluginDas
         'post_callback' => static function (object $user, array $params): void {
             // optional: POST-Verarbeitung – bei 'csrf' => 'core' ist das Token hier bereits geprüft
         },
-        'csrf' => 'core', // seit 3.5.0: Core prüft das Token member_plugin_<slug>; Standard 'plugin' = selbst prüfen
+        'csrf' => 'core', // seit 3.4.13: Core prüft das Token member_plugin_<slug>; Standard 'plugin' = selbst prüfen
     ]);
 });
 ```
 
 - Aufruf: `/member/plugin/meine-buchungen[/<aktion>[/<id>]]`; die Aktion steht in `$_GET['action']`, die numerische ID in `$_GET['id']`.
-- **CSRF (seit 3.5.0):** Jeder POST auf einen Plugin-Bereich muss – falls der Browser `Origin`/`Referer` sendet – von der eigenen Site kommen, sonst antwortet der Core mit 403. Mit `'csrf' => 'core'` prüft der Core zusätzlich das Token; im Formular genügt `<?= $registry->csrfField('meine-buchungen') ?>` (bzw. `csrfToken()` für AJAX im Header `X-CSRF-Token`). `$registry` ist `\CMS\Member\PluginDashboardRegistry::instance()`.
+- **CSRF (seit 3.4.13):** Jeder POST auf einen Plugin-Bereich muss – falls der Browser `Origin`/`Referer` sendet – von der eigenen Site kommen, sonst antwortet der Core mit 403. Mit `'csrf' => 'core'` prüft der Core zusätzlich das Token; im Formular genügt `<?= $registry->csrfField('meine-buchungen') ?>` (bzw. `csrfToken()` für AJAX im Header `X-CSRF-Token`). `$registry` ist `\CMS\Member\PluginDashboardRegistry::instance()`.
 - Unterbereiche über `parent_slug` erscheinen nicht als eigene Dashboard-Kachel.
 - `dashboard_widget => false` blendet die Kachel aus; die Sichtbarkeit lässt sich zusätzlich im Admin unter *Mitglieder-Dashboard → Plugin-Widgets* steuern (Option `member_dashboard_plugin_<plugin>`, Reihenfolge `member_dashboard_plugin_order`).
 - Fehler im `stats_callback` werden ignoriert; die Kachel bleibt sichtbar.

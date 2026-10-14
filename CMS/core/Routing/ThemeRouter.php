@@ -866,6 +866,13 @@ final class ThemeRouter
             return;
         }
 
+        // Legacy-Fallback (Tags nur als Freitext in posts.tags) nur, solange die Tag-Tabelle
+        // noch leer ist. Sonst lud jede unbekannte /tag/xyz-URL alle getaggten Beiträge samt Inhalt.
+        if ($db->get_var("SELECT 1 FROM {$prefix}post_tags LIMIT 1") !== null) {
+            $this->router->render404();
+            return;
+        }
+
         $rows = $db->get_results(
             "SELECT p.*, c.name AS category_name,
                     COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name
@@ -1198,7 +1205,7 @@ final class ThemeRouter
         $postData = $this->attachLegacyCompatibleTagsToPost($postData);
 
         $post = (object)$postData;
-        if (\cms_post_is_publicly_visible($postRow)) {
+        if (\cms_post_is_publicly_visible($postRow) && $this->shouldCountPostView()) {
             $db->execute("UPDATE {$prefix}posts SET views = views + 1 WHERE id = ?", [(int)$post->id]);
         }
 
@@ -1643,6 +1650,29 @@ final class ThemeRouter
         return '';
     }
 
+
+    /**
+     * Aufrufzähler nur für echte Seitenaufrufe: HEAD-Anfragen, Prefetch und Crawler/Monitoring
+     * schrieben sonst bei jedem Abruf in `posts` (Schreiblast, verfälschte „Beliebt“-Listen).
+     */
+    private function shouldCountPostView(): bool
+    {
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'GET') {
+            return false;
+        }
+
+        $purpose = strtolower((string) ($_SERVER['HTTP_SEC_PURPOSE'] ?? $_SERVER['HTTP_PURPOSE'] ?? $_SERVER['HTTP_X_MOZ'] ?? ''));
+        if ($purpose !== '' && str_contains($purpose, 'prefetch')) {
+            return false;
+        }
+
+        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        if ($userAgent === '') {
+            return false;
+        }
+
+        return preg_match('/bot|crawl|spider|slurp|scrape|preview|monitor|uptime|headless|lighthouse|curl|wget|python|java\/|go-http|okhttp|httpclient|facebookexternalhit|embedly/i', $userAgent) !== 1;
+    }
 
     /**
      * @param array<string,mixed> $postData

@@ -4314,7 +4314,10 @@
 
             controls.dataset.cmsEditorUi = 'true';
             controls.dataset.mutationFree = 'true';
-            link.setAttribute('href', 'javascript:void(0)');
+            // Reine Vorschau: kein javascript:-URL (CSP/Barrierefreiheit), Klicks werden abgefangen.
+            link.removeAttribute('href');
+            link.setAttribute('aria-disabled', 'true');
+            link.addEventListener('click', function (event) { event.preventDefault(); });
             link.setAttribute('tabindex', '-1');
             text.readOnly = this.readOnly;
             url.readOnly = this.readOnly;

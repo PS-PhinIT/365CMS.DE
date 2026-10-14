@@ -17,7 +17,7 @@
 - direkte JS-Einbindung in `CMS/admin/partials/footer.php`
 - seit `3.3.42` lädt der Admin-Header die Tabler Icons nicht mehr über jsDelivr/CDN, sondern ausschließlich lokal über `/assets/tabler-icons/tabler-icons.min.css`
 
-## Update auf Tabler 1.6.1 (3.5.0)
+## Update auf Tabler 1.6.1 (3.4.18)
 
 - Übernommen werden nur `dist/css/tabler.min.css` und `dist/js/tabler.min.js` aus dem npm-Paket `@tabler/core@1.6.1` (das GitHub-Archiv `CMS_ASSETS/tabler--tabler-core-1.6.1.zip` enthält kein `dist/`).
 - Lokale Anpassung wie schon bei 1.4.0: Der abschließende `sourceMappingURL`-Kommentar wird entfernt, weil die Runtime keine `.map`-Dateien ausliefert (sonst 404 in den Browser-Devtools). Sonst bytegleich zum Upstream-Build.

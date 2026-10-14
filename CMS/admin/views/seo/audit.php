@@ -72,6 +72,7 @@ $twitterCardOptions = ['summary_large_image', 'summary'];
                             $itemContentType = (string)($item['type'] ?? '');
                             $itemSchemaType = \CMS\Services\SEO\SeoSchemaRenderer::effectiveTypeFor((string)($item['schema_type'] ?? ''), $itemContentType);
                             $itemSchemaSelected = \CMS\Services\SEO\SeoSchemaRenderer::selectableTypeFor($itemSchemaType, $itemContentType);
+                            $itemFieldPrefix = 'seo-audit-' . preg_replace('/[^a-z0-9_-]/i', '', $itemContentType) . '-' . (int)($item['id'] ?? 0);
                             ?>
                             <tr>
                                 <td>
@@ -104,22 +105,22 @@ $twitterCardOptions = ['summary_large_image', 'summary'];
                                             <input type="hidden" name="content_type" value="<?= htmlspecialchars((string)($item['type'] ?? '')) ?>">
                                             <input type="hidden" name="content_id" value="<?= (int)($item['id'] ?? 0) ?>">
                                             <div class="row g-2 text-start">
-                                                <div class="col-12"><label class="form-label small">Meta-Titel</label><input class="form-control form-control-sm" type="text" name="meta_title" value="<?= htmlspecialchars((string)($item['meta_title'] ?? '')) ?>"></div>
-                                                <div class="col-12"><label class="form-label small">Meta-Beschreibung</label><textarea class="form-control form-control-sm" name="meta_description" rows="3"><?= htmlspecialchars((string)($item['meta_description'] ?? '')) ?></textarea></div>
-                                                <div class="col-12"><label class="form-label small">Fokus-Keyphrase</label><input class="form-control form-control-sm" type="text" name="focus_keyphrase" value="<?= htmlspecialchars((string)($item['focus_keyphrase'] ?? '')) ?>"></div>
-                                                <div class="col-12"><label class="form-label small">SEO-Tags / Keywords</label><input class="form-control form-control-sm" type="text" name="keywords" value="<?= htmlspecialchars((string)($item['keywords'] ?? '')) ?>" placeholder="Kommagetrennte Tags"></div>
-                                                <div class="col-12"><label class="form-label small">Canonical</label><input class="form-control form-control-sm" type="text" name="canonical_url" value="<?= htmlspecialchars((string)($item['canonical_url'] ?? '')) ?>"></div>
+                                                <div class="col-12"><label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-meta-title" class="form-label small">Meta-Titel</label><input id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-meta-title" class="form-control form-control-sm" type="text" name="meta_title" value="<?= htmlspecialchars((string)($item['meta_title'] ?? '')) ?>"></div>
+                                                <div class="col-12"><label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-meta-description" class="form-label small">Meta-Beschreibung</label><textarea id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-meta-description" class="form-control form-control-sm" name="meta_description" rows="3"><?= htmlspecialchars((string)($item['meta_description'] ?? '')) ?></textarea></div>
+                                                <div class="col-12"><label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-focus-keyphrase" class="form-label small">Fokus-Keyphrase</label><input id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-focus-keyphrase" class="form-control form-control-sm" type="text" name="focus_keyphrase" value="<?= htmlspecialchars((string)($item['focus_keyphrase'] ?? '')) ?>"></div>
+                                                <div class="col-12"><label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-keywords" class="form-label small">SEO-Tags / Keywords</label><input id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-keywords" class="form-control form-control-sm" type="text" name="keywords" value="<?= htmlspecialchars((string)($item['keywords'] ?? '')) ?>" placeholder="Kommagetrennte Tags"></div>
+                                                <div class="col-12"><label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-canonical" class="form-label small">Canonical</label><input id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-canonical" class="form-control form-control-sm" type="text" name="canonical_url" value="<?= htmlspecialchars((string)($item['canonical_url'] ?? '')) ?>"></div>
                                                 <div class="col-6">
-                                                    <label class="form-label small">Schema</label>
-                                                    <select class="form-select form-select-sm" name="schema_type">
+                                                    <label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-schema-type" class="form-label small">Schema</label>
+                                                    <select id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-schema-type" class="form-select form-select-sm" name="schema_type">
                                                         <?php foreach (\CMS\Services\SEO\SeoSchemaRenderer::typeOptionsFor($itemContentType) as $schemaTypeOption): ?>
                                                             <option value="<?= htmlspecialchars($schemaTypeOption) ?>" <?= $itemSchemaSelected === $schemaTypeOption ? 'selected' : '' ?>><?= htmlspecialchars($schemaTypeOption) ?></option>
                                                         <?php endforeach; ?>
                                                     </select>
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small">Twitter Card</label>
-                                                    <select class="form-select form-select-sm" name="twitter_card">
+                                                    <label for="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-twitter-card" class="form-label small">Twitter Card</label>
+                                                    <select id="<?= htmlspecialchars($itemFieldPrefix, ENT_QUOTES) ?>-twitter-card" class="form-select form-select-sm" name="twitter_card">
                                                         <?php foreach ($twitterCardOptions as $twitterCardOption): ?>
                                                             <option value="<?= htmlspecialchars($twitterCardOption) ?>" <?= ((string)($item['twitter_card'] ?? 'summary_large_image') === $twitterCardOption) ? 'selected' : '' ?>><?= htmlspecialchars($twitterCardOption) ?></option>
                                                         <?php endforeach; ?>

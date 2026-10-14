@@ -29,16 +29,16 @@ References were checked mechanically: static `require`/`include` targets, asset 
 | REF-03 | `DOC/assets/ASSETS_NEW.md` → `ai/AI-SERVICES.md`, `admin/system-settings/AI-SERVICES.md` | falsche Ebene | `../ai/…`, `../admin/…` |
 | REF-03 | `DOC/assets/README.md` → `../ASSETS_NEW.md`, `../ASSETS_OwnAssets.md` | Dateien liegen in `DOC/assets/` | `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` |
 | REF-03 | `DOC/assets/mailer/README.md`, `DOC/assets/msgraph/README.md` → `../../ASSETS_OwnAssets.md` | eine Ebene zu hoch | `../ASSETS_OwnAssets.md` |
-| REF-03 | `DOC/assets/msgraph/README.md` → `../VENDOR-NETWORK-PATHS.md` | Dokument wurde in 3.5.0 entfernt | Link entfernt, Hinweis umformuliert |
+| REF-03 | `DOC/assets/msgraph/README.md` → `../VENDOR-NETWORK-PATHS.md` | Dokument wurde in 3.4.09 entfernt | Link entfernt, Hinweis umformuliert |
 | REF-03 | `DOC/FILELIST.md` Abschnitt 1.2 | nannte `ASSETS/`, `TESTS/`, `tools/` als Repository-Ordner | als „nicht Teil des Repositorys“ gekennzeichnet |
-| REF-04 | `README.md`, `DOC/core/STATUS.md`, Kopf von `Changelog.md` | nannten Changelog-Stand 3.5.0 | auf 3.5.0 aktualisiert |
+| REF-04 | `README.md`, `DOC/core/STATUS.md`, Kopf von `Changelog.md` | nannten Changelog-Stand 3.4.08/3.4.09 | auf 3.4.12 aktualisiert |
 | REF-04 | `DOC/core/STATUS.md`, `DOC/admin/subscription/ORDERS.md` | beschrieben `/order` als 404 | Weiterleitung dokumentiert |
 
 ### Bewusst nicht korrigiert
 
-In `DOC/` genannte, aber nicht vorhandene `CMS/…`-Pfade, die **absichtlich** nicht existieren: entfernte Grid.js-Dateien (die Historien-READMEs unter `DOC/assets/gridjs/` & Co. wurden in 3.5.0 gelöscht), Roadmap-Dateien in `DOC/assets/ASSETS_OwnAssets.md`/`ASSETS_NEW.md`, das zur Laufzeit erzeugte `CMS/config/media-settings.json`, der optionale lokale Marketplace-Index `CMS/index.json` und das Beispiel-Plugin `cms-forum` im Workflow-Fahrplan.
+In `DOC/` genannte, aber nicht vorhandene `CMS/…`-Pfade, die **absichtlich** nicht existieren: entfernte Grid.js-Dateien (die Historien-READMEs unter `DOC/assets/gridjs/` & Co. wurden in 3.4.19 gelöscht), Roadmap-Dateien in `DOC/assets/ASSETS_OwnAssets.md`/`ASSETS_NEW.md`, das zur Laufzeit erzeugte `CMS/config/media-settings.json`, der optionale lokale Marketplace-Index `CMS/index.json` und das Beispiel-Plugin `cms-forum` im Workflow-Fahrplan.
 
-### Mit 3.5.0 behoben
+### Mit 3.4.13 behoben
 
 | ID | Verweis | Korrektur |
 |---|---|---|

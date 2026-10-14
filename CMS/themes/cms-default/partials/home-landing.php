@@ -417,6 +417,7 @@ main.site-main       { padding: 0 !important; margin: 0 !important; }
     <?php
     $lpPosts = [];
     $prefix = \CMS\Database::instance()->getPrefix();
+    $pdo = \CMS\Database::instance()->getConnection();
     try {
         $stmtLp = $pdo->prepare(
             "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name, c.name AS category_name, c.slug AS category_slug

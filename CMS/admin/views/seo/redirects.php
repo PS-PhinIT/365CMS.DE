@@ -264,11 +264,11 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Quellpfad</label>
+                            <label for="redirect-source" class="form-label">Quellpfad</label>
                             <input type="text" name="source_path" id="redirect-source" class="form-control" placeholder="/alter-pfad" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Site</label>
+                            <label for="redirect-site-scope" class="form-label">Site</label>
                             <select name="site_scope" id="redirect-site-scope" class="form-select">
                                 <?php foreach ($sites as $site): ?>
                                     <option value="<?= htmlspecialchars((string)($site['value'] ?? '')) ?>"><?= htmlspecialchars((string)($site['label'] ?? '')) ?></option>
@@ -278,7 +278,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                     </div>
                     <div class="row g-3 mt-0">
                         <div class="col-md-4">
-                            <label class="form-label">Zieltyp</label>
+                            <label for="redirect-target-kind" class="form-label">Zieltyp</label>
                             <select name="target_kind" id="redirect-target-kind" class="form-select">
                                 <option value="manual">Freie URL / externer Slug</option>
                                 <option value="page">Seite</option>
@@ -287,11 +287,11 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                             </select>
                         </div>
                         <div class="col-md-8" id="redirect-target-manual-group">
-                            <label class="form-label">Ziel-URL / Slug</label>
+                            <label for="redirect-target-manual" class="form-label">Ziel-URL / Slug</label>
                             <input type="text" name="target_url_manual" id="redirect-target-manual" class="form-control" placeholder="/neuer-pfad oder https://..." required>
                         </div>
                         <div class="col-md-8" id="redirect-target-page-group" hidden>
-                            <label class="form-label">Ziel-Seite</label>
+                            <label for="redirect-target-page" class="form-label">Ziel-Seite</label>
                             <select name="target_page_id" id="redirect-target-page" class="form-select">
                                 <option value="">Bitte Seite wählen</option>
                                 <?php foreach (($targets['pages'] ?? []) as $pageTarget): ?>
@@ -300,7 +300,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                             </select>
                         </div>
                         <div class="col-md-8" id="redirect-target-post-group" hidden>
-                            <label class="form-label">Ziel-Beitrag</label>
+                            <label for="redirect-target-post" class="form-label">Ziel-Beitrag</label>
                             <select name="target_post_id" id="redirect-target-post" class="form-select">
                                 <option value="">Bitte Beitrag wählen</option>
                                 <?php foreach (($targets['posts'] ?? []) as $postTarget): ?>
@@ -309,7 +309,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                             </select>
                         </div>
                         <div class="col-md-8" id="redirect-target-hub-group" hidden>
-                            <label class="form-label">Ziel-Hub-Site</label>
+                            <label for="redirect-target-hub" class="form-label">Ziel-Hub-Site</label>
                             <select name="target_hub_id" id="redirect-target-hub" class="form-select">
                                 <option value="">Bitte Hub Site wählen</option>
                                 <?php foreach (($targets['hubs'] ?? []) as $hubTarget): ?>
@@ -321,7 +321,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                     <input type="hidden" name="target_url" id="redirect-target-hidden" value="">
                     <div class="row g-3 mt-0">
                         <div class="col-md-4">
-                            <label class="form-label">Typ</label>
+                            <label for="redirect-type" class="form-label">Typ</label>
                             <select name="redirect_type" id="redirect-type" class="form-select">
                                 <option value="301">301 permanent</option>
                                 <option value="302">302 temporär</option>
@@ -335,7 +335,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                         </div>
                     </div>
                     <div class="mb-0">
-                        <label class="form-label">Notiz</label>
+                        <label for="redirect-notes" class="form-label">Notiz</label>
                         <textarea name="notes" id="redirect-notes" class="form-control" rows="3" placeholder="z. B. alte Kampagnen-URL, Relaunch, Tippfehler, Hinweis aus 404-Monitor"></textarea>
                     </div>
                 </div>

@@ -30,7 +30,7 @@
 | Search | `tntsearch` | `5.3.0` | Volltextsuche | Suche |
 | SEO | `melbahja-seo` | gebündelter Snapshot | SEO-Helfer | SEO |
 | Security | `htmlpurifier` | gebündelter Snapshot | XSS-Schutz | System |
-| Security | `dompurify` + `js/cms-csp-runtime.js` | `3.5.0` | Trusted-Types-`default`-Policy, Style-Nonce für dynamische `<style>` | Admin / Member / Frontend |
+| Security | `dompurify` + `js/cms-csp-runtime.js` | `3.4.16` | Trusted-Types-`default`-Policy, Style-Nonce für dynamische `<style>` | Admin / Member / Frontend |
 | i18n | `translation` | `8.1.5` | Übersetzungen | System |
 | i18n | `yaml` | `8.1.8` | Parser für `CMS/lang/*.yaml` | System |
 | AI | `symfony/ai-platform` | `0.14.1` (nur Basis, ohne `Bridge/`) | AI-Plattform-Grundvertrag / Core-Adapter-Basis | System / AI Services |
@@ -67,7 +67,7 @@ Hinweise zum Abgleich:
 | UI | `@tabler/core` | `CMS/assets/tabler/` | 1.6.1 | 1.6.1 | MIT | [tabler.io](https://tabler.io/) | [tabler/tabler](https://github.com/tabler/tabler) |
 | UI | `@tabler/icons-webfont` | `CMS/assets/tabler-icons/` | 3.48.0 | 3.48.0 | MIT | [tabler.io/icons](https://tabler.io/icons) | [tabler/tabler-icons](https://github.com/tabler/tabler-icons) |
 | UI | `photoswipe` | `CMS/assets/photoswipe/` | 5.4.4 | 5.4.4 | MIT | [photoswipe.com](https://photoswipe.com/) | [dimsemenov/PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe) |
-| Security | `dompurify` | `CMS/assets/dompurify/` | 3.5.0 | 3.5.0 | Apache-2.0 / MPL-2.0 | [cure53.de/purify](https://cure53.de/purify) | [cure53/DOMPurify](https://github.com/cure53/DOMPurify) |
+| Security | `dompurify` | `CMS/assets/dompurify/` | 3.4.16 | 3.4.16 | Apache-2.0 / MPL-2.0 | [cure53.de/purify](https://cure53.de/purify) | [cure53/DOMPurify](https://github.com/cure53/DOMPurify) |
 | Editor | `suneditor` | `CMS/assets/suneditor/` | 3.3.3 | 3.3.3 | MIT | [suneditor.com](https://suneditor.com/) | [JiHong88/suneditor](https://github.com/JiHong88/suneditor) |
 | Auth | `firebase/php-jwt` | `CMS/assets/php-jwt/` | 7.2.1 | 7.2.1 | BSD-3-Clause | [packagist.org/packages/firebase/php-jwt](https://packagist.org/packages/firebase/php-jwt) | [googleapis/php-jwt](https://github.com/googleapis/php-jwt) |
 | Auth | `directorytree/ldaprecord` | `CMS/assets/ldaprecord/` | 4.0.8 | 4.0.8 | MIT | [ldaprecord.com](https://ldaprecord.com/) | [DirectoryTree/LdapRecord](https://github.com/DirectoryTree/LdapRecord) |
@@ -206,8 +206,8 @@ cms_asset_url('images/LOGO_365CMS-75px.png')
 
 Zusätzliche Hinweise:
 
-- `cookieconsent`, `filepond`, `elfinder`, `simplepie` und `gridjs` sind keine Runtime-Bundles mehr und wurden in `3.5.0` aus `CMS/assets/` entfernt; ihre historischen READMEs unter `DOC/assets/` (inkl. `msgraph`) wurden in `3.5.0` gelöscht
-- die produktiv eingebundenen Symfony-8.1-Bundles deklarieren `PHP >= 8.4.1`; der Code führt diese Untergrenze seit `3.5.0` als `CMS\Version::MIN_PHP` und wertet sie zusammen mit `CMS_MIN_PHP_VERSION` aus (`Version::minimumPhp()`)
+- `cookieconsent`, `filepond`, `elfinder`, `simplepie` und `gridjs` sind keine Runtime-Bundles mehr und wurden in `3.4.02` aus `CMS/assets/` entfernt; ihre historischen READMEs unter `DOC/assets/` (inkl. `msgraph`) wurden in `3.4.19` gelöscht
+- die produktiv eingebundenen Symfony-8.1-Bundles deklarieren `PHP >= 8.4.1`; der Code führt diese Untergrenze seit `3.4.18` als `CMS\Version::MIN_PHP` und wertet sie zusammen mit `CMS_MIN_PHP_VERSION` aus (`Version::minimumPhp()`)
 - `.htaccess` sperrt `vendor/` komplett sowie PHP-/Metadaten-/versteckte Dateien unter `assets/`
 - **CSP-Vertrag:** Inline-`<script>`/`<style>` nur mit `Security::instance()->nonceAttr()`; keine Inline-Event-Handler (`onclick` …) – stattdessen `data-cms-*`-Attribute aus `js/cms-inline-actions.js`; `style="`-Attribute bleiben per CSP blockiert (`style-src-attr`); `CMS\Http\InlineStyleRewriter` (`core/Http/InlineStyleRewriter.php`, gestartet in `Bootstrap::run()`) überführt sie in vollständigen HTML-Antworten serverseitig in Klassen plus einen `<style nonce>`-Block vor `</head>`. Unsichere Werte (`{ } < > @ \`, Kommentare) bleiben blockiert; Fragmente, Downloads, Antworten mit `Content-Length`, gestreamte oder > 4 MB große Ausgaben bleiben unverändert; per JavaScript eingefügte Style-Attribute werden nicht umgeschrieben (dort CSSOM `el.style.*` nutzen). Tests: `TESTS/csp-style-rewriter/run.php`
 - `js/tabler-bootstrap-bridge.js` stellt `window.bootstrap` für Tabler ab 1.4 (`window.tabler`, in 1.6 weiterhin `window.tabler.bootstrap`) bereit
@@ -245,13 +245,13 @@ Die ausführliche Bewertungsdoku steht in [ASSETS_NEW.md](ASSETS_NEW.md). Die ka
 
 ---
 
-## Prüfstand 2026-10-04 (Asset-Update 3.5.0)
+## Prüfstand 2026-10-04 (Asset-Update 3.4.18)
 
 Abgleich mit `CMS/assets/`, `CMS/assets/autoload.php` und `CMS/core/VendorRegistry.php`:
 
 | Library | Verifizierter Stand | Einbindung im Code |
 |---|---|---|
-| `dompurify` | 3.5.0 (`purify.min.js`) | `cms_csp_runtime_tags()` in `includes/functions/options-runtime.php` zusammen mit `js/cms-csp-runtime.js` |
+| `dompurify` | 3.4.16 (`purify.min.js`) | `cms_csp_runtime_tags()` in `includes/functions/options-runtime.php` zusammen mit `js/cms-csp-runtime.js` |
 | `editorjs` | 2.31.7 + 27 Plugin-UMDs | `EditorJsService` / `EditorJsAssetService` |
 | `tabler` | 1.6.1 (`tabler.min.css`/`tabler.min.js` ohne `sourceMappingURL`-Kommentar) | Admin-/Member-Partials, `js/tabler-bootstrap-bridge.js` |
 | `photoswipe` | 5.4.4 (ESM-Build) | `Bootstrap.php` (Customizer `performance.enable_photoswipe`), `js/photoswipe-init.js` |
@@ -265,10 +265,10 @@ Abgleich mit `CMS/assets/`, `CMS/assets/autoload.php` und `CMS/core/VendorRegist
 | `melbahja-seo` | Snapshot | `SeoSchemaRenderer`, `SitemapService`, `IndexingService`, SEO-Suite |
 | `mailer` / `mime` | 8.1.7 | `MailService` |
 | `translation` / `yaml` | 8.1.5 / 8.1.8 | `TranslationService` (Kataloge `CMS/lang/*.yaml`) |
-| `tntsearch` | 5.3.0 | `SearchService` (Index `cache/search/`); die Seitensuche `/search` nutzt seit 3.5.0 `SiteSearchService` |
+| `tntsearch` | 5.3.0 | `SearchService` (Index `cache/search/`); die Seitensuche `/search` nutzt seit 3.4.06 `SiteSearchService` |
 | `Carbon` | 3.14.2 | `time_ago()` in `includes/functions/redirects-auth.php` |
 | `suneditor` | 3.3.3 | `EditorService`, nur bei `setting_editor_type = suneditor` |
 | `dompdf` | 3.1.6 | `CMS/vendor/dompdf/`, `PdfService` (z. B. PDF-Export im Router) |
 | `images/` | 13 PNG + `plugin-not-found.svg` | Logos, Dashboard-Icons, Member-Platzhalter |
 
-Nicht (mehr) im Repository: `cookieconsent`, `filepond`, `elfinder`, `gridjs`, `simplepie`, `msgraph` unter `CMS/assets/` sowie der Staging-Ordner `ASSETS/` im Repository-Root. Upstream-Updates werden seit 2026-10-04 als ZIP-Archive unter `CMS_ASSETS/` im Repository-Root abgelegt (nicht deployt). Die Unterordner-READMEs dieser Pakete wurden in `3.5.0` aus `DOC/assets/` entfernt.
+Nicht (mehr) im Repository: `cookieconsent`, `filepond`, `elfinder`, `gridjs`, `simplepie`, `msgraph` unter `CMS/assets/` sowie der Staging-Ordner `ASSETS/` im Repository-Root. Upstream-Updates werden seit 2026-10-04 als ZIP-Archive unter `CMS_ASSETS/` im Repository-Root abgelegt (nicht deployt). Die Unterordner-READMEs dieser Pakete wurden in `3.4.19` aus `DOC/assets/` entfernt.

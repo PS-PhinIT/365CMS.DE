@@ -32,11 +32,7 @@ $archiveType  = $archiveType  ?? 'archive';
 $showSidebar   = (bool) meridian_setting('layout', 'show_sidebar', true);
 $recentSidebar = meridian_get_recent_posts(5);
 $sidebarCats   = meridian_get_categories(8);
-$tagCloud      = [];
-$rawTagData    = meridian_get_tags(20);
-foreach ($rawTagData as $t) {
-    $tagCloud[] = $t['name'];
-}
+$tagCloud      = meridian_get_tags(20); // [name, slug, count] – Links über den Slug
 ?>
 
 <!-- Archiv-Header -->

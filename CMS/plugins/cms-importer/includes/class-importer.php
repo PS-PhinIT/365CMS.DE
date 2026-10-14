@@ -20,9 +20,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// CMS_Importer_DB wird von PHP beim Kompilieren dieser Datei vorab deklariert
+// (Early Binding) und darf daher hier nicht geprüft werden – sonst würde
+// CMS_Importer_Service nie geladen.
 if (
     defined('CMS_IMPORTER_SERVICE_CLASSES_LOADED')
-    || class_exists('CMS_Importer_DB', false)
     || class_exists('CMS_Importer_Service', false)
 ) {
     return;

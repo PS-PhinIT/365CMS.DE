@@ -35,7 +35,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_before_route` | Action | – | `Bootstrap::run()` |
 | `register_routes` | Action | `Router $router` | vor dem Dispatch – eigene Routen mit `$router->addRoute()` |
 | `cms_after_route` | Action | – | nach dem Dispatch |
-| `cms_public_form_persistent_token` (`Router::PUBLIC_FORM_TOKEN_FILTER`) | Filter | `$current (null), $routingUri, $method` | globaler CSRF-Guard für öffentliche POSTs – Rückgabe `['action' => …, 'token' => …]` meldet ein Formular mit sessiongebundenem Persistent-Token an (ab 3.5.0, z. B. PHINIT-Favoriten) |
+| `cms_public_form_persistent_token` (`Router::PUBLIC_FORM_TOKEN_FILTER`) | Filter | `$current (null), $routingUri, $method` | globaler CSRF-Guard für öffentliche POSTs – Rückgabe `['action' => …, 'token' => …]` meldet ein Formular mit sessiongebundenem Persistent-Token an (ab 3.4.15, z. B. PHINIT-Favoriten) |
 | `cms_content_request_context` | Filter | `$context, $uri` | Sprachkontext der Anfrage |
 | `cms_content_supported_locales` | Filter | `$locales` | unterstützte Inhaltssprachen (Standard `de`, `en`) |
 

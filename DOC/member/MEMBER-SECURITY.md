@@ -56,4 +56,4 @@ Verwenden Sie ein einzigartiges Passwort, aktivieren Sie TOTP/MFA oder einen Pas
 
 ### Bekannte Einschränkung beim Datei-Upload
 
-Die Upload-Maske unter `/member/media` übergibt seit 3.5.0 ein Token der Aktion `media_action`, die `POST /api/upload` prüft (vorher `member_media_action`, wodurch der erste Upload je Seitenaufruf mit 403 scheiterte). Jede Antwort enthält ein neues Token für Folge-Uploads.
+Die Upload-Maske unter `/member/media` übergibt seit 3.4.12 ein Token der Aktion `media_action`, die `POST /api/upload` prüft (vorher `member_media_action`, wodurch der erste Upload je Seitenaufruf mit 403 scheiterte). Jede Antwort enthält ein neues Token für Folge-Uploads.

@@ -438,7 +438,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                         <input type="date" class="form-control" id="pageContentUpdatedDate" name="content_updated_date" value="<?= htmlspecialchars($pageContentUpdatedDate) ?>">
                                     </div>
                                     <div class="col-sm-5">
-                                        <input type="time" class="form-control" id="pageContentUpdatedTime" name="content_updated_time" value="<?= htmlspecialchars($pageContentUpdatedTime) ?>" step="60">
+                                        <input type="time" class="form-control" id="pageContentUpdatedTime" aria-label="Aktualisierungsuhrzeit (öffentlich sichtbar)" name="content_updated_time" value="<?= htmlspecialchars($pageContentUpdatedTime) ?>" step="60">
                                     </div>
                                 </div>
                                 <div class="form-hint">Optional. Leer lassen = kein „Zuletzt aktualisiert“-Hinweis auf der Seite.</div>

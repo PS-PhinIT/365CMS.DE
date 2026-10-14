@@ -57,7 +57,7 @@ Nach den Änderungen läuft keine DDL-Anweisung mehr im normalen Request (geprü
 
 ### Bereits vorhanden (geprüft)
 
-- **Rate-Limits:** Login, Passwort-Reset, Registrierung, Kontaktformular, API (DB-basiert, zeitzonenfest seit 3.5.0).
+- **Rate-Limits:** Login, Passwort-Reset, Registrierung, Kontaktformular, API (DB-basiert, zeitzonenfest seit 3.4.13).
 - **Seiten-Cache:** HTML-Cache für öffentliche Seiten (`Router::resolvePublicHtmlCacheTtl`).
 - **Sitemaps:** Bundle als Datei, wird nur bei Änderungen neu erzeugt.
 - **Medien:** Auslieferung mit `Last-Modified` und Range-Unterstützung.

@@ -135,6 +135,11 @@ class ThemeCustomizer
      */
     public function setTheme(string $themeSlug): void
     {
+        // Konstruktor hat das aktive Theme bereits geladen – kein zweites Lesen von theme.json + Customizing-Abfrage.
+        if ($themeSlug === $this->currentTheme && $this->themeConfig !== null) {
+            return;
+        }
+
         $this->currentTheme = $themeSlug;
         $this->loadThemeConfig();
         $this->loadCustomizations();

@@ -202,6 +202,7 @@ $s = $settings;
                                             <input type="color" class="form-control form-control-color" id="<?php echo $key; ?>" name="<?php echo $key; ?>"
                                                    value="<?php echo htmlspecialchars($s[$key] ?? '#000000'); ?>">
                                             <input type="text" class="form-control" value="<?php echo htmlspecialchars($s[$key] ?? ''); ?>"
+                                                   aria-label="<?php echo htmlspecialchars($label . ' (Hex-Wert)', ENT_QUOTES, 'UTF-8'); ?>"
                                                    data-cms-sync-target="<?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>"
                                                    pattern="#[0-9a-fA-F]{6}" maxlength="7">
                                         </div>

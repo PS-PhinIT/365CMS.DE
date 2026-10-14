@@ -20,7 +20,7 @@ Actions: `save`, `scan_theme_fonts`, `download_detected_fonts`, `download_google
 | Basisgröße | `font_size_base` | 12–24 px (Standard 16) |
 | Zeilenhöhe | `font_line_height` | 1,0–2,5 (Standard 1,6) |
 | Lokale Schriften erzwingen | `privacy_use_local_fonts` | an/aus – das Theme lädt dann keine Schriften von `fonts.googleapis.com` |
-| Google Fonts als Fallback (Theme-Customizer `typography.google_fonts`) | seit 3.5.0 standardmäßig **aus** | nur wenn aktiviert und keine lokalen Schriften aktiv sind, lädt `cms-default` Fonts von Google; sonst greifen die System-Fallbacks (`Georgia`, `system-ui`) |
+| Google Fonts als Fallback (Theme-Customizer `typography.google_fonts`) | seit 3.4.13 standardmäßig **aus** | nur wenn aktiviert und keine lokalen Schriften aktiv sind, lädt `cms-default` Fonts von Google; sonst greifen die System-Fallbacks (`Georgia`, `system-ui`) |
 
 **Kuratierte Auswahl (Auszug):** Inter, Space Grotesk, Sora, Barlow, Roboto, Open Sans, Lato, Montserrat, Poppins, Source Sans, Nunito, Oswald, Rajdhani, DM Sans, Libre Baskerville, Playfair Display, Merriweather, JetBrains Mono, Fira Code sowie Systemschriften (system-ui, Arial, Georgia, Verdana …) mit passenden Fallback-Stacks.
 

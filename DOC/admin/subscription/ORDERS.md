@@ -23,7 +23,7 @@ Bestellungen entstehen im öffentlichen Checkout `CMS/orders.php` (Aufruf `/orde
 4. verlinkt AGB- und Widerrufsseite aus den Paketeinstellungen,
 5. prüft das CSRF-Token `checkout_process` und legt die Bestellung mit Status `pending` und einer eindeutigen `order_number` an.
 
-> Die Router-Route `GET|POST /order` (`PublicRouter::renderOrder()`/`handleOrder()`) bindet eine optionale `CMS/member/order_public.php` ein. Fehlt sie (Standard), leitet `/order` seit 3.5.0 auf `/orders.php` weiter (GET 302, POST 307, Query-String bleibt erhalten). Vorher lieferte die Route 404.
+> Die Router-Route `GET|POST /order` (`PublicRouter::renderOrder()`/`handleOrder()`) bindet eine optionale `CMS/member/order_public.php` ein. Fehlt sie (Standard), leitet `/order` seit 3.4.12 auf `/orders.php` weiter (GET 302, POST 307, Query-String bleibt erhalten). Vorher lieferte die Route 404.
 
 ### Oberfläche
 

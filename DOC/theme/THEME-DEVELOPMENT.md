@@ -62,19 +62,19 @@ Health-Check beim Aktivieren (`ThemeManager::healthCheckTheme()`): `style.css` v
 
 - `menus` registriert Menüpositionen (zusätzlich Filter `register_menu_locations`).
 - `post_templates` (optional) bietet im Beitragseditor eine Template-Auswahl mit eigenen Metafeldern an; ohne Angabe gibt es nur „Standard“. `cms-default` definiert keine Beitrags-Templates.
-- `page_templates` (optional, ab 3.5.0) bietet im Seiteneditor die Auswahl „Seitenvorlage“ mit Zusatzfeldern an (`CMS\Services\PageTemplateService`). Registriert werden nur IDs `[a-z0-9_-]`, deren `file` als PHP-Datei im Theme-Hauptverzeichnis existiert. Feldtypen: `text`, `textarea`, `url` (nur `/pfad`, `#anker`, `http(s)://`, `mailto:`, `tel:`), `array-of-objects` (JSON-Liste, höchstens 20 Einträge, nur die in `fields` genannten Schlüssel; leere Einträge entfallen). HTML wird zu Klartext. Gespeichert wird in `pages.page_template` und `pages.page_meta_json`; `ThemeManager::render('page', …)` lädt dann die Vorlagendatei statt `page.php` und stellt die Felder als `$page['meta']` bereit. Unbekannte gespeicherte Vorlagen und beschädigtes JSON fallen protokolliert auf `page.php` bzw. `[]` zurück.
+- `page_templates` (optional, ab 3.4.20) bietet im Seiteneditor die Auswahl „Seitenvorlage“ mit Zusatzfeldern an (`CMS\Services\PageTemplateService`). Registriert werden nur IDs `[a-z0-9_-]`, deren `file` als PHP-Datei im Theme-Hauptverzeichnis existiert. Feldtypen: `text`, `textarea`, `url` (nur `/pfad`, `#anker`, `http(s)://`, `mailto:`, `tel:`), `array-of-objects` (JSON-Liste, höchstens 20 Einträge, nur die in `fields` genannten Schlüssel; leere Einträge entfallen). HTML wird zu Klartext. Gespeichert wird in `pages.page_template` und `pages.page_meta_json`; `ThemeManager::render('page', …)` lädt dann die Vorlagendatei statt `page.php` und stellt die Felder als `$page['meta']` bereit. Unbekannte gespeicherte Vorlagen und beschädigtes JSON fallen protokolliert auf `page.php` bzw. `[]` zurück.
 
 ### 3. Rendering-Vertrag
 
 - **Rahmen:** `ThemeManager::render()` bindet `header.php`, das Template und `footer.php` ein und zählt den Seitenaufruf (`TrackingService`). Templates rufen den Rahmen nicht selbst auf; nur `error.php` im eigenständigen Modus (Fatal-Handler, Wartungsmodus) gibt ein vollständiges Dokument aus.
-- **Fehlerseiten (ab 3.5.0):** `Router::renderError(int $status, string $title = '', string $message = '')` rendert für jeden Status außer 404 das Theme-Template `<status>.php` (z. B. `403.php`), sonst `error.php`; fehlt beides, die eingebaute Core-Seite. 404 läuft weiter über `render404()` → `404.php`. Der Router nutzt das für CSRF-Fehler (403), Methoden ohne Route (405 mit `Allow`-Header), Webserver-Fehler per `ErrorDocument` (`REDIRECT_STATUS` 400–599) und den Wartungsmodus (503). Bei 429/503 setzt er `Retry-After`, bei allen Fehlern `Cache-Control: no-store`.
+- **Fehlerseiten (ab 3.4.16):** `Router::renderError(int $status, string $title = '', string $message = '')` rendert für jeden Status außer 404 das Theme-Template `<status>.php` (z. B. `403.php`), sonst `error.php`; fehlt beides, die eingebaute Core-Seite. 404 läuft weiter über `render404()` → `404.php`. Der Router nutzt das für CSRF-Fehler (403), Methoden ohne Route (405 mit `Allow`-Header), Webserver-Fehler per `ErrorDocument` (`REDIRECT_STATUS` 400–599) und den Wartungsmodus (503). Bei 429/503 setzt er `Retry-After`, bei allen Fehlern `Cache-Control: no-store`.
 - **Template-Hierarchie:** `<template>.php` → `index.php`. Der Filter `template_name` kann umleiten. Für `authors` und `sitemap` (Routen `/autoren`, `/sitemap`) greift ohne eigenes Template der Fallback.
 - **Daten je Template** (als Variablen verfügbar):
 
 | Template | Variablen |
 |---|---|
 | `home` | – (Startseite liest selbst: Customizer-Modus `posts` oder `landing`) |
-| `page` | `$page` (Array, `content` = gerendertes, bereinigtes HTML; auch Hub-Sites; ab 3.5.0 zusätzlich `meta` aus der Seitenvorlage), `$contentLocale`. Mit gewählter Seitenvorlage wird deren Datei (z. B. `page-landing.php`) statt `page.php` gerendert. |
+| `page` | `$page` (Array, `content` = gerendertes, bereinigtes HTML; auch Hub-Sites; ab 3.4.20 zusätzlich `meta` aus der Seitenvorlage), `$contentLocale`. Mit gewählter Seitenvorlage wird deren Datei (z. B. `page-landing.php`) statt `page.php` gerendert. |
 | `blog` | `$posts` (Objekte), `$total`, `$currentPage`, `$totalPages`, `$perPage` (Paginierung `?p=N`) |
 | `blog-single` | `$post` (Objekt), `$contentLocale` |
 | `category` | `$category` (Array), `$posts`, `$query`, `$total`, `$currentPage`, `$totalPages`, `$perPage`; Übersicht `/kategorie` mit `$overviewItems` |
@@ -87,7 +87,7 @@ Health-Check beim Aktivieren (`ThemeManager::healthCheckTheme()`): `style.css` v
 
 - **Suche:** Treffer sind bereits gefiltert (jedes Suchwort im sichtbaren Text) und sortiert; ohne Suchbegriff keine Treffer. Formulare senden `q`, `type`, `sort`.
 - **Links:** Beitrags-URLs mit `PermalinkService::buildPostUrl()`, Archive mit `cms_get_archive_url()`, lokalisierte Pfade mit `ContentLocalizationService::buildLocalizedPath()`.
-- **Aktueller Inhalt im Header (ab 3.5.0):** `ThemeManager::render()` setzt vor `header.php` `$GLOBALS['post']` bzw. `$GLOBALS['page']` (bei `404`/`error` werden beide entfernt). Darauf bauen die Core-SEO-Ausgabe (`SEOService::renderCurrentHeadTags()`: Beschreibung, Robots, Canonical, hreflang, Open Graph, Twitter, JSON-LD) und `SEOService::getCurrentSeoPayload()` auf. Themes müssen die Variablen nicht mehr selbst setzen.
+- **Aktueller Inhalt im Header (ab 3.4.20):** `ThemeManager::render()` setzt vor `header.php` `$GLOBALS['post']` bzw. `$GLOBALS['page']` (bei `404`/`error` werden beide entfernt). Darauf bauen die Core-SEO-Ausgabe (`SEOService::renderCurrentHeadTags()`: Beschreibung, Robots, Canonical, hreflang, Open Graph, Twitter, JSON-LD) und `SEOService::getCurrentSeoPayload()` auf. Themes müssen die Variablen nicht mehr selbst setzen.
 - **SEO im Theme:** Entweder `SEOService::renderCurrentHeadTags()` im `head`-Hook ausgeben (so `cms-default`) oder die Werte aus `getCurrentSeoPayload()` selbst rendern. Der Dokumenttitel steht in `payload['title']` (Meta-Titel inkl. Titel-Template).
 - Es gibt **keine** Klassen `\CMS\CMS`, `PageService`, `PostService`, `ContentHelper` und keine Methode `ThemeManager::registerMenuLocation()`.
 

@@ -7,7 +7,7 @@
 
 All SEO screens share one controller, `CMS/admin/seo-page.php`, which maps each route to a section of `CMS/admin/modules/seo/SeoSuiteModule.php` and a view in `CMS/admin/views/seo/`. Frontend output is produced by `CMS\Services\SEOService` and the classes in `CMS/core/Services/SEO/` (`SeoHeadRenderer`, `SeoSchemaRenderer`, `SeoSitemapService`, `SeoAnalyticsRenderer`, `SeoMetaService`, `SeoMetaRepository`, `SeoSettingsStore`, `SeoAuditService`). Per-content SEO data lives in `cms_seo_meta`. Public endpoints: `/sitemap.xml`, `/robots.txt`, `/sitemap` (HTML), `/feed`, `/<indexnow-key>.txt`.
 
-Since 3.5.0 template variables in stored meta fields (`%title%`, `%%sitename%%`, …) are resolved by `SeoAnalysisService::resolveTemplateVariables()`.
+Since 3.4.08 template variables in stored meta fields (`%title%`, `%%sitename%%`, …) are resolved by `SeoAnalysisService::resolveTemplateVariables()`.
 
 ## Deutsch
 
@@ -66,7 +66,7 @@ Standard-OG-Typ (`default_og_type`), Standard-Twitter-Card (`default_twitter_car
 
 - **WebSite/Organization:** Organisation (`organization_enabled`, Name `org_name`, Logo `org_logo`) und Markenname,
 - **BreadcrumbList:** wenn `breadcrumb_enabled` aktiv ist,
-- **Inhaltstyp je Seite/Beitrag:** wählbar im Editor – Beiträge `Article` (Standard), `BlogPosting`, `NewsArticle`; Seiten `WebPage` (Standard), `Article`, `Organization`. Gespeicherte Altwerte (`FAQPage`, `HowTo`, `Person`, `Event` …) fallen seit 3.5.0 auf den Standard des Inhaltstyps zurück (`SeoSchemaRenderer::effectiveTypeFor()`).
+- **Inhaltstyp je Seite/Beitrag:** wählbar im Editor – Beiträge `Article` (Standard), `BlogPosting`, `NewsArticle`; Seiten `WebPage` (Standard), `Article`, `Organization`. Gespeicherte Altwerte (`FAQPage`, `HowTo`, `Person`, `Event` …) fallen seit 3.4.04 auf den Standard des Inhaltstyps zurück (`SeoSchemaRenderer::effectiveTypeFor()`).
 
 Die Schalter für FAQ, HowTo, Person, Event und Review (`faq_enabled`, `howto_enabled`, `person_enabled`, `event_enabled`, `review_enabled`) werden gespeichert, erzeugen aber ohne passende Inhaltsstruktur kein Markup – FAQ- und HowTo-Rich-Results werden bewusst nicht angeboten.
 

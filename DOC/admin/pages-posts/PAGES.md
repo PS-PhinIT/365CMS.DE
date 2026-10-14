@@ -55,7 +55,7 @@ Die Seitenverwaltung pflegt statische Inhalte wie „Über uns“, Leistungsseit
 | Titel im Inhaltsverzeichnis (`show_title_toc`) | Nimmt den Seitentitel als ersten TOC-Eintrag auf. |
 | Kategorie | Optional, aus `cms_post_categories`. |
 | Beitragsbild | Medienauswahl über `featured-image-picker.php`; Referenzen werden normalisiert. |
-| Meta-Titel / Meta-Beschreibung | Direkt in der Seite gespeichert; Platzhalter wie `%title%` oder `%%sitename%%` werden seit 3.5.0 bei der Ausgabe aufgelöst. |
+| Meta-Titel / Meta-Beschreibung | Direkt in der Seite gespeichert; Platzhalter wie `%title%` oder `%%sitename%%` werden seit 3.4.08 bei der Ausgabe aufgelöst. |
 | Erweiterte SEO-Felder | Fokus-Keyphrase, Keywords, Canonical, Robots (index/follow), Open Graph, Twitter Card, Schema-Typ (Standard `WebPage`), Sitemap-Priorität/-Frequenz, Hreflang-Gruppe – nur sichtbar, wenn das Modul `seo` aktiv ist (`admin-seo-editor.js`). |
 | „Inhalt aktualisiert am“ | Optionales Datum/Uhrzeit (`content_updated_at`) für die sichtbare Aktualisierungsangabe. |
 | Seitenvorlage (`page_template`) | Auswahl aus `page_templates` der `theme.json` des aktiven Themes (Fallback „Standard“). Zusatzfelder der gewählten Vorlage werden vor dem Speichern validiert und als JSON in `page_meta_json` abgelegt; inaktive Vorlagen-Panels sind deaktiviert. Formulare ohne Vorlagenfeld (ältere Plugins) lassen Vorlage und Zusatzfelder unverändert. Änderungen erzeugen eine Revision und erscheinen im Revisionsvergleich. |
@@ -93,7 +93,7 @@ Alle Formulare tragen das CSRF-Token der Aktion `admin_pages`. Bei Validierungsf
 
 ### Frontend
 
-Veröffentlichte Seiten werden über `PublicRouter` unter `/<slug>` bzw. `/en/<slug_en>` ausgeliefert. `PageManager::search()` liefert für leere Suchbegriffe seit 3.5.0 keine Treffer mehr. Shortcodes wie `[site-table id="…"]` und `[hub-site id="…"]` im Inhalt werden von `SiteTableService` ersetzt.
+Veröffentlichte Seiten werden über `PublicRouter` unter `/<slug>` bzw. `/en/<slug_en>` ausgeliefert. `PageManager::search()` liefert für leere Suchbegriffe seit 3.4.06 keine Treffer mehr. Shortcodes wie `[site-table id="…"]` und `[hub-site id="…"]` im Inhalt werden von `SiteTableService` ersetzt.
 
 Bei `ThemeManager::render('page', …)` löst der neue `PageTemplateService` die gespeicherte ID auf und stellt validierte Zusatzfelder unter `page['meta']` bereit. Unbekannte/fehlende Vorlagen, etwa nach einem Theme-Wechsel, fallen mit Protokollierung auf das Standardlayout zurück. Explizite Plugin-Template-Overrides bleiben bestehen. Schema und Revisions-Snapshots enthalten die neuen Felder; Bestandsinstallationen erhalten idempotente Kompatibilitätsmigrationen. Migration und Rendering wurden bislang nur isoliert mit Datenbank-Doubles geprüft, nicht gegen eine laufende Installation.
 

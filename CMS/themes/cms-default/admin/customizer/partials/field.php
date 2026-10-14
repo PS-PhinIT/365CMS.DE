@@ -63,7 +63,7 @@ $imageStatusId = $inputId . '_status';
     <?php elseif ($fieldType === 'color'): ?>
         <div class="customizer-color-row">
             <input type="color" id="<?php echo $safeInputId; ?>" name="<?php echo $safeInputName; ?>" value="<?php echo htmlspecialchars($fieldValue, ENT_QUOTES); ?>" class="customizer-color-input">
-            <input type="text" value="<?php echo htmlspecialchars($fieldValue, ENT_QUOTES); ?>" class="form-control customizer-color-text" inputmode="text">
+            <input type="text" value="<?php echo htmlspecialchars($fieldValue, ENT_QUOTES); ?>" class="form-control customizer-color-text" inputmode="text" aria-label="<?php echo htmlspecialchars($fieldLabel . ' (Hex-Wert)', ENT_QUOTES); ?>">
         </div>
 
     <?php elseif ($fieldType === 'number'): ?>

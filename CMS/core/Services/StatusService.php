@@ -178,8 +178,12 @@ class StatusService {
         }
         
         // Disk Space
-        $free = disk_free_space($base_path);
-        $total = disk_total_space($base_path);
+        $free = @disk_free_space($base_path);
+        $total = @disk_total_space($base_path);
+        if ($free === false || $total === false || $total <= 0) {
+            $checks['disk_space'] = ['status' => 'warning', 'message' => 'Speicherplatz konnte nicht ermittelt werden'];
+            return $checks;
+        }
         $percent_used = (($total - $free) / $total) * 100;
         
         if ($percent_used > 90) {
@@ -195,7 +199,7 @@ class StatusService {
         } else {
             $checks['disk_space'] = [
                 'status' => 'ok',
-                'message' => $this->formatBytes($free) . ' frei von ' . $this->formatBytes($total)
+                'message' => $this->formatBytes((int) $free) . ' frei von ' . $this->formatBytes((int) $total)
             ];
         }
         

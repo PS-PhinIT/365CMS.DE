@@ -13,7 +13,7 @@ Building blocks of the reference theme `CMS/themes/cms-default/`: page templates
 | Datei | Zweck |
 |---|---|
 | `header.php` / `footer.php` | Rahmen: Logo, Navigation (Positionen `primary`, `secondary`, `mobile`), Suche, Anmelde-/Konto-Links, Logout (POST mit Token), Footer-Spalten (`footer_topics`, `footer_resources`, `footer_about`, `footer_legal`) |
-| `home.php` | Startseite: Modus `posts` (Blog-Startseite, `partials/home-blog.php`) oder `landing` (`partials/home-landing.php`) |
+| `home.php` | Startseite: Modus `posts` (Blog-Startseite direkt in `home.php`; Datenabfragen nur in diesem Modus) oder `landing` (`partials/home-landing.php`) |
 | `page.php` | Seiten und Hub-Sites |
 | `blog.php`, `blog-single.php` | Beitragsliste und Einzelbeitrag (Autorbox, Tags, verwandte Beiträge, Lesezeit, Aktualisierungs-Badge, Kommentare) |
 | `category.php`, `tag.php`, `archive.php`, `author.php` | Archive und Übersichten (`partials/archive-overview.php`) |
@@ -27,7 +27,6 @@ Building blocks of the reference theme `CMS/themes/cms-default/`: page templates
 
 | Partial | Inhalt |
 |---|---|
-| `partials/home-blog.php` | Blog-Startseite (Hero, neueste Beiträge, Seitenleiste) |
 | `partials/home-landing.php` | Landingpage aus `LandingPageService` |
 | `partials/blog-list-cards.php` / `blog-grid-cards.php` | Beitragskarten als Liste bzw. Raster |
 | `partials/archive-overview.php` | Übersicht aller Kategorien/Tags mit Anzahl und Paginierung |

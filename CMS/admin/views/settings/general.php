@@ -151,7 +151,7 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                     <textarea id="fld-site_description" name="site_description" class="form-control" rows="2"><?php echo htmlspecialchars($s['site_description']); ?></textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Website-Logo</label>
+                                    <label for="siteLogoInput" class="form-label">Website-Logo</label>
                                     <div class="input-group">
                                         <input
                                             type="text"
@@ -193,7 +193,7 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Favicon</label>
+                                    <label for="siteFaviconInput" class="form-label">Favicon</label>
                                     <div class="input-group">
                                         <input
                                             type="text"
@@ -321,16 +321,16 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             <div class="card-body">
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Absender</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)(($mail['from_name'] ?? '') !== '' ? ($mail['from_name'] . ' <' . ($mail['from_email'] ?? '') . '>') : ($mail['from_email'] ?? ''))); ?>" readonly>
+                                        <label for="settingsMailFrom" class="form-label">Absender</label>
+                                        <input id="settingsMailFrom" type="text" class="form-control" value="<?php echo htmlspecialchars((string)(($mail['from_name'] ?? '') !== '' ? ($mail['from_name'] . ' <' . ($mail['from_email'] ?? '') . '>') : ($mail['from_email'] ?? ''))); ?>" readonly>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">SMTP-Host</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($mail['host'] ?? '')); ?>" readonly>
+                                        <label for="settingsMailHost" class="form-label">SMTP-Host</label>
+                                        <input id="settingsMailHost" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($mail['host'] ?? '')); ?>" readonly>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Port / TLS</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)(($mail['port'] ?? '') . ' / ' . ($mail['encryption'] ?? 'none'))); ?>" readonly>
+                                        <label for="settingsMailPortTls" class="form-label">Port / TLS</label>
+                                        <input id="settingsMailPortTls" type="text" class="form-control" value="<?php echo htmlspecialchars((string)(($mail['port'] ?? '') . ' / ' . ($mail['encryption'] ?? 'none'))); ?>" readonly>
                                     </div>
                                 </div>
 
@@ -664,7 +664,7 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             <p class="text-secondary small mb-3">Ein Klick übernimmt eine Datei direkt in das aktuell gewählte Feld. Angezeigt werden interne Bilddateien, Logos und Favicons.</p>
                             <div class="row g-2 align-items-center mb-3">
                                 <div class="col-md-8">
-                                    <input type="search" class="form-control" placeholder="Dateien filtern …" data-media-picker-search>
+                                    <input type="search" class="form-control" aria-label="Dateien filtern" placeholder="Dateien filtern …" data-media-picker-search>
                                 </div>
                                 <div class="col-md-4 text-secondary small" data-media-picker-status>
                                     Lade Medien …

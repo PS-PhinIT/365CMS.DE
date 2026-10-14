@@ -123,6 +123,16 @@ class Bootstrap
             'egulias/email-validator' => ABSPATH . 'assets/egulias-email-validator/composer.json',
         ];
 
+        // Ergebnis merken: sonst wurden bei jedem Request sechs composer.json gelesen und dekodiert.
+        $signature = PHP_VERSION . '|' . $requiredPhpVersion;
+        foreach ($manifests as $manifestPath) {
+            $signature .= '|' . (is_file($manifestPath) ? (string) filemtime($manifestPath) : '-');
+        }
+        $okFlag = ABSPATH . 'cache/platform_ok_' . hash('crc32b', $signature) . '.flag';
+        if (is_file($okFlag)) {
+            return;
+        }
+
         $violations = [];
 
         foreach ($manifests as $packageName => $manifestPath) {
@@ -151,6 +161,12 @@ class Bootstrap
         }
 
         if ($violations === []) {
+            if (is_dir(ABSPATH . 'cache') || @mkdir(ABSPATH . 'cache', 0755, true)) {
+                foreach (glob(ABSPATH . 'cache/platform_ok_*.flag') ?: [] as $staleFlag) {
+                    @unlink($staleFlag);
+                }
+                @file_put_contents($okFlag, '', LOCK_EX);
+            }
             return;
         }
 
@@ -777,12 +793,8 @@ class Bootstrap
                     ))));
 
                     if ($requestedFontSlugs === []) {
-                        $fontSettingRows = $db->get_results(
-                            "SELECT option_name, option_value FROM {$db->getPrefix()}settings WHERE option_name IN ('font_heading', 'font_body')"
-                        ) ?: [];
-
-                        foreach ($fontSettingRows as $fontSettingRow) {
-                            $slug = preg_replace('/[^a-z0-9_-]/i', '', (string) ($fontSettingRow->option_value ?? ''));
+                        foreach (\CMS\Services\OptionStore::getInstance()->getMany(['font_heading', 'font_body']) as $fontSettingValue) {
+                            $slug = preg_replace('/[^a-z0-9_-]/i', '', (string) ($fontSettingValue ?? ''));
                             if ($slug !== '') {
                                 $requestedFontSlugs[] = $slug;
                             }

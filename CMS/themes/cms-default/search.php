@@ -93,7 +93,7 @@ $searchSortOptions = [
             <?php elseif (!empty($search_notice)): ?>
                 <?php echo htmlspecialchars((string) $search_notice, ENT_QUOTES, 'UTF-8'); ?>
             <?php elseif ($query): ?>
-                Keine Ergebnisse für „<?php echo $query; ?>"
+                Keine Ergebnisse für „<?php echo $query; ?>“
             <?php endif; ?>
         </p>
         <!-- Suche verfeinern -->

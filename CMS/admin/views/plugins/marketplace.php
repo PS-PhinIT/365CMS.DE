@@ -168,11 +168,11 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                             <span class="input-icon-addon">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
                             </span>
-                            <input type="text" id="pluginSearch" class="form-control" placeholder="Plugin suchen…">
+                            <input type="text" id="pluginSearch" aria-label="Plugin suchen" class="form-control" placeholder="Plugin suchen…">
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <select id="categoryFilter" class="form-select">
+                        <select id="categoryFilter" aria-label="Nach Kategorie filtern" class="form-select">
                             <option value="">Alle Kategorien</option>
                             <?php foreach ($categoryOptions as $cat): ?>
                                 <option value="<?php echo $escape($cat); ?>"><?php echo $escape($cat); ?></option>
@@ -180,7 +180,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <select id="statusFilter" class="form-select">
+                        <select id="statusFilter" aria-label="Nach Status filtern" class="form-select">
                             <option value="">Alle Stati</option>
                             <?php foreach ($statusOptions as $statusOption): ?>
                                 <option value="<?php echo $escape($statusOption['value'] ?? ''); ?>"><?php echo $escape($statusOption['label'] ?? ''); ?></option>

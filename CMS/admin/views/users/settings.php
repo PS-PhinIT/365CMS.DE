@@ -145,20 +145,20 @@ $passwordPolicyTesterConfig = [
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Max. Login-Versuche</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($security['max_login_attempts'] ?? 5)); ?>" readonly>
+                                    <label for="usersSecurityMaxLoginAttempts" class="form-label">Max. Login-Versuche</label>
+                                    <input id="usersSecurityMaxLoginAttempts" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($security['max_login_attempts'] ?? 5)); ?>" readonly>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Sperrzeit</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)round(((int)($security['login_timeout_seconds'] ?? 300)) / 60)); ?> Minuten" readonly>
+                                    <label for="usersSecurityLockout" class="form-label">Sperrzeit</label>
+                                    <input id="usersSecurityLockout" type="text" class="form-control" value="<?php echo htmlspecialchars((string)round(((int)($security['login_timeout_seconds'] ?? 300)) / 60)); ?> Minuten" readonly>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Admin-Session</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($security['admin_session_hours'] ?? 8)); ?> Stunden" readonly>
+                                    <label for="usersSecurityAdminSession" class="form-label">Admin-Session</label>
+                                    <input id="usersSecurityAdminSession" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($security['admin_session_hours'] ?? 8)); ?> Stunden" readonly>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Member-Session</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($security['member_session_days'] ?? 30)); ?> Tage" readonly>
+                                    <label for="usersSecurityMemberSession" class="form-label">Member-Session</label>
+                                    <input id="usersSecurityMemberSession" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($security['member_session_days'] ?? 30)); ?> Tage" readonly>
                                 </div>
                             </div>
 
@@ -241,22 +241,22 @@ $passwordPolicyTesterConfig = [
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-3">
-                                        <label class="form-label">Host</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['host'] ?? '')); ?>" readonly>
+                                        <label for="usersLdapHost" class="form-label">Host</label>
+                                        <input id="usersLdapHost" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['host'] ?? '')); ?>" readonly>
                                     </div>
                                     <div class="row g-3 mb-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Port</label>
-                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['port'] ?? 389)); ?>" readonly>
+                                            <label for="usersLdapPort" class="form-label">Port</label>
+                                            <input id="usersLdapPort" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['port'] ?? 389)); ?>" readonly>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Standardrolle</label>
-                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['default_role'] ?? 'member')); ?>" readonly>
+                                            <label for="usersLdapDefaultRole" class="form-label">Standardrolle</label>
+                                            <input id="usersLdapDefaultRole" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['default_role'] ?? 'member')); ?>" readonly>
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Base DN</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['base_dn'] ?? '')); ?>" readonly>
+                                        <label for="usersLdapBaseDn" class="form-label">Base DN</label>
+                                        <input id="usersLdapBaseDn" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($ldap['base_dn'] ?? '')); ?>" readonly>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Erstsynchronisierung</label>
@@ -283,16 +283,16 @@ $passwordPolicyTesterConfig = [
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-3">
-                                        <label class="form-label">Secret-Quelle</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($jwt['secret_source'] ?? 'AUTH_KEY (Fallback)')); ?>" readonly>
+                                        <label for="usersJwtSecretSource" class="form-label">Secret-Quelle</label>
+                                        <input id="usersJwtSecretSource" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($jwt['secret_source'] ?? 'AUTH_KEY (Fallback)')); ?>" readonly>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Issuer</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($jwt['issuer'] ?? '')); ?>" readonly>
+                                        <label for="usersJwtIssuer" class="form-label">Issuer</label>
+                                        <input id="usersJwtIssuer" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($jwt['issuer'] ?? '')); ?>" readonly>
                                     </div>
                                     <div class="mb-0">
-                                        <label class="form-label">TTL</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)($jwt['ttl'] ?? 3600)); ?> Sekunden" readonly>
+                                        <label for="usersJwtTtl" class="form-label">TTL</label>
+                                        <input id="usersJwtTtl" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($jwt['ttl'] ?? 3600)); ?> Sekunden" readonly>
                                     </div>
                                 </div>
                             </div>

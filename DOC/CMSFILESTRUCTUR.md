@@ -294,7 +294,6 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `home.php`
 - `index.php`
 - `login.php`
-- `meridan.html`
 - `page.php`
 - `register.php`
 - `search.php`
@@ -371,7 +370,7 @@ Present under `CMS/assets/` (not every inner file listed):
 
 `ai-platform`, `bacon-qr-code`, `Carbon`, `clock`, `cron`, `css`, `dasprid-enum`, `doctrine-deprecations`, `doctrine-lexer`, `dompurify`, `editorjs`, `egulias-email-validator`, `event-dispatcher`, `htmlpurifier`, `images`, `js`, `ldaprecord`, `mailer`, `melbahja-seo`, `mime`, `oskarstark-enum-helper`, `photoswipe`, `php-jwt`, `phpdocumentor-reflection-common`, `phpdocumentor-reflection-docblock`, `phpdocumentor-type-resolver`, `phpstan-phpdoc-parser`, `polyfill-ctype`, `polyfill-intl-grapheme`, `polyfill-intl-idn`, `polyfill-intl-normalizer`, `polyfill-mbstring`, `polyfill-uuid`, `property-access`, `property-info`, `psr`, `serializer`, `string`, `suneditor`, `symfony-contracts`, `tabler`, `tabler-icons`, `tntsearchhelper`, `tntsearchsrc`, `translation`, `twofactorauth`, `type-info`, `uid`, `webauthn`, `webmozart-assert`, `yaml`, `autoload.php`
 
-These folders were **not** found under `CMS/assets/` (older docs mentioned them): `cookieconsent`, `elfinder`, `filepond`, `msgraph`. Removed in 3.5.0 as unused: `gridjs`, `simplepielibrary`, `simplepiesrc`. Init scripts such as `assets/js/cookieconsent-init.js` still exist.
+These folders were **not** found under `CMS/assets/` (older docs mentioned them): `cookieconsent`, `elfinder`, `filepond`, `msgraph`. Removed in 3.4.02 as unused: `gridjs`, `simplepielibrary`, `simplepiesrc`. Init scripts such as `assets/js/cookieconsent-init.js` still exist.
 
 ---
 

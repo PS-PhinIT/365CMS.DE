@@ -66,7 +66,7 @@ trusted-types cms365 default sanitize-html dompurify; require-trusted-types-for 
 | Passwort-Reset | Token in `cms_password_resets`, einmalig, Ablauf 60 min, Rate-Limits, konstante Antwortzeit |
 | Abmeldung | nur mit CSRF-Token `logout` |
 | Audit | `loginSuccess`, `loginFailed`, Rollenwechsel, Sperren |
-| API-Bearer (seit 3.5.0) | `Authorization: Bearer <JWT>` nur mit `JWT_SECRET` (≥ 32 Zeichen); Ausgabe nur an angemeldete Sessions (kein MFA-Bypass), Refresh-Tokens nicht als Access-Token nutzbar, Konto muss aktiv sein – siehe [API-REFERENCE.md](API-REFERENCE.md#jwt-anmeldung-seit-3413) |
+| API-Bearer (seit 3.4.13) | `Authorization: Bearer <JWT>` nur mit `JWT_SECRET` (≥ 32 Zeichen); Ausgabe nur an angemeldete Sessions (kein MFA-Bypass), Refresh-Tokens nicht als Access-Token nutzbar, Konto muss aktiv sein; seit 3.5.0 an den Passwort-Fingerabdruck gebunden (Claim `pwf`, Passwortänderung entwertet alle Tokens) – siehe [API-REFERENCE.md](API-REFERENCE.md#jwt-anmeldung-seit-3413) |
 
 Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/RBAC.md).
 
@@ -76,15 +76,15 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - `verifyToken()` prüft zeitkonstant (`hash_equals`) und **entwertet** das Token (Einmalverwendung).
 - `verifyPersistentToken()` prüft ohne Entwertung (Editor-Uploads `editorjs_media`, KI-Endpunkte, Favoriten).
 - Jede Admin-Seite hat eine eigene Aktion (z. B. `admin_pages`); öffentliche Formulare nutzen `form_guard` (globale Prüfung im Router), Kommentare `comment_<postId>`, Checkout `checkout_process`.
-- Plugin-Bereiche im Member-Dashboard (seit 3.5.0): Jeder POST muss eine passende Herkunft haben (`Origin`/`Referer`, falls gesendet). Mit `'csrf' => 'core'` bei der Registrierung erzwingt der Core zusätzlich das Token `member_plugin_<slug>` (`PluginDashboardRegistry::csrfField()`).
+- Plugin-Bereiche im Member-Dashboard (seit 3.4.13): Jeder POST muss eine passende Herkunft haben (`Origin`/`Referer`, falls gesendet). Mit `'csrf' => 'core'` bei der Registrierung erzwingt der Core zusätzlich das Token `member_plugin_<slug>` (`PluginDashboardRegistry::csrfField()`).
 
 ### 7. Anfrageschutz
 
 - **Firewall** mit IP-/CIDR-/User-Agent-/Länderregeln, Simulationsmodus und Rate-Limit ([../admin/security/FIREWALL.md](../admin/security/FIREWALL.md)).
 - **API-Rate-Limit** 60 Anfragen/60 s je IP (`CMS\Api`), Web-Vitals mit eigenem Limit und Same-Origin-Prüfung.
-- **Registrierung**: seit 3.5.0 höchstens 5 Versuche je IP in 15 Minuten (`Security::checkDbRateLimit(…, 'register', 5, 900)`).
-- **Kontaktformular** (`cms-default`): seit 3.5.0 höchstens 5 Nachrichten je IP und Stunde (Aktion `contact_form`).
-- **Zeitbasis der DB-Rate-Limits:** Einträge in `cms_login_attempts` entstehen mit `NOW()`, geprüft wird gegen PHP-Zeit. Seit 3.5.0 gleicht `CMS\Database` die MySQL-Sitzungszeitzone an PHP an; vorher zählten die Limits auf Servern mit UTC-Datenbank und `Europe/Berlin`-PHP nie.
+- **Registrierung**: seit 3.4.12 höchstens 5 Versuche je IP in 15 Minuten (`Security::checkDbRateLimit(…, 'register', 5, 900)`).
+- **Kontaktformular** (`cms-default`): seit 3.4.13 höchstens 5 Nachrichten je IP und Stunde (Aktion `contact_form`).
+- **Zeitbasis der DB-Rate-Limits:** Einträge in `cms_login_attempts` entstehen mit `NOW()`, geprüft wird gegen PHP-Zeit. Seit 3.4.13 gleicht `CMS\Database` die MySQL-Sitzungszeitzone an PHP an; vorher zählten die Limits auf Servern mit UTC-Datenbank und `Europe/Berlin`-PHP nie.
 - **API-Token**: `POST /api/v1/auth/token` 10/h, `POST /api/v1/auth/refresh` 30/h je IP.
 - **Anti-Spam** für Formulare ([../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md)).
 - **Sichere Weiterleitungen**: `Router::redirect()` und Login-Redirects lassen nur interne/erlaubte Ziele zu.
@@ -105,7 +105,7 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - Datenbank nur über PDO mit nativen Prepared Statements (`ATTR_EMULATE_PREPARES = false`).
 - Rich-Text über `PurifierService` (HTMLPurifier), Editor.js über `EditorJsSanitizer`/`EditorJsHtmlSanitizer`, Frontend zusätzlich DOMPurify.
 - Ausgabe-Escaping über `htmlspecialchars` bzw. Helfer in `includes/functions/escaping.php`.
-- Uploads: Endungs-Allowlist, gefährliche Endungen gesperrt (seit 3.5.0 auch als innere Doppelendung, z. B. `datei.php.jpg`), MIME- und Bildinhaltsprüfung, Dateinamen-Bereinigung, `.htaccess` im Upload-Ordner ([../admin/media/MEDIA.md](../admin/media/MEDIA.md)).
+- Uploads: Endungs-Allowlist, gefährliche Endungen gesperrt (seit 3.4.12 auch als innere Doppelendung, z. B. `datei.php.jpg`), MIME- und Bildinhaltsprüfung, Dateinamen-Bereinigung, `.htaccess` im Upload-Ordner ([../admin/media/MEDIA.md](../admin/media/MEDIA.md)).
 - Geheimnisse in der Datenbank: `SettingsService` verschlüsselt mit AES-256-CBC (Präfix `enc:`). Der Schlüssel wird aus `AUTH_KEY` und `SECURE_AUTH_KEY` abgeleitet – werden diese Konstanten geändert, sind gespeicherte Secrets (SMTP, Azure, Graph, KI-Provider) nicht mehr lesbar und müssen neu eingegeben werden.
 - ZIP-Verarbeitung (Updates, Marketplace, Backups): Grenzen für Einträge/Größe, Pfadprüfung, SHA-256-Pflicht.
 

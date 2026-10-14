@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Security review of the first-party code in `CMS/`. The baseline is solid (prepared statements everywhere, consistent output escaping, CSRF tokens, bcrypt, session regeneration, SSRF protection with IP pinning, hardened `.htaccess`, locked installer). Fixed in this audit: plain-text config backups readable on servers without `.htaccess` support, double-extension uploads, missing registration rate limit, client IP behind reverse proxies, password-breaking config parser, outdated PHP check. Fixed in 3.5.0: DB rate limits that never counted when the MySQL time zone differed from PHP (found by runtime test), a git allowlist bypass in the documentation sync, origin/CSRF checks for plugin member sections, contact-form rate limit, Google Fonts off by default, plus opt-in JWT bearer auth with MFA-safe token issuance.
+Security review of the first-party code in `CMS/`. The baseline is solid (prepared statements everywhere, consistent output escaping, CSRF tokens, bcrypt, session regeneration, SSRF protection with IP pinning, hardened `.htaccess`, locked installer). Fixed in this audit: plain-text config backups readable on servers without `.htaccess` support, double-extension uploads, missing registration rate limit, client IP behind reverse proxies, password-breaking config parser, outdated PHP check. Fixed in 3.4.13: DB rate limits that never counted when the MySQL time zone differed from PHP (found by runtime test), a git allowlist bypass in the documentation sync, origin/CSRF checks for plugin member sections, contact-form rate limit, Google Fonts off by default, plus opt-in JWT bearer auth with MFA-safe token issuance.
 
 ## Deutsch
 
@@ -63,7 +63,7 @@ define('CMS_TRUSTED_PROXIES', '10.0.0.0/8, 192.168.1.5');
 
 `parseExistingConfig()` las Werte mit `'([^']+)'`. Ein DB-Passwort wie `ab\'c` wurde abgeschnitten und beim Speichern der Einstellungen falsch zurückgeschrieben – die Seite verlor danach die DB-Verbindung. **Fix:** Escape-bewusste Regex plus Rückwandlung vor dem erneuten Escapen.
 
-### Mit 3.5.0 behoben
+### Mit 3.4.13 behoben
 
 #### SEC-07 🟠 Plugin-Member-Bereiche ohne zentrale CSRF-Prüfung
 
@@ -92,7 +92,7 @@ Nachweis in der Testumgebung (MariaDB `UTC`): Auf `main` gelang der Login mit ko
 
 `DocumentationSyncEnvironment::isAllowedCommand()` gab bei jedem Befehl mit Shell-Metazeichen sofort zurück, ob er mit `2>&1` endet – da alle internen Befehle so enden, wurde die Liste erlaubter Git-Unterbefehle (`fetch`, `checkout`, `status`, `rev-parse`, `--version`) nie geprüft. Die Befehle entstehen nur intern mit validierten Parametern, daher kein direkter Angriffspfad. **Fix:** abschließendes `2>&1` wird abgetrennt, danach sind keine Metazeichen erlaubt und die Allowlist gilt immer (Test: `push` und `status; rm …` werden abgelehnt).
 
-### Weitere Härtung in 3.5.0
+### Weitere Härtung in 3.4.13
 
 - **API-Bearer-Anmeldung (FUN-08)** nur opt-in mit `JWT_SECRET` ≥ 32 Zeichen; Token nur für bestehende Sessions (verhindert MFA-Umgehung durch Passwort-Login per API), Rate-Limits auf Token- und Refresh-Route, Refresh-Tokens nicht als Access-Token verwendbar.
 - **WP-Asset-Funktionen (FUN-10)** verwerfen `javascript:`/`data:`-URLs, escapen alle Attribute, setzen den CSP-Nonce und lassen bei `wp_localize_script` nur gültige JS-Bezeichner zu (JSON mit `JSON_HEX_*`).

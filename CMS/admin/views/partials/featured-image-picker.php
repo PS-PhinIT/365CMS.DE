@@ -31,10 +31,10 @@ $pickerFilenamePrefix = (string)($pickerFilenamePrefix ?? 'ArtikelRahmen');
                 <div class="featured-picker__toolbar mb-3">
                     <div class="featured-picker__upload">
                         <button type="button" class="btn btn-outline-primary btn-sm" data-role="featured-picker-upload-button">Bild hochladen</button>
-                        <input type="file" class="d-none" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.ico,image/jpeg,image/png,image/gif,image/webp,image/bmp,image/x-bmp,image/x-icon,image/vnd.microsoft.icon" data-role="featured-picker-upload">
+                        <input type="file" class="d-none" aria-label="Bild hochladen" tabindex="-1" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.ico,image/jpeg,image/png,image/gif,image/webp,image/bmp,image/x-bmp,image/x-icon,image/vnd.microsoft.icon" data-role="featured-picker-upload">
                     </div>
                     <div class="featured-picker__search">
-                        <input type="search" class="form-control form-control-sm" placeholder="Bilder filtern …" data-role="featured-picker-search">
+                        <input type="search" class="form-control form-control-sm" aria-label="Bilder filtern" placeholder="Bilder filtern …" data-role="featured-picker-search">
                     </div>
                 </div>
 

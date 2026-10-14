@@ -35,7 +35,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
-- Der Changelog-Abschnitt v3.5.0 bündelt alle Änderungen seit 3.4.00 ([../Changelog.md](../Changelog.md))
+- Release 3.5.0 bündelt alle Änderungen seit 3.4.00 (Zwischenstände 3.4.01–3.4.25 und Folgeaudit vom 14.10.2026) ([../Changelog.md](../Changelog.md))
 
 ### Dokumentationsbereiche
 
@@ -53,7 +53,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 ### Wichtige Hinweise
 
 - **Konfiguration:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Eigene Konstanten deshalb in `config/app.php` pflegen und nach jedem Installer-Lauf prüfen.
-- **Wartungsmodus:** Seit 3.5.0 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar (siehe [checks/FUNKTIONEN.md](checks/FUNKTIONEN.md)).
+- **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar (siehe [checks/FUNKTIONEN.md](checks/FUNKTIONEN.md)).
 - **Bekannte Lücken:** Abweichungen zwischen Code und Doku (z. B. Upload-Token im Member-Medienbereich, fehlende `/order`-Ansicht, `config/app.php`-Neuerzeugung) stehen gesammelt in [core/STATUS.md](core/STATUS.md).
 - **Audits:** Code-Audit vom 2026-10-03 unter [checks/README.md](checks/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
 - **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei.

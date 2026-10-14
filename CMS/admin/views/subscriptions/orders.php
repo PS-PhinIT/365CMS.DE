@@ -94,7 +94,7 @@ $renderPrimarySecondaryText = static function (string $primary, string $secondar
 $renderSelectField = static function (string $wrapperClass, string $label, string $name, string $id, array $options, bool $required = false): void {
     ?>
     <div class="<?= htmlspecialchars($wrapperClass, ENT_QUOTES, 'UTF-8') ?>">
-        <label class="form-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></label>
+        <label class="form-label" for="<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></label>
         <select name="<?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>" id="<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>" class="form-select"<?= $required ? ' required' : '' ?>>
             <?php foreach ($options as $option): ?>
                 <option value="<?= htmlspecialchars((string) ($option['value'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) ($option['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></option>

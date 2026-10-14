@@ -150,14 +150,14 @@ $typeLabels = ['word' => 'Wort', 'email' => 'E-Mail', 'ip' => 'IP-Adresse', 'dom
                             <input type="hidden" name="action" value="add_blacklist">
                             <div class="row g-3">
                                 <div class="col-md-3">
-                                    <select name="bl_type" class="form-select">
+                                    <select name="bl_type" class="form-select" aria-label="Blacklist-Typ">
                                         <?php foreach ($typeLabels as $v => $l): ?>
                                             <option value="<?php echo $v; ?>"><?php echo $l; ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-7">
-                                    <input type="text" name="bl_value" class="form-control" placeholder="Wert eingeben..." required>
+                                    <input type="text" name="bl_value" class="form-control" aria-label="Blacklist-Wert" placeholder="Wert eingeben..." required>
                                 </div>
                                 <div class="col-md-2">
                                     <button type="submit" class="btn btn-primary w-100">Hinzufügen</button>

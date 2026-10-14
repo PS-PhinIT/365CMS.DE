@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRouter.php`) and – for the generic `pages` endpoint – handled by `CMS\Api`. Requests below `/api` run in runtime mode `api` (`Cache-Control: no-store`). Authentication is the regular CMS session cookie; admin endpoints additionally require role `admin` and a capability, state-changing admin endpoints a CSRF token. There is no public write API and no CORS configuration. Since 3.5.0 API clients can optionally authenticate with `Authorization: Bearer <JWT>` when `JWT_SECRET` (≥ 32 characters) is set; tokens are issued only to an existing, fully logged-in session (`POST /api/v1/auth/token`) and renewed via `POST /api/v1/auth/refresh`. CSRF-protected endpoints still require their CSRF token.
+The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRouter.php`) and – for the generic `pages` endpoint – handled by `CMS\Api`. Requests below `/api` run in runtime mode `api` (`Cache-Control: no-store`). Authentication is the regular CMS session cookie; admin endpoints additionally require role `admin` and a capability, state-changing admin endpoints a CSRF token. There is no public write API and no CORS configuration. Since 3.4.13 API clients can optionally authenticate with `Authorization: Bearer <JWT>` when `JWT_SECRET` (≥ 32 characters) is set; tokens are issued only to an existing, fully logged-in session (`POST /api/v1/auth/token`) and renewed via `POST /api/v1/auth/refresh`. CSRF-protected endpoints still require their CSRF token.
 
 ## Deutsch
 
@@ -67,13 +67,13 @@ const res = await fetch('/api/upload', { method: 'POST', body, credentials: 'sam
 
 Plugins registrieren Routen im Hook `register_routes`. Für JSON-Endpunkte unter `/api/…` gilt: Modus `api` (no-store), eigene Authentifizierung/Capability-Prüfung, CSRF für schreibende Browser-Requests, Antwort mit `json_encode(…, JSON_UNESCAPED_UNICODE)`. Siehe [../admin/ADMIN-API-AJAX.md](../admin/ADMIN-API-AJAX.md) und [../workflow/API-INTEGRATION-WORKFLOW.md](../workflow/API-INTEGRATION-WORKFLOW.md).
 
-### JWT-Anmeldung (seit 3.5.0)
+### JWT-Anmeldung (seit 3.4.13)
 
 - **Aktivierung:** nur wenn `JWT_SECRET` in `config/app.php` gesetzt ist (mindestens 32 Zeichen). Der `AUTH_KEY`-Fallback von `JwtService` schaltet die API-Anmeldung **nicht** frei. Ohne Secret antworten die Token-Routen mit 404.
 - **Token holen:** `POST /api/v1/auth/token` aus einer angemeldeten Browser-Session (Login inkl. MFA) mit gleicher Herkunft. Ein reiner Passwort-Login per API ist bewusst nicht vorgesehen, weil er die Zwei-Faktor-Anmeldung umgehen würde.
 - **Verwenden:** `Authorization: Bearer <access_token>` auf `/api/*`. `Router::dispatch()` ruft dafür `Auth::authenticateBearerToken()` auf; der Benutzer muss aktiv sein, Refresh-Tokens werden als Access-Token abgelehnt. Es entsteht keine Session.
 - **Erneuern:** `POST /api/v1/auth/refresh` mit `refresh_token` (Laufzeit 30 Tage). Das Konto muss weiterhin aktiv sein.
-- **Widerruf:** Tokens sind zustandslos. Sperren des Kontos (Status ≠ `active`) entwertet sie sofort; alle Tokens lassen sich durch Ändern von `JWT_SECRET` ungültig machen. Laufzeit über `JWT_TTL` (Standard 3600 s).
+- **Widerruf:** Tokens sind zustandslos. Sperren des Kontos (Status ≠ `active`) entwertet sie sofort. Seit 3.5.0 tragen Access- und Refresh-Token den Claim `pwf` (Fingerabdruck des aktuellen Passwort-Hashes): Eine Passwortänderung oder ein Passwort-Reset entwertet alle Tokens des Kontos; Tokens ohne `pwf` (ausgestellt vor 3.5.0) werden abgelehnt und müssen neu geholt werden. Alle Tokens lassen sich zusätzlich durch Ändern von `JWT_SECRET` ungültig machen. Laufzeit über `JWT_TTL` (Standard 3600 s).
 - Endpunkte mit CSRF-Pflicht (`/api/upload`, `/api/v1/admin/*/test`) verlangen auch bei Bearer-Anmeldung ihr CSRF-Token.
 
 ```bash

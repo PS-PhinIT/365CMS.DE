@@ -131,7 +131,7 @@ $renderFileTree = static function (array $items, string $currentFile, string $ba
                 <div class="card-header">
                     <div class="w-100">
                         <h3 class="card-title mb-2">Dateien</h3>
-                        <input type="search" class="form-control form-control-sm" id="themeExplorerSearch" placeholder="Dateien filtern …" maxlength="120" autocomplete="off" spellcheck="false">
+                        <input type="search" class="form-control form-control-sm" id="themeExplorerSearch" aria-label="Dateien filtern" placeholder="Dateien filtern …" maxlength="120" autocomplete="off" spellcheck="false">
                         <div class="small text-muted mt-2">
                             <?php echo (int) ($treeSummary['items'] ?? 0); ?> Einträge geladen
                             <?php if (!empty($treeSummary['skipped_items'])): ?>
@@ -209,7 +209,7 @@ $renderFileTree = static function (array $items, string $currentFile, string $ba
                             </div>
                         <?php endif; ?>
                         <div class="card-body p-0">
-                            <textarea name="content" id="codeEditor"
+                            <textarea name="content" id="codeEditor" aria-label="Dateiinhalt bearbeiten"
                                       class="form-control font-monospace border-0 rounded-0"
                                       style="min-height: 60vh; resize: vertical; tab-size: 4; white-space: pre; overflow-wrap: normal; overflow-x: auto;"
                                       spellcheck="false"

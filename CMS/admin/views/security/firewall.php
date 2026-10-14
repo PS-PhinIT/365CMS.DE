@@ -239,21 +239,21 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                             </label>
 
                             <div class="mb-3">
-                                <label class="form-label">Rate Limit (Anfragen)</label>
-                                <input type="number" name="firewall_rate_limit" class="form-control" min="10" max="1000" value="<?php echo (int)($settings['firewall_rate_limit'] ?? 60); ?>" data-firewall-rate-limit>
+                                <label for="fld-firewall_rate_limit" class="form-label">Rate Limit (Anfragen)</label>
+                                <input id="fld-firewall_rate_limit" type="number" name="firewall_rate_limit" class="form-control" min="10" max="1000" value="<?php echo (int)($settings['firewall_rate_limit'] ?? 60); ?>" data-firewall-rate-limit>
                                 <small class="form-hint">Max. Anfragen pro Zeitfenster</small>
                                 <div class="firewall-seconds-hint" data-firewall-rate-limit-hint></div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Zeitfenster (Sekunden)</label>
-                                <input type="number" name="firewall_rate_window" class="form-control" min="60" max="3600" value="<?php echo (int)($settings['firewall_rate_window'] ?? 60); ?>" data-firewall-seconds>
+                                <label for="fld-firewall_rate_window" class="form-label">Zeitfenster (Sekunden)</label>
+                                <input id="fld-firewall_rate_window" type="number" name="firewall_rate_window" class="form-control" min="60" max="3600" value="<?php echo (int)($settings['firewall_rate_window'] ?? 60); ?>" data-firewall-seconds>
                                 <div class="firewall-seconds-hint" data-firewall-seconds-hint-for="firewall_rate_window"></div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Sperrdauer (Sekunden)</label>
-                                <input type="number" name="firewall_block_duration" class="form-control" min="60" max="86400" value="<?php echo (int)($settings['firewall_block_duration'] ?? 3600); ?>" data-firewall-seconds>
+                                <label for="fld-firewall_block_duration" class="form-label">Sperrdauer (Sekunden)</label>
+                                <input id="fld-firewall_block_duration" type="number" name="firewall_block_duration" class="form-control" min="60" max="86400" value="<?php echo (int)($settings['firewall_block_duration'] ?? 3600); ?>" data-firewall-seconds>
                                 <div class="firewall-seconds-hint" data-firewall-seconds-hint-for="firewall_block_duration"></div>
                             </div>
 
@@ -263,8 +263,8 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                             </label>
 
                             <div class="mb-3">
-                                <label class="form-label">Vorschaufenster für Simulation (Stunden)</label>
-                                <input type="number" name="firewall_simulation_preview_hours" class="form-control" min="1" max="168" value="<?php echo (int)($settings['firewall_simulation_preview_hours'] ?? 24); ?>">
+                                <label for="fld-firewall_simulation_preview_hours" class="form-label">Vorschaufenster für Simulation (Stunden)</label>
+                                <input id="fld-firewall_simulation_preview_hours" type="number" name="firewall_simulation_preview_hours" class="form-control" min="1" max="168" value="<?php echo (int)($settings['firewall_simulation_preview_hours'] ?? 24); ?>">
                                 <small class="form-hint">Read-only Auswertung der simulierten Treffer vor dem Scharfschalten.</small>
                             </div>
 
@@ -295,31 +295,31 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                                 <input type="hidden" name="expires_at" value="" data-firewall-expires-at>
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label">Typ</label>
-                                        <select name="rule_type" class="form-select">
+                                        <label for="fld-rule_type" class="form-label">Typ</label>
+                                        <select id="fld-rule_type" name="rule_type" class="form-select">
                                             <?php foreach ($typeLabels as $value => $label): ?>
                                                 <option value="<?php echo htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Wert (IP / Pattern)</label>
-                                        <input type="text" name="rule_value" class="form-control" required placeholder="192.168.1.1">
+                                        <label for="fld-rule_value" class="form-label">Wert (IP / Pattern)</label>
+                                        <input id="fld-rule_value" type="text" name="rule_value" class="form-control" required placeholder="192.168.1.1">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">Modus</label>
-                                        <select name="rule_mode" class="form-select">
+                                        <label for="fld-rule_mode" class="form-label">Modus</label>
+                                        <select id="fld-rule_mode" name="rule_mode" class="form-select">
                                             <option value="simulate" selected>Simulation</option>
                                             <option value="enforce">Scharf</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">Grund</label>
-                                        <input type="text" name="rule_reason" class="form-control" placeholder="Optional">
+                                        <label for="fld-rule_reason" class="form-label">Grund</label>
+                                        <input id="fld-rule_reason" type="text" name="rule_reason" class="form-control" placeholder="Optional">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">Ablauf</label>
-                                        <select class="form-select" data-firewall-expiration-preset>
+                                        <label for="fld-firewall_rule_expiration" class="form-label">Ablauf</label>
+                                        <select id="fld-firewall_rule_expiration" class="form-select" data-firewall-expiration-preset>
                                             <option value="0" selected>Kein Ablauf</option>
                                             <option value="3600">1 Stunde</option>
                                             <option value="14400">4 Stunden</option>

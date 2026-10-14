@@ -42,10 +42,10 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `users` | id, username, email, password, display_name, role, status, created_at, updated_at, last_login |
 | `user_meta` | id, user_id → users (CASCADE), meta_key, meta_value |
 | `roles` | id, name, display_name, description, capabilities, member_dashboard_access, sort_order, … |
-| `sessions` | id (SHA-256 der Session-ID, nie die ID selbst), user_id, ip_address, user_agent, payload, last_activity, expires_at – ab 3.5.0 von `Auth` bei Anmeldung angelegt, höchstens alle 5 Minuten aktualisiert und bei Abmeldung/Passwortwechsel entfernt |
+| `sessions` | id (SHA-256 der Session-ID, nie die ID selbst), user_id, ip_address, user_agent, payload, last_activity, expires_at – ab 3.4.20 von `Auth` bei Anmeldung angelegt, höchstens alle 5 Minuten aktualisiert und bei Abmeldung/Passwortwechsel entfernt |
 | `passkey_credentials` | id, user_id, credential_id, public_key, sign_count, aaguid, attestation_fmt, name, created_at, last_used_at |
 | `password_resets` | id, email, token, expires_at, created_at |
-| `login_attempts`, `failed_logins` | Anmeldeversuche (Rate-Limit, Sicherheitsalarme). `action` VARCHAR(30), `username` VARCHAR(60): `Security::normalizeRateLimitAction()`/`normalizeRateLimitIdentifier()` kürzen bzw. hashen längere Werte (ab 3.5.0) |
+| `login_attempts`, `failed_logins` | Anmeldeversuche (Rate-Limit, Sicherheitsalarme). `action` VARCHAR(30), `username` VARCHAR(60): `Security::normalizeRateLimitAction()`/`normalizeRateLimitIdentifier()` kürzen bzw. hashen längere Werte (ab 3.4.20) |
 | `blocked_ips` | id, ip_address, reason, expires_at, permanent, … |
 | `user_groups` | id, name, slug, description, role_id, plan_id, is_active, … |
 | `user_group_members` | id, user_id, group_id, joined_at |
@@ -54,7 +54,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 
 | Tabelle | Spalten |
 |---|---|
-| `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.5.0, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`) |
+| `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.4.21, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`) |
 | `page_revisions` | id, page_id, title, title_en, slug, slug_en, content, content_en, excerpt, status, author_id, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT), created_at |
 | `posts` | id, title (+ title_en), slug, slug_en, content (+ content_en), excerpt (+ excerpt_en), featured_image, status, author_id, author_display_name, author_display_url, post_template, post_meta_json, category_id, tags, views, allow_comments, meta_title, meta_description, created_at, updated_at, published_at, content_updated_at |
 | `post_revisions` | Snapshot je Speichern (Titel, Slugs, Inhalte DE/EN, Status, Kategorie, Tags, Autor-Anzeige, Datumswerte) |
@@ -101,7 +101,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `mail_queue` | recipient, subject, body, headers, status, attempts, max_attempts, available_at, sent_at, locked_at, attachment_*, error_category, last_error |
 | `ai_quota_usage` | scope_name, period_key, user_id, provider_id, request_count, character_count |
 
-### Schema v23 (3.5.0)
+### Schema v23 (3.4.13)
 
 | Änderung | Zweck |
 |---|---|
@@ -111,7 +111,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 
 Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 
-**Zeitzone (seit 3.5.0):** `CMS\Database` setzt pro Verbindung `SET time_zone` auf den PHP-Offset (`date('P')`), damit `NOW()`/`CURRENT_TIMESTAMP` zu den PHP-seitigen Zeitvergleichen passen.
+**Zeitzone (seit 3.4.13):** `CMS\Database` setzt pro Verbindung `SET time_zone` auf den PHP-Offset (`date('P')`), damit `NOW()`/`CURRENT_TIMESTAMP` zu den PHP-seitigen Zeitvergleichen passen.
 
 ### Bedarfsweise angelegte Tabellen
 

@@ -141,39 +141,21 @@ final class CmsAuthPageService
         $settings = array_merge($this->getDefaultSettings(), self::SHARED_SETTING_DEFAULTS);
 
         try {
-            $rows = $this->db->get_results(
-                "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name LIKE ?",
-                [self::SETTING_PREFIX . '%']
-            ) ?: [];
-
-            foreach ($rows as $row) {
-                $optionName = (string) ($row->option_name ?? '');
-                if (!str_starts_with($optionName, self::SETTING_PREFIX)) {
-                    continue;
+            // Über den Options-Cache statt zweier eigener Abfragen (LIKE-Scan auf settings) je Request.
+            $store = OptionStore::getInstance();
+            $prefixedNames = array_map(static fn(string $key): string => self::SETTING_PREFIX . $key, array_keys($settings));
+            foreach ($store->getMany($prefixedNames) as $optionName => $value) {
+                $settingKey = substr((string) $optionName, strlen(self::SETTING_PREFIX));
+                if ($value !== null && $settingKey !== '' && array_key_exists($settingKey, $settings)) {
+                    $settings[$settingKey] = $value;
                 }
-
-                $settingKey = substr($optionName, strlen(self::SETTING_PREFIX));
-                if ($settingKey === false || $settingKey === '' || !array_key_exists($settingKey, $settings)) {
-                    continue;
-                }
-
-                $settings[$settingKey] = (string) ($row->option_value ?? '');
             }
 
-            $sharedKeys = array_keys(self::SHARED_SETTING_DEFAULTS);
-            $placeholders = implode(',', array_fill(0, count($sharedKeys), '?'));
-            $sharedRows = $this->db->get_results(
-                "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name IN ({$placeholders})",
-                $sharedKeys
-            ) ?: [];
-
-            foreach ($sharedRows as $row) {
-                $optionName = (string) ($row->option_name ?? '');
-                if (!array_key_exists($optionName, $settings)) {
-                    continue;
+            // Gemeinsam genutzte Einstellungen (ohne Präfix) haben Vorrang.
+            foreach ($store->getMany(array_keys(self::SHARED_SETTING_DEFAULTS)) as $optionName => $value) {
+                if ($value !== null && array_key_exists((string) $optionName, $settings)) {
+                    $settings[(string) $optionName] = $value;
                 }
-
-                $settings[$optionName] = (string) ($row->option_value ?? '');
             }
         } catch (\Throwable $e) {
             $this->logger->error('CMS-Auth-Settings konnten nicht geladen werden.', [
