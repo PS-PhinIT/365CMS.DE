@@ -19,11 +19,31 @@ if (!defined('ABSPATH')) {
 
 final class RedirectService
 {
+    /** Spalten, die der CSV-Import auswertet; alle Exporte beginnen mit genau diesen Spalten. */
+    public const CSV_IMPORT_COLUMNS = ['redirect_id', 'source_path', 'site_scope', 'target_url', 'redirect_type', 'is_active', 'notes'];
+    public const CSV_REDIRECT_EXPORT_COLUMNS = [...self::CSV_IMPORT_COLUMNS, 'hits', 'last_hit_at'];
+    public const CSV_NOT_FOUND_EXPORT_COLUMNS = [...self::CSV_IMPORT_COLUMNS, 'request_host', 'hit_count', 'first_seen_at', 'last_seen_at', 'referrer_url'];
+    public const CSV_IMPORT_MAX_ROWS = 5000;
+    public const CSV_EXPORT_MAX_ROWS = 20000;
+
+    private const CSV_HEADER_ALIASES = [
+        'redirect_id' => ['redirect_id', 'id', 'regel_id'],
+        'source_path' => ['source_path', 'source', 'quelle', 'quellpfad', 'request_path', 'pfad', '404_pfad'],
+        'site_scope' => ['site_scope', 'site', 'scope'],
+        'target_url' => ['target_url', 'target', 'ziel', 'ziel_url', 'zielurl', 'ziel_slug', 'weiterleitung'],
+        'redirect_type' => ['redirect_type', 'type', 'typ'],
+        'is_active' => ['is_active', 'active', 'aktiv'],
+        'notes' => ['notes', 'note', 'notiz', 'notizen'],
+    ];
+    private const CSV_IMPORT_MAX_ERROR_DETAILS = 25;
+
     private static ?self $instance = null;
 
     private readonly Database $db;
     private readonly string $prefix;
     private ?bool $hasSiteTableSlugColumn = null;
+    /** @var array<int, array<string, string>>|null */
+    private ?array $availableSiteScopes = null;
 
     public static function getInstance(): self
     {
@@ -458,6 +478,291 @@ final class RedirectService
         }
     }
 
+    /**
+     * Weiterleitungsregeln im Spaltenformat von CSV_REDIRECT_EXPORT_COLUMNS.
+     *
+     * @return array<int, array<string, string|int>>
+     */
+    public function getRedirectExportRows(): array
+    {
+        $rows = $this->db->get_results(
+            "SELECT id, source_path, site_scope, target_url, redirect_type, is_active, notes, hits, last_hit_at
+             FROM {$this->prefix}redirect_rules
+             ORDER BY source_path ASC, site_scope ASC
+             LIMIT " . self::CSV_EXPORT_MAX_ROWS
+        ) ?: [];
+
+        return array_map(static fn ($row): array => [
+            'redirect_id' => (int)($row->id ?? 0),
+            'source_path' => (string)($row->source_path ?? ''),
+            'site_scope' => (string)($row->site_scope ?? ''),
+            'target_url' => (string)($row->target_url ?? ''),
+            'redirect_type' => (int)($row->redirect_type ?? 301),
+            'is_active' => (int)($row->is_active ?? 0) === 1 ? 1 : 0,
+            'notes' => (string)($row->notes ?? ''),
+            'hits' => (int)($row->hits ?? 0),
+            'last_hit_at' => (string)($row->last_hit_at ?? ''),
+        ], $rows);
+    }
+
+    /**
+     * 404-Einträge im Spaltenformat von CSV_NOT_FOUND_EXPORT_COLUMNS.
+     * Die ersten Spalten entsprechen dem Importformat der Weiterleitungen; IP-Adresse und User-Agent werden nicht exportiert.
+     *
+     * @return array<int, array<string, string|int>>
+     */
+    public function getNotFoundExportRows(): array
+    {
+        $redirectsByPath = [];
+        foreach ($this->getRedirectRuleRows() as $redirect) {
+            $redirectsByPath[$this->normalizePath((string)($redirect['source_path'] ?? ''))][] = $redirect;
+        }
+
+        $logs = $this->db->get_results(
+            "SELECT request_path, request_host, referrer_url, hit_count, first_seen_at, last_seen_at
+             FROM {$this->prefix}not_found_logs
+             ORDER BY hit_count DESC, last_seen_at DESC
+             LIMIT " . self::CSV_EXPORT_MAX_ROWS
+        ) ?: [];
+
+        // Ein Pfad kann für mehrere Hosts protokolliert sein (www/ohne www, Hub-Domains). Zeilen mit gleicher
+        // Quelle + Site werden zusammengefasst, damit der Re-Import keine doppelten Schlüssel enthält.
+        $rows = [];
+        foreach ($logs as $logRow) {
+            $requestPath = $this->normalizePath((string)($logRow->request_path ?? ''));
+            $log = $this->enrichLogWithRedirect((array)$logRow, $redirectsByPath[$requestPath] ?? []);
+            $hasRedirect = (int)($log['redirect_id'] ?? 0) > 0;
+            $siteScope = $hasRedirect ? (string)($log['site_scope_match'] ?? '') : (string)($log['site_scope_suggestion'] ?? '');
+            $key = $requestPath . '|' . $siteScope;
+            $host = (string)($log['request_host'] ?? '');
+            $firstSeen = (string)($log['first_seen_at'] ?? '');
+            $lastSeen = (string)($log['last_seen_at'] ?? '');
+
+            if (isset($rows[$key])) {
+                $row = &$rows[$key];
+                $row['hit_count'] += (int)($log['hit_count'] ?? 0);
+                if ($host !== '' && !in_array($host, explode(', ', (string)$row['request_host']), true)) {
+                    $row['request_host'] = ltrim($row['request_host'] . ', ' . $host, ', ');
+                }
+                if ($firstSeen !== '' && ($row['first_seen_at'] === '' || $firstSeen < $row['first_seen_at'])) {
+                    $row['first_seen_at'] = $firstSeen;
+                }
+                if ($lastSeen > $row['last_seen_at']) {
+                    $row['last_seen_at'] = $lastSeen;
+                }
+                if ($row['referrer_url'] === '') {
+                    $row['referrer_url'] = (string)($log['referrer_url'] ?? '');
+                }
+                unset($row);
+                continue;
+            }
+
+            $rows[$key] = [
+                'redirect_id' => $hasRedirect ? (int)$log['redirect_id'] : '',
+                'source_path' => $requestPath,
+                'site_scope' => $siteScope,
+                'target_url' => $hasRedirect ? (string)($log['target_url'] ?? '') : '',
+                'redirect_type' => $hasRedirect ? (int)($log['redirect_type'] ?? 301) : 301,
+                'is_active' => $hasRedirect ? ((int)($log['redirect_is_active'] ?? 0) === 1 ? 1 : 0) : 1,
+                'notes' => $hasRedirect ? (string)($log['redirect_notes'] ?? '') : 'Aus 404-Monitor übernommen',
+                'request_host' => $host,
+                'hit_count' => (int)($log['hit_count'] ?? 0),
+                'first_seen_at' => $firstSeen,
+                'last_seen_at' => $lastSeen,
+                'referrer_url' => (string)($log['referrer_url'] ?? ''),
+            ];
+        }
+
+        $rows = array_values($rows);
+        usort($rows, static fn (array $a, array $b): int => [$b['hit_count'], $b['last_seen_at']] <=> [$a['hit_count'], $a['last_seen_at']]);
+
+        return $rows;
+    }
+
+    /**
+     * Importiert Weiterleitungen aus einer CSV-Datei (Export der Weiterleitungen oder des 404-Monitors).
+     * Zeilen ohne Ziel werden übersprungen; bestehende Regeln werden über redirect_id oder Quelle + Site-Scope aktualisiert.
+     *
+     * @return array{success: bool, message?: string, error?: string, details: array<int, string>, summary: array<string, int>}
+     */
+    public function importRedirectsFromCsv(string $csvContent): array
+    {
+        $summary = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => 0, 'failed' => 0];
+
+        try {
+            $records = CsvExchange::parse(
+                $csvContent,
+                self::CSV_HEADER_ALIASES,
+                ['source_path', 'target_url'],
+                self::CSV_IMPORT_MAX_ROWS,
+                implode(';', self::CSV_IMPORT_COLUMNS)
+            );
+        } catch (\InvalidArgumentException $e) {
+            return ['success' => false, 'error' => $e->getMessage(), 'details' => [], 'summary' => $summary];
+        }
+
+        $errors = [];
+        $seenKeys = [];
+        $fail = static function (int $line, string $source, string $message) use (&$summary, &$errors): void {
+            $summary['failed']++;
+            $errors[] = sprintf('Zeile %d%s: %s', $line, $source !== '' ? ' (' . $source . ')' : '', $message);
+        };
+
+        // Eine Transaktion statt Autocommit je Zeile beschleunigt große Importe deutlich.
+        $pdo = $this->db->getPdo();
+        $ownsTransaction = !$pdo->inTransaction() && $pdo->beginTransaction();
+
+        try {
+            foreach ($records as $line => $record) {
+                $rawSource = trim((string)($record['source_path'] ?? ''));
+                $rawTarget = trim((string)($record['target_url'] ?? ''));
+
+                if ($rawTarget === '') {
+                    $summary['skipped']++;
+                    continue;
+                }
+
+                $source = $this->normalizePath($rawSource);
+                if ($source === '' || $source === '/') {
+                    $fail($line, $rawSource, 'Bitte einen gültigen Quellpfad angeben.');
+                    continue;
+                }
+
+                $existing = null;
+                $rawId = trim((string)($record['redirect_id'] ?? ''));
+                if ($rawId !== '') {
+                    $id = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                    if ($id === false) {
+                        $fail($line, $source, 'Ungültige redirect_id „' . $this->limitString($rawId, 40) . '“.');
+                        continue;
+                    }
+                    $existing = $this->getRedirectById((int)$id);
+                }
+
+                $siteScope = array_key_exists('site_scope', $record)
+                    ? $this->normalizeSiteScopeInput((string)$record['site_scope'])
+                    : $this->normalizeSiteScopeInput((string)($existing['site_scope'] ?? ''));
+
+                if ($existing === null) {
+                    $match = $this->findRedirectBySourcePath($source, $siteScope);
+                    $existing = $match !== null ? $this->getRedirectById((int)($match['id'] ?? 0)) : null;
+                }
+
+                $rawType = trim((string)($record['redirect_type'] ?? ''));
+                $type = $rawType !== '' ? (int)$rawType : (int)($existing['redirect_type'] ?? 301);
+                if (!in_array($type, [301, 302], true)) {
+                    $fail($line, $source, 'Typ muss 301 oder 302 sein.');
+                    continue;
+                }
+
+                $rawActive = trim((string)($record['is_active'] ?? ''));
+                $isActive = $rawActive !== '' ? CsvExchange::parseBoolean($rawActive) : ($existing === null || (int)($existing['is_active'] ?? 0) === 1);
+                if ($isActive === null) {
+                    $fail($line, $source, 'Ungültiger Wert für is_active (erlaubt: 1/0, ja/nein).');
+                    continue;
+                }
+
+                $notes = array_key_exists('notes', $record) ? trim((string)$record['notes']) : (string)($existing['notes'] ?? '');
+                if ($existing === null && $notes === '') {
+                    $notes = 'Per CSV-Import angelegt';
+                }
+
+                if (!str_starts_with($rawTarget, '/') && preg_match('#^https?://#i', $rawTarget) !== 1 && preg_match('#^[a-z][a-z0-9+.\-]*:#i', $rawTarget) === 1) {
+                    $fail($line, $source, 'Das Ziel muss ein Pfad/Slug oder eine http(s)-URL sein.');
+                    continue;
+                }
+
+                $target = $this->normalizeManualTarget($rawTarget);
+
+                // Doppelte Zeilen mit identischen Werten (z. B. aus dem 404-Export) sind unkritisch, abweichende Werte nicht.
+                $key = $source . '|' . $siteScope;
+                $signature = $target . '|' . $type . '|' . ($isActive ? '1' : '0') . '|' . $notes;
+                if (isset($seenKeys[$key])) {
+                    if ($seenKeys[$key]['signature'] === $signature) {
+                        $summary['unchanged']++;
+                    } else {
+                        $fail($line, $source, sprintf('Quelle und Site sind bereits in Zeile %d mit anderen Werten enthalten.', $seenKeys[$key]['line']));
+                    }
+                    continue;
+                }
+                $seenKeys[$key] = ['line' => $line, 'signature' => $signature];
+
+                if ($existing !== null
+                    && (string)($existing['source_path'] ?? '') === $source
+                    && $this->normalizeSiteScopeInput((string)($existing['site_scope'] ?? '')) === $siteScope
+                    && (string)($existing['target_url'] ?? '') === $target
+                    && (int)($existing['redirect_type'] ?? 301) === $type
+                    && ((int)($existing['is_active'] ?? 0) === 1) === $isActive
+                    && trim((string)($existing['notes'] ?? '')) === $notes
+                ) {
+                    $summary['unchanged']++;
+                    continue;
+                }
+
+                $post = [
+                    'redirect_id' => $existing !== null ? (int)($existing['id'] ?? 0) : 0,
+                    'source_path' => $source,
+                    'site_scope' => $siteScope,
+                    'target_kind' => 'manual',
+                    'target_url_manual' => $target,
+                    'redirect_type' => (string)$type,
+                    'notes' => $notes,
+                ];
+                if ($isActive) {
+                    $post['is_active'] = '1';
+                }
+
+                $result = $this->saveRedirect($post);
+                if (empty($result['success'])) {
+                    $fail($line, $source, (string)($result['error'] ?? 'Unbekannter Fehler.'));
+                    continue;
+                }
+
+                $summary[$existing !== null ? 'updated' : 'created']++;
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->commit();
+        }
+
+        $summaryText = sprintf(
+            '%d angelegt, %d aktualisiert, %d unverändert, %d ohne Ziel übersprungen, %d fehlerhaft.',
+            $summary['created'],
+            $summary['updated'],
+            $summary['unchanged'],
+            $summary['skipped'],
+            $summary['failed']
+        );
+
+        $details = array_slice($errors, 0, self::CSV_IMPORT_MAX_ERROR_DETAILS);
+        if (count($errors) > self::CSV_IMPORT_MAX_ERROR_DETAILS) {
+            $details[] = sprintf('… und %d weitere fehlerhafte Zeile(n).', count($errors) - self::CSV_IMPORT_MAX_ERROR_DETAILS);
+        }
+
+        if ($summary['failed'] > 0) {
+            return [
+                'success' => false,
+                'error' => 'CSV-Import mit Fehlern abgeschlossen: ' . $summaryText,
+                'type' => ($summary['created'] + $summary['updated']) > 0 ? 'warning' : 'danger',
+                'details' => $details,
+                'summary' => $summary,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'CSV-Import abgeschlossen: ' . $summaryText,
+            'details' => [],
+            'summary' => $summary,
+        ];
+    }
+
     private function normalizePath(string $path): string
     {
         $path = trim($path);
@@ -799,6 +1104,10 @@ final class RedirectService
      */
     private function getAvailableSiteScopes(): array
     {
+        if ($this->availableSiteScopes !== null) {
+            return $this->availableSiteScopes;
+        }
+
         $options = [
             [
                 'value' => '',
@@ -827,7 +1136,7 @@ final class RedirectService
             $options[] = $option;
         }
 
-        return $options;
+        return $this->availableSiteScopes = $options;
     }
 
     /**

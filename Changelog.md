@@ -14,6 +14,18 @@
 
 ---
 
+### v3.4.24 — 14.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.4.24** | 🟢 feat | SEO / 404-Monitor | *CSV exportieren* lädt das 404-Protokoll (bis 20.000 Einträge, je Pfad und Site zusammengefasst, ohne IP-Adresse und User-Agent) im Importformat der Weiterleitungen herunter. |
+| **3.4.24** | 🟢 feat | SEO / Weiterleitungen | Bestehende Weiterleitungen lassen sich als CSV exportieren und per CSV-Import (bis 2 MB / 5.000 Zeilen) massenweise anlegen oder ändern. Zeilen ohne Ziel werden übersprungen, vorhandene Regeln über `redirect_id` bzw. Quelle + Site aktualisiert, fehlerhafte Zeilen mit Zeilennummer gemeldet. |
+| **3.4.24** | 🟢 feat | SEO / Meta-Daten | Unter `/admin/seo-meta` lassen sich die SEO-Metadaten aller Beiträge (Meta-Titel/-Beschreibung, Fokus-Keyphrase, Canonical, Robots, Open Graph, Twitter, Schema-Typ, Sitemap, hreflang) als CSV exportieren und nach der Bearbeitung wieder importieren. Zuordnung über `post_id` bzw. Slug; Titel, Inhalt, Status und Änderungsdatum der Beiträge bleiben unberührt. |
+| **3.4.24** | 🟠 perf | SEO / CSV-Import | CSV-Importe (Weiterleitungen, Beitrags-SEO) laufen in einer Datenbank-Transaktion (ca. 2–3× schneller) mit erhöhtem Zeitlimit. Teilweise erfolgreiche Importe werden gelb statt rot gemeldet; deutsche Spaltennamen mit Umlauten werden erkannt. |
+| **3.4.24** | 🔴 fix | SEO / 404-Monitor | Der 404-CSV-Export fasst Pfade, die für mehrere Hosts protokolliert wurden, je Site zusammen. Identische Dubletten im Import gelten als unverändert statt als Fehler; Ziele mit anderen Schemata als `http(s)` (z. B. `javascript:`) werden beim CSV-Import abgelehnt. |
+
+---
+
 ### v3.4.23 — 14.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

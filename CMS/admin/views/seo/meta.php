@@ -67,7 +67,7 @@ $buildRuntimePublicUrl = static function (string $path): string {
     return rtrim((string) SITE_URL, '/') . $normalizedPath;
 };
 ?>
-<div class="page-header d-print-none admin-redesign-header"><div class="container-xl"><div class="content-listing-header"><div><div class="page-pretitle">SEO</div><h2 class="page-title mb-1">Meta-Daten & Variablen</h2><div class="content-listing-header__meta"><span>Site: <?= htmlspecialchars($siteName) ?></span><span>Kontexte: <?= count($previewContexts) ?></span></div></div><div class="admin-section-toolbar__actions"><a href="/admin/seo-audit" class="btn btn-outline-secondary btn-sm">Audit</a><a href="/admin/seo-social" class="btn btn-outline-primary btn-sm">Social</a></div></div></div></div>
+<div class="page-header d-print-none admin-redesign-header"><div class="container-xl"><div class="content-listing-header"><div><div class="page-pretitle">SEO</div><h2 class="page-title mb-1">Meta-Daten & Variablen</h2><div class="content-listing-header__meta"><span>Site: <?= htmlspecialchars($siteName) ?></span><span>Kontexte: <?= count($previewContexts) ?></span></div></div><div class="admin-section-toolbar__actions"><a href="/admin/seo-meta?export=posts_csv" class="btn btn-outline-primary btn-sm">Beitrags-Metadaten als CSV</a><a href="/admin/seo-audit" class="btn btn-outline-secondary btn-sm">Audit</a><a href="/admin/seo-social" class="btn btn-outline-primary btn-sm">Social</a></div></div></div></div>
 <div class="page-body admin-redesign-page"><div class="container-xl admin-redesign-shell">
     <?php if (!empty($alert)): ?>
         <?php
@@ -182,6 +182,34 @@ $buildRuntimePublicUrl = static function (string $path): string {
                     <div class="col-lg-3"><label class="form-label">Max. Wörter pro Absatz</label><input class="form-control" type="number" name="analysis_paragraph_words" min="40" value="<?= (int)($settings['seo_analysis_paragraph_words'] ?? 120) ?>"></div>
                     <div class="col-12"><button class="btn btn-primary" type="submit">Template speichern</button></div>
                 </form>
+            </div></div>
+        </div>
+        <div class="col-12">
+            <div class="card" id="post-seo-meta-csv"><div class="card-header"><div><h3 class="card-title mb-1">SEO-Metadaten der Beiträge per CSV</h3><div class="text-secondary small">Alle Beitrags-Metadaten exportieren, in Excel o. Ä. anpassen und wieder importieren. Titel, Slug, Inhalt, Auszug und Status der Beiträge werden dabei nicht verändert.</div></div></div><div class="card-body">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <h4 class="mb-2">1. Exportieren</h4>
+                        <p class="text-secondary small mb-3">CSV mit allen Beiträgen (ohne Papierkorb), Semikolon-getrennt, UTF-8.</p>
+                        <a href="/admin/seo-meta?export=posts_csv" class="btn btn-outline-primary">CSV exportieren</a>
+                    </div>
+                    <div class="col-lg-8">
+                        <h4 class="mb-2">2. Bearbeitete CSV importieren</h4>
+                        <form method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                            <input type="hidden" name="action" value="import_post_meta_csv">
+                            <div class="col-md-8">
+                                <label class="form-label" for="post-meta-csv-file">CSV-Datei</label>
+                                <input type="file" class="form-control" id="post-meta-csv-file" name="post_meta_csv" accept=".csv,text/csv" required>
+                            </div>
+                            <div class="col-md-4 d-grid"><button type="submit" class="btn btn-primary">CSV importieren</button></div>
+                            <div class="col-12 form-hint">
+                                Zuordnung über <code>post_id</code> (alternativ <code>slug</code>). Die Spalten <code>slug</code>, <code>title</code>, <code>status</code> und <code>url</code> dienen nur zur Orientierung und werden nicht geschrieben.
+                                Importiert werden: <code>meta_title</code>, <code>meta_description</code>, <code>focus_keyphrase</code>, <code>keywords</code>, <code>canonical_url</code>, <code>robots_index</code>, <code>robots_follow</code>, <code>og_*</code>, <code>twitter_*</code>, <code>schema_type</code>, <code>sitemap_priority</code>, <code>sitemap_changefreq</code>, <code>hreflang_group</code>.
+                                Fehlende Spalten bleiben unverändert, leere Zellen setzen das Feld auf den Standard zurück. Maximal 5 MB / 5.000 Zeilen.
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div></div>
         </div>
     </div>

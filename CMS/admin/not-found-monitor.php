@@ -52,6 +52,20 @@ require_once __DIR__ . '/modules/seo/RedirectManagerModule.php';
 $module = new RedirectManagerModule();
 $alert = null;
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['export'] ?? null) === 'csv') {
+    try {
+        $module->streamNotFoundCsvExport();
+    } catch (\Throwable $e) {
+        \CMS\Logger::instance()->withChannel('seo')->warning('404-CSV-Export fehlgeschlagen.', [
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
+        ]);
+        $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => 'Der CSV-Export konnte nicht erstellt werden.', 'details' => []];
+        header('Location: /admin/not-found-monitor');
+        exit;
+    }
+}
+
 function cms_admin_not_found_monitor_redirect(string $redirectUrl): never
 {
     header('Location: ' . $redirectUrl);

@@ -49,6 +49,7 @@ usort($sortedLogs, static function (array $left, array $right): int {
                     <input type="hidden" name="action" value="clear_logs">
                     <button type="submit" class="btn btn-outline-danger">404-Protokoll leeren</button>
                 </form>
+                <a href="<?= htmlspecialchars('/admin/not-found-monitor?export=csv') ?>" class="btn btn-outline-primary" title="404-Einträge als CSV herunterladen, Ziel ergänzen und unter Weiterleitungen importieren">CSV exportieren</a>
                 <a href="<?= htmlspecialchars('/admin/redirect-manager') ?>" class="btn btn-primary">Zu den Weiterleitungen</a>
             </div>
         </div>

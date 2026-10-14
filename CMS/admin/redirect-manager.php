@@ -20,6 +20,7 @@ const CMS_ADMIN_REDIRECT_MANAGER_ALLOWED_ACTIONS = [
     'delete_redirects_by_slug',
     'toggle_redirect',
     'clear_logs',
+    'import_redirects',
 ];
 
 const CMS_ADMIN_REDIRECT_MANAGER_ACTION_CAPABILITIES = [
@@ -28,6 +29,7 @@ const CMS_ADMIN_REDIRECT_MANAGER_ACTION_CAPABILITIES = [
     'delete_redirects_by_slug' => 'manage_settings',
     'toggle_redirect' => 'manage_settings',
     'clear_logs' => 'manage_settings',
+    'import_redirects' => 'manage_settings',
 ];
 
 function cms_admin_redirect_manager_can_access(): bool
@@ -50,8 +52,9 @@ function cms_admin_redirect_manager_redirect(string $redirectUrl): never
 
 function cms_admin_redirect_manager_flash(array $payload): void
 {
+    $type = (string) ($payload['type'] ?? 'danger');
     $_SESSION['admin_alert'] = [
-        'type' => ($payload['type'] ?? 'danger') === 'success' ? 'success' : 'danger',
+        'type' => in_array($type, ['success', 'warning'], true) ? $type : 'danger',
         'message' => trim((string) ($payload['message'] ?? '')),
         'details' => is_array($payload['details'] ?? null) ? $payload['details'] : [],
     ];
@@ -60,7 +63,7 @@ function cms_admin_redirect_manager_flash(array $payload): void
 function cms_admin_redirect_manager_flash_result(array $result): void
 {
     cms_admin_redirect_manager_flash([
-        'type' => !empty($result['success']) ? 'success' : 'danger',
+        'type' => !empty($result['success']) ? 'success' : (string) ($result['type'] ?? 'danger'),
         'message' => (string) ($result['message'] ?? $result['error'] ?? ''),
         'details' => $result['details'] ?? [],
     ]);
@@ -118,11 +121,25 @@ function cms_admin_redirect_manager_handle_action(RedirectManagerModule $module,
         'delete_redirects_by_slug' => $module->deleteRedirectsBySlug(cms_admin_redirect_manager_normalize_slug_filter($post['slug_filter'] ?? '')),
         'toggle_redirect' => $module->toggleRedirect(cms_admin_redirect_manager_normalize_positive_id($post['id'] ?? 0)),
         'clear_logs' => $module->clearLogs(),
+        'import_redirects' => $module->importRedirectsCsv($_FILES['redirect_csv'] ?? null),
         default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
     };
 }
 
 $alert = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['export'] ?? null) === 'csv') {
+    try {
+        $module->streamRedirectsCsvExport();
+    } catch (\Throwable $e) {
+        \CMS\Logger::instance()->withChannel('seo')->warning('Weiterleitungs-CSV-Export fehlgeschlagen.', [
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
+        ]);
+        cms_admin_redirect_manager_flash(['type' => 'danger', 'message' => 'Der CSV-Export konnte nicht erstellt werden.']);
+        cms_admin_redirect_manager_redirect(cms_admin_redirect_manager_target_url());
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Security::instance()->verifyToken($_POST['csrf_token'] ?? '', 'admin_redirect_manager')) {
