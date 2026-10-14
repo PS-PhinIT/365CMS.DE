@@ -47,7 +47,56 @@ class SecurityAuditModule
             'checks'  => $checks,
             'stats'   => $this->summarizeChecks($checks),
             'audit_log' => $this->fetchRecentAuditLog(),
+            'log_retention' => $this->getLogRetention(),
         ];
+    }
+
+    /**
+     * @return array{activity_log:int, audit_log:int, minimum:int}
+     */
+    private function getLogRetention(): array
+    {
+        $days = ['activity_log' => 0, 'audit_log' => 0];
+        try {
+            $configured = \CMS\Services\DataRetentionService::getInstance()->getRetentionDays();
+            $days['activity_log'] = (int) ($configured['activity_log'] ?? 0);
+            $days['audit_log'] = (int) ($configured['audit_log'] ?? 0);
+        } catch (\Throwable) {
+        }
+
+        return $days + ['minimum' => \CMS\Services\DataRetentionService::MIN_LOG_RETENTION_DAYS];
+    }
+
+    public function saveLogRetention(array $post): array
+    {
+        if (!$this->canAccess()) {
+            return ['success' => false, 'error' => 'Zugriff verweigert.'];
+        }
+
+        try {
+            $saved = \CMS\Services\DataRetentionService::getInstance()->saveLogRetentionDays([
+                'activity_log' => (int) ($post['activity_log_days'] ?? 0),
+                'audit_log' => (int) ($post['audit_log_days'] ?? 0),
+            ]);
+
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SETTING,
+                'security.audit.log_retention',
+                'Aufbewahrungsfristen für Aktivitäts-/Audit-Protokoll gespeichert',
+                'setting',
+                null,
+                $saved,
+                'warning'
+            );
+
+            return ['success' => true, 'message' => 'Aufbewahrungsfristen gespeichert. Die Löschung läuft mit dem täglichen Cron.'];
+        } catch (\Throwable $e) {
+            $this->logFailure('security.audit.log_retention_failed', 'Aufbewahrungsfristen konnten nicht gespeichert werden.', [
+                'exception' => $e::class,
+            ]);
+
+            return ['success' => false, 'error' => 'Aufbewahrungsfristen konnten nicht gespeichert werden.'];
+        }
     }
 
     public function runAudit(): array

@@ -245,6 +245,7 @@ class CookieManagerModule
             'cookie_banner_position',
             'cookie_banner_text',
             'cookie_banner_style',
+            'cookie_primary_color',
             'cookie_lifetime_days',
             'cookie_policy_url',
             'cookie_accept_text',
@@ -302,6 +303,8 @@ class CookieManagerModule
             'cookie_banner_text'     => $this->sanitizeLimitedHtml((string)($post['cookie_banner_text'] ?? ''), self::MAX_SETTING_HTML_LENGTH, '<p><a><strong><em><br>'),
             'cookie_banner_style'    => in_array($post['cookie_banner_style'] ?? '', ['light', 'dark', 'custom'], true)
                 ? $post['cookie_banner_style'] : 'dark',
+            'cookie_primary_color'   => preg_match('/^#[a-f0-9]{6}$/i', (string)($post['cookie_primary_color'] ?? '')) === 1
+                ? strtolower((string)$post['cookie_primary_color']) : '#3b82f6',
             'cookie_lifetime_days'   => (string)max(1, min(365, (int)($post['cookie_lifetime_days'] ?? 30))),
             'cookie_policy_url'      => $this->normalizePolicyUrl((string)($post['cookie_policy_url'] ?? '/datenschutz')),
             'cookie_accept_text'     => $this->sanitizeText((string)($post['cookie_accept_text'] ?? 'Akzeptieren'), 80, 'Akzeptieren'),

@@ -69,6 +69,7 @@ final class SeoSuiteModule
 		'seo_technical_broken_link_scan' => '1',
 		'seo_indexnow_key' => '',
 		'seo_indexnow_key_file' => '',
+		'seo_custom_header_code' => '',
 	];
 
 	private const ANALYTICS_DEFAULTS = [
@@ -395,6 +396,12 @@ final class SeoSuiteModule
 			'seo_indexnow_key' => $indexNowKey,
 			'seo_indexnow_key_file' => $indexNowKeyFile,
 		]);
+
+		// Altlast: frei eingegebener Head-Code wird nur noch angezeigt und kann hier entfernt werden.
+		// Neuer Head-Code gehört in den Theme-Customizer (Erweitert → eigener Head-Code).
+		if (!empty($post['clear_legacy_header_code'])) {
+			$this->persistSettings(['seo_custom_header_code' => '']);
+		}
 
 		$indexNowStatus = $this->indexingService->getIndexNowConfigurationStatus();
 		$message = 'Technische SEO-Einstellungen gespeichert.';

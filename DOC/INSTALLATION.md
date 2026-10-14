@@ -350,6 +350,14 @@ location ~ ^/plugins/cms-importer/(?:reports|wp_import|wp_import_files)(?:/|$) {
 location ~ ^/(?:uploads|assets)/.*\.(?:php[0-9]?|phtml|phar)$ { return 403; }
 ```
 
+Missing static files under `assets/`, `themes/`, `plugins/` and `uploads/` are answered by `.htaccess` with a plain 404 (since 3.5.0), so bot scans for old asset URLs no longer boot the CMS. Nginx equivalent (place after the blocking rules above):
+
+```nginx
+location ~* ^/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$ {
+    try_files $uri =404;
+}
+```
+
 Nginx evaluates regex locations in order: keep these rules above your `location ~ \.php$` FastCGI handler and the `cache/optimized-assets` rule before the generic private-path rule.
 
 **Deutsch**
@@ -394,6 +402,14 @@ location ~ ^/plugins/cms-importer/(?:reports|wp_import|wp_import_files)(?:/|$) {
 
 # Skripte aus uploads/ und assets/ nie ausführen
 location ~ ^/(?:uploads|assets)/.*\.(?:php[0-9]?|phtml|phar)$ { return 403; }
+```
+
+Fehlende statische Dateien unter `assets/`, `themes/`, `plugins/` und `uploads/` beantwortet die `.htaccess` seit 3.5.0 direkt mit einer schlanken 404, damit Bot-Scans nach alten Asset-URLs nicht jedes Mal das CMS starten. Nginx-Gegenstück (nach den Sperrregeln oben einfügen):
+
+```nginx
+location ~* ^/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$ {
+    try_files $uri =404;
+}
 ```
 
 Nginx prüft Regex-Locations in Reihenfolge: Diese Regeln über dem `location ~ \.php$`-FastCGI-Handler platzieren und die `cache/optimized-assets`-Regel vor der allgemeinen Sperrregel.

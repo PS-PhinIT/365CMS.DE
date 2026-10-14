@@ -75,11 +75,13 @@ final class SeoHeadRenderer
             $lines[] = '<meta property="' . htmlspecialchars($property, ENT_QUOTES, 'UTF-8') . '" content="' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '">';
         }
 
+        $twitterHandle = $this->settings->getTwitterHandle();
         $twitterMap = [
             'twitter:card' => $payload['twitter_card'] ?? 'summary_large_image',
             'twitter:title' => $payload['twitter_title'] ?? '',
             'twitter:description' => $payload['twitter_description'] ?? '',
             'twitter:image' => $payload['twitter_image'] ?? '',
+            'twitter:site' => $twitterHandle !== '' ? '@' . $twitterHandle : '',
         ];
 
         foreach ($twitterMap as $name => $value) {

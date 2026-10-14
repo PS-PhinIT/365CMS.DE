@@ -107,6 +107,35 @@ $statusBadge = ['ok' => 'bg-success', 'warning' => 'bg-warning', 'critical' => '
     </form>
 </div>
 
+<?php $logRetention = is_array($data['log_retention'] ?? null) ? $data['log_retention'] : ['activity_log' => 0, 'audit_log' => 0, 'minimum' => 90]; ?>
+<div class="card security-panel-card mb-4" id="log-retention">
+    <div class="card-header">
+        <div class="card-title-wrap">
+            <p class="card-eyebrow">Datenschutz</p>
+            <h3 class="card-title">Aufbewahrung der Protokolle</h3>
+            <div class="card-title-meta">Aktivitäts- und Audit-Protokoll enthalten IP-Adressen und Nutzerbezug. Standard: keine automatische Löschung (Nachweispflicht). Die Frist gehört ins Verarbeitungsverzeichnis.</div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3 align-items-end">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>">
+            <input type="hidden" name="action" value="save_log_retention">
+            <div class="col-md-4">
+                <label class="form-label" for="retention-activity-log">Aktivitätsprotokoll (Tage)</label>
+                <input type="number" class="form-control" id="retention-activity-log" name="activity_log_days" min="0" max="3650" step="1" value="<?php echo (int)($logRetention['activity_log'] ?? 0); ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="retention-audit-log">Audit-Protokoll (Tage)</label>
+                <input type="number" class="form-control" id="retention-audit-log" name="audit_log_days" min="0" max="3650" step="1" value="<?php echo (int)($logRetention['audit_log'] ?? 0); ?>">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-outline-primary">Fristen speichern</button>
+            </div>
+            <div class="col-12 form-hint">0 = nie automatisch löschen. Sonst mindestens <?php echo (int)($logRetention['minimum'] ?? 90); ?> Tage, höchstens 3650. Gelöscht wird beim täglichen Cron; der Filter <code>cms_data_retention_days</code> hat Vorrang.</div>
+        </form>
+    </div>
+</div>
+
 <!-- Sicherheitsprüfungen -->
 <div class="card security-panel-card mb-4">
     <div class="card-header">

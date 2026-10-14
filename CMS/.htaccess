@@ -20,6 +20,16 @@ ErrorDocument 413 /index.php
 ErrorDocument 414 /index.php
 ErrorDocument 429 /index.php
 
+# Fehlende statische Assets (siehe Rewrite-Regel unten) ohne PHP beantworten.
+# Webserver ohne <If>-Unterstützung fallen auf die CMS-Fehlerseite zurück.
+<IfModule mod_version.c>
+    <IfVersion >= 2.4>
+        <If "%{REQUEST_URI} =~ m#/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$#i">
+            ErrorDocument 404 "Not Found"
+        </If>
+    </IfVersion>
+</IfModule>
+
 # Enable rewrite engine
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -75,6 +85,12 @@ ErrorDocument 429 /index.php
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^uploads/ - [L,NC]
     
+    # Fehlende statische Assets unter assets/, themes/, plugins/ und uploads/
+    # direkt mit 404 beantworten, statt für jeden Bot-Treffer das CMS zu starten.
+    # Die schlanke Fehlerantwort setzt der <If>-Block unten.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$ - [R=404,L,NC]
+
     # Force routing through index.php for admin and member areas
     RewriteRule ^admin/ index.php [L,QSA]
     RewriteRule ^member/ index.php [L,QSA]

@@ -6,6 +6,10 @@
  * Tabellen nicht minutenlang gesperrt werden. Die Fristen lassen sich per Filter
  * `cms_data_retention_days` anpassen (Wert 0 = Aufbewahrung ohne Löschung).
  *
+ * Aktivitäts- und Audit-Protokoll werden standardmäßig nicht gelöscht (Nachweispflicht). Eine Frist
+ * lässt sich unter Sicherheit → Sicherheits-Audit setzen (Optionen `data_retention_activity_log_days`
+ * und `data_retention_audit_log_days`); der Filter hat Vorrang.
+ *
  * @package CMSv2\Core\Services
  */
 
@@ -29,12 +33,25 @@ final class DataRetentionService
         'core_web_vitals' => 90,
         'not_found_logs' => RedirectService::NOT_FOUND_LOG_RETENTION_DAYS,
         'log_files' => 30,
+        'activity_log' => 0,
+        'audit_log' => 0,
     ];
+
+    /** Fristen, die zusätzlich über Optionen im Admin gesetzt werden können. */
+    public const OPTION_KEYS = [
+        'activity_log' => 'data_retention_activity_log_days',
+        'audit_log' => 'data_retention_audit_log_days',
+    ];
+
+    /** Mindestfrist für Protokolle, die als Nachweis dienen. */
+    public const MIN_LOG_RETENTION_DAYS = 90;
 
     /** Spalte mit dem Zeitstempel je Tabelle. */
     private const TABLE_DATE_COLUMNS = [
         'page_views' => 'visited_at',
         'core_web_vitals' => 'recorded_at',
+        'activity_log' => 'created_at',
+        'audit_log' => 'created_at',
     ];
 
     private const DELETE_BATCH_SIZE = 5000;
@@ -59,14 +76,20 @@ final class DataRetentionService
     /** @return array<string, int> */
     public function getRetentionDays(): array
     {
-        $configured = Hooks::applyFilters('cms_data_retention_days', self::DEFAULT_RETENTION_DAYS);
+        $defaults = self::DEFAULT_RETENTION_DAYS;
+        foreach (self::OPTION_KEYS as $key => $optionName) {
+            $defaults[$key] = $this->readOptionDays($optionName, $defaults[$key]);
+        }
+
+        $configured = Hooks::applyFilters('cms_data_retention_days', $defaults);
         $configured = is_array($configured) ? $configured : [];
 
         $days = [];
-        foreach (self::DEFAULT_RETENTION_DAYS as $key => $default) {
+        foreach ($defaults as $key => $default) {
             $value = isset($configured[$key]) && is_numeric($configured[$key]) ? (int) $configured[$key] : $default;
-            // 0 = deaktiviert; sonst mindestens 7 Tage, damit Fehlkonfigurationen keine frischen Daten löschen.
-            $days[$key] = $value <= 0 ? 0 : max(7, min(3650, $value));
+            // 0 = deaktiviert; sonst mindestens 7 Tage (Protokolle: 90), damit Fehlkonfigurationen keine frischen Daten löschen.
+            $minimum = isset(self::OPTION_KEYS[$key]) ? self::MIN_LOG_RETENTION_DAYS : 7;
+            $days[$key] = $value <= 0 ? 0 : max($minimum, min(3650, $value));
         }
 
         return $days;
@@ -100,6 +123,53 @@ final class DataRetentionService
         }
 
         return $result;
+    }
+
+    /**
+     * Speichert die im Admin gepflegten Protokollfristen (0 = nie löschen).
+     *
+     * @param array<string, int> $days
+     * @return array<string, int> gespeicherte Werte
+     */
+    public function saveLogRetentionDays(array $days): array
+    {
+        $saved = [];
+        foreach (self::OPTION_KEYS as $key => $optionName) {
+            $value = (int) ($days[$key] ?? 0);
+            $value = $value <= 0 ? 0 : max(self::MIN_LOG_RETENTION_DAYS, min(3650, $value));
+            $existing = $this->db->get_var(
+                "SELECT COUNT(*) FROM {$this->prefix}settings WHERE option_name = ?",
+                [$optionName]
+            );
+            if ((int) $existing > 0) {
+                $this->db->execute(
+                    "UPDATE {$this->prefix}settings SET option_value = ? WHERE option_name = ?",
+                    [(string) $value, $optionName]
+                );
+            } else {
+                $this->db->execute(
+                    "INSERT INTO {$this->prefix}settings (option_name, option_value) VALUES (?, ?)",
+                    [$optionName, (string) $value]
+                );
+            }
+            $saved[$key] = $value;
+        }
+
+        return $saved;
+    }
+
+    private function readOptionDays(string $optionName, int $default): int
+    {
+        try {
+            $value = $this->db->get_var(
+                "SELECT option_value FROM {$this->prefix}settings WHERE option_name = ? LIMIT 1",
+                [$optionName]
+            );
+        } catch (\Throwable) {
+            return $default;
+        }
+
+        return is_numeric($value) ? (int) $value : $default;
     }
 
     private function pruneTable(string $table, string $column, int $retentionDays): int

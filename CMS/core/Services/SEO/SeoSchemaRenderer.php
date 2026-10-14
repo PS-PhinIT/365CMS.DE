@@ -231,11 +231,15 @@ final class SeoSchemaRenderer
         if ($logo === '') {
             $logo = SITE_URL . '/assets/images/LOGO_365CMS-150px.png';
         }
-        $twitter = $this->settings->getSetting('twitter_site', '');
         $sameAs = [];
+        $twitterHandle = $this->settings->getTwitterHandle();
+        if ($twitterHandle !== '') {
+            $sameAs[] = 'https://x.com/' . $twitterHandle;
+        }
 
-        if ($twitter !== '') {
-            $sameAs[] = 'https://twitter.com/' . ltrim($twitter, '@');
+        $facebook = trim($this->settings->getSetting('social_facebook_page', ''));
+        if ($facebook !== '' && preg_match('#^https?://#i', $facebook) === 1) {
+            $sameAs[] = $facebook;
         }
 
         $props = [
