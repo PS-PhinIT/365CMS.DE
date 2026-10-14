@@ -103,7 +103,7 @@ class TrackingService
                 'page_title' => $pageTitle,
                 'user_id'    => $userId,
                 'session_id' => session_id(),
-                'ip_address' => self::anonymizeIp($_SERVER['REMOTE_ADDR'] ?? ''),
+                'ip_address' => self::anonymizeIp(\CMS\Security::getClientIp()),
                 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
                 'referrer'   => $_SERVER['HTTP_REFERER'] ?? '',
             ]) !== false;

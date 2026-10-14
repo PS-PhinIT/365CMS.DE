@@ -684,7 +684,7 @@ class UserService {
                 'entity_type' => 'user',
                 'entity_id' => $user_id > 0 ? $user_id : null,
                 'description' => $description,
-                'ip_address' => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+                'ip_address' => Security::getClientIp(),
                 'user_agent' => (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''),
                 'metadata' => !empty($normalizedDetails)
                     ? json_encode($normalizedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)

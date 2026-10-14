@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\Database;
+use CMS\Logger;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -22,6 +23,9 @@ final class RedirectService
     /** Spalten, die der CSV-Import auswertet; alle Exporte beginnen mit genau diesen Spalten. */
     public const CSV_IMPORT_COLUMNS = ['redirect_id', 'source_path', 'site_scope', 'target_url', 'redirect_type', 'is_active', 'notes'];
     public const CSV_REDIRECT_EXPORT_COLUMNS = [...self::CSV_IMPORT_COLUMNS, 'hits', 'last_hit_at'];
+    /** Obergrenze unterschiedlicher 404-Pfade im Monitor (Schutz vor Scanner-Flut). */
+    public const NOT_FOUND_LOG_MAX_ROWS = 20000;
+    public const NOT_FOUND_LOG_RETENTION_DAYS = 90;
     public const CSV_NOT_FOUND_EXPORT_COLUMNS = [...self::CSV_IMPORT_COLUMNS, 'request_host', 'hit_count', 'first_seen_at', 'last_seen_at', 'referrer_url'];
     public const CSV_IMPORT_MAX_ROWS = 5000;
     public const CSV_EXPORT_MAX_ROWS = 20000;
@@ -151,47 +155,87 @@ final class RedirectService
             return;
         }
 
+        // Spaltenbreiten (VARCHAR 255) einhalten: Überlange Pfade ließen das INSERT im Strict-Mode
+        // scheitern. Host-Header wird zusätzlich auf gültige Zeichen begrenzt.
+        $normalized = $this->limitString($normalized, 255);
         $requestHost = $this->normalizeHost((string)($context['request_host'] ?? ''));
+        $requestHost = preg_match('/^[a-z0-9.-]{1,255}$/', $requestHost) === 1 ? $requestHost : '';
 
-        $existing = $this->db->get_row(
-            "SELECT id, hit_count FROM {$this->prefix}not_found_logs WHERE request_path = ? AND request_host = ? LIMIT 1",
-            [$normalized, $requestHost]
-        );
-
-        if ($existing) {
-            $this->db->execute(
-                "UPDATE {$this->prefix}not_found_logs
-                 SET hit_count = hit_count + 1,
-                     request_host = ?,
-                     request_method = ?,
-                     referrer_url = ?,
-                     ip_address = ?,
-                     user_agent = ?,
-                     last_seen_at = NOW()
-                 WHERE id = ?",
-                [
-                    $requestHost,
-                    (string)($context['request_method'] ?? 'GET'),
-                    $this->limitString((string)($context['referrer_url'] ?? ''), 500),
-                    $this->limitString((string)($context['ip_address'] ?? ''), 64),
-                    $this->limitString((string)($context['user_agent'] ?? ''), 500),
-                    (int)$existing->id,
-                ]
-            );
-            return;
-        }
-
-        $this->db->insert('not_found_logs', [
-            'request_path' => $normalized,
-            'request_host' => $requestHost,
+        $values = [
             'request_method' => $this->limitString((string)($context['request_method'] ?? 'GET'), 10),
             'referrer_url' => $this->limitString((string)($context['referrer_url'] ?? ''), 500),
             'ip_address' => $this->limitString((string)($context['ip_address'] ?? ''), 64),
             'user_agent' => $this->limitString((string)($context['user_agent'] ?? ''), 500),
-            'hit_count' => 1,
-            'first_seen_at' => date('Y-m-d H:i:s'),
-            'last_seen_at' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        try {
+            $this->writeNotFoundLog($normalized, $requestHost, $values);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('redirects')->warning('404-Monitor: Eintrag konnte nicht gespeichert werden.', [
+                'exception' => $e,
+            ]);
+        }
+    }
+
+    /** @param array{request_method:string, referrer_url:string, ip_address:string, user_agent:string} $values */
+    private function writeNotFoundLog(string $normalized, string $requestHost, array $values): void
+    {
+        $updated = $this->db->execute(
+            "UPDATE {$this->prefix}not_found_logs
+             SET hit_count = hit_count + 1,
+                 request_method = ?,
+                 referrer_url = ?,
+                 ip_address = ?,
+                 user_agent = ?,
+                 last_seen_at = NOW()
+             WHERE request_path = ? AND request_host = ?",
+            [
+                $values['request_method'],
+                $values['referrer_url'],
+                $values['ip_address'],
+                $values['user_agent'],
+                $normalized,
+                $requestHost,
+            ]
+        );
+        if ($updated instanceof \PDOStatement && $updated->rowCount() > 0) {
+            return;
+        }
+
+        // Zufällige 404-Pfade (Scanner/Bots) dürfen die Tabelle nicht unbegrenzt wachsen lassen.
+        $rowCount = (int)($this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}not_found_logs") ?? 0);
+        if ($rowCount >= self::NOT_FOUND_LOG_MAX_ROWS) {
+            return;
+        }
+
+        $this->db->execute(
+            "INSERT INTO {$this->prefix}not_found_logs
+                (request_path, request_host, request_method, referrer_url, ip_address, user_agent, hit_count, first_seen_at, last_seen_at)
+             VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
+             ON DUPLICATE KEY UPDATE hit_count = hit_count + 1, last_seen_at = NOW()",
+            [
+                $normalized,
+                $requestHost,
+                $values['request_method'],
+                $values['referrer_url'],
+                $values['ip_address'],
+                $values['user_agent'],
+            ]
+        );
+    }
+
+    /**
+     * Entfernt alte 404-Einträge (Aufruf über den täglichen Cron).
+     */
+    public function pruneNotFoundLogs(int $retentionDays = self::NOT_FOUND_LOG_RETENTION_DAYS): int
+    {
+        $retentionDays = max(7, $retentionDays);
+        $stmt = $this->db->execute(
+            "DELETE FROM {$this->prefix}not_found_logs WHERE last_seen_at < (NOW() - INTERVAL ? DAY) LIMIT 5000",
+            [$retentionDays]
+        );
+
+        return $stmt instanceof \PDOStatement ? $stmt->rowCount() : 0;
     }
 
     public function getAdminData(): array

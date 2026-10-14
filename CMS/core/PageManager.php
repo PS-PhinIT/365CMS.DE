@@ -300,7 +300,9 @@ class PageManager
 
         // Platzhalter im Suchbegriff wörtlich nehmen („%“ lieferte sonst alle Seiten).
         $term = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query) . '%';
-        $stmt = $this->db->prepare("SELECT * FROM {$this->prefix}pages WHERE (title LIKE ? ESCAPE '!' OR content LIKE ? ESCAPE '!' OR title_en LIKE ? ESCAPE '!' OR content_en LIKE ? ESCAPE '!') AND status = 'published' ORDER BY created_at DESC LIMIT 20");
+        // Öffentliche Suche: geplante Seiten (published_at in der Zukunft) und interne Spalten
+        // wie page_meta_json/author_id nicht ausliefern.
+        $stmt = $this->db->prepare("SELECT id, slug, slug_en, title, title_en, excerpt, content, content_en, featured_image, meta_title, meta_description, status, created_at, updated_at, published_at FROM {$this->prefix}pages WHERE (title LIKE ? ESCAPE '!' OR content LIKE ? ESCAPE '!' OR title_en LIKE ? ESCAPE '!' OR content_en LIKE ? ESCAPE '!') AND status = 'published' AND (published_at IS NULL OR published_at <= NOW()) ORDER BY created_at DESC LIMIT 20");
         $stmt->execute([$term, $term, $term, $term]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }

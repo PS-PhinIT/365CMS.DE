@@ -14,6 +14,17 @@ final class SiteTableRepository
 {
     private ?bool $hasTableSlugColumn = null;
 
+    /**
+     * Hub-Zeilen je Request: Router (404/Domain-Erkennung) und Hub-Renderer fragen die
+     * Domain-Zuordnung mehrfach ab – ohne Cache je Aufruf ein Full-Scan inkl. rows_json.
+     *
+     * @var list<array<string, mixed>>|null
+     */
+    private ?array $hubRowsCache = null;
+
+    /** @var array<string, array<string, mixed>|null> Hub-Tabellen je Slug (Request-Cache, auch Fehltreffer). */
+    private array $hubBySlugCache = [];
+
     public function __construct(
         private Database $db,
         private string $prefix,
@@ -44,6 +55,10 @@ final class SiteTableRepository
             return null;
         }
 
+        if (array_key_exists($slug, $this->hubBySlugCache)) {
+            return $this->hubBySlugCache[$slug];
+        }
+
         $selectSlug = $this->hasTableSlugColumn() ? ', table_slug' : ", '' AS table_slug";
         $slugCondition = $this->hasTableSlugColumn()
             ? "(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) = ? OR table_slug = ?)"
@@ -59,7 +74,7 @@ final class SiteTableRepository
             $params
         );
 
-        return is_array($row) ? $this->hydrateTable($row) : null;
+        return $this->hubBySlugCache[$slug] = is_array($row) ? $this->hydrateTable($row) : null;
     }
 
     public function getHubTableByDomain(string $domain): ?array
@@ -69,18 +84,17 @@ final class SiteTableRepository
             return null;
         }
 
-        $selectSlug = $this->hasTableSlugColumn() ? ', table_slug' : ", '' AS table_slug";
-        $rows = $this->db->fetchAll(
-            "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at{$selectSlug}
-             FROM {$this->prefix}site_tables
-             WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'"
-        );
-
-        if (!is_array($rows)) {
-            return null;
+        if ($this->hubRowsCache === null) {
+            $selectSlug = $this->hasTableSlugColumn() ? ', table_slug' : ", '' AS table_slug";
+            $rows = $this->db->fetchAll(
+                "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at{$selectSlug}
+                 FROM {$this->prefix}site_tables
+                 WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'"
+            );
+            $this->hubRowsCache = is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
         }
 
-        foreach ($rows as $row) {
+        foreach ($this->hubRowsCache as $row) {
             if (!is_array($row)) {
                 continue;
             }

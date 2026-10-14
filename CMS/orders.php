@@ -217,7 +217,9 @@ CacheManager::instance()->sendResponseHeaders('private');
 // Get parameters
 $planId = isset($_GET['plan']) ? (int)$_GET['plan'] : 0;
 $billing = isset($_GET['billing']) ? $_GET['billing'] : 'monthly';
-$billing = in_array($billing, ['monthly', 'yearly', 'lifetime'], true) ? $billing : 'monthly';
+// Pläne haben nur Monats-/Jahrespreise. „lifetime“ wird ausschließlich im Admin vergeben,
+// sonst ließe sich ein dauerhaftes Abo zum Monatspreis bestellen.
+$billing = in_array($billing, ['monthly', 'yearly'], true) ? $billing : 'monthly';
 
 // Services
 $db = Database::instance();

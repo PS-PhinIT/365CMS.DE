@@ -140,7 +140,7 @@ final class CoreWebVitalsService
                 'page_title' => $title,
                 'user_id' => $userId,
                 'session_id' => $sessionId,
-                'ip_address' => TrackingService::anonymizeIp((string)($_SERVER['REMOTE_ADDR'] ?? '')),
+                'ip_address' => TrackingService::anonymizeIp(\CMS\Security::getClientIp()),
                 'user_agent' => $userAgent,
                 'device_type' => $this->detectDeviceType($userAgent),
                 'effective_connection' => mb_substr(trim((string)($payload['effective_type'] ?? '')), 0, 32),

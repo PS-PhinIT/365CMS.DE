@@ -30,6 +30,9 @@ if (class_exists(__NAMESPACE__ . '\\ThemeRouter', false)) {
 if (!class_exists(__NAMESPACE__ . '\\ThemeRouter', false)) {
 final class ThemeRouter
 {
+    private const SEARCH_RATE_LIMIT = 30;
+    private const SEARCH_RATE_WINDOW = 60;
+
     /**
      * Rückwärtskompatible Aliase für den Such-Scope (`?type=`).
      * Ältere/gecachte Suchformulare können noch Singular-Werte senden;
@@ -168,6 +171,28 @@ final class ThemeRouter
         $pluginMgr = PluginManager::instance();
         $db = Database::instance();
         $prefix = $db->getPrefix();
+
+        // Jede Suche führt mehrere LIKE-Scans über LONGTEXT-Spalten aus: Kontingent je IP,
+        // damit Bots/Flooding die Datenbank nicht auslasten.
+        if ($parsed['terms'] !== [] || $location !== '' || $filter !== '') {
+            $clientIp = \CMS\Security::getClientIp();
+            if (!\CMS\Security::checkDbRateLimit($clientIp, 'site_search', self::SEARCH_RATE_LIMIT, self::SEARCH_RATE_WINDOW)) {
+                http_response_code(429);
+                header('Retry-After: ' . self::SEARCH_RATE_WINDOW);
+                ThemeManager::instance()->render('search', [
+                    'results' => [],
+                    'query' => $query,
+                    'type' => $type,
+                    'sort' => $sort,
+                    'total' => 0,
+                    'location' => $location,
+                    'filter' => $filter,
+                    'search_notice' => 'Zu viele Suchanfragen in kurzer Zeit. Bitte in einer Minute erneut versuchen.',
+                ]);
+                return;
+            }
+            \CMS\Security::recordDbRateLimitAttempt($clientIp, 'site_search');
+        }
 
         // Ohne verwertbaren Suchbegriff keine Inhaltstreffer (bisher listete eine leere Suche alle Seiten).
         if ($parsed['terms'] !== []) {

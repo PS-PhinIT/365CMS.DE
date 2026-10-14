@@ -1180,6 +1180,11 @@ final class MemberController
         $body = trim((string)($_POST['body'] ?? ''));
         $parentId = (int)($_POST['parent_id'] ?? 0);
 
+        if ($this->messageService->isSendRateLimited($this->getUserId())) {
+            $this->flash('danger', 'Du hast in kurzer Zeit sehr viele Nachrichten gesendet. Bitte warte einige Minuten.');
+            $this->redirect('/member/messages');
+        }
+
         $result = $recipientId > 0
             ? $this->messageService->send($this->getUserId(), $recipientId, $subject, $body, $parentId > 0 ? $parentId : null)
             : false;

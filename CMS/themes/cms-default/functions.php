@@ -1719,10 +1719,33 @@ function meridian_build_category_tree_rows(array $rows): array
  */
 function meridian_get_categories(int $limit = 0): array
 {
+    // Header, Kategorie-Leiste, Sidebar und Footer fragen die Liste mehrfach pro Seite ab:
+    // je Request (und Sprachfilter) nur einmal berechnen.
+    static $cache = [];
+
+    try {
+        $localeAvailability = meridian_post_locale_availability_expression('p');
+        $cacheKey = md5($localeAvailability);
+        if (!array_key_exists($cacheKey, $cache)) {
+            $cache[$cacheKey] = meridian_load_categories($localeAvailability);
+        }
+
+        $cats = $cache[$cacheKey];
+
+        return $limit > 0 ? array_slice($cats, 0, $limit) : $cats;
+    } catch (\Throwable $e) {
+        return [];
+    }
+}
+
+/**
+ * Lädt die Kategorien mit veröffentlichten Beiträgen (ohne Limit) für meridian_get_categories().
+ */
+function meridian_load_categories(string $localeAvailability): array
+{
     try {
         $db = \CMS\Database::instance();
         $prefix = $db->getPrefix();
-        $localeAvailability = meridian_post_locale_availability_expression('p');
         $categories = $db->get_results(
             "SELECT id, name, slug, parent_id, sort_order
              FROM {$prefix}post_categories
@@ -1786,10 +1809,6 @@ function meridian_get_categories(int $limit = 0): array
             static fn(array $category): bool => trim((string) ($category['slug'] ?? '')) !== ''
                 && ((int) ($category['post_count'] ?? 0)) > 0
         ));
-
-        if ($limit > 0) {
-            $cats = array_slice($cats, 0, $limit);
-        }
 
         return $cats;
     } catch (\Throwable $e) {

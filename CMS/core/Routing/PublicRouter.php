@@ -98,7 +98,7 @@ final class PublicRouter
         Logger::instance()->warning('Legacy media-proxy route used; redirecting to member media.', [
             'method' => 'GET',
             'path' => '/media-proxy.php',
-            'remote_addr' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+            'remote_addr' => Security::getClientIp(),
         ]);
 
         $this->router->redirect('/member/media', 302);
@@ -109,7 +109,7 @@ final class PublicRouter
         Logger::instance()->warning('Legacy media-proxy upload route used; delegating to FileUploadService.', [
             'method' => 'POST',
             'path' => '/media-proxy.php',
-            'remote_addr' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+            'remote_addr' => Security::getClientIp(),
         ]);
 
         $result = Services\FileUploadService::getInstance()->handleUploadRequest();
@@ -736,7 +736,7 @@ final class PublicRouter
             $this->requestString($_POST['author'] ?? '', 120),
             $this->requestString($_POST['email'] ?? '', 254),
             $this->requestString($_POST['comment'] ?? '', 5000),
-            (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+            Security::getClientIp(),
             isset($currentUser->id) ? (int)$currentUser->id : null,
             $isAnonymousComment
         );
