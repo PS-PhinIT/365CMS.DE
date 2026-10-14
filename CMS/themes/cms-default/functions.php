@@ -1415,6 +1415,47 @@ function meridian_archive_url(string $type, string $slug = ''): string
 }
 }
 
+if (!function_exists('meridian_footer_fallback_links')) {
+/**
+ * Fallback-Links für die Footer-Spalte „Über uns“, wenn kein Menü gepflegt ist.
+ * Seiten werden nur verlinkt, wenn sie veröffentlicht sind; `/contact` ist eine feste Route.
+ *
+ * @return list<array{label:string,url:string}>
+ */
+function meridian_footer_fallback_links(): array
+{
+    static $links = null;
+    if ($links !== null) {
+        return $links;
+    }
+
+    $pageExists = static function (string $slug): bool {
+        try {
+            $page = \CMS\PageManager::instance()->getPageBySlug($slug);
+            return $page !== null && ($page['status'] ?? '') === 'published';
+        } catch (\Throwable) {
+            return false;
+        }
+    };
+
+    $links = [];
+    foreach (['about', 'ueber-uns', 'ueber'] as $slug) {
+        if ($pageExists($slug)) {
+            $links[] = ['label' => 'Über uns', 'url' => '/' . $slug];
+            break;
+        }
+    }
+    $links[] = ['label' => 'Kontakt', 'url' => '/contact'];
+    foreach (['impressum' => 'Impressum', 'datenschutz' => 'Datenschutz'] as $slug => $label) {
+        if ($pageExists($slug)) {
+            $links[] = ['label' => $label, 'url' => '/' . $slug];
+        }
+    }
+
+    return $links;
+}
+}
+
 if (!function_exists('meridian_tag_link_data')) {
 /**
  * Name und Archiv-Slug eines Tags. Akzeptiert Tag-Arrays (`name`/`title`, `slug`) und reine Namen;

@@ -866,30 +866,19 @@ final class ThemeRouter
             return;
         }
 
-        // Legacy-Fallback (Tags nur als Freitext in posts.tags) nur, solange die Tag-Tabelle
-        // noch leer ist. Sonst lud jede unbekannte /tag/xyz-URL alle getaggten Beiträge samt Inhalt.
-        if ($db->get_var("SELECT 1 FROM {$prefix}post_tags LIMIT 1") !== null) {
-            $this->router->render404();
-            return;
-        }
-
-        $rows = $db->get_results(
-            "SELECT p.*, c.name AS category_name,
-                    COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name
-             FROM {$prefix}posts p
-             LEFT JOIN {$prefix}users u ON u.id = p.author_id
-             LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
-               WHERE " . \cms_post_publication_where('p') . " AND " . $this->buildPostLocaleAvailabilityExpression('p', $locale) . " AND p.tags IS NOT NULL AND p.tags != ''
-             ORDER BY COALESCE(p.published_at, p.created_at) DESC"
+        // Legacy-Fallback (Tags nur als Freitext in posts.tags): zuerst nur ID und Tag-Feld laden,
+        // Volltextzeilen anschließend nur für die passenden Beiträge (vorher lud jede unbekannte
+        // /tag/xyz-URL alle getaggten Beiträge samt Inhalt).
+        $publicationWhere = \cms_post_publication_where('p') . " AND " . $this->buildPostLocaleAvailabilityExpression('p', $locale);
+        $tagRows = $db->get_results(
+            "SELECT p.id, p.tags FROM {$prefix}posts p
+               WHERE {$publicationWhere} AND p.tags IS NOT NULL AND p.tags != ''"
         ) ?: [];
 
-        $allMatchingPosts = [];
-        $matchingPosts = [];
+        $matchingIds = [];
         $resolvedTagName = '';
-
-        foreach ($rows as $row) {
-            $post = (array) $row;
-            foreach ($this->archiveRepository->parsePostTags((string) ($post['tags'] ?? '')) as $tag) {
+        foreach ($tagRows as $tagRow) {
+            foreach ($this->archiveRepository->parsePostTags((string) ($tagRow->tags ?? '')) as $tag) {
                 if (($tag['slug'] ?? '') !== $normalizedSlug) {
                     continue;
                 }
@@ -898,13 +887,35 @@ final class ThemeRouter
                     $resolvedTagName = (string) ($tag['name'] ?? '');
                 }
 
-                $allMatchingPosts[] = (object) $post;
-
-                if ($this->matchesArchiveSearch($post, $query, $locale)) {
-                    $matchingPosts[] = (object) $post;
-                }
-
+                $matchingIds[] = (int) ($tagRow->id ?? 0);
                 break;
+            }
+        }
+
+        $rows = [];
+        if ($matchingIds !== []) {
+            $placeholders = implode(',', array_fill(0, count($matchingIds), '?'));
+            $rows = $db->get_results(
+                "SELECT p.*, c.name AS category_name,
+                        COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name
+                 FROM {$prefix}posts p
+                 LEFT JOIN {$prefix}users u ON u.id = p.author_id
+                 LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
+                   WHERE p.id IN ({$placeholders}) AND {$publicationWhere}
+                 ORDER BY COALESCE(p.published_at, p.created_at) DESC",
+                $matchingIds
+            ) ?: [];
+        }
+
+        $allMatchingPosts = [];
+        $matchingPosts = [];
+
+        foreach ($rows as $row) {
+            $post = (array) $row;
+            $allMatchingPosts[] = (object) $post;
+
+            if ($this->matchesArchiveSearch($post, $query, $locale)) {
+                $matchingPosts[] = (object) $post;
             }
         }
 

@@ -85,7 +85,7 @@ Schwere: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 |---|---|---|---|
 | PERF-12 | Sprachverfügbarkeit von Beiträgen über `CHAR_LENGTH(TRIM(content))` (LONGTEXT-Scan) in Archiv- und Tag-Abfragen | 🟡 | teilweise – Tag-Übersicht einmal je Request; Rest Empfehlung OFFEN-14 |
 | PERF-13 | `SeoAnalysisService::getSetting()` mit eigener Abfrage je Schlüssel (~20 je Beitragsseite) | 🟠 | ✅ 3.5.0 – Options-Cache; SEO-Meta je Inhalt einmal pro Request |
-| PERF-14 | Unbekannte `/tag/…`-URL lud alle getaggten Beiträge mit `p.*` (Bot-Last) | 🟠 | ✅ 3.5.0 – Legacy-Fallback nur bei leerer Tag-Tabelle |
+| PERF-14 | Unbekannte `/tag/…`-URL lud alle getaggten Beiträge mit `p.*` (Bot-Last) | 🟠 | ✅ 3.5.0 – Legacy-Fallback liest zuerst nur `id`/`tags`, Volltext nur für Treffer |
 | PERF-15 | `ThemeManager::hasUnsafeCode()` tokenisierte die ~90 KB `functions.php` bei jedem Request | 🟡 | ✅ 3.5.0 – Ergebnis je Dateiinhalt (SHA-256) in `cache/` |
 | PERF-16 | Startseite fragte im Landing-Modus alle Blog-Daten ab; Tag-Wolke lud alle `posts.tags` | 🟡 | ✅ 3.5.0 |
 | PERF-17 | Einstellungen am Options-Cache vorbei (`CmsAuthPageService`, Schriften in `Bootstrap`, `ThemeManager::loadSettings`) | 🟡 | ✅ 3.5.0 für Auth-Seiten und Schriften; `ThemeManager` (Präfix-Abfrage) Empfehlung OFFEN-15 |
