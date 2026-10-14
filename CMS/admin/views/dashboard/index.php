@@ -107,14 +107,17 @@ if (!function_exists('dashboardUrl')) {
         $normalized = trim($url);
 
         if ($normalized === '') {
-            return $fallback;
+            $normalized = $fallback;
         }
 
         if ($normalized[0] !== '/' || str_starts_with($normalized, '//') || preg_match('/[\x00-\x1F\x7F]/', $normalized) === 1) {
-            return $fallback;
+            $normalized = $fallback;
         }
 
-        return $normalized;
+        // Interne Pfade relativ zur Installationsbasis auflösen (Unterverzeichnis-Installationen).
+        $siteUrl = defined('SITE_URL') ? rtrim((string) SITE_URL, '/') : '';
+
+        return $siteUrl . $normalized;
     }
 }
 
@@ -159,11 +162,11 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                             <?= htmlspecialchars((string) ($link['label'] ?? 'Aktion')) ?>
                         </a>
                     <?php endforeach; ?>
-                    <a href="/admin/pages?action=new" class="btn btn-primary d-none d-sm-inline-block">
+                    <a href="<?= htmlspecialchars(dashboardUrl('/admin/pages?action=new')) ?>" class="btn btn-primary d-none d-sm-inline-block">
                         <?= dashIcon('file-plus') ?>
                         Neue Seite
                     </a>
-                    <a href="/admin/posts?action=new" class="btn btn-outline-primary d-none d-sm-inline-block">
+                    <a href="<?= htmlspecialchars(dashboardUrl('/admin/posts?action=new')) ?>" class="btn btn-outline-primary d-none d-sm-inline-block">
                         <?= dashIcon('pencil-plus') ?>
                         Neuer Beitrag
                     </a>
@@ -538,7 +541,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                                 <?php endforeach; ?>
                             </div>
                             <div class="card-footer">
-                                <a href="/admin/orders" class="btn btn-outline-primary w-100">
+                                <a href="<?= htmlspecialchars(dashboardUrl('/admin/orders')) ?>" class="btn btn-outline-primary w-100">
                                     <?= dashIcon('shopping-cart') ?>
                                     Bestellungen öffnen
                                 </a>
@@ -685,7 +688,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                     </table>
                 </div>
                 <div class="card-footer py-2">
-                    <a href="/admin/logs" class="btn btn-sm btn-outline-secondary">Alle Aktivitäten anzeigen</a>
+                    <a href="<?= htmlspecialchars(dashboardUrl('/admin/logs')) ?>" class="btn btn-sm btn-outline-secondary">Alle Aktivitäten anzeigen</a>
                 </div>
             <?php else: ?>
                 <div class="card-body">

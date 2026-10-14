@@ -143,12 +143,12 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             <div class="card-header"><h3 class="card-title">Website</h3></div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label required">Website-Name</label>
-                                    <input type="text" name="site_name" class="form-control" value="<?php echo htmlspecialchars($s['site_name']); ?>" required>
+                                    <label for="fld-site_name" class="form-label required">Website-Name</label>
+                                    <input id="fld-site_name" type="text" name="site_name" class="form-control" value="<?php echo htmlspecialchars($s['site_name']); ?>" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Beschreibung</label>
-                                    <textarea name="site_description" class="form-control" rows="2"><?php echo htmlspecialchars($s['site_description']); ?></textarea>
+                                    <label for="fld-site_description" class="form-label">Beschreibung</label>
+                                    <textarea id="fld-site_description" name="site_description" class="form-control" rows="2"><?php echo htmlspecialchars($s['site_description']); ?></textarea>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Website-Logo</label>
@@ -236,8 +236,8 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label required">Website-URL</label>
-                                    <input type="url" name="site_url" class="form-control" value="<?php echo htmlspecialchars($s['site_url']); ?>" required>
+                                    <label for="fld-site_url" class="form-label required">Website-URL</label>
+                                    <input id="fld-site_url" type="url" name="site_url" class="form-control" value="<?php echo htmlspecialchars($s['site_url']); ?>" required>
                                     <div class="form-hint">Diese URL wird jetzt auch in der Runtime-Konfiguration (`config/app.php`) aktualisiert, damit `SITE_URL` zentral systemweit mitzieht.</div>
                                 </div>
                                 <div class="border rounded p-3 bg-light mb-0">
@@ -247,8 +247,8 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                         Beim Speichern kann 365CMS absolute Verweise von der alten Basis-URL auf die neue URL in Inhalten, Settings, Tabellen und Weiterleitungen mitmigrieren.
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Alte Basis-URL für Nachmigration <span class="text-secondary small">(optional)</span></label>
-                                        <input type="url" class="form-control" name="migrate_from_site_url" value="" placeholder="https://alte-domain.tld">
+                                        <label for="fld-migrate_from_site_url" class="form-label">Alte Basis-URL für Nachmigration <span class="text-secondary small">(optional)</span></label>
+                                        <input id="fld-migrate_from_site_url" type="url" class="form-control" name="migrate_from_site_url" value="" placeholder="https://alte-domain.tld">
                                         <div class="form-hint">Optional für bereits abgeschlossene Umzüge: Wenn hier eine alte Domain eingetragen wird, ersetzt 365CMS beim Speichern auch dann noch alte Bild-, Upload- und Medien-URLs zentral, selbst wenn die aktuelle Website-URL bereits korrekt gesetzt ist.</div>
                                     </div>
                                     <label class="form-check form-switch">
@@ -263,8 +263,8 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="form-label required">Admin-E-Mail</label>
-                                    <input type="email" name="admin_email" class="form-control" value="<?php echo htmlspecialchars($s['admin_email']); ?>" required>
+                                    <label for="fld-admin_email" class="form-label required">Admin-E-Mail</label>
+                                    <input id="fld-admin_email" type="email" name="admin_email" class="form-control" value="<?php echo htmlspecialchars($s['admin_email']); ?>" required>
                                 </div>
                             </div>
                         </div>
@@ -275,16 +275,16 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             <div class="card-header"><h3 class="card-title">Lokalisierung</h3></div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label">Sprache</label>
-                                    <select name="language" class="form-select">
+                                    <label for="fld-language" class="form-label">Sprache</label>
+                                    <select id="fld-language" name="language" class="form-select">
                                         <?php foreach ($languages as $code => $label): ?>
                                             <option value="<?php echo $code; ?>" <?php echo $s['language'] === $code ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Zeitzone</label>
-                                    <select name="timezone" class="form-select">
+                                    <label for="fld-timezone" class="form-label">Zeitzone</label>
+                                    <select id="fld-timezone" name="timezone" class="form-select">
                                         <?php foreach ($timezones as $tz): ?>
                                             <option value="<?php echo $tz; ?>" <?php echo $s['timezone'] === $tz ? 'selected' : ''; ?>><?php echo htmlspecialchars($tz); ?></option>
                                         <?php endforeach; ?>
@@ -292,16 +292,16 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-sm-6">
-                                        <label class="form-label">Datumsformat</label>
-                                        <select name="date_format" class="form-select">
+                                        <label for="fld-date_format" class="form-label">Datumsformat</label>
+                                        <select id="fld-date_format" name="date_format" class="form-select">
                                             <?php foreach (['d.m.Y' => '31.12.2025', 'Y-m-d' => '2025-12-31', 'm/d/Y' => '12/31/2025', 'd/m/Y' => '31/12/2025'] as $fmt => $example): ?>
                                                 <option value="<?php echo $fmt; ?>" <?php echo $s['date_format'] === $fmt ? 'selected' : ''; ?>><?php echo $example; ?> (<?php echo $fmt; ?>)</option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="form-label">Zeitformat</label>
-                                        <select name="time_format" class="form-select">
+                                        <label for="fld-time_format" class="form-label">Zeitformat</label>
+                                        <select id="fld-time_format" name="time_format" class="form-select">
                                             <?php foreach (['H:i' => '14:30', 'H:i:s' => '14:30:00', 'g:i A' => '2:30 PM'] as $fmt => $example): ?>
                                                 <option value="<?php echo $fmt; ?>" <?php echo $s['time_format'] === $fmt ? 'selected' : ''; ?>><?php echo $example; ?> (<?php echo $fmt; ?>)</option>
                                             <?php endforeach; ?>
@@ -358,8 +358,8 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             <div class="card-header"><h3 class="card-title">Inhalte</h3></div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label">Beiträge pro Seite</label>
-                                    <input type="number" name="posts_per_page" class="form-control" value="<?php echo (int)$s['posts_per_page']; ?>" min="1" max="100">
+                                    <label for="fld-posts_per_page" class="form-label">Beiträge pro Seite</label>
+                                    <input id="fld-posts_per_page" type="number" name="posts_per_page" class="form-control" value="<?php echo (int)$s['posts_per_page']; ?>" min="1" max="100">
                                 </div>
                                 <div class="mb-3">
                                     <div class="cms-admin-info-box mb-0" role="note">
@@ -442,8 +442,8 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                     <small class="form-hint">Besucher sehen eine Wartungsseite. Administratoren haben weiterhin Zugriff.</small>
                                 </div>
                                 <div>
-                                    <label class="form-label">Wartungsnachricht</label>
-                                    <textarea name="maintenance_message" class="form-control" rows="3"><?php echo htmlspecialchars($s['maintenance_message']); ?></textarea>
+                                    <label for="fld-maintenance_message" class="form-label">Wartungsnachricht</label>
+                                    <textarea id="fld-maintenance_message" name="maintenance_message" class="form-control" rows="3"><?php echo htmlspecialchars($s['maintenance_message']); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -451,12 +451,12 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             <div class="card-header"><h3 class="card-title">Erweitert</h3></div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label">Google Analytics / Tag Manager ID</label>
-                                    <input type="text" name="google_analytics" class="form-control" value="<?php echo htmlspecialchars($s['google_analytics']); ?>" placeholder="G-XXXXXXXXXX oder UA-XXXXXX-X">
+                                    <label for="fld-google_analytics" class="form-label">Google Analytics / Tag Manager ID</label>
+                                    <input id="fld-google_analytics" type="text" name="google_analytics" class="form-control" value="<?php echo htmlspecialchars($s['google_analytics']); ?>" placeholder="G-XXXXXXXXXX oder UA-XXXXXX-X">
                                 </div>
                                 <div>
-                                    <label class="form-label">robots.txt</label>
-                                    <textarea name="robots_txt" class="form-control" rows="5" style="font-family: monospace; font-size: 13px;" placeholder="User-agent: *&#10;Allow: /"><?php echo htmlspecialchars($s['robots_txt']); ?></textarea>
+                                    <label for="fld-robots_txt" class="form-label">robots.txt</label>
+                                    <textarea id="fld-robots_txt" name="robots_txt" class="form-control" rows="5" style="font-family: monospace; font-size: 13px;" placeholder="User-agent: *&#10;Allow: /"><?php echo htmlspecialchars($s['robots_txt']); ?></textarea>
                                 </div>
                             </div>
                         </div>

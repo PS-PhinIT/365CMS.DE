@@ -209,6 +209,27 @@ class Database implements DatabaseInterface
             && class_exists(Services\OptionStore::class, false)) {
             Services\OptionStore::getInstance()->flush();
         }
+
+        // RSS-Feed-Cache (Routing\ThemeRouter::serveRssFeed) bei Änderungen an Beiträgen/Kategorien verwerfen;
+        // der Aufrufzähler (`views = views + 1`) zählt nicht als Inhaltsänderung.
+        if (preg_match('/`?' . preg_quote($this->prefix, '/') . '(?:posts|post_categories)`?(?![a-z0-9_])/i', $sql) === 1
+            && preg_match('/^\s*UPDATE\s+\S+\s+SET\s+views\s*=\s*views\s*\+\s*1\s+WHERE/i', $sql) !== 1) {
+            self::invalidateFeedCache();
+        }
+    }
+
+    /**
+     * Löscht die zwischengespeicherten RSS-Feeds (cache/feed/*.xml).
+     */
+    public static function invalidateFeedCache(): void
+    {
+        if (!defined('ABSPATH')) {
+            return;
+        }
+
+        foreach (glob(rtrim((string) ABSPATH, '/\\') . '/cache/feed/*.xml') ?: [] as $file) {
+            @unlink($file);
+        }
     }
 
     /**

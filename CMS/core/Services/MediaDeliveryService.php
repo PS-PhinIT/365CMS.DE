@@ -281,6 +281,13 @@ final class MediaDeliveryService
             session_write_close();
         }
 
+        // Lazy Session (index.php) puffert die Ausgabe – Dateien nicht im Speicher sammeln.
+        if (defined('CMS_SESSION_DEFERRED')) {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+        }
+
         $this->streamFile($absolutePath, $rangeStart, $rangeEnd);
         exit;
     }

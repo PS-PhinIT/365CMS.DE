@@ -92,8 +92,8 @@ $isSelectedPlan = static fn (int $planId): string => $defaultPlanId === $planId 
                         <div class="card-header"><h3 class="card-title">Standard-Zuweisung</h3></div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label">Standardpaket für neue Mitglieder</label>
-                                <select name="subscription_default_plan_id" class="form-select">
+                                <label for="fld-subscription_default_plan_id" class="form-label">Standardpaket für neue Mitglieder</label>
+                                <select id="fld-subscription_default_plan_id" name="subscription_default_plan_id" class="form-select">
                                     <option value="0">– Keine automatische Zuweisung –</option>
                                     <?php foreach ($plans as $plan): ?>
                                         <option value="<?= (int)$plan['id'] ?>" <?= $isSelectedPlan((int) $plan['id']) ?>>
@@ -116,8 +116,8 @@ $isSelectedPlan = static fn (int $planId): string => $defaultPlanId === $planId 
                     <div class="card">
                         <div class="card-header"><h3 class="card-title">Hinweis bei Deaktivierung</h3></div>
                         <div class="card-body">
-                            <label class="form-label">Text für Admin-/Member-Hinweis</label>
-                            <textarea name="subscription_disabled_notice" class="form-control" rows="5"><?= htmlspecialchars($disabledNotice) ?></textarea>
+                            <label for="fld-subscription_disabled_notice" class="form-label">Text für Admin-/Member-Hinweis</label>
+                            <textarea id="fld-subscription_disabled_notice" name="subscription_disabled_notice" class="form-control" rows="5"><?= htmlspecialchars($disabledNotice) ?></textarea>
                             <div class="form-hint mt-2">Dieser Text kann für interne Hinweise oder spätere Frontend-Ausgaben verwendet werden, wenn die Aboverwaltung vollständig deaktiviert ist.</div>
                         </div>
                     </div>

@@ -32,6 +32,7 @@ final class ThemeRouter
 {
     private const SEARCH_RATE_LIMIT = 30;
     private const SEARCH_RATE_WINDOW = 60;
+    private const FEED_CACHE_TTL = 300;
 
     /**
      * Rückwärtskompatible Aliase für den Such-Scope (`?type=`).
@@ -354,7 +355,7 @@ final class ThemeRouter
             $results = array_merge($results, $this->collectPluginSearchResults($query, $type, $contentLocale));
         }
 
-        $results = $siteSearch->rank($results, $parsed['terms'], $sort);
+        $results = $siteSearch->hydrate($siteSearch->rank($results, $parsed['terms'], $sort));
 
         ThemeManager::instance()->render('search', [
             'results' => $results,
@@ -1252,6 +1253,26 @@ final class ThemeRouter
         $feedUrl = SITE_URL . '/feed';
         $language = $locale === 'en' ? 'en' : 'de';
 
+        if (!headers_sent()) {
+            header('Content-Type: application/rss+xml; charset=utf-8');
+            header('X-Robots-Tag: noindex, follow', true);
+        }
+
+        // Kurzzeit-Cache (5 Minuten): Feed-Reader und Bots fragen oft im Minutentakt ab. Schreibzugriffe auf
+        // Beiträge/Kategorien löschen den Cache sofort (Database::invalidateFeedCache()).
+        $cacheDir = rtrim((string) ABSPATH, '/\\') . '/cache/feed';
+        $cacheFile = $cacheDir . '/rss-' . (preg_replace('/[^a-z_-]/', '', strtolower((string) $locale)) ?: $language) . '-' . substr(hash('sha256', (string) SITE_URL), 0, 16) . '.xml';
+        $cachedMtime = @filemtime($cacheFile);
+        if ($cachedMtime !== false && $cachedMtime > time() - self::FEED_CACHE_TTL) {
+            $cached = @file_get_contents($cacheFile);
+            if (is_string($cached) && $cached !== '') {
+                echo $cached;
+                exit;
+            }
+        }
+
+        ob_start();
+
         $posts = $db->get_results(
             "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name, c.name AS category_name
              FROM {$prefix}posts p
@@ -1261,11 +1282,6 @@ final class ThemeRouter
              ORDER BY COALESCE(p.published_at, p.created_at) DESC
              LIMIT 25"
         ) ?: [];
-
-        if (!headers_sent()) {
-            header('Content-Type: application/rss+xml; charset=utf-8');
-            header('X-Robots-Tag: noindex, follow', true);
-        }
 
         echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
         echo "<rss version=\"2.0\">\n";
@@ -1310,6 +1326,16 @@ final class ThemeRouter
 
         echo "</channel>\n";
         echo "</rss>";
+
+        $xml = (string) ob_get_clean();
+        if ((is_dir($cacheDir) || @mkdir($cacheDir, 0755, true)) && is_writable($cacheDir)) {
+            $tmp = $cacheFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
+            if (@file_put_contents($tmp, $xml, LOCK_EX) !== false && !@rename($tmp, $cacheFile)) {
+                @unlink($tmp);
+            }
+        }
+
+        echo $xml;
         exit;
     }
 

@@ -335,6 +335,11 @@ class Security
      */
     private function startSession(): void
     {
+        // Lazy Session (index.php): anonyme GET-Anfragen starten die Session erst bei Bedarf.
+        if (self::isSessionDeferred()) {
+            return;
+        }
+
         if (session_status() === PHP_SESSION_NONE) {
             // Start session with secure settings
             ini_set('session.cookie_httponly', '1');
@@ -352,6 +357,15 @@ class Security
         }
     }
     
+    /**
+     * true, solange eine anonyme Anfrage ohne Session läuft (index.php startet sie bei Schreibzugriffen
+     * auf $_SESSION am Request-Ende nach).
+     */
+    public static function isSessionDeferred(): bool
+    {
+        return defined('CMS_SESSION_DEFERRED') && session_status() === PHP_SESSION_NONE;
+    }
+
     /**
      * Generate CSRF token field (WP style compatibility)
      */

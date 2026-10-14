@@ -194,7 +194,67 @@ if ($legacySessionCookieDomain !== '' && $isAuthEntryPath()) {
     setcookie(session_name(), '', $expiredCookieOptions);
     setcookie('cms_device', '', $expiredCookieOptions);
 }
-session_start();
+
+// Lazy Sessions: Anonyme GET/HEAD-Anfragen ohne Session-Cookie starten keine Session. So entstehen
+// weder Session-Datei noch Set-Cookie, und CDN/Reverse Proxy dürfen öffentliche Seiten cachen.
+// Schreibt der Request doch in $_SESSION (CSRF-Token für ein Formular, Flash-Meldung …), wird die
+// Session beim Request-Ende nachgestartet; die Ausgabe wird dafür gepuffert, damit Set-Cookie und
+// Cache-Control: private noch gesendet werden können. Abschalten: CMS_LAZY_SESSIONS = false.
+$requiresImmediateSession = static function (): bool {
+    if (defined('CMS_LAZY_SESSIONS') && CMS_LAZY_SESSIONS === false) {
+        return true;
+    }
+
+    if (PHP_SAPI === 'cli' || !in_array(strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')), ['GET', 'HEAD'], true)) {
+        return true;
+    }
+
+    if (isset($_COOKIE[session_name()]) || isset($_COOKIE['cms_device'])) {
+        return true;
+    }
+
+    $path = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?? '/');
+    $path = '/' . trim($path, '/');
+    $path = preg_replace('#^/[a-z]{2}(?:-[a-z]{2})?(?=/|$)#i', '', $path) ?: '/';
+
+    return preg_match(
+        '#^/(?:admin|member|api|install|orders\.php|order|checkout|cms-login|login|cms-register|register|cms-password-forgot|forgot-password|logout|mfa-[a-z-]+)(?:/|$)#i',
+        $path
+    ) === 1;
+};
+
+if ($requiresImmediateSession()) {
+    session_start();
+} else {
+    define('CMS_SESSION_DEFERRED', true);
+    $_SESSION = [];
+    ob_start();
+    register_shutdown_function(static function (): void {
+        if (session_status() !== PHP_SESSION_NONE || empty($_SESSION) || headers_sent()) {
+            return;
+        }
+
+        $pending = $_SESSION;
+        if (!@session_start()) {
+            return;
+        }
+
+        $_SESSION = array_replace($_SESSION, $pending);
+        $_SESSION['initialized'] = true;
+
+        // Die Antwort enthält jetzt ein Session-Cookie → darf nicht mehr öffentlich gecacht werden.
+        header_remove('ETag');
+        header_remove('Last-Modified');
+        if (class_exists('CMS\\CacheManager', false)) {
+            CMS\CacheManager::instance()->sendResponseHeaders('private');
+        } else {
+            header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
+        session_write_close();
+    });
+}
 
 // Load configuration
 require_once __DIR__ . '/config.php';

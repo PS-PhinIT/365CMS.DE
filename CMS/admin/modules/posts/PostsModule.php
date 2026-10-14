@@ -326,7 +326,8 @@ class PostsModule
                     continue;
                 }
 
-                $rootId = $this->getCategoryIdBySlug($rootSlug);
+                $rootRow = $this->getDefaultCategoryRow($rootSlug);
+                $rootId = (int) ($rootRow['id'] ?? 0);
 
                 if ($rootId <= 0) {
                     $this->db->execute(
@@ -334,7 +335,8 @@ class PostsModule
                         [$rootName, $rootSlug, $rootSortOrder]
                     );
                     $rootId = (int) $this->db->lastInsertId();
-                } else {
+                } elseif (!$this->defaultCategoryMatches($rootRow, $rootName, null, $rootSortOrder)) {
+                    // Nur bei Abweichung schreiben: sonst löst jeder Aufruf der Beitragsliste Schreibzugriffe aus.
                     $this->db->execute(
                         "UPDATE {$this->prefix}post_categories SET name = ?, parent_id = NULL, sort_order = ? WHERE id = ?",
                         [$rootName, $rootSortOrder, $rootId]
@@ -343,14 +345,15 @@ class PostsModule
 
                 $sortOrder = $rootSortOrder + 10;
                 foreach ((array) ($tree['children'] ?? []) as $slug => $name) {
-                    $categoryId = $this->getCategoryIdBySlug((string) $slug);
+                    $categoryRow = $this->getDefaultCategoryRow((string) $slug);
+                    $categoryId = (int) ($categoryRow['id'] ?? 0);
 
                     if ($categoryId <= 0) {
                         $this->db->execute(
                             "INSERT INTO {$this->prefix}post_categories (name, slug, parent_id, sort_order) VALUES (?, ?, ?, ?)",
                             [(string) $name, (string) $slug, $rootId, $sortOrder]
                         );
-                    } else {
+                    } elseif (!$this->defaultCategoryMatches($categoryRow, (string) $name, $rootId, $sortOrder)) {
                         $this->db->execute(
                             "UPDATE {$this->prefix}post_categories SET name = ?, parent_id = ?, sort_order = ? WHERE id = ?",
                             [(string) $name, $rootId, $sortOrder, $categoryId]
@@ -367,12 +370,38 @@ class PostsModule
         }
     }
 
-    private function getCategoryIdBySlug(string $slug): int
+    /**
+     * @return array{id:int,name:string,parent_id:?int,sort_order:int}|null
+     */
+    private function getDefaultCategoryRow(string $slug): ?array
     {
-        return (int) ($this->db->get_var(
-            "SELECT id FROM {$this->prefix}post_categories WHERE slug = ? LIMIT 1",
+        $row = $this->db->get_row(
+            "SELECT id, name, parent_id, sort_order FROM {$this->prefix}post_categories WHERE slug = ? LIMIT 1",
             [$slug]
-        ) ?: 0);
+        );
+        if ($row === null) {
+            return null;
+        }
+
+        $row = (array) $row;
+
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'name' => (string) ($row['name'] ?? ''),
+            'parent_id' => isset($row['parent_id']) ? (int) $row['parent_id'] : null,
+            'sort_order' => (int) ($row['sort_order'] ?? 0),
+        ];
+    }
+
+    /**
+     * @param array{id:int,name:string,parent_id:?int,sort_order:int}|null $row
+     */
+    private function defaultCategoryMatches(?array $row, string $name, ?int $parentId, int $sortOrder): bool
+    {
+        return $row !== null
+            && $row['name'] === $name
+            && $row['parent_id'] === $parentId
+            && $row['sort_order'] === $sortOrder;
     }
 
     private function categoryExists(int $categoryId): bool

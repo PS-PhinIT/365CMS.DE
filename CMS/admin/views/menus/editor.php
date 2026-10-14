@@ -266,11 +266,11 @@ $menuEditorBaseUrl = '/admin/menu-editor';
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Name</label>
+                    <label for="editMenuName" class="form-label">Name</label>
                     <input type="text" name="menu_name" id="editMenuName" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Position</label>
+                    <label for="editMenuLocation" class="form-label">Position</label>
                     <select name="menu_location" id="editMenuLocation" class="form-select">
                         <option value="">– Keine –</option>
                         <?php foreach ($locations as $key => $label): ?>

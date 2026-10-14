@@ -321,17 +321,6 @@
         });
     });
 
-    // ── Alert Auto-Dismiss ─────────────────────────────────────────────────
-
-    $$('.alert[data-autohide]').forEach((alert) => {
-        const delay = parseInt(alert.dataset.autohide || '5000', 10);
-        setTimeout(() => {
-            alert.style.transition = 'opacity .4s';
-            alert.style.opacity    = '0';
-            setTimeout(() => alert.remove(), 400);
-        }, delay);
-    });
-
     // ── Reading Progress (optional) ────────────────────────────────────────
 
     const progressBar = $('#readingProgress');

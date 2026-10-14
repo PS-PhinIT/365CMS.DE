@@ -859,19 +859,6 @@ class MediaService {
         $this->repository->saveMeta($meta);
     }
 
-    private function purgeMetaForPath(string $relativePath): void {
-        $meta = $this->loadMeta();
-        $relativePath = trim(str_replace('\\', '/', $relativePath), '/');
-
-        foreach (array_keys($meta['files']) as $path) {
-            if ($path === $relativePath || str_starts_with($path, $relativePath . '/')) {
-                unset($meta['files'][$path]);
-            }
-        }
-
-        $this->saveMeta($meta);
-    }
-
     private function renameMetaPath(string $oldRelativePath, string $newRelativePath): void {
         $meta = $this->loadMeta();
         $oldRelativePath = trim(str_replace('\\', '/', $oldRelativePath), '/');

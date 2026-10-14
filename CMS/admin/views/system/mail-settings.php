@@ -207,55 +207,55 @@ $queueLastRunText = !empty($queueLastRun['executed_at'])
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Versandmodus</label>
-                                <select name="driver" class="form-select">
+                                <label for="fld-driver" class="form-label">Versandmodus</label>
+                                <select id="fld-driver" name="driver" class="form-select">
                                     <option value="mail" <?php echo $isSelected((string) ($transport['driver'] ?? 'mail'), 'mail'); ?>>PHP mail() Fallback</option>
                                     <option value="smtp" <?php echo $isSelected((string) ($transport['driver'] ?? 'mail'), 'smtp'); ?>>SMTP via Symfony Mailer</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Authentifizierung</label>
-                                <select name="auth_mode" class="form-select">
+                                <label for="fld-auth_mode" class="form-label">Authentifizierung</label>
+                                <select id="fld-auth_mode" name="auth_mode" class="form-select">
                                     <option value="credentials" <?php echo $isSelected((string) ($transport['auth_mode'] ?? 'credentials'), 'credentials'); ?>>Benutzername + Passwort</option>
                                     <option value="oauth2" <?php echo $isSelected((string) ($transport['auth_mode'] ?? 'credentials'), 'oauth2'); ?>>Azure OAuth2 / XOAUTH2</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Test-E-Mail an</label>
-                                <input type="email" name="test_recipient" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['test_recipient'] ?? '')); ?>" placeholder="admin@example.com">
+                                <label for="fld-test_recipient" class="form-label">Test-E-Mail an</label>
+                                <input id="fld-test_recipient" type="email" name="test_recipient" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['test_recipient'] ?? '')); ?>" placeholder="admin@example.com">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">SMTP-Host</label>
-                                <input type="text" name="smtp_host" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['smtp_host'] ?? '')); ?>" placeholder="smtp.office365.com">
+                                <label for="fld-smtp_host" class="form-label">SMTP-Host</label>
+                                <input id="fld-smtp_host" type="text" name="smtp_host" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['smtp_host'] ?? '')); ?>" placeholder="smtp.office365.com">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Port</label>
-                                <input type="number" name="smtp_port" min="1" max="65535" class="form-control" value="<?php echo (int) ($transport['smtp_port'] ?? 587); ?>">
+                                <label for="fld-smtp_port" class="form-label">Port</label>
+                                <input id="fld-smtp_port" type="number" name="smtp_port" min="1" max="65535" class="form-control" value="<?php echo (int) ($transport['smtp_port'] ?? 587); ?>">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Verschlüsselung</label>
-                                <select name="smtp_encryption" class="form-select">
+                                <label for="fld-smtp_encryption" class="form-label">Verschlüsselung</label>
+                                <select id="fld-smtp_encryption" name="smtp_encryption" class="form-select">
                                     <option value="tls" <?php echo $isSelected((string) ($transport['smtp_encryption'] ?? 'tls'), 'tls'); ?>>TLS / STARTTLS</option>
                                     <option value="ssl" <?php echo $isSelected((string) ($transport['smtp_encryption'] ?? ''), 'ssl'); ?>>SSL</option>
                                     <option value="" <?php echo $isSelected((string) ($transport['smtp_encryption'] ?? ''), ''); ?>>Keine</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">SMTP-Benutzername</label>
-                                <input type="text" name="smtp_username" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['smtp_username'] ?? '')); ?>" placeholder="mailbox@tenant.tld">
+                                <label for="fld-smtp_username" class="form-label">SMTP-Benutzername</label>
+                                <input id="fld-smtp_username" type="text" name="smtp_username" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['smtp_username'] ?? '')); ?>" placeholder="mailbox@tenant.tld">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">SMTP-Passwort</label>
-                                <input type="password" name="smtp_password" class="form-control" value="" placeholder="Leer lassen = vorhandenes Secret behalten">
+                                <label for="fld-smtp_password" class="form-label">SMTP-Passwort</label>
+                                <input id="fld-smtp_password" type="password" name="smtp_password" class="form-control" value="" placeholder="Leer lassen = vorhandenes Secret behalten">
                                 <?php $renderSecretStatusField(!empty($transport['secret_configured']), 'clear_smtp_password', 'Gespeichertes Passwort löschen'); ?>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Absender-E-Mail</label>
-                                <input type="email" name="from_email" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['from_email'] ?? '')); ?>">
+                                <label for="fld-from_email" class="form-label">Absender-E-Mail</label>
+                                <input id="fld-from_email" type="email" name="from_email" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['from_email'] ?? '')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Absender-Name</label>
-                                <input type="text" name="from_name" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['from_name'] ?? '')); ?>">
+                                <label for="fld-from_name" class="form-label">Absender-Name</label>
+                                <input id="fld-from_name" type="text" name="from_name" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['from_name'] ?? '')); ?>">
                             </div>
                         </div>
                     </div>
@@ -300,29 +300,29 @@ $queueLastRunText = !empty($queueLastRun['executed_at'])
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Tenant-ID</label>
-                                <input type="text" name="azure_tenant_id" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['tenant_id'] ?? '')); ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                                <label for="fld-azure_tenant_id" class="form-label">Tenant-ID</label>
+                                <input id="fld-azure_tenant_id" type="text" name="azure_tenant_id" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['tenant_id'] ?? '')); ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Client-ID</label>
-                                <input type="text" name="azure_client_id" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['client_id'] ?? '')); ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                                <label for="fld-azure_client_id" class="form-label">Client-ID</label>
+                                <input id="fld-azure_client_id" type="text" name="azure_client_id" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['client_id'] ?? '')); ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Client-Secret</label>
-                                <input type="password" name="azure_client_secret" class="form-control" value="" placeholder="Leer lassen = vorhandenes Secret behalten">
+                                <label for="fld-azure_client_secret" class="form-label">Client-Secret</label>
+                                <input id="fld-azure_client_secret" type="password" name="azure_client_secret" class="form-control" value="" placeholder="Leer lassen = vorhandenes Secret behalten">
                                 <?php $renderSecretStatusField(!empty($azure['client_secret_configured']), 'clear_azure_client_secret', 'Gespeichertes Client-Secret löschen'); ?>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Mailbox / SMTP-User</label>
-                                <input type="email" name="azure_mailbox" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['mailbox'] ?? '')); ?>" placeholder="noreply@example.com">
+                                <label for="fld-azure_mailbox" class="form-label">Mailbox / SMTP-User</label>
+                                <input id="fld-azure_mailbox" type="email" name="azure_mailbox" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['mailbox'] ?? '')); ?>" placeholder="noreply@example.com">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Scope</label>
-                                <input type="text" name="azure_scope" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['scope'] ?? 'https://outlook.office365.com/.default')); ?>">
+                                <label for="fld-azure_scope" class="form-label">Scope</label>
+                                <input id="fld-azure_scope" type="text" name="azure_scope" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['scope'] ?? 'https://outlook.office365.com/.default')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Token-Endpoint (optional)</label>
-                                <input type="url" name="azure_token_endpoint" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['token_endpoint'] ?? '')); ?>" placeholder="https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token">
+                                <label for="fld-azure_token_endpoint" class="form-label">Token-Endpoint (optional)</label>
+                                <input id="fld-azure_token_endpoint" type="url" name="azure_token_endpoint" class="form-control" value="<?php echo htmlspecialchars((string) ($azure['token_endpoint'] ?? '')); ?>" placeholder="https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token">
                             </div>
                         </div>
                     </div>
@@ -358,29 +358,29 @@ $queueLastRunText = !empty($queueLastRun['executed_at'])
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Tenant-ID</label>
-                                <input type="text" name="graph_tenant_id" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['tenant_id'] ?? '')); ?>">
+                                <label for="fld-graph_tenant_id" class="form-label">Tenant-ID</label>
+                                <input id="fld-graph_tenant_id" type="text" name="graph_tenant_id" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['tenant_id'] ?? '')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Client-ID</label>
-                                <input type="text" name="graph_client_id" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['client_id'] ?? '')); ?>">
+                                <label for="fld-graph_client_id" class="form-label">Client-ID</label>
+                                <input id="fld-graph_client_id" type="text" name="graph_client_id" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['client_id'] ?? '')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Client-Secret</label>
-                                <input type="password" name="graph_client_secret" class="form-control" value="" placeholder="Leer lassen = vorhandenes Secret behalten">
+                                <label for="fld-graph_client_secret" class="form-label">Client-Secret</label>
+                                <input id="fld-graph_client_secret" type="password" name="graph_client_secret" class="form-control" value="" placeholder="Leer lassen = vorhandenes Secret behalten">
                                 <?php $renderSecretStatusField(!empty($graph['client_secret_configured']), 'clear_graph_client_secret', 'Gespeichertes Client-Secret löschen'); ?>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Scope</label>
-                                <input type="text" name="graph_scope" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['scope'] ?? 'https://graph.microsoft.com/.default')); ?>">
+                                <label for="fld-graph_scope" class="form-label">Scope</label>
+                                <input id="fld-graph_scope" type="text" name="graph_scope" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['scope'] ?? 'https://graph.microsoft.com/.default')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Graph Base URL</label>
-                                <input type="url" name="graph_base_url" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['base_url'] ?? 'https://graph.microsoft.com/v1.0')); ?>">
+                                <label for="fld-graph_base_url" class="form-label">Graph Base URL</label>
+                                <input id="fld-graph_base_url" type="url" name="graph_base_url" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['base_url'] ?? 'https://graph.microsoft.com/v1.0')); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Token-Endpoint (optional)</label>
-                                <input type="url" name="graph_token_endpoint" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['token_endpoint'] ?? '')); ?>">
+                                <label for="fld-graph_token_endpoint" class="form-label">Token-Endpoint (optional)</label>
+                                <input id="fld-graph_token_endpoint" type="url" name="graph_token_endpoint" class="form-control" value="<?php echo htmlspecialchars((string) ($graph['token_endpoint'] ?? '')); ?>">
                             </div>
                         </div>
                     </div>
@@ -469,31 +469,31 @@ $queueLastRunText = !empty($queueLastRun['executed_at'])
                                 </label>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Batch-Größe pro Lauf</label>
-                                <input type="number" class="form-control" name="queue_batch_size" min="1" max="100" value="<?php echo (int) ($queueConfig['batch_size'] ?? 10); ?>">
+                                <label for="fld-queue_batch_size" class="form-label">Batch-Größe pro Lauf</label>
+                                <input id="fld-queue_batch_size" type="number" class="form-control" name="queue_batch_size" min="1" max="100" value="<?php echo (int) ($queueConfig['batch_size'] ?? 10); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Versandlimit pro Minute</label>
-                                <input type="number" class="form-control" name="queue_rate_limit_per_minute" min="1" max="600" value="<?php echo (int) ($queueConfig['rate_limit_per_minute'] ?? 8); ?>">
+                                <label for="fld-queue_rate_limit_per_minute" class="form-label">Versandlimit pro Minute</label>
+                                <input id="fld-queue_rate_limit_per_minute" type="number" class="form-control" name="queue_rate_limit_per_minute" min="1" max="600" value="<?php echo (int) ($queueConfig['rate_limit_per_minute'] ?? 8); ?>">
                                 <div class="form-hint">Standard 8/min schützt vor SMTP-Antworten wie „Sender rate overlimit“.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Maximale Versuche pro Job</label>
-                                <input type="number" class="form-control" name="queue_max_attempts" min="1" max="20" value="<?php echo (int) ($queueConfig['max_attempts'] ?? 5); ?>">
+                                <label for="fld-queue_max_attempts" class="form-label">Maximale Versuche pro Job</label>
+                                <input id="fld-queue_max_attempts" type="number" class="form-control" name="queue_max_attempts" min="1" max="20" value="<?php echo (int) ($queueConfig['max_attempts'] ?? 5); ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Retry-Delay (Sekunden)</label>
-                                <input type="number" class="form-control" name="queue_retry_delay_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['retry_delay_seconds'] ?? 300); ?>">
+                                <label for="fld-queue_retry_delay_seconds" class="form-label">Retry-Delay (Sekunden)</label>
+                                <input id="fld-queue_retry_delay_seconds" type="number" class="form-control" name="queue_retry_delay_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['retry_delay_seconds'] ?? 300); ?>">
                                 <div class="form-hint">Für Netzwerk- und OAuth2-Transientfehler.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Throttle-Delay (Sekunden)</label>
-                                <input type="number" class="form-control" name="queue_throttle_delay_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['throttle_delay_seconds'] ?? 900); ?>">
+                                <label for="fld-queue_throttle_delay_seconds" class="form-label">Throttle-Delay (Sekunden)</label>
+                                <input id="fld-queue_throttle_delay_seconds" type="number" class="form-control" name="queue_throttle_delay_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['throttle_delay_seconds'] ?? 900); ?>">
                                 <div class="form-hint">Für 429/4.7.x/Rate-Limit-Situationen.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Lock-Timeout (Sekunden)</label>
-                                <input type="number" class="form-control" name="queue_lock_timeout_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['lock_timeout_seconds'] ?? 900); ?>">
+                                <label for="fld-queue_lock_timeout_seconds" class="form-label">Lock-Timeout (Sekunden)</label>
+                                <input id="fld-queue_lock_timeout_seconds" type="number" class="form-control" name="queue_lock_timeout_seconds" min="60" max="86400" value="<?php echo (int) ($queueConfig['lock_timeout_seconds'] ?? 900); ?>">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Cron-Token</label>
@@ -525,12 +525,12 @@ $queueLastRunText = !empty($queueLastRun['executed_at'])
                         <form method="post" class="row g-3 align-items-end">
                             <?php $renderFormContext('queue'); ?>
                             <div class="col-md-6">
-                                <label class="form-label">Queue-Testempfänger</label>
-                                <input type="email" name="queue_test_recipient" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['test_recipient'] ?? '')); ?>" placeholder="admin@example.com">
+                                <label for="fld-queue_test_recipient" class="form-label">Queue-Testempfänger</label>
+                                <input id="fld-queue_test_recipient" type="email" name="queue_test_recipient" class="form-control" value="<?php echo htmlspecialchars((string) ($transport['test_recipient'] ?? '')); ?>" placeholder="admin@example.com">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Run-Limit</label>
-                                <input type="number" name="queue_run_limit" class="form-control" min="1" max="100" value="<?php echo (int) ($queueConfig['batch_size'] ?? 10); ?>">
+                                <label for="fld-queue_run_limit" class="form-label">Run-Limit</label>
+                                <input id="fld-queue_run_limit" type="number" name="queue_run_limit" class="form-control" min="1" max="100" value="<?php echo (int) ($queueConfig['batch_size'] ?? 10); ?>">
                             </div>
                             <div class="col-md-3 d-grid">
                                 <?php $renderActionButton('run_queue_now', 'Worker jetzt ausführen'); ?>
