@@ -62,14 +62,14 @@ Nach den Änderungen läuft keine DDL-Anweisung mehr im normalen Request (geprü
 - **Sitemaps:** Bundle als Datei, wird nur bei Änderungen neu erzeugt.
 - **Medien:** Auslieferung mit `Last-Modified` und Range-Unterstützung.
 
-### Offene Empfehlungen
+### Zunächst offene Empfehlungen (umgesetzt in 3.5.0)
 
 Siehe [README.md](README.md):
 
-- OFFEN-01: Session für jeden anonymen Besucher – größter verbleibender Hebel für CDN- und Proxy-Caching.
-- OFFEN-02: Suche mit FULLTEXT-Index.
-- OFFEN-03: Feed-Cache.
-- OFFEN-04: statische 404 für Assets.
+- OFFEN-01: Session für jeden anonymen Besucher – größter verbleibender Hebel für CDN- und Proxy-Caching. ✅ umgesetzt in 3.5.0.
+- OFFEN-02: Suche ohne LONGTEXT-Kandidaten. ✅ umgesetzt in 3.5.0 (Projektion statt FULLTEXT, siehe README).
+- OFFEN-03: Feed-Cache. ✅ umgesetzt in 3.5.0.
+- OFFEN-04: statische 404 für Assets. ✅ umgesetzt in 3.5.0.
 
 Für Lastspitzen zusätzlich empfohlen:
 

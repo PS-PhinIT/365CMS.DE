@@ -49,10 +49,10 @@
 - Admin-Routen der Seitenleiste existieren als Einstiegsdateien.
 - Die Behauptung „`cmsConfirm`/`cmsAlert` nie definiert“ aus der automatischen Analyse ist falsch; beide sind in `admin/partials/footer.php` definiert.
 
-### Offene Empfehlungen
+### Zunächst offene Empfehlungen (umgesetzt in 3.5.0)
 
 Siehe [README.md](README.md):
 
-- OFFEN-07: gelesene, aber nicht einstellbare Optionen.
-- OFFEN-08: tote private Methoden.
-- OFFEN-09: Pfade `CMS/DOC/…` im alten Changelog.
+- OFFEN-07: gelesene, aber nicht einstellbare Optionen. ✅ umgesetzt in 3.5.0.
+- OFFEN-08: tote private Methoden. ✅ umgesetzt in 3.5.0.
+- OFFEN-09: Pfade `CMS/DOC/…` im alten Changelog. ✅ umgesetzt in 3.5.0.

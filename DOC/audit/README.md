@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Gesamtaudit 2026-10-14
 
-> **Stand:** 2026-10-14 | **Version:** 3.4.00 (Changelog bis 3.4.25) | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 (Befunde 3.4.25, offene Empfehlungen 3.5.0) | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
 
 ## English (summary)
 
-Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mass requests and bot traffic, missing functions, broken references, GUI defects and operational topics. The checklist was compiled from OWASP Top 10:2025 and current website/CMS audit checklists (see [PRUEFKATALOG.md](PRUEFKATALOG.md)). 54 findings were recorded; 41 were fixed in changelog entry `3.4.25`, 13 are documented as open recommendations. The most important fixes:
+Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mass requests and bot traffic, missing functions, broken references, GUI defects and operational topics. The checklist was compiled from OWASP Top 10:2025 and current website/CMS audit checklists (see [PRUEFKATALOG.md](PRUEFKATALOG.md)). 54 findings were recorded; 41 were fixed in changelog entry `3.4.25`; the 13 open recommendations (OFFEN-01 … OFFEN-13) were implemented in release `3.5.0`, together with proxy/CDN-aware client IP detection for host CDNs with unknown addresses (e.g. Hostinger). The most important fixes:
 
 - The second factor at login could be brute-forced without limit and accepted replayed TOTP codes.
 - Fresh installs lacked the unique key on `user_meta`, so MFA secrets and profile fields were duplicated.
@@ -120,25 +120,25 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 | GUI-05 | GUI | Bestätigungsdialog ohne Dialog-Semantik | 🟡 | ✅ 3.4.25 |
 | GUI-06 | GUI | Such-Rate-Limit ohne sichtbaren Hinweis | ⚪ | ✅ 3.4.25 |
 | GUI-07 | GUI | Formulare verlieren die Beschreibung nach einem Validierungsfehler | ⚪ | ✅ 3.4.25 |
-| OFFEN-01 … OFFEN-13 | diverse | Empfehlungen ohne Codeänderung | – | 📋 offen, siehe unten |
+| OFFEN-01 … OFFEN-13 | diverse | Empfehlungen aus diesem Audit | – | ✅ 3.5.0, siehe unten |
 
-### Offene Empfehlungen
+### Empfehlungen (umgesetzt in 3.5.0)
 
-| ID | Bereich | Empfehlung |
-|---|---|---|
-| OFFEN-01 | Last | Für **jeden** anonymen Besucher wird eine Session gestartet. Das kostet eine Session-Datei und ein `Set-Cookie` je Besucher und verhindert Full-Page-Caching durch CDN oder Reverse Proxy. Sessions erst bei Login, Formular oder Warenkorb starten. |
-| OFFEN-02 | Last | Die Suche lädt bis zu 400 Kandidaten mit `alias.*` (inkl. LONGTEXT) und filtert in PHP. Empfehlung: FULLTEXT-Index und Projektion auf die benötigten Spalten. |
-| OFFEN-03 | Last | Der RSS-Feed wird bei jedem Abruf neu erzeugt. Ergebnis kurz cachen (z. B. 5 Minuten) und beim Speichern verwerfen. |
-| OFFEN-04 | Last | `ErrorDocument 404 /index.php` startet für jede fehlende Datei das CMS. Bei sehr hohem Bot-Aufkommen statische 404 für Assets auf Webserver-Ebene ausliefern. |
-| OFFEN-05 | Sicherheit | Die Firewall-Regel `block_country` liest Länderheader (`CF-IPCountry` u. a.), die ohne vorgeschaltetes CDN frei setzbar sind. Nur hinter Cloudflare o. Ä. aktivieren. |
-| OFFEN-06 | Sicherheit | Bei einer E-Mail-Änderung zusätzlich die **alte** Adresse benachrichtigen. |
-| OFFEN-07 | Funktion | Diese Optionen werden gelesen, lassen sich aber nirgends einstellen: `seo_twitter_site` (`SeoSchemaRenderer`), `seo_custom_header_code` (`SeoSettingsStore`), `cookie_primary_color` (`CookieConsentService`). Feld ergänzen oder Lesezugriff entfernen. |
-| OFFEN-08 | Verweis | Tote private Methoden: `MediaService::purgeMetaForPath()` (die Logik lebt in `MediaRepository`) und `LandingPageService::upgradeLegacyFooterDefaults()` (die Logik lebt in `LandingSectionProfileService`). |
-| OFFEN-09 | Verweis | Ältere Changelog-Einträge nennen Pfade als `CMS/DOC/…`; korrekt ist `DOC/…`. |
-| OFFEN-10 | GUI | Rund 380 `<label>` haben kein `for=`. Ein Teil umschließt das Feld und ist damit gültig. Die übrigen mit axe-core prüfen und verknüpfen. |
-| OFFEN-11 | GUI | Dashboard-Links auf `/admin/posts` sind fest verdrahtet statt über `SITE_URL` gebildet (Problem bei Installation im Unterverzeichnis). |
-| OFFEN-12 | GUI | Für `data-autohide` und `data-copy-input-target` gibt es JS-Handler, aber kein Markup – entfernen oder nutzen. |
-| OFFEN-13 | Datenschutz | `activity_log` und `audit_log` werden bewusst **nicht** automatisch gelöscht (Nachweispflicht). Die Frist im Verarbeitungsverzeichnis festlegen. |
+| ID | Bereich | Empfehlung | Umsetzung 3.5.0 |
+|---|---|---|---|
+| OFFEN-01 | Last | Für **jeden** anonymen Besucher wird eine Session gestartet. Das kostet eine Session-Datei und ein `Set-Cookie` je Besucher und verhindert Full-Page-Caching durch CDN oder Reverse Proxy. Sessions erst bei Login, Formular oder Warenkorb starten. | ✅ Lazy Session: anonyme GET-/HEAD-Seiten ohne Session und `Set-Cookie` (cachebar); Start erst bei Bedarf am Request-Ende, Antwort dann `private`. Abschaltbar mit `CMS_LAZY_SESSIONS = false`. |
+| OFFEN-02 | Last | Die Suche lädt bis zu 400 Kandidaten mit `alias.*` (inkl. LONGTEXT) und filtert in PHP. Empfehlung: FULLTEXT-Index und Projektion auf die benötigten Spalten. | ✅ Projektion auf Such-Spalten, volle Zeilen nur für angezeigte Treffer (`SiteSearchService::hydrate()`). FULLTEXT bewusst **nicht**: findet keine Teilwörter deutscher Komposita („update“ in „Sicherheitsupdate“). |
+| OFFEN-03 | Last | Der RSS-Feed wird bei jedem Abruf neu erzeugt. Ergebnis kurz cachen (z. B. 5 Minuten) und beim Speichern verwerfen. | ✅ Dateicache 5 Min. je Sprache (`cache/feed/`), verworfen bei jeder Schreiboperation auf Beiträge/Kategorien (ohne Aufrufzähler). |
+| OFFEN-04 | Last | `ErrorDocument 404 /index.php` startet für jede fehlende Datei das CMS. Bei sehr hohem Bot-Aufkommen statische 404 für Assets auf Webserver-Ebene ausliefern. | ✅ `.htaccess`: fehlende Dateien mit Asset-Endung unter `assets/`, `themes/`, `plugins/`, `uploads/` → schlanke 404 ohne PHP (mit Apache 2.4.58 getestet); nginx-Regel in `DOC/INSTALLATION.md`. |
+| OFFEN-05 | Sicherheit | Die Firewall-Regel `block_country` liest Länderheader (`CF-IPCountry` u. a.), die ohne vorgeschaltetes CDN frei setzbar sind. Nur hinter Cloudflare o. Ä. aktivieren. | ✅ Länder-Header nur bei Anfragen über einen vertrauenswürdigen Proxy (`TrustedProxyService::countryCode()`). |
+| OFFEN-06 | Sicherheit | Bei einer E-Mail-Änderung zusätzlich die **alte** Adresse benachrichtigen. | ✅ Hinweis-Mail an die bisherige Adresse (neue Adresse maskiert) und Audit-Eintrag `user.email_changed`. |
+| OFFEN-07 | Funktion | Diese Optionen werden gelesen, lassen sich aber nirgends einstellen: `seo_twitter_site` (`SeoSchemaRenderer`), `seo_custom_header_code` (`SeoSettingsStore`), `cookie_primary_color` (`CookieConsentService`). Feld ergänzen oder Lesezugriff entfernen. | ✅ `twitter_site` → Profil aus *SEO → Social* (`twitter:site`, `sameAs`); `seo_custom_header_code` als Altbestand unter *SEO → Technisch* sichtbar und entfernbar (neuer Head-Code im Theme-Customizer); `cookie_primary_color` im Cookie-Manager. |
+| OFFEN-08 | Verweis | Tote private Methoden: `MediaService::purgeMetaForPath()` (die Logik lebt in `MediaRepository`) und `LandingPageService::upgradeLegacyFooterDefaults()` (die Logik lebt in `LandingSectionProfileService`). | ✅ Beide Methoden entfernt. |
+| OFFEN-09 | Verweis | Ältere Changelog-Einträge nennen Pfade als `CMS/DOC/…`; korrekt ist `DOC/…`. | ✅ 68 Pfade korrigiert. |
+| OFFEN-10 | GUI | Rund 380 `<label>` haben kein `for=`. Ein Teil umschließt das Feld und ist damit gültig. Die übrigen mit axe-core prüfen und verknüpfen. | ✅ 250 Labels verknüpft; die übrigen umschließen ihr Feld, sitzen vor Wrappern oder werden dynamisch erzeugt. |
+| OFFEN-11 | GUI | Dashboard-Links auf `/admin/posts` sind fest verdrahtet statt über `SITE_URL` gebildet (Problem bei Installation im Unterverzeichnis). | ✅ `dashboardUrl()` setzt `SITE_URL` vor alle internen Pfade. |
+| OFFEN-12 | GUI | Für `data-autohide` und `data-copy-input-target` gibt es JS-Handler, aber kein Markup – entfernen oder nutzen. | ✅ Beide Handler entfernt. |
+| OFFEN-13 | Datenschutz | `activity_log` und `audit_log` werden bewusst **nicht** automatisch gelöscht (Nachweispflicht). Die Frist im Verarbeitungsverzeichnis festlegen. | ✅ Optionale Frist unter *Sicherheit → Sicherheits-Audit* (Standard aus; 90–3650 Tage; täglicher Cron). |
 
 ### Hinweise für Betreiber
 
@@ -154,9 +154,15 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
   - Tageslogdateien nach 30 Tagen.
 
   Die Fristen lassen sich über den Filter `cms_data_retention_days` anpassen (Wert `0` = nicht löschen; sonst gelten mindestens 7 und höchstens 3650 Tage).
-- **Reverse Proxy:** Die Rate-Limits (Suche, Web-Vitals, MFA, Re-Auth, Nachrichten) zählen je Client-IP. Hinter Proxy oder CDN `CMS_TRUSTED_PROXIES` setzen, sonst teilen sich alle Besucher ein Limit.
+- **Reverse Proxy / CDN (ab 3.5.0):** Die Rate-Limits (Suche, Web-Vitals, MFA, Re-Auth, Nachrichten, Firewall) zählen je Client-IP.
+  - Ohne Einstellung gilt `auto`: private Netze (lokaler Reverse Proxy, Docker, Load Balancer) und Cloudflare werden automatisch erkannt.
+  - **Host-CDN mit unbekannten Adressen (z. B. Hostinger):** Unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* erscheinen erkannte Proxy-Netze mit Anzahl Beobachtungen und verschiedener Clients. Mit **Vertrauen** übernehmen. Das Sicherheits-Audit und die Warnzentrale melden solche Netze. Alternativ `*` setzen, wenn der Server **nur** über das CDN erreichbar ist.
+  - Erscheint dort kein Kandidat und zeigt die Diagnose bereits unterschiedliche Besucher-IPs, schreibt der Webserver (z. B. LiteSpeed) die echte IP schon selbst in `REMOTE_ADDR` – dann ist nichts zu tun.
+  - `CMS_TRUSTED_PROXIES` in `config/app.php` hat Vorrang vor der Admin-Einstellung; Schlüsselwörter und Header-Reihenfolge in [../core/SECURITY.md](../core/SECURITY.md) (Abschnitt 7a).
 - **nginx:** Die `.htaccess`-Regeln greifen hier nicht. Die Sperren für `uploads/member`, `uploads/import` und die Importer-Verzeichnisse stehen in [../INSTALLATION.md](../INSTALLATION.md).
 - **Checkout:** Lifetime-Tarife werden nur noch im Admin vergeben.
+- **Seiten-Cache (ab 3.5.0):** Anonyme Seiten kommen ohne Session-Cookie und mit `Cache-Control: public, max-age=300`. Ein CDN darf sie damit zwischenspeichern; Seiten mit Formularen schalten automatisch auf `private`.
+- **Protokoll-Aufbewahrung (ab 3.5.0):** Aktivitäts- und Audit-Protokoll werden weiterhin nicht automatisch gelöscht, solange unter *Sicherheit → Sicherheits-Audit* keine Frist gesetzt ist. Gewählte Frist ins Verarbeitungsverzeichnis übernehmen.
 
 ### Geänderte Dateien (Auswahl)
 

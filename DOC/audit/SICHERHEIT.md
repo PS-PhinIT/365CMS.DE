@@ -44,7 +44,7 @@ Twelve security findings, all fixed in `3.4.25`:
 - **Sessions:** Regeneration bei Login; nach Passwortwechsel werden andere Sessions beendet (Folgeaudit 2026-10-07).
 - **Uploads:** Doppelendungen und gefährliche Endungen sind seit 3.4.12 gesperrt.
 
-### Nicht geändert (siehe offene Empfehlungen in [README.md](README.md))
+### Zunächst offene Empfehlungen (umgesetzt in 3.5.0, siehe [README.md](README.md))
 
-- OFFEN-05: `block_country` vertraut Länderheadern.
-- OFFEN-06: Benachrichtigung der alten Adresse bei einer E-Mail-Änderung.
+- OFFEN-05: `block_country` vertraut Länderheadern. ✅ umgesetzt in 3.5.0.
+- OFFEN-06: Benachrichtigung der alten Adresse bei einer E-Mail-Änderung. ✅ umgesetzt in 3.5.0.

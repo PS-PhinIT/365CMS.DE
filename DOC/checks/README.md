@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Full code audit of 365CMS on 2026-10-03 covering security, performance, missing or incomplete functionality and broken references (code and documentation). 536 first-party PHP files were linted (no syntax errors) and checked with targeted static sweeps plus manual review of all hits. 36 findings: 19 fixed in changelog entry `3.4.12`, 15 in `3.4.13` (four of them – ineffective DB rate limits on servers whose MySQL time zone differs from PHP, a contact form that could never be submitted, a fresh-install 500 on `/blog`, and a git allowlist bypass – were found by runtime tests against MariaDB); one is partially addressed (PERF-06) and one remains open as a release decision (FUN-12, runtime version). Details per area are in the linked documents below.
+Full code audit of 365CMS on 2026-10-03 covering security, performance, missing or incomplete functionality and broken references (code and documentation). 536 first-party PHP files were linted (no syntax errors) and checked with targeted static sweeps plus manual review of all hits. 36 findings: 19 fixed in changelog entry `3.4.12`, 15 in `3.4.13` (four of them – ineffective DB rate limits on servers whose MySQL time zone differs from PHP, a contact form that could never be submitted, a fresh-install 500 on `/blog`, and a git allowlist bypass – were found by runtime tests against MariaDB); one is partially addressed (PERF-06) and one was left open as a release decision (FUN-12, runtime version; closed in 3.5.0). Details per area are in the linked documents below.
 
 ## Deutsch
 
@@ -92,14 +92,14 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 | FUN-09 | Funktion | Doku-Sync-Klassen nicht an `/admin/documentation` angebunden | 🟡 | ✅ 3.4.13 |
 | FUN-10 | Funktion | `wp_enqueue_style/script`, `wp_dequeue_*` sind leere Stubs | 🟡 | ✅ 3.4.13 |
 | FUN-11 | Funktion | Toter Code: `DesignSettingsModule`, `views/themes/settings.php`, `PageManager::listPages()`, Customizer-Helper | ⚪ | ✅ 3.4.13 (entfernt) |
-| FUN-12 | Funktion | Runtime-Version bleibt `3.4.00`, obwohl Fixes bis 3.4.13 ausgeliefert werden | 🟡 | offen – Release-Entscheidung des Maintainers |
+| FUN-12 | Funktion | Runtime-Version bleibt `3.4.00`, obwohl Fixes bis 3.4.13 ausgeliefert werden | 🟡 | ✅ 3.5.0 (Version, `update.json`, Release-Pakete) |
 | REF-01 | Verweise | Admin-Link `/admin/subscriptions/packages` → 404 | 🟡 | ✅ behoben |
 | REF-02 | Verweise | Marketplace-Manifeste nennen `cms-importer` 1.6.0 / `cms-default` 1.0.3 | 🟡 | ✅ behoben |
 | REF-03 | Verweise | 15 tote Markdown-Links in `Changelog.md` und `DOC/` | ⚪ | ✅ behoben |
 | REF-04 | Verweise | `README.md` nennt Changelog-Stand 3.4.09 | ⚪ | ✅ behoben |
 | REF-05 | Verweise | Customizer-Helper verweist auf nicht existierendes `admin/partials/admin-menu.php` | ⚪ | ✅ 3.4.13 (entfernt) |
 
-**Summe:** 36 Befunde – 19 mit 3.4.12 behoben, 15 mit 3.4.13 behoben (davon 4 erst bei den Laufzeittests gefunden: SEC-10, SEC-11, FUN-13, FUN-14), 1 teilweise (PERF-06), 1 offen (FUN-12, Release-Entscheidung).
+**Summe:** 36 Befunde – 19 mit 3.4.12 behoben, 15 mit 3.4.13 behoben (davon 4 erst bei den Laufzeittests gefunden: SEC-10, SEC-11, FUN-13, FUN-14), 1 teilweise (PERF-06), 1 als Release-Entscheidung offen gelassen (FUN-12, mit 3.5.0 erledigt).
 
 ### Geänderte Dateien
 

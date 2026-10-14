@@ -14,6 +14,26 @@
 
 ---
 
+### v3.5.0 — 14.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.5.0** | ⬜ chore | Release | `Version::CURRENT` = `3.5.0` (bündelt 3.4.01–3.4.25 und die folgenden Punkte), beide `update.json` und Release-Pakete `RELEASE/365CMS-3.5.0-{update,full}.zip` mit SHA-256; Schema `v23`. Schließt FUN-12. |
+| **3.5.0** | 🛡️ security | Proxy / CDN / Client-IP | Neuer `TrustedProxyService`: Ohne Konfiguration gilt `auto` (private Netze + offizielle Cloudflare-Bereiche); `CF-Connecting-IP` nur von Cloudflare-Adressen, sonst `X-Forwarded-For` von rechts (Fallback `Forwarded`, `X-Real-IP`, `True-Client-IP`). Für Host-CDNs mit unbekannten Adressen (z. B. Hostinger) erkennt das CMS Proxy-Netze automatisch (viele verschiedene Clients hinter derselben öffentlichen Adresse) und bietet sie unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* zur Freigabe mit einem Klick an; Sicherheits-Audit warnt. Schlüsselwörter `auto`, `private`, `cloudflare`, `*`, `off`; Konstante `CMS_TRUSTED_PROXIES` hat Vorrang vor der Admin-Einstellung. Länder-Header (`CF-IPCountry` u. a.) werden nur noch von vertrauenswürdigen Proxies gelesen (OFFEN-05). |
+| **3.5.0** | 🟠 perf | Session / Caching | Anonyme GET-/HEAD-Seiten starten keine Session mehr: kein `Set-Cookie`, Antworten bleiben für CDN/Reverse Proxy cachebar. Sobald ein Formular (Kontakt, Kommentar, Login …) die Session braucht, startet sie am Ende des Requests und die Antwort wird `private`. Admin, Mitgliederbereich, API, Checkout und alle POST-Anfragen wie bisher. Abschaltbar mit `define('CMS_LAZY_SESSIONS', false)` (OFFEN-01). |
+| **3.5.0** | 🟠 perf | Suche | Kandidaten werden nur noch mit den Suchspalten geladen; vollständige Zeilen erst für die angezeigten Treffer. Kein FULLTEXT-Index, weil er deutsche Komposita („update“ in „Sicherheitsupdate“) nicht findet (OFFEN-02). |
+| **3.5.0** | 🟠 perf | RSS-Feed | Feed wird 5 Minuten je Sprache in `cache/feed/` vorgehalten und bei jeder Änderung an Beiträgen oder Kategorien verworfen (Aufrufzähler ausgenommen) (OFFEN-03). |
+| **3.5.0** | 🟠 perf | .htaccess | Fehlende statische Dateien unter `assets/`, `themes/`, `plugins/`, `uploads/` werden direkt mit einer schlanken 404 beantwortet statt das CMS zu starten; nginx-Gegenstück in `DOC/INSTALLATION.md` (OFFEN-04). |
+| **3.5.0** | 🔴 fix | Beiträge / Seiten | Beitrags- und Seitenverwaltung schrieben die Standardkategorien bei jedem Aufruf neu (unnötige Schreibzugriffe, Feed-Cache wurde verworfen); jetzt nur noch bei Abweichung. |
+| **3.5.0** | 🔴 fix | Installation | Neuinstallationen legten `pages` ohne `title_en`/`content_en` an; der erste Sitemap-Aufbau scheiterte deshalb einmal. |
+| **3.5.0** | 🛡️ security | Mitgliederbereich / Konto | Nach einer E-Mail-Änderung erhält die **bisherige** Adresse einen Hinweis (neue Adresse maskiert, Zeitpunkt, IP); Eintrag im Audit-Log (OFFEN-06). |
+| **3.5.0** | 🟢 feat | SEO / Cookies | Das X-/Twitter-Profil aus *SEO → Social* wird als `twitter:site` und im Organisations-Schema (`sameAs`, plus Facebook-Seite) ausgegeben; früherer Header-Code (`seo_custom_header_code`) ist unter *SEO → Technisch* sichtbar und entfernbar; Akzentfarbe des Cookie-Banners einstellbar (OFFEN-07). |
+| **3.5.0** | 🟢 feat | Datenschutz / Aufbewahrung | Optionale Löschfrist für Aktivitäts- und Audit-Protokoll unter *Sicherheit → Sicherheits-Audit* (Standard: aus; sonst 90–3650 Tage, täglicher Cron) (OFFEN-13). |
+| **3.5.0** | 🟡 refactor | Admin / GUI | 250 Formular-Labels mit `for`/`id` verknüpft (OFFEN-10), Dashboard-Links über `SITE_URL` (OFFEN-11), tote Methoden und ungenutzte JS-Handler entfernt (OFFEN-08, OFFEN-12). |
+| **3.5.0** | 🔵 docs | Audit / Verweise | `DOC/audit/README.md`: alle offenen Empfehlungen umgesetzt, Betreiberhinweise für Proxy/CDN (Hostinger); `DOC/core/SECURITY.md` aktualisiert; alte Changelog-Pfade `CMS/DOC/…` → `DOC/…` (OFFEN-09). |
+
+---
+
 ### v3.4.25 — 14.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

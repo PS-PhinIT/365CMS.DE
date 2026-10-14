@@ -82,7 +82,7 @@ Karte „Doku-Sync“ mit Status und Button (Aktion `sync_docs`, nur `manage_sys
 
 | ID | Schwere | Befund | Fundstelle | Empfehlung |
 |---|---|---|---|---|
-| FUN-12 | 🟡 | `Version::CURRENT` bleibt `3.4.00`, obwohl seit dem Release Code-Fixes (3.4.01–3.4.13, inkl. Schema v23) ausgeliefert werden. Update-Prüfung, Marketplace-`requires_cms` und Support können Installationen nicht unterscheiden. | `CMS/core/Version.php`, `CMS/update.json`, `CMS/marketplace/core/365cms/update.json` | Release-Entscheidung des Maintainers: `Version::CURRENT`, `RELEASE_DATE`, beide `update.json` (Download-URL, SHA-256) und die Release-Pakete unter `RELEASE/` gemeinsam anheben. Nicht im Audit geändert, weil `update.json` auf ein konkretes ZIP mit Prüfsumme zeigt. |
+| FUN-12 | 🟡 | `Version::CURRENT` bleibt `3.4.00`, obwohl seit dem Release Code-Fixes (3.4.01–3.4.13, inkl. Schema v23) ausgeliefert werden. Update-Prüfung, Marketplace-`requires_cms` und Support können Installationen nicht unterscheiden. | `CMS/core/Version.php`, `CMS/update.json`, `CMS/marketplace/core/365cms/update.json` | Release-Entscheidung des Maintainers: `Version::CURRENT`, `RELEASE_DATE`, beide `update.json` (Download-URL, SHA-256) und die Release-Pakete unter `RELEASE/` gemeinsam anheben. Nicht im Audit geändert, weil `update.json` auf ein konkretes ZIP mit Prüfsumme zeigt. **Erledigt in 3.5.0:** `Version::CURRENT = '3.5.0'`, beide `update.json` und `RELEASE/365CMS-3.5.0-*` gemeinsam angehoben. |
 
 ### Status der Tabelle „Bekannte Lücken“ (`DOC/core/STATUS.md`)
 

@@ -31,10 +31,10 @@ Seven GUI findings, all fixed:
 - **Admin-Seiten:** Dashboard, Logs, Kategorien, Tags, Medien, Einstellungen, Kommentare, Info und Diagnose antworten mit HTTP 200, ohne PHP-Warnungen und ohne Fatal Errors (Laufzeittest nach den Änderungen).
 - **Standard-Theme:** axe-core-Stand aus dem Folgeaudit 2026-10-07 (0 Verstöße auf 11 Seiten). Die Änderungen in `search.php` und `blog-single.php` fügen nur Text bzw. Bedingungen hinzu.
 
-### Offene Empfehlungen
+### Zunächst offene Empfehlungen (umgesetzt in 3.5.0)
 
 Siehe [README.md](README.md):
 
-- OFFEN-10: `<label>` ohne `for=`.
-- OFFEN-11: fest verdrahtete Dashboard-Links.
-- OFFEN-12: ungenutzte JS-Handler.
+- OFFEN-10: `<label>` ohne `for=`. ✅ umgesetzt in 3.5.0.
+- OFFEN-11: fest verdrahtete Dashboard-Links. ✅ umgesetzt in 3.5.0.
+- OFFEN-12: ungenutzte JS-Handler. ✅ umgesetzt in 3.5.0.
