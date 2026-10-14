@@ -15,6 +15,8 @@ Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mas
 - Search, 404 logging and the Core Web Vitals endpoint had no limits, or limits that could be bypassed.
 - Analytics tables grew without any retention.
 
+A follow-up audit on the same day ([FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md)) recorded 43 more findings: 38 were fixed completely and 3 in part in 3.5.0, and the open parts are listed as recommendations OFFEN-14 … OFFEN-19. The most important fixes were the never-loaded importer service, SSRF filter gaps for IPv4-mapped IPv6, path traversal when renaming member folders, and JWT revocation on password change.
+
 Runtime tests against MySQL 8.0 show the number of queries per request dropping from 61 to 15 (home page), 63 to 17 (blog) and 89 to 17 (404 page).
 
 ## Deutsch
@@ -28,6 +30,7 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) | Geschwindigkeit (PERF-07 bis PERF-11) und Massenanfragen/Bot-Last (LAST-01 bis LAST-06) inkl. Messwerten |
 | [FUNKTIONEN-VERWEISE.md](FUNKTIONEN-VERWEISE.md) | Fehlende oder unvollständige Funktionen (FUN-21 bis FUN-25) und fehlerhafte Verweise (REF-06 bis REF-11) |
 | [GUI-BARRIEREFREIHEIT.md](GUI-BARRIEREFREIHEIT.md) | Fehler in der Oberfläche und Barrierefreiheit (GUI-01 bis GUI-07) |
+| [FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md) | Folgeaudit zu 3.5.0: SEC-28 bis SEC-31, FUN-26 bis FUN-34, REF-12 bis REF-15, BP-01 bis BP-05, PERF-12 bis PERF-22, GUI-08 bis GUI-16, Empfehlungen OFFEN-14 bis OFFEN-19 |
 
 Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Offene Empfehlungen tragen `OFFEN-xx`.
 

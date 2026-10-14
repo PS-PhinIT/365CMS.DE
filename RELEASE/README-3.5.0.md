@@ -4,7 +4,7 @@
 
 This release directory documents the distributable `3.5.0` packages (release date 2026-10-14, database schema `v23`). Both packages contain deployable code only. Installation-specific configuration, uploads, caches, logs and backups are intentionally excluded; the full package ships only the protective `.htaccess`/index files of those directories.
 
-Highlights: proxy/CDN-aware client IP detection with one-click approval of unknown CDN networks (e.g. Hostinger), cookie-less cacheable anonymous pages (lazy sessions), feed cache, lighter search, static 404 for missing assets and all open recommendations of the 2026-10-14 audit. See `Changelog.md` (v3.5.0) and `DOC/audit/README.md`.
+Highlights: proxy/CDN-aware client IP detection with one-click approval of unknown CDN networks (e.g. Hostinger), cookie-less cacheable anonymous pages (lazy sessions), feed cache, lighter search, static 404 for missing assets, all open recommendations of the 2026-10-14 audit and the fixes of the follow-up audit (SSRF filter, JWT bound to the password, working importer, fewer queries per page). See `Changelog.md` (v3.5.0), `DOC/audit/README.md` and `DOC/audit/FOLGEAUDIT-2026-10-14.md`.
 
 ## Deutsch
 
@@ -30,3 +30,4 @@ Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest
 - **Proxy / CDN:** *Sicherheit → Firewall → Proxy / CDN & Client-IP* öffnen. Die Diagnose zeigt `REMOTE_ADDR`, Weiterleitungs-Header und die ermittelte Client-IP. Läuft die Seite hinter einem Host-CDN mit unbekannten Adressen (z. B. Hostinger), erscheint dort das Netz Ihres eigenen Aufrufs mit der Markierung **Ihre Anfrage** – mit **Vertrauen** übernehmen. Hinter einem lokalen Reverse Proxy (nginx, Docker) `private` eintragen. Standard ist jetzt `cloudflare`. Eine gesetzte Konstante `CMS_TRUSTED_PROXIES` hat Vorrang.
 - **Seiten-Cache:** Anonyme Seiten kommen jetzt ohne Session-Cookie und mit `Cache-Control: public`. Wer das nicht möchte: `define('CMS_LAZY_SESSIONS', false);` in `config/app.php`.
 - **nginx:** Regel für statische 404 aus `DOC/INSTALLATION.md` übernehmen (Apache nutzt die mitgelieferte `.htaccess`).
+- **API-Clients:** JWTs sind jetzt an das Passwort gebunden (Claim `pwf`). Vor 3.5.0 ausgestellte Tokens werden abgelehnt; Clients holen über `POST /api/v1/auth/token` ein neues Token.

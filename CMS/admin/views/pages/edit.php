@@ -790,9 +790,6 @@ $isEnglishEditorView = $editorLocale === 'en';
         require __DIR__ . '/../partials/featured-image-picker.php';
 
         $pageContentUiConfig = [
-            'templateSelectId' => 'pageTemplateSelect',
-            'templateMetaPanelSelector' => '[data-page-template-meta-panel]',
-            'templateMetaPanelAttribute' => 'data-page-template-meta-panel',
             'formId' => 'pageForm',
             'titleSelector' => '.page-header .page-title',
             'backLinkId' => 'pageBackToList',
