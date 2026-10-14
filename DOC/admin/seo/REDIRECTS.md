@@ -33,7 +33,7 @@ Pro Kombination aus Quelle und Site-Scope ist nur **eine** Regel erlaubt. Jede R
 
 | Funktion | Ort | Inhalt |
 |---|---|---|
-| 404-Export | *404-Monitor → CSV exportieren* (`/admin/not-found-monitor?export=csv`) | bis zu 20.000 404-Pfade, sortiert nach Hits; IP-Adresse und User-Agent werden **nicht** exportiert |
+| 404-Export | *404-Monitor → CSV exportieren* (`/admin/not-found-monitor?export=csv`) | bis zu 20.000 404-Einträge, sortiert nach Hits; ein Pfad, der für mehrere Hosts protokolliert wurde, erscheint je Site nur einmal (Hits summiert, Hosts kommagetrennt); IP-Adresse und User-Agent werden **nicht** exportiert |
 | Weiterleitungs-Export | *Weiterleitungen → CSV exportieren* (`/admin/redirect-manager?export=csv`) | alle Regeln inkl. `hits` und `last_hit_at` |
 | Import | *Weiterleitungen → CSV-Import* (Aktion `import_redirects`) | CSV bis 2 MB / 5.000 Datensätze |
 
@@ -51,7 +51,8 @@ Importregeln:
 - Zeilen ohne `target_url` werden übersprungen.
 - Vorhandene Regeln werden über `redirect_id` oder – ohne ID – über Quelle + `site_scope` gefunden und aktualisiert; unveränderte Regeln werden nicht angefasst. Alle anderen Zeilen legen neue Regeln an.
 - `site_scope`: leer bzw. `global` = alle Sites, sonst `host:domain.tld` oder `path:/hub-pfad`. `redirect_type`: `301` oder `302`. `is_active`: `1`/`0` bzw. `ja`/`nein`. Fehlt eine Spalte, bleibt bei bestehenden Regeln der bisherige Wert erhalten.
-- Jede Zeile wird wie im Formular geprüft (gültige Quelle und Ziel, keine Selbstweiterleitung, keine Dubletten). Fehlerhafte Zeilen werden mit Zeilennummer gemeldet, gültige Zeilen trotzdem übernommen.
+- Jede Zeile wird wie im Formular geprüft (gültige Quelle und Ziel, keine Selbstweiterleitung, keine Dubletten). Als Ziel sind nur Pfade/Slugs und `http(s)`-URLs erlaubt. Kommt Quelle + Site mehrfach mit identischen Werten vor, zählt die Wiederholung als unverändert; abweichende Werte werden als Fehler gemeldet.
+- Fehlerhafte Zeilen werden mit Zeilennummer gemeldet, gültige Zeilen trotzdem übernommen (Hinweis in Gelb statt Rot, wenn Teile übernommen wurden). Der Import läuft in einer Datenbank-Transaktion.
 - Exporte und Importe werden im Audit-Log protokolliert (`seo.redirects.export.csv`, `seo.not_found.export.csv`, `seo.redirects.import.csv`).
 
 ### Automatische Weiterleitungen

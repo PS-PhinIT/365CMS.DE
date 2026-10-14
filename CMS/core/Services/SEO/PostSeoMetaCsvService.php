@@ -201,76 +201,91 @@ final class PostSeoMetaCsvService
         $seenPostIds = [];
         $changedPostIds = [];
 
-        foreach ($records as $line => $record) {
-            $label = trim((string)($record['slug'] ?? $record['post_id'] ?? ''));
+        // Eine Transaktion statt Autocommit je Zeile beschleunigt große Importe deutlich.
+        $pdo = $this->db->getPdo();
+        $ownsTransaction = !$pdo->inTransaction() && $pdo->beginTransaction();
 
-            try {
-                $post = $this->findPost($record);
-                $postId = (int)$post->id;
-                $label = (string)$post->slug;
+        try {
+            foreach ($records as $line => $record) {
+                $label = trim((string)($record['slug'] ?? $record['post_id'] ?? ''));
 
-                if (isset($seenPostIds[$postId])) {
-                    throw new \InvalidArgumentException(sprintf('Beitrag ist bereits in Zeile %d enthalten.', $seenPostIds[$postId]));
-                }
-                $seenPostIds[$postId] = $line;
+                try {
+                    $post = $this->findPost($record);
+                    $postId = (int)$post->id;
+                    $label = (string)$post->slug;
 
-                $currentPostFields = [
-                    'meta_title' => (string)($post->meta_title ?? ''),
-                    'meta_description' => (string)($post->meta_description ?? ''),
-                ];
-                $currentMeta = $this->normalizeStoredMeta($this->seoService->getContentMeta('post', $postId));
-
-                $newPostFields = $currentPostFields;
-                $newMeta = $currentMeta;
-                foreach (self::SEO_COLUMNS as $field) {
-                    if (!array_key_exists($field, $record)) {
-                        continue;
+                    if (isset($seenPostIds[$postId])) {
+                        throw new \InvalidArgumentException(sprintf('Beitrag ist bereits in Zeile %d enthalten.', $seenPostIds[$postId]));
                     }
+                    $seenPostIds[$postId] = $line;
 
-                    $value = $this->normalizeImportValue($field, $record[$field]);
-                    if (in_array($field, self::POST_TABLE_FIELDS, true)) {
-                        $newPostFields[$field] = $value;
-                    } else {
-                        $newMeta[$field] = $value;
+                    $currentPostFields = [
+                        'meta_title' => (string)($post->meta_title ?? ''),
+                        'meta_description' => (string)($post->meta_description ?? ''),
+                    ];
+                    $currentMeta = $this->normalizeStoredMeta($this->seoService->getContentMeta('post', $postId));
+
+                    $newPostFields = $currentPostFields;
+                    $newMeta = $currentMeta;
+                    foreach (self::SEO_COLUMNS as $field) {
+                        if (!array_key_exists($field, $record)) {
+                            continue;
+                        }
+
+                        $value = $this->normalizeImportValue($field, $record[$field]);
+                        if (in_array($field, self::POST_TABLE_FIELDS, true)) {
+                            $newPostFields[$field] = $value;
+                        } else {
+                            $newMeta[$field] = $value;
+                        }
                     }
+                } catch (\InvalidArgumentException $e) {
+                    $summary['failed']++;
+                    $errors[] = sprintf('Zeile %d%s: %s', $line, $label !== '' ? ' (' . $label . ')' : '', $e->getMessage());
+                    continue;
                 }
-            } catch (\InvalidArgumentException $e) {
-                $summary['failed']++;
-                $errors[] = sprintf('Zeile %d%s: %s', $line, $label !== '' ? ' (' . $label . ')' : '', $e->getMessage());
-                continue;
-            }
 
-            $postFieldsChanged = $newPostFields !== $currentPostFields;
-            $metaChanged = $newMeta !== $currentMeta;
-            if (!$postFieldsChanged && !$metaChanged) {
-                $summary['unchanged']++;
-                continue;
-            }
-
-            try {
-                if ($postFieldsChanged) {
-                    // updated_at bewusst beibehalten: Es ändern sich nur SEO-Metadaten, nicht der Inhalt.
-                    $this->db->execute(
-                        "UPDATE {$this->prefix}posts SET meta_title = ?, meta_description = ?, updated_at = updated_at WHERE id = ?",
-                        [$newPostFields['meta_title'], $newPostFields['meta_description'], $postId]
-                    );
+                $postFieldsChanged = $newPostFields !== $currentPostFields;
+                $metaChanged = $newMeta !== $currentMeta;
+                if (!$postFieldsChanged && !$metaChanged) {
+                    $summary['unchanged']++;
+                    continue;
                 }
-                if ($metaChanged) {
-                    $this->seoService->saveContentMeta('post', $postId, $newMeta);
-                }
-            } catch (\Throwable $e) {
-                $summary['failed']++;
-                $errors[] = sprintf('Zeile %d (%s): Speichern fehlgeschlagen.', $line, $label);
-                Logger::instance()->withChannel('seo')->warning('SEO-Metadaten aus CSV konnten nicht gespeichert werden.', [
-                    'post_id' => $postId,
-                    'exception' => $e::class,
-                    'message' => $e->getMessage(),
-                ]);
-                continue;
-            }
 
-            $summary['updated']++;
-            $changedPostIds[] = $postId;
+                try {
+                    if ($postFieldsChanged) {
+                        // updated_at bewusst beibehalten: Es ändern sich nur SEO-Metadaten, nicht der Inhalt.
+                        $this->db->execute(
+                            "UPDATE {$this->prefix}posts SET meta_title = ?, meta_description = ?, updated_at = updated_at WHERE id = ?",
+                            [$newPostFields['meta_title'], $newPostFields['meta_description'], $postId]
+                        );
+                    }
+                    if ($metaChanged) {
+                        $this->seoService->saveContentMeta('post', $postId, $newMeta);
+                    }
+                } catch (\Throwable $e) {
+                    $summary['failed']++;
+                    $errors[] = sprintf('Zeile %d (%s): Speichern fehlgeschlagen.', $line, $label);
+                    Logger::instance()->withChannel('seo')->warning('SEO-Metadaten aus CSV konnten nicht gespeichert werden.', [
+                        'post_id' => $postId,
+                        'exception' => $e::class,
+                        'message' => $e->getMessage(),
+                    ]);
+                    continue;
+                }
+
+                $summary['updated']++;
+                $changedPostIds[] = $postId;
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->commit();
         }
 
         if ($changedPostIds !== []) {
@@ -293,6 +308,7 @@ final class PostSeoMetaCsvService
             return [
                 'success' => false,
                 'error' => 'SEO-Import mit Fehlern abgeschlossen: ' . $summaryText,
+                'type' => $summary['updated'] > 0 ? 'warning' : 'danger',
                 'details' => $details,
                 'summary' => $summary,
             ];

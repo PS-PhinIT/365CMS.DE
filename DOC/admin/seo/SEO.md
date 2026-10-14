@@ -52,7 +52,7 @@ Die Karte *SEO-Metadaten der Beiträge per CSV* (bzw. der Button *Beitrags-Metad
 
 - Titel, Slug, Inhalt, Auszug, Status, Kategorien und `updated_at` der Beiträge bleiben unverändert.
 - Fehlt eine Spalte in der Datei, bleibt das Feld unverändert. Eine leere Zelle setzt das Feld auf den Standard zurück (bei `robots_index`/`robots_follow`: `1`).
-- Validierung: URLs müssen mit `/` beginnen oder `http(s)://` sein; `twitter_card` = `summary_large_image` oder `summary`; `schema_type` = `Article`, `BlogPosting` oder `NewsArticle`; `sitemap_priority` 0–1 (Komma oder Punkt); `sitemap_changefreq` = `always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`. Fehlerhafte Zeilen werden mit Zeilennummer gemeldet und übersprungen, der Rest wird übernommen.
+- Validierung: URLs müssen mit `/` beginnen oder `http(s)://` sein; `twitter_card` = `summary_large_image` oder `summary`; `schema_type` = `Article`, `BlogPosting` oder `NewsArticle`; `sitemap_priority` 0–1 (Komma oder Punkt); `sitemap_changefreq` = `always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`. Fehlerhafte Zeilen werden mit Zeilennummer gemeldet und übersprungen, der Rest wird übernommen (in einer Datenbank-Transaktion).
 - Deutsche Spaltennamen (z. B. *Meta-Titel*, *Fokus-Keyphrase*, *Sitemap-Priorität*) sowie Komma- oder Tab-getrennte Dateien werden ebenfalls erkannt.
 - Export und Import werden im Audit-Log protokolliert (`seo.post_meta.export.csv`, `seo.post_meta.import.csv`). Nach Änderungen werden die Sitemaps und – sofern aktiviert – der Content-Cache invalidiert.
 

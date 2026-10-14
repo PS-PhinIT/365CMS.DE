@@ -247,6 +247,10 @@ final class SeoSuiteModule
 			return ['success' => false, 'error' => $e->getMessage()];
 		}
 
+		if (function_exists('set_time_limit')) {
+			set_time_limit(300);
+		}
+
 		$result = PostSeoMetaCsvService::getInstance()->importFromCsv($content);
 
 		AuditLogger::instance()->log(

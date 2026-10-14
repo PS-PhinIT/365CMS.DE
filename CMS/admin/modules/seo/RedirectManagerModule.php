@@ -82,6 +82,10 @@ class RedirectManagerModule
             return ['success' => false, 'error' => $e->getMessage()];
         }
 
+        if (function_exists('set_time_limit')) {
+            set_time_limit(300);
+        }
+
         $result = $this->service->importRedirectsFromCsv($content);
 
         AuditLogger::instance()->log(

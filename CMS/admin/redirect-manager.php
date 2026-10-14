@@ -52,8 +52,9 @@ function cms_admin_redirect_manager_redirect(string $redirectUrl): never
 
 function cms_admin_redirect_manager_flash(array $payload): void
 {
+    $type = (string) ($payload['type'] ?? 'danger');
     $_SESSION['admin_alert'] = [
-        'type' => ($payload['type'] ?? 'danger') === 'success' ? 'success' : 'danger',
+        'type' => in_array($type, ['success', 'warning'], true) ? $type : 'danger',
         'message' => trim((string) ($payload['message'] ?? '')),
         'details' => is_array($payload['details'] ?? null) ? $payload['details'] : [],
     ];
@@ -62,7 +63,7 @@ function cms_admin_redirect_manager_flash(array $payload): void
 function cms_admin_redirect_manager_flash_result(array $result): void
 {
     cms_admin_redirect_manager_flash([
-        'type' => !empty($result['success']) ? 'success' : 'danger',
+        'type' => !empty($result['success']) ? 'success' : (string) ($result['type'] ?? 'danger'),
         'message' => (string) ($result['message'] ?? $result['error'] ?? ''),
         'details' => $result['details'] ?? [],
     ]);

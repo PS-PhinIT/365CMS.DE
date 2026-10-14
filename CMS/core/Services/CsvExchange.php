@@ -249,7 +249,7 @@ final class CsvExchange
     private static function resolveHeader(string $label, array $headerAliases): ?string
     {
         $label = trim(
-            (string)preg_replace('/[\s\-]+/u', '_', strtolower(trim($label, " \t\n\r\0\x0B\"'"))),
+            (string)preg_replace('/[\s\-]+/u', '_', function_exists('mb_strtolower') ? mb_strtolower(trim($label, " \t\n\r\0\x0B\"'")) : strtolower(trim($label, " \t\n\r\0\x0B\"'"))),
             '_'
         );
 

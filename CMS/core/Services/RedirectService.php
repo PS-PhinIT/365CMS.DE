@@ -525,27 +525,56 @@ final class RedirectService
              LIMIT " . self::CSV_EXPORT_MAX_ROWS
         ) ?: [];
 
+        // Ein Pfad kann für mehrere Hosts protokolliert sein (www/ohne www, Hub-Domains). Zeilen mit gleicher
+        // Quelle + Site werden zusammengefasst, damit der Re-Import keine doppelten Schlüssel enthält.
         $rows = [];
         foreach ($logs as $logRow) {
             $requestPath = $this->normalizePath((string)($logRow->request_path ?? ''));
             $log = $this->enrichLogWithRedirect((array)$logRow, $redirectsByPath[$requestPath] ?? []);
             $hasRedirect = (int)($log['redirect_id'] ?? 0) > 0;
+            $siteScope = $hasRedirect ? (string)($log['site_scope_match'] ?? '') : (string)($log['site_scope_suggestion'] ?? '');
+            $key = $requestPath . '|' . $siteScope;
+            $host = (string)($log['request_host'] ?? '');
+            $firstSeen = (string)($log['first_seen_at'] ?? '');
+            $lastSeen = (string)($log['last_seen_at'] ?? '');
 
-            $rows[] = [
+            if (isset($rows[$key])) {
+                $row = &$rows[$key];
+                $row['hit_count'] += (int)($log['hit_count'] ?? 0);
+                if ($host !== '' && !in_array($host, explode(', ', (string)$row['request_host']), true)) {
+                    $row['request_host'] = ltrim($row['request_host'] . ', ' . $host, ', ');
+                }
+                if ($firstSeen !== '' && ($row['first_seen_at'] === '' || $firstSeen < $row['first_seen_at'])) {
+                    $row['first_seen_at'] = $firstSeen;
+                }
+                if ($lastSeen > $row['last_seen_at']) {
+                    $row['last_seen_at'] = $lastSeen;
+                }
+                if ($row['referrer_url'] === '') {
+                    $row['referrer_url'] = (string)($log['referrer_url'] ?? '');
+                }
+                unset($row);
+                continue;
+            }
+
+            $rows[$key] = [
                 'redirect_id' => $hasRedirect ? (int)$log['redirect_id'] : '',
                 'source_path' => $requestPath,
-                'site_scope' => $hasRedirect ? (string)($log['site_scope_match'] ?? '') : (string)($log['site_scope_suggestion'] ?? ''),
+                'site_scope' => $siteScope,
                 'target_url' => $hasRedirect ? (string)($log['target_url'] ?? '') : '',
                 'redirect_type' => $hasRedirect ? (int)($log['redirect_type'] ?? 301) : 301,
                 'is_active' => $hasRedirect ? ((int)($log['redirect_is_active'] ?? 0) === 1 ? 1 : 0) : 1,
                 'notes' => $hasRedirect ? (string)($log['redirect_notes'] ?? '') : 'Aus 404-Monitor übernommen',
-                'request_host' => (string)($log['request_host'] ?? ''),
+                'request_host' => $host,
                 'hit_count' => (int)($log['hit_count'] ?? 0),
-                'first_seen_at' => (string)($log['first_seen_at'] ?? ''),
-                'last_seen_at' => (string)($log['last_seen_at'] ?? ''),
+                'first_seen_at' => $firstSeen,
+                'last_seen_at' => $lastSeen,
                 'referrer_url' => (string)($log['referrer_url'] ?? ''),
             ];
         }
+
+        $rows = array_values($rows);
+        usort($rows, static fn (array $a, array $b): int => [$b['hit_count'], $b['last_seen_at']] <=> [$a['hit_count'], $a['last_seen_at']]);
 
         return $rows;
     }
@@ -579,101 +608,127 @@ final class RedirectService
             $errors[] = sprintf('Zeile %d%s: %s', $line, $source !== '' ? ' (' . $source . ')' : '', $message);
         };
 
-        foreach ($records as $line => $record) {
-            $rawSource = trim((string)($record['source_path'] ?? ''));
-            $rawTarget = trim((string)($record['target_url'] ?? ''));
+        // Eine Transaktion statt Autocommit je Zeile beschleunigt große Importe deutlich.
+        $pdo = $this->db->getPdo();
+        $ownsTransaction = !$pdo->inTransaction() && $pdo->beginTransaction();
 
-            if ($rawTarget === '') {
-                $summary['skipped']++;
-                continue;
-            }
+        try {
+            foreach ($records as $line => $record) {
+                $rawSource = trim((string)($record['source_path'] ?? ''));
+                $rawTarget = trim((string)($record['target_url'] ?? ''));
 
-            $source = $this->normalizePath($rawSource);
-            if ($source === '' || $source === '/') {
-                $fail($line, $rawSource, 'Bitte einen gültigen Quellpfad angeben.');
-                continue;
-            }
-
-            $existing = null;
-            $rawId = trim((string)($record['redirect_id'] ?? ''));
-            if ($rawId !== '') {
-                $id = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                if ($id === false) {
-                    $fail($line, $source, 'Ungültige redirect_id „' . $this->limitString($rawId, 40) . '“.');
+                if ($rawTarget === '') {
+                    $summary['skipped']++;
                     continue;
                 }
-                $existing = $this->getRedirectById((int)$id);
+
+                $source = $this->normalizePath($rawSource);
+                if ($source === '' || $source === '/') {
+                    $fail($line, $rawSource, 'Bitte einen gültigen Quellpfad angeben.');
+                    continue;
+                }
+
+                $existing = null;
+                $rawId = trim((string)($record['redirect_id'] ?? ''));
+                if ($rawId !== '') {
+                    $id = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                    if ($id === false) {
+                        $fail($line, $source, 'Ungültige redirect_id „' . $this->limitString($rawId, 40) . '“.');
+                        continue;
+                    }
+                    $existing = $this->getRedirectById((int)$id);
+                }
+
+                $siteScope = array_key_exists('site_scope', $record)
+                    ? $this->normalizeSiteScopeInput((string)$record['site_scope'])
+                    : $this->normalizeSiteScopeInput((string)($existing['site_scope'] ?? ''));
+
+                if ($existing === null) {
+                    $match = $this->findRedirectBySourcePath($source, $siteScope);
+                    $existing = $match !== null ? $this->getRedirectById((int)($match['id'] ?? 0)) : null;
+                }
+
+                $rawType = trim((string)($record['redirect_type'] ?? ''));
+                $type = $rawType !== '' ? (int)$rawType : (int)($existing['redirect_type'] ?? 301);
+                if (!in_array($type, [301, 302], true)) {
+                    $fail($line, $source, 'Typ muss 301 oder 302 sein.');
+                    continue;
+                }
+
+                $rawActive = trim((string)($record['is_active'] ?? ''));
+                $isActive = $rawActive !== '' ? CsvExchange::parseBoolean($rawActive) : ($existing === null || (int)($existing['is_active'] ?? 0) === 1);
+                if ($isActive === null) {
+                    $fail($line, $source, 'Ungültiger Wert für is_active (erlaubt: 1/0, ja/nein).');
+                    continue;
+                }
+
+                $notes = array_key_exists('notes', $record) ? trim((string)$record['notes']) : (string)($existing['notes'] ?? '');
+                if ($existing === null && $notes === '') {
+                    $notes = 'Per CSV-Import angelegt';
+                }
+
+                if (!str_starts_with($rawTarget, '/') && preg_match('#^https?://#i', $rawTarget) !== 1 && preg_match('#^[a-z][a-z0-9+.\-]*:#i', $rawTarget) === 1) {
+                    $fail($line, $source, 'Das Ziel muss ein Pfad/Slug oder eine http(s)-URL sein.');
+                    continue;
+                }
+
+                $target = $this->normalizeManualTarget($rawTarget);
+
+                // Doppelte Zeilen mit identischen Werten (z. B. aus dem 404-Export) sind unkritisch, abweichende Werte nicht.
+                $key = $source . '|' . $siteScope;
+                $signature = $target . '|' . $type . '|' . ($isActive ? '1' : '0') . '|' . $notes;
+                if (isset($seenKeys[$key])) {
+                    if ($seenKeys[$key]['signature'] === $signature) {
+                        $summary['unchanged']++;
+                    } else {
+                        $fail($line, $source, sprintf('Quelle und Site sind bereits in Zeile %d mit anderen Werten enthalten.', $seenKeys[$key]['line']));
+                    }
+                    continue;
+                }
+                $seenKeys[$key] = ['line' => $line, 'signature' => $signature];
+
+                if ($existing !== null
+                    && (string)($existing['source_path'] ?? '') === $source
+                    && $this->normalizeSiteScopeInput((string)($existing['site_scope'] ?? '')) === $siteScope
+                    && (string)($existing['target_url'] ?? '') === $target
+                    && (int)($existing['redirect_type'] ?? 301) === $type
+                    && ((int)($existing['is_active'] ?? 0) === 1) === $isActive
+                    && trim((string)($existing['notes'] ?? '')) === $notes
+                ) {
+                    $summary['unchanged']++;
+                    continue;
+                }
+
+                $post = [
+                    'redirect_id' => $existing !== null ? (int)($existing['id'] ?? 0) : 0,
+                    'source_path' => $source,
+                    'site_scope' => $siteScope,
+                    'target_kind' => 'manual',
+                    'target_url_manual' => $target,
+                    'redirect_type' => (string)$type,
+                    'notes' => $notes,
+                ];
+                if ($isActive) {
+                    $post['is_active'] = '1';
+                }
+
+                $result = $this->saveRedirect($post);
+                if (empty($result['success'])) {
+                    $fail($line, $source, (string)($result['error'] ?? 'Unbekannter Fehler.'));
+                    continue;
+                }
+
+                $summary[$existing !== null ? 'updated' : 'created']++;
             }
-
-            $siteScope = array_key_exists('site_scope', $record)
-                ? $this->normalizeSiteScopeInput((string)$record['site_scope'])
-                : $this->normalizeSiteScopeInput((string)($existing['site_scope'] ?? ''));
-
-            if ($existing === null) {
-                $match = $this->findRedirectBySourcePath($source, $siteScope);
-                $existing = $match !== null ? $this->getRedirectById((int)($match['id'] ?? 0)) : null;
+        } catch (\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
             }
+            throw $e;
+        }
 
-            $key = $source . '|' . $siteScope;
-            if (isset($seenKeys[$key])) {
-                $fail($line, $source, sprintf('Quelle und Site sind bereits in Zeile %d enthalten.', $seenKeys[$key]));
-                continue;
-            }
-            $seenKeys[$key] = $line;
-
-            $rawType = trim((string)($record['redirect_type'] ?? ''));
-            $type = $rawType !== '' ? (int)$rawType : (int)($existing['redirect_type'] ?? 301);
-            if (!in_array($type, [301, 302], true)) {
-                $fail($line, $source, 'Typ muss 301 oder 302 sein.');
-                continue;
-            }
-
-            $rawActive = trim((string)($record['is_active'] ?? ''));
-            $isActive = $rawActive !== '' ? CsvExchange::parseBoolean($rawActive) : ($existing === null || (int)($existing['is_active'] ?? 0) === 1);
-            if ($isActive === null) {
-                $fail($line, $source, 'Ungültiger Wert für is_active (erlaubt: 1/0, ja/nein).');
-                continue;
-            }
-
-            $notes = array_key_exists('notes', $record) ? trim((string)$record['notes']) : (string)($existing['notes'] ?? '');
-            if ($existing === null && $notes === '') {
-                $notes = 'Per CSV-Import angelegt';
-            }
-
-            $target = $this->normalizeManualTarget($rawTarget);
-
-            if ($existing !== null
-                && (string)($existing['source_path'] ?? '') === $source
-                && $this->normalizeSiteScopeInput((string)($existing['site_scope'] ?? '')) === $siteScope
-                && (string)($existing['target_url'] ?? '') === $target
-                && (int)($existing['redirect_type'] ?? 301) === $type
-                && ((int)($existing['is_active'] ?? 0) === 1) === $isActive
-                && trim((string)($existing['notes'] ?? '')) === $notes
-            ) {
-                $summary['unchanged']++;
-                continue;
-            }
-
-            $post = [
-                'redirect_id' => $existing !== null ? (int)($existing['id'] ?? 0) : 0,
-                'source_path' => $source,
-                'site_scope' => $siteScope,
-                'target_kind' => 'manual',
-                'target_url_manual' => $target,
-                'redirect_type' => (string)$type,
-                'notes' => $notes,
-            ];
-            if ($isActive) {
-                $post['is_active'] = '1';
-            }
-
-            $result = $this->saveRedirect($post);
-            if (empty($result['success'])) {
-                $fail($line, $source, (string)($result['error'] ?? 'Unbekannter Fehler.'));
-                continue;
-            }
-
-            $summary[$existing !== null ? 'updated' : 'created']++;
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->commit();
         }
 
         $summaryText = sprintf(
@@ -694,6 +749,7 @@ final class RedirectService
             return [
                 'success' => false,
                 'error' => 'CSV-Import mit Fehlern abgeschlossen: ' . $summaryText,
+                'type' => ($summary['created'] + $summary['updated']) > 0 ? 'warning' : 'danger',
                 'details' => $details,
                 'summary' => $summary,
             ];
