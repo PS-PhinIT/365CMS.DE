@@ -374,9 +374,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     cms_admin_section_shell_mark_csrf_verified($verifiedCsrfAction);
 
-    $result = is_callable($postHandler)
-        ? $postHandler($module, $section, $_POST)
-        : ['success' => false, 'error' => $unknownActionMessage];
+    try {
+        $result = is_callable($postHandler)
+            ? $postHandler($module, $section, $_POST)
+            : ['success' => false, 'error' => $unknownActionMessage];
+    } catch (\Throwable $e) {
+        // Unerwartete Fehler einer Admin-Aktion nicht als HTTP 500 enden lassen.
+        Logger::instance()->withChannel('admin.section_shell')->error('Admin-Aktion konnte nicht ausgeführt werden.', [
+            'route_path' => $routePath,
+            'page_title' => $pageTitle,
+            'exception_class' => get_debug_type($e),
+            'exception' => $e->getMessage(),
+            'location' => basename($e->getFile()) . ':' . $e->getLine(),
+        ]);
+        $result = ['success' => false, 'error' => 'Die Aktion konnte nicht ausgeführt werden. Bitte Logs prüfen.'];
+    }
 
     $redirectTarget = cms_admin_section_shell_resolve_redirect_target($redirectPathResolver, $routePath, $module, $section, $result);
 
