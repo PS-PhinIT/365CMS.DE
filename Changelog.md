@@ -14,6 +14,13 @@
 
 ---
 
+### Unveröffentlicht
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **–** | 🔴 fix | Seiten | Speichern neuer und bestehender Seiten endete mit HTTP 500: Bei Vorlagen ohne Zusatzfelder (z. B. „Standard“) wird kein `page_meta` gesendet, ein doppelter Prüfaufruf übergab dann `null` an `PageTemplateService::encodeMetadata()` (`TypeError`). Der doppelte Aufruf entfällt; die Vorlage wird nur noch über die bestehende Vorlagenprüfung validiert. |
+| **–** | 🔴 fix | Seiten / Beiträge | Unerwartete Fehler beim Speichern führen nicht mehr zur 500-Fehlerseite: Sie werden im Kanal `admin.pages` bzw. `admin.posts` protokolliert und als Hinweis im Editor angezeigt, die Eingaben bleiben erhalten. |
+
 ### v3.5.0 — 14.10.2026
 
 | Version | Typ | Bereich | Beschreibung |
