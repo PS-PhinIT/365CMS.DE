@@ -14,12 +14,20 @@
 
 ---
 
+### v3.5.2 — 17.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.5.2** | ⬜ chore | Release | `Version::CURRENT` = `3.5.2` (enthält 3.5.1), beide `update.json` und Release-Pakete `RELEASE/365CMS-3.5.2-{update,full}.zip` mit SHA-256; Schema unverändert `v23`. Der Fix aus 3.5.1 lag bisher nur im Repository – Version und Update-Manifeste standen weiter auf 3.5.0, daher lieferte der Core-Updater den fehlerhaften Stand aus und das Erstellen von Seiten endete weiterhin mit HTTP 500. |
+| **3.5.2** | 🔴 fix | Admin / Section-Shell | Unerwartete Fehler in Admin-Aktionen (POST-Handler aller Section-Seiten, z. B. Seiten, Beiträge) führen nicht mehr zur 500-Fehlerseite: Sie werden im Kanal `admin.section_shell` mit Fehlerklasse und Quelle protokolliert und als Hinweis angezeigt. |
+| **3.5.2** | 🔵 docs | Versionierung | `DOC/DEVLIST.md`: Jeder PR erhält eine eigene Version im Changelog (keine Abschnitte „Unveröffentlicht“, keine `–`-Platzhalter); `Version::CURRENT`, beide `update.json` und die Release-Pakete werden im selben PR angepasst. |
+
 ### v3.5.1 — 17.10.2026
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **3.5.1** | 🔴 fix | Seiten | Speichern neuer und bestehender Seiten endete mit HTTP 500: Bei Vorlagen ohne Zusatzfelder (z. B. „Standard“) wird kein `page_meta` gesendet, ein doppelter Prüfaufruf übergab dann `null` an `PageTemplateService::encodeMetadata()` (`TypeError`). Der doppelte Aufruf entfällt; die Vorlage wird nur noch über die bestehende Vorlagenprüfung validiert. |
-| **3.5.1**  | 🔴 fix | Seiten / Beiträge | Unerwartete Fehler beim Speichern führen nicht mehr zur 500-Fehlerseite: Sie werden im Kanal `admin.pages` bzw. `admin.posts` protokolliert und als Hinweis im Editor angezeigt, die Eingaben bleiben erhalten. |
+| **3.5.1** | 🔴 fix | Seiten / Beiträge | Unerwartete Fehler beim Speichern führen nicht mehr zur 500-Fehlerseite: Sie werden im Kanal `admin.pages` bzw. `admin.posts` protokolliert und als Hinweis im Editor angezeigt, die Eingaben bleiben erhalten. |
 
 ### v3.5.0 — 14.10.2026
 

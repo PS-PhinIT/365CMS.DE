@@ -17,11 +17,11 @@
 
 **English**
 
-Use this index to reach the canonical documents. Product version in code is `3.5.0`. Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Known code/doc gaps are listed in [core/STATUS.md](core/STATUS.md).
+Use this index to reach the canonical documents. Product version in code is `3.5.2`. Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Known code/doc gaps are listed in [core/STATUS.md](core/STATUS.md).
 
 **Deutsch**
 
-Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `3.5.0`. Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Bekannte Lücken zwischen Code und Doku stehen in [core/STATUS.md](core/STATUS.md).
+Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `3.5.2`. Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Bekannte Lücken zwischen Code und Doku stehen in [core/STATUS.md](core/STATUS.md).
 
 | Goal / Ziel | Document / Dokument |
 |---|---|

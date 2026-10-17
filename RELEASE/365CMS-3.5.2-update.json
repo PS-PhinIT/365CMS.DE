@@ -1,0 +1,13 @@
+{
+  "slug": "365cms-core",
+  "name": "365CMS",
+  "type": "core",
+  "version": "3.5.2",
+  "released": "2026-10-17",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.2-update.zip",
+  "checksum_sha256": "149b5dcfb59ca0ea6779abcea8efa181b7386404be48d1c2c111f46b8bfce1fa",
+  "requires_php": "8.4.1",
+  "schema_version": "v23",
+  "critical": false,
+  "notes": "Vollständiges Core-Updatepaket. Der Update-Swap bewahrt config/, config.php, uploads/, cache/, logs/ und backups/. Anschließend unter Admin > Updates das Datenbank-Update ausführen (Schema bleibt v23)."
+}
