@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
  */
 
 use CMS\Auth;
+use CMS\Logger;
 use CMS\Security;
 use CMS\Services\AI\AiSettingsService;
 use CMS\Services\CoreModuleService;
@@ -633,7 +634,17 @@ $sectionPageConfig = [
 
             case 'save':
                 $userId = Auth::instance()->getCurrentUser()->id ?? 0;
-                $result = $module->save($post, (int) $userId);
+                try {
+                    $result = $module->save($post, (int) $userId);
+                } catch (\Throwable $e) {
+                    // Unerwartete Fehler nicht als HTTP 500 enden lassen: Eingaben bleiben im Editor erhalten.
+                    Logger::instance()->withChannel('admin.posts')->error('Beitrag konnte nicht gespeichert werden.', [
+                        'post_id' => cms_admin_posts_normalize_positive_id($post['id'] ?? 0),
+                        'exception_class' => get_debug_type($e),
+                        'exception' => $e->getMessage(),
+                    ]);
+                    $result = ['success' => false, 'error' => 'Beitrag konnte nicht gespeichert werden. Bitte Logs prüfen.'];
+                }
                 if (!empty($result['success'])) {
                     $result['editor_locale'] = $editorLocale;
                     $result['redirect_path'] = cms_admin_posts_target_url(cms_admin_posts_normalize_positive_id($result['id'] ?? 0), $editorLocale);

@@ -392,18 +392,6 @@ class PagesModule
         if ($id > 0 && $existingPage === []) {
             return ['success' => false, 'error' => 'Die Seite existiert nicht mehr. Bitte Liste neu laden.'];
         }
-        $pageTemplate = (string) ($existingPage['page_template'] ?? 'default');
-        $pageMetaJson = $existingPage['page_meta_json'] ?? null;
-        if (array_key_exists('page_template', $post)) {
-            $pageTemplate = trim((string) $post['page_template']);
-            try {
-                $templateService = new \CMS\Services\PageTemplateService(\CMS\ThemeManager::instance()->getThemePath());
-                $pageMetaJson = $templateService->encodeMetadata($post['page_meta'] ?? null, $pageTemplate);
-            } catch (\InvalidArgumentException|\JsonException|\UnexpectedValueException $exception) {
-                return $this->failResult('pages.template.invalid', $exception->getMessage(), $exception, ['page_id' => $id]);
-            }
-        }
-
         if ($editorLocale === 'en' && $existingPage !== []) {
             $title = $this->sanitizePlainText((string) ($existingPage['title'] ?? ''), 255);
             $slug = trim((string) ($existingPage['slug'] ?? ''));
@@ -473,8 +461,8 @@ class PagesModule
             'meta_title' => $metaTitle,
             'meta_description' => $metaDesc,
             'content_updated_at' => $contentUpdatedAtInput['value'],
-            'page_template' => $pageTemplate,
-            'page_meta_json' => $pageMetaJson,
+            'page_template' => PageTemplateService::DEFAULT_TEMPLATE,
+            'page_meta_json' => null,
         ];
 
         if ($templateSelection['provided']) {
