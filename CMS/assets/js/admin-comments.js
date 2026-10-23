@@ -198,6 +198,41 @@
             });
         });
 
+        var editModal = document.getElementById('commentEditModal');
+        var editId = document.getElementById('commentEditId');
+        var editAuthor = document.getElementById('commentEditAuthor');
+        var editContent = document.getElementById('commentEditContent');
+
+        function fillEditForm(trigger) {
+            if (!trigger || !editId || !editAuthor || !editContent) {
+                return;
+            }
+
+            editId.value = trigger.getAttribute('data-comment-id') || '0';
+            editAuthor.value = trigger.getAttribute('data-comment-author') || '';
+            editContent.value = trigger.getAttribute('data-comment-content') || '';
+        }
+
+        document.querySelectorAll('.js-comment-edit-trigger').forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                fillEditForm(trigger);
+            });
+        });
+
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function (event) {
+                if (event.relatedTarget) {
+                    fillEditForm(event.relatedTarget);
+                }
+            });
+
+            editModal.addEventListener('shown.bs.modal', function () {
+                if (editContent) {
+                    editContent.focus();
+                }
+            });
+        }
+
         syncSelectAllState();
         updateBulkBar();
         updateBulkSubmitState();

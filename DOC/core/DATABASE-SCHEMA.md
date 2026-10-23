@@ -61,7 +61,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `post_categories` | id, name, slug, slug_en, description, parent_id, sort_order, replacement_category_id, created_at |
 | `post_tags` | id, name, slug, slug_en, description, post_count, created_at |
 | `post_tag_rel`, `post_category_rel` | Zuordnungen (CASCADE auf `posts`) |
-| `comments` | id, post_id, user_id, author, author_email, author_ip, content, status (`pending/approved/spam/trash`), post_date, modified_at |
+| `comments` | id, post_id, user_id, author, author_email, author_ip, content, status (`pending/approved/spam/trash`), post_date, modified_at, edited_at, edited_by (Bearbeitung durch Moderation) |
 | `landing_sections` | id, type, data (JSON), sort_order |
 | `site_tables` | id, table_name, table_slug, description, columns_json, rows_json, settings_json (auch Hub-Sites) |
 | `media` | id, filename, filepath, filetype, filesize, title, alt_text, caption, uploaded_by, uploaded_at |

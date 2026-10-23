@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 use CMS\AuditLogger;
+use CMS\Auth;
 use CMS\Database;
 use CMS\Logger;
 use CMS\Services\CommentService;
@@ -26,7 +27,7 @@ class CommentsModule
     private const LINK_SCOPES = ['all', 'linked', 'orphaned'];
     private const CONTENT_VIEWS = ['excerpt', 'full'];
     private const MODERATION_STATUSES = ['pending', 'approved', 'spam', 'trash'];
-    private const SUPPORTED_ACTIONS = ['status', 'delete', 'bulk', 'empty_trash'];
+    private const SUPPORTED_ACTIONS = ['status', 'edit', 'delete', 'bulk', 'empty_trash'];
     private const BULK_ACTIONS = ['approve', 'spam', 'trash', 'delete'];
     private const MAX_BULK_IDS = 100;
     private const STATUS_META = [
@@ -73,6 +74,14 @@ class CommentsModule
     public function canDelete(): bool
     {
         return function_exists('current_user_can') && current_user_can('comments.delete');
+    }
+
+    /**
+     * Inhalt und Autorname nachträglich bearbeiten (Recht: comments.moderate).
+     */
+    public function canEdit(): bool
+    {
+        return $this->canModerate();
     }
 
     public function isSupportedAction(string $action): bool
@@ -147,6 +156,7 @@ class CommentsModule
             'contentView' => (string) ($normalizedFilters['content_view'] ?? 'excerpt'),
             'filterMeta' => $this->buildFilterMeta($normalizedFilters),
             'canModerate' => $this->canModerate(),
+            'canEdit' => $this->canEdit(),
             'canDelete' => $this->canDelete(),
         ];
     }
@@ -225,6 +235,47 @@ class CommentsModule
             'comment_id' => $id,
             'status' => $status,
         ]);
+    }
+
+    /**
+     * Kommentar nachträglich bearbeiten (z. B. sensible Angaben entfernen).
+     * Im Frontend erscheint danach „Bearbeitet vom Administrator“.
+     */
+    public function edit(int $id, string $author, string $content): array
+    {
+        if (!$this->canEdit()) {
+            return $this->failResult('comments.edit.denied', 'Sie dürfen Kommentare nicht bearbeiten.', [
+                'comment_id' => $id,
+            ]);
+        }
+
+        if ($id <= 0) {
+            return $this->failResult('comments.edit.invalid_id', 'Ungültige Kommentar-ID.', [
+                'comment_id' => $id,
+            ]);
+        }
+
+        $editorId = (int) (Auth::getCurrentUser()->id ?? 0);
+        $result = $this->service->updateByModerator($id, $author, $content, $editorId);
+
+        if (empty($result['success'])) {
+            return $this->failResult('comments.edit.failed', (string) ($result['error'] ?? 'Kommentar konnte nicht gespeichert werden.'), [
+                'comment_id' => $id,
+            ]);
+        }
+
+        if (empty($result['changed'])) {
+            return ['success' => true, 'message' => 'Keine Änderungen am Kommentar.'];
+        }
+
+        $this->logSuccess(
+            'comments.edit.completed',
+            'Kommentar durch Moderation bearbeitet.',
+            ['comment_id' => $id, 'editor_id' => $editorId],
+            $id
+        );
+
+        return ['success' => true, 'message' => 'Kommentar gespeichert. Er wird als „Bearbeitet vom Administrator“ gekennzeichnet.'];
     }
 
     /**
@@ -408,6 +459,7 @@ class CommentsModule
         $postUrl = $this->buildPostUrl($postSlug, $postPublishedAt, $postCreatedAt);
         $statusMeta = self::ROW_STATUS_META[$status] ?? ['label' => $status, 'badge_class' => 'bg-secondary-lt'];
         $authorScope = $this->determineAuthorScope($userId, $author);
+        $editedAt = trim((string)$this->commentField($comment, 'edited_at', ''));
 
         return [
             'id' => $commentId,
@@ -425,6 +477,8 @@ class CommentsModule
             'status_badge' => (string)($statusMeta['badge_class'] ?? 'bg-secondary-lt'),
             'post_date' => $postDate,
             'formatted_date' => $this->formatCommentDate($postDate),
+            'is_edited' => $editedAt !== '',
+            'formatted_edited_at' => $editedAt !== '' ? $this->formatCommentDate($editedAt) : '',
             'post_title' => trim((string)$this->commentField($comment, 'post_title', '')),
             'post_slug' => preg_replace('/[^a-zA-Z0-9\-_\/]/', '', $postSlug) ?? '',
             'post_url' => $postUrl,
@@ -611,6 +665,16 @@ class CommentsModule
     private function buildRowActions(int $commentId, string $status): array
     {
         $actions = [];
+
+        if ($this->canEdit()) {
+            $actions[] = [
+                'type' => 'edit',
+                'comment_id' => $commentId,
+                'label' => 'Bearbeiten',
+                'icon' => 'edit',
+                'variant' => 'default',
+            ];
+        }
 
         if ($this->canModerate()) {
             $statusActions = [

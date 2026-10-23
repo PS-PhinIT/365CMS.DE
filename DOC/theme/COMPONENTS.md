@@ -56,7 +56,7 @@ Die Theme-Klasse `MeridianCMSDefaultTheme` registriert: Preconnect/Fonts/Styles/
 | Menüs | `ThemeManager::instance()->getMenu('<position>')` |
 | Tabellen & Hub-Sites | Shortcodes `[site-table id="…"]`, `[hub-site id="…"]` |
 | SEO-Head | über `head` (Meta, Open Graph, Twitter, Canonical, Hreflang, JSON-LD) |
-| Kommentare | Formular an `POST /comments/post` mit Token `comment_<postId>`; freigegebene Kommentare über `CommentService::getApprovedForPost()` |
+| Kommentare | Formular an `POST /comments/post` mit Token `comment_<postId>`; freigegebene Kommentare über `CommentService::getApprovedForPost()`; ist `edited_at` gesetzt, zeigt das Theme „Bearbeitet vom Administrator“ |
 | Favoriten | POST mit `phinit_toggle_favorite`, `favorite_content_type`, `favorite_content_id`, Token `phinit_favorite_<typ>_<id>` |
 | Logout | `<form method="post" action="/logout">` mit `csrf_token` aus `Security::generateToken('logout')` |
 | Consent | `CookieConsentService` – eigener Banner nur, wenn nicht extern verwaltet |

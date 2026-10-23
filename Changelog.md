@@ -14,6 +14,14 @@
 
 ---
 
+### v3.5.3 — 23.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.5.3** | 🟢 feat | Admin / Kommentare | Kommentare lassen sich unter *Kommentare → Aktionen → Bearbeiten* nachträglich bearbeiten (Autorname und Text, Recht `comments.moderate`), z. B. um sensible Angaben zu entfernen oder eigene Kommentare zu ergänzen. Der Text wird wie neue Kommentare mit dem Purifier-Profil `strict` bereinigt (max. 5000 Zeichen); Status und Datum bleiben unverändert, ohne Änderung wird nichts markiert. Protokoll im Audit-Log (`comments.edit.*`). |
+| **3.5.3** | 🟢 feat | Theme / Kommentare | Bearbeitete Kommentare zeigen auf der Website „Bearbeitet vom Administrator“ (`cms-default`: `.comment-edited-note`), in der Admin-Liste mit Bearbeitungsdatum. |
+| **3.5.3** | ⬜ chore | Datenbank / Release | Neue Spalten `comments.edited_at` und `comments.edited_by` (Neuinstallation über `SchemaManager`, Bestandsinstallationen automatisch über die Laufzeit-Schemaprüfung); Schema bleibt `v23`. `Version::CURRENT` = `3.5.3`, beide `update.json` und Release-Pakete `RELEASE/365CMS-3.5.3-{update,full}.zip` mit SHA-256. |
+
 ### v3.5.2 — 17.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

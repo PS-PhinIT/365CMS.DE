@@ -12,13 +12,13 @@ Snapshot of the runtime state verified against the source code on 2026-10-02: ve
 
 | Merkmal | Wert | Quelle |
 |---|---|---|
-| Core-Version | `3.5.2`, Release `2026-10-17`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
+| Core-Version | `3.5.3`, Release `2026-10-23`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
 | Schema | `v23` | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.0.9 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
+| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` (23.10.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
 
 ### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
 

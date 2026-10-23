@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Kommentare
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-10-23 | **Version:** 3.5.3 | **Status:** Stable
 > **Route:** `/admin/comments` | **Capabilities:** `comments.view`, `comments.moderate`, `comments.delete` | **CSRF-Aktion:** `admin_comments`
 
 ## English (summary)
@@ -9,7 +9,7 @@ Comment moderation lives at `/admin/comments` (`CMS/admin/comments.php` → `CMS
 
 - Status tabs: `all`, `pending`, `approved`, `spam`, `trash`.
 - Filters: free text `q`, `author_scope` (`all|registered|guest|anonymous`), `link_scope` (`all|linked|orphaned`), `content_view` (`excerpt|full`).
-- POST actions: `status`, `delete`, `bulk` (`approve|spam|trash|delete`, max. 100 IDs), `empty_trash`.
+- POST actions: `status`, `edit` (author name + content, requires `comments.moderate`; the frontend then shows “Bearbeitet vom Administrator”), `delete`, `bulk` (`approve|spam|trash|delete`, max. 100 IDs), `empty_trash`.
 - Frontend submissions go to `POST /comments/post` with a per-post CSRF token (`comment_<postId>`), are rate-limited and always start as `pending`; administrators receive an e-mail notification.
 
 ## Deutsch
@@ -30,7 +30,7 @@ Comment moderation lives at `/admin/comments` (`CMS/admin/comments.php` → `CMS
 | Capability | Erlaubt |
 |---|---|
 | `comments.view` | Liste ansehen |
-| `comments.moderate` | Status ändern (freigeben, Spam, Papierkorb) |
+| `comments.moderate` | Status ändern (freigeben, Spam, Papierkorb), Kommentare bearbeiten |
 | `comments.delete` | Endgültig löschen, Papierkorb leeren |
 
 ### Oberfläche
@@ -43,12 +43,24 @@ Comment moderation lives at `/admin/comments` (`CMS/admin/comments.php` → `CMS
   - Verknüpfung `link_scope`: `linked` (Beitrag existiert) oder `orphaned` (Beitrag gelöscht)
   - Darstellung `content_view`: `excerpt` (gekürzt) oder `full`
 - Jede Zeile zeigt Autor mit Initialen-Avatar, E-Mail, Datum, Status-Badge und den Link zum Beitrag (sofern vorhanden).
+- Bearbeitete Kommentare tragen in der Liste den Hinweis „Bearbeitet vom Administrator · Datum“.
+
+### Kommentar bearbeiten
+
+Über *Aktionen → Bearbeiten* öffnet sich ein Dialog mit Autorname und Kommentartext. So lassen sich nachträglich sensible Angaben entfernen oder eigene Kommentare ergänzen.
+
+- Der Text wird wie bei neuen Kommentaren mit dem Purifier-Profil `strict` bereinigt (max. 5000 Zeichen, nicht leer).
+- Status und Erstellungsdatum bleiben unverändert; `edited_at` und `edited_by` werden gesetzt.
+- Im Frontend erscheint unter dem Kommentar „Bearbeitet vom Administrator“ (Theme `cms-default`: `.comment-edited-note`).
+- Ohne Änderung wird nichts gespeichert und nicht markiert („Keine Änderungen am Kommentar.“).
+- Protokoll im Audit-Log: `comments.edit.completed` bzw. `comments.edit.failed`.
 
 ### Aktionen
 
 | `action` | Parameter | Wirkung |
 |---|---|---|
 | `status` | `id`, `status` (`pending`, `approved`, `spam`, `trash`) | Status eines Kommentars ändern |
+| `edit` | `id`, `author`, `content` | Autorname und Inhalt bearbeiten, Kennzeichnung „Bearbeitet vom Administrator“ |
 | `delete` | `id` | Kommentar endgültig löschen |
 | `bulk` | `bulk_action` (`approve`, `spam`, `trash`, `delete`), `ids[]` | Sammelaktion, höchstens **100** IDs |
 | `empty_trash` | – | Alle Kommentare im Papierkorb löschen |
@@ -72,7 +84,7 @@ Alle Aktionen werden mit Ergebnis (verarbeitet/fehlgeschlagen) im Audit-Log prot
 
 ### Datenmodell
 
-Tabelle `cms_comments`: `id`, `post_id`, `user_id`, `author`, `author_email`, `author_ip`, `content`, `status` (ENUM `pending|approved|spam|trash`, Standard `pending`), `post_date`, `modified_at`. Details siehe [../../core/DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md).
+Tabelle `cms_comments`: `id`, `post_id`, `user_id`, `author`, `author_email`, `author_ip`, `content`, `status` (ENUM `pending|approved|spam|trash`, Standard `pending`), `post_date`, `modified_at`, `edited_at` (Zeitpunkt der letzten Moderations-Bearbeitung, `NULL` = unbearbeitet), `edited_by` (Benutzer-ID). Details siehe [../../core/DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md).
 
 ### Verwandte Dokumente
 

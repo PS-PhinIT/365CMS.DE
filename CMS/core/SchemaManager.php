@@ -554,6 +554,8 @@ class SchemaManager
                 status ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending',
                 post_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                edited_at TIMESTAMP NULL DEFAULT NULL,
+                edited_by INT UNSIGNED NULL DEFAULT NULL,
                 INDEX idx_post_id (post_id),
                 INDEX idx_status (status),
                 INDEX idx_post_date (post_date),
@@ -1061,6 +1063,19 @@ class SchemaManager
             $this->prefix . 'post_tags',
             'description',
             "ALTER TABLE {$this->prefix}post_tags ADD COLUMN description TEXT AFTER slug_en"
+        );
+
+        // Nachträgliche Bearbeitung durch die Moderation („Bearbeitet vom Administrator“).
+        $this->ensureColumnExists(
+            $this->prefix . 'comments',
+            'edited_at',
+            "ALTER TABLE {$this->prefix}comments ADD COLUMN edited_at TIMESTAMP NULL DEFAULT NULL AFTER modified_at"
+        );
+
+        $this->ensureColumnExists(
+            $this->prefix . 'comments',
+            'edited_by',
+            "ALTER TABLE {$this->prefix}comments ADD COLUMN edited_by INT UNSIGNED NULL DEFAULT NULL AFTER edited_at"
         );
 
         $ordersSql = self::getSchemaQueries($this->prefix, $this->charset)['orders'] ?? '';

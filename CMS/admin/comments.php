@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 use CMS\Auth;
 
-const CMS_ADMIN_COMMENTS_ALLOWED_ACTIONS = ['status', 'delete', 'bulk', 'empty_trash'];
+const CMS_ADMIN_COMMENTS_ALLOWED_ACTIONS = ['status', 'edit', 'delete', 'bulk', 'empty_trash'];
 const CMS_ADMIN_COMMENTS_ALLOWED_STATUSES = ['pending', 'approved', 'spam', 'trash'];
 const CMS_ADMIN_COMMENTS_ALLOWED_BULK_ACTIONS = ['approve', 'spam', 'trash', 'delete'];
 const CMS_ADMIN_COMMENTS_MAX_BULK_IDS = 100;
@@ -57,7 +57,7 @@ function cms_admin_comments_normalize_filters(CommentsModule $module, array $sou
 }
 
 /**
- * @return array{action:string,id:int,new_status:string,bulk_action:string,ids:list<int>}
+ * @return array{action:string,id:int,new_status:string,bulk_action:string,ids:list<int>,author:string,content:string}
  */
 function cms_admin_comments_normalize_payload(array $post): array
 {
@@ -67,6 +67,8 @@ function cms_admin_comments_normalize_payload(array $post): array
         'new_status' => cms_admin_comments_normalize_status_value($post['new_status'] ?? ''),
         'bulk_action' => cms_admin_comments_normalize_bulk_action($post['bulk_action'] ?? ''),
         'ids' => cms_admin_comments_normalize_bulk_ids($post['ids'] ?? []),
+        'author' => is_string($post['author'] ?? null) ? $post['author'] : '',
+        'content' => is_string($post['content'] ?? null) ? $post['content'] : '',
     ];
 }
 
@@ -101,6 +103,9 @@ function cms_admin_comments_handle_action(CommentsModule $module, array $payload
     switch ($payload['action']) {
         case 'status':
             return $module->updateStatus($payload['id'], $payload['new_status']);
+
+        case 'edit':
+            return $module->edit($payload['id'], $payload['author'], $payload['content']);
 
         case 'delete':
             return $module->delete($payload['id']);
@@ -155,6 +160,14 @@ $sectionPageConfig = [
 
         if ($payload['action'] === 'status' && ($payload['id'] <= 0 || $payload['new_status'] === '')) {
             return ['success' => false, 'error' => 'Ungültige Kommentar-Aktion.'];
+        }
+
+        if ($payload['action'] === 'edit' && $payload['id'] <= 0) {
+            return ['success' => false, 'error' => 'Ungültige Kommentar-ID.'];
+        }
+
+        if ($payload['action'] === 'edit' && !$module->canEdit()) {
+            return ['success' => false, 'error' => 'Sie dürfen Kommentare nicht bearbeiten.'];
         }
 
         if ($payload['action'] === 'delete' && $payload['id'] <= 0) {

@@ -2,12 +2,12 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "3.5.2",
+  "version": "3.5.3",
   "min_php": "8.4.1",
-  "released": "2026-10-17",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.2-update.zip",
+  "released": "2026-10-23",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.3-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "149b5dcfb59ca0ea6779abcea8efa181b7386404be48d1c2c111f46b8bfce1fa",
-  "notes": "Release-Stand 3.5.2 (Bugfix für 3.5.0): Speichern neuer und bestehender Seiten endet nicht mehr mit HTTP 500 (TypeError in PageTemplateService::encodeMetadata() bei Vorlagen ohne Zusatzfelder, Fix aus 3.5.1); unerwartete Fehler in Admin-Aktionen werden protokolliert und als Hinweis angezeigt statt mit HTTP 500 zu enden. Datenbankschema unverändert v23.",
+  "checksum_sha256": "4b12900e9705f1373b8d828d1be457a77c0f19b1b0d3efd58aff9832c9edec46",
+  "notes": "Release-Stand 3.5.3: Kommentare lassen sich im Adminbereich nachträglich bearbeiten (Autorname und Inhalt, Recht comments.moderate), z. B. um sensible Angaben zu entfernen; bearbeitete Kommentare zeigen auf der Website „Bearbeitet vom Administrator“. Neue Spalten comments.edited_at/edited_by werden automatisch ergänzt, Datenbankschema bleibt v23.",
   "critical": false
 }
