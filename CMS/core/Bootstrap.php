@@ -803,8 +803,10 @@ class Bootstrap
                         return;
                     }
 
+                    $placeholders = implode(',', array_fill(0, count($requestedFontSlugs), '?'));
                     $fonts = $db->get_results(
-                        "SELECT slug, css_path FROM {$db->getPrefix()}custom_fonts WHERE css_path IS NOT NULL AND css_path != ''"
+                        "SELECT slug, css_path, file_path FROM {$db->getPrefix()}custom_fonts WHERE slug IN ({$placeholders}) AND css_path IS NOT NULL AND css_path != ''",
+                        $requestedFontSlugs
                     ) ?: [];
 
                     $fontMap = [];
@@ -813,24 +815,51 @@ class Bootstrap
                         if ($slug === '') {
                             continue;
                         }
-                        $fontMap[$slug] = (string)($font->css_path ?? '');
+                        $fontMap[$slug] = [
+                            'css' => (string)($font->css_path ?? ''),
+                            'file' => (string)($font->file_path ?? ''),
+                        ];
                     }
 
+                    // Nur Dateien direkt unter uploads/fonts/ – DB-Werte nie ungeprüft als Pfad verwenden.
+                    $isManagedFontPath = static fn (string $path, string $extensionPattern): bool => preg_match(
+                        '#^uploads/fonts/[A-Za-z0-9._-]+\.(?:' . $extensionPattern . ')$#',
+                        $path
+                    ) === 1 && !str_contains($path, '..');
+                    $buildFontUrl = static fn (string $path): string => function_exists('cms_runtime_base_url')
+                        ? cms_runtime_base_url($path)
+                        : rtrim((string) SITE_URL, '/') . '/' . $path;
+
+                    $preloadTags = '';
+                    $stylesheetTags = '';
                     foreach ($requestedFontSlugs as $slug) {
                         if (!isset($fontMap[$slug])) {
                             continue;
                         }
 
-                        $cssFile = ABSPATH . ltrim($fontMap[$slug], '/');
-                        if (is_file($cssFile)) {
-                            $cssHref = function_exists('cms_runtime_base_url')
-                                ? cms_runtime_base_url(ltrim((string) $fontMap[$slug], '/'))
-                                : rtrim((string) SITE_URL, '/') . '/' . ltrim((string) $fontMap[$slug], '/');
-
-                            $safeCssHref = htmlspecialchars($cssHref, ENT_QUOTES, 'UTF-8');
-                            echo '<link rel="stylesheet" href="' . $safeCssHref . '">' . "\n";
+                        $cssPath = ltrim(str_replace('\\', '/', $fontMap[$slug]['css']), '/');
+                        if (!$isManagedFontPath($cssPath, 'css')) {
+                            continue;
                         }
+
+                        $cssMtime = @filemtime(ABSPATH . $cssPath);
+                        if ($cssMtime === false) {
+                            continue;
+                        }
+
+                        // Primärschnitt (latin, normal, 400) vorladen: spart die Kette HTML → CSS → Font.
+                        $filePath = ltrim(str_replace('\\', '/', $fontMap[$slug]['file']), '/');
+                        if ($isManagedFontPath($filePath, 'woff2') && is_file(ABSPATH . $filePath)) {
+                            $preloadTags .= '<link rel="preload" href="' . htmlspecialchars($buildFontUrl($filePath), ENT_QUOTES, 'UTF-8')
+                                . '" as="font" type="font/woff2" crossorigin>' . "\n";
+                        }
+
+                        // CSS wird per .htaccess ein Jahr immutable gecacht → Version für Neu-Downloads anhängen.
+                        $stylesheetTags .= '<link rel="stylesheet" href="'
+                            . htmlspecialchars($buildFontUrl($cssPath) . '?ver=' . $cssMtime, ENT_QUOTES, 'UTF-8') . '">' . "\n";
                     }
+
+                    echo $preloadTags . $stylesheetTags;
                 } catch (\Throwable $e) {
                     // Tabelle existiert noch nicht – ignorieren
                 }

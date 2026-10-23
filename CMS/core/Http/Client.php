@@ -166,12 +166,12 @@ final class Client
         $responseHeaders = [];
         $body = '';
         $maxBytes = max(0, (int) ($options['maxBytes'] ?? 0));
-        $curlHeaders = ['User-Agent: ' . ($options['userAgent'] ?? '365CMS-HttpClient/1.0')];
-
-        foreach ((array) ($options['headers'] ?? []) as $header) {
-            if (is_string($header) && trim($header) !== '') {
-                $curlHeaders[] = $header;
-            }
+        $curlHeaders = $this->buildRequestHeaders(
+            (string) ($options['userAgent'] ?? '365CMS-HttpClient/1.0'),
+            (array) ($options['headers'] ?? [])
+        );
+        if ($curlHeaders === null) {
+            return $this->failure('Ungültige HTTP-Header (Steuerzeichen oder fehlerhafter Header-Name).');
         }
 
         $ch = curl_init($url);
@@ -274,6 +274,41 @@ final class Client
             'headers' => $responseHeaders,
             'contentType' => $contentType,
         ];
+    }
+
+    /**
+     * Baut die Request-Header so, dass jeder Header-Name genau einmal gesendet wird.
+     * Ein expliziter "User-Agent:"-Eintrag in $headers ersetzt die userAgent-Option –
+     * doppelte User-Agent-Header lassen Gegenstellen (z. B. Google Fonts) auf
+     * Legacy-Formate zurückfallen.
+     *
+     * @param array<int|string, mixed> $headers
+     * @return list<string>|null null bei Header-Injection-Versuch
+     */
+    private function buildRequestHeaders(string $userAgent, array $headers): ?array
+    {
+        $normalized = [];
+        $candidates = array_merge(['User-Agent: ' . $userAgent], array_values($headers));
+
+        foreach ($candidates as $header) {
+            if (!is_string($header) || trim($header) === '') {
+                continue;
+            }
+
+            if (preg_match('/[\x00-\x08\x0A-\x1F\x7F]/', $header) === 1 || !str_contains($header, ':')) {
+                return null;
+            }
+
+            [$name, $value] = explode(':', $header, 2);
+            $name = trim($name);
+            if (preg_match('/^[A-Za-z0-9!#$%&\'*+.^_`|~-]+$/', $name) !== 1) {
+                return null;
+            }
+
+            $normalized[strtolower($name)] = $name . ': ' . trim($value);
+        }
+
+        return array_values($normalized);
     }
 
     /**

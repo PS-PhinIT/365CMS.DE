@@ -399,7 +399,8 @@ $fontManagerConfig = [
                             <?php foreach ($customFontRows as $font): ?>
                                 <?php
                                 $fontName = (string) ($font['name'] ?? '');
-                                $fontFormat = (string) ($font['format'] ?? '');
+                                $fontFormats = array_map('strval', (array) ($font['asset_formats'] ?? []));
+                                $fontFormat = $fontFormats !== [] ? implode(', ', $fontFormats) : (string) ($font['format'] ?? '');
                                 $fontSourceLabel = (($font['source'] ?? '') === 'google-fonts-local') ? 'Google (lokal)' : 'Manuell';
                                 $fontSearchText = strtolower(trim($fontName . ' ' . $fontFormat . ' ' . $fontSourceLabel));
                                 ?>
@@ -408,19 +409,32 @@ $fontManagerConfig = [
                                         <div>
                                             <div class="fw-semibold"><?php echo htmlspecialchars($fontName, ENT_QUOTES, 'UTF-8'); ?></div>
                                             <div class="text-muted small">
-                                                <?php echo htmlspecialchars($fontFormat, ENT_QUOTES, 'UTF-8'); ?>
+                                                <?php echo htmlspecialchars(strtoupper($fontFormat), ENT_QUOTES, 'UTF-8'); ?>
+                                                <?php if (!empty($font['uses_legacy_format'])): ?>
+                                                    <span class="badge bg-warning-lt ms-1" title="TTF/OTF ist rund fünfmal größer als WOFF2">Legacy-Format</span>
+                                                <?php endif; ?>
                                                 · <?php echo htmlspecialchars($fontSourceLabel, ENT_QUOTES, 'UTF-8'); ?>
                                                 <?php if (!empty($font['file_size_label'])): ?>
                                                     · <?php echo htmlspecialchars((string) ($font['file_size_label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
+                                        <div class="d-flex flex-wrap gap-2">
+                                        <?php if (!empty($font['refreshable'])): ?>
+                                        <form method="post" data-font-manager-form="refresh-font">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                                            <input type="hidden" name="action" value="refresh_font">
+                                            <input type="hidden" name="font_id" value="<?php echo (int)($font['id'] ?? 0); ?>">
+                                            <button type="submit" class="btn btn-sm <?php echo !empty($font['uses_legacy_format']) ? 'btn-warning' : 'btn-outline-secondary'; ?>" data-pending-text="Lädt neu …"><?php echo !empty($font['uses_legacy_format']) ? 'Als WOFF2 neu laden' : 'Neu laden'; ?></button>
+                                        </form>
+                                        <?php endif; ?>
                                         <form method="post" data-font-manager-form="delete-font">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                                             <input type="hidden" name="action" value="delete_font">
                                             <input type="hidden" name="font_id" value="<?php echo (int)($font['id'] ?? 0); ?>">
                                             <button type="button" class="btn btn-outline-danger btn-sm js-font-delete" data-font-name="<?php echo htmlspecialchars((string) ($font['name'] ?? ''), ENT_QUOTES); ?>" data-pending-text="Löscht …">Löschen</button>
                                         </form>
+                                        </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>

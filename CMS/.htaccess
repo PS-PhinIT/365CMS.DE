@@ -197,6 +197,7 @@ AddDefaultCharset UTF-8
 </IfModule>
 
 # Kompression – Brotli (bevorzugt) + Gzip/Deflate als Fallback (M-09)
+# WOFF/WOFF2 sind intern bereits komprimiert und werden bewusst ausgelassen.
 <IfModule mod_brotli.c>
     # Qualitätsstufe 6 – gutes Verhältnis Kompression/CPU
     BrotliCompressionQuality 6
@@ -207,8 +208,7 @@ AddDefaultCharset UTF-8
         application/json application/xml application/xhtml+xml \
         application/rss+xml application/atom+xml \
         image/svg+xml \
-        font/woff font/woff2 font/truetype font/opentype \
-        application/font-woff application/font-woff2 \
+        font/ttf font/otf font/truetype font/opentype \
         application/vnd.ms-fontobject
 </IfModule>
 
@@ -221,8 +221,7 @@ AddDefaultCharset UTF-8
         application/json application/xml application/xhtml+xml \
         application/rss+xml application/atom+xml \
         image/svg+xml \
-        font/woff font/woff2 font/truetype font/opentype \
-        application/font-woff application/font-woff2 \
+        font/ttf font/otf font/truetype font/opentype \
         application/vnd.ms-fontobject
 
     # Defekte Proxys umgehen
@@ -233,7 +232,7 @@ AddDefaultCharset UTF-8
 
 # Vary: Accept-Encoding – verhindert Proxy-Caching von unkomprimierten Inhalten (M-09)
 <IfModule mod_headers.c>
-    <FilesMatch "\.(html?|css|js|json|xml|svg|woff|woff2|ttf|otf|eot)$">
+    <FilesMatch "\.(html?|css|js|json|xml|svg|ttf|otf|eot)$">
         Header append Vary "Accept-Encoding"
     </FilesMatch>
 </IfModule>
@@ -256,6 +255,8 @@ AddDefaultCharset UTF-8
     ExpiresByType text/html            "access plus 0 seconds"
     ExpiresByType font/woff            "access plus 1 year"
     ExpiresByType font/woff2           "access plus 1 year"
+    ExpiresByType font/ttf             "access plus 1 year"
+    ExpiresByType font/otf             "access plus 1 year"
     ExpiresByType application/font-woff "access plus 1 year"
     ExpiresByType application/font-woff2 "access plus 1 year"
 </IfModule>

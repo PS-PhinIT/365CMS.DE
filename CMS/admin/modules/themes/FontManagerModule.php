@@ -39,6 +39,9 @@ class FontManagerModule
     private const MANAGED_FONT_FILE_EXTENSIONS = ['woff', 'woff2', 'ttf', 'otf'];
     private const TEMP_FONT_FILE_PREFIX = 'cmsfont_';
     private const LOCAL_FONT_ALLOWED_SUBSETS = ['latin', 'latin-ext'];
+    private const GOOGLE_FONTS_WOFF2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+    private const LOCAL_FONT_CSS_PROPERTIES = ['font-family', 'font-style', 'font-weight', 'font-stretch', 'font-display', 'src', 'unicode-range'];
+    private const LEGACY_FONT_FORMATS = ['ttf', 'otf'];
     private const FONT_SLUG_ALIASES = [
         'exo 2' => 'exo2',
         'source code pro' => 'source-code',
@@ -678,7 +681,92 @@ class FontManagerModule
      */
     public function downloadGoogleFont(string $fontFamily): array
     {
-        $fontFamily = trim($fontFamily);
+        $result = $this->installGoogleFont(trim($fontFamily), null);
+        unset($result['local_paths']);
+
+        return $result;
+    }
+
+    /**
+     * Lädt eine bereits lokal gespeicherte Google-Schrift erneut (z. B. TTF-Altbestand → WOFF2)
+     * und entfernt danach nicht mehr referenzierte Altdateien.
+     */
+    public function refreshCustomFont(int $fontId): array
+    {
+        if ($fontId <= 0) {
+            return $this->buildFontFailureResult('Ungültige Font-ID.', 'font_manager_invalid_font_id', ['Font-ID: ' . $fontId], ['font_id' => $fontId]);
+        }
+
+        $font = $this->db->get_row(
+            "SELECT id, name, slug, file_path, css_path, source FROM {$this->prefix}custom_fonts WHERE id = ?",
+            [$fontId]
+        );
+
+        if (!$font) {
+            return $this->buildFontFailureResult('Die angeforderte Schriftart wurde nicht gefunden.', 'font_manager_font_not_found', ['Font-ID: ' . $fontId], ['font_id' => $fontId]);
+        }
+
+        if ((string) ($font->source ?? '') !== 'google-fonts-local') {
+            return $this->buildFontFailureResult(
+                'Nur lokal gespeicherte Google Fonts können neu geladen werden.',
+                'font_manager_refresh_unsupported_source',
+                ['Font-ID: ' . $fontId, 'Quelle: ' . (string) ($font->source ?? '')],
+                ['font_id' => $fontId]
+            );
+        }
+
+        $previousAssets = [];
+        $previousFilePath = $this->resolveManagedFontPath((string) ($font->file_path ?? ''));
+        if ($previousFilePath !== null) {
+            $previousAssets[$previousFilePath] = $previousFilePath;
+        }
+        $previousCssPath = $this->resolveManagedFontPath((string) ($font->css_path ?? ''));
+        if ($previousCssPath !== null) {
+            foreach ($this->extractManagedFontAssetPathsFromCss($previousCssPath) as $assetPath) {
+                $previousAssets[$assetPath] = $assetPath;
+            }
+        }
+
+        $result = $this->installGoogleFont(trim((string) ($font->name ?? '')), $font);
+        $newPaths = array_map(
+            static fn (string $path): string => (string) (realpath($path) ?: $path),
+            (array) ($result['local_paths'] ?? [])
+        );
+        unset($result['local_paths']);
+
+        if (empty($result['success'])) {
+            return $result;
+        }
+
+        $warnings = [];
+        $removed = 0;
+        foreach ($previousAssets as $assetPath) {
+            if (in_array((string) (realpath($assetPath) ?: $assetPath), $newPaths, true)) {
+                continue;
+            }
+
+            if ($this->deleteFileIfExists($assetPath, $warnings)) {
+                $removed++;
+            }
+        }
+
+        $result['details'] = array_values(array_filter(array_merge(
+            (array) ($result['details'] ?? []),
+            [
+                'Entfernte Altdateien: ' . $removed,
+                $warnings !== [] ? 'Hinweise: ' . implode(' | ', array_slice($warnings, 0, 2)) : '',
+            ]
+        )));
+
+        return $result;
+    }
+
+    /**
+     * @param object|null $existingFont Datensatz aus custom_fonts für Refresh, sonst Neuinstallation
+     * @return array<string, mixed>
+     */
+    private function installGoogleFont(string $fontFamily, ?object $existingFont): array
+    {
         if ($fontFamily === '' || !preg_match('/^[a-zA-Z0-9 ]+$/', $fontFamily)) {
             return $this->buildFontFailureResult(
                 'Ungültiger Schriftname. Nur Buchstaben, Zahlen und Leerzeichen erlaubt.',
@@ -693,28 +781,34 @@ class FontManagerModule
             return $this->buildFontFailureResult('Schriften-Verzeichnis konnte nicht erstellt werden.', 'font_manager_fonts_dir_unavailable', [], ['font_family' => $fontFamily]);
         }
 
-        $slug = $this->normalizeFontSlug($fontFamily);
+        $isRefresh = $existingFont !== null;
+        $slug = $isRefresh
+            ? $this->sanitizeFontKey((string) ($existingFont->slug ?? ''))
+            : $this->normalizeFontSlug($fontFamily);
         if ($slug === '') {
             return $this->buildFontFailureResult('Für diese Schrift konnte kein gültiger lokaler Dateiname erzeugt werden.', 'font_manager_invalid_font_slug', ['Google Font: ' . $fontFamily], ['font_family' => $fontFamily]);
         }
 
-        // Prüfe ob bereits heruntergeladen
-        $existing = $this->db->get_var(
-            "SELECT COUNT(*) FROM {$this->prefix}custom_fonts WHERE name = ?",
-            [$fontFamily]
-        );
-        if ((int)$existing > 0) {
-            return $this->buildFontFailureResult("Schrift \"{$fontFamily}\" ist bereits vorhanden.", 'font_manager_font_exists', ['Google Font: ' . $fontFamily], ['font_family' => $fontFamily, 'slug' => $slug]);
+        if (!$isRefresh) {
+            $existing = $this->db->get_var(
+                "SELECT COUNT(*) FROM {$this->prefix}custom_fonts WHERE name = ?",
+                [$fontFamily]
+            );
+            if ((int) $existing > 0) {
+                return $this->buildFontFailureResult("Schrift \"{$fontFamily}\" ist bereits vorhanden.", 'font_manager_font_exists', ['Google Font: ' . $fontFamily], ['font_family' => $fontFamily, 'slug' => $slug]);
+            }
         }
 
-        // Google Fonts CSS API (WOFF2 via User-Agent)
         $familyParam = str_replace('%20', '+', rawurlencode($fontFamily));
         $cssUrl = 'https://fonts.googleapis.com/css2?family=' . $familyParam . ':wght@300;400;500;600;700&display=swap';
         $css = $this->fetchRemoteContent($cssUrl);
         if ($css === false) {
-            // IMPROVED: Fallback auf Legacy-CSS-Endpunkt, weil manche Hoster/Firewalls css2 blocken.
-            $legacyCssUrl = 'https://fonts.googleapis.com/css?family=' . $familyParam . ':300,400,500,600,700&display=swap';
-            $css = $this->fetchRemoteContent($legacyCssUrl);
+            // css2 antwortet mit 400, wenn ein angefragtes Gewicht fehlt (z. B. Lato ohne 500/600);
+            // der Legacy-Endpunkt liefert dann die vorhandenen Gewichte.
+            $css = $this->fetchRemoteContent('https://fonts.googleapis.com/css?family=' . $familyParam . ':300,400,500,600,700&display=swap');
+        }
+        if ($css === false) {
+            $css = $this->fetchRemoteContent('https://fonts.googleapis.com/css2?family=' . $familyParam . '&display=swap');
         }
         if ($css === false) {
             return $this->buildFontFailureResult(
@@ -725,18 +819,12 @@ class FontManagerModule
             );
         }
 
-        $optimizedCss = $this->optimizeGoogleFontCssForLocalDelivery($css);
-        if ($optimizedCss !== '') {
-            $css = $optimizedCss;
-        }
+        $css = $this->optimizeGoogleFontCssForLocalDelivery($css);
 
-        // Font-URLs extrahieren und lokal speichern
-        $localCss = $css;
-        $downloadedFiles = [];
+        $urlMap = [];
         $downloadedPaths = [];
         $downloadWarnings = [];
         $downloadedBytes = 0;
-        $primaryFormat = '';
 
         if (preg_match_all('/url\(([^)]+?\.(woff2?|ttf|otf)[^)]*)\)/i', $css, $matches)) {
             $remoteUrls = array_values(array_unique(array_map(
@@ -759,17 +847,13 @@ class FontManagerModule
 
             foreach ($remoteUrls as $remoteUrl) {
                 if (!$this->isAllowedFontUrl($remoteUrl)) {
-                    $downloadWarnings[] = 'Remote-Datei liegt außerhalb der erlaubten Fonts-Hosts: ' . $remoteUrl;
+                    $downloadWarnings[] = 'Remote-Datei liegt außerhalb der erlaubten Fonts-Hosts und wurde verworfen.';
                     continue;
                 }
 
-                // Dateiname aus URL ableiten
-                $urlPath = (string)parse_url($remoteUrl, PHP_URL_PATH);
-                $extension = strtolower((string)pathinfo($urlPath, PATHINFO_EXTENSION));
-                if ($extension === '') {
-                    $extension = 'woff2';
-                }
-                if (!in_array($extension, ['woff2', 'woff', 'ttf', 'otf'], true)) {
+                $urlPath = (string) parse_url($remoteUrl, PHP_URL_PATH);
+                $extension = strtolower((string) pathinfo($urlPath, PATHINFO_EXTENSION));
+                if (!in_array($extension, self::MANAGED_FONT_FILE_EXTENSIONS, true)) {
                     continue;
                 }
 
@@ -779,7 +863,6 @@ class FontManagerModule
                     continue;
                 }
 
-                $localPath = $fontsDir . DIRECTORY_SEPARATOR . $fileName;
                 $fontData = $this->fetchRemoteContent($remoteUrl);
                 if ($fontData === false) {
                     $downloadWarnings[] = 'Remote-Datei konnte nicht geladen werden: ' . basename($urlPath);
@@ -792,34 +875,36 @@ class FontManagerModule
                 }
 
                 $fileBytes = strlen($fontData);
-                if ($fileBytes <= 0) {
-                    $downloadWarnings[] = 'Remote-Datei ist leer: ' . basename($urlPath);
-                    continue;
-                }
-
                 if (($downloadedBytes + $fileBytes) > self::MAX_REMOTE_FONT_TOTAL_BYTES) {
                     $downloadWarnings[] = 'Download-Limit von ' . $this->formatBytesLabel(self::MAX_REMOTE_FONT_TOTAL_BYTES) . ' für Font-Dateien erreicht.';
                     break;
                 }
 
+                $localPath = $fontsDir . DIRECTORY_SEPARATOR . $fileName;
                 if (!$this->writeManagedFontFileAtomically($localPath, $fontData, 0644)) {
                     $downloadWarnings[] = 'Remote-Datei konnte nicht lokal gespeichert werden: ' . basename($localPath);
                     continue;
                 }
 
                 $downloadedBytes += $fileBytes;
-                $downloadedFiles[] = $fileName;
-                $downloadedPaths[] = $localPath;
-                if ($primaryFormat === '') {
-                    $primaryFormat = $extension;
-                }
-
-                // URL im CSS hostneutral relativ zur lokalen CSS-Datei ersetzen
-                $localCss = str_replace($remoteUrl, $fileName, $localCss);
+                $urlMap[$remoteUrl] = $fileName;
+                $downloadedPaths[$fileName] = $localPath;
             }
         }
 
-        if (empty($downloadedFiles)) {
+        $builtCss = $urlMap !== [] ? $this->buildLocalFontCss($css, $urlMap) : ['css' => '', 'primary' => '', 'files' => []];
+
+        // Dateien, deren @font-face-Block beim Sanitizing verworfen wurde, nicht verwaist liegen lassen.
+        foreach ($downloadedPaths as $fileName => $localPath) {
+            if (!in_array($fileName, $builtCss['files'], true)) {
+                @unlink($localPath);
+                unset($downloadedPaths[$fileName]);
+            }
+        }
+
+        if ($builtCss['css'] === '' || $builtCss['primary'] === '') {
+            $this->cleanupDownloadedFontFiles(array_values($downloadedPaths));
+
             return $this->buildFontFailureResult(
                 "Keine Font-Dateien konnten heruntergeladen werden für \"{$fontFamily}\".",
                 'font_manager_font_download_failed',
@@ -828,38 +913,53 @@ class FontManagerModule
             );
         }
 
-        // Lokales CSS speichern
+        $primaryFile = $builtCss['primary'];
+        $primaryFormat = strtolower((string) pathinfo($primaryFile, PATHINFO_EXTENSION));
+        if ($primaryFormat !== 'woff2') {
+            $downloadWarnings[] = 'Google Fonts lieferte kein WOFF2 (' . strtoupper($primaryFormat) . ') – Dateien sind deutlich größer.';
+            $this->logger->warning('Google Fonts lieferte kein WOFF2-Format.', ['font_family' => $fontFamily, 'format' => $primaryFormat]);
+        }
+
         $cssFile = $fontsDir . DIRECTORY_SEPARATOR . $slug . '.css';
-        if (!$this->writeManagedFontFileAtomically($cssFile, $localCss, 0644)) {
-            $this->cleanupDownloadedFontFiles($downloadedPaths);
+        if (!$this->writeManagedFontFileAtomically($cssFile, $builtCss['css'], 0644)) {
+            if (!$isRefresh) {
+                $this->cleanupDownloadedFontFiles(array_values($downloadedPaths));
+            }
 
             return $this->buildFontFailureResult(
                 'Lokale CSS-Datei für die Schrift konnte nicht geschrieben werden.',
                 'font_manager_css_write_failed',
-                ['Bereits geladene Font-Dateien wurden wieder entfernt.'],
+                [$isRefresh ? 'Die bisherige Schrift bleibt unverändert aktiv.' : 'Bereits geladene Font-Dateien wurden wieder entfernt.'],
                 ['font_family' => $fontFamily, 'slug' => $slug]
             );
         }
 
-        $downloadedPaths[] = $cssFile;
+        $localPaths = array_values($downloadedPaths);
+        $localPaths[] = $cssFile;
 
         try {
-            // In DB speichern
-            $this->db->execute(
-                "INSERT INTO {$this->prefix}custom_fonts (name, slug, format, file_path, css_path, source, created_at)
-                 VALUES (?, ?, ?, ?, ?, 'google-fonts-local', NOW())",
-                [$fontFamily, $slug, $primaryFormat !== '' ? $primaryFormat : 'woff2', 'uploads/fonts/' . $downloadedFiles[0], 'uploads/fonts/' . $slug . '.css']
-            );
+            if ($isRefresh) {
+                $this->db->execute(
+                    "UPDATE {$this->prefix}custom_fonts SET format = ?, file_path = ?, css_path = ? WHERE id = ?",
+                    [$primaryFormat, 'uploads/fonts/' . $primaryFile, 'uploads/fonts/' . $slug . '.css', (int) ($existingFont->id ?? 0)]
+                );
+            } else {
+                $this->db->execute(
+                    "INSERT INTO {$this->prefix}custom_fonts (name, slug, format, file_path, css_path, source, created_at)
+                     VALUES (?, ?, ?, ?, ?, 'google-fonts-local', NOW())",
+                    [$fontFamily, $slug, $primaryFormat, 'uploads/fonts/' . $primaryFile, 'uploads/fonts/' . $slug . '.css']
+                );
+            }
 
-            // Font-Stack registrieren
-            $fontStack = "'{$fontFamily}', sans-serif";
             $this->db->execute(
                 "INSERT INTO {$this->prefix}settings (option_name, option_value) VALUES (?, ?)
                  ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
-                ['font_stack_' . $slug, $fontStack]
+                ['font_stack_' . $slug, "'{$fontFamily}', sans-serif"]
             );
         } catch (\Throwable $e) {
-            $this->cleanupDownloadedFontFiles($downloadedPaths);
+            if (!$isRefresh) {
+                $this->cleanupDownloadedFontFiles($localPaths);
+            }
             $this->logger->error('Google Font konnte nach dem Download nicht persistiert werden.', [
                 'font_family' => $fontFamily,
                 'slug' => $slug,
@@ -869,19 +969,20 @@ class FontManagerModule
             return $this->buildFontFailureResult(
                 'Die heruntergeladene Schrift konnte nicht persistiert werden.',
                 'font_manager_persist_failed',
-                ['Temporär geladene Dateien wurden wieder entfernt.'],
+                [$isRefresh ? 'Die neue CSS-Datei ist bereits aktiv; bitte Vorgang wiederholen.' : 'Temporär geladene Dateien wurden wieder entfernt.'],
                 ['font_family' => $fontFamily, 'slug' => $slug, 'exception' => $this->sanitizeErrorContext($e->getMessage())]
             );
         }
 
-        // ADDED: Erfolgreiche lokale Font-Downloads protokollieren.
+        $downloadedFiles = array_keys($downloadedPaths);
+
         AuditLogger::instance()->log(
             AuditLogger::CAT_THEME,
-            'font.download.google',
-            'Google Font lokal gespeichert',
+            $isRefresh ? 'font.refresh.google' : 'font.download.google',
+            $isRefresh ? 'Google Font lokal neu geladen' : 'Google Font lokal gespeichert',
             'font',
-            null,
-            ['font_family' => $fontFamily, 'downloaded_files' => $downloadedFiles],
+            $isRefresh ? (int) ($existingFont->id ?? 0) : null,
+            ['font_family' => $fontFamily, 'downloaded_files' => $downloadedFiles, 'format' => $primaryFormat],
             'info'
         );
 
@@ -889,15 +990,169 @@ class FontManagerModule
 
         return [
             'success' => true,
-            'message' => "Schrift \"{$fontFamily}\" DSGVO-konform heruntergeladen (" . count($downloadedFiles) . " Dateien). Kein externer CDN-Aufruf mehr nötig.",
+            'message' => $isRefresh
+                ? "Schrift \"{$fontFamily}\" neu geladen (" . count($downloadedFiles) . ' Dateien, ' . strtoupper($primaryFormat) . ').'
+                : "Schrift \"{$fontFamily}\" DSGVO-konform heruntergeladen (" . count($downloadedFiles) . ' Dateien, ' . strtoupper($primaryFormat) . '). Kein externer CDN-Aufruf mehr nötig.',
             'details' => array_values(array_filter([
                 'Dateien: ' . count($downloadedFiles),
+                'Format: ' . strtoupper($primaryFormat),
                 'Gesamtgröße: ' . $this->formatBytesLabel($downloadedBytes),
                 'CSS: uploads/fonts/' . $slug . '.css',
+                'Preload-Datei: ' . $primaryFile,
                 'Erlaubte Hosts: ' . implode(', ', self::ALLOWED_REMOTE_FONT_HOSTS),
                 $downloadWarnings !== [] ? 'Hinweise: ' . implode(' | ', array_slice($downloadWarnings, 0, 2)) : '',
             ])),
+            'local_paths' => $localPaths,
         ];
+    }
+
+    /**
+     * Baut das lokale @font-face-CSS aus dem Google-CSS neu auf: nur erlaubte Eigenschaften,
+     * nur lokal gespeicherte Dateien in src, font-display: swap. Blöcke mit nicht lokal
+     * verfügbaren URLs werden verworfen, damit keine externen Requests übrig bleiben.
+     *
+     * @param array<string, string> $urlMap Remote-URL => lokaler Dateiname
+     * @return array{css: string, primary: string, files: list<string>}
+     */
+    private function buildLocalFontCss(string $css, array $urlMap): array
+    {
+        $empty = ['css' => '', 'primary' => '', 'files' => []];
+        $pattern = '/(?:\/\*\s*(?<label>[a-z0-9 \-]{1,40}?)\s*\*\/\s*)?@font-face\s*\{(?<body>[^{}]*)\}/i';
+        if (preg_match_all($pattern, $css, $matches, PREG_SET_ORDER) < 1) {
+            return $empty;
+        }
+
+        $blocks = [];
+        $files = [];
+        $primary = '';
+        $primaryScore = -1;
+
+        foreach ($matches as $match) {
+            $label = strtolower(trim((string) ($match['label'] ?? '')));
+            $declarations = [];
+            $blockFiles = [];
+            $valid = true;
+
+            foreach (explode(';', (string) $match['body']) as $declaration) {
+                if (trim($declaration) === '') {
+                    continue;
+                }
+
+                if (!str_contains($declaration, ':')) {
+                    $valid = false;
+                    break;
+                }
+
+                [$property, $value] = array_map('trim', explode(':', $declaration, 2));
+                $property = strtolower($property);
+                if (!in_array($property, self::LOCAL_FONT_CSS_PROPERTIES, true) || $value === '') {
+                    continue;
+                }
+
+                if ($property === 'src') {
+                    $value = (string) preg_replace_callback(
+                        '/url\(\s*([\'"]?)([^\'")]+)\1\s*\)/i',
+                        static function (array $urlMatch) use ($urlMap, &$blockFiles, &$valid): string {
+                            $fileName = $urlMap[trim($urlMatch[2])] ?? null;
+                            if ($fileName === null) {
+                                $valid = false;
+                                return '';
+                            }
+                            $blockFiles[] = $fileName;
+                            return "url('" . $fileName . "')";
+                        },
+                        $value
+                    );
+
+                    if ($blockFiles === [] || preg_match('/^[A-Za-z0-9 ,.\'"()_\-]+$/', $value) !== 1) {
+                        $valid = false;
+                    }
+                } elseif ($property === 'font-family') {
+                    if (preg_match('/^([\'"]?)[A-Za-z0-9 _\-]+\1$/', $value) !== 1) {
+                        $valid = false;
+                    }
+                } elseif ($property === 'font-display') {
+                    $value = 'swap';
+                } elseif (preg_match('/^[A-Za-z0-9 ,.+%?\-]+$/', $value) !== 1) {
+                    $valid = false;
+                }
+
+                if (!$valid) {
+                    break;
+                }
+
+                $declarations[$property] = $value;
+            }
+
+            if (!$valid || !isset($declarations['font-family'], $declarations['src'])) {
+                continue;
+            }
+
+            $declarations['font-display'] = 'swap';
+
+            $lines = [];
+            foreach ($declarations as $property => $value) {
+                $lines[] = '  ' . $property . ': ' . $value . ';';
+            }
+
+            $blocks[] = ($label !== '' ? '/* ' . $label . " */\n" : '') . "@font-face {\n" . implode("\n", $lines) . "\n}";
+            foreach ($blockFiles as $fileName) {
+                $files[$fileName] = $fileName;
+            }
+
+            $score = $this->scorePreloadCandidate($label, $declarations);
+            $candidate = $this->pickPreferredFontFile($blockFiles);
+            if ($score > $primaryScore && $candidate !== '') {
+                $primaryScore = $score;
+                $primary = $candidate;
+            }
+        }
+
+        if ($blocks === []) {
+            return $empty;
+        }
+
+        return [
+            'css' => implode("\n\n", $blocks) . "\n",
+            'primary' => $primary,
+            'files' => array_values($files),
+        ];
+    }
+
+    /** @param array<string, string> $declarations */
+    private function scorePreloadCandidate(string $label, array $declarations): int
+    {
+        $score = 0;
+        if ($label === 'latin' || $label === '') {
+            $score += 4;
+        }
+
+        if (strtolower(trim($declarations['font-style'] ?? 'normal')) === 'normal') {
+            $score += 2;
+        }
+
+        $weights = array_map('intval', preg_split('/\s+/', trim($declarations['font-weight'] ?? '400')) ?: ['400']);
+        $minWeight = min($weights);
+        $maxWeight = max($weights);
+        if ($minWeight <= 400 && $maxWeight >= 400) {
+            $score += 1;
+        }
+
+        return $score;
+    }
+
+    /** @param list<string> $fileNames */
+    private function pickPreferredFontFile(array $fileNames): string
+    {
+        foreach (['woff2', 'woff', 'ttf', 'otf'] as $extension) {
+            foreach ($fileNames as $fileName) {
+                if (strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION)) === $extension) {
+                    return $fileName;
+                }
+            }
+        }
+
+        return '';
     }
 
     private function isAllowedFontUrl(string $url): bool
@@ -923,17 +1178,18 @@ class FontManagerModule
         }
 
         $acceptHeader = str_contains($url, 'fonts.gstatic.com')
-            ? 'font/woff2,font/woff,font/ttf,application/octet-stream,*/*;q=0.1'
+            ? 'font/woff2,font/woff;q=0.9,*/*;q=0.1'
             : 'text/css,*/*;q=0.1';
 
         $headers = [
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept: ' . $acceptHeader,
             'Accept-Language: de-DE,de;q=0.9,en;q=0.8',
         ];
 
+        // Google Fonts wählt das Format anhand des User-Agents: Nur ein vollständiger,
+        // moderner Browser-UA (genau EIN Header) liefert WOFF2 statt TTF.
         $response = HttpClient::getInstance()->get($url, [
-            'userAgent' => '365CMS-FontManager/1.0',
+            'userAgent' => self::GOOGLE_FONTS_WOFF2_USER_AGENT,
             'headers' => $headers,
             'timeout' => 20,
             'connectTimeout' => 10,
@@ -1000,19 +1256,22 @@ class FontManagerModule
      */
     private function collectChangedSettingKeys(array $settings, array $existingSettings): array
     {
+        $currentValues = [];
+        $existingKeys = array_values(array_filter(array_keys($settings), static fn (string $key): bool => isset($existingSettings[$key])));
+        if ($existingKeys !== []) {
+            $placeholders = implode(',', array_fill(0, count($existingKeys), '?'));
+            foreach ($this->db->get_results(
+                "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name IN ({$placeholders})",
+                $existingKeys
+            ) ?: [] as $row) {
+                $currentValues[(string) $row->option_name] = (string) ($row->option_value ?? '');
+            }
+        }
+
         $changedKeys = [];
 
         foreach ($settings as $key => $value) {
-            $currentValue = null;
-
-            if (isset($existingSettings[$key])) {
-                $currentValue = $this->db->get_var(
-                    "SELECT option_value FROM {$this->prefix}settings WHERE option_name = ? LIMIT 1",
-                    [$key]
-                );
-            }
-
-            if (!isset($existingSettings[$key]) || (string) $currentValue !== (string) $value) {
+            if (!isset($existingSettings[$key]) || ($currentValues[$key] ?? null) !== (string) $value) {
                 $changedKeys[] = $key;
             }
         }
@@ -1371,6 +1630,11 @@ class FontManagerModule
 
         if ($fontsWithAssetWarnings > 0) {
             $warnings[] = $fontsWithAssetWarnings . ' lokale Schrift' . ($fontsWithAssetWarnings === 1 ? '' : 'en') . ' haben unvollständige CSS- oder Asset-Verknüpfungen und sollten geprüft werden.';
+        }
+
+        $legacyFormatFonts = count(array_filter($customFontRows, static fn (array $row): bool => !empty($row['uses_legacy_format'])));
+        if ($legacyFormatFonts > 0) {
+            $warnings[] = $legacyFormatFonts . ' lokale Schrift' . ($legacyFormatFonts === 1 ? ' liegt' : 'en liegen') . ' noch als TTF/OTF vor. „Als WOFF2 neu laden“ reduziert die Dateigröße pro Schnitt um rund 80 %.';
         }
 
         return [
@@ -2035,6 +2299,17 @@ class FontManagerModule
             }
             $assetStatus = $fileExists && ($cssPath === '' || ($cssExists && $missingLinkedAssets === 0)) ? 'complete' : 'warning';
 
+            $assetFormats = [];
+            foreach ($linkedFontAssets !== [] ? $linkedFontAssets : ($resolvedFilePath !== null ? [$resolvedFilePath] : []) as $assetPath) {
+                $assetExtension = strtolower((string) pathinfo($assetPath, PATHINFO_EXTENSION));
+                if ($assetExtension !== '') {
+                    $assetFormats[$assetExtension] = $assetExtension;
+                }
+            }
+            $storedFormat = strtolower(trim((string) ($font->format ?? '')));
+            $usesLegacyFormat = array_intersect(array_keys($assetFormats), self::LEGACY_FONT_FORMATS) !== []
+                || ($assetFormats === [] && in_array($storedFormat, self::LEGACY_FONT_FORMATS, true));
+
             $rows[] = [
                 'id' => (int) ($font->id ?? 0),
                 'slug' => $slug,
@@ -2049,6 +2324,9 @@ class FontManagerModule
                 'linked_asset_count' => count($linkedFontAssets),
                 'missing_linked_asset_count' => $missingLinkedAssets,
                 'asset_status' => $assetStatus,
+                'asset_formats' => array_values($assetFormats),
+                'uses_legacy_format' => $usesLegacyFormat,
+                'refreshable' => (string) ($font->source ?? '') === 'google-fonts-local',
             ];
         }
 

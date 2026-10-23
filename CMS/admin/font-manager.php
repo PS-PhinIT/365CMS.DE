@@ -43,6 +43,7 @@ function cms_admin_font_manager_allowed_actions(): array
         'save',
         'scan_theme_fonts',
         'delete_font',
+        'refresh_font',
         'download_google_font',
         'download_detected_fonts',
     ];
@@ -147,7 +148,7 @@ function cms_admin_font_manager_normalize_payload(array $post): array
 
     if ($action === null) {
         $error = 'Unbekannte oder nicht erlaubte Aktion.';
-    } elseif ($action === 'delete_font' && $fontId <= 0) {
+    } elseif (($action === 'delete_font' || $action === 'refresh_font') && $fontId <= 0) {
         $error = 'Ungültige Font-ID.';
     } elseif ($action === 'save' && !cms_admin_font_manager_is_numeric_scalar($post['font_size'] ?? null)) {
         $error = 'Ungültige Font-Größe.';
@@ -177,6 +178,7 @@ function cms_admin_font_manager_handle_action(
         'save' => $module->saveSettings((array) ($payload['settings'] ?? [])),
         'scan_theme_fonts' => $module->scanThemeFonts(),
         'delete_font' => $module->deleteCustomFont((int) ($payload['font_id'] ?? 0)),
+        'refresh_font' => $module->refreshCustomFont((int) ($payload['font_id'] ?? 0)),
         'download_google_font' => $module->downloadGoogleFont((string) ($payload['google_font_family'] ?? '')),
         'download_detected_fonts' => $module->downloadDetectedFonts(),
         default => ['success' => false, 'error' => 'Unbekannte oder nicht erlaubte Aktion.'],

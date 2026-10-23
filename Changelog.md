@@ -14,6 +14,17 @@
 
 ---
 
+### v3.5.4 — 23.10.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.5.4** | 🔴 fix | Core / HTTP-Client | `CMS\Http\Client` sendete zusätzlich zum `userAgent`-Standardwert einen in `headers` übergebenen `User-Agent` – jeder Header-Name wird jetzt genau einmal gesendet, ein expliziter Header ersetzt den Standardwert. |
+| **3.5.4** | 🟠 perf | Font Manager | Google Fonts werden mit genau einem vollständigen Chrome-User-Agent angefragt und als WOFF2 statt TTF gespeichert (ca. 25 statt 140 KiB pro Schriftschnitt). Nur Subsets `latin`/`latin-ext`; fehlen angefragte Gewichte, folgt der Legacy-Endpunkt. |
+| **3.5.4** | 🟢 feat | Font Manager | Bestehende TTF/OTF-Schriften sind als „Legacy-Format“ markiert und lassen sich per „Als WOFF2 neu laden“ (`refresh_font`) umstellen; Altdateien werden danach entfernt, Zuordnungen bleiben erhalten. |
+| **3.5.4** | 🟠 perf | Frontend / Fonts | Lokale Schriften: Preload der Primärdatei (latin, normal, 400) als WOFF2, Font-CSS mit `?ver=<Dateizeit>` (CSS ist ein Jahr `immutable` gecacht), Abfrage nur der benötigten Slugs. `.htaccess`: WOFF/WOFF2 nicht mehr erneut per Brotli/Deflate komprimiert, `Expires` auch für TTF/OTF. Speichern der Schrifteinstellungen liest Altwerte mit einer statt einer Abfrage je Option. |
+| **3.5.4** | 🛡️ security | Font Manager / HTTP-Client | Lokales Font-CSS wird aus erlaubten Eigenschaften neu aufgebaut (`src` nur lokale Dateien, `font-display: swap`), Blöcke mit externen URLs oder unerwarteten Werten werden verworfen. `Http\Client` lehnt Header mit Steuerzeichen/ungültigem Namen ab (Header-Injection). Font-Pfade aus der Datenbank werden im Frontend nur unter `uploads/fonts/` akzeptiert. |
+| **3.5.4** | ⬜ chore | Release | `Version::CURRENT` = `3.5.4`, beide `update.json` und Release-Pakete `RELEASE/365CMS-3.5.4-{update,full}.zip` mit SHA-256; Schema unverändert `v23`. |
+
 ### v3.5.3 — 23.10.2026
 
 | Version | Typ | Bereich | Beschreibung |
