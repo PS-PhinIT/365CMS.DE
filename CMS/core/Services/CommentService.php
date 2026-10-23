@@ -69,7 +69,7 @@ class CommentService
         }
 
         return $this->db->get_results(
-            "SELECT id, user_id, author, content, post_date,
+            "SELECT id, user_id, author, content, post_date, edited_at,
                     CASE WHEN user_id IS NOT NULL AND author = 'Anonym' THEN 1 ELSE 0 END AS is_anonymous
              FROM {$this->prefix}comments
              WHERE post_id = ? AND status = 'approved'
@@ -264,7 +264,7 @@ class CommentService
 
         return $this->db->get_results(
             "SELECT c.id, c.post_id, c.author, c.author_email, c.content, c.status, c.post_date,
-                c.user_id,
+                c.user_id, c.edited_at, c.edited_by,
                 p.id AS linked_post_id,
                 p.title AS post_title, p.slug AS post_slug,
                 p.published_at AS post_published_at, p.created_at AS post_created_at
@@ -347,6 +347,62 @@ class CommentService
         }
 
         return $this->db->update('comments', ['status' => $status], ['id' => $commentId]);
+    }
+
+    /**
+     * Nachträgliche Bearbeitung durch die Moderation (z. B. sensible Angaben entfernen).
+     * Markiert den Kommentar als „Bearbeitet vom Administrator“; Status und Datum bleiben unverändert.
+     *
+     * @return array{success:bool,changed:bool,error?:string}
+     */
+    public function updateByModerator(int $commentId, string $authorName, string $content, int $editorUserId): array
+    {
+        if ($commentId <= 0) {
+            return ['success' => false, 'changed' => false, 'error' => 'Ungültige Kommentar-ID.'];
+        }
+
+        $current = $this->db->get_row(
+            "SELECT id, author, content FROM {$this->prefix}comments WHERE id = ? LIMIT 1",
+            [$commentId]
+        );
+        if (!$current) {
+            return ['success' => false, 'changed' => false, 'error' => 'Kommentar wurde nicht gefunden.'];
+        }
+
+        $cleanAuthor = $this->sanitizeAuthorName($authorName);
+        if ($cleanAuthor === '') {
+            return ['success' => false, 'changed' => false, 'error' => 'Der Autorname darf nicht leer sein.'];
+        }
+
+        $cleanContent = trim(PurifierService::getInstance()->purify($content, 'strict'));
+        if ($cleanContent === '') {
+            return ['success' => false, 'changed' => false, 'error' => 'Der Kommentar darf nicht leer sein.'];
+        }
+
+        if ($this->lengthUtf8($cleanContent) > self::MAX_CONTENT_LENGTH) {
+            return [
+                'success' => false,
+                'changed' => false,
+                'error' => 'Der Kommentar darf höchstens ' . self::MAX_CONTENT_LENGTH . ' Zeichen lang sein.',
+            ];
+        }
+
+        if ($cleanAuthor === (string) ($current->author ?? '') && $cleanContent === (string) ($current->content ?? '')) {
+            return ['success' => true, 'changed' => false];
+        }
+
+        $updated = $this->db->update('comments', [
+            'author' => $cleanAuthor,
+            'content' => $cleanContent,
+            'edited_at' => date('Y-m-d H:i:s'),
+            'edited_by' => $editorUserId > 0 ? $editorUserId : null,
+        ], ['id' => $commentId]);
+
+        if (!$updated) {
+            return ['success' => false, 'changed' => false, 'error' => 'Kommentar konnte nicht gespeichert werden.'];
+        }
+
+        return ['success' => true, 'changed' => true];
     }
 
     public function delete(int $commentId): bool

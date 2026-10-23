@@ -24,8 +24,9 @@ $contentView = (string) ($data['contentView'] ?? ($filters['content_view'] ?? 'e
 $showFullCommentContent = $contentView === 'full';
 $canModerate = (bool)($data['canModerate'] ?? false);
 $canDelete = (bool)($data['canDelete'] ?? false);
+$canEdit = (bool)($data['canEdit'] ?? false);
 $canBulkActions = $canModerate || $canDelete;
-$showActionColumn = $canModerate || $canDelete;
+$showActionColumn = $canModerate || $canDelete || $canEdit;
 $commentsBaseUrl = '/admin/comments';
 
 $renderCommentIcon = static function (string $icon): string {
@@ -33,6 +34,7 @@ $renderCommentIcon = static function (string $icon): string {
         'alert' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
         'check' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/>',
         'ban' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M5.7 5.7l12.6 12.6"/>',
+        'edit' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/>',
         'trash' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>',
         default => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1"/>',
     };
@@ -266,6 +268,9 @@ $actionClass = static function (string $variant): string {
                                     <?php else: ?>
                                         <div class="text-truncate" style="max-width:300px;"><?php echo htmlspecialchars((string)($c['excerpt'] ?? '')); ?></div>
                                     <?php endif; ?>
+                                    <?php if (!empty($c['is_edited'])): ?>
+                                        <div class="text-secondary small fst-italic mt-1">Bearbeitet vom Administrator<?php echo (string) ($c['formatted_edited_at'] ?? '') !== '' ? ' · ' . htmlspecialchars((string) $c['formatted_edited_at']) : ''; ?></div>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if ($cPostTitle && !empty($c['has_post_link'])): ?>
@@ -309,6 +314,18 @@ $actionClass = static function (string $variant): string {
                                                     $actionStatus = (string) ($action['status'] ?? '');
                                                     $isDeleteAction = $actionType === 'delete';
                                                     ?>
+                                                    <?php if ($actionType === 'edit'): ?>
+                                                        <button type="button"
+                                                                class="<?php echo htmlspecialchars($buttonClass); ?> w-100 text-start js-comment-edit-trigger"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#commentEditModal"
+                                                                data-comment-id="<?php echo $actionCommentId; ?>"
+                                                                data-comment-author="<?php echo htmlspecialchars($cAuthor, ENT_QUOTES, 'UTF-8'); ?>"
+                                                                data-comment-content="<?php echo htmlspecialchars((string)($c['content'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon dropdown-item-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><?php echo $renderCommentIcon($iconName); ?></svg>
+                                                            <?php echo htmlspecialchars((string) ($action['label'] ?? 'Bearbeiten')); ?>
+                                                        </button>
+                                                    <?php else: ?>
                                                     <form method="post"
                                                           class="m-0"
                                                           <?php if ($isDeleteAction): ?>data-confirm-title="Kommentar löschen" data-confirm-message="Kommentar wirklich löschen? Dies kann nicht rückgängig gemacht werden." data-confirm-text="Löschen" data-confirm-class="btn-danger" data-confirm-status-class="bg-danger"<?php endif; ?>>
@@ -323,6 +340,7 @@ $actionClass = static function (string $variant): string {
                                                             <?php echo htmlspecialchars((string) ($action['label'] ?? 'Aktion')); ?>
                                                         </button>
                                                     </form>
+                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </div>
                                         </div>
@@ -338,4 +356,37 @@ $actionClass = static function (string $variant): string {
 
     </div>
 </div>
+
+<?php if ($canEdit): ?>
+<div class="modal modal-blur fade" id="commentEditModal" tabindex="-1" aria-labelledby="commentEditModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form method="post" class="modal-content" id="commentEditForm">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="id" id="commentEditId" value="0">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commentEditModalTitle">Kommentar bearbeiten</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="commentEditAuthor" class="form-label required">Autorname</label>
+                    <input type="text" class="form-control" id="commentEditAuthor" name="author" maxlength="100" required>
+                </div>
+                <div class="mb-3">
+                    <label for="commentEditContent" class="form-label required">Kommentar</label>
+                    <textarea class="form-control" id="commentEditContent" name="content" rows="8" maxlength="5000" required></textarea>
+                </div>
+                <div class="text-secondary small">
+                    Nach dem Speichern erscheint am Kommentar auf der Website der Hinweis „Bearbeitet vom Administrator“. Status und Datum bleiben unverändert.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 

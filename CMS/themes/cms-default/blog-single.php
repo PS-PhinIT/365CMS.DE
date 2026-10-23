@@ -307,6 +307,9 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
                 <?php endif; ?>
               </div>
               <div class="comment-text"><?php echo $commentText; ?></div>
+              <?php if (!empty($comment->edited_at)): ?>
+              <p class="comment-edited-note">Bearbeitet vom Administrator</p>
+              <?php endif; ?>
             </div>
           </article>
         <?php endforeach; ?>

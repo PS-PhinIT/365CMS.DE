@@ -1328,6 +1328,10 @@ img { display: block; max-width: 100%; }
   padding: .05rem .35rem; border-radius: 2px;
 }
 .comment-text { font-size: .82rem; color: var(--ink-soft); line-height: 1.65; }
+.comment-edited-note {
+  margin: .35rem 0 0;
+  font-size: .7rem; font-style: italic; color: var(--ink-ghost);
+}
 .comment-reply-btn {
   display: inline-flex; align-items: center; gap: .25rem;
   font-size: .72rem; color: var(--ink-ghost); font-weight: 500;

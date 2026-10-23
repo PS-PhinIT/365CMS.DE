@@ -33,7 +33,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `ContentLanguageCopyService` | DE→EN-Kopie von Inhalten |
 | `ContentMediaPlacementService` | Platzierung von Medien in Inhalten |
 | `PermalinkService` | Beitrags-URLs aus der Permalink-Struktur (`/blog/%postname%` …) |
-| `CommentService` | Kommentare anlegen (pending), moderieren, Flood-Limit, Admin-Benachrichtigung |
+| `CommentService` | Kommentare anlegen (pending), moderieren, durch Moderation bearbeiten (`updateByModerator()`), Flood-Limit, Admin-Benachrichtigung |
 | `SiteTableService` + `SiteTable\…` | Tabellen und Hub-Sites rendern, Shortcodes, Export |
 | `LandingPageService` + `Landing\…` | Landingpage-Daten, Plugin-Overrides |
 | `ThemeCustomizer` | Theme-Optionen speichern/lesen, CSS generieren, Import/Export |
