@@ -695,7 +695,7 @@ Working model for this project:
 
 **Repo ↔ runtime file under `CMS/` ↔ deploy ↔ live check**
 
-Version source of truth: `CMS/core/Version.php` (`3.5.3`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version. Every PR gets its own version: new `Changelog.md` heading `### vX.Y.Z — DD.MM.YYYY` (no "unreleased" sections or `–` placeholders in the version column), `Version::CURRENT`, both `update.json` files and the release packages `RELEASE/365CMS-X.Y.Z-{update,full}.zip` with SHA-256 are updated in the same PR.
+Version source of truth: `CMS/core/Version.php` (`3.5.4`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version. Every PR gets its own version: new `Changelog.md` heading `### vX.Y.Z — DD.MM.YYYY` (no "unreleased" sections or `–` placeholders in the version column), `Version::CURRENT`, both `update.json` files and the release packages `RELEASE/365CMS-X.Y.Z-{update,full}.zip` with SHA-256 are updated in the same PR.
 
 **Deutsch**
 
@@ -707,4 +707,4 @@ Arbeitsmodell dieses Projekts:
 
 **Repo ↔ Runtime-Datei unter `CMS/` ↔ Deploy ↔ Live-Prüfung**
 
-Versionsquelle: `CMS/core/Version.php` (`3.5.3`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.
+Versionsquelle: `CMS/core/Version.php` (`3.5.4`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.
