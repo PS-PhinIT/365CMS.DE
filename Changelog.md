@@ -14,6 +14,15 @@
 
 ---
 
+### v3.5.5 — 08.11.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.5.5** | 🔴 fix | Beiträge / Sitemap | Der Aufrufzähler (`views = views + 1`) setzte über `ON UPDATE CURRENT_TIMESTAMP` bei jedem Besuch `posts.updated_at` auf „jetzt“ – Beitragsliste, Sitemap-`lastmod` und `dateModified` zeigten dadurch das Datum des letzten Aufrufs. Der Zähler lässt `updated_at` jetzt unverändert. |
+| **3.5.5** | 🔴 fix | Beiträge / Seiten | Das Aktualisierungsdatum ändert sich nur noch bei tatsächlich geänderten Werten: erneutes Speichern ohne Änderung, Bulk-Aktionen auf Einträge mit bereits gesetztem Wert sowie das Löschen/Ersetzen von Kategorien und Tags lassen `updated_at` unverändert. |
+| **3.5.5** | 🔴 fix | Datenbank | Einmalige Reparatur (Option `posts_updated_at_view_repair`): `updated_at` aufgerufener Beiträge wird auf die letzte nachweisbare Autorenänderung (jüngste Revision, sonst Veröffentlichung/Erstellung) zurückgesetzt; Werte werden nur verringert. |
+| **3.5.5** | ⬜ chore | Release | `Version::CURRENT` = `3.5.5`, beide `update.json` und Release-Pakete `RELEASE/365CMS-3.5.5-{update,full}.zip` mit SHA-256; Schema unverändert `v23`. |
+
 ### v3.5.4 — 23.10.2026
 
 | Version | Typ | Bereich | Beschreibung |

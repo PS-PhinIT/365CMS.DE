@@ -2,12 +2,12 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "3.5.4",
+  "version": "3.5.5",
   "min_php": "8.4.1",
-  "released": "2026-10-23",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.4-update.zip",
+  "released": "2026-11-08",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.5-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "4387d535459a189e8f7c918c9f7d674c5d580c9d26dbbd49e199dafe5b8e1ec2",
-  "notes": "Release-Stand 3.5.4: Der Font Manager lädt Google Fonts als WOFF2 statt TTF (ca. 25 statt 140 KiB pro Schriftschnitt), weil der HTTP-Client nicht mehr zwei User-Agent-Header sendet. Vorhandene TTF-Schriften lassen sich per „Als WOFF2 neu laden“ umstellen. Lokales Font-CSS wird abgesichert neu aufgebaut, das Frontend lädt die Primärschrift per Preload und versioniert das Font-CSS; HTTP-Header mit Steuerzeichen werden abgelehnt. Datenbankschema bleibt v23.",
+  "checksum_sha256": "c40d1b79b770fe86be0685b87e82506af54ded95ce9e4ced846a0bc9e510712b",
+  "notes": "Release-Stand 3.5.5: Das Aktualisierungsdatum von Beiträgen und Seiten ändert sich nur noch bei echten Änderungen durch den Autor. Der Aufrufzähler überschrieb bisher bei jedem Besuch updated_at, sodass Beitragsliste, Sitemap (lastmod) und dateModified das heutige Datum zeigten. Speichern ohne Änderung und Bulk-Aktionen ohne geänderten Wert lassen das Datum unverändert; bereits überschriebene Daten werden einmalig auf die letzte Revision bzw. Veröffentlichung zurückgesetzt. Datenbankschema bleibt v23.",
   "critical": false
 }

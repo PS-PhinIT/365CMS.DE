@@ -189,7 +189,7 @@ class Database implements DatabaseInterface
         // RSS-Feed-Cache (Routing\ThemeRouter::serveRssFeed) bei Änderungen an Beiträgen/Kategorien verwerfen;
         // der Aufrufzähler (`views = views + 1`) zählt nicht als Inhaltsänderung.
         if (preg_match('/`?' . preg_quote($this->prefix, '/') . '(?:posts|post_categories)`?(?![a-z0-9_])/i', $sql) === 1
-            && preg_match('/^\s*UPDATE\s+\S+\s+SET\s+views\s*=\s*views\s*\+\s*1\s+WHERE/i', $sql) !== 1) {
+            && preg_match('/^\s*UPDATE\s+\S+\s+SET\s+views\s*=\s*views\s*\+\s*1\s*(?:,\s*updated_at\s*=\s*updated_at\s*)?WHERE/i', $sql) !== 1) {
             self::invalidateFeedCache();
         }
     }
