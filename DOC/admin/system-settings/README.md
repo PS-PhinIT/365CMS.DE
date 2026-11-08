@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – System & Dokumentation
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -29,6 +29,6 @@ KI-Einstellungen liegen in der Gruppe *KI-Dienste*: [AI-SERVICES.md](AI-SERVICES
 
 ### Wichtige Hinweise
 
-- **`config/app.php` wird beim Speichern der allgemeinen Einstellungen neu erzeugt.** Eigene LDAP-/JWT-/SMTP-/HTTPS-Konstanten vorher sichern und nach dem Speichern erneut setzen ([SYSTEM.md](SYSTEM.md#speichern-und-configappphp)).
+- **Speichern der allgemeinen Einstellungen ändert in `config/app.php` nur `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` und `CMS_DEBUG`;** eigene LDAP-/JWT-/SMTP-/HTTPS-Konstanten bleiben erhalten. Vor jeder Änderung entsteht eine Kopie `config/app.backup-<Datum>.php` (Rechte `0640`, die letzten fünf bleiben erhalten) ([SYSTEM.md](SYSTEM.md#speichern-und-configappphp)).
 - Vor Updates, Restores und Site-URL-Migrationen immer ein Backup erstellen.
 - Geheimnisse (SMTP-Passwort, Azure-/Graph-Secrets, KI-API-Keys) werden über `SettingsService` AES-256-verschlüsselt in der Datenbank gespeichert und nie im Klartext angezeigt.

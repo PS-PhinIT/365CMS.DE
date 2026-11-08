@@ -1369,8 +1369,10 @@ final class SeoSuiteModule
 			'average_score' => count($auditRows) > 0 ? (int)round($totalScore / count($auditRows)) : 0,
 			'status' => [
 				'sitemap_exists' => !empty($files['sitemap.xml']['exists']),
+				'sitemap_delivery' => (string)($files['sitemap.xml']['delivery'] ?? 'on_demand'),
 				'sitemap_date' => $files['sitemap.xml']['updated_at'] ?? null,
 				'robots_exists' => !empty($robotsStatus['exists']),
+				'robots_delivery' => (string)($robotsStatus['delivery'] ?? 'dynamic'),
 				'robots_date' => $robotsStatus['updated_at'] ?? null,
 				'files' => $files,
 			],
@@ -1392,14 +1394,29 @@ final class SeoSuiteModule
 		];
 	}
 
+	/**
+	 * Status der öffentlichen SEO-Dateien. Fehlende Dateien sind nicht automatisch ein Fehler:
+	 * robots.txt liefert das CMS dynamisch aus (ThemeRouter::serveRobotsTxt()), das Sitemap-Bundle
+	 * wird beim ersten Abruf von /sitemap.xml erzeugt und nach Inhaltsänderungen verworfen
+	 * (SeoSitemapService::getSitemapFile()), Teil-Sitemaps ohne Einträge werden nicht geschrieben.
+	 *
+	 * delivery: file | dynamic | on_demand | empty
+	 */
 	private function getSitemapFilesStatus(): array
 	{
 		$result = [];
+		$bundleSaved = is_file(ABSPATH . 'sitemap.xml');
 		foreach (['sitemap.xml', 'pages.xml', 'posts.xml', 'en-pages.xml', 'en-posts.xml', 'plugins.xml', 'images.xml', 'news.xml', 'robots.txt'] as $file) {
 			$path = ABSPATH . $file;
-			$exists = file_exists($path);
+			$exists = is_file($path);
 			$result[$file] = [
 				'exists' => $exists,
+				'delivery' => match (true) {
+					$exists => 'file',
+					$file === 'robots.txt' => 'dynamic',
+					$file === 'sitemap.xml', !$bundleSaved => 'on_demand',
+					default => 'empty',
+				},
 				'path' => '/' . $file,
 				'updated_at' => $exists ? date('d.m.Y H:i', (int)filemtime($path)) : null,
 				'size' => $exists ? (int)filesize($path) : 0,

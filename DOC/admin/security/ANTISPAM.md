@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Anti-Spam
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/antispam` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_antispam` | **Core-Modul:** `security`
 
 ## English (summary)
@@ -16,12 +16,16 @@ Nur wenn `antispam_enabled = 1`:
 | # | Prüfung | Einstellung | Meldung an den Besucher |
 |---|---|---|---|
 | 1 | Honeypot-Feld ausgefüllt | `antispam_honeypot` | „Spam erkannt.“ |
-| 2 | Formular schneller abgeschickt als erlaubt | `antispam_min_time` (0–60 s) | „Bitte warten Sie einen Moment …“ |
+| 2 | Formular schneller abgeschickt als erlaubt | `antispam_min_time` (0–60 s, 0 = aus) | „Bitte warten Sie einen Moment …“ |
 | 3 | Leerer User-Agent | `antispam_block_empty_ua` | „Die Anfrage wurde aus Sicherheitsgründen blockiert.“ |
 | 4 | Zu viele Links im Inhalt | `antispam_max_links` (0–50, 0 = aus) | „Zu viele Links in der Anfrage.“ |
 | 5 | Treffer in der Blacklist (E-Mail, IP, Domain, Wort in Name/Inhalt) | Blacklist | „Die Anfrage wurde aus Sicherheitsgründen blockiert.“ |
 
 Jede Ablehnung wird mit Grund (`honeypot`, `minimum_time`, `empty_user_agent`, `max_links`, `blacklist`) protokolliert und ist im Sicherheits-Log sichtbar.
+
+**Standardwerte**, solange nichts gespeichert wurde: AntiSpam aus, Honeypot an, Mindestzeit 3 s, leerer User-Agent wird blockiert, höchstens 3 Links. Seit 4.0.0 zeigt das Formular genau diese wirksamen Werte; vorher waren Honeypot und User-Agent-Prüfung im Formular nicht angehakt und wurden beim ersten Speichern ausgeschaltet. Ein gespeicherter Wert `0` bei Mindestzeit oder Link-Limit wird als `0` angezeigt und bleibt beim nächsten Speichern erhalten (vorher erschien `3`, und ein erneutes Speichern schaltete die Prüfung wieder ein).
+
+Der Prüfpunkt *AntiSpam Runtime aktiv* im [Sicherheits-Audit](SECURITY-AUDIT.md) warnt, solange AntiSpam ausgeschaltet ist, aber Kommentare oder Kontaktformulare aktiv sind.
 
 ### Blacklist
 

@@ -43,7 +43,7 @@ final class SeoSitemapService
     }
 
     /** Dateien des Sitemap-Bundles (Index + Teil-Sitemaps). */
-    public const SITEMAP_FILES = ['sitemap.xml', 'pages.xml', 'posts.xml', 'plugins.xml', 'images.xml', 'news.xml'];
+    public const SITEMAP_FILES = ['sitemap.xml', 'pages.xml', 'posts.xml', 'en-pages.xml', 'en-posts.xml', 'plugins.xml', 'images.xml', 'news.xml'];
 
     /**
      * Liefert eine Datei des Sitemap-Bundles. Gespeicherte Dateien im Web-Root werden direkt
@@ -89,15 +89,24 @@ final class SeoSitemapService
         }
     }
 
-    public function generateRobotsTxt(): string
+    /**
+     * @param string|null $siteUrl Basis-URL für die Sitemap-Zeile (Standard: SITE_URL); beim Domainwechsel die neue URL.
+     */
+    public function generateRobotsTxt(?string $siteUrl = null): string
     {
+        $sitemapLine = 'Sitemap: ' . rtrim($siteUrl ?? SITE_URL, '/') . '/sitemap.xml';
         $customContent = trim($this->metaService->getSetting('robots_txt_content'));
         if ($customContent === '') {
             // Feld „robots.txt“ unter Einstellungen → Allgemein (bisher gespeichert, aber nie ausgewertet).
             $customContent = trim((string) (\CMS\Services\OptionStore::getInstance()->get('robots_txt') ?? ''));
         }
         if ($customContent !== '') {
-            return $customContent;
+            // Eigene Regeln ohne Sitemap-Zeile machen das Sitemap-Bundle für Crawler unauffindbar.
+            if (preg_match('/^\s*sitemap\s*:/im', $customContent) !== 1) {
+                $customContent .= "\n\n" . $sitemapLine;
+            }
+
+            return $customContent . "\n";
         }
 
         $txt = "# robots.txt for " . SITE_NAME . "\n";
@@ -110,7 +119,7 @@ final class SeoSitemapService
         $txt .= "Disallow: /logs/\n";
         $txt .= "Disallow: /backups/\n";
         $txt .= "Disallow: /member/\n\n";
-        $txt .= "Sitemap: " . SITE_URL . "/sitemap.xml\n";
+        $txt .= $sitemapLine . "\n";
 
         return $txt;
     }
@@ -160,10 +169,10 @@ final class SeoSitemapService
         }
     }
 
-    public function saveRobotsTxt(): bool
+    public function saveRobotsTxt(?string $siteUrl = null): bool
     {
         try {
-            return file_put_contents(ABSPATH . 'robots.txt', $this->generateRobotsTxt()) !== false;
+            return file_put_contents(ABSPATH . 'robots.txt', $this->generateRobotsTxt($siteUrl), LOCK_EX) !== false;
         } catch (\Throwable $e) {
             $this->logger->error('SEOService::saveRobotsTxt() fehlgeschlagen.', [
                 'exception' => $e,

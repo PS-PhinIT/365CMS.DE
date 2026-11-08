@@ -290,8 +290,8 @@ class StatusService {
     public function checkSecurity(): array {
         $checks = [];
         
-        // HTTPS
-        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        // HTTPS – dieselbe Erkennung wie Sicherheits-Audit und Dashboard (inkl. Reverse-Proxy-Headern)
+        if (\CMS\Security::instance()->getSecurityHeaderProfile()['https'] ?? false) {
             $checks['https'] = ['status' => 'ok', 'message' => 'HTTPS aktiv'];
         } else {
             $checks['https'] = [

@@ -221,13 +221,13 @@ $normalizeIssueFilter = static function (string $issueLabel): string {
             <div class="col-md-6">
                 <div class="card admin-content-card h-100">
                     <div class="card-body d-flex align-items-center gap-3">
-                        <span class="badge <?= !empty($status['sitemap_exists']) ? 'bg-success' : 'bg-danger' ?> badge-pill p-2">
+                        <span class="badge <?= !empty($status['sitemap_exists']) ? 'bg-success' : 'bg-info' ?> badge-pill p-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5"/><path d="M9 4v13"/><path d="M15 7v5.5"/><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.001 -.836 1.709 -1.462 2.121 -1.879z"/><path d="M19 18v.01"/></svg>
                         </span>
                         <div>
                             <div class="fw-bold">Sitemap</div>
                             <div class="text-secondary small">
-                                <?= !empty($status['sitemap_exists']) ? 'Vorhanden · ' . htmlspecialchars((string)($status['sitemap_date'] ?? '')) : 'Nicht vorhanden' ?>
+                                <?= !empty($status['sitemap_exists']) ? 'Vorhanden · ' . htmlspecialchars((string)($status['sitemap_date'] ?? '')) : 'Wird beim ersten Abruf von /sitemap.xml erzeugt' ?>
                             </div>
                         </div>
                     </div>
@@ -236,12 +236,12 @@ $normalizeIssueFilter = static function (string $issueLabel): string {
             <div class="col-md-6">
                 <div class="card admin-content-card h-100">
                     <div class="card-body d-flex align-items-center gap-3">
-                        <span class="badge <?= !empty($status['robots_exists']) ? 'bg-success' : 'bg-warning' ?> badge-pill p-2">
+                        <span class="badge bg-success badge-pill p-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-11a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1m3 0v18"/><path d="M13 8l2 0"/><path d="M13 12l2 0"/></svg>
                         </span>
                         <div>
                             <div class="fw-bold">robots.txt</div>
-                            <div class="text-secondary small"><?= !empty($status['robots_exists']) ? 'Vorhanden · ' . htmlspecialchars((string)($status['robots_date'] ?? '')) : 'Nicht vorhanden' ?></div>
+                            <div class="text-secondary small"><?= !empty($status['robots_exists']) ? 'Statische Datei · ' . htmlspecialchars((string)($status['robots_date'] ?? '')) : 'Dynamisch vom CMS ausgeliefert' ?></div>
                         </div>
                     </div>
                 </div>

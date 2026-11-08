@@ -201,11 +201,18 @@ class SecurityAuditModule
 
         $checks = array_merge($checks, $this->buildConfigPermissionChecks($abspath));
 
+        // install.php wird mit jedem Update ausgeliefert; nach der Installation sperrt config/install.lock
+        // den Installer für alle außer angemeldeten Admins (InstallerController::guardInstalledInstaller()).
         $installExists = is_file($abspath . 'install.php');
+        $installLocked = $installExists && is_file($abspath . 'config/install.lock');
         $checks[] = $this->buildCheck(
-            'install.php entfernt',
-            $installExists ? 'warning' : 'ok',
-            $installExists ? 'install.php existiert noch und sollte nach der Installation gelöscht werden.' : 'install.php wurde entfernt.'
+            $installExists ? 'install.php gesperrt' : 'install.php entfernt',
+            (!$installExists || $installLocked) ? 'ok' : 'warning',
+            !$installExists
+                ? 'install.php wurde entfernt.'
+                : ($installLocked
+                    ? 'install.php ist vorhanden, aber über config/install.lock gesperrt (nur angemeldete Admins). Optional nach jedem Update löschen.'
+                    : 'install.php existiert ohne Sperrdatei config/install.lock – Datei löschen oder den Installer einmal als Admin aufrufen, damit die Sperre geschrieben wird.')
         );
 
         $checks[] = $this->buildCheck(
@@ -301,23 +308,7 @@ class SecurityAuditModule
                     : 'Apache-Fallback prüfen: kein Report-Only-Header im Produktivpfad, CSP ohne unsafe-inline/unsafe-eval, Trusted Types sowie HSTS inklusive Proxy-HTTPS-Erkennung sollten aktiv sein.')
         );
 
-        $backupDir = $abspath . 'backups/';
-        if (is_dir($backupDir)) {
-            $backups = glob($backupDir . '*.sql*');
-            $lastBackup = 0;
-            foreach ($backups ?: [] as $backupFile) {
-                $timestamp = @filemtime($backupFile);
-                if (is_int($timestamp) && $timestamp > 0) {
-                    $lastBackup = max($lastBackup, $timestamp);
-                }
-            }
-            $daysSince = $lastBackup ? (int) ceil((time() - $lastBackup) / 86400) : 999;
-            $checks[] = $this->buildCheck(
-                'Letztes Backup',
-                $daysSince <= 7 ? 'ok' : ($daysSince <= 30 ? 'warning' : 'critical'),
-                $lastBackup ? "Letztes Backup vor {$daysSince} Tagen." : 'Kein Datenbank-Backup gefunden.'
-            );
-        }
+        $checks[] = $this->buildBackupCheck();
 
         try {
             $weakAdmins = $this->db->get_var(
@@ -336,38 +327,8 @@ class SecurityAuditModule
             ]);
         }
 
-        $runtimeFirewallOk = class_exists('\CMS\Services\SecurityRuntimeService')
-            && is_file($abspath . 'core/Bootstrap.php')
-            && $this->fileContains($abspath . 'core/Bootstrap.php', 'SecurityRuntimeService::getInstance()->handleRequest()');
-        $checks[] = $this->buildCheck(
-            'Firewall Runtime aktiv',
-            $runtimeFirewallOk ? 'ok' : 'critical',
-            $runtimeFirewallOk
-                ? 'Firewall-Regeln und Rate-Limits sind im Bootstrap-Runtime-Pfad verdrahtet.'
-                : 'Firewall ist nicht vollständig im Runtime-Pfad verdrahtet.'
-        );
-
-        $contactAntispamRuntime = $this->inspectContactAntispamRuntime();
-        $commentAntispamOk = class_exists('\CMS\Services\AntispamService')
-            && is_file($abspath . 'core/Services/CommentService.php')
-            && $this->fileContains($abspath . 'core/Services/CommentService.php', 'AntispamService::getInstance()->evaluate')
-            && $this->fileContains($abspath . 'themes/cms-default/blog-single.php', 'comment_hp')
-            && $this->fileContains($abspath . 'themes/cms-default/blog-single.php', 'comment_started_at');
-
-        $antispamRuntimeOk = $commentAntispamOk && $contactAntispamRuntime['ok'];
-        $antispamRuntimeDetail = $commentAntispamOk
-            ? 'Kommentar-Runtime nutzt die zentrale AntiSpam-Auswertung inklusive Honeypot, Mindestzeit, User-Agent-, Link- und Blacklist-Prüfung.'
-            : 'Kommentar-Runtime ist nicht vollständig mit der zentralen AntiSpam-Auswertung verbunden.';
-
-        if (!empty($contactAntispamRuntime['detail'])) {
-            $antispamRuntimeDetail .= ' ' . (string) $contactAntispamRuntime['detail'];
-        }
-
-        $checks[] = $this->buildCheck(
-            'AntiSpam Runtime aktiv',
-            $antispamRuntimeOk ? 'ok' : 'critical',
-            $antispamRuntimeDetail
-        );
+        $checks[] = $this->buildFirewallCheck($abspath);
+        $checks[] = $this->buildAntispamCheck($abspath);
 
         $externalRuntimeHits = [];
         foreach ([
@@ -421,19 +382,180 @@ class SecurityAuditModule
         return $checks;
     }
 
+    /**
+     * @return array{name:string, status:string, detail:string}
+     */
+    private function buildBackupCheck(): array
+    {
+        try {
+            $overview = \CMS\Services\BackupService::getInstance()->getBackupOverview();
+        } catch (\Throwable $e) {
+            $this->logFailure('security.audit.backup_check_failed', 'Backup-Status konnte für das Sicherheits-Audit nicht ermittelt werden.', [
+                'exception' => $e::class,
+            ]);
+
+            return $this->buildCheck(
+                'Letztes Backup',
+                'warning',
+                'Backup-Status konnte nicht ermittelt werden – Schreib-/Leserechte von backups/ prüfen.'
+            );
+        }
+
+        $incompleteHint = $overview['incomplete'] > 0
+            ? ' ' . $overview['incomplete'] . ' unvollständige(s) Backup(s) unter System → Backup & Restore prüfen bzw. löschen.'
+            : '';
+        $latest = $overview['latest'];
+
+        if ($latest === null) {
+            return $this->buildCheck(
+                'Letztes Backup',
+                'critical',
+                'Kein vollständiges lokales Backup unter backups/ gefunden. Unter System → Backup & Restore ein Backup erstellen (externe Hoster-Backups kann das Audit nicht erkennen).' . $incompleteHint
+            );
+        }
+
+        $timestamp = (int) $latest['timestamp'];
+        $ageSeconds = $timestamp > 0 ? max(0, time() - $timestamp) : PHP_INT_MAX;
+        $ageDays = intdiv($ageSeconds, 86400);
+        $status = $ageSeconds <= 7 * 86400 ? 'ok' : ($ageSeconds <= 30 * 86400 ? 'warning' : 'critical');
+        $ageLabel = match (true) {
+            $timestamp <= 0 => 'mit unbekanntem Datum',
+            $ageDays === 0 => 'vor weniger als 24 Stunden',
+            $ageDays === 1 => 'vor 1 Tag',
+            default => 'vor ' . $ageDays . ' Tagen',
+        };
+
+        return $this->buildCheck(
+            'Letztes Backup',
+            $status,
+            sprintf(
+                'Letztes Backup %s (%s%s); %d vollständige(s) lokale(s) Backup(s).%s',
+                $ageLabel,
+                $latest['type'] === 'full' ? 'Vollbackup' : 'Datenbank-Backup',
+                $timestamp > 0 ? ', ' . date('d.m.Y H:i', $timestamp) : '',
+                $overview['count'],
+                $incompleteHint
+            ) . ($status === 'ok' ? '' : ' Empfehlung: mindestens wöchentlich sichern.')
+        );
+    }
+
+    /**
+     * Die Verdrahtung allein genügt nicht: Ohne `firewall_enabled = 1` kehrt
+     * SecurityRuntimeService::handleRequest() vor Regeln und Request-Rate-Limit zurück.
+     *
+     * @return array{name:string, status:string, detail:string}
+     */
+    private function buildFirewallCheck(string $abspath): array
+    {
+        $name = 'Firewall Runtime aktiv';
+        $wired = class_exists('\CMS\Services\SecurityRuntimeService')
+            && $this->fileContains($abspath . 'core/Bootstrap.php', 'SecurityRuntimeService::getInstance()->handleRequest()');
+        if (!$wired) {
+            return $this->buildCheck($name, 'critical', 'Firewall ist nicht vollständig im Runtime-Pfad verdrahtet.');
+        }
+
+        try {
+            $enabled = (\CMS\Services\OptionStore::getInstance()->get('firewall_enabled') ?? '0') === '1';
+        } catch (\Throwable $e) {
+            $this->logFailure('security.audit.firewall_state_failed', 'Firewall-Schalter konnte für das Sicherheits-Audit nicht gelesen werden.', [
+                'exception' => $e::class,
+            ]);
+
+            return $this->buildCheck($name, 'warning', 'Firewall-Schalter konnte nicht gelesen werden – Einstellungen unter Sicherheit → Firewall prüfen.');
+        }
+
+        return $enabled
+            ? $this->buildCheck($name, 'ok', 'Firewall ist aktiviert; Regeln und Request-Rate-Limit greifen im Bootstrap-Runtime-Pfad.')
+            : $this->buildCheck($name, 'warning', 'Firewall ist deaktiviert: Firewall-Regeln und das Request-Rate-Limit greifen nicht. Unter Sicherheit → Firewall aktivieren; Login-Sperren bleiben unabhängig davon aktiv.');
+    }
+
+    /**
+     * Ohne `antispam_enabled = 1` lässt AntispamService::evaluate() jede Einsendung durch;
+     * aufgeführt werden nur die tatsächlich aktiven Einzelprüfungen.
+     *
+     * @return array{name:string, status:string, detail:string}
+     */
+    private function buildAntispamCheck(string $abspath): array
+    {
+        $name = 'AntiSpam Runtime aktiv';
+        $contactRuntime = $this->inspectContactAntispamRuntime();
+        $commentWired = class_exists('\CMS\Services\AntispamService')
+            && $this->fileContains($abspath . 'core/Services/CommentService.php', 'AntispamService::getInstance()->evaluate')
+            && $this->fileContains($abspath . 'themes/cms-default/blog-single.php', 'comment_hp')
+            && $this->fileContains($abspath . 'themes/cms-default/blog-single.php', 'comment_started_at');
+        $contactDetail = $contactRuntime['detail'] !== '' ? ' ' . $contactRuntime['detail'] : '';
+
+        if (!$commentWired || !$contactRuntime['ok']) {
+            return $this->buildCheck(
+                $name,
+                'critical',
+                ($commentWired
+                    ? 'Kommentar-Runtime nutzt die zentrale AntiSpam-Auswertung.'
+                    : 'Kommentar-Runtime ist nicht vollständig mit der zentralen AntiSpam-Auswertung verbunden.') . $contactDetail
+            );
+        }
+
+        try {
+            $settings = \CMS\Services\AntispamService::getInstance()->getSettings();
+            $commentsEnabled = class_exists('\CMS\Services\CommentService')
+                ? \CMS\Services\CommentService::getInstance()->areCommentsEnabledGlobally()
+                : true;
+        } catch (\Throwable $e) {
+            $this->logFailure('security.audit.antispam_state_failed', 'AntiSpam-Einstellungen konnten für das Sicherheits-Audit nicht gelesen werden.', [
+                'exception' => $e::class,
+            ]);
+
+            return $this->buildCheck($name, 'warning', 'AntiSpam-Einstellungen konnten nicht gelesen werden – Einstellungen unter Sicherheit → Anti-Spam prüfen.');
+        }
+
+        if (($settings['antispam_enabled'] ?? '0') !== '1') {
+            $targets = array_values(array_filter([
+                $commentsEnabled ? 'Kommentare' : '',
+                $contactRuntime['active'] ? 'Kontaktformulare' : '',
+            ]));
+
+            if ($targets === []) {
+                return $this->buildCheck($name, 'ok', 'AntiSpam ist deaktiviert; Kommentare sind global abgeschaltet und kein Kontaktformular-Plugin ist aktiv.');
+            }
+
+            return $this->buildCheck(
+                $name,
+                'warning',
+                'AntiSpam ist deaktiviert: ' . implode(' und ', $targets) . ' werden ohne Honeypot-, Mindestzeit-, User-Agent-, Link- und Blacklist-Prüfung angenommen. Unter Sicherheit → Anti-Spam aktivieren.'
+            );
+        }
+
+        $minimumSeconds = max(0, min(60, (int) ($settings['antispam_min_time'] ?? 0)));
+        $maxLinks = max(0, min(50, (int) ($settings['antispam_max_links'] ?? 0)));
+        $activeRules = array_values(array_filter([
+            ($settings['antispam_honeypot'] ?? '0') === '1' ? 'Honeypot' : '',
+            $minimumSeconds > 0 ? 'Mindestzeit ' . $minimumSeconds . ' s' : '',
+            ($settings['antispam_block_empty_ua'] ?? '0') === '1' ? 'User-Agent-Prüfung' : '',
+            $maxLinks > 0 ? 'höchstens ' . $maxLinks . ' Links' : '',
+            'Blacklist',
+        ]));
+
+        return $this->buildCheck(
+            $name,
+            'ok',
+            'Kommentar-Runtime nutzt die zentrale AntiSpam-Auswertung (aktiv: ' . implode(', ', $activeRules) . ').' . $contactDetail
+        );
+    }
+
     private function fileContains(string $path, string $needle): bool
     {
         return $this->fileContainsAny($path, [$needle]);
     }
 
     /**
-     * @return array{ok:bool,detail:string}
+     * @return array{ok:bool,active:bool,detail:string}
      */
     private function inspectContactAntispamRuntime(): array
     {
         if (!class_exists('CMS_Contact_Frontend', false) || !defined('CMS_CONTACT_PLUGIN_DIR')) {
             return [
                 'ok' => true,
+                'active' => false,
                 'detail' => 'Kein aktives Kontaktformular-Plugin erkannt; zusätzlicher Formular-Check nicht erforderlich.',
             ];
         }
@@ -449,6 +571,7 @@ class SecurityAuditModule
 
             return [
                 'ok' => false,
+                'active' => true,
                 'detail' => 'Aktives Kontaktformular-Plugin konnte nicht zuverlässig auf zentrale AntiSpam-Verdrahtung geprüft werden.',
             ];
         }
@@ -468,12 +591,14 @@ class SecurityAuditModule
         if ($frontendUsesCentralService && $templatesContainTimestamp) {
             return [
                 'ok' => true,
+                'active' => true,
                 'detail' => 'Aktive Kontaktformulare nutzen ebenfalls die zentrale AntiSpam-Auswertung inklusive Formular-Timestamp für `antispam_min_time`.',
             ];
         }
 
         return [
             'ok' => false,
+            'active' => true,
             'detail' => 'Aktive Kontaktformulare sind nicht vollständig an die zentrale AntiSpam-Auswertung oder den Formular-Timestamp angebunden.',
         ];
     }
@@ -712,14 +837,21 @@ class SecurityAuditModule
                 continue;
             }
 
-            $perms = substr(sprintf('%o', fileperms($path)), -4);
-            $configOk = in_array($perms, ['0644', '0640', '0600'], true);
+            $mode = @fileperms($path);
+            if (!is_int($mode)) {
+                $checks[] = $this->buildCheck($label . ' Berechtigungen', 'warning', 'Dateiberechtigungen von ' . $label . ' konnten nicht gelesen werden.');
+                continue;
+            }
+
+            // Entscheidend ist, dass Gruppe/Welt nicht schreiben dürfen – schreibgeschützte Modi (0444/0440/0400) sind ebenfalls sicher.
+            $perms = sprintf('%04o', $mode & 0o7777);
+            $configOk = ($mode & 0o022) === 0;
             $checks[] = $this->buildCheck(
                 $label . ' Berechtigungen (' . $perms . ')',
                 $configOk ? 'ok' : 'warning',
                 $configOk
                     ? 'Dateiberechtigungen sind korrekt.'
-                    : ($label . ' sollte nicht öffentlich beschreibbar sein (empfohlen: 644 oder 640).')
+                    : ($label . ' ist für Gruppe oder alle beschreibbar (empfohlen: 640, 600 oder 644).')
             );
         }
 

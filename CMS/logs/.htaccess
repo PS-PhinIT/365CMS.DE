@@ -1,2 +1,10 @@
 # Deny direct web access to log files
-Require all denied
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+# Apache 2.2 Fallback
+<IfModule !mod_authz_core.c>
+    Order Deny,Allow
+    Deny from all
+</IfModule>

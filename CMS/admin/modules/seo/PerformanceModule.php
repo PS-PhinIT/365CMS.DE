@@ -1127,7 +1127,12 @@ final class PerformanceModule
         $revisionCount = (int)($this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}page_revisions") ?? 0);
         $expiredSessions = (int)($this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}sessions WHERE expires_at IS NOT NULL AND expires_at <= NOW()") ?? 0);
         $expiredCache = (int)($this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}cache WHERE expires_at IS NOT NULL AND expires_at <= NOW()") ?? 0);
-        $failedLogins24h = (int)($this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}login_attempts WHERE attempted_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)") ?? 0);
+        $failedLoginActions = \CMS\Security::FAILED_LOGIN_ACTIONS;
+        $failedLogins24h = (int)($this->db->get_var(
+            "SELECT COUNT(*) FROM {$this->prefix}login_attempts WHERE attempted_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)"
+            . " AND action IN (" . implode(', ', array_fill(0, count($failedLoginActions), '?')) . ")",
+            $failedLoginActions
+        ) ?? 0);
 
         $healthScore = 100;
         if ($totalOverhead > 20 * 1024 * 1024) {

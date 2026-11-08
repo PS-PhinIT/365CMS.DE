@@ -88,6 +88,7 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - **Registrierung**: seit 3.4.12 höchstens 5 Versuche je IP in 15 Minuten (`Security::checkDbRateLimit(…, 'register', 5, 900)`).
 - **Kontaktformular** (`cms-default`): seit 3.4.13 höchstens 5 Nachrichten je IP und Stunde (Aktion `contact_form`).
 - **Zeitbasis der DB-Rate-Limits:** Einträge in `cms_login_attempts` entstehen mit `NOW()`, geprüft wird gegen PHP-Zeit. Seit 3.4.13 gleicht `CMS\Database` die MySQL-Sitzungszeitzone an PHP an; vorher zählten die Limits auf Servern mit UTC-Datenbank und `Europe/Berlin`-PHP nie.
+- **Statistik „Fehlgeschlagene Logins“:** `cms_login_attempts` speichert auch die übrigen Rate-Limit-Aktionen (jeder API-Aufruf, Suche, Registrierung, Kontaktformular …). Dashboard (Kachel, Prioritätshinweis, Sicherheits-Score), *Diagnose → Übersicht* und *Performance → Datenbank* zählen seit 4.0.0 nur die Aktionen aus `Security::FAILED_LOGIN_ACTIONS` (`login`, `mfa_verify`); vorher erschien jeder API-Aufruf als fehlgeschlagener Login.
 - **API-Token**: `POST /api/v1/auth/token` 10/h, `POST /api/v1/auth/refresh` 30/h je IP.
 - **Anti-Spam** für Formulare ([../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md)).
 - **Sichere Weiterleitungen**: `Router::redirect()` und Login-Redirects lassen nur interne/erlaubte Ziele zu.

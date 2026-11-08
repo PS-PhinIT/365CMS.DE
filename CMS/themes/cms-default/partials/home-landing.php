@@ -374,7 +374,7 @@ main.site-main       { padding: 0 !important; margin: 0 !important; }
     if (!in_array($lpContentType, ['features', 'text', 'posts'], true)) {
         $lpContentType = 'features';
     }
-    $lpPostsCount  = max(1, (int)($lpContentSets['posts_count'] ?? 5));
+    $lpPostsCount  = max(1, min(50, (int)($lpContentSets['posts_count'] ?? 5)));
     ?>
 
     <?php if ($lpPluginHtml['content'] !== ''): ?>

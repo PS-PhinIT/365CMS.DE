@@ -36,17 +36,34 @@ class BackupService
     private const MAX_S3_REST_UPLOAD_BYTES = 26214400;
     private const BACKUP_NAME_PATTERN = '/^[a-z0-9][a-z0-9._-]{2,120}$/i';
     private const LEGACY_DATABASE_BACKUP_PATTERN = '/^database_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.sql(?:\.gz)?$/i';
+    /** Von diesem Service angelegte Backup-Verzeichnisse (inkl. Zähler-Suffix bei Namenskollision). */
+    private const OWN_BACKUP_DIRECTORY_PATTERN = '/^(?:full|database)_backup_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}(?:-[0-9]{1,2})?$/';
+    private const MAX_BACKUP_NAME_ATTEMPTS = 50;
+    /** Ein Backup-Verzeichnis ohne Manifest gilt erst nach dieser Zeit als abgebrochen statt „läuft noch“. */
+    private const INCOMPLETE_BACKUP_GRACE_SECONDS = 3600;
+    private const LEGACY_HTACCESS_CONTENT = 'deny from all';
+    private const BACKUP_HTACCESS_CONTENT = "# Verweigert jeden direkten HTTP-Zugriff auf Backups.\n"
+        . "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
+        . "<IfModule !mod_authz_core.c>\n    Order Deny,Allow\n    Deny from all\n</IfModule>\n";
     private const S3_BUCKET_PATTERN = '/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/';
     private const S3_ENDPOINT_PATTERN = '/^[a-z0-9.-]+$/i';
     private const S3_REGION_PATTERN = '/^[a-z0-9-]{2,40}$/i';
-    private const FILE_BACKUP_DIRECTORIES = ['uploads', 'themes', 'plugins', 'assets'];
+    /**
+     * Gesicherte Inhalte. assets/ gehört zum Core-Release (gebündelte PHP-/JS-Bibliotheken) und wird
+     * bei jedem Update ersetzt – ein Restore darf keine veralteten Bibliotheken zurückspielen.
+     */
+    private const FILE_BACKUP_DIRECTORIES = ['uploads', 'themes', 'plugins'];
+    /** Ältere Vollbackups enthalten noch assets/; diese Einträge werden beim Restore übersprungen. */
+    private const RESTORE_SKIPPED_LEGACY_DIRECTORIES = ['assets'];
     private const ALLOWED_DOWNLOAD_PARTS = ['database', 'files'];
     private const BACKUP_HASH_ALGORITHM = 'sha256';
     private const VALIDATION_CRITICAL_TABLE_SUFFIXES = ['users', 'settings', 'pages', 'posts'];
     private const VALIDATION_MAX_CRITICAL_TABLES = 6;
-    private const RESTORE_MAX_ARCHIVE_ENTRIES = 5000;
-    private const RESTORE_MAX_ARCHIVE_FILE_BYTES = 268435456;
-    private const RESTORE_MAX_ARCHIVE_UNCOMPRESSED_BYTES = 536870912;
+    // Plausibilitätsgrenzen gegen manipulierte Archive; realistisch genug für gewachsene Medienbibliotheken.
+    private const RESTORE_MAX_ARCHIVE_ENTRIES = 250000;
+    private const RESTORE_MAX_ARCHIVE_FILE_BYTES = 4294967296;
+    private const RESTORE_MAX_ARCHIVE_UNCOMPRESSED_BYTES = 34359738368;
+    private const RESTORE_FREE_SPACE_FACTOR = 1.1;
     
     /**
      * Singleton instance
@@ -81,8 +98,16 @@ class BackupService
         }
 
         $htaccessPath = $backupRoot . '.htaccess';
-        if (!is_file($htaccessPath) && file_put_contents($htaccessPath, "deny from all\n", LOCK_EX) === false) {
-            throw new \RuntimeException('Backup-Schutzdatei konnte nicht geschrieben werden.');
+        if (!is_file($htaccessPath)) {
+            if (file_put_contents($htaccessPath, self::BACKUP_HTACCESS_CONTENT, LOCK_EX) === false) {
+                throw new \RuntimeException('Backup-Schutzdatei konnte nicht geschrieben werden.');
+            }
+        } elseif (filesize($htaccessPath) <= 64) {
+            // Alte Apache-2.2-Kurzform durch die 2.2/2.4-kompatible Variante ersetzen (fail-soft).
+            $existing = file_get_contents($htaccessPath);
+            if (is_string($existing) && strcasecmp(trim($existing), self::LEGACY_HTACCESS_CONTENT) === 0 && is_writable($htaccessPath)) {
+                file_put_contents($htaccessPath, self::BACKUP_HTACCESS_CONTENT, LOCK_EX);
+            }
         }
 
         $indexPath = $backupRoot . 'index.html';
@@ -96,10 +121,11 @@ class BackupService
      */
     public function createFullBackup(): array
     {
+        $backupPath = null;
+
         try {
             $timestamp = date('Y-m-d_H-i-s');
-            $backupName = $this->normalizeBackupName("full_backup_{$timestamp}");
-            $backupPath = $this->createBackupDirectory($backupName);
+            ['name' => $backupName, 'path' => $backupPath] = $this->createBackupDirectory("full_backup_{$timestamp}");
             
             // 1. Database backup
             $dbFile = $this->createDatabaseBackup($backupPath);
@@ -115,7 +141,7 @@ class BackupService
                 'database' => $dbFile,
                 'files' => $filesZip,
                 'size' => $this->getDirectorySize($backupPath),
-                'cms_version' => CMS_VERSION ?? 'unknown',
+                'cms_version' => $this->getCmsVersion(),
                 'checksums' => $this->buildBackupChecksums($backupPath, $dbFile, $filesZip),
             ];
             
@@ -137,6 +163,7 @@ class BackupService
             Logger::instance()->withChannel('backup')->error('Full backup could not be created.', [
                 'exception' => $e,
             ]);
+            $this->discardIncompleteBackup($backupPath);
             return [
                 'success' => false,
                 'error' => $this->buildServiceErrorMessage('Vollständiges Backup konnte nicht erstellt werden.', $e),
@@ -179,10 +206,11 @@ class BackupService
      */
     public function createStandaloneDatabaseBackup(): array
     {
+        $backupPath = null;
+
         try {
             $timestamp = date('Y-m-d_H-i-s');
-            $backupName = $this->normalizeBackupName("database_backup_{$timestamp}");
-            $backupPath = $this->createBackupDirectory($backupName);
+            ['name' => $backupName, 'path' => $backupPath] = $this->createBackupDirectory("database_backup_{$timestamp}");
             $dbFile = $this->createDatabaseBackup($backupPath);
 
             $manifest = [
@@ -192,7 +220,7 @@ class BackupService
                 'database' => $dbFile,
                 'files' => '',
                 'size' => $this->getDirectorySize($backupPath),
-                'cms_version' => CMS_VERSION ?? 'unknown',
+                'cms_version' => $this->getCmsVersion(),
                 'checksums' => $this->buildBackupChecksums($backupPath, $dbFile),
             ];
 
@@ -213,6 +241,7 @@ class BackupService
             Logger::instance()->withChannel('backup')->error('Standalone database backup could not be created.', [
                 'exception' => $e,
             ]);
+            $this->discardIncompleteBackup($backupPath);
 
             return [
                 'success' => false,
@@ -380,7 +409,15 @@ class BackupService
             }
         }
         
-        $zip->close();
+        // Leere Archive legt libzip beim Schließen nicht an – Platzhalter-Verzeichnis sichert ein gültiges ZIP.
+        if ($zip->numFiles === 0) {
+            $zip->addEmptyDir(self::FILE_BACKUP_DIRECTORIES[0]);
+        }
+
+        // ZipArchive schreibt erst beim Schließen – ein Fehler hier (z. B. Speicherplatz) darf kein „erfolgreiches“ Backup ergeben.
+        if (!$zip->close() || !is_file($filepath)) {
+            throw new \RuntimeException('Datei-Archiv konnte nicht vollständig geschrieben werden.');
+        }
         
         return basename($filepath);
     }
@@ -400,15 +437,10 @@ class BackupService
                 continue;
             }
 
-            if (!$file->isDir()) {
-                $filePath = $file->getRealPath();
-                if ($filePath === false) {
-                    continue;
-                }
-
-                $relativePath = $basePath . '/' . str_replace('\\', '/', substr($filePath, strlen(rtrim($path, '\\/')) + 1));
-                $zip->addFile($filePath, $relativePath);
-            }
+            // Relativen Pfad aus dem Iterator ableiten: realpath() würde bei symbolisch verlinkten
+            // Basisverzeichnissen (z. B. uploads/ auf separatem Storage) falsche Archivpfade erzeugen.
+            $relativePath = $basePath . '/' . str_replace('\\', '/', $files->getSubPathname());
+            $zip->addFile($file->getPathname(), $relativePath);
         }
     }
     
@@ -428,7 +460,7 @@ class BackupService
             
             $subject = 'CMS Database Backup - ' . date('Y-m-d H:i');
             $message = "Automatisches Datenbank-Backup vom " . date('Y-m-d H:i:s') . "\n\n";
-            $message .= "CMS Version: " . (CMS_VERSION ?? 'unknown') . "\n";
+            $message .= "CMS Version: " . $this->getCmsVersion() . "\n";
             $message .= "Backup Größe: " . $this->formatBytes($backupSize);
             
             // Send email with attachment
@@ -655,92 +687,229 @@ class BackupService
     
     /**
      * List available backups
+     *
+     * Liefert vollständige Backups (Manifest bzw. Legacy-SQL-Datei) sowie unvollständige, von diesem
+     * Service angelegte Backup-Verzeichnisse (status = incomplete|pending), neueste zuerst.
      */
     public function listBackups(int $limit = self::DEFAULT_BACKUP_LIST_LIMIT): array
     {
-        $backups = [];
         $limit = max(1, min(self::MAX_BACKUP_LIST_LIMIT, $limit));
-        
-        $backupRoot = $this->backupRoot();
-        if (!is_dir($backupRoot)) {
-            return $backups;
-        }
-        
-        $items = scandir($backupRoot);
-        if ($items === false) {
-            return $backups;
+        $backups = [];
+
+        // Kandidaten (Verzeichnisse und Legacy-Dateien) gemeinsam nach Änderungszeit sortieren,
+        // damit alte Einzel-Dumps neuere Verzeichnis-Backups nicht aus dem Limit verdrängen.
+        foreach (array_keys($this->collectBackupCandidates()) as $item) {
+            if (count($backups) >= $limit) {
+                break;
+            }
+
+            $record = $this->readBackupRecord((string) $item);
+            if ($record !== null) {
+                $backups[] = $record;
+            }
         }
 
-        $directoryCandidates = [];
-        
+        usort($backups, static fn (array $a, array $b): int => [(int) ($b['timestamp'] ?? 0), (string) ($b['name'] ?? '')]
+            <=> [(int) ($a['timestamp'] ?? 0), (string) ($a['name'] ?? '')]);
+
+        return $backups;
+    }
+
+    /**
+     * Kompakter Backup-Status (z. B. für das Sicherheits-Audit): zählt nur vollständige Backups.
+     *
+     * @return array{count:int, incomplete:int, latest:array{name:string, type:string, timestamp:int}|null}
+     */
+    public function getBackupOverview(): array
+    {
+        $overview = ['count' => 0, 'incomplete' => 0, 'latest' => null];
+
+        foreach (array_keys($this->collectBackupCandidates()) as $item) {
+            $record = $this->readBackupRecord((string) $item);
+            if ($record === null) {
+                continue;
+            }
+
+            $status = (string) ($record['status'] ?? 'ok');
+            if ($status === 'incomplete') {
+                $overview['incomplete']++;
+                continue;
+            }
+
+            if ($status !== 'ok') {
+                continue;
+            }
+
+            $overview['count']++;
+            $timestamp = (int) ($record['timestamp'] ?? 0);
+            if ($overview['latest'] === null || $timestamp > $overview['latest']['timestamp']) {
+                $overview['latest'] = [
+                    'name' => (string) ($record['name'] ?? ''),
+                    'type' => (string) ($record['type'] ?? 'database'),
+                    'timestamp' => $timestamp,
+                ];
+            }
+        }
+
+        return $overview;
+    }
+
+    /**
+     * @return array<string, int> Backup-Name => Änderungszeit, neueste zuerst
+     */
+    private function collectBackupCandidates(): array
+    {
+        $backupRoot = $this->backupRoot();
+        if (!is_dir($backupRoot)) {
+            return [];
+        }
+
+        $items = scandir($backupRoot);
+        if ($items === false) {
+            return [];
+        }
+
+        $candidates = [];
         foreach ($items as $item) {
             if ($item === '.' || $item === '..' || $item === '.htaccess' || $item === 'index.html') {
                 continue;
             }
 
             $path = $backupRoot . $item;
-
-            if (is_dir($path) && $this->isAllowedBackupName($item)) {
-                $directoryCandidates[$item] = (int) (filemtime($path) ?: 0);
-                continue;
-            }
-
-            if (is_file($path) && $this->isLegacyDatabaseBackupFile($item)) {
-                $timestamp = (int) (filemtime($path) ?: 0);
-                $size = (int) (filesize($path) ?: 0);
-                $backups[] = [
-                    'name' => $item,
-                    'path' => $path,
-                    'timestamp' => $timestamp,
-                    'date' => $timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : '-',
-                    'type' => 'database',
-                    'database' => $item,
-                    'files' => '',
-                    'size' => $size,
-                ];
+            if ((is_dir($path) && $this->isAllowedBackupName($item))
+                || (is_file($path) && $this->isLegacyDatabaseBackupFile($item))
+            ) {
+                $candidates[$item] = (int) (@filemtime($path) ?: 0);
             }
         }
 
-        arsort($directoryCandidates, SORT_NUMERIC);
+        arsort($candidates, SORT_NUMERIC);
 
-        foreach (array_keys($directoryCandidates) as $item) {
-            if (count($backups) >= $limit) {
-                break;
-            }
+        return $candidates;
+    }
 
-            $path = $backupRoot . $item;
-            $manifestFile = $path . '/manifest.json';
-
-            if (!is_file($manifestFile)) {
-                continue;
-            }
-
-            $manifestSize = filesize($manifestFile);
-            if ($manifestSize === false || $manifestSize > self::MANIFEST_MAX_BYTES) {
-                continue;
-            }
-
-            $manifestContents = file_get_contents($manifestFile);
-            if (!is_string($manifestContents) || $manifestContents === '') {
-                continue;
-            }
-
-            $manifest = Json::decodeArray($manifestContents, []);
-            if ($manifest === []) {
-                continue;
-            }
-
-            $manifest['name'] = $item;
-            $manifest['path'] = $path;
-            $backups[] = $manifest;
+    /**
+     * Liest ein einzelnes Backup (Verzeichnis mit Manifest, unvollständiges eigenes Verzeichnis oder Legacy-Dump).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function readBackupRecord(string $item): ?array
+    {
+        $item = trim(basename($item));
+        if ($item === '' || $item === '.htaccess' || $item === 'index.html') {
+            return null;
         }
-        
-        // Sort by timestamp (newest first)
-        usort($backups, function($a, $b) {
-            return ($b['timestamp'] ?? 0) - ($a['timestamp'] ?? 0);
-        });
-        
-        return array_slice($backups, 0, $limit);
+
+        $path = $this->backupRoot() . $item;
+
+        if ($this->isLegacyDatabaseBackupFile($item)) {
+            if (!is_file($path) || is_link($path) || !$this->isWithinBackupRoot($path)) {
+                return null;
+            }
+
+            $timestamp = (int) (@filemtime($path) ?: 0);
+
+            return [
+                'name' => $item,
+                'path' => $path,
+                'timestamp' => $timestamp,
+                'date' => $timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : '-',
+                'type' => 'database',
+                'database' => $item,
+                'files' => '',
+                'size' => (int) (@filesize($path) ?: 0),
+                'database_available' => true,
+                'files_available' => false,
+                'status' => 'ok',
+                'error' => '',
+            ];
+        }
+
+        if (!$this->isAllowedBackupName($item) || !is_dir($path) || is_link($path) || !$this->isWithinBackupRoot($path)) {
+            return null;
+        }
+
+        $manifestFile = $path . DIRECTORY_SEPARATOR . 'manifest.json';
+        $manifest = $this->readBackupManifest($manifestFile);
+
+        if ($manifest === null) {
+            // Fremde Verzeichnisse (z. B. performance-rollbacks/) sind keine Backups dieses Services.
+            if (preg_match(self::OWN_BACKUP_DIRECTORY_PATTERN, $item) !== 1) {
+                return null;
+            }
+
+            $modifiedAt = (int) (@filemtime($path) ?: 0);
+            $inProgress = $modifiedAt > 0 && (time() - $modifiedAt) < self::INCOMPLETE_BACKUP_GRACE_SECONDS;
+
+            return [
+                'name' => $item,
+                'path' => $path,
+                'timestamp' => $modifiedAt,
+                'date' => $modifiedAt > 0 ? date('Y-m-d H:i:s', $modifiedAt) : '-',
+                'type' => str_starts_with($item, 'full_backup_') ? 'full' : 'database',
+                'database' => '',
+                'files' => '',
+                'size' => $this->getDirectorySize($path),
+                'database_available' => false,
+                'files_available' => false,
+                'status' => $inProgress ? 'pending' : 'incomplete',
+                'error' => $inProgress
+                    ? 'Backup wird gerade erstellt oder wurde soeben abgebrochen (noch kein Manifest).'
+                    : 'Backup ist unvollständig: manifest.json fehlt oder ist beschädigt (z. B. Abbruch durch Zeitlimit, Speicherplatz oder Fehler).',
+            ];
+        }
+
+        $timestamp = (int) ($manifest['timestamp'] ?? 0);
+        if ($timestamp <= 0) {
+            $timestamp = (int) (@filemtime($manifestFile) ?: 0);
+        }
+
+        $issues = [];
+        $databaseFile = trim(basename((string) ($manifest['database'] ?? '')));
+        $filesArchive = trim(basename((string) ($manifest['files'] ?? '')));
+        $databaseAvailable = $databaseFile !== '' && is_file($path . DIRECTORY_SEPARATOR . $databaseFile);
+        $filesAvailable = $filesArchive !== '' && is_file($path . DIRECTORY_SEPARATOR . $filesArchive);
+        if ($databaseFile === '' && $filesArchive === '') {
+            $issues[] = 'Manifest verweist auf keine Sicherungsdateien';
+        }
+        if ($databaseFile !== '' && !$databaseAvailable) {
+            $issues[] = 'Datenbank-Dump fehlt (' . $databaseFile . ')';
+        }
+        if ($filesArchive !== '' && !$filesAvailable) {
+            $issues[] = 'Datei-Archiv fehlt (' . $filesArchive . ')';
+        }
+
+        $manifest['name'] = $item;
+        $manifest['path'] = $path;
+        $manifest['timestamp'] = $timestamp;
+        $manifest['database_available'] = $databaseAvailable;
+        $manifest['files_available'] = $filesAvailable;
+        $manifest['status'] = $issues === [] ? 'ok' : 'incomplete';
+        $manifest['error'] = $issues === [] ? '' : 'Backup ist unvollständig: ' . implode('; ', $issues) . '.';
+
+        return $manifest;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function readBackupManifest(string $manifestFile): ?array
+    {
+        if (!is_file($manifestFile) || is_link($manifestFile)) {
+            return null;
+        }
+
+        $manifestSize = @filesize($manifestFile);
+        if ($manifestSize === false || $manifestSize < 2 || $manifestSize > self::MANIFEST_MAX_BYTES) {
+            return null;
+        }
+
+        $manifestContents = @file_get_contents($manifestFile);
+        if (!is_string($manifestContents) || $manifestContents === '') {
+            return null;
+        }
+
+        $manifest = Json::decodeArray($manifestContents, []);
+
+        return $manifest === [] ? null : $manifest;
     }
 
     /**
@@ -783,11 +952,25 @@ class BackupService
             throw new \RuntimeException('Backup wurde nicht gefunden.');
         }
 
+        if ((string) ($record['status'] ?? 'ok') !== 'ok') {
+            throw new \RuntimeException((string) ($record['error'] ?? '') !== ''
+                ? (string) $record['error'] . ' Wiederherstellung abgebrochen.'
+                : 'Backup ist unvollständig; Wiederherstellung abgebrochen.');
+        }
+
         $databasePath = $this->resolveBackupDatabasePath($record);
         $filesPath = $this->resolveBackupFilesArchivePath($record);
 
         if ($databasePath === '' && $filesPath === '') {
             throw new \RuntimeException('Backup enthält keine wiederherstellbaren Bestandteile.');
+        }
+
+        // Integrität und Archivstruktur vor dem (teuren) Rollback-Snapshot prüfen: beschädigte oder
+        // veränderte Backups dürfen den Live-Bestand nicht überschreiben.
+        $this->assertBackupPartIntegrity('Datenbank-Dump', $databasePath, (string) ($record['checksums']['database']['value'] ?? ''));
+        $this->assertBackupPartIntegrity('Datei-Archiv', $filesPath, (string) ($record['checksums']['files']['value'] ?? ''));
+        if ($filesPath !== '') {
+            $this->assertRestorableFilesArchive($filesPath);
         }
 
         $rollbackBackup = $this->createFullBackup();
@@ -983,17 +1166,8 @@ class BackupService
             return null;
         }
 
-        foreach ($this->listBackups(self::MAX_BACKUP_LIST_LIMIT) as $backup) {
-            if (!is_array($backup)) {
-                continue;
-            }
-
-            if ((string) ($backup['name'] ?? '') === $normalizedName) {
-                return $backup;
-            }
-        }
-
-        return null;
+        // Direkt lesen statt über listBackups(): auch Backups jenseits des Listen-Limits bleiben erreichbar.
+        return $this->readBackupRecord($normalizedName);
     }
 
     private function normalizeDownloadPart(string $part): string
@@ -1062,9 +1236,16 @@ class BackupService
             throw new \RuntimeException('Backup-Archiv konnte nicht geöffnet werden.');
         }
 
-        if (!$this->validateRestoreArchiveEntries($zip)) {
+        $inspection = $this->inspectRestoreArchive($zip);
+        if (!$inspection['valid']) {
             $zip->close();
-            throw new \RuntimeException('Backup-Archiv enthält ungültige oder unsichere Pfade.');
+            throw new \RuntimeException('Backup-Archiv kann nicht wiederhergestellt werden: ' . $inspection['reason']);
+        }
+
+        $freeSpaceError = $this->checkRestoreFreeSpace($inspection['uncompressed_bytes']);
+        if ($freeSpaceError !== '') {
+            $zip->close();
+            throw new \RuntimeException($freeSpaceError);
         }
 
         $stagingRoot = $this->createManagedTemporaryDirectory(ABSPATH, '365cms_restore_stage_');
@@ -1097,6 +1278,10 @@ class BackupService
 
         try {
             foreach ($entries as $entry) {
+                if (in_array($entry, self::RESTORE_SKIPPED_LEGACY_DIRECTORIES, true)) {
+                    continue;
+                }
+
                 if (!in_array($entry, self::FILE_BACKUP_DIRECTORIES, true)) {
                     throw new \RuntimeException('Backup-Archiv enthält nicht erlaubte Zielpfade.');
                 }
@@ -1391,19 +1576,38 @@ class BackupService
         }
     }
 
-    private function validateRestoreArchiveEntries(\ZipArchive $zip): bool
+    /**
+     * Prüft ein Datei-Archiv vor dem Entpacken (Pfade, Symlinks, Größen, Zielverzeichnisse).
+     *
+     * @return array{valid:bool, reason:string, entries:int, uncompressed_bytes:int, skipped_directories:list<string>}
+     */
+    private function inspectRestoreArchive(\ZipArchive $zip): array
     {
-        $hasEntries = false;
-        $totalUncompressedSize = 0;
+        $entryCount = $zip->numFiles;
+        $invalid = static fn (string $reason, int $bytes = 0): array => [
+            'valid' => false,
+            'reason' => $reason,
+            'entries' => $entryCount,
+            'uncompressed_bytes' => $bytes,
+            'skipped_directories' => [],
+        ];
 
-        if ($zip->numFiles <= 0 || $zip->numFiles > self::RESTORE_MAX_ARCHIVE_ENTRIES) {
-            return false;
+        if ($entryCount <= 0) {
+            return $invalid('Das Archiv enthält keine Einträge.');
         }
 
-        for ($index = 0; $index < $zip->numFiles; $index++) {
+        if ($entryCount > self::RESTORE_MAX_ARCHIVE_ENTRIES) {
+            return $invalid(sprintf('Das Archiv enthält %d Einträge (Grenze: %d).', $entryCount, self::RESTORE_MAX_ARCHIVE_ENTRIES));
+        }
+
+        $totalUncompressedSize = 0;
+        $firstSegments = [];
+        $secondSegments = [];
+
+        for ($index = 0; $index < $entryCount; $index++) {
             $entryName = $zip->getNameIndex($index);
             if (!is_string($entryName) || $entryName === '') {
-                return false;
+                return $invalid('Das Archiv enthält einen unlesbaren Eintrag.');
             }
 
             $normalized = str_replace('\\', '/', $entryName);
@@ -1419,19 +1623,19 @@ class BackupService
                 || preg_match('~^[A-Za-z]:/~', $normalized) === 1
                 || preg_match('/[\x00-\x1F\x7F]/', $normalized) === 1
             ) {
-                return false;
+                return $invalid('Das Archiv enthält ungültige oder unsichere Pfade.');
             }
 
             $stat = $zip->statIndex($index);
             if (is_array($stat)) {
                 $size = max(0, (int) ($stat['size'] ?? 0));
                 if ($size > self::RESTORE_MAX_ARCHIVE_FILE_BYTES) {
-                    return false;
+                    return $invalid('Eine Datei im Archiv überschreitet die Restore-Grenze von ' . $this->formatBytes(self::RESTORE_MAX_ARCHIVE_FILE_BYTES) . '.');
                 }
 
                 $totalUncompressedSize += $size;
                 if ($totalUncompressedSize > self::RESTORE_MAX_ARCHIVE_UNCOMPRESSED_BYTES) {
-                    return false;
+                    return $invalid('Das Archiv überschreitet entpackt die Restore-Grenze von ' . $this->formatBytes(self::RESTORE_MAX_ARCHIVE_UNCOMPRESSED_BYTES) . '.');
                 }
             }
 
@@ -1440,14 +1644,101 @@ class BackupService
             if ($zip->getExternalAttributesIndex($index, $opsys, $attributes) && $opsys === \ZipArchive::OPSYS_UNIX) {
                 $mode = ($attributes >> 16) & 0xF000;
                 if ($mode === 0xA000) {
-                    return false;
+                    return $invalid('Das Archiv enthält symbolische Links.');
                 }
             }
 
-            $hasEntries = true;
+            $isDirectoryEntry = str_ends_with($normalized, '/');
+            $firstSegments[$parts[0]] = true;
+            if (count($parts) > 1 || $isDirectoryEntry) {
+                $secondSegments[$parts[0]][$parts[1] ?? ''] = true;
+            } else {
+                $secondSegments[$parts[0]]['/file'] = true;
+            }
         }
 
-        return $hasEntries;
+        // Erlaubt sind nur die Backup-Verzeichnisse – direkt oder unter genau einem Wrapper-Ordner.
+        $allowedEntries = $this->getRestoreArchiveTopLevelDirectories();
+        $topLevel = array_map('strval', array_keys($firstSegments));
+        if (count(array_diff($topLevel, $allowedEntries)) > 0) {
+            $wrapped = count($topLevel) === 1
+                ? array_values(array_filter(array_map('strval', array_keys($secondSegments[$topLevel[0]] ?? [])), static fn (string $segment): bool => $segment !== ''))
+                : [];
+            if ($wrapped === [] || count(array_diff($wrapped, $allowedEntries)) > 0) {
+                return $invalid('Das Archiv enthält nicht erlaubte Zielpfade (erlaubt: ' . implode(', ', self::FILE_BACKUP_DIRECTORIES) . ').', $totalUncompressedSize);
+            }
+
+            $topLevel = $wrapped;
+        }
+
+        return [
+            'valid' => true,
+            'reason' => '',
+            'entries' => $entryCount,
+            'uncompressed_bytes' => $totalUncompressedSize,
+            'skipped_directories' => array_values(array_intersect($topLevel, self::RESTORE_SKIPPED_LEGACY_DIRECTORIES)),
+        ];
+    }
+
+    /** @return list<string> */
+    private function getRestoreArchiveTopLevelDirectories(): array
+    {
+        return array_values(array_merge(self::FILE_BACKUP_DIRECTORIES, self::RESTORE_SKIPPED_LEGACY_DIRECTORIES));
+    }
+
+    private function checkRestoreFreeSpace(int $requiredBytes): string
+    {
+        $freeBytes = @disk_free_space(rtrim((string) ABSPATH, '/\\'));
+        if (!is_float($freeBytes) || $requiredBytes <= 0) {
+            return '';
+        }
+
+        $neededBytes = (int) ceil($requiredBytes * self::RESTORE_FREE_SPACE_FACTOR);
+        if ($freeBytes >= $neededBytes) {
+            return '';
+        }
+
+        return 'Nicht genug freier Speicherplatz für die Wiederherstellung (benötigt ca. ' . $this->formatBytes($neededBytes)
+            . ', frei: ' . $this->formatBytes((int) $freeBytes) . ').';
+    }
+
+    private function assertBackupPartIntegrity(string $label, string $path, string $expectedHash): void
+    {
+        if ($path === '' || $expectedHash === '') {
+            return;
+        }
+
+        $currentHash = $this->calculateFileHash($path);
+        if ($currentHash === '' || !hash_equals(strtolower($expectedHash), strtolower($currentHash))) {
+            throw new \RuntimeException($label . ': SHA-256 weicht vom Backup-Manifest ab – Datei ist beschädigt oder wurde verändert. Wiederherstellung abgebrochen.');
+        }
+    }
+
+    private function assertRestorableFilesArchive(string $archivePath): void
+    {
+        if (!extension_loaded('zip')) {
+            throw new \RuntimeException('ZIP-Unterstützung ist für die Dateiwiederherstellung nicht verfügbar.');
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($archivePath) !== true) {
+            throw new \RuntimeException('Backup-Archiv konnte nicht geöffnet werden.');
+        }
+
+        try {
+            $inspection = $this->inspectRestoreArchive($zip);
+        } finally {
+            $zip->close();
+        }
+
+        if (!$inspection['valid']) {
+            throw new \RuntimeException('Backup-Archiv kann nicht wiederhergestellt werden: ' . $inspection['reason']);
+        }
+
+        $freeSpaceError = $this->checkRestoreFreeSpace($inspection['uncompressed_bytes']);
+        if ($freeSpaceError !== '') {
+            throw new \RuntimeException($freeSpaceError);
+        }
     }
 
     private function resolveRestoreArchiveRoot(string $stagingRoot): string
@@ -1457,7 +1748,8 @@ class BackupService
             return $stagingRoot;
         }
 
-        $allAllowed = array_reduce($entries, fn (bool $carry, string $entry): bool => $carry && in_array($entry, self::FILE_BACKUP_DIRECTORIES, true), true);
+        $allowedEntries = $this->getRestoreArchiveTopLevelDirectories();
+        $allAllowed = array_reduce($entries, fn (bool $carry, string $entry): bool => $carry && in_array($entry, $allowedEntries, true), true);
         if ($allAllowed) {
             return $stagingRoot;
         }
@@ -1467,7 +1759,7 @@ class BackupService
             if (is_dir($candidate)) {
                 $candidateEntries = $this->listDirectoryEntries($candidate);
                 $candidateAllowed = $candidateEntries !== []
-                    && array_reduce($candidateEntries, fn (bool $carry, string $entry): bool => $carry && in_array($entry, self::FILE_BACKUP_DIRECTORIES, true), true);
+                    && array_reduce($candidateEntries, fn (bool $carry, string $entry): bool => $carry && in_array($entry, $allowedEntries, true), true);
 
                 if ($candidateAllowed) {
                     return $candidate;
@@ -1589,6 +1881,16 @@ class BackupService
         $type = (string) ($record['type'] ?? 'backup');
         $hasManifestChecksums = !empty($record['checksums']);
 
+        if ((string) ($record['status'] ?? 'ok') !== 'ok') {
+            return [
+                'label' => 'Backup-Vollständigkeit',
+                'status' => 'blocked',
+                'current' => (string) ($record['status'] ?? '') === 'pending' ? 'In Arbeit' : 'Unvollständig',
+                'expected' => 'Manifest und alle Sicherungsdateien vorhanden',
+                'detail' => (string) ($record['error'] ?? '') !== '' ? (string) $record['error'] : 'Backup ist unvollständig.',
+            ];
+        }
+
         if ($type === 'database' && !str_contains((string) ($record['name'] ?? ''), 'backup_')) {
             return [
                 'label' => 'Backup-Manifest',
@@ -1686,18 +1988,25 @@ class BackupService
             ];
         }
 
-        $isValid = $this->validateRestoreArchiveEntries($zip);
-        $entryCount = $zip->numFiles;
-        $zip->close();
+        try {
+            $inspection = $this->inspectRestoreArchive($zip);
+        } finally {
+            $zip->close();
+        }
+
+        $detail = $inspection['valid']
+            ? 'Das Archiv lässt sich öffnen und enthält nur erlaubte Restore-Pfade (' . $this->formatBytes($inspection['uncompressed_bytes']) . ' entpackt).'
+            : $inspection['reason'];
+        if ($inspection['valid'] && $inspection['skipped_directories'] !== []) {
+            $detail .= ' Enthaltene Core-Verzeichnisse (' . implode(', ', $inspection['skipped_directories']) . ') werden beim Restore übersprungen.';
+        }
 
         return [
             'label' => 'Datei-Archiv Struktur',
-            'status' => $isValid ? 'ok' : 'blocked',
-            'current' => $entryCount . ' Einträge',
+            'status' => $inspection['valid'] ? 'ok' : 'blocked',
+            'current' => $inspection['entries'] . ' Einträge',
             'expected' => 'Nur erlaubte Restore-Pfade',
-            'detail' => $isValid
-                ? 'Das Archiv lässt sich öffnen und enthält nur erlaubte Restore-Pfade.'
-                : 'Das Archiv enthält ungültige oder unsichere Pfade.',
+            'detail' => $detail,
         ];
     }
 
@@ -1965,15 +2274,16 @@ class BackupService
      */
     private function formatBytes(int $bytes): string
     {
-        $units = ['B', 'KB', 'MB', 'GB'];
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $size = (float) max(0, $bytes);
         $i = 0;
-        
-        while ($bytes >= 1024 && $i < count($units) - 1) {
-            $bytes /= 1024;
+
+        while ($size >= 1024 && $i < count($units) - 1) {
+            $size /= 1024;
             $i++;
         }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return number_format($size, $i === 0 ? 0 : 2, ',', '.') . ' ' . $units[$i];
     }
     
     /**
@@ -2008,7 +2318,9 @@ class BackupService
             'success' => true,
         ];
         
-        $optionName = 'backup_log_' . time();
+        // Zufalls-Suffix verhindert Kollisionen (UNIQUE option_name) bei zwei Backups in derselben Sekunde;
+        // die Sortierung nach option_name bleibt chronologisch.
+        $optionName = 'backup_log_' . time() . '_' . bin2hex(random_bytes(3));
         
         try {
             return $this->db->insert('settings', [
@@ -2050,18 +2362,64 @@ class BackupService
         return $normalizedDir;
     }
 
-    private function createBackupDirectory(string $backupName): string
+    /**
+     * Legt ein neues Backup-Unterverzeichnis exklusiv an. Existiert der Name bereits (zwei Backups in
+     * derselben Sekunde, z. B. Doppelklick oder Rollback-Snapshot), wird ein Zähler-Suffix angehängt,
+     * statt das vorhandene Backup zu überschreiben.
+     *
+     * @return array{name:string, path:string}
+     */
+    private function createBackupDirectory(string $backupName): array
     {
-        $backupPath = $this->backupRoot() . $this->normalizeBackupName($backupName) . DIRECTORY_SEPARATOR;
-        if (!$this->isWithinBackupRoot($backupPath)) {
-            throw new \RuntimeException('Backup-Unterverzeichnis liegt außerhalb des Backup-Roots.');
+        $baseName = $this->normalizeBackupName($backupName);
+        $backupRoot = $this->backupRoot();
+
+        for ($attempt = 1; $attempt <= self::MAX_BACKUP_NAME_ATTEMPTS; $attempt++) {
+            $name = $attempt === 1 ? $baseName : $this->normalizeBackupName($baseName . '-' . $attempt);
+            $backupPath = $backupRoot . $name . DIRECTORY_SEPARATOR;
+            if (!$this->isWithinBackupRoot($backupPath)) {
+                throw new \RuntimeException('Backup-Unterverzeichnis liegt außerhalb des Backup-Roots.');
+            }
+
+            if (file_exists($backupPath)) {
+                continue;
+            }
+
+            if (@mkdir($backupPath, 0755)) {
+                return ['name' => $name, 'path' => $backupPath];
+            }
+
+            if (!file_exists($backupPath)) {
+                throw new \RuntimeException('Backup-Unterverzeichnis konnte nicht erstellt werden.');
+            }
         }
 
-        if (!mkdir($backupPath, 0755, true) && !is_dir($backupPath)) {
-            throw new \RuntimeException('Backup-Unterverzeichnis konnte nicht erstellt werden.');
+        throw new \RuntimeException('Für das Backup konnte kein freier Verzeichnisname reserviert werden.');
+    }
+
+    /**
+     * Entfernt das Verzeichnis eines fehlgeschlagenen Backups, damit keine unvollständigen Reste liegen bleiben.
+     */
+    private function discardIncompleteBackup(?string $backupPath): void
+    {
+        if ($backupPath === null || $backupPath === '' || !is_dir($backupPath) || !$this->isWithinBackupRoot($backupPath)) {
+            return;
         }
 
-        return $backupPath;
+        if (rtrim($this->normalizeManagedPath($backupPath, true), '\\/') === rtrim($this->normalizeManagedPath($this->backupRoot(), true), '\\/')) {
+            return;
+        }
+
+        if (!$this->deleteDirectory($backupPath)) {
+            Logger::instance()->withChannel('backup')->warning('Incomplete backup directory could not be removed.', [
+                'backup_name' => basename(rtrim($backupPath, '\\/')),
+            ]);
+        }
+    }
+
+    private function getCmsVersion(): string
+    {
+        return \CMS\Version::CURRENT;
     }
 
     private function normalizeBackupName(string $name): string

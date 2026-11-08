@@ -107,7 +107,7 @@ final class ThemeRouter
         }
         $this->router->addRoute('GET', '/feed', [$this, 'serveRssFeed']);
         $this->router->addRoute('GET', '/sitemap.xml', [$this, 'serveSitemap']);
-        foreach (['pages', 'posts', 'plugins', 'images', 'news'] as $sitemapPart) {
+        foreach (['pages', 'posts', 'en-pages', 'en-posts', 'plugins', 'images', 'news'] as $sitemapPart) {
             $this->router->addRoute('GET', '/' . $sitemapPart . '.xml', fn() => $this->serveSitemapFile($sitemapPart . '.xml'));
         }
         $this->router->addRoute('GET', '/robots.txt', [$this, 'serveRobotsTxt']);

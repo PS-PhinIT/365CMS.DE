@@ -77,20 +77,34 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                                     } elseif ($fileName === 'news.xml') {
                                         $isFileEnabled = $newsSitemapEnabled;
                                     }
-                                    $hasNoEntriesState = in_array($fileName, ['plugins.xml', 'en-posts.xml'], true);
-                                    $statusTooltip = '';
-                                    if (empty($file['exists'])) {
-                                        if ($hasNoEntriesState && !$hasGenerationError) {
-                                            $statusTooltip = $fileName === 'plugins.xml'
-                                                ? 'Wird erzeugt, sobald aktive Plugins öffentliche Seiten melden'
-                                                : 'Wird erzeugt, sobald veröffentlichte Beiträge einen englischen Titel und Inhalt haben';
-                                        } elseif (!$isFileEnabled) {
+                                    // Fehlende Dateien sind meist kein Fehler: robots.txt wird dynamisch ausgeliefert,
+                                    // das Sitemap-Bundle beim ersten Abruf erzeugt, leere Teil-Sitemaps nicht geschrieben.
+                                    $delivery = (string) ($file['delivery'] ?? (!empty($file['exists']) ? 'file' : 'on_demand'));
+                                    $statusTooltip = match ($fileName) {
+                                        'plugins.xml' => 'Wird erzeugt, sobald aktive Plugins öffentliche Seiten melden',
+                                        'en-pages.xml' => 'Wird erzeugt, sobald veröffentlichte Seiten einen englischen Titel und Inhalt haben',
+                                        'en-posts.xml' => 'Wird erzeugt, sobald veröffentlichte Beiträge einen englischen Titel und Inhalt haben',
+                                        default => 'Teil-Sitemap ohne Einträge – wird beim nächsten Generieren wieder geschrieben, sobald Inhalte vorhanden sind',
+                                    };
+                                    $statusBadge = ['class' => 'bg-success', 'label' => 'vorhanden'];
+                                    if ($delivery !== 'file') {
+                                        if (!$isFileEnabled) {
+                                            $statusBadge = ['class' => 'bg-secondary', 'label' => 'deaktiviert'];
                                             $statusTooltip = 'Deaktiviert — in Einstellungen aktivieren';
-                                        } elseif ($hasGenerationError) {
+                                        } elseif ($hasGenerationError && $delivery !== 'dynamic') {
+                                            $statusBadge = ['class' => 'bg-danger', 'label' => 'fehlt'];
                                             $statusTooltip = 'Generierungsfehler — Logs prüfen';
+                                        } elseif ($delivery === 'dynamic') {
+                                            $statusBadge = ['class' => 'bg-success', 'label' => 'dynamisch'];
+                                            $statusTooltip = 'Keine statische Datei nötig – das CMS liefert die robots.txt bei jedem Abruf aus (Inhalt in den SEO-Einstellungen).';
+                                        } elseif ($delivery === 'on_demand') {
+                                            $statusBadge = ['class' => 'bg-info', 'label' => 'bei Abruf'];
+                                            $statusTooltip = 'Wird beim nächsten Abruf von /sitemap.xml automatisch erzeugt und gespeichert (nach Inhaltsänderungen neu) – oder „Sitemaps generieren“ klicken.';
                                         } else {
-                                            $statusTooltip = 'Noch nicht generiert — Sitemaps generieren klicken';
+                                            $statusBadge = ['class' => 'bg-secondary', 'label' => 'keine Einträge'];
                                         }
+                                    } else {
+                                        $statusTooltip = '';
                                     }
                                     ?>
                                     <tr>
@@ -103,13 +117,7 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                                             </div>
                                         </td>
                                         <td>
-                                            <?php if (!empty($file['exists'])): ?>
-                                                <span class="badge bg-success">vorhanden</span>
-                                            <?php elseif ($hasNoEntriesState && !$hasGenerationError): ?>
-                                                <span class="badge bg-secondary" title="<?= htmlspecialchars($statusTooltip) ?>">keine Einträge</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-danger" title="<?= htmlspecialchars($statusTooltip) ?>">fehlt</span>
-                                            <?php endif; ?>
+                                            <span class="badge <?= htmlspecialchars($statusBadge['class']) ?>"<?= $statusTooltip !== '' ? ' title="' . htmlspecialchars($statusTooltip) . '"' : '' ?>><?= htmlspecialchars($statusBadge['label']) ?></span>
                                         </td>
                                         <td><?= htmlspecialchars((string) ($file['updated_at'] ?? '—')) ?></td>
                                         <td class="text-end"><?= !empty($file['exists']) ? number_format(((int) $file['size']) / 1024, 1, ',', '.') . ' KB' : '—' ?></td>
