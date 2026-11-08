@@ -10,11 +10,10 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\Database;
+use CMS\Http\Client as HttpClient;
 use CMS\Logger;
 use CMS\VendorRegistry;
 use Melbahja\Seo\Indexing\GoogleIndexer;
-use Melbahja\Seo\Indexing\IndexNowEngine;
-use Melbahja\Seo\Indexing\IndexNowIndexer;
 use Melbahja\Seo\Indexing\URLIndexingType;
 
 if (!defined('ABSPATH')) {
@@ -27,6 +26,34 @@ final class IndexingService
 {
     private static ?self $instance = null;
     private const MAX_INDEXNOW_KEY_FILE_SIZE = 4096;
+
+    /**
+     * Gemeinsamer IndexNow-Endpunkt. Teilnehmende Suchmaschinen teilen empfangene URLs
+     * untereinander, eine Meldung pro URL-Gruppe genügt daher (https://www.indexnow.org/documentation).
+     */
+    public const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
+
+    /** Maximale Anzahl URLs je IndexNow-POST laut Protokoll. */
+    public const INDEXNOW_MAX_URLS_PER_REQUEST = 10000;
+
+    /** Protokoll: 8–128 Zeichen, nur a-z, A-Z, 0-9 und Bindestrich. */
+    public const INDEXNOW_KEY_PATTERN = '/^[A-Za-z0-9-]{8,128}$/';
+    public const INDEXNOW_KEY_MIN_LENGTH = 8;
+    public const INDEXNOW_KEY_MAX_LENGTH = 128;
+    public const INDEXNOW_KEY_DEFAULT_LENGTH = 32;
+
+    /** Antwortcodes des IndexNow-Protokolls. */
+    public const INDEXNOW_RESPONSE_CODES = [
+        200 => ['label' => 'OK', 'description' => 'URL(s) erfolgreich übermittelt.', 'success' => true],
+        202 => ['label' => 'Accepted', 'description' => 'URL(s) empfangen, die Prüfung des IndexNow-Keys steht noch aus.', 'success' => true],
+        400 => ['label' => 'Bad Request', 'description' => 'Ungültiges Anfrageformat.', 'success' => false],
+        403 => ['label' => 'Forbidden', 'description' => 'Key ungültig (Keydatei nicht gefunden oder Key nicht in der Datei).', 'success' => false],
+        422 => ['label' => 'Unprocessable Entity', 'description' => 'URLs gehören nicht zum Host oder der Key entspricht nicht dem Protokoll-Schema.', 'success' => false],
+        429 => ['label' => 'Too Many Requests', 'description' => 'Zu viele Anfragen (mögliches Spam-Verhalten) – später erneut senden.', 'success' => false],
+    ];
+
+    /** @var array{success:bool, status:int, message:string, url_count:int, requests:int} */
+    private array $lastIndexNowResult = ['success' => false, 'status' => 0, 'message' => '', 'url_count' => 0, 'requests' => 0];
 
     /** Obergrenze für die je Zeitfenster an IndexNow gemeldeten URLs (Schutz vor Überlast bei sehr großen Zeiträumen). */
     private const MAX_RECENT_CONTENT_URLS_PER_TYPE = 500;
@@ -48,14 +75,44 @@ final class IndexingService
     /** Erlaubte Ziel-Dienste für die Massen-Meldung kürzlich veröffentlichter Inhalte. */
     private const RECENT_CONTENT_TARGETS = ['indexnow', 'google'];
 
-    /** Settings-Gruppe/Key für das dauerhaft (verschlüsselt) gespeicherte Google-Access-Token. */
-    private const GOOGLE_SETTINGS_GROUP = 'seo_indexing';
+    /** Settings-Gruppe für Google-Access-Token und IndexNow-Warteschlange. */
+    private const SETTINGS_GROUP = 'seo_indexing';
     private const GOOGLE_ACCESS_TOKEN_KEY = 'google_access_token';
+    private const INDEXNOW_QUEUE_KEY = 'indexnow_queue';
+    private const INDEXNOW_QUEUE_RESULT_KEY = 'indexnow_queue_last_result';
+
+    /** Option (Opt-in) für die automatische IndexNow-Meldung gespeicherter Seiten und Beiträge. */
+    public const INDEXNOW_AUTO_SUBMIT_OPTION = 'seo_indexnow_auto_submit';
+
+    /** Obergrenze vorgemerkter URLs; bei Überlauf fallen die ältesten Einträge heraus. */
+    public const INDEXNOW_QUEUE_MAX_URLS = 1000;
+
+    /**
+     * Mindestabstand in Sekunden, bevor dieselbe URL aus der Warteschlange erneut gemeldet wird
+     * (IndexNow-FAQ: mindestens 5 Minuten zwischen zwei Meldungen derselben URL).
+     */
+    public const INDEXNOW_RESUBMIT_INTERVAL = 300;
+    private const INDEXNOW_RECENT_SUBMISSIONS_KEY = 'indexnow_recent_submissions';
+    /** Aufbewahrung der Meldezeitpunkte (Sekunden) – zugleich maximales Zeitfenster der stündlichen Nachmeldung. */
+    private const INDEXNOW_RECENT_SUBMISSIONS_RETENTION = 86400;
+    private const INDEXNOW_RECENT_SUBMISSIONS_MAX = 2000;
+    private const INDEXNOW_PUBLISH_CHECK_KEY = 'indexnow_publish_checked_at';
+
+    /** HTTP-Status, bei denen eine Wiederholung derselben URL-Gruppe nichts ändert (Warteschlange wird verworfen). */
+    private const INDEXNOW_PERMANENT_ERROR_CODES = [400, 422];
+
+    /** Herkunft des aktiven IndexNow-Keys (siehe resolveIndexNowKeyWithSource()). */
+    public const INDEXNOW_KEY_SOURCES = [
+        'database' => 'SEO-Einstellungen (Option „seo_indexnow_key“)',
+        'legacy_setting' => 'Alt-Einstellung „seo.indexnow_key“',
+        'constant' => 'Konstante SEO_INDEXNOW_KEY (config.php)',
+    ];
 
     private Database $db;
     private SettingsService $settings;
     private Logger $logger;
     private string $prefix;
+    private bool $indexNowFlushScheduled = false;
 
     public static function getInstance(): self
     {
@@ -71,45 +128,286 @@ final class IndexingService
     }
 
     /**
-     * Sendet URLs an alle IndexNow-kompatiblen Endpunkte.
+     * Meldet URLs per IndexNow-Protokoll (JSON-POST an api.indexnow.org).
+     *
+     * URLs werden je Host gruppiert und in Blöcken von maximal 10.000 URLs gesendet. Für den
+     * eigenen Host wird `keyLocation` mitgesendet, damit die Keydatei auch bei Installationen
+     * in Unterverzeichnissen gefunden wird. HTTP 200 und 202 gelten als Erfolg.
      */
     public function submitIndexNow(string|array $urls): bool
     {
         $urlList = $this->normalizeUrls($urls);
         if ($urlList === []) {
             $this->logger->warning('IndexNow-Submission ohne URLs verworfen.');
-            return false;
+            return $this->setLastIndexNowResult(false, 0, 'Keine gültigen URLs für IndexNow angegeben.', 0, 0);
         }
 
         $apiKey = $this->resolveIndexNowKey();
         if ($apiKey === '') {
             $this->logger->warning('IndexNow-Submission übersprungen: kein API-Key konfiguriert.');
-            return false;
+            return $this->setLastIndexNowResult(false, 0, 'Es ist kein IndexNow-API-Key konfiguriert.', count($urlList), 0);
         }
 
-        try {
-            $indexer = new IndexNowIndexer($apiKey);
-            $success = true;
+        if (!self::isValidIndexNowKey($apiKey)) {
+            $this->logger->warning('IndexNow-Submission übersprungen: API-Key entspricht nicht dem Protokoll.');
+            return $this->setLastIndexNowResult(false, 0, 'Der IndexNow-API-Key entspricht nicht dem Protokoll (8–128 Zeichen, nur a-z, A-Z, 0-9 und Bindestrich).', count($urlList), 0);
+        }
 
-            foreach (IndexNowEngine::cases() as $engine) {
-                $results = $indexer->submitUrls($urlList, $engine, URLIndexingType::UPDATE);
-                if (in_array(false, $results, true)) {
+        $byHost = [];
+        foreach ($urlList as $url) {
+            $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+            if ($host !== '') {
+                $byHost[$host][] = $url;
+            }
+        }
+
+        $keyLocations = $this->buildIndexNowKeyLocationsByHost($apiKey);
+        $success = true;
+        $acceptedUrls = [];
+        $requests = 0;
+        $lastStatus = 0;
+        $messages = [];
+
+        foreach ($byHost as $host => $hostUrls) {
+            foreach (array_chunk($hostUrls, self::INDEXNOW_MAX_URLS_PER_REQUEST) as $chunk) {
+                $payload = [
+                    'host' => $host,
+                    'key' => $apiKey,
+                ];
+                if (isset($keyLocations[$host])) {
+                    $payload['keyLocation'] = $keyLocations[$host];
+                }
+                $payload['urlList'] = array_values($chunk);
+
+                $requests++;
+                $result = $this->postIndexNowPayload($payload);
+                $lastStatus = $result['status'];
+
+                if (!$result['success']) {
                     $success = false;
-                    $this->logger->warning('IndexNow-Engine meldete Teilerfolg für {engine}.', [
-                        'engine' => $engine->name,
-                        'url_count' => count($urlList),
+                    $messages[] = $host . ': ' . $result['message'];
+                    $this->logger->warning('IndexNow-Submission für {host} fehlgeschlagen.', [
+                        'host' => $host,
+                        'status' => $result['status'],
+                        'url_count' => count($chunk),
+                        'reason' => $result['message'],
                     ]);
+                } elseif ($result['status'] === 202) {
+                    $messages[] = $host . ': ' . $result['message'];
+                }
+
+                if ($result['success']) {
+                    array_push($acceptedUrls, ...$chunk);
                 }
             }
+        }
 
-            return $success;
-        } catch (\Throwable $e) {
-            $this->logger->error('IndexNow-Submission fehlgeschlagen.', [
-                'url_count' => count($urlList),
-                'exception' => $e,
-            ]);
+        if ($acceptedUrls !== []) {
+            $this->rememberIndexNowSubmissions($acceptedUrls);
+        }
+
+        if ($requests === 0) {
+            return $this->setLastIndexNowResult(false, 0, 'Keine gültigen URLs mit Host für IndexNow gefunden.', count($urlList), 0);
+        }
+
+        $message = $success
+            ? count($urlList) . ' URL(s) per IndexNow übermittelt (HTTP ' . $lastStatus . ').'
+            : 'IndexNow-Übermittlung fehlgeschlagen.';
+        if ($messages !== []) {
+            $message .= ' ' . implode(' ', $messages);
+        }
+
+        return $this->setLastIndexNowResult($success, $lastStatus, $message, count($urlList), $requests);
+    }
+
+    /**
+     * @return array{success:bool, status:int, message:string, url_count:int, requests:int}
+     */
+    public function getLastIndexNowResult(): array
+    {
+        return $this->lastIndexNowResult;
+    }
+
+    public static function isValidIndexNowKey(string $key): bool
+    {
+        return preg_match(self::INDEXNOW_KEY_PATTERN, $key) === 1;
+    }
+
+    /**
+     * Erzeugt einen kryptografisch zufälligen hexadezimalen IndexNow-Key (Standard: 32 Zeichen).
+     */
+    public function generateIndexNowKey(int $length = self::INDEXNOW_KEY_DEFAULT_LENGTH): string
+    {
+        $length = max(self::INDEXNOW_KEY_MIN_LENGTH, min(self::INDEXNOW_KEY_MAX_LENGTH, $length));
+
+        return substr(bin2hex(random_bytes((int) ceil($length / 2))), 0, $length);
+    }
+
+    /**
+     * Verzeichnis, in dem die Keydatei abgelegt wird: das Web-Root des CMS (ABSPATH, dort liegt index.php).
+     */
+    public function getIndexNowKeyFileDirectory(): string
+    {
+        return $this->normalizeDirectoryPath((string) ABSPATH);
+    }
+
+    public function getIndexNowKeyLocation(string $key = ''): string
+    {
+        $key = $key !== '' ? $key : $this->resolveIndexNowKey();
+        if ($key === '' || !self::isValidIndexNowKey($key)) {
+            return '';
+        }
+
+        return $this->resolvePublicBaseUrl() . '/' . $key . '.txt';
+    }
+
+    /**
+     * keyLocation je eigenem Host: die konfigurierte SITE_URL hat Vorrang, zusätzlich wird der Host des
+     * aktuellen Requests berücksichtigt (z. B. www/ohne www). Fremde Hosts erhalten keine keyLocation.
+     *
+     * @return array<string, string>
+     */
+    private function buildIndexNowKeyLocationsByHost(string $key): array
+    {
+        $locations = [];
+        foreach ([defined('SITE_URL') ? rtrim((string) SITE_URL, '/') : '', $this->resolvePublicBaseUrl()] as $baseUrl) {
+            $host = strtolower((string) parse_url($baseUrl, PHP_URL_HOST));
+            if ($host !== '' && !isset($locations[$host])) {
+                $locations[$host] = $baseUrl . '/' . $key . '.txt';
+            }
+        }
+
+        return $locations;
+    }
+
+    /**
+     * Schreibt die UTF-8-Keydatei `{key}.txt` mit dem Key als Inhalt in das Web-Root (Option 1 des Protokolls).
+     * Optional wird die Keydatei eines vorherigen Keys entfernt – aber nur, wenn sie exakt diesem Key entspricht.
+     *
+     * @return array{success:bool, file:string, path:string, error:string, removed_previous:bool}
+     */
+    public function writeIndexNowKeyFile(string $key, string $previousKey = ''): array
+    {
+        $result = ['success' => false, 'file' => '', 'path' => '', 'error' => '', 'removed_previous' => false];
+
+        if (!self::isValidIndexNowKey($key)) {
+            $result['error'] = 'Der IndexNow-API-Key entspricht nicht dem Protokoll (8–128 Zeichen, nur a-z, A-Z, 0-9 und Bindestrich).';
+            return $result;
+        }
+
+        $directory = $this->getIndexNowKeyFileDirectory();
+        if ($directory === '' || !is_dir($directory)) {
+            $result['error'] = 'Das Root-Verzeichnis des CMS wurde nicht gefunden.';
+            return $result;
+        }
+
+        $fileName = $key . '.txt';
+        $path = $directory . DIRECTORY_SEPARATOR . $fileName;
+        $result['file'] = $fileName;
+        $result['path'] = $path;
+
+        if (is_link($path) || (file_exists($path) && !is_file($path))) {
+            $result['error'] = 'Am Zielpfad existiert bereits ein Eintrag, der keine normale Datei ist.';
+            return $result;
+        }
+
+        if (!is_writable($directory) && !(is_file($path) && is_writable($path))) {
+            $result['error'] = 'Das Root-Verzeichnis ist nicht beschreibbar. Bitte die Datei „' . $fileName . '“ mit dem Key als Inhalt manuell hochladen – bis dahin liefert das CMS sie dynamisch aus.';
+            return $result;
+        }
+
+        if (@file_put_contents($path, $key, LOCK_EX) !== strlen($key)) {
+            $result['error'] = 'Die Keydatei „' . $fileName . '“ konnte nicht geschrieben werden.';
+            return $result;
+        }
+
+        $result['success'] = true;
+
+        if ($previousKey !== '' && $previousKey !== $key && self::isValidIndexNowKey($previousKey)) {
+            $result['removed_previous'] = $this->removeIndexNowKeyFile($previousKey);
+        }
+
+        $this->logger->info('IndexNow-Keydatei geschrieben.', ['file' => $fileName]);
+
+        return $result;
+    }
+
+    /**
+     * Entfernt `{key}.txt` aus dem Web-Root, sofern die Datei exakt den Key enthält.
+     */
+    public function removeIndexNowKeyFile(string $key): bool
+    {
+        if (!self::isValidIndexNowKey($key)) {
             return false;
         }
+
+        $path = $this->getIndexNowKeyFileDirectory() . DIRECTORY_SEPARATOR . $key . '.txt';
+        if (is_link($path) || !is_file($path) || (int) filesize($path) > self::MAX_INDEXNOW_KEY_FILE_SIZE) {
+            return false;
+        }
+
+        $content = file_get_contents($path);
+        if ($content === false || trim($content) !== $key) {
+            return false;
+        }
+
+        return @unlink($path);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array{success:bool, status:int, message:string}
+     */
+    private function postIndexNowPayload(array $payload): array
+    {
+        try {
+            $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return ['success' => false, 'status' => 0, 'message' => 'Die IndexNow-Nutzlast konnte nicht als JSON kodiert werden.'];
+        }
+
+        $response = HttpClient::getInstance()->post(self::INDEXNOW_ENDPOINT, $body, [
+            'userAgent' => '365CMS-IndexNow/1.0',
+            'headers' => ['Content-Type: application/json; charset=utf-8'],
+            'timeout' => 20,
+            'maxBytes' => 65536,
+        ]);
+
+        $status = (int) ($response['status'] ?? 0);
+        $known = self::INDEXNOW_RESPONSE_CODES[$status] ?? null;
+
+        if ($known !== null) {
+            return [
+                'success' => (bool) $known['success'],
+                'status' => $status,
+                'message' => 'HTTP ' . $status . ' ' . $known['label'] . ' – ' . $known['description'],
+            ];
+        }
+
+        if (!empty($response['success'])) {
+            return ['success' => true, 'status' => $status, 'message' => 'HTTP ' . $status];
+        }
+
+        return [
+            'success' => false,
+            'status' => $status,
+            'message' => $status > 0
+                ? 'HTTP ' . $status . ' – unerwartete Antwort des IndexNow-Endpunkts.'
+                : (string) ($response['error'] ?? 'Der IndexNow-Endpunkt war nicht erreichbar.'),
+        ];
+    }
+
+    private function setLastIndexNowResult(bool $success, int $status, string $message, int $urlCount, int $requests): bool
+    {
+        $this->lastIndexNowResult = [
+            'success' => $success,
+            'status' => $status,
+            'message' => $message,
+            'url_count' => $urlCount,
+            'requests' => $requests,
+        ];
+
+        return $success;
     }
 
     /**
@@ -194,7 +492,7 @@ final class IndexingService
             return $this->clearGoogleAccessToken();
         }
 
-        return $this->settings->set(self::GOOGLE_SETTINGS_GROUP, self::GOOGLE_ACCESS_TOKEN_KEY, $token, true, 0);
+        return $this->settings->set(self::SETTINGS_GROUP, self::GOOGLE_ACCESS_TOKEN_KEY, $token, true, 0);
     }
 
     /**
@@ -202,12 +500,439 @@ final class IndexingService
      */
     public function clearGoogleAccessToken(): bool
     {
-        return $this->settings->forget(self::GOOGLE_SETTINGS_GROUP, self::GOOGLE_ACCESS_TOKEN_KEY);
+        return $this->settings->forget(self::SETTINGS_GROUP, self::GOOGLE_ACCESS_TOKEN_KEY);
     }
 
     private function resolveGoogleAccessToken(): string
     {
-        return $this->settings->getString(self::GOOGLE_SETTINGS_GROUP, self::GOOGLE_ACCESS_TOKEN_KEY, '');
+        return $this->settings->getString(self::SETTINGS_GROUP, self::GOOGLE_ACCESS_TOKEN_KEY, '');
+    }
+
+    public function isIndexNowAutoSubmitEnabled(): bool
+    {
+        return $this->getDirectSettingValue(self::INDEXNOW_AUTO_SUBMIT_OPTION) === '1';
+    }
+
+    /**
+     * Merkt die öffentlichen URLs (DE und – falls übersetzt – EN) einer gespeicherten Seite bzw. eines
+     * gespeicherten Beitrags für IndexNow vor. Nur aktiv, wenn die automatische Meldung eingeschaltet und ein
+     * protokollgültiger Key vorhanden ist. Entwürfe, geplante Beiträge und noindex-Inhalte werden übersprungen.
+     *
+     * @return int Anzahl neu vorgemerkter URLs
+     */
+    public function queueContentForIndexNow(string $contentType, int $contentId): int
+    {
+        if ($contentId <= 0 || !in_array($contentType, ['post', 'page'], true) || !$this->isIndexNowAutoSubmitEnabled()) {
+            return 0;
+        }
+
+        if (!self::isValidIndexNowKey($this->resolveIndexNowKey())) {
+            return 0;
+        }
+
+        return $this->queueIndexNowUrls($this->buildContentIndexNowUrls($contentType, $contentId));
+    }
+
+    /**
+     * Fügt URLs (dedupliziert) der IndexNow-Warteschlange hinzu.
+     *
+     * @param list<string> $urls
+     * @return int Anzahl neu vorgemerkter URLs
+     */
+    public function queueIndexNowUrls(array $urls): int
+    {
+        $urls = $this->normalizeUrls($urls);
+        if ($urls === []) {
+            return 0;
+        }
+
+        $queue = $this->getIndexNowQueue();
+        $known = array_fill_keys($queue, true);
+        $added = 0;
+        foreach ($urls as $url) {
+            if (!isset($known[$url])) {
+                $queue[] = $url;
+                $known[$url] = true;
+                $added++;
+            }
+        }
+
+        if ($added === 0) {
+            return 0;
+        }
+
+        if (count($queue) > self::INDEXNOW_QUEUE_MAX_URLS) {
+            $queue = array_slice($queue, -self::INDEXNOW_QUEUE_MAX_URLS);
+        }
+
+        return $this->settings->set(self::SETTINGS_GROUP, self::INDEXNOW_QUEUE_KEY, array_values($queue)) ? $added : 0;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getIndexNowQueue(): array
+    {
+        $queue = $this->settings->get(self::SETTINGS_GROUP, self::INDEXNOW_QUEUE_KEY, []);
+        if (!is_array($queue)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(static fn(mixed $url): string => is_string($url) ? trim($url) : '', $queue),
+            static fn(string $url): bool => $url !== ''
+        ));
+    }
+
+    /**
+     * @return array{enabled:bool, count:int, max:int, urls:list<string>, resubmit_interval:int, last_result:array<string, mixed>}
+     */
+    public function getIndexNowQueueStatus(): array
+    {
+        $queue = $this->getIndexNowQueue();
+        $lastResult = $this->settings->get(self::SETTINGS_GROUP, self::INDEXNOW_QUEUE_RESULT_KEY, []);
+
+        return [
+            'enabled' => $this->isIndexNowAutoSubmitEnabled(),
+            'count' => count($queue),
+            'max' => self::INDEXNOW_QUEUE_MAX_URLS,
+            'urls' => array_slice($queue, 0, 25),
+            'resubmit_interval' => self::INDEXNOW_RESUBMIT_INTERVAL,
+            'last_result' => is_array($lastResult) ? $lastResult : [],
+        ];
+    }
+
+    public function clearIndexNowQueue(): bool
+    {
+        return $this->settings->forget(self::SETTINGS_GROUP, self::INDEXNOW_QUEUE_KEY);
+    }
+
+    /**
+     * Sendet alle vorgemerkten URLs per IndexNow. Bei Erfolg werden die gesendeten URLs aus der Warteschlange
+     * entfernt; bei vorübergehenden Fehlern (Netzwerk, 403, 429, 5xx) bleiben sie für den nächsten Versuch
+     * erhalten, bei 400/422 werden sie verworfen, weil eine Wiederholung nichts ändern würde. URLs, die vor weniger
+     * als INDEXNOW_RESUBMIT_INTERVAL Sekunden erfolgreich gemeldet wurden, bleiben bis zum nächsten Lauf vorgemerkt.
+     *
+     * @param string $trigger 'auto' (nach dem Speichern), 'cron' oder 'manual'
+     * @return array{success:bool, status:int, message:string, url_count:int, requests:int}
+     */
+    public function flushIndexNowQueue(string $trigger = 'manual'): array
+    {
+        $trigger = in_array($trigger, ['auto', 'cron', 'manual'], true) ? $trigger : 'manual';
+        $queue = $this->getIndexNowQueue();
+        if ($queue === []) {
+            return ['success' => true, 'status' => 0, 'message' => 'Die IndexNow-Warteschlange ist leer.', 'url_count' => 0, 'requests' => 0];
+        }
+
+        // Vor weniger als INDEXNOW_RESUBMIT_INTERVAL Sekunden gemeldete URLs bleiben für den nächsten Lauf vorgemerkt.
+        $recentSubmissions = $this->getRecentIndexNowSubmissions();
+        $due = array_values(array_filter($queue, static fn(string $url): bool => !isset($recentSubmissions[$url])));
+        $deferred = count($queue) - count($due);
+        $deferredMessage = $deferred > 0
+            ? $deferred . ' URL(s) wurden vor weniger als ' . intdiv(self::INDEXNOW_RESUBMIT_INTERVAL, 60) . ' Minuten gemeldet und bleiben bis zum nächsten Lauf vorgemerkt.'
+            : '';
+
+        if ($due === []) {
+            $result = ['success' => true, 'status' => 0, 'message' => $deferredMessage, 'url_count' => 0, 'requests' => 0];
+            $this->storeIndexNowQueueResult($trigger, $result);
+
+            return $result;
+        }
+
+        $success = $this->submitIndexNow($due);
+        $result = $this->lastIndexNowResult;
+        $discard = !$success && in_array($result['status'], self::INDEXNOW_PERMANENT_ERROR_CODES, true);
+
+        if ($success || $discard) {
+            // Nur die gesendeten URLs entfernen – zwischenzeitlich (auch von parallelen Requests) neu
+            // vorgemerkte bleiben erhalten; daher den Request-Cache vor dem erneuten Lesen verwerfen.
+            OptionStore::getInstance()->flush();
+            $remaining = array_values(array_diff($this->getIndexNowQueue(), $due));
+            if ($remaining === []) {
+                $this->clearIndexNowQueue();
+            } else {
+                $this->settings->set(self::SETTINGS_GROUP, self::INDEXNOW_QUEUE_KEY, $remaining);
+            }
+        }
+
+        if ($discard) {
+            $result['message'] .= ' Die vorgemerkten URLs wurden verworfen, da eine Wiederholung nichts ändern würde.';
+        }
+
+        if ($deferredMessage !== '') {
+            $result['message'] .= ' ' . $deferredMessage;
+        }
+
+        $this->storeIndexNowQueueResult($trigger, $result);
+
+        return $result;
+    }
+
+    /**
+     * @param array{success:bool, status:int, message:string, url_count:int, requests:int} $result
+     */
+    private function storeIndexNowQueueResult(string $trigger, array $result): void
+    {
+        $this->settings->set(self::SETTINGS_GROUP, self::INDEXNOW_QUEUE_RESULT_KEY, [
+            'time' => date('Y-m-d H:i:s'),
+            'trigger' => $trigger,
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'message' => $result['message'],
+            'url_count' => $result['url_count'],
+        ]);
+    }
+
+    /**
+     * Erfolgreich gemeldete URLs der letzten $maxAge Sekunden (Standard: INDEXNOW_RESUBMIT_INTERVAL).
+     *
+     * @return array<string, int> URL => Unix-Zeitpunkt der Meldung
+     */
+    private function getRecentIndexNowSubmissions(int $maxAge = self::INDEXNOW_RESUBMIT_INTERVAL): array
+    {
+        $stored = $this->settings->get(self::SETTINGS_GROUP, self::INDEXNOW_RECENT_SUBMISSIONS_KEY, []);
+        if (!is_array($stored)) {
+            return [];
+        }
+
+        $threshold = time() - $maxAge;
+        $recent = [];
+        foreach ($stored as $url => $submittedAt) {
+            if (is_string($url) && is_int($submittedAt) && $submittedAt > $threshold) {
+                $recent[$url] = $submittedAt;
+            }
+        }
+
+        return $recent;
+    }
+
+    /**
+     * @param list<string> $urls
+     */
+    private function rememberIndexNowSubmissions(array $urls): void
+    {
+        try {
+            OptionStore::getInstance()->flush();
+            $recent = $this->getRecentIndexNowSubmissions(self::INDEXNOW_RECENT_SUBMISSIONS_RETENTION);
+            $now = time();
+            foreach ($urls as $url) {
+                unset($recent[$url]);
+                $recent[$url] = $now;
+            }
+
+            if (count($recent) > self::INDEXNOW_RECENT_SUBMISSIONS_MAX) {
+                $recent = array_slice($recent, -self::INDEXNOW_RECENT_SUBMISSIONS_MAX, null, true);
+            }
+
+            $this->settings->set(self::SETTINGS_GROUP, self::INDEXNOW_RECENT_SUBMISSIONS_KEY, $recent);
+        } catch (\Throwable $e) {
+            $this->logger->warning('IndexNow: Zeitpunkte der Meldung konnten nicht gespeichert werden.', ['exception' => $e]);
+        }
+    }
+
+    /**
+     * Sendet die Warteschlange am Ende des aktuellen Requests – nach Abschluss der Antwort, sofern der Server
+     * das unterstützt (PHP-FPM/LiteSpeed), damit das Speichern im Admin nicht auf die Suchmaschine wartet.
+     * Schlägt die Übermittlung fehl, wiederholt der stündliche Cron sie.
+     */
+    public function scheduleIndexNowQueueFlush(): void
+    {
+        if ($this->indexNowFlushScheduled) {
+            return;
+        }
+
+        $this->indexNowFlushScheduled = true;
+        register_shutdown_function(function (): void {
+            try {
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_write_close();
+                }
+
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                } elseif (function_exists('litespeed_finish_request')) {
+                    litespeed_finish_request();
+                }
+
+                $this->flushIndexNowQueue('auto');
+            } catch (\Throwable $e) {
+                $this->logger->error('Automatische IndexNow-Übermittlung fehlgeschlagen.', ['exception' => $e]);
+            }
+        });
+    }
+
+    /**
+     * Stündlicher Lauf (nur bei aktiver automatischer Meldung): merkt seit dem letzten Lauf veröffentlichte,
+     * noch nicht gemeldete Inhalte vor und sendet die Warteschlange (inkl. Wiederholung fehlgeschlagener Meldungen).
+     */
+    public function runScheduledIndexNowFlush(): void
+    {
+        if (!$this->isIndexNowAutoSubmitEnabled() || !self::isValidIndexNowKey($this->resolveIndexNowKey())) {
+            return;
+        }
+
+        try {
+            $this->queueNewlyPublishedContent();
+        } catch (\Throwable $e) {
+            $this->logger->warning('IndexNow: Neu veröffentlichte Inhalte konnten nicht ermittelt werden.', ['exception' => $e]);
+        }
+
+        if ($this->getIndexNowQueue() === []) {
+            return;
+        }
+
+        $this->flushIndexNowQueue('cron');
+    }
+
+    /**
+     * Merkt Beiträge vor, die seit dem letzten Lauf öffentlich geworden sind, ohne beim Speichern gemeldet worden
+     * zu sein – geplante Beiträge, deren Veröffentlichungszeitpunkt erreicht ist, und per Massenaktion
+     * veröffentlichte Beiträge. Der erste Lauf setzt nur den Startzeitpunkt; das Zeitfenster ist auf
+     * INDEXNOW_RECENT_SUBMISSIONS_RETENTION begrenzt.
+     *
+     * @return int Anzahl neu vorgemerkter URLs
+     */
+    private function queueNewlyPublishedContent(): int
+    {
+        $now = time();
+        $lastCheck = $this->settings->getInt(self::SETTINGS_GROUP, self::INDEXNOW_PUBLISH_CHECK_KEY, 0);
+        $this->settings->set(self::SETTINGS_GROUP, self::INDEXNOW_PUBLISH_CHECK_KEY, $now);
+        if ($lastCheck <= 0 || $lastCheck >= $now) {
+            return 0;
+        }
+
+        $from = date('Y-m-d H:i:s', max($lastCheck, $now - self::INDEXNOW_RECENT_SUBMISSIONS_RETENTION));
+        $until = date('Y-m-d H:i:s', $now);
+        $submitted = $this->getRecentIndexNowSubmissions(self::INDEXNOW_RECENT_SUBMISSIONS_RETENTION);
+        $urls = [];
+
+        $rows = $this->db->get_results(
+            "SELECT id, published_at FROM {$this->prefix}posts
+             WHERE status = 'published' AND published_at > ? AND published_at <= ?
+             ORDER BY published_at ASC
+             LIMIT " . self::MAX_RECENT_CONTENT_URLS_PER_TYPE,
+            [$from, $until]
+        ) ?: [];
+
+        foreach ($rows as $row) {
+            $publishedAt = strtotime((string) ($row->published_at ?? '')) ?: 0;
+            foreach ($this->buildContentIndexNowUrls('post', (int) ($row->id ?? 0)) as $url) {
+                // Beim Speichern bereits nach der Veröffentlichung gemeldete URLs nicht doppelt senden.
+                if (($submitted[$url] ?? 0) < $publishedAt) {
+                    $urls[] = $url;
+                }
+            }
+        }
+
+        return $this->queueIndexNowUrls($urls);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildContentIndexNowUrls(string $contentType, int $contentId): array
+    {
+        try {
+            $row = $contentType === 'post'
+                ? $this->db->get_row(
+                    "SELECT id, slug, slug_en, status, published_at, created_at, " . $this->buildHasEnglishSql() . " AS has_en
+                     FROM {$this->prefix}posts
+                     WHERE id = ?
+                     LIMIT 1",
+                    [$contentId]
+                )
+                : $this->db->get_row(
+                    "SELECT id, slug, slug_en, status, " . $this->buildHasEnglishSql() . " AS has_en
+                     FROM {$this->prefix}pages
+                     WHERE id = ?
+                     LIMIT 1",
+                    [$contentId]
+                );
+
+            if ($row === null || !$this->isContentIndexable($contentType, $contentId)) {
+                return [];
+            }
+
+            return $this->buildIndexNowUrlsFromRow($contentType, $row);
+        } catch (\Throwable $e) {
+            $this->logger->warning('IndexNow: URL für {type} #{id} konnte nicht ermittelt werden.', [
+                'type' => $contentType,
+                'id' => $contentId,
+                'exception' => $e,
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Baut die öffentliche DE-URL und – falls übersetzt – die EN-URL eines Inhalts.
+     * Gemeinsame Grundlage für Auto-Meldung, Cron-Nachholung und Sammelmeldung.
+     *
+     * @return list<string>
+     */
+    private function buildIndexNowUrlsFromRow(string $contentType, object $row): array
+    {
+        $slug = trim((string) ($row->slug ?? ''));
+        if ($slug === '') {
+            return [];
+        }
+
+        $slugEn = trim((string) ($row->slug_en ?? ''));
+        $hasEnglish = (int) ($row->has_en ?? 0) === 1;
+        $urls = [];
+
+        if ($contentType === 'post') {
+            if (!\cms_post_is_publicly_visible($row)) {
+                return [];
+            }
+
+            $permalinks = PermalinkService::getInstance();
+            $publishedAt = (string) ($row->published_at ?? '');
+            $createdAt = (string) ($row->created_at ?? '');
+            $urls[] = $permalinks->buildPostUrlFromValues($slug, $publishedAt, $createdAt);
+            if ($hasEnglish) {
+                $urls[] = $permalinks->buildPostUrlFromValues($slugEn !== '' ? $slugEn : $slug, $publishedAt, $createdAt, 'en');
+            }
+        } else {
+            if ((string) ($row->status ?? '') !== 'published') {
+                return [];
+            }
+
+            $urls[] = $this->buildPagePathUrl($slug);
+            if ($hasEnglish) {
+                $urls[] = rtrim((string) SITE_URL, '/') . ContentLocalizationService::getInstance()->buildLocalizedPath(
+                    '/' . ltrim($slugEn !== '' ? $slugEn : $slug, '/'),
+                    'en'
+                );
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
+
+    /**
+     * SQL-Ausdruck „EN-Übersetzung vorhanden“ – identisch zur Sitemap (Titel und Inhalt EN befüllt).
+     */
+    private function buildHasEnglishSql(string $alias = ''): string
+    {
+        $column = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+        return "(CHAR_LENGTH(TRIM(COALESCE({$column}title_en, ''))) > 0 AND CHAR_LENGTH(TRIM(COALESCE({$column}content_en, ''))) > 0)";
+    }
+
+    private function isContentIndexable(string $contentType, int $contentId): bool
+    {
+        try {
+            $robotsIndex = $this->db->get_var(
+                "SELECT robots_index FROM {$this->prefix}seo_meta WHERE content_type = ? AND content_id = ? LIMIT 1",
+                [$contentType, $contentId]
+            );
+        } catch (\Throwable) {
+            return true;
+        }
+
+        return $robotsIndex === null || (int) $robotsIndex === 1;
     }
 
     /**
@@ -236,7 +961,8 @@ final class IndexingService
     }
 
     /**
-     * Ermittelt die öffentlichen URLs aller veröffentlichten Seiten/Beiträge im gewählten Zeitfenster.
+     * Ermittelt die öffentlichen URLs (DE und übersetzte EN-Fassung) aller veröffentlichten,
+     * indexierbaren Seiten/Beiträge im gewählten Zeitfenster. noindex-Inhalte werden wie in der Sitemap ausgelassen.
      *
      * @return list<string>
      */
@@ -257,44 +983,33 @@ final class IndexingService
 
         try {
             $pageRows = $this->db->get_results(
-                "SELECT slug
-                 FROM {$this->prefix}pages
-                 WHERE status = 'published' AND updated_at >= ?
-                 ORDER BY updated_at DESC
+                "SELECT p.id, p.slug, p.slug_en, p.status, " . $this->buildHasEnglishSql('p') . " AS has_en
+                 FROM {$this->prefix}pages p
+                 LEFT JOIN {$this->prefix}seo_meta sm ON sm.content_type = 'page' AND sm.content_id = p.id
+                 WHERE p.status = 'published' AND p.updated_at >= ? AND COALESCE(sm.robots_index, 1) = 1
+                 ORDER BY p.updated_at DESC
                  LIMIT " . self::MAX_RECENT_CONTENT_URLS_PER_TYPE,
                 [$cutoff]
             ) ?: [];
 
             foreach ($pageRows as $row) {
-                $slug = trim((string) ($row->slug ?? ''));
-                if ($slug === '') {
-                    continue;
-                }
-
-                $urls[] = $this->buildPagePathUrl($slug);
+                array_push($urls, ...$this->buildIndexNowUrlsFromRow('page', $row));
             }
 
             $postRows = $this->db->get_results(
-                "SELECT slug, published_at, created_at
-                 FROM {$this->prefix}posts
-                 WHERE " . \cms_post_publication_where() . "
-                   AND COALESCE(published_at, created_at) >= ?
-                 ORDER BY COALESCE(published_at, created_at) DESC
+                "SELECT p.id, p.slug, p.slug_en, p.status, p.published_at, p.created_at, " . $this->buildHasEnglishSql('p') . " AS has_en
+                 FROM {$this->prefix}posts p
+                 LEFT JOIN {$this->prefix}seo_meta sm ON sm.content_type = 'post' AND sm.content_id = p.id
+                 WHERE " . \cms_post_publication_where('p') . "
+                   AND COALESCE(p.published_at, p.created_at) >= ?
+                   AND COALESCE(sm.robots_index, 1) = 1
+                 ORDER BY COALESCE(p.published_at, p.created_at) DESC
                  LIMIT " . self::MAX_RECENT_CONTENT_URLS_PER_TYPE,
                 [$cutoff]
             ) ?: [];
 
             foreach ($postRows as $row) {
-                $slug = trim((string) ($row->slug ?? ''));
-                if ($slug === '') {
-                    continue;
-                }
-
-                $urls[] = PermalinkService::getInstance()->buildPostUrlFromValues(
-                    $slug,
-                    (string) ($row->published_at ?? ''),
-                    (string) ($row->created_at ?? '')
-                );
+                array_push($urls, ...$this->buildIndexNowUrlsFromRow('post', $row));
             }
         } catch (\Throwable $e) {
             $this->logger->error('IndexNow: Ermittlung kürzlich veröffentlichter Inhalte fehlgeschlagen.', [
@@ -355,7 +1070,7 @@ final class IndexingService
             if ($this->submitIndexNow($urls)) {
                 $messages[] = 'IndexNow: ' . count($urls) . ' URL(s) aus „' . $label . '“ gemeldet.';
             } else {
-                $errors[] = 'IndexNow konnte die URLs nicht vollständig entgegennehmen.';
+                $errors[] = 'IndexNow konnte die URLs nicht vollständig entgegennehmen: ' . $this->lastIndexNowResult['message'];
             }
         }
 
@@ -416,6 +1131,13 @@ final class IndexingService
      * @return array{
      *     key:string,
      *     key_available:bool,
+     *     key_source:string,
+     *     key_source_label:string,
+     *     key_protocol_valid:bool,
+     *     key_location:string,
+     *     key_file_directory:string,
+     *     key_file_directory_writable:bool,
+     *     endpoint:string,
      *     dynamic_key_file_active:bool,
      *     dynamic_key_file_url:string,
      *     selected_root_file:string,
@@ -448,7 +1170,7 @@ final class IndexingService
      */
     public function getIndexNowConfigurationStatus(): array
     {
-        $key = $this->resolveIndexNowKey();
+        ['key' => $key, 'source' => $keySource] = $this->resolveIndexNowKeyWithSource();
         $selectedFile = $this->resolveIndexNowSelectedRootFile();
         $publicBaseUrl = $this->resolvePublicBaseUrl();
         $rootDebugCandidates = $this->getIndexNowRootDebugCandidates($selectedFile);
@@ -461,7 +1183,9 @@ final class IndexingService
         ));
         $rootTxtFiles = $this->getIndexNowRootTxtFiles();
         $rootDirectory = implode(' | ', $rootDirectories);
-        $dynamicKeyFileUrl = $key !== ''
+        $keyProtocolValid = $key !== '' && self::isValidIndexNowKey($key);
+        // Der ThemeRouter liefert /{key}.txt nur für protokollgültige Keys aus.
+        $dynamicKeyFileUrl = $keyProtocolValid
             ? $publicBaseUrl . '/' . rawurlencode($key) . '.txt'
             : '';
 
@@ -480,8 +1204,10 @@ final class IndexingService
 
         if ($key === '') {
             $validationNotes[] = 'Kein IndexNow-API-Key gespeichert.';
-        } else {
+        } elseif ($keyProtocolValid) {
             $validationNotes[] = 'Die dynamische Keydatei ist unter `' . $dynamicKeyFileUrl . '` verfügbar.';
+        } else {
+            $validationErrors[] = 'Der gespeicherte API-Key entspricht nicht dem IndexNow-Protokoll (8–128 Zeichen, nur a-z, A-Z, 0-9 und Bindestrich). Bitte einen neuen Key erzeugen.';
         }
 
         if ($selectedFile !== '') {
@@ -556,10 +1282,19 @@ final class IndexingService
             $validationNotes[] = 'Es ist aktuell keine physische Root-TXT-Datei ausgewählt.';
         }
 
+        $keyFileDirectory = $this->getIndexNowKeyFileDirectory();
+
         return [
             'key' => $key,
             'key_available' => $key !== '',
-            'dynamic_key_file_active' => $key !== '',
+            'key_source' => $keySource,
+            'key_source_label' => self::INDEXNOW_KEY_SOURCES[$keySource] ?? '',
+            'key_protocol_valid' => $keyProtocolValid,
+            'key_location' => $keyProtocolValid ? $this->getIndexNowKeyLocation($key) : '',
+            'key_file_directory' => $keyFileDirectory,
+            'key_file_directory_writable' => $keyFileDirectory !== '' && is_dir($keyFileDirectory) && is_writable($keyFileDirectory),
+            'endpoint' => self::INDEXNOW_ENDPOINT,
+            'dynamic_key_file_active' => $keyProtocolValid,
             'dynamic_key_file_url' => $dynamicKeyFileUrl,
             'selected_root_file' => $selectedFile,
             'selected_root_file_url' => $selectedFileUrl,
@@ -568,7 +1303,7 @@ final class IndexingService
             'selected_root_file_matches_key' => $selectedFileMatchesKey,
             'selected_root_file_content_matches_key' => $selectedFileContentMatchesKey,
             'selected_root_file_valid' => $selectedFileValid,
-            'ready_for_submission' => $key !== '' && ($selectedFile === '' || $selectedFileValid),
+            'ready_for_submission' => $keyProtocolValid && ($selectedFile === '' || $selectedFileValid),
             'root_directory' => $rootDirectory,
             'root_txt_files' => $rootTxtFiles,
             'validation_errors' => $validationErrors,
@@ -751,44 +1486,37 @@ final class IndexingService
 
     private function resolveIndexNowKey(): string
     {
-        try {
-            if (function_exists('config')) {
-                $value = config('seo.indexnow_key');
-                if (is_string($value) && trim($value) !== '') {
-                    return trim($value);
-                }
-            }
-        } catch (\Throwable) {
-            // Fallbacks unten greifen.
-        }
+        return $this->resolveIndexNowKeyWithSource()['key'];
+    }
 
+    /**
+     * Ermittelt den aktiven IndexNow-Key samt Herkunft. Der in den SEO-Einstellungen gespeicherte Key hat
+     * Vorrang; die Alt-Einstellung `seo.indexnow_key` und die Konstante `SEO_INDEXNOW_KEY` dienen nur als Fallback.
+     *
+     * @return array{key:string, source:string}
+     */
+    private function resolveIndexNowKeyWithSource(): array
+    {
         $candidates = [
-            $this->getDirectSettingValue('seo_indexnow_key'),
-            $this->getDirectSettingValue('seo.indexnow_key'),
-            $this->settings->getString('seo', 'indexnow_key', ''),
-            defined('SEO_INDEXNOW_KEY') ? (string) SEO_INDEXNOW_KEY : '',
-            function_exists('get_option') ? (string) get_option('seo.indexnow_key', '') : '',
-            function_exists('get_option') ? (string) get_option('seo_indexnow_key', '') : '',
+            'database' => $this->getDirectSettingValue('seo_indexnow_key'),
+            'legacy_setting' => $this->settings->getString('seo', 'indexnow_key', ''),
+            'constant' => defined('SEO_INDEXNOW_KEY') ? trim((string) SEO_INDEXNOW_KEY) : '',
         ];
 
-        foreach ($candidates as $candidate) {
-            $candidate = trim($candidate);
+        foreach ($candidates as $source => $candidate) {
             if ($candidate !== '') {
-                return $candidate;
+                return ['key' => $candidate, 'source' => $source];
             }
         }
 
-        return '';
+        return ['key' => '', 'source' => ''];
     }
 
     private function resolveIndexNowSelectedRootFile(): string
     {
         $candidates = [
             $this->getDirectSettingValue('seo_indexnow_key_file'),
-            $this->getDirectSettingValue('seo.indexnow_key_file'),
             $this->settings->getString('seo', 'indexnow_key_file', ''),
-            function_exists('get_option') ? (string) get_option('seo.indexnow_key_file', '') : '',
-            function_exists('get_option') ? (string) get_option('seo_indexnow_key_file', '') : '',
         ];
 
         foreach ($candidates as $candidate) {
@@ -836,7 +1564,8 @@ final class IndexingService
 
         foreach ($list as $url) {
             $url = trim((string) $url);
-            if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false
+                || !in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true)) {
                 continue;
             }
             $normalized[] = $url;

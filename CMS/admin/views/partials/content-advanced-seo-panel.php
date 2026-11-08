@@ -82,6 +82,9 @@ $advancedSeoPanel = $advancedSeoPanel ?? [];
                 </select>
             </div>
             <div class="col-lg-4 d-flex flex-column justify-content-end gap-2">
+                <?php /* Abgewählte Checkboxen werden nicht gesendet; ohne Fallback würde noindex/nofollow nie gespeichert. */ ?>
+                <input type="hidden" name="<?php echo htmlspecialchars((string)($advancedSeoPanel['robotsIndexName'] ?? 'robots_index')); ?>" value="0">
+                <input type="hidden" name="<?php echo htmlspecialchars((string)($advancedSeoPanel['robotsFollowName'] ?? 'robots_follow')); ?>" value="0">
                 <label class="form-check"><input class="form-check-input" type="checkbox" id="<?php echo htmlspecialchars((string)($advancedSeoPanel['robotsIndexId'] ?? 'robotsIndex')); ?>" name="<?php echo htmlspecialchars((string)($advancedSeoPanel['robotsIndexName'] ?? 'robots_index')); ?>" value="1" <?php echo !empty($advancedSeoPanel['robotsIndexChecked']) ? 'checked' : ''; ?>><span class="form-check-label">index</span></label>
                 <label class="form-check"><input class="form-check-input" type="checkbox" id="<?php echo htmlspecialchars((string)($advancedSeoPanel['robotsFollowId'] ?? 'robotsFollow')); ?>" name="<?php echo htmlspecialchars((string)($advancedSeoPanel['robotsFollowName'] ?? 'robots_follow')); ?>" value="1" <?php echo !empty($advancedSeoPanel['robotsFollowChecked']) ? 'checked' : ''; ?>><span class="form-check-label">follow</span></label>
                 <label class="form-label mt-2" for="<?php echo htmlspecialchars((string)($advancedSeoPanel['hreflangGroupId'] ?? '')); ?>">hreflang-Gruppe</label>

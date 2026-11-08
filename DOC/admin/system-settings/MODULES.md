@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Core-Module (Feature-Schalter)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
 > **Route:** `/admin/modules` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_modules`
 
 ## English (summary)
@@ -14,7 +14,7 @@
 | Slug | Bezeichnung | Admin-Seiten | Abhängigkeit | Legacy-Setting |
 |---|---|---|---|---|
 | `ai_services` | AI Services | `ai-services`, `ai-translation`, `ai-content-creator`, `ai-seo-creator`, `ai-settings` (+ Editor.js-Übersetzungs- und SEO-Endpunkte) | – | – |
-| `seo` | SEO | `seo-dashboard`, `analytics`, `seo-audit`, `seo-meta`, `seo-social`, `seo-schema`, `seo-sitemap`, `seo-technical`, `redirect-manager`, `not-found-monitor` | – | – |
+| `seo` | SEO | `seo-dashboard`, `analytics`, `seo-audit`, `seo-meta`, `seo-social`, `seo-schema`, `seo-sitemap`, `seo-search-engines`, `seo-technical`, `redirect-manager`, `not-found-monitor` | – | – |
 | `security` | Sicherheit | `antispam`, `firewall`, `security-audit` | – | – |
 | `legal` | Recht | `legal-sites`, `cookie-manager`, `data-requests`, `privacy-requests`, `deletion-requests` | – | – |
 | `member_dashboard` | Member Dashboard | alle `member-dashboard*`-Seiten | – | `member_dashboard_enabled` |

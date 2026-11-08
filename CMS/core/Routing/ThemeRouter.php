@@ -113,7 +113,8 @@ final class ThemeRouter
         $this->router->addRoute('GET', '/robots.txt', [$this, 'serveRobotsTxt']);
         $this->router->addRoute('GET', '/security.txt', [$this, 'serveSecurityTxt']);
         $this->router->addRoute('GET', '/.well-known/security.txt', [$this, 'serveSecurityTxt']);
-        if ($indexNowKey !== '') {
+        // Nur protokollgültige Keys (a-z, A-Z, 0-9, -) registrieren – sonst könnten Zeichen wie ':' als Routen-Parameter wirken.
+        if (Services\IndexingService::isValidIndexNowKey($indexNowKey)) {
             $this->router->addRoute('GET', '/' . $indexNowKey . '.txt', [$this, 'serveIndexNowKeyFile']);
         }
     }
@@ -1389,7 +1390,7 @@ final class ThemeRouter
     public function serveIndexNowKeyFile(): void
     {
         $indexNowKey = Services\IndexingService::getInstance()->getIndexNowKey();
-        if ($indexNowKey === '') {
+        if (!Services\IndexingService::isValidIndexNowKey($indexNowKey)) {
             http_response_code(404);
             header('Content-Type: text/plain; charset=utf-8');
             echo 'Page not found';

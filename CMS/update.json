@@ -2,12 +2,12 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "3.5.5",
+  "version": "3.5.6",
   "min_php": "8.4.1",
   "released": "2026-11-08",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.5-update.zip",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.6-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "c40d1b79b770fe86be0685b87e82506af54ded95ce9e4ced846a0bc9e510712b",
-  "notes": "Release-Stand 3.5.5: Das Aktualisierungsdatum von Beiträgen und Seiten ändert sich nur noch bei echten Änderungen durch den Autor. Der Aufrufzähler überschrieb bisher bei jedem Besuch updated_at, sodass Beitragsliste, Sitemap (lastmod) und dateModified das heutige Datum zeigten. Speichern ohne Änderung und Bulk-Aktionen ohne geänderten Wert lassen das Datum unverändert; bereits überschriebene Daten werden einmalig auf die letzte Revision bzw. Veröffentlichung zurückgesetzt. Datenbankschema bleibt v23.",
+  "checksum_sha256": "335eda89348adc92728a583ff85ec8096d06c980e3dc17fccfefbc97534e094f",
+  "notes": "Release-Stand 3.5.6: Neuer SEO-Bereich „Suchmaschinen“ bündelt IndexNow, Google Search Console, Google Indexing API und die Website-Verifizierung für Google, Bing, Yandex, Seznam, Naver und Baidu. Der IndexNow-Key lässt sich direkt in der Oberfläche erzeugen und als Keydatei im Web-Root ablegen; Meldungen gehen gemäß Protokoll gebündelt an api.indexnow.org, optional automatisch beim Speichern und per stündlichem Cron. Der abgeschaltete Sitemap-Ping entfällt. Korrigiert: noindex/nofollow ließ sich im Editor nicht speichern. Datenbankschema bleibt v23.",
   "critical": false
 }

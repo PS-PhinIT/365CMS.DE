@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – SEO
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
 
 ## English (summary)
 
@@ -17,6 +17,7 @@ This folder documents the sidebar group **SEO**. The group is controlled by the 
 | Soziale Medien | `/admin/seo-social` | [SEO.md](SEO.md#social-adminseo-social) |
 | Strukturierte Daten | `/admin/seo-schema` | [SEO.md](SEO.md#strukturierte-daten-adminseo-schema) |
 | Sitemap & robots.txt | `/admin/seo-sitemap` | [SEO.md](SEO.md#sitemap-adminseo-sitemap) |
+| Suchmaschinen (IndexNow, Google, Webmaster-Verifizierung) | `/admin/seo-search-engines` | [SEO.md](SEO.md#suchmaschinen-adminseo-search-engines) |
 | Technisches SEO | `/admin/seo-technical` | [SEO.md](SEO.md#technisches-seo-adminseo-technical) |
 | Weiterleitungen | `/admin/redirect-manager` | [REDIRECTS.md](REDIRECTS.md) |
 | 404-Monitor | `/admin/not-found-monitor` | [REDIRECTS.md](REDIRECTS.md#404-monitor-adminnot-found-monitor) |
@@ -31,7 +32,7 @@ Die Alt-Route `/admin/seo` leitet auf `/admin/seo-dashboard` um. Alle SEO-Seiten
 | `/robots.txt` | aus der SEO-Suite gepflegt |
 | `/sitemap` | HTML-Sitemap des Themes |
 | `/feed` | RSS-Feed der Beiträge |
-| `/<indexnow-key>.txt` | IndexNow-Schlüsseldatei |
+| `/<indexnow-key>.txt` | IndexNow-Schlüsseldatei (physisch im Web-Root oder dynamisch ausgeliefert) |
 | `/security.txt`, `/.well-known/security.txt` | Sicherheitskontakt |
 
 ### Verwandte Dokumente

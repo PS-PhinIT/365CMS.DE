@@ -299,7 +299,7 @@ $hasTable = $analytics['has_page_views'] ?? false;
             </div>
             <div class="col-lg-6">
                 <div class="card h-100">
-                    <div class="card-header"><h3 class="card-title">Tracking & Suchmaschinen</h3></div>
+                    <div class="card-header"><h3 class="card-title">Tracking</h3></div>
                     <div class="card-body">
                         <form method="post" class="row g-3">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
@@ -309,7 +309,7 @@ $hasTable = $analytics['has_page_views'] ?? false;
                                     Tracker werden erst nach Einwilligung geladen: GA4 und Matomo über die Cookie-Kategorie <strong>Analytics</strong>, GTM und Meta Pixel über <strong>Marketing</strong>. Die Content-Security-Policy wird nur für die Hosts der hier eingetragenen Anbieter geöffnet; Matomo muss per <code>https://</code> erreichbar sein. Eigener Tracking-Code (Inline-Skripte) wird aus Sicherheitsgründen nicht ausgeführt.
                                 </div>
                             </div>
-                            <div class="col-12"><label for="seoAnalyticsGscProperty" class="form-label">Google Search Console Property</label><input id="seoAnalyticsGscProperty" class="form-control" type="text" name="gsc_property" value="<?= htmlspecialchars((string)($trackingSettings['seo_analytics_gsc_property'] ?? '')) ?>" placeholder="sc-domain:example.de"></div>
+                            <div class="col-12 small text-secondary">Search-Console-Property und Verifizierungscodes der Webmaster-Tools werden im Bereich <a href="/admin/seo-search-engines">Suchmaschinen</a> gepflegt.</div>
                             <div class="col-md-6"><label for="seoAnalyticsGa4Id" class="form-label">GA4 ID</label><input id="seoAnalyticsGa4Id" class="form-control" type="text" name="ga4_id" value="<?= htmlspecialchars((string)($trackingSettings['seo_analytics_ga4_id'] ?? '')) ?>" placeholder="G-XXXXXXX"></div>
                             <div class="col-md-6"><label for="seoAnalyticsGtmId" class="form-label">GTM ID</label><input id="seoAnalyticsGtmId" class="form-control" type="text" name="gtm_id" value="<?= htmlspecialchars((string)($trackingSettings['seo_analytics_gtm_id'] ?? '')) ?>" placeholder="GTM-XXXX"></div>
                             <div class="col-md-8"><label for="seoAnalyticsMatomoUrl" class="form-label">Matomo URL</label><input id="seoAnalyticsMatomoUrl" class="form-control" type="text" name="matomo_url" value="<?= htmlspecialchars((string)($trackingSettings['seo_analytics_matomo_url'] ?? '')) ?>"></div>

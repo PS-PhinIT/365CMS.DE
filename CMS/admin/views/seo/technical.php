@@ -17,14 +17,6 @@ $missingAltRows = $technical['missing_alt_rows'] ?? [];
 $noindexCandidates = $technical['noindex_candidates'] ?? [];
 $hreflangGroups = $technical['hreflang_groups'] ?? [];
 $redirectStats = $technical['redirect_stats'] ?? [];
-$indexNow = $technical['indexnow'] ?? [];
-$indexNowRootTxtFiles = $indexNow['root_txt_files'] ?? [];
-$indexNowValidationErrors = $indexNow['validation_errors'] ?? [];
-$indexNowValidationNotes = $indexNow['validation_notes'] ?? [];
-$indexNowDebug = $indexNow['debug'] ?? [];
-$indexNowDebugCandidates = is_array($indexNowDebug['root_candidates'] ?? null) ? $indexNowDebug['root_candidates'] : [];
-$indexNowSelectedFileReason = (string)($indexNowDebug['selected_file_reason'] ?? '');
-$indexNowSelectedFileResolvedFrom = (string)($indexNowDebug['selected_file_resolved_from'] ?? '');
 $brokenLinkAvailable = !empty($brokenLinkReport['available']);
 $brokenLinkGeneratedAt = (string)($brokenLinkReport['generated_at_label'] ?? '');
 $brokenLinkTrigger = (string)($brokenLinkReport['trigger_label'] ?? '—');
@@ -96,7 +88,7 @@ $brokenLinkNotes = is_array($brokenLinkReport['notes'] ?? null) ? $brokenLinkRep
         <div class="col-lg-5">
             <div class="card h-100">
                 <div class="card-header">
-                    <h3 class="card-title">Technische Standards &amp; IndexNow</h3>
+                    <h3 class="card-title">Technische Standards</h3>
                 </div>
                 <div class="card-body">
                     <form method="post" class="row g-3">
@@ -152,42 +144,6 @@ $brokenLinkNotes = is_array($brokenLinkReport['notes'] ?? null) ? $brokenLinkRep
                             </label>
                         </div>
 
-                        <div class="col-12"><hr class="my-2"></div>
-
-                        <div class="col-12">
-                            <label class="form-label" for="indexnow-key">IndexNow API-Key</label>
-                            <input
-                                class="form-control"
-                                id="indexnow-key"
-                                type="text"
-                                name="indexnow_key"
-                                value="<?= htmlspecialchars((string)($settings['seo_indexnow_key'] ?? '')) ?>"
-                                placeholder="z. B. 75d0bf8d82694244923c1ecf56fe1e6e"
-                                autocomplete="off"
-                            >
-                            <div class="form-hint">Der Key wird für die dynamische <code>/KEY.txt</code>-Auslieferung und für IndexNow-Submissions verwendet.</div>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label" for="indexnow-key-file">Root-`.txt`-Datei auswählen</label>
-                            <select class="form-select" id="indexnow-key-file" name="indexnow_key_file">
-                                <option value="">Keine physische Root-TXT-Datei wählen</option>
-                                <?php foreach ($indexNowRootTxtFiles as $fileName): ?>
-                                    <option value="<?= htmlspecialchars((string) $fileName) ?>" <?= (($settings['seo_indexnow_key_file'] ?? '') === $fileName) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars((string) $fileName) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="form-hint">
-                                Root-Verzeichnis: <code><?= htmlspecialchars((string)($indexNow['root_directory'] ?? ABSPATH)) ?></code>
-                            </div>
-                            <?php if (empty($indexNowRootTxtFiles)): ?>
-                                <div class="alert alert-warning mt-3 mb-0" role="alert">
-                                    Im aktuellen CMS-Root wurde noch keine <code>.txt</code>-Datei gefunden.
-                                </div>
-                            <?php endif; ?>
-                        </div>
-
                         <?php $legacyHeaderCode = (string)($settings['seo_custom_header_code'] ?? ''); ?>
                         <?php if (trim($legacyHeaderCode) !== ''): ?>
                             <div class="col-12">
@@ -214,160 +170,12 @@ $brokenLinkNotes = is_array($brokenLinkReport['notes'] ?? null) ? $brokenLinkRep
 
         <div class="col-lg-7">
             <div class="card mb-4">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h3 class="card-title mb-0">IndexNow-Prüfung</h3>
-                    <div class="d-flex flex-wrap gap-2 justify-content-end">
-                        <span class="badge <?= !empty($indexNow['key_available']) ? 'bg-success' : 'bg-warning text-dark' ?>">
-                            API-Key <?= !empty($indexNow['key_available']) ? 'bereit' : 'fehlt' ?>
-                        </span>
-                        <span class="badge <?= !empty($indexNow['selected_root_file']) ? 'bg-primary' : 'bg-secondary' ?>">
-                            Root-TXT <?= !empty($indexNow['selected_root_file']) ? 'gewählt' : 'nicht gewählt' ?>
-                        </span>
-                        <span class="badge <?= !empty($indexNow['ready_for_submission']) ? 'bg-success' : 'bg-warning text-dark' ?>">
-                            Übermittlung <?= !empty($indexNow['ready_for_submission']) ? 'bereit' : 'prüfen' ?>
-                        </span>
+                <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <div class="fw-semibold">IndexNow, Google &amp; Webmaster-Verifizierung</div>
+                        <div class="text-secondary small">API-Keys, Keydatei, automatische Meldung und Verifizierungscodes werden im Bereich „Suchmaschinen“ gepflegt.</div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <div class="small text-secondary mb-1">Dynamische Keydatei</div>
-                            <?php if (!empty($indexNow['dynamic_key_file_url'])): ?>
-                                <a href="<?= htmlspecialchars((string) $indexNow['dynamic_key_file_url']) ?>" target="_blank" rel="noopener noreferrer">
-                                    <code><?= htmlspecialchars((string) $indexNow['dynamic_key_file_url']) ?></code>
-                                </a>
-                            <?php else: ?>
-                                <span class="text-secondary">Noch nicht verfügbar</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="small text-secondary mb-1">Ausgewählte Root-TXT-Datei</div>
-                            <?php if (!empty($indexNow['selected_root_file'])): ?>
-                                <div><code><?= htmlspecialchars((string) $indexNow['selected_root_file']) ?></code></div>
-                                <?php if (!empty($indexNow['selected_root_file_url'])): ?>
-                                    <a href="<?= htmlspecialchars((string) $indexNow['selected_root_file_url']) ?>" target="_blank" rel="noopener noreferrer" class="small">
-                                        <?= htmlspecialchars((string) $indexNow['selected_root_file_url']) ?>
-                                    </a>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <span class="text-secondary">Keine Datei ausgewählt</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <div class="small text-secondary mb-1">Datei vorhanden</div>
-                            <span class="badge <?= !empty($indexNow['selected_root_file_exists']) ? 'bg-success' : 'bg-secondary' ?>">
-                                <?= !empty($indexNow['selected_root_file_exists']) ? 'Ja' : 'Nein' ?>
-                            </span>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small text-secondary mb-1">Dateiname = API-Key</div>
-                            <span class="badge <?= !empty($indexNow['selected_root_file_matches_key']) ? 'bg-success' : 'bg-secondary' ?>">
-                                <?= !empty($indexNow['selected_root_file_matches_key']) ? 'Ja' : 'Nein' ?>
-                            </span>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small text-secondary mb-1">Dateiinhalt = API-Key</div>
-                            <span class="badge <?= !empty($indexNow['selected_root_file_content_matches_key']) ? 'bg-success' : 'bg-secondary' ?>">
-                                <?= !empty($indexNow['selected_root_file_content_matches_key']) ? 'Ja' : 'Nein' ?>
-                            </span>
-                        </div>
-                    </div>
-
-                    <?php if (!empty($indexNowValidationErrors)): ?>
-                        <div class="alert alert-warning" role="alert">
-                            <div class="fw-semibold mb-1">Prüfung mit Hinweisen</div>
-                            <ul class="mb-0 ps-3">
-                                <?php foreach ($indexNowValidationErrors as $error): ?>
-                                    <li><?= htmlspecialchars((string) $error) ?></li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($indexNowValidationNotes)): ?>
-                        <div class="text-secondary small">
-                            <?php foreach ($indexNowValidationNotes as $note): ?>
-                                <div>• <?= htmlspecialchars((string) $note) ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <hr class="my-4">
-
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                        <div>
-                            <div class="fw-semibold">Prüfdetails: Root-Pfade</div>
-                            <div class="text-secondary small">Diese Übersicht zeigt, welche Kandidaten geprüft wurden und wie die ausgewählte TXT-Datei bewertet wurde.</div>
-                        </div>
-                        <span class="badge bg-info-lt text-info"><?= count($indexNowDebugCandidates) ?> Pfad<?= count($indexNowDebugCandidates) === 1 ? '' : 'e' ?></span>
-                    </div>
-
-                    <div class="alert alert-info" role="alert">
-                        <div class="fw-semibold mb-1">Prüf-Ergebnis für die ausgewählte TXT-Datei</div>
-                        <div><?= htmlspecialchars($indexNowSelectedFileReason !== '' ? $indexNowSelectedFileReason : 'Noch keine Detailinformationen vorhanden.') ?></div>
-                        <?php if (!empty($indexNow['selected_root_file_path'])): ?>
-                            <div class="small mt-2">Aufgelöster Dateipfad: <code><?= htmlspecialchars((string) $indexNow['selected_root_file_path']) ?></code></div>
-                        <?php elseif ($indexNowSelectedFileResolvedFrom !== ''): ?>
-                            <div class="small mt-2">Gefunden unter: <code><?= htmlspecialchars($indexNowSelectedFileResolvedFrom) ?></code></div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Quelle</th>
-                                    <th>Geprüfter Pfad</th>
-                                    <th>Status</th>
-                                    <th>Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($indexNowDebugCandidates)): ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center text-secondary py-3">Noch keine Root-Prüfdaten verfügbar.</td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php foreach ($indexNowDebugCandidates as $candidate): ?>
-                                        <?php
-                                        $candidateSource = (string)($candidate['source'] ?? 'unbekannt');
-                                        $candidatePath = (string)($candidate['normalized_path'] ?? $candidate['original_path'] ?? '');
-                                        $candidateUsable = !empty($candidate['usable']);
-                                        $candidateReason = (string)($candidate['reason'] ?? '');
-                                        $candidateTxtFiles = is_array($candidate['txt_files'] ?? null) ? $candidate['txt_files'] : [];
-                                        $candidateSelectedExists = !empty($candidate['selected_file_exists']);
-                                        $candidateSelectedPath = (string)($candidate['selected_file_path'] ?? '');
-                                        ?>
-                                        <tr>
-                                            <td><code><?= htmlspecialchars($candidateSource) ?></code></td>
-                                            <td>
-                                                <code><?= htmlspecialchars($candidatePath !== '' ? $candidatePath : '—') ?></code>
-                                                <?php if ($candidateSelectedExists && $candidateSelectedPath !== ''): ?>
-                                                    <div class="small text-success mt-1">Ausgewählte Datei gefunden: <code><?= htmlspecialchars($candidateSelectedPath) ?></code></div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge <?= $candidateUsable ? 'bg-success-lt text-success' : 'bg-danger-lt text-danger' ?>">
-                                                    <?= $candidateUsable ? 'geprüft' : 'übersprungen' ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div><?= htmlspecialchars($candidateReason !== '' ? $candidateReason : 'Keine Details vorhanden.') ?></div>
-                                                <?php if (!empty($candidateTxtFiles)): ?>
-                                                    <div class="small text-secondary mt-1">
-                                                        TXT-Dateien: <?= htmlspecialchars(implode(', ', array_map(static fn($file): string => (string) $file, $candidateTxtFiles))) ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                    <a class="btn btn-outline-primary" href="/admin/seo-search-engines">Zu den Suchmaschinen</a>
                 </div>
             </div>
 

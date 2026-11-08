@@ -13,6 +13,7 @@ use CMS\Services\IndexingService;
 use CMS\Services\PermalinkService;
 use CMS\Services\RedirectService;
 use CMS\Services\SEO\PostSeoMetaCsvService;
+use CMS\Services\SEO\SearchEngineVerification;
 use CMS\Services\SEOService;
 use CMS\Services\SeoAnalysisService;
 use CMS\Services\SeoBrokenLinkService;
@@ -67,13 +68,23 @@ final class SeoSuiteModule
 		'seo_technical_noindex_tags' => '0',
 		'seo_technical_pagination_rel' => '1',
 		'seo_technical_broken_link_scan' => '1',
-		'seo_indexnow_key' => '',
-		'seo_indexnow_key_file' => '',
 		'seo_custom_header_code' => '',
 	];
 
-	private const ANALYTICS_DEFAULTS = [
+	private const SEARCH_ENGINE_DEFAULTS = [
+		'seo_indexnow_key' => '',
+		'seo_indexnow_key_file' => '',
+		'seo_indexnow_auto_submit' => '0',
 		'seo_analytics_gsc_property' => '',
+		'seo_verification_google' => '',
+		'seo_verification_bing' => '',
+		'seo_verification_yandex' => '',
+		'seo_verification_seznam' => '',
+		'seo_verification_naver' => '',
+		'seo_verification_baidu' => '',
+	];
+
+	private const ANALYTICS_DEFAULTS = [
 		'seo_analytics_ga4_id' => '',
 		'seo_analytics_matomo_url' => '',
 		'seo_analytics_matomo_site_id' => '1',
@@ -149,12 +160,22 @@ final class SeoSuiteModule
 			'schema' => $this->getSchemaData($decoratedAuditRows),
 			'sitemap' => $this->getSitemapData($decoratedAuditRows),
 			'technical' => $this->getTechnicalData($decoratedAuditRows),
+			'search_engines' => $this->getSearchEnginesData(),
 		];
 	}
 
 	public function getSectionData(string $section = 'dashboard'): array
 	{
 		$section = strtolower(trim($section));
+
+		// Benötigt keine Audit-Auswertung aller Inhalte.
+		if ($section === 'search_engines') {
+			return [
+				'section' => 'search_engines',
+				'search_engines' => $this->getSearchEnginesData(),
+			];
+		}
+
 		$context = $this->buildSectionContext();
 		$overview = $context['overview'];
 		$decoratedAuditRows = $context['audit_rows'];
@@ -213,6 +234,11 @@ final class SeoSuiteModule
 			'save_social_defaults' => $this->saveSocialDefaults($post),
 			'save_schema_defaults' => $this->saveSchemaDefaults($post),
 			'save_technical_settings' => $this->saveTechnicalSettings($post),
+			'save_search_engine_settings' => $this->saveSearchEngineSettings($post),
+			'generate_indexnow_key' => $this->generateIndexNowKey($post),
+			'write_indexnow_key_file' => $this->writeIndexNowKeyFile(),
+			'flush_indexnow_queue' => $this->flushIndexNowQueue(),
+			'clear_indexnow_queue' => $this->clearIndexNowQueue(),
 			'run_broken_link_scan' => $this->brokenLinkService->runScan('manual'),
 			'ignore_broken_link_target' => $this->brokenLinkService->ignorePath((string)($post['target_path'] ?? '')),
 			'unignore_broken_link_target' => $this->brokenLinkService->removeIgnoredPath((string)($post['target_path'] ?? '')),
@@ -371,19 +397,6 @@ final class SeoSuiteModule
 
 	public function saveTechnicalSettings(array $post): array
 	{
-		$rawIndexNowKey = trim((string)($post['indexnow_key'] ?? ''));
-		$indexNowKey = $this->normalizeIndexNowKey($rawIndexNowKey);
-		if ($rawIndexNowKey !== '' && $indexNowKey === '') {
-			return ['success' => false, 'error' => 'Der IndexNow-API-Key enthält ungültige Zeichen. Erlaubt sind Buchstaben, Zahlen, Bindestriche und Unterstriche.'];
-		}
-
-		$availableRootTxtFiles = $this->indexingService->getIndexNowRootTxtFiles();
-		$rawIndexNowKeyFile = trim((string)($post['indexnow_key_file'] ?? ''));
-		$indexNowKeyFile = $this->normalizeIndexNowKeyFile($rawIndexNowKeyFile, $availableRootTxtFiles);
-		if ($rawIndexNowKeyFile !== '' && $indexNowKeyFile === '') {
-			return ['success' => false, 'error' => 'Die ausgewählte Root-TXT-Datei ist ungültig oder nicht mehr vorhanden.'];
-		}
-
 		$this->persistSettings([
 			'seo_technical_auto_redirect_slug' => !empty($post['auto_redirect_slug']) ? '1' : '0',
 			'seo_technical_hreflang_enabled' => !empty($post['hreflang_enabled']) ? '1' : '0',
@@ -393,8 +406,6 @@ final class SeoSuiteModule
 			'seo_technical_noindex_tags' => !empty($post['noindex_tags']) ? '1' : '0',
 			'seo_technical_pagination_rel' => !empty($post['pagination_rel']) ? '1' : '0',
 			'seo_technical_broken_link_scan' => !empty($post['broken_link_scan']) ? '1' : '0',
-			'seo_indexnow_key' => $indexNowKey,
-			'seo_indexnow_key_file' => $indexNowKeyFile,
 		]);
 
 		// Altlast: frei eingegebener Head-Code wird nur noch angezeigt und kann hier entfernt werden.
@@ -403,11 +414,79 @@ final class SeoSuiteModule
 			$this->persistSettings(['seo_custom_header_code' => '']);
 		}
 
+		return ['success' => true, 'message' => 'Technische SEO-Einstellungen gespeichert.'];
+	}
+
+	/**
+	 * Speichert IndexNow-Key, Root-Keydatei, automatische Meldung, Search-Console-Property
+	 * und die Verifizierungscodes der Webmaster-Tools.
+	 */
+	public function saveSearchEngineSettings(array $post): array
+	{
+		$rawIndexNowKey = trim((string)($post['indexnow_key'] ?? ''));
+		$indexNowKey = $this->normalizeIndexNowKey($rawIndexNowKey);
+		if ($rawIndexNowKey !== '' && $indexNowKey === '') {
+			return ['success' => false, 'error' => 'Der IndexNow-API-Key ist ungültig. Erlaubt sind 8–128 Zeichen: Buchstaben (a-z, A-Z), Zahlen (0-9) und Bindestriche.'];
+		}
+
+		$availableRootTxtFiles = $this->indexingService->getIndexNowRootTxtFiles();
+		$rawIndexNowKeyFile = trim((string)($post['indexnow_key_file'] ?? ''));
+		$indexNowKeyFile = $this->normalizeIndexNowKeyFile($rawIndexNowKeyFile, $availableRootTxtFiles);
+		if ($rawIndexNowKeyFile !== '' && $indexNowKeyFile === '') {
+			return ['success' => false, 'error' => 'Die ausgewählte Root-TXT-Datei ist ungültig oder nicht mehr vorhanden.'];
+		}
+
+		$gscProperty = $this->normalizeSearchConsoleProperty((string)($post['gsc_property'] ?? ''));
+		if ($gscProperty === null) {
+			return ['success' => false, 'error' => 'Die Search-Console-Property ist ungültig. Erlaubt sind „sc-domain:example.de“ oder eine URL-Präfix-Property wie „https://www.example.de/“.'];
+		}
+
+		$verificationInput = is_array($post['verification'] ?? null) ? $post['verification'] : [];
+		$verificationValues = [];
+		$verificationErrors = [];
+		foreach (SearchEngineVerification::ENGINES as $engine => $definition) {
+			$normalized = SearchEngineVerification::normalizeCode($engine, (string)($verificationInput[$engine] ?? ''));
+			if ($normalized['error'] !== '') {
+				$verificationErrors[] = $normalized['error'];
+				continue;
+			}
+			$verificationValues[$definition['option']] = $normalized['value'];
+		}
+
+		if ($verificationErrors !== []) {
+			return ['success' => false, 'error' => implode(' ', $verificationErrors)];
+		}
+
+		$autoSubmit = !empty($post['indexnow_auto_submit']);
+
+		$this->persistSettings(array_merge([
+			'seo_indexnow_key' => $indexNowKey,
+			'seo_indexnow_key_file' => $indexNowKeyFile,
+			'seo_indexnow_auto_submit' => $autoSubmit ? '1' : '0',
+			'seo_analytics_gsc_property' => $gscProperty,
+		], $verificationValues));
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.search_engines.saved',
+			'Suchmaschinen-Einstellungen gespeichert',
+			'seo',
+			null,
+			[
+				'indexnow_key_set' => $indexNowKey !== '',
+				'indexnow_auto_submit' => $autoSubmit,
+				'verifications' => array_keys(array_filter($verificationValues, static fn(string $value): bool => $value !== '')),
+			],
+			'info'
+		);
+
 		$indexNowStatus = $this->indexingService->getIndexNowConfigurationStatus();
-		$message = 'Technische SEO-Einstellungen gespeichert.';
+		$message = 'Suchmaschinen-Einstellungen gespeichert.';
 
 		if (!$indexNowStatus['key_available']) {
 			$message .= ' IndexNow ist noch nicht aktiv, da kein API-Key hinterlegt ist.';
+		} elseif ($indexNowStatus['key_source'] !== 'database') {
+			$message .= ' Aktiver IndexNow-Key stammt aus: ' . $indexNowStatus['key_source_label'] . '.';
 		} elseif ($indexNowStatus['selected_root_file'] !== '' && !$indexNowStatus['selected_root_file_valid']) {
 			$message .= ' Die ausgewählte IndexNow-TXT-Datei wurde gespeichert, besteht die Prüfung aber noch nicht vollständig.';
 		} elseif ($indexNowStatus['selected_root_file'] !== '') {
@@ -416,13 +495,119 @@ final class SeoSuiteModule
 			$message .= ' Die dynamische IndexNow-Keydatei ist aktiv; optional kann zusätzlich eine physische Root-TXT-Datei gewählt werden.';
 		}
 
+		if ($autoSubmit && !$indexNowStatus['key_protocol_valid']) {
+			$message .= ' Die automatische Meldung startet erst, wenn ein gültiger IndexNow-Key gespeichert ist.';
+		}
+
 		return ['success' => true, 'message' => $message];
+	}
+
+	/**
+	 * Erzeugt einen neuen IndexNow-Key (hexadezimal, kryptografisch zufällig), speichert ihn
+	 * und legt optional die Keydatei `{key}.txt` im Web-Root ab.
+	 */
+	public function generateIndexNowKey(array $post): array
+	{
+		$length = (int)($post['indexnow_key_length'] ?? IndexingService::INDEXNOW_KEY_DEFAULT_LENGTH);
+		if ($length < IndexingService::INDEXNOW_KEY_MIN_LENGTH || $length > IndexingService::INDEXNOW_KEY_MAX_LENGTH) {
+			return ['success' => false, 'error' => 'Die Key-Länge muss zwischen 8 und 128 Zeichen liegen.'];
+		}
+
+		$previousKey = $this->indexingService->getIndexNowKey();
+
+		try {
+			$newKey = $this->indexingService->generateIndexNowKey($length);
+		} catch (\Throwable) {
+			return ['success' => false, 'error' => 'Es konnte kein sicherer Zufallswert für den IndexNow-Key erzeugt werden.'];
+		}
+
+		$writeFile = !empty($post['indexnow_write_root_file']);
+		$removePrevious = !empty($post['indexnow_remove_previous_file']);
+		$fileResult = null;
+		$removedPreviousFile = false;
+		if ($writeFile) {
+			$fileResult = $this->indexingService->writeIndexNowKeyFile($newKey, $removePrevious ? $previousKey : '');
+			$removedPreviousFile = (bool)($fileResult['removed_previous'] ?? false);
+		} elseif ($removePrevious && $previousKey !== '' && $previousKey !== $newKey) {
+			$removedPreviousFile = $this->indexingService->removeIndexNowKeyFile($previousKey);
+		}
+
+		$keyFile = ($fileResult['success'] ?? false) ? (string)$fileResult['file'] : '';
+
+		$this->persistSettings([
+			'seo_indexnow_key' => $newKey,
+			'seo_indexnow_key_file' => $keyFile,
+		]);
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.indexnow.key_generated',
+			'IndexNow-API-Key neu erzeugt',
+			'seo',
+			null,
+			[
+				'length' => $length,
+				'root_file_written' => (bool)($fileResult['success'] ?? false),
+				'previous_file_removed' => $removedPreviousFile,
+			],
+			'info'
+		);
+
+		$message = 'Neuer IndexNow-Key mit ' . $length . ' Zeichen erzeugt und gespeichert.';
+		if ($fileResult === null) {
+			$keyLocation = $this->indexingService->getIndexNowKeyLocation($newKey);
+			$message .= ' Die Keydatei wird dynamisch unter ' . ($keyLocation !== '' ? $keyLocation : '/' . $newKey . '.txt') . ' ausgeliefert.';
+			if ($removedPreviousFile) {
+				$message .= ' Die Keydatei des vorherigen Keys wurde entfernt.';
+			}
+		} elseif ($fileResult['success']) {
+			$message .= ' Keydatei „' . $fileResult['file'] . '“ wurde im Root-Verzeichnis abgelegt.';
+			if ($removedPreviousFile) {
+				$message .= ' Die Keydatei des vorherigen Keys wurde entfernt.';
+			}
+		} else {
+			return [
+				'success' => false,
+				'error' => $message . ' Die Keydatei konnte nicht abgelegt werden: ' . $fileResult['error'],
+			];
+		}
+
+		return ['success' => true, 'message' => $message];
+	}
+
+	/**
+	 * Legt für den aktuell gespeicherten Key die Keydatei `{key}.txt` im Web-Root ab und wählt sie aus.
+	 */
+	public function writeIndexNowKeyFile(): array
+	{
+		$key = $this->indexingService->getIndexNowKey();
+		if ($key === '') {
+			return ['success' => false, 'error' => 'Es ist noch kein IndexNow-API-Key gespeichert.'];
+		}
+
+		$fileResult = $this->indexingService->writeIndexNowKeyFile($key);
+		if (!$fileResult['success']) {
+			return ['success' => false, 'error' => $fileResult['error']];
+		}
+
+		$this->persistSettings(['seo_indexnow_key_file' => $fileResult['file']]);
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.indexnow.key_file_written',
+			'IndexNow-Keydatei im Root-Verzeichnis abgelegt',
+			'seo',
+			null,
+			['file' => $fileResult['file']],
+			'info'
+		);
+
+		return ['success' => true, 'message' => 'Keydatei „' . $fileResult['file'] . '“ wurde im Root-Verzeichnis abgelegt und ausgewählt.'];
 	}
 
 	public function saveAnalyticsSettings(array $post): array
 	{
 		$this->persistSettings([
-			'seo_analytics_gsc_property' => trim((string)($post['gsc_property'] ?? '')),
 			'seo_analytics_ga4_id' => $this->normalizeTrackingId((string)($post['ga4_id'] ?? ''), '/^G-[A-Z0-9\-]+$/i'),
 			'seo_analytics_matomo_url' => $this->normalizeOptionalUrl((string)($post['matomo_url'] ?? ''), false),
 			'seo_analytics_matomo_site_id' => $this->normalizePositiveIntString($post['matomo_site_id'] ?? '1', '1'),
@@ -445,8 +630,9 @@ final class SeoSuiteModule
 			'seo_sitemap_pages_changefreq' => $this->normalizeSitemapChangefreq((string)($post['pages_changefreq'] ?? 'weekly'), 'weekly'),
 			'seo_sitemap_posts_priority' => $this->normalizeSitemapPriority((string)($post['posts_priority'] ?? '0.6'), '0.6'),
 			'seo_sitemap_posts_changefreq' => $this->normalizeSitemapChangefreq((string)($post['posts_changefreq'] ?? 'monthly'), 'monthly'),
-			'seo_sitemap_ping_google' => !empty($post['ping_google']) ? '1' : '0',
-			'seo_sitemap_ping_bing' => !empty($post['ping_bing']) ? '1' : '0',
+			// Sitemap-Ping wird von Google (2023) und Bing (2022) nicht mehr angeboten → dauerhaft aus.
+			'seo_sitemap_ping_google' => '0',
+			'seo_sitemap_ping_bing' => '0',
 			'seo_sitemap_image_enabled' => !empty($post['image_enabled']) ? '1' : '0',
 			'seo_sitemap_news_enabled' => !empty($post['news_enabled']) ? '1' : '0',
 			'seo_sitemap_news_publication_name' => trim((string)($post['news_publication_name'] ?? '365CMS')),
@@ -458,12 +644,21 @@ final class SeoSuiteModule
 
 	public function submitIndexingUrls(array $post): array
 	{
-		$urls = $this->parseSubmittedUrls((string)($post['urls'] ?? ''));
+		$rawInput = (string)($post['urls'] ?? '');
+		$urls = $this->parseSubmittedUrls($rawInput);
 		if ($urls === []) {
-			return ['success' => false, 'error' => 'Bitte mindestens eine gültige URL angeben.'];
+			return ['success' => false, 'error' => 'Bitte mindestens eine gültige URL dieser Website angeben.'];
 		}
 
 		$rawUrls = implode("\n", $urls);
+		$inputLineCount = count(array_filter(
+			array_map('trim', preg_split('/\r\n|\r|\n/', $rawInput) ?: []),
+			static fn(string $line): bool => $line !== ''
+		));
+		$ignoredCount = max(0, $inputLineCount - count($urls));
+		$ignoredNote = $ignoredCount > 0
+			? sprintf(' %d Eintrag/Einträge ignoriert (ungültig, doppelt, fremde Domain oder über %d URLs).', $ignoredCount, self::MAX_INDEXING_URLS)
+			: '';
 
 		$targets = $post['submission_target'] ?? [];
 		$targets = is_array($targets) ? $targets : [$targets];
@@ -481,9 +676,9 @@ final class SeoSuiteModule
 
 		if (in_array('indexnow', $targets, true)) {
 			if ($this->indexingService->submitIndexNow($rawUrls)) {
-				$messages[] = 'IndexNow wurde angestoßen.';
+				$messages[] = 'IndexNow: ' . $this->indexingService->getLastIndexNowResult()['message'];
 			} else {
-				$errors[] = 'IndexNow konnte die URLs nicht übermitteln.';
+				$errors[] = 'IndexNow konnte die URLs nicht übermitteln: ' . $this->indexingService->getLastIndexNowResult()['message'];
 			}
 		}
 
@@ -499,14 +694,14 @@ final class SeoSuiteModule
 		}
 
 		if ($messages !== [] && $errors === []) {
-			return ['success' => true, 'message' => implode(' ', $messages)];
+			return ['success' => true, 'message' => implode(' ', $messages) . $ignoredNote];
 		}
 
 		if ($messages !== [] && $errors !== []) {
-			return ['success' => false, 'error' => implode(' ', $messages) . ' ' . implode(' ', $errors)];
+			return ['success' => false, 'error' => implode(' ', $messages) . ' ' . implode(' ', $errors) . $ignoredNote];
 		}
 
-		return ['success' => false, 'error' => implode(' ', $errors)];
+		return ['success' => false, 'error' => implode(' ', $errors) . $ignoredNote];
 	}
 
 	public function submitRecentContentIndexNow(array $post): array
@@ -606,6 +801,62 @@ final class SeoSuiteModule
 		);
 
 		return ['success' => true, 'message' => 'Gespeichertes Google-Access-Token wurde entfernt.'];
+	}
+
+	/**
+	 * Übermittelt die für IndexNow vorgemerkten URLs sofort (statt nach dem Speichern bzw. per Cron).
+	 */
+	public function flushIndexNowQueue(): array
+	{
+		$queueCount = count($this->indexingService->getIndexNowQueue());
+		if ($queueCount === 0) {
+			return ['success' => false, 'error' => 'Die IndexNow-Warteschlange ist leer.'];
+		}
+
+		$result = $this->indexingService->flushIndexNowQueue('manual');
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.indexnow.queue_flushed',
+			'IndexNow-Warteschlange manuell übermittelt',
+			'seo',
+			null,
+			[
+				'queued' => $queueCount,
+				'url_count' => (int)$result['url_count'],
+				'status' => (int)$result['status'],
+				'success' => (bool)$result['success'],
+			],
+			$result['success'] ? 'info' : 'warning'
+		);
+
+		return $result['success']
+			? ['success' => true, 'message' => (string)$result['message']]
+			: ['success' => false, 'error' => (string)$result['message']];
+	}
+
+	public function clearIndexNowQueue(): array
+	{
+		$queueCount = count($this->indexingService->getIndexNowQueue());
+		if ($queueCount === 0) {
+			return ['success' => true, 'message' => 'Die IndexNow-Warteschlange ist bereits leer.'];
+		}
+
+		if (!$this->indexingService->clearIndexNowQueue()) {
+			return ['success' => false, 'error' => 'Die IndexNow-Warteschlange konnte nicht geleert werden.'];
+		}
+
+		AuditLogger::instance()->log(
+			AuditLogger::CAT_SETTING,
+			'seo.indexnow.queue_cleared',
+			'IndexNow-Warteschlange geleert',
+			'seo',
+			null,
+			['url_count' => $queueCount],
+			'info'
+		);
+
+		return ['success' => true, 'message' => $queueCount . ' vorgemerkte URL(s) wurden aus der IndexNow-Warteschlange entfernt.'];
 	}
 
 	public function saveAuditItem(array $post): array
@@ -1016,7 +1267,6 @@ final class SeoSuiteModule
 	private function getSitemapData(array $auditRows): array
 	{
 		$settings = array_merge($this->seoService->getSitemapSettings(), $this->loadSettings(self::SITEMAP_EXTRA_DEFAULTS));
-		$indexNowStatus = $this->indexingService->getIndexNowConfigurationStatus();
 
 		$eligibleRows = array_values(array_filter($auditRows, static function (array $row): bool {
 			$type = (string) ($row['type'] ?? '');
@@ -1036,27 +1286,6 @@ final class SeoSuiteModule
 		return [
 			'settings' => $settings,
 			'files' => $this->getSitemapFilesStatus(),
-			'indexing' => [
-				'indexnow_available' => $indexNowStatus['key_available'],
-				'indexnow_key_file_active' => $indexNowStatus['dynamic_key_file_active'],
-				'indexnow_key_url' => $indexNowStatus['dynamic_key_file_url'],
-				'indexnow_selected_root_file' => $indexNowStatus['selected_root_file'],
-				'indexnow_selected_root_file_url' => $indexNowStatus['selected_root_file_url'],
-				'indexnow_selected_root_file_valid' => $indexNowStatus['selected_root_file_valid'],
-				'indexnow_ready_for_submission' => $indexNowStatus['ready_for_submission'],
-				'indexnow_validation_errors' => $indexNowStatus['validation_errors'],
-				'indexnow_validation_notes' => $indexNowStatus['validation_notes'],
-				'google_access_token_available' => $this->indexingService->hasGoogleAccessToken(),
-				'recent_content_ranges' => $this->indexingService->getRecentContentRangeOptions(),
-				'recent_content_targets' => $this->indexingService->getRecentContentTargetOptions(),
-				'engines' => ['IndexNow', 'Google Indexing API'],
-				'notes' => [
-					'IndexNow-Key kann jetzt direkt im SEO-Bereich gepflegt werden.',
-					'Keydatei wird bei gesetztem Schlüssel dynamisch vom Core ausgeliefert.',
-					'Optional kann zusätzlich eine physische Root-TXT-Datei geprüft werden.',
-					'Google-Access-Token kann dauerhaft (verschlüsselt) gespeichert oder pro Aktion manuell überschrieben werden.',
-				],
-			],
 			'counts' => [
 				'pages' => count(array_filter($eligibleRows, static fn(array $row): bool => ($row['type'] ?? '') === 'page')),
 				'posts' => count(array_filter($eligibleRows, static fn(array $row): bool => ($row['type'] ?? '') === 'post')),
@@ -1071,7 +1300,6 @@ final class SeoSuiteModule
 		$settings = $this->loadSettings(self::TECHNICAL_DEFAULTS);
 		$brokenLinkReport = $this->brokenLinkService->getAdminData();
 		$redirectData = $this->redirectService->getAdminData();
-		$indexNowStatus = $this->indexingService->getIndexNowConfigurationStatus();
 
 		$missingAltRows = array_values(array_filter($auditRows, static function (array $row): bool {
 			return (int)($row['analysis']['stats']['missing_alt_texts'] ?? 0) > 0;
@@ -1102,7 +1330,6 @@ final class SeoSuiteModule
 			'noindex_candidates' => array_slice($noindexCandidates, 0, 10),
 			'hreflang_groups' => $hreflangGroups,
 			'redirect_stats' => $redirectData['stats'] ?? [],
-			'indexnow' => $indexNowStatus,
 		];
 	}
 
@@ -1451,7 +1678,73 @@ final class SeoSuiteModule
 			return '';
 		}
 
-		return preg_match('/^[A-Za-z0-9_-]{8,128}$/', $value) === 1 ? $value : '';
+		return preg_match(IndexingService::INDEXNOW_KEY_PATTERN, $value) === 1 ? $value : '';
+	}
+
+	/**
+	 * Search-Console-Property: Domain-Property („sc-domain:example.de“) oder URL-Präfix („https://www.example.de/“).
+	 * Liefert '' für leere Eingaben und null für ungültige Werte.
+	 */
+	private function normalizeSearchConsoleProperty(string $value): ?string
+	{
+		$value = trim($value);
+		if ($value === '') {
+			return '';
+		}
+
+		$domain = null;
+		if (stripos($value, 'sc-domain:') === 0) {
+			$domain = strtolower(trim(substr($value, strlen('sc-domain:'))));
+		} elseif (!str_contains($value, '/') && !str_contains($value, ':')) {
+			// Reiner Domainname (z. B. aus der früheren Freitext-Eingabe) → Domain-Property.
+			$domain = strtolower($value);
+		}
+
+		if ($domain !== null) {
+			$isDomain = strlen($domain) <= 253
+				&& preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/', $domain) === 1;
+
+			return $isDomain ? 'sc-domain:' . $domain : null;
+		}
+
+		$url = $this->normalizeOptionalUrl($value, false);
+		if ($url === '' || (string)parse_url($url, PHP_URL_HOST) === '') {
+			return null;
+		}
+
+		return (string)parse_url($url, PHP_URL_PATH) === '' ? $url . '/' : $url;
+	}
+
+	/**
+	 * Daten für den Bereich „Suchmaschinen“ (IndexNow, Google, Webmaster-Verifizierung).
+	 */
+	private function getSearchEnginesData(): array
+	{
+		$settings = $this->loadSettings(self::SEARCH_ENGINE_DEFAULTS);
+		$gscProperty = (string)($settings['seo_analytics_gsc_property'] ?? '');
+
+		return [
+			'settings' => $settings,
+			'indexnow' => $this->indexingService->getIndexNowConfigurationStatus(),
+			'queue' => $this->indexingService->getIndexNowQueueStatus(),
+			'verification' => [
+				'engines' => SearchEngineVerification::ENGINES,
+				'codes' => SearchEngineVerification::getCodes(),
+			],
+			'google_access_token_available' => $this->indexingService->hasGoogleAccessToken(),
+			'search_console_url' => 'https://search.google.com/search-console'
+				. ($gscProperty !== '' ? '?resource_id=' . rawurlencode($gscProperty) : ''),
+			'recent_content_ranges' => $this->indexingService->getRecentContentRangeOptions(),
+			'recent_content_targets' => $this->indexingService->getRecentContentTargetOptions(),
+			'key_length' => [
+				'min' => IndexingService::INDEXNOW_KEY_MIN_LENGTH,
+				'max' => IndexingService::INDEXNOW_KEY_MAX_LENGTH,
+				'default' => IndexingService::INDEXNOW_KEY_DEFAULT_LENGTH,
+			],
+			'response_codes' => IndexingService::INDEXNOW_RESPONSE_CODES,
+			'max_urls_per_request' => IndexingService::INDEXNOW_MAX_URLS_PER_REQUEST,
+			'max_manual_urls' => self::MAX_INDEXING_URLS,
+		];
 	}
 
 	/**

@@ -13,7 +13,6 @@ $sitemap = $data['sitemap'] ?? [];
 $settings = $sitemap['settings'] ?? [];
 $files = $sitemap['files'] ?? [];
 $counts = $sitemap['counts'] ?? [];
-$indexing = $sitemap['indexing'] ?? [];
 $runtimeBaseUrl = function_exists('home_url') ? rtrim((string) home_url(), '/') : rtrim((string) SITE_URL, '/');
 $buildRuntimePublicUrl = static function (string $path) use ($runtimeBaseUrl): string {
     return $runtimeBaseUrl . '/' . ltrim($path, '/');
@@ -27,7 +26,7 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
         <div class="row g-2 align-items-center">
             <div class="col">
                 <div class="page-pretitle">SEO</div>
-                <h2 class="page-title">Sitemap &amp; Indexing</h2>
+                <h2 class="page-title">Sitemap &amp; robots.txt</h2>
             </div>
         </div>
     </div>
@@ -157,18 +156,6 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                             </div>
                             <div class="col-md-6">
                                 <label class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="ping_google" value="1" <?= !empty($settings['ping_google']) ? 'checked' : '' ?>>
-                                    <span class="form-check-label">Google pingen</span>
-                                </label>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="ping_bing" value="1" <?= !empty($settings['ping_bing']) ? 'checked' : '' ?>>
-                                    <span class="form-check-label">Bing pingen</span>
-                                </label>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-check">
                                     <input class="form-check-input" type="checkbox" name="image_enabled" value="1" <?= !empty($settings['seo_sitemap_image_enabled']) ? 'checked' : '' ?>>
                                     <span class="form-check-label">`images.xml` aktivieren</span>
                                 </label>
@@ -190,191 +177,28 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
 
         <div class="row g-4">
             <div class="col-lg-7">
-                <div class="card mb-4">
-                    <div class="card-header d-flex align-items-center justify-content-between">
-                        <h3 class="card-title mb-0">IndexNow &amp; Google Submission</h3>
-                        <div class="d-flex flex-wrap gap-2 justify-content-end">
-                            <span class="badge <?= !empty($indexing['indexnow_available']) ? 'bg-success' : 'bg-warning text-dark' ?>">
-                                IndexNow-Key <?= !empty($indexing['indexnow_available']) ? 'bereit' : 'fehlt' ?>
-                            </span>
-                            <span class="badge <?= !empty($indexing['indexnow_key_file_active']) ? 'bg-primary' : 'bg-secondary' ?>">
-                                Keydatei <?= !empty($indexing['indexnow_key_file_active']) ? 'dynamisch aktiv' : 'inaktiv' ?>
-                            </span>
-                            <span class="badge <?= !empty($indexing['indexnow_ready_for_submission']) ? 'bg-success' : 'bg-warning text-dark' ?>">
-                                Prüfung <?= !empty($indexing['indexnow_ready_for_submission']) ? 'ok' : 'offen' ?>
-                            </span>
-                            <span class="badge <?= !empty($indexing['google_access_token_available']) ? 'bg-success' : 'bg-secondary' ?>">
-                                Google-Token <?= !empty($indexing['google_access_token_available']) ? 'gespeichert' : 'fehlt' ?>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <?php if (!empty($indexing['indexnow_key_file_active']) && !empty($indexing['indexnow_key_url'])): ?>
-                            <div class="alert alert-primary" role="status">
-                                <div class="fw-semibold mb-1">IndexNow-Keydatei dynamisch aktiv</div>
-                                <div class="small mb-2">Die Verifizierungsdatei wird automatisch vom Core ausgeliefert und ist erreichbar unter:</div>
-                                <div><a href="<?= htmlspecialchars((string) $indexing['indexnow_key_url']) ?>" target="_blank" rel="noopener noreferrer"><code><?= htmlspecialchars((string) $indexing['indexnow_key_url']) ?></code></a></div>
-                            </div>
-                        <?php endif; ?>
-                        <?php if (!empty($indexing['indexnow_selected_root_file'])): ?>
-                            <div class="alert <?= !empty($indexing['indexnow_selected_root_file_valid']) ? 'alert-success' : 'alert-warning' ?>" role="status">
-                                <div class="fw-semibold mb-1">Physische Root-TXT-Datei</div>
-                                <div class="small mb-2">
-                                    Gewählt: <code><?= htmlspecialchars((string) $indexing['indexnow_selected_root_file']) ?></code>
-                                </div>
-                                <?php if (!empty($indexing['indexnow_selected_root_file_url'])): ?>
-                                    <div>
-                                        <a href="<?= htmlspecialchars((string) $indexing['indexnow_selected_root_file_url']) ?>" target="_blank" rel="noopener noreferrer">
-                                            <code><?= htmlspecialchars((string) $indexing['indexnow_selected_root_file_url']) ?></code>
-                                        </a>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                        <?php if (!empty($indexing['indexnow_validation_errors'])): ?>
-                            <div class="alert alert-warning" role="alert">
-                                <div class="fw-semibold mb-1">IndexNow-Prüfung</div>
-                                <ul class="mb-0 ps-3">
-                                    <?php foreach ((array) $indexing['indexnow_validation_errors'] as $validationError): ?>
-                                        <li><?= htmlspecialchars((string) $validationError) ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
-                        <?php if (!empty($indexing['indexnow_validation_notes'])): ?>
-                            <div class="text-secondary small mb-3">
-                                <?php foreach ((array) $indexing['indexnow_validation_notes'] as $validationNote): ?>
-                                    <div>• <?= htmlspecialchars((string) $validationNote) ?></div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                        <div class="text-secondary small mb-3">
-                            <?php foreach (($indexing['notes'] ?? []) as $note): ?>
-                                <div>• <?= htmlspecialchars((string) $note) ?></div>
-                            <?php endforeach; ?>
-                        </div>
-
-                        <div class="border rounded p-3 mb-3">
-                            <div class="fw-semibold mb-2">Google-Access-Token dauerhaft speichern</div>
-                            <div class="text-secondary small mb-2">
-                                Einmal hinterlegt, wird das Token automatisch für alle Google-Meldungen (inkl. „Kürzlich veröffentlichte Inhalte“) verwendet — eine manuelle Eingabe ist dann nicht mehr nötig. Google-Access-Tokens laufen erfahrungsgemäß nach kurzer Zeit ab und müssen gelegentlich erneuert werden.
-                            </div>
-                            <form method="post" class="row g-2">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                                <input type="hidden" name="action" value="save_google_access_token">
-                                <div class="col-md-8">
-                                    <input class="form-control" type="password" name="google_access_token" aria-label="Google Access-Token" autocomplete="off" placeholder="ya29...">
-                                </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-outline-primary w-100" type="submit">Token speichern</button>
-                                </div>
-                            </form>
-                            <?php if (!empty($indexing['google_access_token_available'])): ?>
-                                <form method="post" class="mt-2" data-cms-confirm="Gespeichertes Google-Token wirklich entfernen?">
-                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                                    <input type="hidden" name="action" value="clear_google_access_token">
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Gespeichertes Token entfernen</button>
-                                </form>
-                            <?php endif; ?>
-                        </div>
-
-                        <form method="post" class="row g-3">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="action" value="submit_indexing_urls">
-                            <div class="col-12">
-                                <label for="seoIndexingUrls" class="form-label">URLs zur Übermittlung</label>
-                                <textarea id="seoIndexingUrls" class="form-control" name="urls" rows="6" placeholder="<?= htmlspecialchars($runtimeBaseUrl) ?>/&#10;<?= htmlspecialchars($runtimeBaseUrl) ?>/blog/beispiel-artikel"></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="submission_target[]" value="indexnow" <?= !empty($indexing['indexnow_available']) ? 'checked' : '' ?>>
-                                    <span class="form-check-label">An IndexNow senden</span>
-                                </label>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="submission_target[]" value="google" <?= !empty($indexing['google_access_token_available']) ? 'checked' : '' ?>>
-                                    <span class="form-check-label">An Google senden</span>
-                                </label>
-                            </div>
-                            <div class="col-12">
-                                <label for="seoIndexingGoogleAccessToken" class="form-label">Google Access-Token (optional)</label>
-                                <input id="seoIndexingGoogleAccessToken" class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
-                                <div class="form-hint">Nur für diese Aktion. Leer lassen, um automatisch das dauerhaft gespeicherte Token zu verwenden<?= !empty($indexing['google_access_token_available']) ? ' (aktuell vorhanden)' : ' (aktuell nicht vorhanden)' ?>.</div>
-                            </div>
-                            <div class="col-12">
-                                <button class="btn btn-primary" type="submit">URLs jetzt übermitteln</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
+                <div class="card h-100">
                     <div class="card-header">
-                        <h3 class="card-title">Kürzlich veröffentlichte Inhalte melden</h3>
+                        <h3 class="card-title">Sitemap bei Suchmaschinen einreichen</h3>
                     </div>
                     <div class="card-body">
-                        <?php $recentContentAnyTargetAvailable = !empty($indexing['indexnow_available']) || !empty($indexing['google_access_token_available']); ?>
-                        <?php if (!$recentContentAnyTargetAvailable): ?>
-                            <div class="alert alert-warning mb-3" role="alert">
-                                Weder IndexNow noch Google sind aktuell konfiguriert. Bitte zuerst unter „Technisches SEO“ einen IndexNow-API-Key oder oben ein Google-Access-Token hinterlegen.
-                            </div>
-                        <?php else: ?>
-                            <div class="text-secondary small mb-3">
-                                Meldet alle veröffentlichten Seiten und Beiträge aus dem gewählten Zeitfenster in einem Schritt an die gewählten Dienste — praktisch nach Importen, Backfills oder Massenänderungen.
-                            </div>
-                        <?php endif; ?>
-                        <form method="post" class="row g-3">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="action" value="submit_recent_content_indexnow">
-                            <div class="col-md-8">
-                                <label for="seoRecentContentRange" class="form-label">Zeitraum</label>
-                                <select id="seoRecentContentRange" class="form-select" name="recent_content_range" <?= !$recentContentAnyTargetAvailable ? 'disabled' : '' ?>>
-                                    <?php foreach ((array) ($indexing['recent_content_ranges'] ?? []) as $rangeKey => $rangeLabel): ?>
-                                        <option value="<?= htmlspecialchars((string) $rangeKey) ?>"><?= htmlspecialchars((string) $rangeLabel) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="recent_content_target[]" value="indexnow" <?= !empty($indexing['indexnow_available']) ? 'checked' : '' ?> <?= empty($indexing['indexnow_available']) ? 'disabled' : '' ?>>
-                                    <span class="form-check-label">An IndexNow melden</span>
-                                </label>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="recent_content_target[]" value="google" <?= !empty($indexing['google_access_token_available']) ? 'checked' : '' ?> <?= empty($indexing['google_access_token_available']) ? 'disabled' : '' ?>>
-                                    <span class="form-check-label">An Google melden</span>
-                                </label>
-                            </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <button class="btn btn-primary w-100" type="submit" <?= !$recentContentAnyTargetAvailable ? 'disabled' : '' ?>>Jetzt melden</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Google: URL aus Index entfernen</h3>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" class="row g-3" data-cms-confirm="URL wirklich bei Google zur Entfernung aus dem Index melden?">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="action" value="delete_google_url">
-                            <div class="col-md-7">
-                                <label for="seoGoogleDeleteUrl" class="form-label">URL</label>
-                                <input id="seoGoogleDeleteUrl" class="form-control" type="url" name="google_delete_url" placeholder="<?= htmlspecialchars($runtimeBaseUrl) ?>/veraltete-seite">
-                            </div>
-                            <div class="col-md-5">
-                                <label for="seoGoogleDeleteAccessToken" class="form-label">Google Access-Token (optional)</label>
-                                <input id="seoGoogleDeleteAccessToken" class="form-control" type="password" name="google_access_token" autocomplete="off" placeholder="ya29...">
-                                <div class="form-hint">Leer lassen, um das dauerhaft gespeicherte Token zu verwenden.</div>
-                            </div>
-                            <div class="col-12">
-                                <button class="btn btn-outline-danger" type="submit">URL bei Google löschen</button>
-                            </div>
-                        </form>
+                        <p class="text-secondary small">
+                            Reichen Sie die Index-Datei einmalig in den Webmaster-Tools ein. Danach rufen die Suchmaschinen sie regelmäßig selbst ab;
+                            einzelne Änderungen meldet IndexNow sofort.
+                        </p>
+                        <div class="mb-3">
+                            <div class="small text-secondary mb-1">Sitemap-Index</div>
+                            <a href="<?= htmlspecialchars($buildRuntimePublicUrl('sitemap.xml')) ?>" target="_blank" rel="noopener noreferrer">
+                                <code><?= htmlspecialchars($buildRuntimePublicUrl('sitemap.xml')) ?></code>
+                            </a>
+                        </div>
+                        <ul class="small mb-3 ps-3">
+                            <li><strong>Google:</strong> Search Console → <em>Sitemaps</em> → URL der Index-Datei hinzufügen.</li>
+                            <li><strong>Bing:</strong> Bing Webmaster Tools → <em>Sitemaps</em> → Sitemap einreichen (gilt auch für Yahoo und DuckDuckGo).</li>
+                            <li><strong>Yandex, Seznam, Naver, Baidu:</strong> jeweils im eigenen Webmaster-Tool unter „Sitemaps“.</li>
+                            <li><code>robots.txt</code> verweist automatisch auf <code>sitemap.xml</code> – auch ohne Einreichung wird die Sitemap gefunden.</li>
+                        </ul>
+                        <a class="btn btn-outline-primary" href="/admin/seo-search-engines">Suchmaschinen &amp; IndexNow verwalten</a>
                     </div>
                 </div>
             </div>
@@ -421,8 +245,9 @@ $newsSitemapEnabled = !empty($settings['seo_sitemap_news_enabled']);
                         </div>
                         <hr>
                         <div class="small text-secondary">
-                            Aktive Endpunkte:
-                            <strong><?= htmlspecialchars(implode(', ', (array) ($indexing['engines'] ?? []))) ?></strong>
+                            Suchmaschinen finden das Bundle über die <code>Sitemap:</code>-Zeile der <code>robots.txt</code> und über die Webmaster-Tools.
+                            Den früheren Sitemap-Ping haben Google (2023) und Bing (2022) eingestellt – für sofortige Benachrichtigungen dient IndexNow im Bereich
+                            <a href="/admin/seo-search-engines">Suchmaschinen</a>.
                         </div>
                     </div>
                 </div>
