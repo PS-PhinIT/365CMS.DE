@@ -130,14 +130,15 @@ class UserService {
         }
         
         // Sanitize & Hash
+        $username = Security::sanitize($data['username'], 'username');
         $clean_data = [
-            'username' => Security::sanitize($data['username'], 'username'),
+            'username' => $username,
             'email' => Security::sanitize($data['email'], 'email'),
             'password' => Security::hashPassword($data['password']),
+            // users.display_name ist NOT NULL ohne Default – ohne Wert scheitert das INSERT im SQL-Strict-Mode.
+            'display_name' => $this->resolveDisplayName($data, $username),
             'role' => $this->normalizeRole($data['role'] ?? 'member'),
-            'status' => in_array($data['status'] ?? 'active', ['active', 'inactive', 'banned']) 
-                       ? $data['status'] 
-                       : 'active'
+            'status' => $this->normalizeStatus($data['status'] ?? null)
         ];
         
         // Insert
@@ -243,8 +244,7 @@ class UserService {
         
         // Status
         if (isset($data['status'])) {
-            $allowed_statuses = ['active', 'inactive', 'banned'];
-            if (in_array($data['status'], $allowed_statuses)) {
+            if (is_string($data['status']) && array_key_exists($data['status'], $this->getAvailableStatuses())) {
                 $update_data['status'] = $data['status'];
             }
         }
@@ -488,6 +488,7 @@ class UserService {
             'active_users' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE status = 'active'"),
             'inactive_users' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE status = 'inactive'"),
             'banned_users' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE status = 'banned'"),
+            'unverified_users' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE status = 'unverified'"),
             'admins' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE role = 'admin'"),
             'editors' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE role = 'editor'"),
             'authors' => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users WHERE role = 'author'"),
@@ -861,8 +862,40 @@ class UserService {
         return [
             'active' => 'Aktiv',
             'inactive' => 'Inaktiv',
-            'banned' => 'Gesperrt'
+            'banned' => 'Gesperrt',
+            EmailVerificationService::STATUS_UNVERIFIED => 'E-Mail unbestätigt',
         ];
+    }
+
+    private function normalizeStatus(mixed $status): string {
+        return is_string($status) && array_key_exists($status, $this->getAvailableStatuses()) ? $status : 'active';
+    }
+
+    /**
+     * Anzeigename für neue Konten: explizit übergeben → Vor- und Nachname → Benutzername (max. 100 Zeichen).
+     */
+    private function resolveDisplayName(array $data, string $username): string {
+        $text = static function (mixed $value): string {
+            if (!is_scalar($value)) {
+                return '';
+            }
+
+            return trim(preg_replace('/[\x00-\x1F\x7F]+/u', '', strip_tags((string) $value)) ?? '');
+        };
+
+        $candidates = [
+            $text($data['display_name'] ?? ''),
+            trim($text($data['first_name'] ?? '') . ' ' . $text($data['last_name'] ?? '')),
+            $username,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate !== '') {
+                return function_exists('mb_substr') ? mb_substr($candidate, 0, 100, 'UTF-8') : substr($candidate, 0, 100);
+            }
+        }
+
+        return 'Benutzer';
     }
 
     private function normalizeRole(string $role): string {

@@ -61,8 +61,10 @@ class Router
             $uri = substr($uri, 0, $pos);
         }
 
-        if (SITE_URL_PATH !== '/') {
-            $uri = str_replace(SITE_URL_PATH, '', $uri);
+        // Nur das Präfix des Installationsverzeichnisses entfernen, nicht jedes Vorkommen im Pfad.
+        $basePath = rtrim((string) SITE_URL_PATH, '/');
+        if ($basePath !== '' && ($uri === $basePath || str_starts_with($uri, $basePath . '/'))) {
+            $uri = substr($uri, strlen($basePath));
         }
 
         return '/' . trim($uri, '/');
@@ -315,7 +317,7 @@ class Router
             return false;
         }
 
-        $exempt = ['/login', '/logout', '/cms-login', '/cms-password-forgot', '/forgot-password', '/mfa-challenge', '/mfa-setup', '/mfa-disable', '/health'];
+        $exempt = ['/login', '/logout', '/cms-login', '/cms-password-forgot', '/forgot-password', '/cms-verify-email', '/mfa-challenge', '/mfa-setup', '/mfa-disable', '/health'];
         if (in_array($routingUri, $exempt, true)) {
             return false;
         }
@@ -712,7 +714,7 @@ class Router
             }
         }
 
-        if (in_array($routingUri, ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/logout', '/mfa-challenge', '/mfa-setup', '/order'], true)) {
+        if (in_array($routingUri, ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/cms-verify-email', '/logout', '/mfa-challenge', '/mfa-setup', '/order'], true)) {
             $cache->sendResponseHeaders('private');
             return;
         }

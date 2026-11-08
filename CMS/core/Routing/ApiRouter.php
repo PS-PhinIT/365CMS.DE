@@ -524,7 +524,7 @@ final class ApiRouter
             $where[] = 'u.role = ?';
             $params[] = $role;
         }
-        if ($status !== '' && in_array($status, ['active', 'inactive', 'banned'], true)) {
+        if ($status !== '' && in_array($status, ['active', 'inactive', 'banned', Services\EmailVerificationService::STATUS_UNVERIFIED], true)) {
             $where[] = 'u.status = ?';
             $params[] = $status;
         }

@@ -132,6 +132,16 @@ final class SiteTableService
         return $page;
     }
 
+    /**
+     * Prüft ohne Seitenaufbau, ob eine Domain als Hub-Domain hinterlegt ist.
+     */
+    public function isHubDomain(string $domain): bool
+    {
+        $table = $this->repository->getHubTableByDomain($domain);
+
+        return $table !== null && $this->isHubTable($table);
+    }
+
     public function getHubPageByDomain(string $domain, string $locale = 'de'): ?array
     {
         $table = $this->repository->getHubTableByDomain($domain);

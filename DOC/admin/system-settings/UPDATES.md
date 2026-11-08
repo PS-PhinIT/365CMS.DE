@@ -1,11 +1,11 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Updates
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/updates` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_updates`
 
 ## English (summary)
 
-`/admin/updates` (`CMS/admin/updates.php` → `CMS/admin/modules/system/UpdatesModule.php` → `CMS\Services\UpdateService`, view `CMS/admin/views/system/updates.php`) checks and installs updates for the core, plugins and the active theme, and runs pending database migrations (`DatabaseUpdateRunner`). Packages must come from allow-listed hosts and carry a SHA-256 checksum; core updates preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/` and `uploads/`. Actions: `check_updates`, `run_database_update`, `install_core`, `install_plugin`, `install_theme`.
+`/admin/updates` (`CMS/admin/updates.php` → `CMS/admin/modules/system/UpdatesModule.php` → `CMS\Services\UpdateService`, view `CMS/admin/views/system/updates.php`) checks and installs updates for the core, plugins and the active theme, and runs pending database migrations (`DatabaseUpdateRunner`). Packages must come from allow-listed hosts and carry a SHA-256 checksum; core updates preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/` and `uploads/`. Actions: `check_updates`, `run_database_update`, `install_core`, `install_plugin`, `install_theme`. Since 4.0.0, a core manifest with `"critical": true` is shown as a red "critical update" alert.
 
 ## Deutsch
 
@@ -13,7 +13,7 @@
 
 | Bereich | Inhalt |
 |---|---|
-| Core | installierte Version (`CMS\Version::CURRENT`, derzeit `3.5.6`), verfügbare Version laut Update-Quelle, Release-Notizen, kritisch ja/nein |
+| Core | installierte Version (`CMS\Version::CURRENT`, derzeit `4.0.0`), verfügbare Version laut Update-Quelle, Release-Notizen, kritisch ja/nein (bei `"critical": true` roter Hinweis „Kritisches Update verfügbar“, seit 4.0.0) |
 | Datenbank | installierte und Ziel-Schema-Version (`SchemaManager::SCHEMA_VERSION = v23`), Downgrade-Erkennung |
 | Plugins | installierte vs. verfügbare Versionen aus der Plugin-Registry |
 | Theme | aktives Theme vs. Marktplatz-Version |
@@ -43,16 +43,18 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
 {
   "slug": "365cms-core",
   "type": "core",
-  "version": "3.5.6",
+  "version": "4.0.0",
   "min_php": "8.4.1",
   "released": "2026-11-08",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.6-update.zip",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
   "checksum_sha256": "<64 Hex-Zeichen>",
   "notes": "…",
   "critical": false
 }
 ```
+
+`checksum_sha256` (alternativ `sha256`) ist für die automatische Installation Pflicht; ohne gültige Prüfsumme bietet die Seite nur die manuelle Installation an. `critical` kennzeichnet Sicherheitsupdates (`true`, `1`, `"yes"` oder `"ja"`; fehlend, Listen und andere Werte gelten als „nein“).
 
 ### Installation (`install_core`, `install_plugin`, `install_theme`)
 

@@ -1092,8 +1092,8 @@ class CMS_Importer_Service
      * Lädt alle Bilder eines Posts herunter und registriert sie in cms_media.
      * Zielverzeichnis: uploads/images/{slug}/
      *
-     * @param  string[] $urls  Absolute Bild-URLs
-     * @return string[]        Lokale Dateipfade der erfolgreich geladenen Bilder
+     * @param  array<int, array{url: string, alt?: mixed, caption?: mixed, title?: mixed}> $candidates  Bild-Kandidaten mit absoluter URL und Metadaten (`collect_media_candidates()`)
+     * @return array{url_map: array<string, string>, featured_local_url: string}
      */
     private function download_media_assets(\CMS\Database $db, string $p, string $contextType, string $slug, array $candidates, string $featuredUrl): array
     {
@@ -1182,7 +1182,19 @@ class CMS_Importer_Service
         }
 
         $body = (string) ($response['body'] ?? '');
-        return $body !== '' ? $body : null;
+        if ($body === '') {
+            return null;
+        }
+
+        // Nur echte Rasterbilder übernehmen: SVG (Skript-fähig) und als Bild getarnte Inhalte verwerfen.
+        $imageInfo = @getimagesizefromstring($body);
+        $sniffedMime = is_array($imageInfo) ? strtolower((string) ($imageInfo['mime'] ?? '')) : '';
+        if (!in_array($sniffedMime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/bmp', 'image/x-ms-bmp'], true)) {
+            error_log('CMS_Importer: Remote-Datei ist kein zulässiges Rasterbild – URL: ' . $url);
+            return null;
+        }
+
+        return $body;
     }
 
     /**
@@ -2509,7 +2521,7 @@ class CMS_Importer_Service
         }
 
         $path = strtolower((string) parse_url($url, PHP_URL_PATH));
-        return preg_match('/\.(jpe?g|png|gif|webp|bmp|svg|avif)(?:$|\?)/i', $path) === 1;
+        return preg_match('/\.(jpe?g|png|gif|webp|bmp|avif)(?:$|\?)/i', $path) === 1;
     }
 
     private function default_seo_payload(): array

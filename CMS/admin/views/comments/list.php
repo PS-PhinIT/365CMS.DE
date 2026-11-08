@@ -389,4 +389,3 @@ $actionClass = static function (string $variant): string {
     </div>
 </div>
 <?php endif; ?>
-

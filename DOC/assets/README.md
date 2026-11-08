@@ -1,5 +1,5 @@
 # 365CMS Asset-Dokumentation
-> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Status:** Aktuell | **Update:** 2026-10-04
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Aktuell | **Update:** 2026-11-08
 
 ## Inhaltsverzeichnis
 - <a>Tabellarische Übersicht</a>
@@ -25,16 +25,16 @@
 | Auth | `bacon-qr-code` + `dasprid-enum` | `3.1.1` / `1.0.7` | lokale TOTP-QR-Codes als SVG (kein externer QR-Dienst, kein GD) | Auth / Member |
 | Auth | `webauthn` | gebündelter Snapshot | Passkeys | Auth |
 | Mail | `mailer` | `8.1.7` | Mail-Versand | System |
-| Mail | `mime` | `8.1.7` | MIME-Objekte / Anhänge | System |
+| Mail | `mime` | `8.1.10` | MIME-Objekte / Anhänge | System |
 | Mail | `egulias-email-validator` + `doctrine-lexer` | `4.0.4` / `3.0.3` | RFC-Adressvalidierung (Pflicht für `Mime\Address` / SMTP) | System |
 | Search | `tntsearch` | `5.3.0` | Volltextsuche | Suche |
 | SEO | `melbahja-seo` | gebündelter Snapshot | SEO-Helfer | SEO |
 | Security | `htmlpurifier` | gebündelter Snapshot | XSS-Schutz | System |
-| Security | `dompurify` + `js/cms-csp-runtime.js` | `3.4.16` | Trusted-Types-`default`-Policy, Style-Nonce für dynamische `<style>` | Admin / Member / Frontend |
+| Security | `dompurify` + `js/cms-csp-runtime.js` | `3.4.17` | Trusted-Types-`default`-Policy, Style-Nonce für dynamische `<style>` | Admin / Member / Frontend |
 | i18n | `translation` | `8.1.5` | Übersetzungen | System |
-| i18n | `yaml` | `8.1.8` | Parser für `CMS/lang/*.yaml` | System |
+| i18n | `yaml` | `8.1.11` | Parser für `CMS/lang/*.yaml` | System |
 | AI | `symfony/ai-platform` | `0.14.1` (nur Basis, ohne `Bridge/`) | AI-Plattform-Grundvertrag / Core-Adapter-Basis | System / AI Services |
-| AI (transitiv) | `serializer`, `property-info`, `property-access`, `type-info`, `uid`, `string`, `event-dispatcher` | `8.1.x` (Stand Symfony 8.1.8) | Abhängigkeiten der AI Platform | Transitiv |
+| AI (transitiv) | `serializer`, `property-info`, `property-access`, `type-info`, `uid`, `string`, `event-dispatcher` | `8.1.x` (Stand Symfony 8.1.8, `serializer` 8.1.11) | Abhängigkeiten der AI Platform | Transitiv |
 | AI (transitiv) | `oskarstark-enum-helper`, `phpdocumentor-*`, `phpstan-phpdoc-parser`, `webmozart-assert`, `doctrine-deprecations` | aktuelle Stable | Abhängigkeiten der AI Platform | Transitiv |
 | Util | `Carbon` | `3.14.2` (`src/Carbon` + `lazy/Carbon`) | Datum / Zeit | System |
 | Util | `clock` + `psr/Clock` | `8.1.0` / `1.0.0` | Clock-Abstraktion für Carbon / AI | Transitiv |
@@ -67,7 +67,7 @@ Hinweise zum Abgleich:
 | UI | `@tabler/core` | `CMS/assets/tabler/` | 1.6.1 | 1.6.1 | MIT | [tabler.io](https://tabler.io/) | [tabler/tabler](https://github.com/tabler/tabler) |
 | UI | `@tabler/icons-webfont` | `CMS/assets/tabler-icons/` | 3.48.0 | 3.48.0 | MIT | [tabler.io/icons](https://tabler.io/icons) | [tabler/tabler-icons](https://github.com/tabler/tabler-icons) |
 | UI | `photoswipe` | `CMS/assets/photoswipe/` | 5.4.4 | 5.4.4 | MIT | [photoswipe.com](https://photoswipe.com/) | [dimsemenov/PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe) |
-| Security | `dompurify` | `CMS/assets/dompurify/` | 3.4.16 | 3.4.16 | Apache-2.0 / MPL-2.0 | [cure53.de/purify](https://cure53.de/purify) | [cure53/DOMPurify](https://github.com/cure53/DOMPurify) |
+| Security | `dompurify` | `CMS/assets/dompurify/` | 3.4.17 | 3.4.17 | Apache-2.0 / MPL-2.0 | [cure53.de/purify](https://cure53.de/purify) | [cure53/DOMPurify](https://github.com/cure53/DOMPurify) |
 | Editor | `suneditor` | `CMS/assets/suneditor/` | 3.3.3 | 3.3.3 | MIT | [suneditor.com](https://suneditor.com/) | [JiHong88/suneditor](https://github.com/JiHong88/suneditor) |
 | Auth | `firebase/php-jwt` | `CMS/assets/php-jwt/` | 7.2.1 | 7.2.1 | BSD-3-Clause | [packagist.org/packages/firebase/php-jwt](https://packagist.org/packages/firebase/php-jwt) | [googleapis/php-jwt](https://github.com/googleapis/php-jwt) |
 | Auth | `directorytree/ldaprecord` | `CMS/assets/ldaprecord/` | 4.0.8 | 4.0.8 | MIT | [ldaprecord.com](https://ldaprecord.com/) | [DirectoryTree/LdapRecord](https://github.com/DirectoryTree/LdapRecord) |
@@ -76,7 +76,7 @@ Hinweise zum Abgleich:
 | Auth | `dasprid/enum` | `CMS/assets/dasprid-enum/` | 1.0.7 | 1.0.7 | BSD-2-Clause | [packagist.org/packages/dasprid/enum](https://packagist.org/packages/dasprid/enum) | [DASPRiD/Enum](https://github.com/DASPRiD/Enum) |
 | Auth | `lbuchs/webauthn` | `CMS/assets/webauthn/` | Snapshot | 2.2.0 | MIT | [packagist.org/packages/lbuchs/webauthn](https://packagist.org/packages/lbuchs/webauthn) | [lbuchs/WebAuthn](https://github.com/lbuchs/WebAuthn) |
 | Mail | `symfony/mailer` | `CMS/assets/mailer/` | 8.1.7 | 8.1.7 | MIT | [symfony.com/components/Mailer](https://symfony.com/components/Mailer) | [symfony/mailer](https://github.com/symfony/mailer) |
-| Mail | `symfony/mime` | `CMS/assets/mime/` | 8.1.7 | 8.1.7 | MIT | [symfony.com/components/Mime](https://symfony.com/components/Mime) | [symfony/mime](https://github.com/symfony/mime) |
+| Mail | `symfony/mime` | `CMS/assets/mime/` | 8.1.10 | 8.1.10 | MIT | [symfony.com/components/Mime](https://symfony.com/components/Mime) | [symfony/mime](https://github.com/symfony/mime) |
 | Mail | `egulias/email-validator` | `CMS/assets/egulias-email-validator/` | 4.0.4 | 4.0.4 | MIT | [packagist.org/packages/egulias/email-validator](https://packagist.org/packages/egulias/email-validator) | [egulias/EmailValidator](https://github.com/egulias/EmailValidator) |
 | Mail | `doctrine/lexer` | `CMS/assets/doctrine-lexer/` | 3.0.3 | 3.0.3 | MIT | [doctrine-project.org/projects/lexer.html](https://www.doctrine-project.org/projects/lexer.html) | [doctrine/lexer](https://github.com/doctrine/lexer) |
 | Search | `teamtnt/tntsearch` | `CMS/assets/tntsearchsrc/`, `CMS/assets/tntsearchhelper/` | 5.3.0 | 5.3.0 | MIT | [packagist.org/packages/teamtnt/tntsearch](https://packagist.org/packages/teamtnt/tntsearch) | [teamtnt/tntsearch](https://github.com/teamtnt/tntsearch) |
@@ -84,9 +84,9 @@ Hinweise zum Abgleich:
 | Security | `ezyang/htmlpurifier` | `CMS/assets/htmlpurifier/` | 4.19.0 | 4.19.1 | LGPL-2.1-or-later | [htmlpurifier.org](https://htmlpurifier.org/) | [ezyang/htmlpurifier](https://github.com/ezyang/htmlpurifier) |
 | Cron | `poliander/cron` | `CMS/assets/cron/` | 3.3.1 | 3.3.1 | GPL-3.0-or-later | [packagist.org/packages/poliander/cron](https://packagist.org/packages/poliander/cron) | [poliander/cron](https://github.com/poliander/cron) |
 | i18n | `symfony/translation` | `CMS/assets/translation/` | 8.1.5 | 8.1.5 | MIT | [symfony.com/components/Translation](https://symfony.com/components/Translation) | [symfony/translation](https://github.com/symfony/translation) |
-| i18n | `symfony/yaml` | `CMS/assets/yaml/` | 8.1.8 | 8.1.8 | MIT | [symfony.com/components/Yaml](https://symfony.com/components/Yaml) | [symfony/yaml](https://github.com/symfony/yaml) |
+| i18n | `symfony/yaml` | `CMS/assets/yaml/` | 8.1.11 | 8.1.11 | MIT | [symfony.com/components/Yaml](https://symfony.com/components/Yaml) | [symfony/yaml](https://github.com/symfony/yaml) |
 | AI | `symfony/ai-platform` | `CMS/assets/ai-platform/` | 0.14.1 | 0.14.1 | MIT | [ai.symfony.com](https://ai.symfony.com/) | [symfony/ai-platform](https://github.com/symfony/ai-platform) |
-| AI (transitiv) | `symfony/serializer` | `CMS/assets/serializer/` | 8.1.8 | 8.1.8 | MIT | [symfony.com/components/Serializer](https://symfony.com/components/Serializer) | [symfony/serializer](https://github.com/symfony/serializer) |
+| AI (transitiv) | `symfony/serializer` | `CMS/assets/serializer/` | 8.1.11 | 8.1.11 | MIT | [symfony.com/components/Serializer](https://symfony.com/components/Serializer) | [symfony/serializer](https://github.com/symfony/serializer) |
 | AI (transitiv) | `symfony/property-info` | `CMS/assets/property-info/` | 8.1.8 | 8.1.8 | MIT | [symfony.com/components/PropertyInfo](https://symfony.com/components/PropertyInfo) | [symfony/property-info](https://github.com/symfony/property-info) |
 | AI (transitiv) | `symfony/property-access` | `CMS/assets/property-access/` | 8.1.4 | 8.1.4 | MIT | [symfony.com/components/PropertyAccess](https://symfony.com/components/PropertyAccess) | [symfony/property-access](https://github.com/symfony/property-access) |
 | AI (transitiv) | `symfony/type-info` | `CMS/assets/type-info/` | 8.1.8 | 8.1.8 | MIT | [symfony.com/components/TypeInfo](https://symfony.com/components/TypeInfo) | [symfony/type-info](https://github.com/symfony/type-info) |
@@ -251,7 +251,7 @@ Abgleich mit `CMS/assets/`, `CMS/assets/autoload.php` und `CMS/core/VendorRegist
 
 | Library | Verifizierter Stand | Einbindung im Code |
 |---|---|---|
-| `dompurify` | 3.4.16 (`purify.min.js`) | `cms_csp_runtime_tags()` in `includes/functions/options-runtime.php` zusammen mit `js/cms-csp-runtime.js` |
+| `dompurify` | 3.4.17 (`purify.min.js`) | `cms_csp_runtime_tags()` in `includes/functions/options-runtime.php` zusammen mit `js/cms-csp-runtime.js` |
 | `editorjs` | 2.31.7 + 27 Plugin-UMDs | `EditorJsService` / `EditorJsAssetService` |
 | `tabler` | 1.6.1 (`tabler.min.css`/`tabler.min.js` ohne `sourceMappingURL`-Kommentar) | Admin-/Member-Partials, `js/tabler-bootstrap-bridge.js` |
 | `photoswipe` | 5.4.4 (ESM-Build) | `Bootstrap.php` (Customizer `performance.enable_photoswipe`), `js/photoswipe-init.js` |
@@ -263,8 +263,8 @@ Abgleich mit `CMS/assets/`, `CMS/assets/autoload.php` und `CMS/core/VendorRegist
 | `ldaprecord` | 4.0.8 | `Auth/LDAP/LdapAuthProvider.php` |
 | `php-jwt` | 7.2.1 | `Services/JwtService.php` (von keiner Core-Route genutzt) |
 | `melbahja-seo` | Snapshot | `SeoSchemaRenderer`, `SitemapService`, `IndexingService`, SEO-Suite |
-| `mailer` / `mime` | 8.1.7 | `MailService` |
-| `translation` / `yaml` | 8.1.5 / 8.1.8 | `TranslationService` (Kataloge `CMS/lang/*.yaml`) |
+| `mailer` / `mime` | 8.1.7 / 8.1.10 | `MailService` |
+| `translation` / `yaml` | 8.1.5 / 8.1.11 | `TranslationService` (Kataloge `CMS/lang/*.yaml`) |
 | `tntsearch` | 5.3.0 | `SearchService` (Index `cache/search/`); die Seitensuche `/search` nutzt seit 3.4.06 `SiteSearchService` |
 | `Carbon` | 3.14.2 | `time_ago()` in `includes/functions/redirects-auth.php` |
 | `suneditor` | 3.3.3 | `EditorService`, nur bei `setting_editor_type = suneditor` |

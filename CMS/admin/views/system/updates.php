@@ -182,13 +182,17 @@ if (!function_exists('cms_admin_updates_render_preflight_badge')) {
         <div class="card-body">
             <?php if (!empty($core['update_available'])): ?>
                 <?php
+                $coreUpdateCritical = !empty($core['critical']);
                 $coreUpdateDetails = [];
+                if ($coreUpdateCritical) {
+                    $coreUpdateDetails[] = 'Der Herausgeber stuft dieses Update als kritisch ein (Sicherheitskorrekturen). Bitte zeitnah installieren.';
+                }
                 if (!empty($core['changelog'])) {
                     $coreUpdateDetails[] = cms_truncate_text((string) $core['changelog'], 200, '');
                 }
                 $alertData = [
-                    'type' => 'warning',
-                    'message' => 'Neues Update verfügbar: Version ' . (string) ($core['latest_version'] ?? ''),
+                    'type' => $coreUpdateCritical ? 'danger' : 'warning',
+                    'message' => ($coreUpdateCritical ? 'Kritisches Update verfügbar: Version ' : 'Neues Update verfügbar: Version ') . (string) ($core['latest_version'] ?? ''),
                     'details' => $coreUpdateDetails,
                 ];
                 $alertDismissible = false;

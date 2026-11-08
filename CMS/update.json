@@ -2,12 +2,12 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "3.5.6",
+  "version": "4.0.0",
   "min_php": "8.4.1",
   "released": "2026-11-08",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-3.5.6-update.zip",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "335eda89348adc92728a583ff85ec8096d06c980e3dc17fccfefbc97534e094f",
-  "notes": "Release-Stand 3.5.6: Neuer SEO-Bereich „Suchmaschinen“ bündelt IndexNow, Google Search Console, Google Indexing API und die Website-Verifizierung für Google, Bing, Yandex, Seznam, Naver und Baidu. Der IndexNow-Key lässt sich direkt in der Oberfläche erzeugen und als Keydatei im Web-Root ablegen; Meldungen gehen gemäß Protokoll gebündelt an api.indexnow.org, optional automatisch beim Speichern und per stündlichem Cron. Der abgeschaltete Sitemap-Ping entfällt. Korrigiert: noindex/nofollow ließ sich im Editor nicht speichern. Datenbankschema bleibt v23.",
-  "critical": false
+  "checksum_sha256": "39e0209e534665e1c4e1985e606eeef336ff81cba55ebf2f78db9e72566440e4",
+  "notes": "Release-Stand 4.0.0: Sicherheits- und Korrekturrelease nach dem Folgeaudit vom 08.11.2026 – bitte zeitnah installieren. Behoben u. a.: manipulierbarer Host-Header in Script- und Asset-URLs (Cache-Poisoning), MFA-Einrichtung ohne Passwort, Zugangsgeheimnisse im DSGVO-Export, umgehbare Installer-Sperre, SVG-Import über den WordPress-Importer (gespeichertes XSS), Plugin-Dashboards mit unbekannter Capability und Passkey-Anmeldungen ohne zweiten Faktor. Aktualisiert: DOMPurify 3.4.17, symfony/mime 8.1.10, symfony/yaml 8.1.11, symfony/serializer 8.1.11. Die Option „E-Mail-Verifizierung erzwingen“ wirkt jetzt (Bestätigungslink bei der Registrierung). Korrigiert: Benutzer anlegen im Adminbereich und die Kennzeichnung kritischer Updates. Datenbankschema bleibt v23.",
+  "critical": true
 }

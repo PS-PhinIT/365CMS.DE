@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer- & Auth-Einstellungen
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/user-settings` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_user_settings`
 
 ## English (summary)
@@ -8,6 +8,7 @@
 `/admin/user-settings` (`CMS/admin/user-settings.php` → `CMS/admin/modules/users/UserSettingsModule.php` → `CMS/admin/views/users/settings.php`) controls registration and shows the technical state of all authentication providers.
 
 - Database settings: `registration_enabled`, `member_registration_enabled`, `member_email_verification`, `member_default_role`.
+- Since 4.0.0, `member_email_verification` is enforced: new registrations get the status `unverified` and a confirmation link (`/cms-verify-email`, valid for 48 hours, single use). They can sign in only after confirming. A completed password reset also confirms the address.
 - Read-only status: login protection (`MAX_LOGIN_ATTEMPTS`, `LOGIN_TIMEOUT`), password policy (12 characters, upper/lower case, digit, special character), session lifetimes, providers (password, TOTP, backup codes, passkeys/WebAuthn, LDAP), JWT.
 - Action `sync_ldap` imports up to 250 directory users.
 - Provider credentials (LDAP, JWT, SMTP) are constants in `CMS/config/app.php`, never stored in the database.
@@ -20,8 +21,23 @@
 |---|---|---|---|
 | Globale Benutzerregistrierung | `registration_enabled` | aus | Öffentliche Registrierung (Standardpfad `/cms-register`, `/register` leitet weiter; Pfade konfigurierbar unter CMS-Loginseite) |
 | Registrierung im Member-Bereich | `member_registration_enabled` | an | Registrierungseinstieg im Member-Kontext |
-| E-Mail-Verifizierung erzwingen | `member_email_verification` | aus | Neue Konten müssen den Bestätigungslink anklicken |
+| E-Mail-Verifizierung erzwingen | `member_email_verification` | aus | Neue Registrierungen müssen den Bestätigungslink aus der Mail öffnen, bevor sie sich anmelden können (seit 4.0.0 durchgesetzt, vorher ohne Wirkung). Bestehende Konten bleiben unverändert; siehe [E-Mail-Verifizierung](#e-mail-verifizierung-seit-400) |
 | Standardrolle neuer Mitglieder | `member_default_role` | `member` | Nur Rollen ohne Adminrechte wählbar (`UserService::resolveRegistrationRole()`) |
+
+### E-Mail-Verifizierung (seit 4.0.0)
+
+Umgesetzt in `CMS/core/Services/EmailVerificationService.php`.
+
+1. **Registrierung:** Ist die Option an, legt `Auth::register()` das Konto mit dem Status `unverified` an und sendet eine Bestätigungsmail an die angegebene Adresse.
+2. **Link:** `/cms-verify-email?uid=<id>&token=<64 Hex-Zeichen>` (englische Anfragen mit `/en`-Präfix), 48 Stunden gültig und nur einmal verwendbar. In der Datenbank liegt nur der SHA-256-Hash des Tokens (`user_meta` `email_verification_token`, Ablauf in `email_verification_expires`).
+3. **Bestätigung:** Der Link setzt den Status auf `active`, löscht das Token, speichert `email_verified_at`, schreibt den Audit-Eintrag `auth.email_verified` und löst den Hook `user_email_verified` (Parameter: Benutzer-ID) aus. Anschließend leitet er mit Hinweis auf die Anmeldeseite.
+4. **Anmeldung vor der Bestätigung:** Mit richtigem Passwort erscheint der Hinweis „E-Mail-Adresse noch nicht bestätigt“, und ein neuer Link wird gesendet (höchstens 3 Mails je Konto und Stunde; der alte Link wird ungültig). Mit falschem Passwort bleibt es bei der allgemeinen Fehlermeldung.
+5. **Passwort vergessen:** Funktioniert auch für unbestätigte Konten. Ein abgeschlossener Reset belegt den Zugriff auf das Postfach und aktiviert das Konto. So kann niemand eine fremde Adresse dauerhaft blockieren.
+6. **Rate-Limit:** höchstens 10 Bestätigungsversuche je IP in 15 Minuten.
+
+Unbestätigte Konten erscheinen in der Benutzerliste mit dem Status „E-Mail unbestätigt“ (Filter `?status=unverified`, Zähler in der Kopfzeile). Freischalten ohne Link: Status auf `active` setzen oder Sammelaktion *Aktivieren*. Wird die Option ausgeschaltet, sind neue Konten sofort aktiv; bereits unbestätigte Konten bleiben unbestätigt, können ihren Link aber weiter nutzen.
+
+Voraussetzung ist ein funktionierender Mailversand. Bei aktiver Mail-Warteschlange muss der Cron laufen.
 
 ### Login-Schutz und Passwortrichtlinie (Anzeige)
 

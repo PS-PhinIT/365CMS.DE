@@ -377,9 +377,11 @@ final class CmsAuthPageService
         Security::recordDbRateLimitAttempt($clientIp, 'forgot_password_request_account', $normalizedEmail);
 
         try {
+            // Unbestätigte Konten dürfen ebenfalls zurücksetzen: Der Link geht an dieselbe Adresse und
+            // bestätigt sie damit (sonst bliebe eine fremd registrierte Adresse dauerhaft blockiert).
             $user = $this->db->get_row(
-                "SELECT id, email FROM {$this->prefix}users WHERE email = ? AND status = 'active' LIMIT 1",
-                [$email]
+                "SELECT id, email FROM {$this->prefix}users WHERE email = ? AND status IN ('active', ?) LIMIT 1",
+                [$email, EmailVerificationService::STATUS_UNVERIFIED]
             );
 
             if ($user !== null && !empty($user->email)) {
@@ -508,6 +510,7 @@ final class CmsAuthPageService
             $passwordHash = Security::instance()->hashPassword($password);
             $this->db->execute("UPDATE {$this->prefix}users SET password = ? WHERE email = ?", [$passwordHash, (string) $row->email]);
             $this->db->execute("DELETE FROM {$this->prefix}password_resets WHERE email = ?", [(string) $row->email]);
+            EmailVerificationService::getInstance()->markVerifiedByEmail((string) $row->email);
             // Bestehende Sitzungen werden über den Passwort-Fingerprint ungültig (Auth::checkSession());
             // die Einträge der Sitzungsübersicht gleich mit entfernen.
             $this->db->execute(

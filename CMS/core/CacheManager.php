@@ -17,7 +17,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/** @implements CacheInterface */
 class CacheManager implements CacheInterface
 {
     private static ?self $instance = null;

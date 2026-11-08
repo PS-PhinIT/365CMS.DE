@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/users` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_users`
 
 ## English (summary)
@@ -9,9 +9,10 @@ User accounts are managed at `/admin/users` (`CMS/admin/users.php` → `CMS/admi
 
 - Views: `list` (filters `role`, `status`, `q`, pagination `page`) and `edit`.
 - Actions: `save`, `delete`, `bulk` (`activate`, `deactivate`, `delete`, `hard_delete`).
-- Statuses: `active`, `inactive`, `banned`.
+- Statuses: `active`, `inactive`, `banned`, `unverified` (e-mail address not confirmed yet, since 4.0.0; see [AUTH-SETTINGS.md](AUTH-SETTINGS.md#e-mail-verifizierung-seit-400)).
 - Deleting is **permanent** (single delete and both bulk delete variants call `UserService::deleteUser($id, true)`). Use `deactivate` to keep the account.
-- The own account can never be deleted or changed by a bulk action.
+- The own account can never be deleted or changed by a bulk action. Since 4.0.0, the edit form also refuses to demote, deactivate or ban it.
+- New accounts get a display name from first and last name, otherwise the username. Before 4.0.0, creating users failed on MySQL/MariaDB in strict mode.
 
 ## Deutsch
 
@@ -27,18 +28,19 @@ User accounts are managed at `/admin/users` (`CMS/admin/users.php` → `CMS/admi
 
 ### Liste
 
-- **Filter:** Rolle (`?role=`), Status (`?status=active|inactive|banned`), Suche (`?q=` Benutzername, E-Mail, Name), Seite (`?page=`).
+- **Filter:** Rolle (`?role=`), Status (`?status=active|inactive|banned|unverified`), Suche (`?q=` Benutzername, E-Mail, Name), Seite (`?page=`).
 - Spalten: Benutzer, E-Mail, Rolle, Status, Gruppen, letzter Login, Registrierung.
+- Die Kopfzeile zählt unbestätigte Konten („N E-Mail unbestätigt“), sobald es welche gibt.
 - **Sammelaktionen:**
 
 | `bulk_action` | Wirkung |
 |---|---|
-| `activate` | Status `active` |
+| `activate` | Status `active` (schaltet auch unbestätigte Konten ohne Bestätigungslink frei) |
 | `deactivate` | Status `inactive` (Login gesperrt, Daten bleiben erhalten) |
 | `delete` | Soft-Delete: Status `inactive` (seit 3.4.12; vorher endgültig) |
 | `hard_delete` | Benutzer **endgültig** löschen (einzige Löschaktion in der Oberfläche) |
 
-Der eigene Account wird bei Sammelaktionen immer übersprungen; nicht (mehr) existierende IDs führen zu einer Fehlermeldung.
+Der eigene Account wird bei Sammelaktionen immer übersprungen; nicht (mehr) existierende IDs führen zu einer Fehlermeldung. Seit 4.0.0 lehnt auch das Bearbeiten-Formular ab, das eigene Konto herabzustufen, zu deaktivieren oder zu sperren.
 
 ### Bearbeiten / Anlegen
 
@@ -46,10 +48,10 @@ Der eigene Account wird bei Sammelaktionen immer übersprungen; nicht (mehr) exi
 |---|---|
 | Benutzername (`username`) | eindeutig |
 | E-Mail (`email`) | eindeutig, validiert |
-| Vorname / Nachname | optional |
+| Vorname / Nachname | optional; beim Anlegen bilden sie den Anzeigenamen (`display_name`), ohne Namen wird der Benutzername verwendet (max. 100 Zeichen). Bis 3.5.6 fehlte der Anzeigename, und das Anlegen scheiterte auf MySQL/MariaDB im Strict-Mode mit „Datenbankfehler beim Erstellen“ |
 | Passwort (`password`) | beim Anlegen Pflicht; beim Bearbeiten leer lassen = unverändert. Es gilt die Passwortrichtlinie (Standard mind. 12 Zeichen, Groß-/Kleinbuchstaben, Ziffer, Sonderzeichen), siehe [AUTH-SETTINGS.md](AUTH-SETTINGS.md) |
 | Rolle (`role`) | `admin`, `editor`, `author`, `member` sowie eigene Rollen aus [RBAC.md](RBAC.md); unbekannte Werte werden zu `member` |
-| Status (`status`) | `active`, `inactive`, `banned` |
+| Status (`status`) | `active`, `inactive`, `banned`, `unverified` („E-Mail unbestätigt“: Anmeldung erst nach Bestätigungslink, siehe [AUTH-SETTINGS.md](AUTH-SETTINGS.md#e-mail-verifizierung-seit-400)); unbekannte Werte werden beim Anlegen zu `active` und beim Bearbeiten ignoriert |
 
 Die Bearbeitungsansicht zeigt zusätzlich Gruppen, Abo, MFA-/Passkey-Status und letzte Aktivitäten.
 

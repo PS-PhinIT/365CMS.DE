@@ -116,7 +116,7 @@ final class AuthManager
      * @param string $signature           Base64-dekodiert vom Client
      * @param string $credentialId        Credential-ID (Base64url)
      * @param string $challenge           Gespeicherte Challenge (hex)
-     * @return bool|string true bei Erfolg, Fehlertext sonst
+     * @return bool|string true bei Erfolg, 'MFA_REQUIRED' (Passkey ohne User Verification bei aktiver MFA) oder Fehlertext
      */
     public function authenticateViaPasskey(
         string $clientDataJSON,
@@ -158,8 +158,20 @@ final class AuthManager
             $adapter->updateSignCount((int)$credential['id'], $newCounter);
         }
 
+        // Ohne User Verification (PIN/Biometrie, Flag UV = 0x04) ist der Passkey nur ein Besitzfaktor:
+        // aktive TOTP-MFA dann zusätzlich verlangen statt sie zu überspringen.
+        $userId = (int)$credential['user_id'];
+        $authenticatorFlags = strlen($authenticatorData) > 32 ? ord($authenticatorData[32]) : 0;
+        if (($authenticatorFlags & 0x04) === 0 && $this->sessionAuth->isMfaEnabled($userId)) {
+            $_SESSION['mfa_pending_user_id'] = $userId;
+            $_SESSION['mfa_pending_remember'] = '0';
+            $_SESSION['mfa_pending_since'] = time();
+            $_SESSION['mfa_failed_attempts'] = 0;
+            return 'MFA_REQUIRED';
+        }
+
         // Session starten (ohne Passwort-Check, da Passkey verifiziert)
-        if (!$this->sessionAuth->completeLoginForUserId((int)$credential['user_id'])) {
+        if (!$this->sessionAuth->completeLoginForUserId($userId)) {
             return 'Passkey-Anmeldung konnte nicht abgeschlossen werden.';
         }
 

@@ -215,6 +215,21 @@ final class InstallerService
         return is_file($this->getInstallerLockPath());
     }
 
+    /**
+     * true, wenn config/app.php nicht mehr die ausgelieferte Vorlage mit DB-Platzhaltern ist.
+     */
+    public function hasCustomizedConfig(): bool
+    {
+        $configPath = $this->rootDir . '/config/app.php';
+        if (!is_file($configPath)) {
+            return false;
+        }
+
+        $content = file_get_contents($configPath);
+
+        return is_string($content) && trim($content) !== '' && !str_contains($content, 'YOUR_DATABASE_');
+    }
+
     public function writeInstallerLockFile(?array $config = null): void
     {
         $lockPath = $this->getInstallerLockPath();

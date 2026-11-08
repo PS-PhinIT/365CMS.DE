@@ -2163,6 +2163,8 @@ class SystemInfoModule
         }
 
         $loopbackUrl = rtrim((string) SITE_URL, '/') . '/cron.php?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        // Cron-Token nicht im Audit-Log speichern.
+        $auditUrl = rtrim((string) SITE_URL, '/') . '/cron.php?' . http_build_query(['token' => '***'] + $query, '', '&', PHP_QUERY_RFC3986);
         $response = HttpClient::getInstance()->get($loopbackUrl, [
             'userAgent' => '365CMS-System-CronLoopback/1.0',
             'timeout' => 30,
@@ -2181,7 +2183,7 @@ class SystemInfoModule
                 null,
                 [
                     'task' => $request['task'],
-                    'url' => $this->sanitizeAuditString($loopbackUrl),
+                    'url' => $this->sanitizeAuditString($auditUrl),
                     'error' => $this->sanitizeAuditString((string) ($response['error'] ?? 'HTTP-Fehler')),
                 ],
                 'error'
@@ -2226,7 +2228,7 @@ class SystemInfoModule
             null,
             [
                 'task' => $request['task'],
-                'url' => $this->sanitizeAuditString($loopbackUrl),
+                'url' => $this->sanitizeAuditString($auditUrl),
                 'success' => !empty($payload['success']),
             ],
             !empty($payload['success']) ? 'warning' : 'error'

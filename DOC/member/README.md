@@ -1,6 +1,6 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02 (Abgleich mit `MemberRouter`, `MemberController`, `PluginDashboardRegistry`)
-> **Kurzbeschreibung:** Vollständige Referenz des privaten Member-Bereichs mit Seiten, Routing, Einstellungen, Erweiterungspunkten, Sicherheit und Fallbacks. Die Angaben entsprechen dem Code-Stand von Version 3.5.0.
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 4.0.0
+> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-08 (Sicherheitsaudit 4.0.0: Nachrichten-Empfänger, Datenexport, eigene Bestellungen)
+> **Kurzbeschreibung:** Vollständige Referenz des privaten Member-Bereichs mit Seiten, Routing, Einstellungen, Erweiterungspunkten, Sicherheit und Fallbacks. Die Angaben entsprechen dem Code-Stand von Version 4.0.0.
 
 # 365CMS Member Area
 
@@ -88,14 +88,14 @@ Alle Formulare senden `POST` an die eigene Seite mit Feld `action` und `csrf_tok
 | | `backup_generate` | neue Backup-Codes erzeugen (alte werden ungültig) |
 | | `passkey_register` / `passkey_delete` | Passkey (WebAuthn) hinzufügen bzw. entfernen |
 | `/member/notifications` | `notifications_save` | E-Mail-Benachrichtigungen (Sicherheit, Updates, Marketing), Browser-/Desktop-/Mobil-Hinweise, Häufigkeit, neue Funktionen/Aktionen |
-| `/member/messages` | `message_send` | Nachricht an Benutzer-ID oder Benutzername senden, Antwort über `parent_id` (Thread) |
+| `/member/messages` | `message_send` | Nachricht an Benutzer-ID, Benutzername, E-Mail-Adresse oder Anzeigenamen senden (in dieser Reihenfolge; ein Anzeigename nur, wenn ihn genau ein aktives Konto trägt), Antwort über `parent_id` (Thread) |
 | `/member/media` | `media_folder_create`, `media_folder_delete`, `media_delete`, `media_rename`, `media_move` | eigene Dateien unter `uploads/member/user-<id>/` verwalten; Löschen nur bei `member_delete_own` |
 | | Upload | per JavaScript an `POST /api/upload` (nur wenn `member_uploads_enabled`), Größe/Typen laut Medien-Einstellungen (`member_max_upload_size`, `member_allowed_types`) |
 | `/member/privacy` | `privacy_save` | Profil-Sichtbarkeit, öffentliche Felder, E-Mail anzeigen, Aktivitäten anzeigen |
-| | `privacy_export` | sofortiger JSON-Download aller eigenen Daten (`member-export-<id>.json`) |
+| | `privacy_export` | sofortiger JSON-Download aller eigenen Daten (`member-export-<id>.json`); Zugangsgeheimnisse (MFA-/TOTP-Secrets, Backup-Codes, Passkey-, LDAP-, Token- und Passwort-Metadaten) sind ausgenommen |
 | | `privacy_delete_request` | Löschantrag: Status `pending_deletion`, Ausführung frühestens nach 30 Tagen durch Administratoren ([../admin/legal/DELETION-REQUESTS.md](../admin/legal/DELETION-REQUESTS.md)) |
 | `/member/favorites` | – | Liste gemerkter Beiträge/Seiten (Merken über das Theme) |
-| `/member/subscription` | – | aktuelles Paket, Limits/Nutzung, Verlängerungshinweise, eigene Bestellungen |
+| `/member/subscription` | – | aktuelles Paket, Limits/Nutzung, Verlängerungshinweise, eigene Bestellungen (nur angemeldet aufgegebene, also mit `user_id` des Kontos; Gastbestellungen mit derselben E-Mail-Adresse erscheinen nicht, sie bleiben unter *Aboverwaltung → Bestellungen & Zuweisung* sichtbar) |
 
 ### Menü
 

@@ -9,7 +9,7 @@
 ## Quellordner
 
 - `CMS/assets/translation/`
-- `CMS/assets/yaml/` (`symfony/yaml` 8.1.8 zum Parsen von `CMS/lang/*.yaml`)
+- `CMS/assets/yaml/` (`symfony/yaml` 8.1.11 zum Parsen von `CMS/lang/*.yaml`)
 
 ## Verwendung in 365CMS
 

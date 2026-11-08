@@ -10,6 +10,7 @@
 declare(strict_types=1);
 namespace CMS;
 
+use CMS\Services\EmailVerificationService;
 use CMS\Services\UserService;
 
 if (!defined('ABSPATH')) {
@@ -27,6 +28,8 @@ class Auth
     ];
 
     private const DEVICE_COOKIE_NAME = 'cms_device';
+    /** bcrypt-Hash (Kosten wie Security::hashPassword) eines festen Werts – nur für Timing-Angleichung. */
+    private const LOGIN_TIMING_DUMMY_HASH = '$2y$12$Ka0ROJ/q3DghtbJ2sUBc9eIT4fFu2DpKB2mzGWtsGrJL/X7ZZmwDe';
     private const DEVICE_COOKIE_TTL = 7200;
     private const SESSION_LIFETIME_OPTION_ADMIN = 'perf_session_timeout_admin';
     private const SESSION_LIFETIME_OPTION_MEMBER = 'perf_session_timeout_member';
@@ -270,6 +273,8 @@ class Auth
         $user = $stmt->fetchObject();
         
         if (!$user) {
+            // Gleiche Laufzeit wie bei falschem Passwort, damit Benutzernamen nicht per Timing erkennbar sind.
+            $security->verifyPassword($password, self::LOGIN_TIMING_DUMMY_HASH);
             $this->logLoginAttempt($username);
             // H-01: Fehlgeschlagenen Login protokollieren
             AuditLogger::instance()->loginFailed($username);
@@ -289,6 +294,19 @@ class Auth
             return 'Ungültige Anmeldedaten.';
         }
         
+        if ($user->status === EmailVerificationService::STATUS_UNVERIFIED) {
+            // Erst nach korrektem Passwort erreichbar – verrät also nichts über fremde Konten.
+            $resent = false;
+            try {
+                $resent = EmailVerificationService::getInstance()->resend((int) $user->id);
+            } catch (\Throwable) {
+            }
+
+            return $resent
+                ? 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Wir haben Ihnen soeben einen neuen Bestätigungslink gesendet.'
+                : 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Bitte nutzen Sie den Link aus unserer Bestätigungs-E-Mail (auch im Spam-Ordner nachsehen).';
+        }
+
         if ($user->status !== 'active') {
             return 'Ihr Konto ist deaktiviert.';
         }
@@ -422,6 +440,8 @@ class Auth
             return 'E-Mail-Adresse bereits registriert.';
         }
         
+        $requiresVerification = $this->isEmailVerificationRequired();
+
         // Create user
         $userId = $db->insert('users', [
             'username' => $username,
@@ -429,7 +449,7 @@ class Auth
             'password' => $security->hashPassword($password),
             'display_name' => $displayName,
             'role' => $registrationRole,
-            'status' => 'active'
+            'status' => $requiresVerification ? EmailVerificationService::STATUS_UNVERIFIED : 'active'
         ]);
         
         if ($userId) {
@@ -445,11 +465,38 @@ class Auth
                 );
             }
 
+            if ($requiresVerification) {
+                try {
+                    EmailVerificationService::getInstance()->sendVerificationMail((int) $userId);
+                } catch (\Throwable $e) {
+                    Logger::instance()->withChannel('auth.register')->warning(
+                        'Bestätigungs-E-Mail konnte nach Registrierung nicht versendet werden.',
+                        [
+                            'user_id' => (int) $userId,
+                            'exception' => $e::class,
+                        ]
+                    );
+                }
+            }
+
             Hooks::doAction('user_registered', (int) $userId);
             return true;
         }
         
         return 'Registrierung fehlgeschlagen.';
+    }
+
+    /**
+     * true, wenn neue Registrierungen ihre E-Mail-Adresse bestätigen müssen
+     * (Mitglieder → Einstellungen: „E-Mail-Verifizierung für neue Mitglieder erzwingen“).
+     */
+    public function isEmailVerificationRequired(): bool
+    {
+        try {
+            return EmailVerificationService::getInstance()->isRequired();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function resolveRegistrationRole(Database $db): string
@@ -921,6 +968,11 @@ class Auth
      */
     public function confirmMfaSetup(int $userId, string $code): bool
     {
+        // Aktiven Authenticator nie überschreiben – Wechsel nur über die Deaktivierung (mit Passwort).
+        if ($this->isMfaEnabled($userId)) {
+            return false;
+        }
+
         $pendingSecret = $this->getUserMeta($userId, 'mfa_pending_secret');
         if (!$pendingSecret) {
             return false;

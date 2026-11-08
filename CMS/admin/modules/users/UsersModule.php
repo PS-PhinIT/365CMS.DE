@@ -845,6 +845,15 @@ class UsersModule
             $data['password'] = $password;
         }
 
+        // Selbstaussperrung verhindern (analog zur Bulk-Aktion).
+        $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
+        if ($id > 0 && $id === $currentUserId && ($data['role'] !== 'admin' || $data['status'] !== 'active')) {
+            return [
+                'success' => false,
+                'error' => 'Das eigene Konto kann nicht herabgestuft, deaktiviert oder gesperrt werden.',
+            ];
+        }
+
         try {
             if ($id > 0) {
                 $result = $this->userService->updateUser($id, $data);

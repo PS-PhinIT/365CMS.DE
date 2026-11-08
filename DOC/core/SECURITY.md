@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Sicherheitsmodell
 
-> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -18,6 +18,8 @@ Security is layered: transport (HTTPS redirect strategy, HSTS), response headers
 | `CMS_TRUSTED_PROXIES` | nicht gesetzt (= `cloudflare`) | Komma-Liste vertrauenswürdiger Proxys/CDNs: IPs, CIDR (IPv4 /8–/32, IPv6 /16–/128) und Schlüsselwörter `cloudflare`, `private` (lokaler Reverse Proxy, der `X-Forwarded-For` selbst setzt), `auto` (`private` + `cloudflare`), `*`, `off`. Eine gesetzte Konstante hat Vorrang vor der Admin-Einstellung (*Sicherheit → Firewall → Proxy / CDN & Client-IP*, Option `security_trusted_proxies`); leerer Wert = `off`. Details: Abschnitt 7a. Betrifft Rate-Limits, Firewall, Audit-Log |
 
 HTTPS wird auch hinter Proxys erkannt (`X-Forwarded-Proto`, `X-Forwarded-SSL`, `Front-End-Https`, Port 443).
+
+Runtime-URLs (`cms_runtime_base_url()`, Asset-, Theme- und Script-URLs) nutzen nur Hosts der eigenen Installation: `SITE_URL`-Host, dessen `www`-Variante und hinterlegte Hub-Domains; andere `Host`-Werte fallen auf `SITE_URL` zurück. `X-Forwarded-Host` und eine Herabstufung per `X-Forwarded-Proto: http` gelten nur hinter vertrauenswürdigen Proxys (`CMS_TRUSTED_PROXIES`). Das verhindert Web-Cache-Poisoning über gefälschte Header (4.0.0).
 
 ### 2. Sicherheitsheader (`Security::setSecurityHeaders()`)
 
@@ -59,11 +61,12 @@ trusted-types cms365 default sanitize-html dompurify; require-trusted-types-for 
 | Passwortrichtlinie | ≥ 12 Zeichen, Groß-/Kleinbuchstabe, Ziffer, Sonderzeichen (`Auth::getPasswordPolicyDefinition()`) |
 | Login-Sperre | `MAX_LOGIN_ATTEMPTS` (5) in `LOGIN_TIMEOUT` (300 s) je IP über `Security::checkDbRateLimit()` |
 | Generische Fehlermeldung | „Ungültige Anmeldedaten.“ – kein Hinweis, ob Benutzer existiert |
-| Kontostatus | nur `active` darf sich anmelden |
-| MFA | TOTP (`Totp`, `TotpAdapter`) + Backup-Codes; Login liefert `MFA_REQUIRED` → `/mfa-challenge` |
+| Kontostatus | nur `active` darf sich anmelden; `unverified` (E-Mail-Adresse unbestätigt, seit 4.0.0 bei aktiver Option `member_email_verification`) erhält nach richtigem Passwort einen neuen Bestätigungslink – siehe [../admin/users-groups/AUTH-SETTINGS.md](../admin/users-groups/AUTH-SETTINGS.md#e-mail-verifizierung-seit-400) |
+| MFA | TOTP (`Totp`, `TotpAdapter`) + Backup-Codes; Login liefert `MFA_REQUIRED` → `/mfa-challenge`. Passkey-Logins ohne User Verification (UV-Flag) verlangen bei aktiver MFA zusätzlich den TOTP-Code; Einrichtung/Neueinrichtung nur mit aktuellem Passwort |
 | Passkeys | WebAuthn (`WebAuthnAdapter`, `cms_passkey_credentials`) |
 | LDAP | `LdapAuthProvider` (LdapRecord) |
-| Passwort-Reset | Token in `cms_password_resets`, einmalig, Ablauf 60 min, Rate-Limits, konstante Antwortzeit |
+| Passwort-Reset | Token in `cms_password_resets`, einmalig, Ablauf 60 min, Rate-Limits, konstante Antwortzeit; seit 4.0.0 auch für unbestätigte Konten, ein abgeschlossener Reset bestätigt die E-Mail-Adresse |
+| E-Mail-Bestätigung (seit 4.0.0) | Link `/cms-verify-email`, Token 256 Bit, nur SHA-256-Hash gespeichert, 48 h gültig, einmalig; 10 Versuche je IP in 15 min, neuer Link höchstens 3-mal je Konto und Stunde (`EmailVerificationService`) |
 | Abmeldung | nur mit CSRF-Token `logout` |
 | Audit | `loginSuccess`, `loginFailed`, Rollenwechsel, Sperren |
 | API-Bearer (seit 3.4.13) | `Authorization: Bearer <JWT>` nur mit `JWT_SECRET` (≥ 32 Zeichen); Ausgabe nur an angemeldete Sessions (kein MFA-Bypass), Refresh-Tokens nicht als Access-Token nutzbar, Konto muss aktiv sein; seit 3.5.0 an den Passwort-Fingerabdruck gebunden (Claim `pwf`, Passwortänderung entwertet alle Tokens) – siehe [API-REFERENCE.md](API-REFERENCE.md#jwt-anmeldung-seit-3413) |

@@ -205,6 +205,8 @@ final class ContentDraftGenerationPipeline
         }
 
         $value = html_entity_decode(strip_tags((string) $value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Erst durch das Dekodieren entstandene Tags (z. B. &lt;script&gt;) ebenfalls entfernen.
+        $value = preg_replace('/<\/?[a-z!][^>]*>/i', '', $value) ?? '';
         $value = str_replace(["\r\n", "\r"], "\n", $value);
         $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', ' ', $value) ?? '';
         $value = trim(preg_replace('/[ \t]+/u', ' ', $value) ?? '');

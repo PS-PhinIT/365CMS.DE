@@ -53,7 +53,8 @@ function cms_admin_section_shell_normalize_route_path(mixed $routePath): string
         $path = $parsedPath;
     }
 
-    $path = '/' . ltrim($path, '/');
+    // Backslashes normalisieren Browser zu "/" – sonst würde "/\evil.tld" zur externen Weiterleitung.
+    $path = '/' . ltrim(str_replace('\\', '/', $path), '/');
 
     return $path === '//' ? '/admin' : $path;
 }

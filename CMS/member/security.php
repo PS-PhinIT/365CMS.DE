@@ -128,9 +128,13 @@ include __DIR__ . '/partials/header.php';
                             <p class="text-secondary">Schütze dein Konto zusätzlich mit einem Authenticator und Backup-Codes.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <?php if (empty($securityData['totp_enabled'])): ?>
-                                    <form method="post" action="">
+                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
                                         <input type="hidden" name="action" value="totp_start">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
+                                        <div>
+                                            <label class="form-label" for="totp_start_current_password">Aktuelles Passwort</label>
+                                            <input class="form-control" id="totp_start_current_password" name="current_password" type="password" autocomplete="current-password" required>
+                                        </div>
                                         <button type="submit" class="btn btn-primary">TOTP einrichten</button>
                                     </form>
                                 <?php else: ?>

@@ -20,7 +20,7 @@ const CMS_ADMIN_ORDERS_ALLOWED_BILLING_CYCLES = ['monthly', 'yearly', 'lifetime'
 const CMS_ADMIN_ORDERS_ALLOWED_EXPORTS = ['orders', 'usage'];
 
 /**
- * @return array{assign_subscription:update_status|delete}|array{}
+ * @return array<string, string>
  */
 function cms_admin_orders_allowed_actions(): array
 {

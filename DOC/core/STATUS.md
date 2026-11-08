@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Implementierungsstatus
 
-> **Stand:** 2026-10-03 | **Version:** 3.5.0 | **Schema:** v23 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Schema:** v23 | **Status:** Stable
 
 ## English (summary)
 
@@ -12,13 +12,13 @@ Snapshot of the runtime state verified against the source code on 2026-10-02: ve
 
 | Merkmal | Wert | Quelle |
 |---|---|---|
-| Core-Version | `3.5.6`, Release `2026-11-08`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
+| Core-Version | `4.0.0`, Release `2026-11-08`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
 | Schema | `v23` | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.0.9 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
+| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5`, `3.5.6` und `4.0.0` (08.11.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
 
 ### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
 
@@ -59,7 +59,7 @@ Snapshot of the runtime state verified against the source code on 2026-10-02: ve
 
 ### Bekannte Lücken und Inkonsistenzen (Stand 2026-10-03)
 
-Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
+Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)), ergänzt im Folgeaudit vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
 
 | # | Befund | Auswirkung | Fundstelle | Status |
 |---|---|---|---|---|
@@ -81,6 +81,9 @@ Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)
 | 17 | `POST /contact` ohne Route | Kontaktformular immer 404 | `ThemeRouter` | ✅ 3.4.13 |
 | 18 | `posts.title_en/content_en/excerpt_en` nur über `/admin/posts` ergänzt | frische Installation: `/blog` 500 | `SchemaManager`, `PostsModule` | ✅ 3.4.13 – Schema v23 |
 | 15 | `Version::CURRENT` blieb `3.4.00` trotz ausgelieferter Fixes | Installationen nicht unterscheidbar | `CMS/core/Version.php` | ✅ 3.5.0 – `Version::CURRENT = 3.5.0` (Audit FUN-12) |
+| 19 | Option `member_email_verification` wurde nicht ausgewertet | neue Konten ohne bestätigte E-Mail-Adresse sofort aktiv | `Auth::register()`, Benutzer-Einstellungen | ✅ 4.0.0 – `EmailVerificationService`, Status `unverified`, Link `/cms-verify-email` (Audit FUN-36) |
+| 20 | `UserService::createUser()` setzte `display_name` nicht (`NOT NULL` ohne Standardwert) | „Benutzer anlegen“ unter `/admin/users` scheiterte auf MySQL/MariaDB im Strict-Mode | `UserService` | ✅ 4.0.0 – Anzeigename aus Vor-/Nachname bzw. Benutzername (Audit FUN-37) |
+| 21 | Feld `critical` im Core-Update-Manifest wurde nicht ausgewertet | Sicherheitsupdates unter *System → Updates* nicht von normalen Updates zu unterscheiden | `UpdateService::checkCoreUpdates()`, Update-Ansicht | ✅ 4.0.0 – roter Hinweis „Kritisches Update verfügbar“ (Audit FUN-38) |
 
 ### Grundsatz dieser Dokumentation
 
