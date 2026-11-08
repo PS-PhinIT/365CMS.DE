@@ -144,6 +144,7 @@ class UpdateService
                     'price_currency' => strtoupper((string) ($marketplaceRelease['price_currency'] ?? 'EUR')),
                     'requires_cms' => (string) ($marketplaceRelease['requires_cms'] ?? $marketplaceRelease['min_cms_version'] ?? ''),
                     'requires_php' => (string) ($marketplaceRelease['requires_php'] ?? $marketplaceRelease['min_php'] ?? ''),
+                    'critical' => $this->normalizeBooleanValue($marketplaceRelease['critical'] ?? false),
                 ];
 
                 $this->setCache($cacheKey, $result);
@@ -187,6 +188,7 @@ class UpdateService
             'install_supported' => $downloadUrl !== '' && $sha256 !== '',
             'manual_reason' => $sha256 === '' ? 'Automatische Installation benötigt eine gültige SHA-256-Prüfsumme im Release-Manifest.' : '',
             'release_notes' => $release['body'] ?? '',
+            'critical' => false,
         ];
         
         // Cache result
@@ -622,6 +624,10 @@ class UpdateService
     {
         if (is_bool($value)) {
             return $value;
+        }
+
+        if (!is_scalar($value)) {
+            return false;
         }
 
         $normalized = strtolower(trim((string) $value));

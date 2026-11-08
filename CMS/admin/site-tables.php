@@ -33,7 +33,7 @@ $module    = new TablesModule();
 $alert     = null;
 
 /**
- * @return array{save_settings:save_settings,save:save,delete:delete,duplicate:duplicate}
+ * @return array<string, string>
  */
 function cms_admin_site_tables_allowed_actions(): array
 {
@@ -46,7 +46,7 @@ function cms_admin_site_tables_allowed_actions(): array
 }
 
 /**
- * @return array{list:list,settings:settings,edit:edit}
+ * @return array<string, string>
  */
 function cms_admin_site_tables_allowed_views(): array
 {

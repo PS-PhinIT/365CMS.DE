@@ -19,7 +19,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/** @implements DatabaseInterface */
 class Database implements DatabaseInterface
 {
     private static ?self $instance = null;

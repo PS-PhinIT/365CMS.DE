@@ -38,7 +38,7 @@ function cms_admin_packages_normalize_positive_id(mixed $id): int
 }
 
 /**
- * @return array<string, callable(array): void>
+ * @return array<string, callable(array): array>
  */
 function cms_admin_packages_action_handlers(PackagesModule $module, SubscriptionSettingsModule $settingsModule): array
 {

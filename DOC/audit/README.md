@@ -2,6 +2,8 @@
 
 > **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
 
+> **Neuestes Audit:** [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) – Folgeaudit zu 3.5.6 (Sicherheit, Bibliotheken, Funktionen), alle 24 Befunde in 4.0.0 behoben
+
 ## English (summary)
 
 Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mass requests and bot traffic, missing functions, broken references, GUI defects and operational topics. The checklist was compiled from OWASP Top 10:2025 and current website/CMS audit checklists (see [PRUEFKATALOG.md](PRUEFKATALOG.md)). 54 findings were recorded; 41 were fixed in changelog entry `3.4.25`; the 13 open recommendations (OFFEN-01 … OFFEN-13) were implemented in release `3.5.0`, together with proxy/CDN-aware client IP detection for host CDNs with unknown addresses (e.g. Hostinger). The most important fixes:
@@ -17,6 +19,8 @@ Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mas
 
 A follow-up audit on the same day ([FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md)) recorded 43 more findings, all fixed in 3.5.0; the parts first left open (recommendations OFFEN-14 … OFFEN-19) were implemented in 3.5.0 as well. The most important fixes were the never-loaded importer service, SSRF filter gaps for IPv4-mapped IPv6, path traversal when renaming member folders, and JWT revocation on password change.
 
+A further follow-up audit of 3.5.6 on 2026-11-08 ([FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md)) recorded 24 findings (security, bundled libraries, functions, best practice). All are fixed in 4.0.0; six recommendations (OFFEN-20 … OFFEN-25) remain open.
+
 Runtime tests against MySQL 8.0 show the number of queries per request dropping from 61 to 15 (home page), 63 to 17 (blog) and 89 to 17 (404 page).
 
 ## Deutsch
@@ -31,6 +35,7 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | [FUNKTIONEN-VERWEISE.md](FUNKTIONEN-VERWEISE.md) | Fehlende oder unvollständige Funktionen (FUN-21 bis FUN-25) und fehlerhafte Verweise (REF-06 bis REF-11) |
 | [GUI-BARRIEREFREIHEIT.md](GUI-BARRIEREFREIHEIT.md) | Fehler in der Oberfläche und Barrierefreiheit (GUI-01 bis GUI-07) |
 | [FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md) | Folgeaudit zu 3.5.0: SEC-28 bis SEC-31, FUN-26 bis FUN-34, REF-12 bis REF-15, BP-01 bis BP-05, PERF-12 bis PERF-22, GUI-08 bis GUI-16, Empfehlungen OFFEN-14 bis OFFEN-19 (umgesetzt in 3.5.0) |
+| [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) | Folgeaudit zu 3.5.6 vom 2026-11-08: SEC-32 bis SEC-45, Bibliotheken DEP-01 bis DEP-04, FUN-35 bis FUN-38 (u. a. E-Mail-Verifizierung, Benutzer anlegen, Kennzeichnung kritischer Updates), BP-06, BP-07 (behoben in 4.0.0), Empfehlungen OFFEN-20 bis OFFEN-25 (offen) |
 
 Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Offene Empfehlungen tragen `OFFEN-xx`.
 

@@ -83,6 +83,9 @@ $renderInlineToggleList = static function (array $items, string $emptyLabel, int
                     <span><?php echo (int)($stats['active_users'] ?? 0); ?> aktiv</span>
                     <span><?php echo (int)($stats['inactive_users'] ?? 0); ?> inaktiv</span>
                     <span><?php echo (int)($stats['banned_users'] ?? 0); ?> gesperrt</span>
+                    <?php if ((int)($stats['unverified_users'] ?? 0) > 0): ?>
+                    <span><?php echo (int)$stats['unverified_users']; ?> E-Mail unbestätigt</span>
+                    <?php endif; ?>
                 </div>
             </div>
             <div>
@@ -223,12 +226,14 @@ $renderInlineToggleList = static function (array $items, string $emptyLabel, int
                                 'active' => 'Aktiv',
                                 'inactive' => 'Inaktiv',
                                 'banned' => 'Gesperrt',
+                                'unverified' => 'E-Mail unbestätigt',
                                 default => $status !== '' ? ucfirst($status) : '–',
                             };
                             $statusClass = match ($status) {
                                 'active' => 'bg-green-lt text-green',
                                 'inactive' => 'bg-yellow-lt text-yellow',
                                 'banned' => 'bg-red-lt text-red',
+                                'unverified' => 'bg-orange-lt text-orange',
                                 default => 'bg-secondary-lt text-secondary',
                             };
                             $initials = strtoupper(substr($username !== '' ? $username : 'U', 0, 2));

@@ -27,7 +27,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/** @implements LoggerInterface */
 class Logger implements LoggerInterface
 {
     // ── PSR-3 Log-Level-Konstanten (aufsteigend nach Gewicht) ──────────────

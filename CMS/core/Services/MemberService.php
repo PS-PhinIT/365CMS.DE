@@ -427,7 +427,7 @@ class MemberService
                 [$identifier]
             );
 
-        if (!$user || (string)($user->status ?? 'active') === 'banned') {
+        if (!$user || in_array((string)($user->status ?? 'active'), ['banned', EmailVerificationService::STATUS_UNVERIFIED], true)) {
             return null;
         }
 
@@ -541,11 +541,27 @@ class MemberService
 
         return [
             'account'           => (array)$user,
-            'meta'              => $this->getUserMeta($userId),
+            'meta'              => $this->filterExportableUserMeta($this->getUserMeta($userId)),
             'privacy_settings'  => $this->getPrivacySettings($userId),
             'notifications'     => $this->getNotificationPreferences($userId),
             'exported_at'       => date('c'),
         ];
+    }
+
+    /**
+     * Entfernt Authentifizierungs-Geheimnisse (TOTP-Secret, Backup-Code-Hashes, Tokens, LDAP-DN)
+     * aus dem Datenexport – ein Export darf keinen zweiten Faktor klonbar machen.
+     *
+     * @param array<string, string> $meta
+     * @return array<string, string>
+     */
+    private function filterExportableUserMeta(array $meta): array
+    {
+        return array_filter(
+            $meta,
+            static fn (int|string $key): bool => preg_match('/^(?:mfa_|2fa_|ldap_|passkey)|token|secret|password|passwd|hash|nonce|backup_code|api_key/i', (string) $key) !== 1,
+            ARRAY_FILTER_USE_KEY
+        );
     }
 
     /**

@@ -185,11 +185,21 @@ final class TotpAdapter
 
     /**
      * Bestätigt MFA-Einrichtung: Prüft Code gegen Pending-Secret.
+     * Ein bereits aktiver Authenticator wird nicht überschrieben (Wechsel nur nach Deaktivierung).
+     * Optional muss das Pending-Secret dem im Setup-Schritt ausgegebenen Secret entsprechen.
      */
-    public function confirmSetup(int $userId, string $code): bool
+    public function confirmSetup(int $userId, string $code, ?string $expectedSecret = null): bool
     {
+        if ($this->isEnabled($userId)) {
+            return false;
+        }
+
         $pendingSecret = $this->getUserMeta($userId, 'mfa_pending_secret');
         if ($pendingSecret === null) {
+            return false;
+        }
+
+        if ($expectedSecret !== null && !hash_equals($pendingSecret, $expectedSecret)) {
             return false;
         }
 

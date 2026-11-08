@@ -487,15 +487,17 @@ class PluginDashboardRegistry
      */
     private function checkCapability(?string $capability): bool
     {
-        if ($capability === null) {
+        $capability = trim((string) $capability);
+        if ($capability === '' || strtolower($capability) === 'member') {
             return true;
         }
         $auth = Auth::instance();
         if ($capability === 'admin') {
             return $auth->isAdmin();
         }
-        // Erweiterbar für weitere Rollen
-        return true;
+
+        // Rollenname oder Capability – unbekannte Werte werden nicht mehr pauschal freigegeben.
+        return Auth::hasRole($capability) || $auth->hasCapability($capability);
     }
 
     private function sanitizeWidgetColor(string $value, string $fallback = '#4f46e5'): string

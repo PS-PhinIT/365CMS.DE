@@ -120,7 +120,7 @@ $passwordPolicyTesterConfig = [
                                     <input type="checkbox" name="member_email_verification" class="form-check-input" value="1" <?php echo !empty($settings['member_email_verification']) ? 'checked' : ''; ?>>
                                     <span class="form-check-label">E-Mail-Verifizierung für neue Mitglieder erzwingen</span>
                                 </label>
-                                <div class="form-hint">Sinnvoll für Community-, Netzwerk- und Portal-Setups mit sensiblen Profilen.</div>
+                                <div class="form-hint">Neue Registrierungen erhalten den Status „E-Mail unbestätigt“ und können sich erst nach Klick auf den Bestätigungslink (48 Stunden gültig) anmelden. Beim Login mit korrektem Passwort wird bei Bedarf ein neuer Link verschickt; bestehende Konten bleiben unverändert.</div>
                             </div>
 
                             <div>

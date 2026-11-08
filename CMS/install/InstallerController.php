@@ -53,17 +53,22 @@ final class InstallerController
 
     private function guardInstalledInstaller(): void
     {
-        if ($this->existingConfig === false) {
+        // Als installiert gilt: lesbare Konfiguration, vorhandene Sperrdatei oder eine bereits
+        // angepasste config/app.php (z. B. Zugangsdaten per Umgebungsvariable, die der Parser nicht erkennt).
+        $hasLock = $this->service->hasInstallerLock();
+        if ($this->existingConfig === false && !$hasLock && !$this->service->hasCustomizedConfig()) {
             return;
         }
 
-        if (!$this->service->hasInstallerLock()) {
+        if (!$hasLock && is_array($this->existingConfig)) {
             $this->service->writeInstallerLockFile($this->existingConfig);
         }
 
         if (!isset($_SESSION['install_success']) && !$this->service->canAccessInstalledInstaller()) {
             http_response_code(403);
-            $this->render('blocked', []);
+            $this->render('blocked', $this->existingConfig === false ? [
+                'blockedHint' => 'Die Installation ist gesperrt (config/install.lock bzw. angepasste config/app.php). Für eine bewusste Neuinstallation die Sperrdatei per SFTP/SSH entfernen und eine unveränderte Konfigurationsvorlage verwenden.',
+            ] : []);
         }
     }
 
@@ -162,10 +167,10 @@ final class InstallerController
                         'tables_created' => $newTables,
                     ];
                     $this->redirect('?step=5');
-                } catch (\RuntimeException $e) {
-                    $updateErrors[] = $e->getMessage();
                 } catch (PDOException $e) {
                     $updateErrors[] = 'Datenbankfehler: ' . $e->getMessage();
+                } catch (\RuntimeException $e) {
+                    $updateErrors[] = $e->getMessage();
                 }
             }
         }

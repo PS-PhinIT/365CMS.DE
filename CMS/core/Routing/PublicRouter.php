@@ -40,6 +40,7 @@ final class PublicRouter
         $this->router->addRoute('POST', '/cms-register', [$this, 'handleRegister']);
         $this->router->addRoute('GET', '/cms-password-forgot', [$this, 'renderForgotPassword']);
         $this->router->addRoute('POST', '/cms-password-forgot', [$this, 'handleForgotPassword']);
+        $this->router->addRoute('GET', Services\EmailVerificationService::PATH, [$this, 'handleVerifyEmail']);
 
         $this->router->addRoute('GET', '/login', [$this, 'redirectLegacyLogin']);
         $this->router->addRoute('POST', '/login', [$this, 'handleLogin']);
@@ -212,6 +213,12 @@ final class PublicRouter
             if ($result === true) {
                 unset($_SESSION['auth_redirect_after_login']);
                 $this->redirectToSafeTarget($this->resolveAllowedRedirectParts($this->resolveSuccessfulLoginRedirect($redirectTarget)));
+                return;
+            }
+
+            if ($result === 'MFA_REQUIRED') {
+                $_SESSION['auth_redirect_after_login'] = $defaultPendingRedirect;
+                $this->router->redirect($this->getLocalizedPublicPath('/mfa-challenge'));
                 return;
             }
 
@@ -399,8 +406,12 @@ final class PublicRouter
             . '<form method="POST" action="' . htmlspecialchars($mfaSetupPath, ENT_QUOTES, 'UTF-8') . '">'
             . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($csrfToken) . '">'
             . '<div class="cms-mfa-field">'
+            . '<label class="cms-mfa-label" for="cms-mfa-setup-password">Aktuelles Passwort</label>'
+            . '<input type="password" id="cms-mfa-setup-password" name="current_password" required autocomplete="current-password" class="cms-mfa-input">'
+            . '</div>'
+            . '<div class="cms-mfa-field">'
             . '<label class="cms-mfa-label" for="cms-mfa-setup-code">Bestätigungscode aus der App</label>'
-            . '<input type="text" id="cms-mfa-setup-code" name="totp_code" inputmode="numeric" pattern="\d{6}" maxlength="6" required autofocus autocomplete="one-time-code" '
+            . '<input type="text" id="cms-mfa-setup-code" name="totp_code" inputmode="numeric" pattern="\d{6}" maxlength="6" required autocomplete="one-time-code" '
             . 'class="cms-mfa-input" placeholder="000000">'
             . '</div>'
             . '<button type="submit" class="cms-mfa-submit">✅ 2FA aktivieren</button>'
@@ -425,6 +436,14 @@ final class PublicRouter
 
         $userId = (int)$_SESSION['user_id'];
         $code = $this->requestString($_POST['totp_code'] ?? '', 12);
+
+        // Eine übernommene Sitzung darf keinen eigenen Authenticator hinterlegen.
+        $reauth = Auth::instance()->verifyCurrentPassword($userId, (string)($_POST['current_password'] ?? ''));
+        if ($reauth !== true) {
+            $_SESSION['error'] = (string)$reauth;
+            $this->router->redirect($this->getLocalizedPublicPath('/mfa-setup'));
+            return;
+        }
 
         if (!Auth::instance()->confirmMfaSetup($userId, $code)) {
             $_SESSION['error'] = 'Ungültiger Code. Bitte erneut scannen und Code eingeben.';
@@ -586,7 +605,9 @@ final class PublicRouter
         $result = Auth::instance()->register($_POST);
 
         if ($result === true) {
-            $_SESSION['success'] = 'Registrierung erfolgreich! Sie können sich nun anmelden.';
+            $_SESSION['success'] = Auth::instance()->isEmailVerificationRequired()
+                ? 'Registrierung erfolgreich! Bitte bestätigen Sie Ihre E-Mail-Adresse über den Link, den wir Ihnen gerade gesendet haben – erst danach ist die Anmeldung möglich.'
+                : 'Registrierung erfolgreich! Sie können sich nun anmelden.';
             $this->router->redirect($this->getPublicAuthPath('login'));
         } else {
             $_SESSION['error'] = $result;
@@ -597,6 +618,25 @@ final class PublicRouter
             ]);
             $this->router->redirect($this->getPublicAuthPath('register'));
         }
+    }
+
+    /**
+     * Bestätigungslink aus der Registrierungs-Mail (`/cms-verify-email?uid=…&token=…`).
+     */
+    public function handleVerifyEmail(): void
+    {
+        if (!headers_sent()) {
+            header('Referrer-Policy: no-referrer', true);
+        }
+
+        $uid = $this->requestString($_GET['uid'] ?? '', 20);
+        $result = Services\EmailVerificationService::getInstance()->verify(
+            ctype_digit($uid) ? (int) $uid : 0,
+            $this->requestString($_GET['token'] ?? '', 128)
+        );
+
+        $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
+        $this->router->redirect($this->getPublicAuthPath('login'), 303);
     }
 
     public function redirectLegacyLogin(): void
@@ -1166,6 +1206,7 @@ final class PublicRouter
             '/cms-login',
             '/cms-register',
             '/cms-password-forgot',
+            '/cms-verify-email',
             '/logout',
             '/mfa-challenge',
             '/mfa-setup',

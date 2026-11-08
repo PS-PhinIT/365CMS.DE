@@ -17,11 +17,11 @@
 
 **English**
 
-Use this index to reach the canonical documents. Product version in code is `3.5.6`. Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Known code/doc gaps are listed in [core/STATUS.md](core/STATUS.md).
+Use this index to reach the canonical documents. Product version in code is `4.0.0`. Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Known code/doc gaps are listed in [core/STATUS.md](core/STATUS.md).
 
 **Deutsch**
 
-Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `3.5.6`. Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Bekannte Lücken zwischen Code und Doku stehen in [core/STATUS.md](core/STATUS.md).
+Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `4.0.0`. Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Bekannte Lücken zwischen Code und Doku stehen in [core/STATUS.md](core/STATUS.md).
 
 | Goal / Ziel | Document / Dokument |
 |---|---|
@@ -178,7 +178,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | Area / Bereich | Documents / Dokumente |
 |---|---|
 | Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md), [assets/ASSETS_NEW.md](assets/ASSETS_NEW.md), [assets/ASSETS_OwnAssets.md](assets/ASSETS_OwnAssets.md) |
-| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); code audit 2026-10-03: [checks/README.md](checks/README.md) ([security](checks/SECURITY.md), [performance](checks/PERFORMANCE.md), [functions](checks/FUNKTIONEN.md), [references](checks/VERWEISE.md)); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
+| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions): [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md); code audit 2026-10-03: [checks/README.md](checks/README.md) ([security](checks/SECURITY.md), [performance](checks/PERFORMANCE.md), [functions](checks/FUNKTIONEN.md), [references](checks/VERWEISE.md)); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
 | Workflows | [workflow/](workflow/) |
 
 ### Workflows

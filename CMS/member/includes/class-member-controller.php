@@ -622,25 +622,16 @@ final class MemberController
         }
 
         try {
-            $email = trim((string) ($this->getCurrentUser()->email ?? ''));
-            $emailLike = $email !== '' ? '%"email":"' . $this->escapeLikeValue($email) . '"%' : '';
-
+            // Nur fest zugeordnete Bestellungen: Gastbestellungen per (unbestätigter) E-Mail
+            // würden fremde Rechnungs- und Kontaktdaten offenlegen.
             $rows = $this->db->get_results(
                 "SELECT o.*, p.name AS plan_name
                  FROM {$this->prefix}orders o
                  LEFT JOIN {$this->prefix}subscription_plans p ON p.id = o.plan_id
                  WHERE o.user_id = ?
-                    OR (
-                        o.user_id IS NULL
-                        AND (
-                            o.customer_email = ?
-                            OR o.email = ?
-                            OR o.contact_data LIKE ?
-                        )
-                    )
                  ORDER BY o.created_at DESC
                  LIMIT 25",
-                [$this->getUserId(), $email, $email, $emailLike]
+                [$this->getUserId()]
             ) ?: [];
 
             return array_map(fn ($row) => $this->normalizeMemberOrderRow($row), $rows);
@@ -703,11 +694,6 @@ final class MemberController
         }
 
         return '';
-    }
-
-    private function escapeLikeValue(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
     /**
@@ -1322,12 +1308,19 @@ final class MemberController
 
         // Sicherheitskritische Änderungen erfordern das aktuelle Passwort: Eine übernommene
         // Sitzung soll MFA nicht abschalten oder eigene Passkeys/Backup-Codes anlegen können.
-        if (in_array($action, ['totp_disable', 'backup_generate', 'passkey_register'], true)) {
+        if (in_array($action, ['totp_start', 'totp_disable', 'backup_generate', 'passkey_register'], true)) {
             $reauth = \CMS\Auth::instance()->verifyCurrentPassword($userId, (string)($_POST['current_password'] ?? ''));
             if ($reauth !== true) {
                 $this->flash('danger', (string)$reauth);
                 $this->redirect('/member/security');
             }
+        }
+
+        // Ein aktiver Authenticator wird nie still ersetzt – Wechsel nur über „MFA deaktivieren“ (mit Passwort).
+        if (in_array($action, ['totp_start', 'totp_confirm'], true) && TotpAdapter::instance()->isEnabled($userId)) {
+            unset($_SESSION['member_totp_setup']);
+            $this->flash('warning', 'Zwei-Faktor-Authentifizierung ist bereits aktiv. Zum Wechsel der Authenticator-App MFA zuerst deaktivieren.');
+            $this->redirect('/member/security');
         }
 
         if ($action === 'totp_start') {
@@ -1339,7 +1332,9 @@ final class MemberController
 
         if ($action === 'totp_confirm') {
             $code = trim((string)($_POST['totp_code'] ?? ''));
-            $confirmed = TotpAdapter::instance()->confirmSetup($userId, $code);
+            // Nur das in dieser Sitzung per Passwort gestartete Setup darf bestätigt werden.
+            $sessionSecret = (string)($_SESSION['member_totp_setup']['secret'] ?? '');
+            $confirmed = $sessionSecret !== '' && TotpAdapter::instance()->confirmSetup($userId, $code, $sessionSecret);
             if ($confirmed) {
                 unset($_SESSION['member_totp_setup']);
                 $codes = BackupCodesManager::instance()->generate($userId);
@@ -1472,12 +1467,23 @@ final class MemberController
             return 0;
         }
 
-        $row = $this->db->get_row(
-            "SELECT id FROM {$this->prefix}users WHERE status = 'active' AND (username = ? OR display_name = ? OR email = ?) LIMIT 1",
-            [$input, $input, $input]
-        );
+        // Eindeutige Kennungen zuerst; Anzeigenamen nur, wenn sie genau einem aktiven Konto gehören.
+        foreach (['username', 'email'] as $column) {
+            $id = (int) ($this->db->get_var(
+                "SELECT id FROM {$this->prefix}users WHERE status = 'active' AND {$column} = ? LIMIT 1",
+                [$input]
+            ) ?? 0);
+            if ($id > 0) {
+                return $id;
+            }
+        }
 
-        return (int)($row->id ?? 0);
+        $rows = $this->db->get_results(
+            "SELECT id FROM {$this->prefix}users WHERE status = 'active' AND display_name = ? LIMIT 2",
+            [$input]
+        ) ?: [];
+
+        return count($rows) === 1 ? (int) ($rows[0]->id ?? 0) : 0;
     }
 
     private function upsertUserMeta(string $key, string $value): void

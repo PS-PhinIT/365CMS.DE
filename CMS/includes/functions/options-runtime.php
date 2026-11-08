@@ -453,16 +453,41 @@ function cms_post_is_scheduled(array|object $post): bool {
 }
 
 /**
+ * true, wenn die Anfrage über einen vertrauenswürdigen Proxy/CDN kam (siehe TrustedProxyService).
+ */
+function cms_runtime_request_via_trusted_proxy(): bool {
+    try {
+        return class_exists(\CMS\Services\TrustedProxyService::class)
+            && \CMS\Services\TrustedProxyService::requestViaTrustedProxy();
+    } catch (\Throwable) {
+        return false;
+    }
+}
+
+/**
  * Liefert das aktuelle Request-Schema mit Proxy-Unterstützung.
+ *
+ * Eine Herabstufung auf http per X-Forwarded-Proto wird nur von vertrauenswürdigen Proxys
+ * übernommen, damit gefälschte Header keine http-Asset-URLs in gecachte Seiten schreiben.
  */
 function cms_runtime_scheme(): string {
     $forwardedProto = trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
     if ($forwardedProto !== '') {
         $parts = explode(',', $forwardedProto);
         $scheme = strtolower(trim((string) ($parts[0] ?? '')));
-        if (in_array($scheme, ['http', 'https'], true)) {
+        if ($scheme === 'https' || ($scheme === 'http' && cms_runtime_request_via_trusted_proxy())) {
             return $scheme;
         }
+    }
+
+    $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
+    if (($https !== '' && $https !== 'off' && $https !== '0') || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443) {
+        return 'https';
+    }
+
+    $siteScheme = strtolower((string) parse_url((string) (defined('SITE_URL') ? SITE_URL : ''), PHP_URL_SCHEME));
+    if ($siteScheme === 'https') {
+        return 'https';
     }
 
     $requestScheme = strtolower(trim((string) ($_SERVER['REQUEST_SCHEME'] ?? '')));
@@ -470,33 +495,64 @@ function cms_runtime_scheme(): string {
         return $requestScheme;
     }
 
-    $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
-    if ($https !== '' && $https !== 'off' && $https !== '0') {
-        return 'https';
-    }
-
-    $serverPort = (int) ($_SERVER['SERVER_PORT'] ?? 0);
-    if ($serverPort === 443) {
-        return 'https';
-    }
-
-    $siteScheme = strtolower((string) parse_url((string) (defined('SITE_URL') ? SITE_URL : ''), PHP_URL_SCHEME));
-    if (in_array($siteScheme, ['http', 'https'], true)) {
-        return $siteScheme;
+    if ($siteScheme === 'http') {
+        return 'http';
     }
 
     return 'https';
 }
 
 /**
- * Liefert den aktuellen Host der Anfrage mit einfacher Validierung.
+ * true, wenn der Hostname zur Installation gehört (SITE_URL-Host, dessen www-Variante oder Hub-Domain).
+ */
+function cms_runtime_host_is_allowed(string $hostname, string $siteHost): bool {
+    if ($hostname === $siteHost || $hostname === 'www.' . $siteHost || 'www.' . $hostname === $siteHost) {
+        return true;
+    }
+
+    static $hubDomains = [];
+    static $resolving = false;
+    if (array_key_exists($hostname, $hubDomains)) {
+        return $hubDomains[$hostname];
+    }
+
+    if ($resolving || str_starts_with($hostname, '[') || filter_var($hostname, FILTER_VALIDATE_IP) !== false) {
+        return false;
+    }
+
+    $resolving = true;
+    try {
+        $allowed = class_exists(\CMS\Services\SiteTableService::class)
+            && \CMS\Services\SiteTableService::getInstance()->isHubDomain($hostname);
+    } catch (\Throwable) {
+        $allowed = false;
+    } finally {
+        $resolving = false;
+    }
+
+    return $hubDomains[$hostname] = $allowed;
+}
+
+/**
+ * Liefert den aktuellen Host der Anfrage.
+ *
+ * Host-Header sind fälschbar und landen in Script-/Asset-URLs gecachter Seiten. Daher zählt
+ * X-Forwarded-Host nur hinter vertrauenswürdigen Proxys, und es werden ausschließlich Hosts der
+ * eigenen Installation übernommen; sonst gilt der Host aus SITE_URL.
  */
 function cms_runtime_host(): string {
-    $candidates = [
-        (string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ''),
-        (string) ($_SERVER['HTTP_HOST'] ?? ''),
-        (string) ($_SERVER['SERVER_NAME'] ?? ''),
-    ];
+    $siteUrl = (string) (defined('SITE_URL') ? SITE_URL : '');
+    $siteHost = strtolower(trim((string) parse_url($siteUrl, PHP_URL_HOST), '.'));
+    $sitePort = (int) parse_url($siteUrl, PHP_URL_PORT);
+
+    $candidates = [];
+    if (trim((string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? '')) !== '' && cms_runtime_request_via_trusted_proxy()) {
+        $candidates[] = (string) $_SERVER['HTTP_X_FORWARDED_HOST'];
+    }
+    $candidates[] = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    $candidates[] = (string) ($_SERVER['SERVER_NAME'] ?? '');
+
+    $isLoopbackSite = in_array($siteHost, ['localhost', '127.0.0.1', '[::1]'], true);
 
     foreach ($candidates as $candidate) {
         $candidate = trim($candidate);
@@ -506,26 +562,33 @@ function cms_runtime_host(): string {
 
         $parts = explode(',', $candidate);
         $host = strtolower(trim((string) ($parts[0] ?? ''), " \t\n\r\0\x0B."));
-        if ($host === '') {
+        if ($host === '' || preg_match('/^(\[[0-9a-f:]+\]|[a-z0-9.-]+)(?::(\d{1,5}))?$/i', $host, $match) !== 1) {
             continue;
         }
 
-        if (preg_match('/^(?:\[[0-9a-f:]+\]|[a-z0-9.-]+)(?::\d+)?$/i', $host) === 1) {
+        // Ohne konfigurierte SITE_URL (z. B. Installer) gibt es keine Referenz für eine Allowlist.
+        if ($siteHost === '') {
             return $host;
         }
+
+        $hostname = trim((string) $match[1], '.');
+        if (!cms_runtime_host_is_allowed($hostname, $siteHost)) {
+            continue;
+        }
+
+        $port = isset($match[2]) ? (int) $match[2] : 0;
+        if ($port > 0 && ($port === $sitePort || $isLoopbackSite)) {
+            return $hostname . ':' . $port;
+        }
+
+        return $sitePort > 0 ? $hostname . ':' . $sitePort : $hostname;
     }
 
-    $siteHost = strtolower((string) parse_url((string) (defined('SITE_URL') ? SITE_URL : ''), PHP_URL_HOST));
-    $sitePort = (int) parse_url((string) (defined('SITE_URL') ? SITE_URL : ''), PHP_URL_PORT);
     if ($siteHost === '') {
         return '';
     }
 
-    if ($sitePort > 0) {
-        return $siteHost . ':' . $sitePort;
-    }
-
-    return $siteHost;
+    return $sitePort > 0 ? $siteHost . ':' . $sitePort : $siteHost;
 }
 
 /**
