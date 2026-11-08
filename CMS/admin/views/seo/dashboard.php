@@ -118,6 +118,7 @@ $normalizeIssueFilter = static function (string $issueLabel): string {
             </div>
             <div class="admin-section-toolbar__actions">
                 <a class="btn btn-outline-secondary btn-sm" href="/admin/seo-audit">Audit</a>
+                <a class="btn btn-outline-secondary btn-sm" href="/admin/seo-search-engines">Suchmaschinen</a>
                 <a class="btn btn-outline-primary btn-sm" href="/admin/seo-technical">Technik</a>
             </div>
         </div>
@@ -336,6 +337,7 @@ $normalizeIssueFilter = static function (string $issueLabel): string {
                         <a class="list-group-item list-group-item-action" href="<?= htmlspecialchars('/admin/seo-social') ?>">OG, X/Twitter & Pinterest</a>
                         <a class="list-group-item list-group-item-action" href="<?= htmlspecialchars('/admin/seo-schema') ?>">Schema.org & Typ-Verteilung</a>
                         <a class="list-group-item list-group-item-action" href="<?= htmlspecialchars('/admin/seo-sitemap') ?>">Sitemaps & robots.txt</a>
+                        <a class="list-group-item list-group-item-action" href="<?= htmlspecialchars('/admin/seo-search-engines') ?>">Suchmaschinen: IndexNow, Google & Verifizierung</a>
                         <a class="list-group-item list-group-item-action" href="<?= htmlspecialchars('/admin/seo-technical') ?>">Broken Links, hreflang & Bild-SEO</a>
                     </div>
                 </div>

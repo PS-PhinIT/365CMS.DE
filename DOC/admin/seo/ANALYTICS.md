@@ -1,11 +1,11 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Analysen & Tracking
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
 > **Route:** `/admin/analytics` | **Capability:** `manage_settings` oder `view_analytics` | **CSRF-Aktion:** `admin_seo_suite` | **Core-Modul:** `seo`
 
 ## English (summary)
 
-`/admin/analytics` is the analytics section of the SEO suite (`CMS/admin/seo-page.php` → `SeoSuiteModule` / `AnalyticsModule` → `CMS/admin/views/seo/analytics.php`). It shows first-party page views (`cms_page_views`, IP anonymised by `TrackingService`), top pages, visitors, Core Web Vitals (`cms_core_web_vitals`, collected via `POST /api/v1/analytics/web-vitals`) and feature usage. Action `save_analytics_settings` configures external tools (Google Search Console property, GA4, Matomo, Google Tag Manager, Meta Pixel) which `SeoAnalyticsRenderer` only loads after cookie consent.
+`/admin/analytics` is the analytics section of the SEO suite (`CMS/admin/seo-page.php` → `SeoSuiteModule` / `AnalyticsModule` → `CMS/admin/views/seo/analytics.php`). It shows first-party page views (`cms_page_views`, IP anonymised by `TrackingService`), top pages, visitors, Core Web Vitals (`cms_core_web_vitals`, collected via `POST /api/v1/analytics/web-vitals`) and feature usage. Action `save_analytics_settings` configures external tools (GA4, Matomo, Google Tag Manager, Meta Pixel) which `SeoAnalyticsRenderer` only loads after cookie consent. Since 3.5.6 the Google Search Console property and webmaster verification codes live in *SEO → Suchmaschinen* (`/admin/seo-search-engines`).
 
 ## Deutsch
 
@@ -29,7 +29,6 @@ Beiträge mit Veröffentlichungsdatum in der Zukunft werden in Auswertungen nich
 
 | Feld | Option | Validierung |
 |---|---|---|
-| Search-Console-Property | `seo_analytics_gsc_property` | Freitext (Domain-/URL-Property) |
 | Google Analytics 4 | `seo_analytics_ga4_id` | `G-…` |
 | Matomo-URL / Site-ID | `seo_analytics_matomo_url`, `seo_analytics_matomo_site_id` | HTTPS-URL, Zahl |
 | Google Tag Manager | `seo_analytics_gtm_id` | `GTM-…` |
@@ -38,6 +37,8 @@ Beiträge mit Veröffentlichungsdatum in der Zukunft werden in Auswertungen nich
 | „Do Not Track“ respektieren | `seo_analytics_respect_dnt` | an/aus |
 | IP anonymisieren | `seo_analytics_anonymize_ip` | an/aus (GA4 `anonymize_ip`, Matomo ohne Cookies) |
 | Web Vitals erfassen / Stichprobe | `seo_analytics_web_vitals_enabled`, `seo_analytics_web_vitals_sample_rate` | an/aus, 1–100 |
+
+Search-Console-Property (`seo_analytics_gsc_property`) und Verifizierungscodes der Webmaster-Tools werden seit 3.5.6 unter *SEO → Suchmaschinen* gepflegt ([SEO.md](SEO.md#suchmaschinen-adminseo-search-engines)); `save_analytics_settings` lässt sie unverändert.
 
 ### Datenschutz
 

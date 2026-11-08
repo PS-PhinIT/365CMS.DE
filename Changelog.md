@@ -14,6 +14,22 @@
 
 ---
 
+### v3.5.6 — 08.11.2026
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **3.5.6** | 🟢 feat | SEO / Suchmaschinen | Neuer Bereich **SEO → Suchmaschinen** (`/admin/seo-search-engines`) bündelt alle suchmaschinenbezogenen Einstellungen, die bisher auf *Sitemap*, *Technisches SEO* und *Analytics* verteilt waren: IndexNow, Google Search Console, Google Indexing API und Website-Verifizierung. Gespeicherte Werte bleiben erhalten; erreichbar über Sidebar, SEO-Navigation und Dashboard. |
+| **3.5.6** | 🟢 feat | SEO / Verifizierung | Bestätigungs-Meta-Tags für Google (`google-site-verification`), Bing (`msvalidate.01`), Yandex, Seznam, Naver und Baidu. Eingetragen werden kann der Code oder der komplette Meta-Tag aus dem Webmaster-Tool; gespeichert wird nur der `content`-Wert, fremde Meta-Tags werden abgelehnt. |
+| **3.5.6** | 🟢 feat | SEO / IndexNow | Key-Generator nach IndexNow-Protokoll direkt in der Oberfläche (PHP, `random_bytes()`): hexadezimaler Key mit 16, 32 (empfohlen), 64 oder 128 Zeichen; die UTF-8-Keydatei `<key>.txt` mit dem Key als Inhalt wird auf Wunsch im Web-Root abgelegt (sonst dynamisch ausgeliefert), die Keydatei des bisherigen Keys kann entfernt werden. Manuell eingetragene Keys werden nach Protokoll geprüft (8–128 Zeichen, `a-z`, `A-Z`, `0-9`, `-`); Prüfansicht mit Key-Quelle, `keyLocation`, Beschreibbarkeit des Roots und Antwortcodes. |
+| **3.5.6** | 🟢 feat | SEO / IndexNow | Übermittlung gemäß Protokoll als ein JSON-`POST` an `api.indexnow.org` (`host`, `key`, `keyLocation`, `urlList`; je Host, max. 10.000 URLs je Anfrage) statt einzeln an jede Suchmaschine – die Teilnehmer teilen Meldungen untereinander. HTTP 202 gilt als Erfolg (Key-Prüfung ausstehend); 400, 403, 422 und 429 werden mit Ursache gemeldet. |
+| **3.5.6** | 🟢 feat | SEO / IndexNow | Optionale automatische Meldung (Standard aus): Gespeicherte, veröffentlichte und indexierbare Beiträge und Seiten (DE und – falls übersetzt – EN) werden vorgemerkt und nach der Antwort gesendet. Der stündliche Cron meldet geplante bzw. per Massenaktion veröffentlichte Beiträge nach und wiederholt vorübergehende Fehler (Netzwerk, 403, 429, 5xx); bei 400/422 werden URLs verworfen. Dieselbe URL wird frühestens nach 5 Minuten erneut gemeldet. Warteschlange sofort senden oder leeren, Ergebnis des letzten Laufs wird angezeigt. |
+| **3.5.6** | 🔴 fix | SEO / Sitemap | Der Sitemap-Ping an Google und Bing wurde von beiden Diensten abgeschaltet (2023 bzw. 2022) und lief ins Leere; die Schalter entfallen. Stattdessen zeigt die Sitemap-Seite, wo die Index-Datei in den Webmaster-Tools eingereicht wird. |
+| **3.5.6** | 🔴 fix | SEO / Search Console | Die Search-Console-Property wird geprüft: erlaubt sind `sc-domain:example.de` und URL-Präfixe wie `https://www.example.de/`; eine reine Domain wird als Domain-Property (`sc-domain:`) gespeichert. |
+| **3.5.6** | 🔴 fix | Beiträge / Seiten | `noindex`/`nofollow` ließ sich im Editor nicht speichern: Nicht angehakte Checkboxen werden nicht gesendet, fehlende Werte galten als „index, follow“. Das SEO-Panel sendet jetzt beide Werte explizit. |
+| **3.5.6** | 🔴 fix | SEO / IndexNow | „Kürzlich veröffentlichte Inhalte melden“ meldete auch `noindex`-Inhalte und keine englischen URLs; jetzt wie in der Sitemap ohne `noindex`-Inhalte und mit EN-URL übersetzter Inhalte. Die manuelle Meldung nennt die Zahl ignorierter Einträge (ungültig, doppelt, fremde Domain, über 100 URLs). |
+| **3.5.6** | 🔵 docs | SEO | `DOC/admin/seo/SEO.md` (neuer Abschnitt *Suchmaschinen*), `ANALYTICS.md`, `DOC/admin/seo/README.md`, `FILESTRUCTURE.md` und `MODULES.md` angepasst. |
+| **3.5.6** | ⬜ chore | Release | `Version::CURRENT` = `3.5.6`, beide `update.json` und Release-Pakete `RELEASE/365CMS-3.5.6-{update,full}.zip` mit SHA-256; Schema unverändert `v23`. |
+
 ### v3.5.5 — 08.11.2026
 
 | Version | Typ | Bereich | Beschreibung |

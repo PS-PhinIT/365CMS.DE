@@ -54,7 +54,14 @@ function cms_admin_seo_allowed_page_configs(): array
             'view_file' => __DIR__ . '/views/seo/sitemap.php',
             'page_title' => 'SEO Sitemap',
             'active_page' => 'seo-sitemap',
-            'actions' => ['save_sitemap_settings', 'submit_indexing_urls', 'submit_recent_content_indexnow', 'delete_google_url', 'save_google_access_token', 'clear_google_access_token', 'regenerate_sitemap_bundle', 'save_robots'],
+            'actions' => ['save_sitemap_settings', 'regenerate_sitemap_bundle', 'save_robots'],
+        ],
+        'search_engines' => [
+            'route_path' => '/admin/seo-search-engines',
+            'view_file' => __DIR__ . '/views/seo/search-engines.php',
+            'page_title' => 'Suchmaschinen',
+            'active_page' => 'seo-search-engines',
+            'actions' => ['save_search_engine_settings', 'generate_indexnow_key', 'write_indexnow_key_file', 'flush_indexnow_queue', 'clear_indexnow_queue', 'submit_indexing_urls', 'submit_recent_content_indexnow', 'delete_google_url', 'save_google_access_token', 'clear_google_access_token', 'regenerate_sitemap_bundle', 'save_robots'],
         ],
         'technical' => [
             'route_path' => '/admin/seo-technical',
@@ -85,6 +92,7 @@ function cms_admin_seo_read_capabilities_by_section(): array
         'social' => ['manage_settings'],
         'schema' => ['manage_settings'],
         'sitemap' => ['manage_settings'],
+        'search_engines' => ['manage_settings'],
         'technical' => ['manage_settings'],
         'analytics' => ['manage_settings', 'view_analytics'],
     ];

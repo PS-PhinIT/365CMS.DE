@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Dateistruktur
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
 
 ## English (summary)
 
@@ -30,7 +30,7 @@ CMS/admin/
 
 | Controller | Routen (Einstiegsdateien setzen nur die Sektion) |
 |---|---|
-| `seo-page.php` | `seo-dashboard`, `seo-audit`, `seo-meta`, `seo-social`, `seo-schema`, `seo-sitemap`, `seo-technical`, `analytics` |
+| `seo-page.php` | `seo-dashboard`, `seo-audit`, `seo-meta`, `seo-social`, `seo-schema`, `seo-sitemap`, `seo-search-engines`, `seo-technical`, `analytics` |
 | `performance-page.php` | `performance`, `performance-cache`, `-media`, `-database`, `-settings`, `-sessions` |
 | `system-monitor-page.php` | `info`, `diagnose`, `monitor-warnings`, `monitor-assets`, `cms-logs`, `monitor-response-time`, `monitor-disk-usage`, `monitor-scheduled-tasks`, `monitor-health-check`, `monitor-email-alerts`, `monitor-cron-status` |
 | `logs-page.php` | `logs`, `logs/operational`, `logs/security-audit`, `logs/php-errors`, `logs/channels` |

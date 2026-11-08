@@ -21,6 +21,7 @@ $seoSubnavItems = [
     ['slug' => 'seo-social', 'label' => 'Social', 'url' => '/admin/seo-social'],
     ['slug' => 'seo-schema', 'label' => 'Strukturierte Daten', 'url' => '/admin/seo-schema'],
     ['slug' => 'seo-sitemap', 'label' => 'Sitemap', 'url' => '/admin/seo-sitemap'],
+    ['slug' => 'seo-search-engines', 'label' => 'Suchmaschinen', 'url' => '/admin/seo-search-engines'],
     ['slug' => 'seo-technical', 'label' => 'Technisches SEO', 'url' => '/admin/seo-technical'],
     ['slug' => 'redirect-manager', 'label' => 'Weiterleitungen', 'url' => '/admin/redirect-manager'],
     ['slug' => 'not-found-monitor', 'label' => '404-Monitor', 'url' => '/admin/not-found-monitor'],

@@ -16,6 +16,7 @@ use CMS\Hooks;
 use CMS\Http\Client as HttpClient;
 use CMS\Logger;
 use CMS\VendorRegistry;
+use CMS\Services\SEO\SearchEngineVerification;
 use CMS\Services\SEO\SeoAuditService;
 use CMS\Services\SEO\SeoMetaService;
 use CMS\Services\SEO\SeoSitemapService;
@@ -262,6 +263,14 @@ class SEOService
     public function getCustomHeaderCode(): string
     {
         return $this->metaService->getCustomHeaderCode();
+    }
+
+    /**
+     * Meta-Tags zur Website-Verifizierung (Google, Bing, Yandex, Seznam, Naver, Baidu).
+     */
+    public function getSearchEngineVerificationTags(): string
+    {
+        return SearchEngineVerification::renderTags();
     }
 
     /**

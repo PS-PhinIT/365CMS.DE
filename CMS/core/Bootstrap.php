@@ -737,6 +737,21 @@ class Bootstrap
                 }
             }, 90);
 
+            // Website-Verifizierung der Webmaster-Tools (SEO → Suchmaschinen) als Meta-Tags im <head>.
+            Hooks::addAction('head', static function (): void {
+                static $verificationTagsRendered = false;
+
+                if ($verificationTagsRendered) {
+                    return;
+                }
+
+                $verificationTagsRendered = true;
+                try {
+                    echo Services\SEOService::getInstance()->getSearchEngineVerificationTags();
+                } catch (\Throwable) {
+                }
+            }, 16);
+
             // PhotoSwipe V5 — Lightbox für Bilder in Content-Bereichen
             Hooks::addAction('head', static function () use ($shouldLoadPhotoSwipe): void {
                 if (!$shouldLoadPhotoSwipe()) {
@@ -894,6 +909,9 @@ class Bootstrap
         Hooks::addAction('cms_cron_hourly', static function (): void {
             Services\SecurityAlertService::getInstance()->runScheduledScan();
         }, 40);
+        Hooks::addAction('cms_cron_hourly', static function (): void {
+            Services\IndexingService::getInstance()->runScheduledIndexNowFlush();
+        }, 45);
         // Sitemaps nach Inhaltsänderungen verwerfen: die nächste Anfrage auf /sitemap.xml erzeugt
         // das Bundle neu, statt bis zum nächsten Tages-Cron veraltete URLs auszuliefern.
         foreach (['cms_after_post_save', 'cms_after_page_save', 'post_deleted', 'page_deleted'] as $sitemapInvalidationHook) {
@@ -903,6 +921,23 @@ class Bootstrap
                 } catch (\Throwable) {
                 }
             }, 90);
+        }
+        // IndexNow (Opt-in unter SEO → Suchmaschinen): gespeicherte, öffentliche Inhalte vormerken und nach der
+        // Antwort melden; fehlgeschlagene Meldungen wiederholt der stündliche Cron.
+        foreach (['cms_after_post_save' => 'post', 'cms_after_page_save' => 'page'] as $indexNowHook => $indexNowContentType) {
+            Hooks::addAction($indexNowHook, static function (mixed $contentId = 0) use ($indexNowContentType): void {
+                try {
+                    $indexing = Services\IndexingService::getInstance();
+                    if ($indexing->queueContentForIndexNow($indexNowContentType, (int) $contentId) > 0) {
+                        $indexing->scheduleIndexNowQueueFlush();
+                    }
+                } catch (\Throwable $e) {
+                    Logger::instance()->withChannel('seo.indexing')->warning('IndexNow: Inhalt konnte nicht vorgemerkt werden.', [
+                        'type' => $indexNowContentType,
+                        'exception' => $e,
+                    ]);
+                }
+            }, 95);
         }
         Hooks::addAction('cms_cron_daily', static function (): void {
             if (!Services\SEOService::getInstance()->saveSitemapBundle()) {
