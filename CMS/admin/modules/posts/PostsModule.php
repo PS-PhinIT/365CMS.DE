@@ -952,13 +952,13 @@ class PostsModule
                     );
                 }
 
-                $this->db->execute(
+                $saveStatement = $this->db->execute(
                     "UPDATE {$this->prefix}posts 
                      SET title = ?, title_en = ?, slug = ?, slug_en = ?, content = ?, content_en = ?, excerpt = ?, excerpt_en = ?, status = ?,
                          category_id = ?, featured_image = ?, tags = ?,
                          meta_title = ?, meta_description = ?, author_display_name = ?, author_display_url = ?, post_template = ?, post_meta_json = ?, published_at = ?,
                          content_updated_at = ?,
-                         updated_at = NOW()
+                         updated_at = updated_at
                      WHERE id = ?",
                     [
                         (string)$savePayload['title'],
@@ -984,6 +984,10 @@ class PostsModule
                         $id,
                     ]
                 );
+                // Aktualisierungsdatum nur bei tatsächlich geänderten Werten setzen, nicht bei bloßem erneuten Speichern.
+                if ($saveStatement->rowCount() > 0) {
+                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = NOW() WHERE id = ?", [$id]);
+                }
 
                 SEOService::getInstance()->saveContentMeta('post', $id, $post);
                 $this->syncPostTags($id, $rawTags);
@@ -1216,12 +1220,12 @@ class PostsModule
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge gelöscht.'];
 
                 case 'publish':
-                    $this->db->execute("UPDATE {$this->prefix}posts SET status = 'published', published_at = COALESCE(published_at, NOW()), updated_at = NOW() WHERE id IN ({$placeholders})", $ids);
+                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published', published_at = COALESCE(published_at, NOW()) WHERE id IN ({$placeholders})", $ids);
                     $this->clearContentCacheIfEnabled('post_bulk_publish', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge veröffentlicht.'];
 
                 case 'draft':
-                    $this->db->execute("UPDATE {$this->prefix}posts SET status = 'draft', updated_at = NOW() WHERE id IN ({$placeholders})", $ids);
+                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})", $ids);
                     $this->clearContentCacheIfEnabled('post_bulk_draft', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge als Entwurf gesetzt.'];
 
@@ -1236,8 +1240,8 @@ class PostsModule
 
                     $params = array_merge([(int) ($selectedCategoryIds[0] ?? 0)], $ids);
                     $this->db->execute(
-                        "UPDATE {$this->prefix}posts SET category_id = ?, updated_at = NOW() WHERE id IN ({$placeholders})",
-                        $params
+                        "UPDATE {$this->prefix}posts SET updated_at = IF(category_id <=> ?, updated_at, NOW()), category_id = ? WHERE id IN ({$placeholders})",
+                        array_merge([$params[0]], $params)
                     );
 
                     foreach ($ids as $postId) {
@@ -1249,7 +1253,7 @@ class PostsModule
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge den gewählten Kategorien zugewiesen.'];
 
                 case 'clear_category':
-                    $this->db->execute("UPDATE {$this->prefix}posts SET category_id = NULL, updated_at = NOW() WHERE id IN ({$placeholders})", $ids);
+                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(category_id IS NULL, updated_at, NOW()), category_id = NULL WHERE id IN ({$placeholders})", $ids);
                     foreach ($ids as $postId) {
                         $this->syncPostCategories((int) $postId, []);
                     }
@@ -1264,8 +1268,8 @@ class PostsModule
 
                     $params = array_merge([$authorDisplayName], $ids);
                     $this->db->execute(
-                        "UPDATE {$this->prefix}posts SET author_display_name = ?, updated_at = NOW() WHERE id IN ({$placeholders})",
-                        $params
+                        "UPDATE {$this->prefix}posts SET updated_at = IF(author_display_name <=> ?, updated_at, NOW()), author_display_name = ? WHERE id IN ({$placeholders})",
+                        array_merge([$params[0]], $params)
                     );
 
                     $this->clearContentCacheIfEnabled('post_bulk_set_author_display_name', (int) $ids[0]);
@@ -1273,7 +1277,7 @@ class PostsModule
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge mit neuem Autoren-Anzeigenamen aktualisiert.'];
 
                 case 'clear_author_display_name':
-                    $this->db->execute("UPDATE {$this->prefix}posts SET author_display_name = NULL, updated_at = NOW() WHERE id IN ({$placeholders})", $ids);
+                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(author_display_name IS NULL, updated_at, NOW()), author_display_name = NULL WHERE id IN ({$placeholders})", $ids);
                     $this->clearContentCacheIfEnabled('post_bulk_clear_author_display_name', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge auf den normalen 365CMS-Anzeigenamen zurückgesetzt.'];
 
@@ -1647,7 +1651,7 @@ class PostsModule
                 $this->reassignPostsFromDeletedCategory($id, $replacementId);
             } else {
                 $this->db->execute("DELETE FROM {$this->prefix}post_category_rel WHERE category_id = ?", [$id]);
-                $this->db->execute("UPDATE {$this->prefix}posts SET category_id = NULL WHERE category_id = ?", [$id]);
+                $this->db->execute("UPDATE {$this->prefix}posts SET category_id = NULL, updated_at = updated_at WHERE category_id = ?", [$id]);
             }
 
             $this->db->execute("UPDATE {$this->prefix}post_categories SET parent_id = NULL WHERE parent_id = ?", [$id]);
@@ -1778,7 +1782,7 @@ class PostsModule
             }
 
             $this->db->execute(
-                "UPDATE {$this->prefix}posts SET category_id = ?, updated_at = NOW() WHERE id = ?",
+                "UPDATE {$this->prefix}posts SET category_id = ?, updated_at = updated_at WHERE id = ?",
                 [$newPrimaryCategoryId, $postId]
             );
 
@@ -3258,7 +3262,7 @@ class PostsModule
         foreach ($postIds as $postId) {
             $tagNames = $this->getPostTagNames($postId);
             $this->db->execute(
-                "UPDATE {$this->prefix}posts SET tags = ?, updated_at = NOW() WHERE id = ?",
+                "UPDATE {$this->prefix}posts SET tags = ?, updated_at = updated_at WHERE id = ?",
                 [implode(', ', $tagNames), $postId]
             );
         }

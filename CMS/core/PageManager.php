@@ -177,12 +177,21 @@ class PageManager
             return false;
         }
         
-        $fields[] = "updated_at = NOW()";
+        $fields[] = "updated_at = updated_at";
         $values[] = $id;
         
         $sql = "UPDATE {$this->prefix}pages SET " . implode(', ', $fields) . " WHERE id = ?";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($values);
+        if (!$stmt->execute($values)) {
+            return false;
+        }
+
+        // Aktualisierungsdatum nur bei tatsächlich geänderten Werten setzen, nicht bei bloßem erneuten Speichern.
+        if ($stmt->rowCount() > 0) {
+            $this->db->execute("UPDATE {$this->prefix}pages SET updated_at = NOW() WHERE id = ?", [$id]);
+        }
+
+        return true;
     }
 
     /**

@@ -1092,7 +1092,51 @@ class SchemaManager
         $this->ensureUserMetaUniqueKey();
         $this->ensureSiteTableSlugs();
         $this->ensurePostLocaleColumns();
+        $this->repairViewCounterUpdatedAt();
         $this->dropRedundantIndexes();
+    }
+
+    private const VIEW_COUNTER_REPAIR_OPTION = 'posts_updated_at_view_repair';
+
+    /**
+     * Bis 3.5.4 stempelte der Aufrufzähler (`views = views + 1`) über ON UPDATE CURRENT_TIMESTAMP
+     * bei jedem Besuch `posts.updated_at` neu. Einmalig wird das Datum aufgerufener Beiträge auf die
+     * letzte nachweisbare Autorenänderung zurückgesetzt (jüngste Revision, Veröffentlichung, Erstellung);
+     * der Wert wird nur verringert, nie erhöht.
+     */
+    private function repairViewCounterUpdatedAt(): void
+    {
+        $posts = $this->prefix . 'posts';
+        $revisions = $this->prefix . 'post_revisions';
+        $settings = $this->prefix . 'settings';
+
+        try {
+            $done = $this->db->get_var("SELECT option_value FROM {$settings} WHERE option_name = ? LIMIT 1", [self::VIEW_COUNTER_REPAIR_OPTION]);
+            if ((string) $done === '1' || !$this->db->columnExists($posts, 'views')) {
+                return;
+            }
+
+            $hasRevisions = $this->db->columnExists($revisions, 'post_id') && $this->db->columnExists($revisions, 'created_at');
+            $join = $hasRevisions
+                ? "LEFT JOIN (SELECT post_id, MAX(created_at) AS last_revision_at FROM {$revisions} GROUP BY post_id) r ON r.post_id = p.id"
+                : '';
+            $revisionExpr = $hasRevisions ? 'r.last_revision_at' : 'NULL';
+            $estimate = "GREATEST(COALESCE(p.created_at, p.updated_at), COALESCE(p.published_at, p.created_at, p.updated_at), COALESCE({$revisionExpr}, p.created_at, p.updated_at))";
+
+            $this->db->getPdo()->exec(
+                "UPDATE {$posts} p {$join}
+                 SET p.updated_at = {$estimate}
+                 WHERE p.views > 0 AND p.updated_at > {$estimate}"
+            );
+
+            $this->db->execute(
+                "INSERT INTO {$settings} (option_name, option_value, autoload) VALUES (?, '1', 0)
+                 ON DUPLICATE KEY UPDATE option_value = '1'",
+                [self::VIEW_COUNTER_REPAIR_OPTION]
+            );
+        } catch (\Throwable $e) {
+            error_log('SchemaManager::repairViewCounterUpdatedAt() failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+        }
     }
 
     /**

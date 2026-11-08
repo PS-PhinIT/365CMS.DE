@@ -1217,7 +1217,8 @@ final class ThemeRouter
 
         $post = (object)$postData;
         if (\cms_post_is_publicly_visible($postRow) && $this->shouldCountPostView()) {
-            $db->execute("UPDATE {$prefix}posts SET views = views + 1 WHERE id = ?", [(int)$post->id]);
+            // `updated_at = updated_at` verhindert, dass ON UPDATE CURRENT_TIMESTAMP jeden Aufruf als Änderung stempelt.
+            $db->execute("UPDATE {$prefix}posts SET views = views + 1, updated_at = updated_at WHERE id = ?", [(int)$post->id]);
         }
 
         if (!empty($post->content)) {

@@ -675,7 +675,7 @@ class PagesModule
 
                 case 'publish':
                     $this->db->execute(
-                        "UPDATE {$this->prefix}pages SET status = 'published', updated_at = NOW() WHERE id IN ({$placeholders})",
+                        "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published' WHERE id IN ({$placeholders})",
                         $ids
                     );
                     $this->clearContentCacheIfEnabled('page_bulk_publish', (int) $ids[0]);
@@ -683,7 +683,7 @@ class PagesModule
 
                 case 'draft':
                     $this->db->execute(
-                        "UPDATE {$this->prefix}pages SET status = 'draft', updated_at = NOW() WHERE id IN ({$placeholders})",
+                        "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})",
                         $ids
                     );
                     $this->clearContentCacheIfEnabled('page_bulk_draft', (int) $ids[0]);
@@ -701,8 +701,8 @@ class PagesModule
 
                     $params = array_merge([$categoryId], $ids);
                     $this->db->execute(
-                        "UPDATE {$this->prefix}pages SET category_id = ?, updated_at = NOW() WHERE id IN ({$placeholders})",
-                        $params
+                        "UPDATE {$this->prefix}pages SET updated_at = IF(category_id <=> ?, updated_at, NOW()), category_id = ? WHERE id IN ({$placeholders})",
+                        array_merge([$params[0]], $params)
                     );
 
                     $this->clearContentCacheIfEnabled('page_bulk_set_category', (int) $ids[0]);
@@ -711,7 +711,7 @@ class PagesModule
 
                 case 'clear_category':
                     $this->db->execute(
-                        "UPDATE {$this->prefix}pages SET category_id = NULL, updated_at = NOW() WHERE id IN ({$placeholders})",
+                        "UPDATE {$this->prefix}pages SET updated_at = IF(category_id IS NULL, updated_at, NOW()), category_id = NULL WHERE id IN ({$placeholders})",
                         $ids
                     );
                     $this->clearContentCacheIfEnabled('page_bulk_clear_category', (int) $ids[0]);
