@@ -241,7 +241,7 @@ $showRuleCreateSimulatedSuccess = isset($alert['type'], $alert['message'])
                             <div class="mb-3">
                                 <label for="fld-firewall_rate_limit" class="form-label">Rate Limit (Anfragen)</label>
                                 <input id="fld-firewall_rate_limit" type="number" name="firewall_rate_limit" class="form-control" min="10" max="1000" value="<?php echo (int)($settings['firewall_rate_limit'] ?? 60); ?>" data-firewall-rate-limit>
-                                <small class="form-hint">Max. Anfragen pro Zeitfenster</small>
+                                <small class="form-hint">Max. Anfragen je IP pro Zeitfenster. Nicht gezählt werden IPs mit Regel „IP erlauben“ und angemeldete Administratoren.</small>
                                 <div class="firewall-seconds-hint" data-firewall-rate-limit-hint></div>
                             </div>
 

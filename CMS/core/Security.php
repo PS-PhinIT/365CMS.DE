@@ -680,6 +680,11 @@ class Security
      * (Passwort-Reset je Konto und je Token) zählten dadurch nie.
      */
     public const RATE_LIMIT_ACTION_MAX_LENGTH = 30;
+    /**
+     * login_attempts.action-Werte für echte fehlgeschlagene Anmeldungen. Die Tabelle dient zugleich als
+     * Rate-Limit-Speicher (Suche, API, Registrierung, Kontaktformular …) – Statistiken dürfen nur diese zählen.
+     */
+    public const FAILED_LOGIN_ACTIONS = ['login', 'mfa_verify'];
     public const RATE_LIMIT_IDENTIFIER_MAX_LENGTH = 60;
 
     public static function normalizeRateLimitAction(string $action): string

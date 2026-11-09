@@ -211,9 +211,9 @@ class SEOService
     /**
      * Generate robots.txt.
      */
-    public function generateRobotsTxt(): string
+    public function generateRobotsTxt(?string $siteUrl = null): string
     {
-        return $this->sitemapService->generateRobotsTxt();
+        return $this->sitemapService->generateRobotsTxt($siteUrl);
     }
 
     /**
@@ -252,9 +252,9 @@ class SEOService
     /**
      * Save robots.txt to file.
      */
-    public function saveRobotsTxt(): bool
+    public function saveRobotsTxt(?string $siteUrl = null): bool
     {
-        return $this->sitemapService->saveRobotsTxt();
+        return $this->sitemapService->saveRobotsTxt($siteUrl);
     }
 
     /**

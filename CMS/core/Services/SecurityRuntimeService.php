@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\AuditLogger;
+use CMS\Auth;
 use CMS\Database;
 use CMS\Logger;
 use CMS\Security;
@@ -20,11 +21,13 @@ final class SecurityRuntimeService
     private const DEFAULT_BLOCK_DURATION = 3600;
     private const RULE_MODE_ENFORCE = 'enforce';
     private const RULE_MODE_SIMULATE = 'simulate';
+    private const AUTO_BLOCK_REASON = 'Automatisches Rate-Limit';
 
     private static ?self $instance = null;
 
     private Database $db;
     private string $prefix;
+    private ?bool $rateLimitExempt = null;
 
     public static function getInstance(): self
     {
@@ -138,15 +141,21 @@ final class SecurityRuntimeService
                 ]);
             }
 
-            $this->enforceRateLimit($settings, $ip, $uri, $userAgent);
+            if ($decision['decision'] === 'allow') {
+                // allow_ip hat Vorrang vor Block-Regeln und Rate-Limit.
+                if (($settings['firewall_log_enabled'] ?? '0') === '1') {
+                    $this->logSecurityEvent('allowed', $ip, $uri, $userAgent, $decision['rule'], [
+                        'source' => 'allow_rule',
+                        'rule_id' => $decision['rule_id'],
+                        'rule_type' => $decision['rule_type'],
+                        'rule_mode' => $decision['rule_mode'],
+                    ]);
+                }
+                return;
+            }
 
-            if ($decision['decision'] === 'allow' && ($settings['firewall_log_enabled'] ?? '0') === '1') {
-                $this->logSecurityEvent('allowed', $ip, $uri, $userAgent, $decision['rule'], [
-                    'source' => 'allow_rule',
-                    'rule_id' => $decision['rule_id'],
-                    'rule_type' => $decision['rule_type'],
-                    'rule_mode' => $decision['rule_mode'],
-                ]);
+            if (!$this->isRateLimitExempt()) {
+                $this->enforceRateLimit($settings, $ip, $uri, $userAgent);
             }
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('security.runtime')->warning('Firewall-Runtime-Prüfung fehlgeschlagen.', [
@@ -182,11 +191,32 @@ final class SecurityRuntimeService
         return $settings;
     }
 
-        /** @return array{decision:string,rule:string,rule_id:int,rule_type:string,rule_mode:string} */
+    /**
+     * Angemeldete Konten mit `manage_settings` (Administratoren) zählen nicht zum Rate-Limit und umgehen
+     * automatische Rate-Limit-Sperren. Sonst sperrt zügiges Arbeiten im Backend die eigene IP für die
+     * ganze Sperrdauer aus – samt Firewall-Seite, über die sich die Sperre aufheben ließe.
+     */
+    private function isRateLimitExempt(): bool
+    {
+        if ($this->rateLimitExempt !== null) {
+            return $this->rateLimitExempt;
+        }
+
+        try {
+            $auth = Auth::instance();
+            $this->rateLimitExempt = $auth->currentUser() !== null && $auth->hasCapability('manage_settings');
+        } catch (\Throwable) {
+            $this->rateLimitExempt = false;
+        }
+
+        return $this->rateLimitExempt;
+    }
+
+    /** @return array{decision:string,rule:string,rule_id:int,rule_type:string,rule_mode:string} */
     private function evaluateRules(string $ip, string $userAgent): array
     {
         $rows = $this->db->get_results(
-                        "SELECT id, rule_type, rule_mode, value
+                        "SELECT id, rule_type, rule_mode, value, reason
              FROM {$this->prefix}firewall_rules
              WHERE is_active = 1
                AND (expires_at IS NULL OR expires_at > NOW())
@@ -214,6 +244,11 @@ final class SecurityRuntimeService
             }
 
             if ($type === 'block_ip' && hash_equals($value, $ip)) {
+                // Automatische Rate-Limit-Sperren gelten nicht für angemeldete Administratoren
+                // (isRateLimitExempt()); manuell angelegte Regeln werden weiter geprüft.
+                if ((string)($row->reason ?? '') === self::AUTO_BLOCK_REASON && $this->isRateLimitExempt()) {
+                    continue;
+                }
                 return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode];
             }
 
@@ -265,7 +300,9 @@ final class SecurityRuntimeService
         }
 
         $exists = (int)($this->db->get_var(
-            "SELECT COUNT(*) FROM {$this->prefix}firewall_rules WHERE rule_type = 'block_ip' AND value = ? AND is_active = 1 AND (rule_mode IS NULL OR rule_mode = ?)",
+            "SELECT COUNT(*) FROM {$this->prefix}firewall_rules
+             WHERE rule_type = 'block_ip' AND value = ? AND is_active = 1 AND (rule_mode IS NULL OR rule_mode = ?)
+               AND (expires_at IS NULL OR expires_at > NOW())",
             [$ip, self::RULE_MODE_ENFORCE]
         ) ?? 0);
         if ($exists > 0) {
@@ -276,7 +313,7 @@ final class SecurityRuntimeService
             'rule_type' => 'block_ip',
             'rule_mode' => self::RULE_MODE_ENFORCE,
             'value' => $ip,
-            'reason' => 'Automatisches Rate-Limit',
+            'reason' => self::AUTO_BLOCK_REASON,
             'is_active' => 1,
             'expires_at' => $expiresAt,
         ]);
@@ -290,7 +327,7 @@ final class SecurityRuntimeService
 
         $this->db->execute(
             "DELETE FROM {$this->prefix}firewall_rules WHERE rule_type = 'block_ip' AND reason = ? AND expires_at IS NOT NULL AND expires_at <= NOW()",
-            ['Automatisches Rate-Limit']
+            [self::AUTO_BLOCK_REASON]
         );
         // In Blöcken löschen: ein einziges DELETE über Hunderttausende Zeilen sperrt die Tabelle lange.
         $this->db->execute(

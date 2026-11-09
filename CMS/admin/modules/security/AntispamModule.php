@@ -13,14 +13,6 @@ use CMS\AuditLogger;
 
 class AntispamModule
 {
-    private const SETTING_KEYS = [
-        'antispam_enabled',
-        'antispam_honeypot',
-        'antispam_min_time',
-        'antispam_max_links',
-        'antispam_block_empty_ua',
-    ];
-
     private readonly \CMS\Database $db;
     private readonly string $prefix;
 
@@ -28,10 +20,10 @@ class AntispamModule
     {
         $this->db     = \CMS\Database::instance();
         $this->prefix = $this->db->getPrefix();
-        $this->ensureTable();
+        $this->db->runSchemaOnce('antispam_blacklist', __FILE__, fn (): bool => $this->ensureTable());
     }
 
-    private function ensureTable(): void
+    private function ensureTable(): bool
     {
         $this->db->getPdo()->exec(
             "CREATE TABLE IF NOT EXISTS {$this->prefix}spam_blacklist (
@@ -51,6 +43,8 @@ class AntispamModule
         } catch (\Throwable $e) {
             // Index existiert bereits oder Altbestand enthält Duplikate; Laufzeitprüfung fängt Duplikate trotzdem ab.
         }
+
+        return true;
     }
 
     public function getData(): array
@@ -230,20 +224,15 @@ class AntispamModule
         }
     }
 
+    /**
+     * Dieselben Standardwerte wie die Laufzeitprüfung (AntispamService), damit das Formular
+     * den tatsächlich wirksamen Zustand zeigt und ein Speichern ihn nicht verändert.
+     *
+     * @return array<string,string>
+     */
     private function loadSettings(): array
     {
-        $placeholders = implode(',', array_fill(0, count(self::SETTING_KEYS), '?'));
-        $rows = $this->db->get_results(
-            "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name IN ({$placeholders})",
-            self::SETTING_KEYS
-        ) ?: [];
-
-        $settings = array_fill_keys(self::SETTING_KEYS, '');
-        foreach ($rows as $row) {
-            $settings[$row->option_name] = (string)$row->option_value;
-        }
-
-        return $settings;
+        return \CMS\Services\AntispamService::getInstance()->getSettings();
     }
 
     private function sanitizeText(string $value, int $maxLength): string

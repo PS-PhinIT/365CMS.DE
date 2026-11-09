@@ -85,7 +85,7 @@ define('LDAP_DEFAULT_ROLE', 'member');
 
 Der Button **„LDAP-Erstsynchronisierung“** (`action=sync_ldap`) legt bis zu **250** Verzeichnisbenutzer mit `LDAP_DEFAULT_ROLE` an. Das Ergebnis wird im Audit-Log (`user_settings.ldap.sync`) protokolliert. Der Button ist deaktiviert, solange LDAP nicht vollständig konfiguriert ist.
 
-> **Wichtig:** Das Speichern unter `/admin/settings` erzeugt `config/app.php` neu und setzt dabei `LDAP_*` und `JWT_*` auf leere Standardwerte zurück. Werte nach jedem Speichern der allgemeinen Einstellungen prüfen bzw. erneut eintragen ([../system-settings/SYSTEM.md](../system-settings/SYSTEM.md#speichern-und-configappphp)).
+> **Hinweis:** Das Speichern unter `/admin/settings` ändert in `config/app.php` nur `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` und `CMS_DEBUG`; `LDAP_*` und `JWT_*` bleiben erhalten. Nur wenn eine dieser vier Konstanten fehlt oder mehrfach definiert ist, erzeugt das CMS die Datei aus der Vorlage neu und setzt `LDAP_*`/`JWT_*` auf leere Standardwerte; die vorherige Fassung liegt dann als `config/app.backup-<Datum>.php` vor ([../system-settings/SYSTEM.md](../system-settings/SYSTEM.md#speichern-und-configappphp)).
 
 ### Sicherheitshinweise
 

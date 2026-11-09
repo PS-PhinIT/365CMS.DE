@@ -219,18 +219,19 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
                         <?php foreach ($backups as $backup): ?>
                             <?php
                             $name = is_array($backup) ? ($backup['name'] ?? $backup['filename'] ?? '') : (string)$backup;
-                            $size = is_array($backup) ? ($backup['size'] ?? $backup['size_formatted'] ?? '-') : '-';
+                            $size = is_array($backup) ? ($backup['size_formatted'] ?? $backup['size'] ?? '-') : '-';
                             $date = is_array($backup) ? ($backup['date'] ?? $backup['created'] ?? '-') : '-';
                             $statusRaw = strtolower(trim((string) (is_array($backup) ? ($backup['status'] ?? '') : '')));
-                            $isFailedBackup = in_array($statusRaw, ['failed', 'fehlgeschlagen', 'error', 'fehler'], true)
+                            $isFailedBackup = in_array($statusRaw, ['failed', 'fehlgeschlagen', 'error', 'fehler', 'incomplete'], true)
                                 || (is_array($backup) && array_key_exists('success', $backup) && empty($backup['success']));
+                            $isPendingBackup = $statusRaw === 'pending';
                             $errorLog = is_array($backup)
                                 ? (string) ($backup['error_log'] ?? $backup['error'] ?? $backup['message'] ?? 'Keine Fehlerdetails vorhanden.')
                                 : 'Keine Fehlerdetails vorhanden.';
                             $canDownloadDatabase = !empty($backup['can_download_database']);
                             $canDownloadFiles = !empty($backup['can_download_files']);
                             $canRestore = !empty($backup['can_restore']);
-                            if ($isFailedBackup) {
+                            if ($isFailedBackup || $isPendingBackup) {
                                 $canRestore = false;
                             }
                             $downloadDatabaseToken = $canDownloadDatabase && function_exists('cms_admin_backups_create_download_token')
@@ -253,8 +254,10 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
                                             type="button"
                                             class="badge bg-danger-lt text-danger border-0 backup-failed-badge"
                                             data-cms-call="cmsAdminBackupsShowErrorLog" data-cms-call-args="<?php echo htmlspecialchars((string) json_encode([(string) $name, (string) $errorLog], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>">
-                                            Fehlgeschlagen
+                                            <?php echo $statusRaw === 'incomplete' ? 'Unvollständig' : 'Fehlgeschlagen'; ?>
                                         </button>
+                                    <?php elseif ($isPendingBackup): ?>
+                                        <span class="badge bg-warning-lt text-warning" title="<?php echo htmlspecialchars($errorLog); ?>">In Arbeit</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-muted"><?php echo htmlspecialchars((string)$size); ?></td>
@@ -293,7 +296,7 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
                                                 Dry-Run
                                             </button>
                                         </form>
-                                        <?php if (!empty($backup['can_restore'])): ?>
+                                        <?php if ($canRestore): ?>
                                             <form method="post" class="d-inline">
                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                                                 <input type="hidden" name="action" value="restore">

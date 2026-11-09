@@ -361,6 +361,9 @@ class BackupsModule
             $date = $this->sanitizeDate((string)($backup['date'] ?? ''));
             $timestamp = max(0, (int)($backup['timestamp'] ?? 0));
             $size = max(0, (int)($backup['size'] ?? 0));
+            $status = in_array((string) ($backup['status'] ?? 'ok'), ['ok', 'incomplete', 'pending'], true)
+                ? (string) ($backup['status'] ?? 'ok')
+                : 'incomplete';
 
             if ($name === '' || $type === '') {
                 continue;
@@ -369,17 +372,21 @@ class BackupsModule
             $entry = [
                 'name' => $name,
                 'type' => $type,
-                'date' => $date !== '' ? $date : ($timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : '-'),
+                // Manifest-„date“ ist ein Dateinamen-Stempel (Y-m-d_H-i-s) – lesbares Datum aus dem Zeitstempel bevorzugen.
+                'date' => $timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : ($date !== '' ? $date : '-'),
                 'timestamp' => $timestamp,
                 'size' => $size,
                 'size_formatted' => $size > 0 ? $this->formatBytes($size) : '-',
                 'database' => $this->normalizeBackupFileName((string)($backup['database'] ?? ''), ['sql', 'gz']),
                 'files' => $this->normalizeBackupFileName((string)($backup['files'] ?? ''), ['zip']),
+                'status' => $status,
+                'error' => $status === 'ok' ? '' : $this->sanitizeText((string) ($backup['error'] ?? ''), 240),
             ];
 
-            $entry['can_download_database'] = $entry['database'] !== '';
-            $entry['can_download_files'] = $entry['files'] !== '';
-            $entry['can_restore'] = $entry['can_download_database'] || $entry['can_download_files'];
+            // Vorhandene Teile bleiben auch bei unvollständigen Backups herunterladbar; Restore nur bei vollständigen.
+            $entry['can_download_database'] = $entry['database'] !== '' && ($backup['database_available'] ?? true) !== false;
+            $entry['can_download_files'] = $entry['files'] !== '' && ($backup['files_available'] ?? true) !== false;
+            $entry['can_restore'] = $status === 'ok' && ($entry['can_download_database'] || $entry['can_download_files']);
 
             $sanitized[] = $entry;
         }

@@ -460,10 +460,13 @@ class DashboardService {
      * Sicherheits-Statistiken
      */
     public function getSecurityStats(): array {
-        // login_attempts enthält nur Fehlschläge (success-Spalte wurde entfernt)
+        // login_attempts speichert auch andere Rate-Limit-Ereignisse (Suche, API, Registrierung …).
+        $failedLoginActions = \CMS\Security::FAILED_LOGIN_ACTIONS;
         $failed_logins_24h = (int)$this->db->get_var(
             "SELECT COUNT(*) FROM {$this->prefix}login_attempts
-             WHERE attempted_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)"
+             WHERE attempted_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+               AND action IN (" . implode(', ', array_fill(0, count($failedLoginActions), '?')) . ")",
+            $failedLoginActions
         ) ?: 0;
 
         // Erfolgreiche Logins werden nicht in login_attempts gespeichert
@@ -481,9 +484,8 @@ class DashboardService {
             $score -= 10;
         }
         
-        // HTTPS
-        $https_enabled = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
-                      || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        // HTTPS – dieselbe Erkennung wie Sicherheits-Audit und System-Info (Port 443, X-Forwarded-Proto/-SSL, Front-End-Https)
+        $https_enabled = (bool) (\CMS\Security::instance()->getSecurityHeaderProfile()['https'] ?? false);
         
         if (!$https_enabled) {
             $score -= 20;

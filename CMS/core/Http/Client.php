@@ -149,9 +149,12 @@ final class Client
         $pinnedIp = '';
 
         if (!$allowPrivateHosts) {
-            $pinnedIp = $this->resolveSafeExternalIp($url);
+            $pinnedIp = $this->resolveSafeExternalIp($url, $blockReason);
             if ($pinnedIp === '') {
-                return $this->failure('URL wurde durch den SSRF-Schutz blockiert.');
+                // Nicht auflösbare Hosts (DNS-/Netzwerkproblem) nicht als SSRF-Angriff melden – das führt Admins in die Irre.
+                return $this->failure($blockReason === 'dns'
+                    ? 'Host konnte nicht aufgelöst werden (DNS) – Internetverbindung bzw. DNS des Servers prüfen.'
+                    : 'URL wurde durch den SSRF-Schutz blockiert.');
             }
         }
 
@@ -373,15 +376,21 @@ final class Client
     }
 
 
-    private function resolveSafeExternalIp(string $url): string
+    /**
+     * @param-out string $blockReason '' | 'dns' | 'private'
+     */
+    private function resolveSafeExternalIp(string $url, ?string &$blockReason = null): string
     {
+        $blockReason = 'private';
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
         if ($host === '' || in_array($host, ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback'], true)) {
             return '';
         }
 
-        $resolvedIps = $this->resolveHostIps($host);
+        // IPv6-Literale liefert parse_url() in eckigen Klammern ([::1]).
+        $resolvedIps = $this->resolveHostIps(trim($host, '[]'));
         if ($resolvedIps === []) {
+            $blockReason = 'dns';
             \CMS\Logger::instance()->withChannel('http-client')->warning('External HTTP request blocked because the host could not be pinned to a safe IP.', [
                 'host' => $host,
                 'url' => $this->sanitizeUrlForLog($url),
@@ -399,6 +408,8 @@ final class Client
                 return '';
             }
         }
+
+        $blockReason = '';
 
         return (string) $resolvedIps[0];
     }

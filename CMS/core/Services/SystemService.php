@@ -446,13 +446,15 @@ class SystemService {
                 $stats['cache_entries'] = (int)($row['total'] ?? 0);
             }
             
-            // Failed logins today (Tabelle: login_attempts, enthält nur Fehlschläge)
+            // Fehlgeschlagene Logins heute; login_attempts enthält auch andere Rate-Limit-Ereignisse.
+            $failedLoginActions = Security::FAILED_LOGIN_ACTIONS;
             $result = $pdo->prepare("
                 SELECT COUNT(*) as total 
                 FROM {$this->quoteIdentifier($prefix . 'login_attempts')} 
-                WHERE DATE(attempted_at) = CURDATE()
+                WHERE attempted_at >= CURDATE()
+                  AND action IN (" . implode(', ', array_fill(0, count($failedLoginActions), '?')) . ")
             ");
-            $result->execute();
+            $result->execute($failedLoginActions);
             if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
                 $stats['failed_logins_today'] = (int)($row['total'] ?? 0);
             }
