@@ -675,6 +675,39 @@ class Security
     }
 
     /**
+     * Zählt Einträge in `login_attempts` je Kennung (Konto, E-Mail-Adresse) und Aktion, unabhängig
+     * von der IP – erfasst also auch verteilte Versuche gegen dasselbe Konto. 0 bei DB-Fehlern.
+     */
+    public static function countDbIdentifierAttempts(string $identifier, string $action, int $timeWindow): int
+    {
+        $identifier = self::normalizeRateLimitIdentifier($identifier);
+        if ($identifier === '') {
+            return 0;
+        }
+
+        try {
+            $db = Database::instance();
+
+            return (int) $db->get_var(
+                "SELECT COUNT(*) FROM {$db->getPrefix()}login_attempts WHERE username = ? AND action = ? AND attempted_at >= ?",
+                [$identifier, self::normalizeRateLimitAction($action), date('Y-m-d H:i:s', time() - $timeWindow)]
+            );
+        } catch (\Throwable $e) {
+            error_log('Security::countDbIdentifierAttempts() Fehler: ' . self::sanitizeDiagnosticText($e->getMessage()));
+
+            return 0;
+        }
+    }
+
+    /**
+     * Rate-Limit je Kennung (siehe countDbIdentifierAttempts()); true = erlaubt.
+     */
+    public static function checkDbIdentifierRateLimit(string $identifier, string $action, int $maxAttempts, int $timeWindow): bool
+    {
+        return self::countDbIdentifierAttempts($identifier, $action, $timeWindow) < $maxAttempts;
+    }
+
+    /**
      * Spaltenbreiten von `login_attempts` (action VARCHAR(30), username VARCHAR(60)).
      * Längere Werte ließen das INSERT im SQL-Strict-Mode scheitern – die betroffenen Limits
      * (Passwort-Reset je Konto und je Token) zählten dadurch nie.

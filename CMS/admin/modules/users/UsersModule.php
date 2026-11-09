@@ -267,6 +267,7 @@ class UsersModule
             'securityEvents'    => $securityEventsState['events'],
             'securityEventsUnavailable' => (bool) $securityEventsState['unavailable'],
             'roleImpactPreview' => $this->buildRoleImpactPreview($user, $availableRoles),
+            'pendingEmail'      => $user !== null ? \CMS\Services\EmailChangeService::getInstance()->getPending((int) $user->id) : null,
         ];
     }
 
@@ -833,7 +834,8 @@ class UsersModule
 
         $data = [
             'username'   => $this->normalizeScalarText($post['username'] ?? '', 50),
-            'email'      => $this->normalizeScalarText($post['email'] ?? '', 190),
+            // Nicht auf die Spaltenbreite kürzen: zu lange Adressen meldet die Validierung.
+            'email'      => $this->normalizeScalarText($post['email'] ?? '', 254),
             'role'       => $this->normalizeScalarText($post['role'] ?? 'member', 50),
             'status'     => $this->normalizeScalarText($post['status'] ?? 'active', 20),
             'first_name' => $this->normalizeScalarText($post['first_name'] ?? '', 120),
@@ -843,6 +845,10 @@ class UsersModule
         $password = (string) ($post['password'] ?? '');
         if ($password !== '') {
             $data['password'] = $password;
+        }
+
+        if ($id > 0 && !empty($post['email_skip_confirmation'])) {
+            $data['email_skip_confirmation'] = true;
         }
 
         // Selbstaussperrung verhindern (analog zur Bulk-Aktion).
@@ -887,6 +893,16 @@ class UsersModule
                         ],
                     ];
                 }
+                $pendingEmail = \CMS\Services\EmailChangeService::getInstance()->getPending($id);
+                if ($pendingEmail !== null && strcasecmp($pendingEmail['email'], $data['email']) === 0) {
+                    return [
+                        'success' => true,
+                        'id' => $id,
+                        'message' => 'Benutzer aktualisiert. Die neue E-Mail-Adresse ' . $pendingEmail['email']
+                            . ' wird erst übernommen, wenn der Link in der Bestätigungs-E-Mail geöffnet wird.',
+                    ];
+                }
+
                 return ['success' => true, 'id' => $id, 'message' => 'Benutzer aktualisiert.'];
             } else {
                 if (empty($data['password'])) {
@@ -1037,6 +1053,29 @@ class UsersModule
                 ],
             ];
         }
+    }
+
+    /**
+     * Beendet alle Sitzungen und API-Tokens eines Benutzers (Folgeaudit OFFEN-23).
+     *
+     * @return array{success:bool,message?:string,error?:string}
+     */
+    public function revokeSessions(int $id): array
+    {
+        if (!\CMS\Auth::instance()->revokeAllSessions($id, 'admin')) {
+            return ['success' => false, 'error' => 'Die Sitzungen konnten nicht beendet werden. Details stehen im Server-Log.'];
+        }
+
+        return ['success' => true, 'message' => 'Alle Sitzungen und API-Tokens des Benutzers wurden beendet.'];
+    }
+
+    public function cancelEmailChange(int $id): array
+    {
+        if (!\CMS\Services\EmailChangeService::getInstance()->cancel($id, \CMS\Services\EmailChangeService::INITIATOR_ADMIN)) {
+            return ['success' => false, 'error' => 'Für diesen Benutzer gibt es keine ausstehende Änderung der E-Mail-Adresse.'];
+        }
+
+        return ['success' => true, 'message' => 'Die ausstehende Änderung der E-Mail-Adresse wurde verworfen.'];
     }
 
     private function buildUserEditSourceUrl(int $id = 0): string

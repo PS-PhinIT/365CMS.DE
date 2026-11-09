@@ -35,41 +35,29 @@ function theme_login_user(string $email, string $password): bool|string
 
         return is_string($result) ? $result : 'Ungültige Zugangsdaten.';
     } catch (\Throwable $e) {
-        return 'Anmeldung fehlgeschlagen: ' . $e->getMessage();
+        // Keine Exception-Texte (z. B. SQL-Details) an Besucher ausgeben.
+        error_log('theme_login_user: ' . $e::class . ': ' . $e->getMessage());
+
+        return 'Anmeldung fehlgeschlagen.';
     }
 }
 
 function theme_register_user(string $email, string $username, string $password): bool|string
 {
     try {
-        $db = \CMS\Database::instance();
-        $prefix = $db->getPrefix();
-        $exists = $db->execute(
-            "SELECT id FROM {$prefix}users WHERE email = ? OR username = ? LIMIT 1",
-            [$email, $username]
-        )->fetch();
-        if ($exists) {
-            return 'E-Mail-Adresse oder Benutzername bereits vergeben.';
-        }
+        // Auth::register() prüft Benutzername und E-Mail selbst und verrät eine bereits
+        // registrierte Adresse nicht (Folgeaudit OFFEN-24).
+        $result = \CMS\Auth::instance()->register([
+            'email' => $email,
+            'username' => $username,
+            'password' => $password,
+            'display_name' => $username,
+        ]);
 
-        if (method_exists(\CMS\Auth::instance(), 'register')) {
-            $result = \CMS\Auth::instance()->register([
-                'email' => $email,
-                'username' => $username,
-                'password' => $password,
-                'display_name' => $username,
-            ]);
-            return $result === true ? true : (is_string($result) ? $result : 'Registrierung fehlgeschlagen.');
-        }
-
-        $hash = password_hash($password, PASSWORD_BCRYPT);
-        $db->execute(
-            "INSERT INTO {$prefix}users (email, username, password, role, created_at) VALUES (?, ?, ?, 'member', NOW())",
-            [$email, $username, $hash]
-        );
-
-        return true;
+        return $result === true ? true : (is_string($result) ? $result : 'Registrierung fehlgeschlagen.');
     } catch (\Throwable $e) {
-        return 'Registrierung fehlgeschlagen: ' . $e->getMessage();
+        error_log('theme_register_user: ' . $e::class . ': ' . $e->getMessage());
+
+        return 'Registrierung fehlgeschlagen.';
     }
 }

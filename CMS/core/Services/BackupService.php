@@ -2,8 +2,10 @@
 /**
  * Backup Service
  * 
- * Automatische Datensicherung (Datenbank + Dateien)
- * Optionen: Webspace, E-Mail (SQL only), S3
+ * Datensicherung (Datenbank + Dateien) mit Manifest, SHA-256-Prüfsummen, Validierung und Restore.
+ * Speicherort: CMS_BACKUP_PATH (config/app.php, empfohlen außerhalb des Webroots), sonst CMS/backups/.
+ * Option „backup_encryption“: Teile werden mit CryptoService (XChaCha20-Poly1305) als *.enc gespeichert.
+ * emailDatabaseBackup()/uploadToS3() existieren, sind aber an keine Oberfläche bzw. keinen Cron angebunden.
  * 
  * @package CMSv2\Core\Services
  */
@@ -28,8 +30,17 @@ class BackupService
     private static ?self $instance = null;
     private Database $db;
     private HttpClient $httpClient;
-    
-    private const BACKUP_DIR = ABSPATH . 'backups/';
+    private ?string $backupRootPath = null;
+
+    /** Option: neue Backups mit dem CryptoService-Schlüssel verschlüsseln ('1' = aktiv). */
+    public const OPTION_ENCRYPTION = 'backup_encryption';
+    /** Standard-Root ohne CMS_BACKUP_PATH (relativ zu ABSPATH, nur per .htaccess geschützt). */
+    private const DEFAULT_BACKUP_DIRECTORY = 'backups';
+    private const ENCRYPTED_FILE_SUFFIX = '.enc';
+    private const ENCRYPTION_FORMAT = 'cmsenc2';
+    /** Punkt-Präfix: collectBackupCandidates() listet Arbeitsverzeichnisse nicht als Backups. */
+    private const DECRYPT_WORKSPACE_PREFIX = '.decrypt-';
+    private const DECRYPT_WORKSPACE_MAX_AGE_SECONDS = 21600;
     private const MANIFEST_MAX_BYTES = 262144;
     private const DEFAULT_BACKUP_LIST_LIMIT = 25;
     private const MAX_BACKUP_LIST_LIMIT = 100;
@@ -93,9 +104,14 @@ class BackupService
     {
         $backupRoot = $this->backupRoot();
 
-        if (!is_dir($backupRoot) && !mkdir($backupRoot, 0755, true) && !is_dir($backupRoot)) {
-            throw new \RuntimeException('Backup-Verzeichnis konnte nicht erstellt werden.');
+        // Vor dem Anlegen prüfen, damit ein unzulässiger CMS_BACKUP_PATH kein Verzeichnis hinterlässt.
+        $this->assertSafeBackupRoot($backupRoot);
+
+        if (!is_dir($backupRoot) && !mkdir($backupRoot, 0750, true) && !is_dir($backupRoot)) {
+            throw new \RuntimeException('Backup-Verzeichnis konnte nicht erstellt werden (CMS_BACKUP_PATH prüfen).');
         }
+
+        $this->assertSafeBackupRoot($backupRoot);
 
         $htaccessPath = $backupRoot . '.htaccess';
         if (!is_file($htaccessPath)) {
@@ -124,6 +140,7 @@ class BackupService
         $backupPath = null;
 
         try {
+            $encryption = $this->resolveEncryptionForNewBackup();
             $timestamp = date('Y-m-d_H-i-s');
             ['name' => $backupName, 'path' => $backupPath] = $this->createBackupDirectory("full_backup_{$timestamp}");
             
@@ -132,8 +149,14 @@ class BackupService
             
             // 2. Files backup
             $filesZip = $this->createFilesBackup($backupPath);
+
+            // 3. Optional verschlüsseln; Prüfsummen beziehen sich auf die gespeicherten (verschlüsselten) Dateien.
+            if ($encryption !== null) {
+                $dbFile = $this->encryptBackupPart($backupPath, $dbFile);
+                $filesZip = $this->encryptBackupPart($backupPath, $filesZip);
+            }
             
-            // 3. Create manifest
+            // 4. Create manifest
             $manifest = [
                 'timestamp' => time(),
                 'date' => $timestamp,
@@ -144,6 +167,9 @@ class BackupService
                 'cms_version' => $this->getCmsVersion(),
                 'checksums' => $this->buildBackupChecksums($backupPath, $dbFile, $filesZip),
             ];
+            if ($encryption !== null) {
+                $manifest['encryption'] = $encryption;
+            }
             
             $manifestJson = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             if (!is_string($manifestJson) || file_put_contents($backupPath . 'manifest.json', $manifestJson, LOCK_EX) === false) {
@@ -209,9 +235,13 @@ class BackupService
         $backupPath = null;
 
         try {
+            $encryption = $this->resolveEncryptionForNewBackup();
             $timestamp = date('Y-m-d_H-i-s');
             ['name' => $backupName, 'path' => $backupPath] = $this->createBackupDirectory("database_backup_{$timestamp}");
             $dbFile = $this->createDatabaseBackup($backupPath);
+            if ($encryption !== null) {
+                $dbFile = $this->encryptBackupPart($backupPath, $dbFile);
+            }
 
             $manifest = [
                 'timestamp' => time(),
@@ -223,6 +253,9 @@ class BackupService
                 'cms_version' => $this->getCmsVersion(),
                 'checksums' => $this->buildBackupChecksums($backupPath, $dbFile),
             ];
+            if ($encryption !== null) {
+                $manifest['encryption'] = $encryption;
+            }
 
             $manifestJson = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             if (!is_string($manifestJson) || file_put_contents($backupPath . 'manifest.json', $manifestJson, LOCK_EX) === false) {
@@ -969,33 +1002,45 @@ class BackupService
         // veränderte Backups dürfen den Live-Bestand nicht überschreiben.
         $this->assertBackupPartIntegrity('Datenbank-Dump', $databasePath, (string) ($record['checksums']['database']['value'] ?? ''));
         $this->assertBackupPartIntegrity('Datei-Archiv', $filesPath, (string) ($record['checksums']['files']['value'] ?? ''));
-        if ($filesPath !== '') {
-            $this->assertRestorableFilesArchive($filesPath);
-        }
 
-        $rollbackBackup = $this->createFullBackup();
-        if (empty($rollbackBackup['success']) || empty($rollbackBackup['name'])) {
-            throw new \RuntimeException('Vor der Wiederherstellung konnte kein Sicherungs-Snapshot erstellt werden.');
-        }
-
+        $workspace = null;
         $restoredDatabase = false;
         $restoredFiles = false;
 
-        if ($databasePath !== '') {
-            $this->restoreDatabaseDump($databasePath);
-            $restoredDatabase = true;
-        }
+        try {
+            // Verschlüsselte Teile vorab vollständig entschlüsseln (authentifiziert); ein fehlender
+            // Schlüssel oder eine manipulierte Datei bricht vor jeder Änderung am Live-Bestand ab.
+            $databaseSource = $this->resolveReadableBackupPart('Datenbank-Dump', $record, $databasePath, $workspace)['path'];
+            $filesSource = $this->resolveReadableBackupPart('Datei-Archiv', $record, $filesPath, $workspace)['path'];
 
-        if ($filesPath !== '') {
-            $this->restoreFilesArchive($filesPath);
-            $restoredFiles = true;
+            if ($filesSource !== '') {
+                $this->assertRestorableFilesArchive($filesSource);
+            }
+
+            $rollbackBackup = $this->createFullBackup();
+            if (empty($rollbackBackup['success']) || empty($rollbackBackup['name'])) {
+                throw new \RuntimeException('Vor der Wiederherstellung konnte kein Sicherungs-Snapshot erstellt werden.');
+            }
+            $rollbackName = (string) $rollbackBackup['name'];
+
+            if ($databaseSource !== '') {
+                $this->restoreDatabaseDump($databaseSource);
+                $restoredDatabase = true;
+            }
+
+            if ($filesSource !== '') {
+                $this->restoreFilesArchive($filesSource);
+                $restoredFiles = true;
+            }
+        } finally {
+            $this->removeDecryptWorkspace($workspace);
         }
 
         return [
             'success' => true,
             'restored_database' => $restoredDatabase,
             'restored_files' => $restoredFiles,
-            'rollback_backup' => (string) $rollbackBackup['name'],
+            'rollback_backup' => $rollbackName,
         ];
     }
 
@@ -1026,47 +1071,73 @@ class BackupService
         ];
 
         $checks[] = $this->buildManifestValidationCheck($record);
+        $workspace = null;
 
-        if ($databasePath !== '') {
-            [$databaseHashCheck, $resolvedDatabaseHash] = $this->buildFileHashValidationCheck(
-                'Datenbank-Dump SHA-256',
-                $databasePath,
-                (string) ($record['checksums']['database']['value'] ?? '')
-            );
-            $checks[] = $databaseHashCheck;
-            $tableProbes = $this->probeBackupTables($databasePath, $criticalTables);
+        try {
+            if ($databasePath !== '') {
+                [$databaseHashCheck, $resolvedDatabaseHash] = $this->buildFileHashValidationCheck(
+                    'Datenbank-Dump SHA-256',
+                    $databasePath,
+                    (string) ($record['checksums']['database']['value'] ?? '')
+                );
+                $checks[] = $databaseHashCheck;
+                [$readableDatabasePath, $decryptionCheck] = $this->buildDecryptionValidationCheck('Datenbank-Dump', $record, $databasePath, $workspace);
+                if ($decryptionCheck !== null) {
+                    $checks[] = $decryptionCheck;
+                }
 
-            if ($includeRestoreDryRun) {
-                $restoreDryRun = $this->runTemporaryDatabaseRestoreCheck($databasePath, $criticalTables, $resolvedDatabaseHash);
-            }
-        } else {
-            $checks[] = [
-                'label' => 'Datenbank-Dump',
-                'status' => 'blocked',
-                'current' => 'Fehlt',
-                'expected' => 'Lesbar',
-                'detail' => 'Dieses Backup enthält keinen lesbaren Datenbank-Dump.',
-            ];
+                if ($readableDatabasePath !== '') {
+                    $tableProbes = $this->probeBackupTables($readableDatabasePath, $criticalTables);
 
-            if ($includeRestoreDryRun) {
-                $restoreDryRun = [
-                    'requested' => true,
-                    'performed' => false,
+                    if ($includeRestoreDryRun) {
+                        $restoreDryRun = $this->runTemporaryDatabaseRestoreCheck($readableDatabasePath, $criticalTables, $resolvedDatabaseHash);
+                    }
+                } elseif ($includeRestoreDryRun) {
+                    $restoreDryRun = [
+                        'requested' => true,
+                        'performed' => false,
+                        'status' => 'blocked',
+                        'message' => 'Restore-Dry-Run nicht möglich, da der Datenbank-Dump nicht entschlüsselt werden konnte.',
+                        'tables' => [],
+                    ];
+                }
+            } else {
+                $checks[] = [
+                    'label' => 'Datenbank-Dump',
                     'status' => 'blocked',
-                    'message' => 'Restore-Dry-Run nicht möglich, da kein Datenbank-Dump im Backup enthalten ist.',
-                    'tables' => [],
+                    'current' => 'Fehlt',
+                    'expected' => 'Lesbar',
+                    'detail' => 'Dieses Backup enthält keinen lesbaren Datenbank-Dump.',
                 ];
-            }
-        }
 
-        if ($filesPath !== '') {
-            [$filesHashCheck] = $this->buildFileHashValidationCheck(
-                'Datei-Archiv SHA-256',
-                $filesPath,
-                (string) ($record['checksums']['files']['value'] ?? '')
-            );
-            $checks[] = $filesHashCheck;
-            $checks[] = $this->buildFilesArchiveValidationCheck($filesPath);
+                if ($includeRestoreDryRun) {
+                    $restoreDryRun = [
+                        'requested' => true,
+                        'performed' => false,
+                        'status' => 'blocked',
+                        'message' => 'Restore-Dry-Run nicht möglich, da kein Datenbank-Dump im Backup enthalten ist.',
+                        'tables' => [],
+                    ];
+                }
+            }
+
+            if ($filesPath !== '') {
+                [$filesHashCheck] = $this->buildFileHashValidationCheck(
+                    'Datei-Archiv SHA-256',
+                    $filesPath,
+                    (string) ($record['checksums']['files']['value'] ?? '')
+                );
+                $checks[] = $filesHashCheck;
+                [$readableFilesPath, $decryptionCheck] = $this->buildDecryptionValidationCheck('Datei-Archiv', $record, $filesPath, $workspace);
+                if ($decryptionCheck !== null) {
+                    $checks[] = $decryptionCheck;
+                }
+                if ($readableFilesPath !== '') {
+                    $checks[] = $this->buildFilesArchiveValidationCheck($readableFilesPath);
+                }
+            }
+        } finally {
+            $this->removeDecryptWorkspace($workspace);
         }
 
         return [
@@ -1078,6 +1149,7 @@ class BackupService
                 'cms_version' => (string) ($record['cms_version'] ?? 'unknown'),
                 'database' => basename((string) ($record['database'] ?? '')),
                 'files' => basename((string) ($record['files'] ?? '')),
+                'encrypted' => $this->getRecordEncryption($record) !== null,
             ],
             'summary' => $this->summarizeValidationStatuses($checks, $tableProbes, $restoreDryRun),
             'checks' => $checks,
@@ -1107,6 +1179,11 @@ class BackupService
             $backupPath = $this->backupRoot() . $normalizedName;
 
             if (!is_dir($backupPath) || !$this->isWithinBackupRoot($backupPath)) {
+                return false;
+            }
+
+            // Nur erkannte Backups löschen – CMS_BACKUP_PATH kann auf ein gemeinsam genutztes Verzeichnis zeigen.
+            if ($this->readBackupRecord($normalizedName) === null) {
                 return false;
             }
 
@@ -2341,7 +2418,431 @@ class BackupService
 
     private function backupRoot(): string
     {
-        return rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, self::BACKUP_DIR), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        return $this->backupRootPath ??= self::resolveConfiguredBackupRoot();
+    }
+
+    /**
+     * Backup-Root aus CMS_BACKUP_PATH (config/app.php): absoluter Pfad oder relativ zu ABSPATH
+     * (z. B. '../365cms-backups'); leer = ABSPATH/backups/. Liefert immer einen abschließenden Separator.
+     */
+    public static function resolveConfiguredBackupRoot(): string
+    {
+        $configured = self::configuredBackupPath();
+
+        if ($configured === '') {
+            $path = rtrim((string) ABSPATH, '/\\') . DIRECTORY_SEPARATOR . self::DEFAULT_BACKUP_DIRECTORY;
+        } elseif (preg_match('#^(?:[/\\\\]|[A-Za-z]:[/\\\\])#', $configured) === 1) {
+            $path = $configured;
+        } else {
+            $path = rtrim((string) ABSPATH, '/\\') . DIRECTORY_SEPARATOR . $configured;
+        }
+
+        return rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    }
+
+    private static function configuredBackupPath(): string
+    {
+        if (!defined('CMS_BACKUP_PATH')) {
+            return '';
+        }
+
+        $value = constant('CMS_BACKUP_PATH');
+
+        return is_string($value) ? trim($value) : '';
+    }
+
+    public function getBackupRoot(): string
+    {
+        $realRoot = $this->normalizeManagedPath($this->backupRoot(), true);
+
+        return $realRoot !== '' ? $realRoot : $this->backupRoot();
+    }
+
+    /**
+     * true, wenn der Backup-Root unterhalb des CMS-Verzeichnisses oder des DocumentRoot liegt und damit
+     * nur durch .htaccess (Apache) bzw. eine passende Server-Regel vor direktem Abruf geschützt ist.
+     */
+    public function isBackupRootInsideWebroot(): bool
+    {
+        $root = $this->comparablePath($this->getBackupRoot());
+        $webroots = [(string) ABSPATH];
+        $documentRoot = trim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($documentRoot !== '') {
+            $webroots[] = $documentRoot;
+        }
+
+        foreach ($webroots as $webroot) {
+            $realWebroot = realpath($webroot);
+            if ($realWebroot === false) {
+                continue;
+            }
+
+            if (str_starts_with($root, $this->comparablePath(rtrim($realWebroot, '/\\') . DIRECTORY_SEPARATOR))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function isEncryptionEnabled(): bool
+    {
+        return OptionStore::getInstance()->get(self::OPTION_ENCRYPTION, '0') === '1';
+    }
+
+    public function setEncryptionEnabled(bool $enabled): void
+    {
+        if ($enabled && !CryptoService::getInstance()->canEncryptFiles()) {
+            throw new \RuntimeException('Backup-Verschlüsselung benötigt die PHP-Erweiterung sodium (libsodium secretstream).');
+        }
+
+        $this->db->execute(
+            "INSERT INTO {$this->db->getPrefix()}settings (option_name, option_value, autoload) VALUES (?, ?, 1)
+             ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
+            [self::OPTION_ENCRYPTION, $enabled ? '1' : '0']
+        );
+        OptionStore::getInstance()->flush();
+    }
+
+    /**
+     * Speicherort und Verschlüsselungsstatus für Admin-Ansicht und Sicherheits-Audit.
+     *
+     * @return array{path:string, custom_path:bool, inside_webroot:bool, writable:bool, encryption_enabled:bool, encryption_available:bool, dedicated_key:bool, weak_key:bool, key_id:string, unencrypted_backups:int, legacy_webroot_backups:int}
+     */
+    public function getStorageStatus(): array
+    {
+        $crypto = CryptoService::getInstance();
+        $root = $this->backupRoot();
+
+        return [
+            'path' => $this->getBackupRoot(),
+            'custom_path' => self::configuredBackupPath() !== '',
+            'inside_webroot' => $this->isBackupRootInsideWebroot(),
+            'writable' => is_dir($root) && is_writable($root),
+            'encryption_enabled' => $this->isEncryptionEnabled(),
+            'encryption_available' => $crypto->canEncryptFiles(),
+            'dedicated_key' => $crypto->usesDedicatedKey(),
+            'weak_key' => $crypto->hasWeakKey(),
+            'key_id' => $crypto->currentKeyId(),
+            'unencrypted_backups' => $this->countUnencryptedBackups(),
+            'legacy_webroot_backups' => $this->countLegacyWebrootBackups(),
+        ];
+    }
+
+    /**
+     * Zählt Backups im aktuellen Backup-Root mit unverschlüsselten Sicherungsdateien.
+     */
+    private function countUnencryptedBackups(): int
+    {
+        $count = 0;
+        foreach (array_keys($this->collectBackupCandidates()) as $item) {
+            $record = $this->readBackupRecord((string) $item);
+            if ($record === null || (empty($record['database_available']) && empty($record['files_available']))) {
+                continue;
+            }
+
+            if ($this->getRecordEncryption($record) === null) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Zählt Backups, die nach dem Umzug per CMS_BACKUP_PATH noch im alten Verzeichnis ABSPATH/backups/ liegen.
+     */
+    private function countLegacyWebrootBackups(): int
+    {
+        $legacyRoot = rtrim((string) ABSPATH, '/\\') . DIRECTORY_SEPARATOR . self::DEFAULT_BACKUP_DIRECTORY;
+        $realLegacyRoot = realpath($legacyRoot);
+        if ($realLegacyRoot === false || !is_dir($realLegacyRoot)) {
+            return 0;
+        }
+
+        if ($this->comparablePath(rtrim($realLegacyRoot, '/\\') . DIRECTORY_SEPARATOR) === $this->comparablePath($this->getBackupRoot())) {
+            return 0;
+        }
+
+        $count = 0;
+        foreach ($this->listDirectoryEntries($realLegacyRoot) as $entry) {
+            $path = $realLegacyRoot . DIRECTORY_SEPARATOR . $entry;
+            if (is_link($path)) {
+                continue;
+            }
+
+            if ((is_dir($path) && (preg_match(self::OWN_BACKUP_DIRECTORY_PATTERN, $entry) === 1 || is_file($path . DIRECTORY_SEPARATOR . 'manifest.json')))
+                || (is_file($path) && $this->isLegacyDatabaseBackupFile($entry))
+            ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Lehnt Backup-Roots ab, bei denen „Backup löschen“ oder Restore-Arbeitsverzeichnisse fremde Daten
+     * treffen könnten: Dateisystem-Wurzel, das CMS-Verzeichnis selbst oder eines seiner Elternverzeichnisse.
+     */
+    private function assertSafeBackupRoot(string $backupRoot): void
+    {
+        $realRoot = $this->prospectiveRealPath($backupRoot);
+        if ($realRoot === null) {
+            throw new \RuntimeException('Backup-Verzeichnis ist nicht erreichbar (CMS_BACKUP_PATH prüfen).');
+        }
+
+        $root = $this->comparablePath(rtrim($realRoot, '/\\') . DIRECTORY_SEPARATOR);
+        $realAbspath = realpath((string) ABSPATH);
+        $cmsRoot = $realAbspath !== false ? $this->comparablePath(rtrim($realAbspath, '/\\') . DIRECTORY_SEPARATOR) : '';
+
+        if (dirname($realRoot) === $realRoot || ($cmsRoot !== '' && str_starts_with($cmsRoot, $root))) {
+            throw new \RuntimeException('CMS_BACKUP_PATH darf weder die Dateisystem-Wurzel noch das CMS-Verzeichnis oder ein übergeordnetes Verzeichnis sein.');
+        }
+
+        // uploads/, themes/, plugins/ ersetzt der Datei-Restore, Core-Verzeichnisse das Update.
+        if ($cmsRoot !== '' && str_starts_with($root, $cmsRoot) && !str_starts_with($root, $cmsRoot . self::DEFAULT_BACKUP_DIRECTORY . '/')) {
+            throw new \RuntimeException('CMS_BACKUP_PATH innerhalb des CMS-Verzeichnisses ist nur unterhalb von backups/ zulässig – andere Verzeichnisse überschreiben Restore und Updates.');
+        }
+    }
+
+    /**
+     * Realer Pfad eines evtl. noch nicht vorhandenen Verzeichnisses: nächster vorhandener Vorfahre per
+     * realpath() plus die fehlenden Segmente. null, wenn ein fehlendes Segment „..“ ist oder nichts auflösbar ist.
+     */
+    private function prospectiveRealPath(string $path): ?string
+    {
+        $current = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), DIRECTORY_SEPARATOR);
+        $missing = [];
+
+        while ($current !== '' && !is_dir($current)) {
+            $segment = basename($current);
+            if ($segment === '..') {
+                return null;
+            }
+            if ($segment !== '' && $segment !== '.') {
+                array_unshift($missing, $segment);
+            }
+
+            $parent = dirname($current);
+            if ($parent === $current) {
+                break;
+            }
+            $current = $parent;
+        }
+
+        $real = realpath($current === '' ? DIRECTORY_SEPARATOR : $current);
+        if ($real === false) {
+            return null;
+        }
+
+        return $missing === [] ? $real : rtrim($real, '/\\') . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $missing);
+    }
+
+    private function comparablePath(string $path): string
+    {
+        $path = str_replace('\\', '/', $path);
+
+        return DIRECTORY_SEPARATOR === '\\' ? strtolower($path) : $path;
+    }
+
+    /**
+     * Verschlüsselungs-Metadaten für ein neues Backup oder null, wenn die Verschlüsselung aus ist.
+     * Bei aktivierter Option ohne libsodium wird abgebrochen statt unverschlüsselt zu sichern.
+     *
+     * @return array{format:string, cipher:string, key_id:string}|null
+     */
+    private function resolveEncryptionForNewBackup(): ?array
+    {
+        if (!$this->isEncryptionEnabled()) {
+            return null;
+        }
+
+        $crypto = CryptoService::getInstance();
+        if (!$crypto->canEncryptFiles()) {
+            throw new \RuntimeException('Backup-Verschlüsselung ist aktiviert, aber libsodium (secretstream) fehlt – es wurde kein unverschlüsseltes Backup erstellt.');
+        }
+
+        return [
+            'format' => self::ENCRYPTION_FORMAT,
+            'cipher' => 'XChaCha20-Poly1305 (libsodium secretstream)',
+            'key_id' => $crypto->currentKeyId(),
+        ];
+    }
+
+    /**
+     * Verschlüsselt eine Backup-Datei nach <datei>.enc und entfernt anschließend den Klartext.
+     */
+    private function encryptBackupPart(string $backupPath, string $fileName): string
+    {
+        if ($fileName === '') {
+            return '';
+        }
+
+        $source = $backupPath . $fileName;
+        $target = $source . self::ENCRYPTED_FILE_SUFFIX;
+
+        try {
+            CryptoService::getInstance()->encryptFile($source, $target, CryptoService::CONTEXT_BACKUP);
+        } catch (\Throwable $e) {
+            @unlink($target);
+            throw new \RuntimeException('Backup-Datei konnte nicht verschlüsselt werden: ' . $e->getMessage(), 0, $e);
+        }
+
+        $size = @filesize($target);
+        if (!is_int($size) || $size < 1) {
+            @unlink($target);
+            throw new \RuntimeException('Verschlüsselte Backup-Datei ist leer oder nicht lesbar.');
+        }
+
+        if (!@unlink($source) && is_file($source)) {
+            throw new \RuntimeException('Unverschlüsselte Backup-Datei konnte nach dem Verschlüsseln nicht entfernt werden.');
+        }
+
+        return basename($target);
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     * @return array{format:string, key_id:string}|null
+     */
+    private function getRecordEncryption(array $record): ?array
+    {
+        $encryption = $record['encryption'] ?? null;
+        if (!is_array($encryption)) {
+            return null;
+        }
+
+        return [
+            'format' => (string) ($encryption['format'] ?? ''),
+            'key_id' => (string) ($encryption['key_id'] ?? ''),
+        ];
+    }
+
+    /**
+     * Liefert einen lesbaren Pfad für einen Backup-Teil. Verschlüsselte Dateien (Magic-Bytes bzw. Manifest)
+     * werden vollständig und authentifiziert in ein Arbeitsverzeichnis im Backup-Root entschlüsselt.
+     *
+     * @param array<string, mixed> $record
+     * @return array{path:string, decrypted:bool, key_id:string}
+     */
+    private function resolveReadableBackupPart(string $label, array $record, string $path, ?string &$workspace): array
+    {
+        if ($path === '') {
+            return ['path' => '', 'decrypted' => false, 'key_id' => ''];
+        }
+
+        $crypto = CryptoService::getInstance();
+        $fileKeyId = $crypto->fileKeyId($path);
+        $manifestEncryption = $this->getRecordEncryption($record);
+
+        if ($fileKeyId === null) {
+            if ($manifestEncryption !== null) {
+                throw new \RuntimeException($label . ': Das Manifest weist das Backup als verschlüsselt aus, die Datei ist es aber nicht – Datei wurde ersetzt oder ist beschädigt.');
+            }
+
+            return ['path' => $path, 'decrypted' => false, 'key_id' => ''];
+        }
+
+        if (!$crypto->hasKey($fileKeyId)) {
+            throw new \RuntimeException($label . ': Schlüssel ' . $fileKeyId . ' fehlt – CMS_ENCRYPTION_KEY bzw. CMS_ENCRYPTION_KEYS_PREVIOUS der sichernden Installation in config/app.php eintragen.');
+        }
+
+        $workspace ??= $this->createDecryptWorkspace();
+        // Name ohne .enc behalten, damit .sql.gz/.zip beim Lesen erkannt werden (eigenes Verzeichnis, keine Kollision).
+        $fileName = basename($path);
+        $plainName = str_ends_with(strtolower($fileName), self::ENCRYPTED_FILE_SUFFIX)
+            ? substr($fileName, 0, -strlen(self::ENCRYPTED_FILE_SUFFIX))
+            : $fileName;
+        if ($plainName === '') {
+            $plainName = 'backup-part.bin';
+        }
+        $target = $workspace . DIRECTORY_SEPARATOR . $plainName;
+
+        try {
+            $crypto->decryptFile($path, $target, CryptoService::CONTEXT_BACKUP);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException($label . ' konnte nicht entschlüsselt werden: ' . $e->getMessage(), 0, $e);
+        }
+
+        return ['path' => $target, 'decrypted' => true, 'key_id' => $fileKeyId];
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     * @return array{0: string, 1: array<string, string>|null} lesbarer Pfad ('' bei Fehler) und optionaler Check
+     */
+    private function buildDecryptionValidationCheck(string $label, array $record, string $path, ?string &$workspace): array
+    {
+        try {
+            $readable = $this->resolveReadableBackupPart($label, $record, $path, $workspace);
+        } catch (\Throwable $e) {
+            return ['', [
+                'label' => $label . ' Entschlüsselung',
+                'status' => 'blocked',
+                'current' => 'Fehlgeschlagen',
+                'expected' => 'Entschlüsselt und authentifiziert',
+                'detail' => $this->sanitizeValidationMessage($e->getMessage()),
+            ]];
+        }
+
+        if (!$readable['decrypted']) {
+            return [$readable['path'], null];
+        }
+
+        return [$readable['path'], [
+            'label' => $label . ' Entschlüsselung',
+            'status' => 'ok',
+            'current' => 'Schlüssel ' . $readable['key_id'],
+            'expected' => 'Entschlüsselt und authentifiziert',
+            'detail' => 'XChaCha20-Poly1305: alle Blöcke authentifiziert, Datei vollständig. Die entschlüsselte Kopie wurde nach der Prüfung gelöscht.',
+        ]];
+    }
+
+    private function createDecryptWorkspace(): string
+    {
+        $this->cleanupStaleDecryptWorkspaces();
+
+        $path = $this->buildManagedTemporaryPath($this->backupRoot(), self::DECRYPT_WORKSPACE_PREFIX);
+        if (!@mkdir($path, 0700) && !is_dir($path)) {
+            throw new \RuntimeException('Arbeitsverzeichnis zum Entschlüsseln konnte nicht erstellt werden.');
+        }
+
+        return $path;
+    }
+
+    private function removeDecryptWorkspace(?string $workspace): void
+    {
+        if ($workspace === null || $workspace === '' || !str_starts_with(basename($workspace), self::DECRYPT_WORKSPACE_PREFIX)) {
+            return;
+        }
+
+        $this->removeDirectory($workspace);
+    }
+
+    /**
+     * Entfernt Entschlüsselungs-Arbeitsverzeichnisse abgebrochener Läufe (z. B. Zeitlimit).
+     */
+    private function cleanupStaleDecryptWorkspaces(): void
+    {
+        $backupRoot = $this->backupRoot();
+        foreach ($this->listDirectoryEntries($backupRoot) as $entry) {
+            if (!str_starts_with($entry, self::DECRYPT_WORKSPACE_PREFIX)) {
+                continue;
+            }
+
+            $path = $backupRoot . $entry;
+            if (!is_dir($path) || is_link($path)) {
+                continue;
+            }
+
+            $modifiedAt = (int) (@filemtime($path) ?: 0);
+            if ($modifiedAt > 0 && (time() - $modifiedAt) < self::DECRYPT_WORKSPACE_MAX_AGE_SECONDS) {
+                continue;
+            }
+
+            $this->removeDirectory($path);
+        }
     }
 
     private function resolveTargetDirectory(?string $targetDir): string

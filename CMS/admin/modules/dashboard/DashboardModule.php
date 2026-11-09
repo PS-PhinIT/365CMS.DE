@@ -185,6 +185,11 @@ class DashboardModule
         'updates',
     ];
 
+    /** Ersatzziele für Admin-Seiten, deren Core-Modul deaktiviert ist. */
+    private const DISABLED_ADMIN_PAGE_FALLBACKS = [
+        '/admin/security-audit' => '/admin/logs/security-audit',
+    ];
+
     private const ROLE_TEMPLATE_DEFINITIONS = [
         'admin' => [
             'label' => 'Administrator',
@@ -402,8 +407,8 @@ class DashboardModule
             'dashboard_preferences' => $preferences,
             'activity'      => $this->getRecentActivity(),
             'quickLinks'    => $this->getQuickLinks(),
-            'alerts'        => array_merge($this->buildDashboardHealthAlerts($meta), $this->getAlerts($stats, $pendingComments)),
-            'attention'     => $this->service->getAttentionItems($stats),
+            'alerts'        => $this->filterAdminLinks(array_merge($this->buildDashboardHealthAlerts($meta), $this->getAlerts($stats, $pendingComments)), false),
+            'attention'     => $this->filterAdminLinks($this->service->getAttentionItems($stats), false),
             'subscription_enabled' => $subscriptionEnabled,
             'recent_orders' => $subscriptionOrdersEnabled ? $this->service->getRecentOrders() : [],
             'orders'        => $orders,
@@ -475,7 +480,47 @@ class DashboardModule
 
     private function getFavoriteShortcutDefinitions(): array
     {
-        return self::FAVORITE_SHORTCUT_DEFINITIONS;
+        return $this->filterAdminLinks(self::FAVORITE_SHORTCUT_DEFINITIONS, true);
+    }
+
+    /**
+     * Liefert das Linkziel oder '' für Seiten deaktivierter Core-Module (deren Entry-Points leiten sonst auf / um).
+     */
+    private function resolveAdminLinkTarget(string $url): string
+    {
+        $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+        if (!str_starts_with($path, '/admin/')) {
+            return $url;
+        }
+
+        $pageSlug = trim(substr($path, strlen('/admin/')), '/');
+        if ($pageSlug === '' || str_contains($pageSlug, '/')
+            || CoreModuleService::getInstance()->isAdminPageEnabled($pageSlug)) {
+            return $url;
+        }
+
+        return self::DISABLED_ADMIN_PAGE_FALLBACKS[$path] ?? '';
+    }
+
+    /**
+     * @param array<int|string, mixed> $items
+     * @return array<int|string, mixed>
+     */
+    private function filterAdminLinks(array $items, bool $dropUnavailable): array
+    {
+        $filtered = [];
+        foreach ($items as $key => $item) {
+            if (is_array($item) && isset($item['url'])) {
+                $item['url'] = $this->resolveAdminLinkTarget((string) $item['url']);
+                if ($item['url'] === '' && $dropUnavailable) {
+                    continue;
+                }
+            }
+
+            $filtered[$key] = $item;
+        }
+
+        return array_is_list($items) ? array_values($filtered) : $filtered;
     }
 
     private function getWorkOverviewWidgetDefinitions(bool $subscriptionOrdersEnabled): array
@@ -1211,7 +1256,7 @@ class DashboardModule
             }
         }
 
-        return $orderedWidgets;
+        return $this->filterAdminLinks($orderedWidgets, false);
     }
 
     private function getPendingCommentsCount(): int

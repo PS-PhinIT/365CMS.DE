@@ -926,7 +926,25 @@ final class MemberController
 
     public function handleProfileRequest(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || (string)($_POST['action'] ?? '') !== 'profile_save') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return;
+        }
+
+        if ((string)($_POST['action'] ?? '') === 'email_change_cancel') {
+            if (!$this->verifyCsrf('email_change_cancel')) {
+                $this->flash('danger', 'Sicherheitsüberprüfung fehlgeschlagen.');
+                $this->redirect('/member/profile');
+            }
+
+            $cancelled = \CMS\Services\EmailChangeService::getInstance()->cancel($this->getUserId());
+            $this->flash(
+                $cancelled ? 'success' : 'info',
+                $cancelled ? 'Die ausstehende Änderung der E-Mail-Adresse wurde verworfen.' : 'Es gibt keine ausstehende Änderung der E-Mail-Adresse.'
+            );
+            $this->redirect('/member/profile');
+        }
+
+        if ((string)($_POST['action'] ?? '') !== 'profile_save') {
             return;
         }
 
@@ -1016,7 +1034,8 @@ final class MemberController
             }
         }
 
-        $result = $this->memberService->updateProfile($this->getUserId(), $data);
+        $emailNotice = '';
+        $result = $this->memberService->updateProfile($this->getUserId(), $data, $emailNotice);
         $this->upsertUserMeta('location', trim((string)($_POST['location'] ?? '')));
         $this->upsertUserMeta('social', $social);
         $this->upsertUserMeta('avatar', $avatar);
@@ -1025,7 +1044,7 @@ final class MemberController
         }
 
         if ($result === true) {
-            $this->flash('success', 'Dein Profil wurde aktualisiert.');
+            $this->flash('success', trim('Dein Profil wurde aktualisiert. ' . (string)$emailNotice));
         } else {
             $this->flash('danger', (string)$result);
         }
@@ -1271,13 +1290,14 @@ final class MemberController
         }
 
         $action = (string)($_POST['action'] ?? '');
-        if (!in_array($action, ['password_change', 'totp_start', 'totp_confirm', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete'], true)) {
+        if (!in_array($action, ['password_change', 'totp_start', 'totp_confirm', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all'], true)) {
             return;
         }
 
         $csrfAction = match ($action) {
             'password_change' => 'security_password',
             'passkey_register', 'passkey_delete' => 'security_passkey',
+            'sessions_revoke_all' => 'security_sessions',
             default => 'security_mfa',
         };
 
@@ -1308,12 +1328,23 @@ final class MemberController
 
         // Sicherheitskritische Änderungen erfordern das aktuelle Passwort: Eine übernommene
         // Sitzung soll MFA nicht abschalten oder eigene Passkeys/Backup-Codes anlegen können.
-        if (in_array($action, ['totp_start', 'totp_disable', 'backup_generate', 'passkey_register'], true)) {
+        if (in_array($action, ['totp_start', 'totp_disable', 'backup_generate', 'passkey_register', 'sessions_revoke_all'], true)) {
             $reauth = \CMS\Auth::instance()->verifyCurrentPassword($userId, (string)($_POST['current_password'] ?? ''));
             if ($reauth !== true) {
                 $this->flash('danger', (string)$reauth);
                 $this->redirect('/member/security');
             }
+        }
+
+        if ($action === 'sessions_revoke_all') {
+            $revoked = \CMS\Auth::instance()->revokeAllSessions($userId, 'member');
+            $this->flash(
+                $revoked ? 'success' : 'danger',
+                $revoked
+                    ? 'Alle anderen Sitzungen und API-Tokens wurden abgemeldet. Diese Sitzung bleibt aktiv.'
+                    : 'Die Sitzungen konnten nicht abgemeldet werden. Bitte später erneut versuchen.'
+            );
+            $this->redirect('/member/security');
         }
 
         // Ein aktiver Authenticator wird nie still ersetzt – Wechsel nur über „MFA deaktivieren“ (mit Passwort).
@@ -1346,8 +1377,8 @@ final class MemberController
         }
 
         if ($action === 'totp_disable') {
+            // Entfernt auch die Backup-Codes und schreibt den Audit-Eintrag.
             TotpAdapter::instance()->disable($userId);
-            BackupCodesManager::instance()->deleteAll($userId);
             unset($_SESSION['member_totp_setup']);
             $this->flash('warning', 'Zwei-Faktor-Authentifizierung wurde deaktiviert.');
             $this->redirect('/member/security');

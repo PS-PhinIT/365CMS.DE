@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Implementierungsstatus
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Schema:** v23 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** v23 | **Status:** Stable
 
 ## English (summary)
 
-Snapshot of the runtime state verified against the source code on 2026-10-02: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation.
+Snapshot of the runtime state verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation.
 
 ## Deutsch
 
@@ -55,11 +55,11 @@ Snapshot of the runtime state verified against the source code on 2026-10-02: ve
 | Firewall, Anti-Spam, Audit | produktiv | [../admin/security/](../admin/security/README.md) |
 | KI-Dienste | produktiv (nur Admin, keine Auto-Veröffentlichung) | [../ai/AI-SERVICES.md](../ai/AI-SERVICES.md) |
 | Backups, Updates, Monitoring, Cron | produktiv | [../admin/system-settings/](../admin/system-settings/README.md) |
-| JSON-API | lesend + Admin-Listen, Session-basiert | [API-REFERENCE.md](API-REFERENCE.md) |
+| JSON-API | lesend + Admin-Listen, Session oder optional Bearer-Token (`JWT_SECRET`) | [API-REFERENCE.md](API-REFERENCE.md) |
 
-### Bekannte Lücken und Inkonsistenzen (Stand 2026-10-03)
+### Bekannte Lücken und Inkonsistenzen (Stand 2026-11-09)
 
-Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)), ergänzt im Folgeaudit vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
+Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)), ergänzt in den Folgeaudits vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)) und 2026-11-09 ([../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
 
 | # | Befund | Auswirkung | Fundstelle | Status |
 |---|---|---|---|---|
@@ -84,10 +84,18 @@ Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)
 | 19 | Option `member_email_verification` wurde nicht ausgewertet | neue Konten ohne bestätigte E-Mail-Adresse sofort aktiv | `Auth::register()`, Benutzer-Einstellungen | ✅ 4.0.0 – `EmailVerificationService`, Status `unverified`, Link `/cms-verify-email` (Audit FUN-36) |
 | 20 | `UserService::createUser()` setzte `display_name` nicht (`NOT NULL` ohne Standardwert) | „Benutzer anlegen“ unter `/admin/users` scheiterte auf MySQL/MariaDB im Strict-Mode | `UserService` | ✅ 4.0.0 – Anzeigename aus Vor-/Nachname bzw. Benutzername (Audit FUN-37) |
 | 21 | Feld `critical` im Core-Update-Manifest wurde nicht ausgewertet | Sicherheitsupdates unter *System → Updates* nicht von normalen Updates zu unterscheiden | `UpdateService::checkCoreUpdates()`, Update-Ansicht | ✅ 4.0.0 – roter Hinweis „Kritisches Update verfügbar“ (Audit FUN-38) |
+| 22 | `cms_mail()` ignorierte `Content-Type: text/plain` | Klartext-Mails gingen über SMTP und die Mail-Queue als HTML ohne Zeilenumbrüche hinaus | `includes/functions/mail.php` | ✅ 4.0.0 – Versand bzw. Queue über `sendPlain()`/`enqueuePlain()` (Audit FUN-55) |
+| 23 | `mail()`-Fallback ohne RFC-2047-Kodierung | Umlaute in Betreff und Absendername kamen ohne SMTP verstümmelt an | `MailService` | ✅ 4.0.0 – Betreff und Absendername als `=?UTF-8?B?…?=` (Audit FUN-56) |
+| 24 | Dashboard verlinkte Seiten deaktivierter Core-Module | Klick führte auf die Startseite | `DashboardModule` | ✅ 4.0.0 – Ersatzziel oder Link entfernt (Audit FUN-57) |
+| 25 | `mail()`-Fallback ohne `Content-Transfer-Encoding` | UTF-8-Mails ohne SMTP als 7bit deklariert, HTML-Zeilen über 998 Zeichen konnten von MTAs umbrochen werden | `MailService::sendMessageFallback()` | ✅ 4.0.0 – Body als `quoted-printable` mit CRLF (Audit FUN-61) |
+| 26 | Theme-Helfer gaben Exception-Texte aus; `theme_register_user()` meldete vergebene E-Mail-Adressen | interne Fehlermeldungen sichtbar, Umgehung der neutralen Registrierung | `themes/cms-default/functions.php` (`theme_login_user()`, `theme_register_user()`) | ✅ 4.0.0 – nur `Auth::register()`, Fehler im Log, neutrale Meldung (Audit SEC-48) |
+| 27 | `/member/plugin-section` war direkt aufrufbar | PHP-Warnungen (Variablen fehlen), Hook `member_plugin_section_head` mit `null` statt Bereich | `MemberRouter::renderMemberPage()` | ✅ 4.0.0 – interne Vorlage liefert 404 (Audit FUN-62) |
+
+Die Härtungspunkte OFFEN-20 bis OFFEN-26 aus dem Folgeaudit vom 2026-11-08 (AEAD-Verschlüsselung gespeicherter Geheimnisse, bestätigte E-Mail-Änderung, Sitzungs-Widerruf, neutrale Registrierung, Anmeldeverzögerung je Konto, Backup-Ablage außerhalb des Webroots) sind in 4.0.0 umgesetzt. Offen ist nur OFFEN-27 (signierte Update-Pakete); Details in [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md).
 
 ### Grundsatz dieser Dokumentation
 
-Dokumentiert wird nur, was im ausgelieferten Code nachvollziehbar ist. Pfade, Klassen und Routen in `DOC/` wurden am 2026-10-02 gegen `CMS/` abgeglichen und im Audit vom 2026-10-03 erneut geprüft.
+Dokumentiert wird nur, was im ausgelieferten Code nachvollziehbar ist. Pfade, Klassen und Routen in `DOC/` wurden am 2026-10-02 gegen `CMS/` abgeglichen, im Audit vom 2026-10-03 erneut geprüft und für 4.0.0 am 2026-11-09 nachgezogen.
 
 ### Verwandte Dokumente
 

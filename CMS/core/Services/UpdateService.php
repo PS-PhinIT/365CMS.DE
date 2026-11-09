@@ -1544,7 +1544,7 @@ class UpdateService
                 'uploads_writable' => is_writable(ABSPATH . 'uploads'),
                 'cache_writable' => is_writable(ABSPATH . 'cache'),
                 'logs_writable' => is_writable(ABSPATH . 'logs'),
-                'backups_writable' => is_writable(ABSPATH . 'backups'),
+                'backups_writable' => is_writable(rtrim(BackupService::resolveConfiguredBackupRoot(), '/\\')),
                 'assets_writable' => is_writable(ABSPATH . 'assets'),
                 'paths' => [
                     'runtime' => $this->buildRuntimePathRequirements(),
@@ -1584,7 +1584,7 @@ class UpdateService
     {
         return [
             'cache' => $this->buildPathRequirement('Cache', ABSPATH . 'cache', 'Schreibrechte für `cache/` vergeben oder das Verzeichnis anlegen.'),
-            'backups' => $this->buildPathRequirement('Backups', ABSPATH . 'backups', 'Schreibrechte für `backups/` vergeben oder das Verzeichnis anlegen.'),
+            'backups' => $this->buildPathRequirement('Backups', BackupService::resolveConfiguredBackupRoot(), 'Schreibrechte für das Backup-Verzeichnis (`backups/` bzw. `CMS_BACKUP_PATH`) vergeben oder das Verzeichnis anlegen.'),
             'logs' => $this->buildPathRequirement('Logs', ABSPATH . 'logs', 'Schreibrechte für `logs/` vergeben oder das Verzeichnis anlegen.'),
             'assets' => $this->buildPathRequirement('Assets', ABSPATH . 'assets', 'Schreibrechte für `assets/` vergeben oder das Verzeichnis anlegen.'),
         ];

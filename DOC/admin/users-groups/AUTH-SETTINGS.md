@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer- & Auth-Einstellungen
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/user-settings` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_user_settings`
 
 ## English (summary)
@@ -9,6 +9,8 @@
 
 - Database settings: `registration_enabled`, `member_registration_enabled`, `member_email_verification`, `member_default_role`.
 - Since 4.0.0, `member_email_verification` is enforced: new registrations get the status `unverified` and a confirmation link (`/cms-verify-email`, valid for 48 hours, single use). They can sign in only after confirming. A completed password reset also confirms the address.
+- Since 4.0.0, registering with an e-mail address that already has an account shows the same success message as a new registration; the owner of the address gets a notice instead (at most 3 per address and hour). Username conflicts are still reported. Full protection requires `member_email_verification`.
+- Since 4.0.0, failed logins are also counted per account (independent of the IP): after 5 failures within 15 minutes each further attempt is delayed by 1, 2, 4, 8, 16 and at most 30 seconds.
 - Read-only status: login protection (`MAX_LOGIN_ATTEMPTS`, `LOGIN_TIMEOUT`), password policy (12 characters, upper/lower case, digit, special character), session lifetimes, providers (password, TOTP, backup codes, passkeys/WebAuthn, LDAP), JWT.
 - Action `sync_ldap` imports up to 250 directory users.
 - Provider credentials (LDAP, JWT, SMTP) are constants in `CMS/config/app.php`, never stored in the database.
@@ -30,7 +32,7 @@ Umgesetzt in `CMS/core/Services/EmailVerificationService.php`.
 
 1. **Registrierung:** Ist die Option an, legt `Auth::register()` das Konto mit dem Status `unverified` an und sendet eine Bestätigungsmail an die angegebene Adresse.
 2. **Link:** `/cms-verify-email?uid=<id>&token=<64 Hex-Zeichen>` (englische Anfragen mit `/en`-Präfix), 48 Stunden gültig und nur einmal verwendbar. In der Datenbank liegt nur der SHA-256-Hash des Tokens (`user_meta` `email_verification_token`, Ablauf in `email_verification_expires`).
-3. **Bestätigung:** Der Link setzt den Status auf `active`, löscht das Token, speichert `email_verified_at`, schreibt den Audit-Eintrag `auth.email_verified` und löst den Hook `user_email_verified` (Parameter: Benutzer-ID) aus. Anschließend leitet er mit Hinweis auf die Anmeldeseite.
+3. **Bestätigung:** Der Link setzt den Status auf `active`, löscht das Token, speichert `email_verified_at`, schreibt den Audit-Eintrag `auth.email_verified` und löst den Hook `user_email_verified` (Parameter: Benutzer-ID) aus. Gastbestellungen mit dieser Adresse werden dem Konto zugeordnet (Hook `guest_orders_assigned`). Anschließend leitet er mit Hinweis auf die Anmeldeseite.
 4. **Anmeldung vor der Bestätigung:** Mit richtigem Passwort erscheint der Hinweis „E-Mail-Adresse noch nicht bestätigt“, und ein neuer Link wird gesendet (höchstens 3 Mails je Konto und Stunde; der alte Link wird ungültig). Mit falschem Passwort bleibt es bei der allgemeinen Fehlermeldung.
 5. **Passwort vergessen:** Funktioniert auch für unbestätigte Konten. Ein abgeschlossener Reset belegt den Zugriff auf das Postfach und aktiviert das Konto. So kann niemand eine fremde Adresse dauerhaft blockieren.
 6. **Rate-Limit:** höchstens 10 Bestätigungsversuche je IP in 15 Minuten.
@@ -39,12 +41,19 @@ Unbestätigte Konten erscheinen in der Benutzerliste mit dem Status „E-Mail un
 
 Voraussetzung ist ein funktionierender Mailversand. Bei aktiver Mail-Warteschlange muss der Cron laufen.
 
+### Registrierung mit bereits verwendeter E-Mail-Adresse (seit 4.0.0)
+
+Die Registrierung verrät nicht mehr, ob eine Adresse schon ein Konto hat. Ist die Adresse vergeben, zeigt sie dieselbe Erfolgsmeldung wie bei einer neuen Registrierung, legt aber kein Konto an. Der Inhaber der Adresse erhält stattdessen eine Hinweis-Mail mit Links zur Anmeldung und zu „Passwort vergessen“ (höchstens 3 Hinweise je Adresse und Stunde, Aktion `register_existing`; Audit-Eintrag `register_existing_email`). Ein bereits vergebener **Benutzername** wird weiterhin gemeldet.
+
+Den vollen Schutz gegen das Ausprobieren von Adressen gibt es nur mit aktiver E-Mail-Verifizierung. Ohne sie ist ein neues Konto sofort aktiv, und ein anschließender Anmeldeversuch zeigt weiterhin, ob die Adresse frei war.
+
 ### Login-Schutz und Passwortrichtlinie (Anzeige)
 
 | Wert | Quelle | Standard |
 |---|---|---|
 | Max. Fehlversuche | `MAX_LOGIN_ATTEMPTS` in `config/app.php` | 5 |
 | Sperrdauer | `LOGIN_TIMEOUT` | 300 s |
+| Verzögerung je Konto (seit 4.0.0) | `Auth::accountFailureDelaySeconds()` (Aktion `login_account`) | nach 5 Fehlversuchen in 15 min: 1, 2, 4, 8, 16, max. 30 s je weiterem Versuch, unabhängig von der IP; ein richtiges Passwort setzt den Zähler zurück |
 | Passwort-Mindestlänge | `Auth::PASSWORD_POLICY_MIN_LENGTH` | 12 |
 | Zeichenklassen | `Auth::getPasswordPolicyDefinition()` | Groß-, Kleinbuchstabe, Ziffer, Sonderzeichen |
 | Session Admin | Option `perf_session_timeout_admin` | 8 Stunden |

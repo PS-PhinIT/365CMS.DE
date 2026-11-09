@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Übersicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Schema:** v23 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** v23 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the runtime core in `CMS/core/`: bootstrap and request lifecycle, routing, classes and services, database schema, hooks, JSON API, security model, directory structure and the current implementation status. All statements were verified against the source code on 2026-10-02.
+This folder documents the runtime core in `CMS/core/`: bootstrap and request lifecycle, routing, classes and services, database schema, hooks, JSON API, security model, directory structure and the current implementation status. All statements were verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09.
 
 ## Deutsch
 
@@ -24,7 +24,7 @@ This folder documents the runtime core in `CMS/core/`: bootstrap and request lif
 
 ### Kernfakten
 
-- `CMS\Version::CURRENT = '3.5.0'`, Schema `v23`, PHP ≥ 8.4.1.
+- `CMS\Version::CURRENT = '4.0.0'`, Schema `v23`, PHP ≥ 8.4.1.
 - Einstieg `CMS/index.php` → `CMS\Bootstrap` → Modus `cli`/`api`/`admin`/`web` → `CMS\Router`.
 - Routing nach Präfix: `/api` → `ApiRouter`, `/admin` → `AdminRouter`, `/member`/`/dashboard` → `MemberRouter`, Rest → `PublicRouter` + `ThemeRouter`.
 - Erweiterung über `CMS\Hooks`, Plugins (`CMS/plugins/`) und Themes (`CMS/themes/`).

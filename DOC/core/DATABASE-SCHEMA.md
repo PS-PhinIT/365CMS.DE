@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Datenbank & Schema
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Schema:** `v23` | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** `v23` | **Status:** Stable
 
 ## English (summary)
 
@@ -40,12 +40,12 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | Tabelle | Spalten |
 |---|---|
 | `users` | id, username, email, password, display_name, role, status, created_at, updated_at, last_login |
-| `user_meta` | id, user_id → users (CASCADE), meta_key, meta_value |
+| `user_meta` | id, user_id → users (CASCADE), meta_key, meta_value – sicherheitsrelevante Schlüssel siehe unten |
 | `roles` | id, name, display_name, description, capabilities, member_dashboard_access, sort_order, … |
 | `sessions` | id (SHA-256 der Session-ID, nie die ID selbst), user_id, ip_address, user_agent, payload, last_activity, expires_at – ab 3.4.20 von `Auth` bei Anmeldung angelegt, höchstens alle 5 Minuten aktualisiert und bei Abmeldung/Passwortwechsel entfernt |
 | `passkey_credentials` | id, user_id, credential_id, public_key, sign_count, aaguid, attestation_fmt, name, created_at, last_used_at |
 | `password_resets` | id, email, token, expires_at, created_at |
-| `login_attempts`, `failed_logins` | Anmeldeversuche (Rate-Limit, Sicherheitsalarme). `action` VARCHAR(30), `username` VARCHAR(60): `Security::normalizeRateLimitAction()`/`normalizeRateLimitIdentifier()` kürzen bzw. hashen längere Werte (ab 3.4.20) |
+| `login_attempts`, `failed_logins` | Anmeldeversuche (Rate-Limit, Sicherheitsalarme). `action` VARCHAR(30), `username` VARCHAR(60): `Security::normalizeRateLimitAction()`/`normalizeRateLimitIdentifier()` kürzen bzw. hashen längere Werte (ab 3.4.20). Seit 4.0.0 zusätzlich die Aktionen `login_account` (Verzögerung je Konto), `register_existing`, `email_change`, `email_change_confirm` und `email_change_notice` |
 | `blocked_ips` | id, ip_address, reason, expires_at, permanent, … |
 | `user_groups` | id, name, slug, description, role_id, plan_id, is_active, … |
 | `user_group_members` | id, user_id, group_id, joined_at |
@@ -131,6 +131,15 @@ Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 | `monitoring_trends` | `MonitoringTrendService` | Antwortzeit-, Speicher-, Cron-Verlauf |
 | `import_log`, `import_meta`, `import_items` | Plugin `cms-importer` | WordPress-Import |
 
+### Sicherheitsrelevante Schlüssel in `cms_user_meta`
+
+| Schlüssel | Inhalt |
+|---|---|
+| `mfa_enabled`, `mfa_secret`, `mfa_pending_secret` | TOTP-Status und -Secrets; die Secrets seit 4.0.0 verschlüsselt (`enc:v2:…`, Kontext Benutzer + Feld), Klartext aus älteren Versionen wird beim Lesen bzw. beim Start migriert |
+| `auth_token_version` | Zähler für „Überall abmelden“ (seit 4.0.0): fließt in den Sitzungs-Fingerabdruck und den `pwf`-Claim der API-Tokens ein |
+| `email_verification_token`, `email_verification_expires`, `email_verified_at` | Bestätigung neuer Konten (Token als SHA-256-Hash) bzw. Zeitpunkt der letzten Bestätigung |
+| `pending_email`, `pending_email_token`, `pending_email_expires` | ausstehende E-Mail-Änderung (seit 4.0.0; Token als SHA-256-Hash, 48 Stunden gültig) |
+
 ### Wichtige Optionen in `cms_settings`
 
 | Option | Inhalt |
@@ -140,7 +149,7 @@ Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 | `active_theme` | aktives Theme |
 | `site_name`, `site_url`, `language`, … | allgemeine Einstellungen ([../admin/system-settings/SYSTEM.md](../admin/system-settings/SYSTEM.md)) |
 | `seo_*`, `perf_*`, `firewall_*`, `antispam_*`, `cookie_*`, `member_*`, `legal_*`, `cms_loginpage_*` | Einstellungen der jeweiligen Bereiche |
-| Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`enc:`/`json:`) |
+| Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`json:`; Secrets seit 4.0.0 `enc:v2:<alg>:<Schlüssel-ID>:<Daten>` über `CryptoService`, Altwerte `enc:` werden automatisch neu verschlüsselt) |
 
 ### Hinweise für Entwickler
 

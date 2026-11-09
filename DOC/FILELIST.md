@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: FILELIST
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -141,11 +141,11 @@ Die alten Zahlen (467 Dateien, 28.03.2026) nicht mehr verwenden. Aktuelle Zählu
 | File | Purpose / Zweck |
 |---|---|
 | `config/.htaccess` | deny direct access |
-| `config/app.php` | DB, keys, paths, SMTP, LDAP, JWT, HSTS, theme |
+| `config/app.php` | DB, keys, paths, SMTP, LDAP, JWT, HSTS, theme, encryption key ring, backup path |
 | `config/media-meta.json` | media metadata |
 | `config/media-settings.json` | media settings |
 
-`config/app.php` defines `ABSPATH`, `CMS_DEBUG`, `DB_*`, `AUTH_KEY`, `SECURE_AUTH_KEY`, `NONCE_KEY`, `SITE_NAME`, `SITE_URL` (no trailing slash, no subdirectory), `ADMIN_EMAIL`, `CMS_VERSION` from `Version::CURRENT`, path constants, `DEFAULT_THEME = cms-default`, login limits, optional LDAP/JWT/SMTP.
+`config/app.php` defines `ABSPATH`, `CMS_DEBUG`, `DB_*`, `AUTH_KEY`, `SECURE_AUTH_KEY`, `NONCE_KEY`, `SITE_NAME`, `SITE_URL` (no trailing slash, no subdirectory), `ADMIN_EMAIL`, `CMS_VERSION` from `Version::CURRENT`, path constants, `DEFAULT_THEME = cms-default`, login limits, optional LDAP/JWT/SMTP and, since 4.0.0, `CMS_ENCRYPTION_KEY` / `CMS_ENCRYPTION_KEYS_PREVIOUS` (key ring for encrypted secrets and backups) and `CMS_BACKUP_PATH` (backup directory).
 
 Changes here affect bootstrap, HTTPS, sessions, mail, LDAP, JWT, and logging at once.
 
@@ -198,7 +198,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-298 files. Layout:
+290 files. Layout:
 
 - `CMS/admin/*.php` — HTTP entry points
 - `CMS/admin/modules/<domain>/` — domain modules (`comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`)
@@ -210,7 +210,7 @@ Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `
 
 **Deutsch**
 
-298 Dateien. Aufbau:
+290 Dateien. Aufbau:
 
 - `CMS/admin/*.php` — HTTP-Einstiege
 - `CMS/admin/modules/<domain>/` — Fachmodule

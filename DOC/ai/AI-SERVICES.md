@@ -1,5 +1,5 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02 (Quellcode-Abgleich: Provider-Klassen, Quota-Tabelle, Editor-Einbindung)
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 4.0.0
+> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-09 (Abgleich mit 4.0.0: Secrets über `CryptoService`; zuvor 2026-10-02 Quellcode-Abgleich: Provider-Klassen, Quota-Tabelle, Editor-Einbindung)
 > **Kurzbeschreibung:** Complete user and technical documentation for the protected 365CMS AI Services, including administration, translation, content drafts, SEO metadata, provider policies, quotas, security, and integration assets.
 
 # 365CMS AI Services
@@ -396,7 +396,7 @@ The translation endpoint uses the token action `admin_ai_editorjs_translation`. 
 
 ### 17. Settings persistence
 
-Settings are stored through the existing `SettingsService` as logical groups (secrets AES-256 encrypted). The only AI-specific table is `cms_ai_quota_usage` (counters per scope, period, user and provider) used by `AiQuotaService`:
+Settings are stored through the existing `SettingsService` as logical groups (secrets encrypted with AEAD via `CryptoService` since 4.0.0). The only AI-specific table is `cms_ai_quota_usage` (counters per scope, period, user and provider) used by `AiQuotaService`:
 
 | Group | Responsibility |
 |---|---|
@@ -972,7 +972,7 @@ Token-Actions:
 
 ### 17. Persistenz der Einstellungen
 
-Über `SettingsService` werden logische Gruppen gespeichert (Secrets AES-256-verschlüsselt). Einzige KI-spezifische Tabelle ist `cms_ai_quota_usage` (Zähler je Scope, Zeitraum, Benutzer und Provider) für `AiQuotaService`:
+Über `SettingsService` werden logische Gruppen gespeichert (Secrets seit 4.0.0 authentifiziert verschlüsselt über `CryptoService`). Einzige KI-spezifische Tabelle ist `cms_ai_quota_usage` (Zähler je Scope, Zeitraum, Benutzer und Provider) für `AiQuotaService`:
 
 | Gruppe | Aufgabe |
 |---|---|

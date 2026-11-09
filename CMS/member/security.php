@@ -279,6 +279,18 @@ include __DIR__ . '/partials/header.php';
                             </tbody>
                         </table>
                     </div>
+                    <div class="card-footer">
+                        <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="Alle anderen Sitzungen und API-Tokens abmelden?">
+                            <input type="hidden" name="action" value="sessions_revoke_all">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_sessions'), ENT_QUOTES) ?>">
+                            <div>
+                                <label class="form-label" for="sessions_revoke_current_password">Aktuelles Passwort</label>
+                                <input class="form-control" id="sessions_revoke_current_password" name="current_password" type="password" autocomplete="current-password" required>
+                            </div>
+                            <button type="submit" class="btn btn-outline-danger">Überall sonst abmelden</button>
+                        </form>
+                        <div class="text-secondary small mt-2">Beendet alle anderen Browser-Sitzungen und macht ausgestellte API-Tokens ungültig. Das Passwort bleibt unverändert.</div>
+                    </div>
                 </div>
             </div>
         </div>

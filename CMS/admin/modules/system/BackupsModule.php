@@ -19,7 +19,8 @@ use CMS\Services\BackupService;
 
 class BackupsModule
 {
-    private BackupService $service;
+    private ?BackupService $service = null;
+    private string $serviceError = '';
     private Logger $logger;
 
     private const CSRF_ACTION = 'admin_backups';
@@ -30,11 +31,32 @@ class BackupsModule
     private const BACKUP_LIST_LIMIT = 25;
     private const BACKUP_NAME_PATTERN = '/^[a-z0-9][a-z0-9._-]{2,120}$/i';
     private const ALLOWED_BACKUP_TYPES = ['full', 'database', 'email'];
+    private const DATABASE_FILE_EXTENSIONS = ['sql', 'gz', 'enc'];
+    private const FILES_ARCHIVE_EXTENSIONS = ['zip', 'enc'];
 
     public function __construct()
     {
-        $this->service = BackupService::getInstance();
         $this->logger = Logger::instance()->withChannel('admin.backups');
+
+        // Ein ungültiger CMS_BACKUP_PATH soll als klare Meldung erscheinen, nicht als generischer Ladefehler.
+        try {
+            $this->service = BackupService::getInstance();
+        } catch (\Throwable $e) {
+            $this->serviceError = $this->sanitizeText($e->getMessage(), self::MAX_ERROR_LENGTH);
+            $this->logger->error('Backup-Service konnte nicht initialisiert werden.', [
+                'exception' => $e::class,
+                'message' => $this->serviceError,
+            ]);
+        }
+    }
+
+    private function service(): BackupService
+    {
+        if ($this->service === null) {
+            throw new \RuntimeException($this->serviceError !== '' ? $this->serviceError : 'Backup-Service ist nicht verfügbar.');
+        }
+
+        return $this->service;
     }
 
     /**
@@ -46,12 +68,87 @@ class BackupsModule
             return [
                 'backups' => [],
                 'history' => [],
+                'storage' => [],
+                'service_error' => '',
+                'can_write' => false,
+            ];
+        }
+
+        if ($this->service === null) {
+            return [
+                'backups' => [],
+                'history' => [],
+                'storage' => [],
+                'service_error' => $this->serviceError !== '' ? $this->serviceError : 'Backup-Service ist nicht verfügbar.',
+                'can_write' => false,
             ];
         }
 
         return [
             'backups' => $this->sanitizeBackupList($this->listBackupsSafe()),
             'history' => $this->sanitizeHistory($this->getHistorySafe()),
+            'storage' => $this->getStorageStatusSafe(),
+            'service_error' => '',
+            'can_write' => $this->canWrite(),
+        ];
+    }
+
+    /**
+     * Verschlüsselung neuer Backups ein- bzw. ausschalten (bestehende Backups bleiben unverändert).
+     */
+    public function setEncryption(bool $enabled): array
+    {
+        if (!$this->assertWritableRequest()) {
+            return ['success' => false, 'error' => 'Keine Berechtigung für diese Aktion.'];
+        }
+
+        try {
+            $this->service()->setEncryptionEnabled($enabled);
+            $this->auditAction(
+                $enabled ? 'backup.encryption.enabled' : 'backup.encryption.disabled',
+                $enabled ? 'Backup-Verschlüsselung aktiviert.' : 'Backup-Verschlüsselung deaktiviert.',
+                ['key_id' => (string) ($this->getStorageStatusSafe()['key_id'] ?? '')]
+            );
+
+            return [
+                'success' => true,
+                'message' => $enabled
+                    ? 'Backup-Verschlüsselung aktiviert. Neue Backups werden verschlüsselt (*.enc); CMS_ENCRYPTION_KEY getrennt von den Backups sichern.'
+                    : 'Backup-Verschlüsselung deaktiviert. Neue Backups werden unverschlüsselt gespeichert; bestehende verschlüsselte Backups bleiben lesbar, solange der Schlüssel konfiguriert ist.',
+            ];
+        } catch (\Throwable $e) {
+            return $this->failResult('backup.encryption.update_failed', 'Backup-Verschlüsselung konnte nicht geändert werden.', $e);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getStorageStatusSafe(): array
+    {
+        try {
+            $status = $this->service()->getStorageStatus();
+        } catch (\Throwable $e) {
+            $this->logger->warning('Backup-Speicherstatus konnte nicht ermittelt werden.', [
+                'exception' => $e::class,
+                'message' => $this->sanitizeText($e->getMessage(), self::MAX_ERROR_LENGTH),
+            ]);
+
+            return [];
+        }
+
+        return [
+            'path' => $this->sanitizeText((string) $status['path'], 255),
+            'custom_path' => (bool) $status['custom_path'],
+            'inside_webroot' => (bool) $status['inside_webroot'],
+            'writable' => (bool) $status['writable'],
+            'encryption_enabled' => (bool) $status['encryption_enabled'],
+            'encryption_available' => (bool) $status['encryption_available'],
+            'dedicated_key' => (bool) $status['dedicated_key'],
+            'weak_key' => (bool) $status['weak_key'],
+            'key_id' => preg_match('/^[a-f0-9]{8}$/', (string) $status['key_id']) === 1 ? (string) $status['key_id'] : '',
+            'unencrypted_backups' => max(0, (int) $status['unencrypted_backups']),
+            'legacy_webroot_backups' => max(0, (int) $status['legacy_webroot_backups']),
         ];
     }
 
@@ -65,7 +162,7 @@ class BackupsModule
         }
 
         try {
-            $result = $this->service->createFullBackup();
+            $result = $this->service()->createFullBackup();
             if (!empty($result['success'])) {
                 $backupName = $this->normalizeBackupName((string)($result['name'] ?? ''));
                 $message = 'Vollständiges Backup erstellt.';
@@ -101,7 +198,7 @@ class BackupsModule
         }
 
         try {
-            $result = $this->service->createStandaloneDatabaseBackup();
+            $result = $this->service()->createStandaloneDatabaseBackup();
             if (empty($result['success'])) {
                 return [
                     'success' => false,
@@ -110,7 +207,7 @@ class BackupsModule
             }
 
             $backupName = $this->normalizeBackupName((string) ($result['name'] ?? ''));
-            $backupFile = $this->normalizeBackupFileName((string) ($result['manifest']['database'] ?? ''), ['sql', 'gz']);
+            $backupFile = $this->normalizeBackupFileName((string) ($result['manifest']['database'] ?? ''), self::DATABASE_FILE_EXTENSIONS);
 
             if ($backupName !== '') {
                 $this->auditAction('backup.database.created', 'Datenbank-Backup erstellt.', [
@@ -148,7 +245,7 @@ class BackupsModule
         }
 
         try {
-            $result = $this->service->deleteBackup($normalizedName);
+            $result = $this->service()->deleteBackup($normalizedName);
             if ($result) {
                 $this->auditAction('backup.deleted', 'Backup gelöscht.', [
                     'name' => $normalizedName,
@@ -178,7 +275,7 @@ class BackupsModule
         }
 
         try {
-            $result = $this->service->restoreBackup($normalizedName);
+            $result = $this->service()->restoreBackup($normalizedName);
 
             $this->auditAction('backup.restored', 'Backup wiederhergestellt.', [
                 'name' => $normalizedName,
@@ -210,7 +307,7 @@ class BackupsModule
         }
 
         try {
-            $report = $this->service->validateBackup($normalizedName, $includeRestoreDryRun);
+            $report = $this->service()->validateBackup($normalizedName, $includeRestoreDryRun);
             $summary = is_array($report['summary'] ?? null) ? $report['summary'] : [];
             $status = (string) ($summary['status'] ?? 'warning');
 
@@ -263,13 +360,22 @@ class BackupsModule
             return null;
         }
 
-        return $this->service->resolveDownloadableBackupFile($normalizedName, $part);
+        try {
+            return $this->service()->resolveDownloadableBackupFile($normalizedName, $part);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Backup-Download konnte nicht vorbereitet werden.', [
+                'exception' => $e::class,
+                'message' => $this->sanitizeText($e->getMessage(), self::MAX_ERROR_LENGTH),
+            ]);
+
+            return null;
+        }
     }
 
     private function listBackupsSafe(): array
     {
         try {
-            return $this->service->listBackups(self::BACKUP_LIST_LIMIT);
+            return $this->service()->listBackups(self::BACKUP_LIST_LIMIT);
         } catch (\Throwable $e) {
             $this->logger->warning('Backup-Liste konnte nicht geladen werden.', [
                 'exception' => $e::class,
@@ -282,7 +388,7 @@ class BackupsModule
     private function getHistorySafe(): array
     {
         try {
-            return $this->service->getBackupHistory(self::HISTORY_LIMIT);
+            return $this->service()->getBackupHistory(self::HISTORY_LIMIT);
         } catch (\Throwable $e) {
             $this->logger->warning('Backup-Historie konnte nicht geladen werden.', [
                 'exception' => $e::class,
@@ -377,10 +483,11 @@ class BackupsModule
                 'timestamp' => $timestamp,
                 'size' => $size,
                 'size_formatted' => $size > 0 ? $this->formatBytes($size) : '-',
-                'database' => $this->normalizeBackupFileName((string)($backup['database'] ?? ''), ['sql', 'gz']),
-                'files' => $this->normalizeBackupFileName((string)($backup['files'] ?? ''), ['zip']),
+                'database' => $this->normalizeBackupFileName((string)($backup['database'] ?? ''), self::DATABASE_FILE_EXTENSIONS),
+                'files' => $this->normalizeBackupFileName((string)($backup['files'] ?? ''), self::FILES_ARCHIVE_EXTENSIONS),
                 'status' => $status,
                 'error' => $status === 'ok' ? '' : $this->sanitizeText((string) ($backup['error'] ?? ''), 240),
+                'encrypted' => is_array($backup['encryption'] ?? null),
             ];
 
             // Vorhandene Teile bleiben auch bei unvollständigen Backups herunterladbar; Restore nur bei vollständigen.

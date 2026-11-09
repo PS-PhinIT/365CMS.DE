@@ -514,8 +514,11 @@ class Database implements DatabaseInterface
      * Update die Tabellendefinition, läuft die Prüfung einmal erneut. Wirft der
      * Callback eine Exception oder liefert er `false`, wird kein Flag geschrieben
      * und die Prüfung beim nächsten Request wiederholt.
+     *
+     * `$variant` ergänzt den Codestand um einen weiteren Stand (z. B. Schlüsselring);
+     * Flags früherer Varianten werden wie alte Codestände aufgeräumt.
      */
-    public function runSchemaOnce(string $key, string $sourceFile, callable $callback): void
+    public function runSchemaOnce(string $key, string $sourceFile, callable $callback, string $variant = ''): void
     {
         $key = preg_replace('/[^a-z0-9_]/', '', strtolower($key)) ?? '';
         if ($key === '' || !defined('ABSPATH')) {
@@ -525,6 +528,10 @@ class Database implements DatabaseInterface
 
         $hash = is_file($sourceFile) ? @hash_file('crc32b', $sourceFile) : false;
         $revision = is_string($hash) && $hash !== '' ? $hash : 'unknown';
+        $variant = preg_replace('/[^a-z0-9]/', '', strtolower($variant)) ?? '';
+        if ($variant !== '') {
+            $revision .= '_' . $variant;
+        }
         $cacheDir = ABSPATH . 'cache';
         $flagFile = $cacheDir . '/db_runtime_' . $key . '_' . $this->prefix . $revision . '.flag';
 

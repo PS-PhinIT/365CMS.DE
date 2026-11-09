@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Hook-Referenz
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-`CMS\Hooks` (`CMS/core/Hooks.php`) is a WordPress-like action/filter registry. Callbacks are stored per tag and priority (lower runs first). WordPress-style wrappers (`add_action`, `do_action`, `add_filter`, `apply_filters`) live in `CMS/includes/functions/wordpress-compat.php`. `before_footer` and `body_end` fire at most once per request. This document lists every hook fired by the core, the admin, the member area and the shipped theme in 3.5.0, with its arguments.
+`CMS\Hooks` (`CMS/core/Hooks.php`) is a WordPress-like action/filter registry. Callbacks are stored per tag and priority (lower runs first). WordPress-style wrappers (`add_action`, `do_action`, `add_filter`, `apply_filters`) live in `CMS/includes/functions/wordpress-compat.php`. `before_footer` and `body_end` fire at most once per request. This document lists every hook fired by the core, the admin, the member area and the shipped theme in 4.0.0, with its arguments. New in 4.0.0: account hooks for e-mail verification and confirmed e-mail changes (`user_email_verified`, `user_email_change_requested`, `user_email_changed`, `guest_orders_assigned`), `user_sessions_revoked` and the `cms_data_retention_days` filter.
 
 ## Deutsch
 
@@ -101,11 +101,17 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `plugin_activated`, `plugin_deactivated`, `plugin_before_delete`, `plugin_deleted` | Action | `$slug` |
 | `plugin_installed` | Action | – |
 | `user_registered` | Action | `$userId` |
+| `user_email_verified` | Action | `$userId` (Adresse per Link aus `/cms-verify-email` bestätigt; seit 4.0.0) |
+| `user_email_change_requested` | Action | `$userId, $newEmail, $initiator` (`'member'`/`'admin'`; Bestätigungslink an die neue Adresse verschickt, nicht wenn die Adresse einem anderen Konto gehört; seit 4.0.0) |
+| `user_email_changed` | Action | `$userId, $previousEmail, $newEmail` (nach Bestätigung über `/cms-confirm-email-change` oder Admin-Änderung ohne Bestätigung; seit 4.0.0) |
+| `guest_orders_assigned` | Action | `$userId, $count` (Gastbestellungen der bestätigten Adresse dem Konto zugeordnet; seit 4.0.0) |
+| `user_sessions_revoked` | Action | `$userId, $initiator` (`'member'`/`'admin'`; alle Sitzungen und API-Tokens beendet, `Auth::revokeAllSessions()`; seit 4.0.0) |
 | `subscription_assigned` | Action | `$userId, $planId` |
 | `dsgvo_export_data` | Action | `$userId, $email` (Auskunft abgeschlossen) |
 | `dsgvo_delete_data` | Action | `$userId, $email` (unmittelbar vor der endgültigen Kontolöschung – Plugins löschen hier ihre Daten) |
 | `performance_cache_purged` | Action | `'all', $report` |
 | `performance_cdn_purge_requested` | Action | `$payload` (CDN-Purge durch Plugin) |
+| `cms_data_retention_days` | Filter | `$days` – Tage je Bereich (`page_views`, `core_web_vitals`, `not_found_logs`, `log_files`, `activity_log`, `audit_log`); 0 = nicht löschen, sonst mindestens 7 Tage (Protokolle 90), höchstens 3650 (`DataRetentionService::getRetentionDays()`) |
 | `theme_customizer_save` | Action | `$themeSlug, $tab, $sections, $context` |
 
 ### Member-Bereich

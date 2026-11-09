@@ -21,16 +21,16 @@ if (!defined('ABSPATH')) {
 
 class SettingsService
 {
-    private const ENCRYPTION_PREFIX = 'enc:';
+    /** Altformat vor 4.0.0 (AES-256-CBC ohne MAC); neue Werte nutzen CryptoService::PREFIX. */
+    private const LEGACY_ENCRYPTION_PREFIX = 'enc:';
     private const JSON_PREFIX = 'json:';
-    private const CIPHER = 'AES-256-CBC';
 
     private static ?self $instance = null;
 
     private Database $db;
     private Logger $logger;
     private string $prefix;
-    private string $keyMaterial;
+    private CryptoService $crypto;
 
     public static function getInstance(): self
     {
@@ -42,11 +42,7 @@ class SettingsService
         $this->db = Database::instance();
         $this->logger = Logger::instance()->withChannel('settings');
         $this->prefix = $this->db->getPrefix();
-        $this->keyMaterial = hash(
-            'sha256',
-            (defined('AUTH_KEY') ? (string) AUTH_KEY : '') . '|' . (defined('SECURE_AUTH_KEY') ? (string) SECURE_AUTH_KEY : ''),
-            true
-        );
+        $this->crypto = CryptoService::getInstance();
     }
 
     public function get(string $group, string $key, mixed $default = null): mixed
@@ -61,7 +57,7 @@ class SettingsService
         }
 
         try {
-            return $this->decodeValue((string) $value);
+            return $this->decodeValue((string) $value, $optionName);
         } catch (\Throwable $e) {
             $this->logger->error('Settings-Wert konnte nicht dekodiert werden: {option}', [
                 'option' => $optionName,
@@ -137,7 +133,14 @@ class SettingsService
             }
 
             $key = substr($optionName, strlen($prefix));
-            $result[$key] = $this->decodeValue((string) ($row->option_value ?? ''));
+            try {
+                $result[$key] = $this->decodeValue((string) ($row->option_value ?? ''), $optionName);
+            } catch (\Throwable $e) {
+                $this->logger->error('Settings-Wert konnte nicht dekodiert werden: {option}', [
+                    'option' => $optionName,
+                    'exception' => $e,
+                ]);
+            }
         }
 
         return $result;
@@ -146,7 +149,7 @@ class SettingsService
     public function set(string $group, string $key, mixed $value, bool $encrypted = false, int $autoload = 0): bool
     {
         $optionName = $this->buildOptionName($group, $key);
-        $storedValue = $this->encodeValue($value, $encrypted);
+        $storedValue = $this->encodeValue($value, $encrypted, $optionName);
         $autoload = $autoload === 1 ? 1 : 0;
 
         try {
@@ -219,7 +222,45 @@ class SettingsService
         return $value;
     }
 
-    private function encodeValue(mixed $value, bool $encrypted): string
+    /**
+     * Bringt verschlüsselte Werte im Altformat (AES-256-CBC) oder mit älterer Schlüssel-ID
+     * auf das aktuelle Format. Verarbeitet höchstens $limit Werte je Aufruf.
+     *
+     * @return bool true, wenn keine weiteren Werte offen sind
+     */
+    public function migrateEncryptedValues(int $limit = 500): bool
+    {
+        $rows = $this->db->get_results(
+            "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_value LIKE 'enc:%'"
+        ) ?: [];
+
+        $migrated = 0;
+        foreach ($rows as $row) {
+            $optionName = (string) ($row->option_name ?? '');
+            $storedValue = (string) ($row->option_value ?? '');
+            if ($optionName === '' || !$this->needsMigration($storedValue)) {
+                continue;
+            }
+
+            if ($migrated >= $limit) {
+                return false;
+            }
+
+            try {
+                $this->migrateStoredValue($optionName, $storedValue, $this->decryptStoredValue($storedValue, $optionName));
+                $migrated++;
+            } catch (\Throwable $e) {
+                $this->logger->error('Verschlüsselter Settings-Wert konnte nicht migriert werden: {option}', [
+                    'option' => $optionName,
+                    'exception' => $e,
+                ]);
+            }
+        }
+
+        return true;
+    }
+
+    private function encodeValue(mixed $value, bool $encrypted, string $optionName): string
     {
         $normalized = $this->normalizeValue($value);
 
@@ -227,14 +268,17 @@ class SettingsService
             return $normalized;
         }
 
-        return self::ENCRYPTION_PREFIX . $this->encrypt($normalized);
+        return $this->crypto->encrypt($normalized, CryptoService::CONTEXT_SETTINGS, $optionName);
     }
 
-    private function decodeValue(string $value): mixed
+    private function decodeValue(string $value, string $optionName): mixed
     {
         $decoded = $value;
-        if (str_starts_with($decoded, self::ENCRYPTION_PREFIX)) {
-            $decoded = $this->decrypt(substr($decoded, strlen(self::ENCRYPTION_PREFIX)));
+        if (str_starts_with($decoded, self::LEGACY_ENCRYPTION_PREFIX)) {
+            $decoded = $this->decryptStoredValue($value, $optionName);
+            if ($this->needsMigration($value)) {
+                $this->migrateStoredValue($optionName, $value, $decoded);
+            }
         }
 
         if (str_starts_with($decoded, self::JSON_PREFIX)) {
@@ -242,6 +286,40 @@ class SettingsService
         }
 
         return $decoded;
+    }
+
+    private function decryptStoredValue(string $storedValue, string $optionName): string
+    {
+        if ($this->crypto->isEncrypted($storedValue)) {
+            return $this->crypto->decrypt($storedValue, CryptoService::CONTEXT_SETTINGS, $optionName);
+        }
+
+        return $this->crypto->decryptLegacySettingsValue(substr($storedValue, strlen(self::LEGACY_ENCRYPTION_PREFIX)));
+    }
+
+    private function needsMigration(string $storedValue): bool
+    {
+        return str_starts_with($storedValue, self::LEGACY_ENCRYPTION_PREFIX)
+            && (!$this->crypto->isEncrypted($storedValue) || $this->crypto->needsReencryption($storedValue));
+    }
+
+    /**
+     * Schreibt einen entschlüsselten Altwert im aktuellen Format zurück – nur, wenn die Zeile
+     * unverändert ist (paralleles Speichern gewinnt).
+     */
+    private function migrateStoredValue(string $optionName, string $previousValue, string $plainText): void
+    {
+        try {
+            $this->db->execute(
+                "UPDATE {$this->prefix}settings SET option_value = ? WHERE option_name = ? AND option_value = ?",
+                [$this->crypto->encrypt($plainText, CryptoService::CONTEXT_SETTINGS, $optionName), $optionName, $previousValue]
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning('Settings-Wert konnte nicht neu verschlüsselt werden: {option}', [
+                'option' => $optionName,
+                'exception' => $e,
+            ]);
+        }
     }
 
     private function normalizeValue(mixed $value): string
@@ -255,53 +333,5 @@ class SettingsService
         }
 
         return (string) $value;
-    }
-
-    private function encrypt(string $plainText): string
-    {
-        if (!function_exists('openssl_encrypt')) {
-            throw new \RuntimeException('OpenSSL ist für die Verschlüsselung von Einstellungen erforderlich.');
-        }
-
-        $ivLength = openssl_cipher_iv_length(self::CIPHER);
-        if (!is_int($ivLength) || $ivLength <= 0) {
-            throw new \RuntimeException('Ungültige IV-Länge für Settings-Verschlüsselung.');
-        }
-
-        $iv = random_bytes($ivLength);
-        $cipherText = openssl_encrypt($plainText, self::CIPHER, $this->keyMaterial, OPENSSL_RAW_DATA, $iv);
-
-        if (!is_string($cipherText) || $cipherText === '') {
-            throw new \RuntimeException('Settings-Wert konnte nicht verschlüsselt werden.');
-        }
-
-        return base64_encode($iv . $cipherText);
-    }
-
-    private function decrypt(string $payload): string
-    {
-        if (!function_exists('openssl_decrypt')) {
-            throw new \RuntimeException('OpenSSL ist für die Entschlüsselung von Einstellungen erforderlich.');
-        }
-
-        $raw = base64_decode($payload, true);
-        if (!is_string($raw) || $raw === '') {
-            throw new \RuntimeException('Verschlüsselter Settings-Payload ist ungültig.');
-        }
-
-        $ivLength = openssl_cipher_iv_length(self::CIPHER);
-        if (!is_int($ivLength) || strlen($raw) <= $ivLength) {
-            throw new \RuntimeException('Verschlüsselter Settings-Payload ist unvollständig.');
-        }
-
-        $iv = substr($raw, 0, $ivLength);
-        $cipherText = substr($raw, $ivLength);
-        $plainText = openssl_decrypt($cipherText, self::CIPHER, $this->keyMaterial, OPENSSL_RAW_DATA, $iv);
-
-        if (!is_string($plainText)) {
-            throw new \RuntimeException('Settings-Wert konnte nicht entschlüsselt werden.');
-        }
-
-        return $plainText;
     }
 }

@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Service-Schicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -33,6 +33,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `ContentLanguageCopyService` | DE→EN-Kopie von Inhalten |
 | `ContentMediaPlacementService` | Platzierung von Medien in Inhalten |
 | `PermalinkService` | Beitrags-URLs aus der Permalink-Struktur (`/blog/%postname%` …) |
+| `PageTemplateService` | Seitenvorlagen aus dem Theme-Manifest (`theme.json` → `page_templates`), Prüfung der Zusatzfelder |
 | `CommentService` | Kommentare anlegen (pending), moderieren, durch Moderation bearbeiten (`updateByModerator()`), Flood-Limit, Admin-Benachrichtigung |
 | `SiteTableService` + `SiteTable\…` | Tabellen und Hub-Sites rendern, Shortcodes, Export |
 | `LandingPageService` + `Landing\…` | Landingpage-Daten, Plugin-Overrides |
@@ -73,7 +74,9 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `UserService` | Benutzer-CRUD, Sammelaktionen, Rollen, Statistik |
 | `MemberService` | Profil, Privatsphäre, Datenexport, Löschantrag, Sicherheitsempfehlungen |
 | `MessageService` | Nachrichten zwischen Mitgliedern |
-| `JwtService` | JWT erzeugen/prüfen (vorbereitet, derzeit nicht in API-Routen verdrahtet) |
+| `JwtService` | JWT erzeugen/prüfen für die optionale Bearer-Anmeldung der API (`/api/v1/auth/token`, nur mit `JWT_SECRET`, siehe [API-REFERENCE.md](API-REFERENCE.md)) |
+| `EmailVerificationService` | Bestätigung neuer Konten per Link (`/cms-verify-email`, Option `member_email_verification`, Status `unverified`), danach Zuordnung von Gastbestellungen |
+| `EmailChangeService` | E-Mail-Änderung mit Bestätigungslink an die neue Adresse (`/cms-confirm-email-change`, 48 h), Hinweis an die alte Adresse, Zuordnung von Gastbestellungen (seit 4.0.0) |
 | `CmsAuthPageService` | CMS-eigene Login-/Registrierungs-/Passwort-Seiten, Reset-Ablauf |
 
 ### Mail & Integration
@@ -96,7 +99,9 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `AntispamService` | Formular-Spamprüfung |
 | `CookieConsentService` | Consent-Banner, Zustimmungsabfrage |
 | `CoreModuleService` | Feature-Module an/aus ([../admin/system-settings/MODULES.md](../admin/system-settings/MODULES.md)) |
-| `SettingsService` | gruppierte, optional verschlüsselte Einstellungen |
+| `SettingsService` | gruppierte, optional verschlüsselte Einstellungen (Secrets über `CryptoService`) |
+| `CryptoService` | authentifizierte Verschlüsselung gespeicherter Geheimnisse (Einstellungen, TOTP) und Backups, Schlüsselring mit `CMS_ENCRYPTION_KEY`/`CMS_ENCRYPTION_KEYS_PREVIOUS` (seit 4.0.0, [SECURITY.md](SECURITY.md)) |
+| `TrustedProxyService` | vertrauenswürdige Proxys/CDNs, echte Client-IP (über `Security::getClientIp()`) und Länder-Header |
 
 ### Betrieb & Analyse
 
@@ -109,12 +114,16 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `FeatureUsageService` | Nutzung von Admin-Funktionen |
 | `MonitoringTrendService` | Verläufe für Monitoring |
 | `ErrorReportService` | Fehlerberichte |
-| `BackupService` | Backups, Restore, Validierung, E-Mail/S3 |
+| `BackupService` | Backups, Restore, Validierung; Ablageort `CMS_BACKUP_PATH` und optionale Verschlüsselung (seit 4.0.0, [../admin/system-settings/BACKUP.md](../admin/system-settings/BACKUP.md)) |
 | `UpdateService` | Update-Prüfung und -Installation, Systemvoraussetzungen |
 | `CronRunnerService`, `CronExpressionAdapter` | Cron-Tasks und -Ausdrücke |
 | `OpcacheWarmupService` | OPcache-Vorwärmen |
 | `AssetOptimizerService` | Asset-Versionierung/Minifizierung |
 | `PerformanceSafetyNetService` | Snapshots/Rollback für Wartungsaktionen |
+| `DataRetentionService` | tägliches Löschen alter Telemetrie- und Protokolldaten (Filter `cms_data_retention_days`) |
+| `OptionStore` | Request-Cache für die Tabelle `settings` (Autoload-Werte in einer Abfrage) |
+| `CsvExchange` | CSV-Export/-Import im Admin (BOM, Trennzeichen-Erkennung, Schutz vor Formel-Injection) |
+| `MarketplaceEndpoints` | zentrale Marketplace- und Core-Update-URLs mit Fallback auf die offiziellen Werte |
 
 ### Konventionen für eigene Services (Plugins)
 

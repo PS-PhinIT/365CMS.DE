@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: CMSFILESTRUCTUR
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -25,13 +25,13 @@
 
 **English**
 
-This file is the **CMS runtime inventory** for `CMS/` as counted on 2026-09-13. It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
+This file is the **CMS runtime inventory** for `CMS/`, counts updated on 2026-11-09 (release 4.0.0). It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
 
 Out of scope for a full file listing: deep vendor trees (`CMS/vendor/dompdf/`, large library trees under `CMS/assets/` such as `htmlpurifier`, `tabler`, `editorjs`). Those directories exist and are loaded at runtime; listing every vendor file is not useful for GitHub readers.
 
 **Deutsch**
 
-Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, gezählt am 2026-09-13. Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
+Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, Zählung aktualisiert am 2026-11-09 (Release 4.0.0). Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
 
 Nicht vollständig ausgerollt: tiefe Vendor-Bäume (`CMS/vendor/dompdf/`, große Bibliotheksbäume unter `CMS/assets/` wie `htmlpurifier`, `tabler`, `editorjs`). Diese Verzeichnisse existieren und werden zur Laufzeit geladen; jede Vendor-Datei aufzulisten ist für GitHub-Leser nicht sinnvoll.
 
@@ -41,26 +41,26 @@ Nicht vollständig ausgerollt: tiefe Vendor-Bäume (`CMS/vendor/dompdf/`, große
 
 **English**
 
-File counts from the current tree (`Get-ChildItem -Recurse -File`):
+Versioned files per area (`git ls-files CMS/<area> | wc -l`; runtime files such as `config/media-settings.json`, uploads or logs are not counted):
 
 **Deutsch**
 
-Dateizahlen aus dem aktuellen Baum (`Get-ChildItem -Recurse -File`):
+Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitdateien wie `config/media-settings.json`, Uploads oder Logs zählen nicht):
 
 | Area / Bereich | Files / Dateien |
 |---|---:|
-| `CMS/admin/` | 298 |
-| `CMS/assets/` | 2984 (mostly bundled libraries) |
-| `CMS/core/` | 155 |
-| `CMS/themes/` | 43 |
+| `CMS/admin/` | 290 |
+| `CMS/assets/` | 3043 (mostly bundled libraries) |
+| `CMS/core/` | 168 |
+| `CMS/themes/` | 41 |
 | `CMS/member/` | 17 |
-| `CMS/plugins/` | 13 |
-| `CMS/includes/` | 10 |
+| `CMS/plugins/` | 15 |
+| `CMS/includes/` | 11 |
 | `CMS/install/` | 9 |
-| `CMS/config/` | 4 |
+| `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
-| `CMS/assets/css/` | 13 stylesheets |
-| `CMS/assets/js/` | 41 scripts |
+| `CMS/assets/css/` | 14 stylesheets |
+| `CMS/assets/js/` | 39 scripts |
 
 ---
 
@@ -162,7 +162,7 @@ Root-Klassen in `CMS/core/`:
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT = '3.5.0'`)
+- `Version.php` (`CURRENT = '4.0.0'`)
 - `WP_Error.php`
 
 Subdirectories:
@@ -176,7 +176,7 @@ Subdirectories:
 | `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `ThemeArchiveRepository.php`, `ThemeRouter.php` |
 | `core/Services/` | domain services (see [FILELIST.md](FILELIST.md) and [DEVLIST.md](DEVLIST.md)) |
 
-Service PHP files currently present at `core/Services/` root include: `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `CmsAuthPageService`, `CommentService`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `DashboardService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `JwtService`, `LandingPageService`, `MailLogService`, `MailQueueService`, `MailService`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `OpcacheWarmupService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SiteSearchService`, `SitemapService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `UpdateService`, `UserService`.
+Service PHP files currently present at `core/Services/` root include: `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `CmsAuthPageService`, `CommentService`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `JwtService`, `LandingPageService`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TrustedProxyService`, `UpdateService`, `UserService`.
 
 Service subfolders: `AI/`, `EditorJs/`, `Landing/`, `Media/`, `SEO/`, `SiteTable/`.
 
@@ -247,11 +247,11 @@ Service subfolders: `AI/`, `EditorJs/`, `Landing/`, `Media/`, `SEO/`, `SiteTable
 
 **English**
 
-The only installed runtime plugin in this tree is `cms-importer` (13 files).
+The only installed runtime plugin in this tree is `cms-importer` (15 files).
 
 **Deutsch**
 
-Das einzige installierte Runtime-Plugin in diesem Baum ist `cms-importer` (13 Dateien).
+Das einzige installierte Runtime-Plugin in diesem Baum ist `cms-importer` (15 Dateien).
 
 - `plugins/cms-importer/cms-importer.php`
 - `plugins/cms-importer/update.json`
@@ -378,7 +378,7 @@ These folders were **not** found under `CMS/assets/` (older docs mentioned them)
 
 **English**
 
-`CMS/admin/` contains 298 files: PHP entry points, `modules/`, `views/`, `partials/`, and `logs/`.
+`CMS/admin/` contains 290 files: PHP entry points, `modules/`, `views/`, `partials/`, and `logs/`.
 
 Module directories: `comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`.
 
@@ -386,7 +386,7 @@ Entry examples that match public admin routes include `index.php`, `pages.php`, 
 
 **Deutsch**
 
-`CMS/admin/` enthält 298 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/` und `logs/`.
+`CMS/admin/` enthält 290 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/` und `logs/`.
 
 Modulverzeichnisse: `comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`.
 

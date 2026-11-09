@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Verzeichnisstruktur
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-Layout of `CMS/core/` and its role inside the runtime directory `CMS/`. There are no `public/`, `resources/` or `storage/` directories: the web root is `CMS/` itself, writable runtime data lives in `CMS/cache/`, `CMS/logs/`, `CMS/uploads/`, `CMS/backups/` and `CMS/config/`, and third-party libraries are bundled under `CMS/assets/` (plus Dompdf under `CMS/vendor/`).
+Layout of `CMS/core/` and its role inside the runtime directory `CMS/`. There are no `public/`, `resources/` or `storage/` directories: the web root is `CMS/` itself, writable runtime data lives in `CMS/cache/`, `CMS/logs/`, `CMS/uploads/`, `CMS/backups/` (or, since 4.0.0, the directory set in `CMS_BACKUP_PATH`) and `CMS/config/`, and third-party libraries are bundled under `CMS/assets/` (plus Dompdf under `CMS/vendor/`).
 
 ## Deutsch
 
@@ -28,7 +28,7 @@ CMS/core/
 ├── Http/                      # Client, Request, InlineStyleRewriter
 ├── Member/                    # PluginDashboardRegistry
 ├── Routing/                   # ApiRouter, AdminRouter, MemberRouter, PublicRouter, ThemeRouter, ThemeArchiveRepository
-└── Services/                  # ~60 Fachservices
+└── Services/                  # ~70 Fachservices
     ├── AI/ (+ Providers/)      # KI-Dienste
     ├── EditorJs/              # Editor.js-Hilfsklassen
     ├── Landing/               # Landingpage
@@ -57,7 +57,7 @@ CMS/core/
 | `cache/` | Dateicache, Schema-Flag | **ja** |
 | `logs/` | Kanal-Logs, `error.log` | **ja** |
 | `uploads/` | Medien, Mitglieder-Uploads, Schriften | **ja** |
-| `backups/` | Backups, Performance-Snapshots | **ja** |
+| `backups/` | Backups (Standard; seit 4.0.0 per `CMS_BACKUP_PATH` außerhalb des Webroots ablegbar), Performance-Snapshots (bleiben immer hier) | **ja** |
 
 ### Namespaces und Autoloading
 

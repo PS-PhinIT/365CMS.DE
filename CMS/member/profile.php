@@ -18,6 +18,7 @@ $profileFields = (array)($settings['profile_fields'] ?? []);
 $profileFieldDefinitions = is_array($settings['profile_field_definitions'] ?? null) ? $settings['profile_field_definitions'] : $controller->getProfileFieldDefinitions();
 $requiredProfileFields = array_map('strval', (array)($settings['required_profile_fields'] ?? ['username', 'email']));
 $profileCompletion = $controller->getProfileCompletion();
+$pendingEmailChange = \CMS\Services\EmailChangeService::getInstance()->getPending($controller->getUserId());
 $profileValue = static function (string $field) use ($user, $meta): string {
     return match ($field) {
         'username' => (string)($user->username ?? ''),
@@ -37,10 +38,20 @@ include __DIR__ . '/partials/header.php';
                 <h3 class="card-title">Persönliche Angaben</h3>
             </div>
             <div class="card-body">
+                <?php if ($pendingEmailChange !== null): ?>
+                    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2" role="status">
+                        <div>
+                            Ausstehende Änderung der E-Mail-Adresse auf <strong><?= htmlspecialchars($pendingEmailChange['email'], ENT_QUOTES, 'UTF-8') ?></strong>.
+                            Bitte bestätige den Link, den wir an diese Adresse gesendet haben (gültig bis <?= htmlspecialchars(date('d.m.Y H:i', $pendingEmailChange['expires_at']), ENT_QUOTES, 'UTF-8') ?> Uhr).
+                            Bis dahin bleibt <?= htmlspecialchars((string)($user->email ?? ''), ENT_QUOTES, 'UTF-8') ?> aktiv.
+                        </div>
+                        <button type="submit" form="memberEmailChangeCancelForm" class="btn btn-sm btn-outline-secondary" data-cms-confirm="Ausstehende Änderung der E-Mail-Adresse verwerfen?">Änderung verwerfen</button>
+                    </div>
+                <?php endif; ?>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label" for="display_name">Anzeigename</label>
-                        <input class="form-control" id="display_name" name="display_name" type="text" value="<?= htmlspecialchars((string)($user->display_name ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                        <input class="form-control" id="display_name" name="display_name" type="text" maxlength="100" value="<?= htmlspecialchars((string)($user->display_name ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                     <?php foreach ($profileFields as $field): ?>
                         <?php
@@ -67,14 +78,14 @@ include __DIR__ . '/partials/header.php';
                             <?php elseif ($type === 'textarea'): ?>
                                 <textarea class="form-control" id="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" name="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" rows="6" <?= $isRequired ? 'required' : '' ?>><?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?></textarea>
                             <?php else: ?>
-                                <input class="form-control" id="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" name="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" type="<?= htmlspecialchars($inputType, ENT_QUOTES, 'UTF-8') ?>" value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>" <?= $isRequired ? 'required' : '' ?>>
+                                <input class="form-control" id="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" name="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" type="<?= htmlspecialchars($inputType, ENT_QUOTES, 'UTF-8') ?>" value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>" <?= $field === 'email' ? 'maxlength="100" autocomplete="email"' : '' ?> <?= $isRequired ? 'required' : '' ?>>
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                     <div class="col-md-6">
                         <label class="form-label" for="profile_current_password">Aktuelles Passwort</label>
                         <input class="form-control" id="profile_current_password" name="current_password" type="password" autocomplete="current-password" aria-describedby="profile_current_password_hint">
-                        <div class="form-hint" id="profile_current_password_hint">Nur erforderlich, wenn du deine E-Mail-Adresse änderst.</div>
+                        <div class="form-hint" id="profile_current_password_hint">Nur erforderlich, wenn du deine E-Mail-Adresse änderst. Die neue Adresse gilt erst nach Bestätigung des Links, den wir an sie senden.</div>
                     </div>
                 </div>
             </div>
@@ -82,6 +93,12 @@ include __DIR__ . '/partials/header.php';
                 <button type="submit" class="btn btn-primary">Profil speichern</button>
             </div>
         </form>
+        <?php if ($pendingEmailChange !== null): ?>
+            <form id="memberEmailChangeCancelForm" method="post" action="" class="d-none">
+                <input type="hidden" name="action" value="email_change_cancel">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('email_change_cancel'), ENT_QUOTES) ?>">
+            </form>
+        <?php endif; ?>
     </div>
 
     <div class="col-lg-4">

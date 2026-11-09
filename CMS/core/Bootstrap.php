@@ -366,6 +366,7 @@ class Bootstrap
         // H-10: Inkrementelle DB-Migrationen ausführen (idempotent, version-basiert –
         // nur 1 DB-Query pro Request wenn bereits aktuell)
         (new MigrationManager($this->db))->run();
+        $this->migrateStoredSecrets();
         Debug::checkpoint('bootstrap.migrations_checked');
 
         // Security init (setzt HTTP-Security-Header) – nicht im CLI-Modus
@@ -968,6 +969,28 @@ class Bootstrap
         Debug::checkpoint('bootstrap.hooks_initialized', ['mode' => $this->mode]);
     }
     
+    /**
+     * Verschlüsselte Einstellungen und TOTP-Secrets einmal je Code- und Schlüsselstand auf das
+     * aktuelle Format bzw. den aktuellen Schlüssel bringen (Altwerte vor 4.0.0, Schlüsselrotation).
+     */
+    private function migrateStoredSecrets(): void
+    {
+        try {
+            $this->db->runSchemaOnce(
+                'stored_secrets',
+                CORE_PATH . 'Services/CryptoService.php',
+                static fn (): bool => Services\SettingsService::getInstance()->migrateEncryptedValues()
+                    && Auth\MFA\TotpAdapter::instance()->migrateStoredSecrets(),
+                Services\CryptoService::getInstance()->keyRingId()
+            );
+        } catch (\Throwable $e) {
+            Logger::instance()->warning('Gespeicherte Geheimnisse konnten nicht migriert werden.', [
+                'component' => 'crypto',
+                'exception' => $e,
+            ]);
+        }
+    }
+
     /**
      * Run the CMS
      */

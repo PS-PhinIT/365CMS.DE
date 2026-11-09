@@ -124,3 +124,15 @@ defined('SMTP_PASS')       || define('SMTP_PASS',       '');
 defined('SMTP_ENCRYPTION') || define('SMTP_ENCRYPTION', 'tls'); // 'tls', 'ssl', ''
 defined('SMTP_FROM_EMAIL') || define('SMTP_FROM_EMAIL', ADMIN_EMAIL);
 defined('SMTP_FROM_NAME')  || define('SMTP_FROM_NAME',  SITE_NAME);
+
+// ─── Verschlüsselung gespeicherter Geheimnisse ─────────────────────────────
+// Schlüssel für Einstellungs-Secrets, TOTP-Secrets und verschlüsselte Backups (wird durch install.php
+// erzeugt; leer = Ableitung aus AUTH_KEY/SECURE_AUTH_KEY). Getrennt von Datenbank und Backups sichern!
+// Rotation: neuen Schlüssel setzen und den bisherigen in CMS_ENCRYPTION_KEYS_PREVIOUS eintragen
+// (mehrere durch Komma getrennt); gespeicherte Werte werden danach automatisch neu verschlüsselt.
+defined('CMS_ENCRYPTION_KEY')           || define('CMS_ENCRYPTION_KEY',           '');
+defined('CMS_ENCRYPTION_KEYS_PREVIOUS') || define('CMS_ENCRYPTION_KEYS_PREVIOUS', '');
+
+// ─── Backups ───────────────────────────────────────────────────────────────
+// Leer: CMS/backups/ (nur per .htaccess geschützt). Empfohlen: absoluter Pfad außerhalb des Webroots.
+defined('CMS_BACKUP_PATH') || define('CMS_BACKUP_PATH', '');

@@ -41,6 +41,7 @@ final class PublicRouter
         $this->router->addRoute('GET', '/cms-password-forgot', [$this, 'renderForgotPassword']);
         $this->router->addRoute('POST', '/cms-password-forgot', [$this, 'handleForgotPassword']);
         $this->router->addRoute('GET', Services\EmailVerificationService::PATH, [$this, 'handleVerifyEmail']);
+        $this->router->addRoute('GET', Services\EmailChangeService::PATH, [$this, 'handleConfirmEmailChange']);
 
         $this->router->addRoute('GET', '/login', [$this, 'redirectLegacyLogin']);
         $this->router->addRoute('POST', '/login', [$this, 'handleLogin']);
@@ -358,7 +359,7 @@ final class PublicRouter
 
         $userId = (int)$_SESSION['user_id'];
         if (Auth::instance()->isMfaEnabled($userId)) {
-            $_SESSION['success'] = '2FA ist bereits aktiv.';
+            $this->setMemberAlert('info', '2FA ist bereits aktiv.');
             $this->router->redirect('/member/security');
             return;
         }
@@ -366,6 +367,8 @@ final class PublicRouter
         $auth = Auth::instance();
         $security = Security::instance();
         $setup = $auth->setupMfaSecret($userId);
+        // Bestätigt wird nur das hier angezeigte Secret (nicht ein in einer anderen Sitzung erzeugtes).
+        $_SESSION['mfa_setup_secret'] = (string)$setup['secret'];
         $csrfToken = $security->generateToken('mfa_setup');
         $mfaSetupPath = $this->getLocalizedPublicPath('/mfa-setup');
         $documentLang = htmlspecialchars($this->getCurrentDocumentLang(), ENT_QUOTES, 'UTF-8');
@@ -445,14 +448,31 @@ final class PublicRouter
             return;
         }
 
-        if (!Auth::instance()->confirmMfaSetup($userId, $code)) {
+        $sessionSecret = (string)($_SESSION['mfa_setup_secret'] ?? '');
+        if ($sessionSecret === '' || !Auth::instance()->confirmMfaSetup($userId, $code, $sessionSecret)) {
             $_SESSION['error'] = 'Ungültiger Code. Bitte erneut scannen und Code eingeben.';
             $this->router->redirect($this->getLocalizedPublicPath('/mfa-setup'));
             return;
         }
 
-        $_SESSION['success'] = '2FA wurde erfolgreich aktiviert.';
+        unset($_SESSION['mfa_setup_secret']);
+        $codes = \CMS\Auth\MFA\BackupCodesManager::instance()->generate($userId);
+        $this->setMemberAlert('success', '2FA wurde erfolgreich aktiviert.', ['backup_codes' => $codes]);
         $this->router->redirect('/member/security');
+    }
+
+    /**
+     * Meldung für die Sicherheitsseite des Mitgliederbereichs (MemberController::flash()).
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function setMemberAlert(string $type, string $message, array $payload = []): void
+    {
+        $_SESSION['member_alert'] = [
+            'type' => $type,
+            'message' => $message,
+            'payload' => $payload,
+        ];
     }
 
     public function handleMfaDisable(): void
@@ -464,20 +484,21 @@ final class PublicRouter
 
         $security = Security::instance();
         if (!$security->verifyToken($_POST['csrf_token'] ?? '', 'mfa_disable')) {
-            $_SESSION['error'] = 'Sicherheitsüberprüfung fehlgeschlagen.';
+            $this->setMemberAlert('danger', 'Sicherheitsüberprüfung fehlgeschlagen.');
             $this->router->redirect('/member/security');
             return;
         }
 
         $reauth = Auth::instance()->verifyCurrentPassword((int)$_SESSION['user_id'], (string)($_POST['current_password'] ?? ''));
         if ($reauth !== true) {
-            $_SESSION['error'] = (string)$reauth;
+            $this->setMemberAlert('danger', (string)$reauth);
             $this->router->redirect('/member/security');
             return;
         }
 
         Auth::instance()->disableMfa((int)$_SESSION['user_id']);
-        $_SESSION['success'] = '2FA wurde deaktiviert.';
+        unset($_SESSION['mfa_setup_secret']);
+        $this->setMemberAlert('warning', '2FA wurde deaktiviert.');
         $this->router->redirect('/member/security');
     }
 
@@ -634,6 +655,31 @@ final class PublicRouter
             ctype_digit($uid) ? (int) $uid : 0,
             $this->requestString($_GET['token'] ?? '', 128)
         );
+
+        $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
+        $this->router->redirect($this->getPublicAuthPath('login'), 303);
+    }
+
+    /**
+     * Bestätigungslink für eine geänderte E-Mail-Adresse (`/cms-confirm-email-change?uid=…&token=…`).
+     */
+    public function handleConfirmEmailChange(): void
+    {
+        if (!headers_sent()) {
+            header('Referrer-Policy: no-referrer', true);
+        }
+
+        $uid = $this->requestString($_GET['uid'] ?? '', 20);
+        $result = Services\EmailChangeService::getInstance()->confirm(
+            ctype_digit($uid) ? (int) $uid : 0,
+            $this->requestString($_GET['token'] ?? '', 128)
+        );
+
+        if (Auth::instance()->isLoggedIn()) {
+            $this->setMemberAlert($result['success'] ? 'success' : 'danger', $result['message']);
+            $this->router->redirect('/member/profile', 303);
+            return;
+        }
 
         $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
         $this->router->redirect($this->getPublicAuthPath('login'), 303);
@@ -1207,6 +1253,7 @@ final class PublicRouter
             '/cms-register',
             '/cms-password-forgot',
             '/cms-verify-email',
+            '/cms-confirm-email-change',
             '/logout',
             '/mfa-challenge',
             '/mfa-setup',

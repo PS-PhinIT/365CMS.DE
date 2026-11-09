@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – API-Referenz
 
-> **Stand:** 2026-10-03 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -40,7 +40,7 @@ The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRout
 |---|---|
 | `/api/v1/admin/posts` | `page` (≥1), `limit` (5–100, Standard 20), `status` (`all`, `published`, `scheduled`, `draft`, `private`, `trash`), `search`, `sort` (`title`, `status`, `published_at`, `views`, `updated_at`, `created_at`), `order` |
 | `/api/v1/admin/pages` | `page`, `limit`, `status` (`published`, `draft`, `private`), `search`, `sort` (`title`, `slug`, `status`, `updated_at`, `created_at`), `order` |
-| `/api/v1/admin/users` | `page`, `limit`, `search`, `role` (Rolle, `all` oder `banned`), `sort` (`username`, `email`, `display_name`, `role`, `status`, `created_at`), `order` |
+| `/api/v1/admin/users` | `page`, `limit`, `search`, `role` (Rolle, `all` oder `banned`), `status` (`active`, `inactive`, `banned`, seit 4.0.0 auch `unverified`), `sort` (`username`, `email`, `display_name`, `role`, `status`, `created_at`), `order` |
 | `/api/v1/admin/mail/logs` | `page`, `limit` (10–200), `search`, `status` |
 
 Beiträge enthalten zusätzlich `effective_status` (`scheduled`, wenn `published_at` in der Zukunft liegt).
@@ -73,7 +73,7 @@ Plugins registrieren Routen im Hook `register_routes`. Für JSON-Endpunkte unter
 - **Token holen:** `POST /api/v1/auth/token` aus einer angemeldeten Browser-Session (Login inkl. MFA) mit gleicher Herkunft. Ein reiner Passwort-Login per API ist bewusst nicht vorgesehen, weil er die Zwei-Faktor-Anmeldung umgehen würde.
 - **Verwenden:** `Authorization: Bearer <access_token>` auf `/api/*`. `Router::dispatch()` ruft dafür `Auth::authenticateBearerToken()` auf; der Benutzer muss aktiv sein, Refresh-Tokens werden als Access-Token abgelehnt. Es entsteht keine Session.
 - **Erneuern:** `POST /api/v1/auth/refresh` mit `refresh_token` (Laufzeit 30 Tage). Das Konto muss weiterhin aktiv sein.
-- **Widerruf:** Tokens sind zustandslos. Sperren des Kontos (Status ≠ `active`) entwertet sie sofort. Seit 3.5.0 tragen Access- und Refresh-Token den Claim `pwf` (Fingerabdruck des aktuellen Passwort-Hashes): Eine Passwortänderung oder ein Passwort-Reset entwertet alle Tokens des Kontos; Tokens ohne `pwf` (ausgestellt vor 3.5.0) werden abgelehnt und müssen neu geholt werden. Der Client erkennt solche Tokens an der 401-Antwort mit dem Header `WWW-Authenticate: Bearer error="invalid_token", error_description="Token issued before 365CMS 3.5.0 …"`; `POST /api/v1/auth/refresh` meldet zusätzlich im JSON-Feld `error`, dass eine neue Anmeldung über `POST /api/v1/auth/token` nötig ist. Alle Tokens lassen sich zusätzlich durch Ändern von `JWT_SECRET` ungültig machen. Laufzeit über `JWT_TTL` (Standard 3600 s).
+- **Widerruf:** Tokens sind zustandslos. Sperren des Kontos (Status ≠ `active`) entwertet sie sofort. Seit 3.5.0 tragen Access- und Refresh-Token den Claim `pwf` (Fingerabdruck des aktuellen Passwort-Hashes): Eine Passwortänderung oder ein Passwort-Reset entwertet alle Tokens des Kontos. Seit 4.0.0 fließt zusätzlich die Token-Version des Kontos (`user_meta.auth_token_version`) in `pwf` ein: „Überall abmelden“ in der Benutzerverwaltung bzw. „Überall sonst abmelden“ im Mitgliederbereich (`Auth::revokeAllSessions()`) entwertet alle Tokens, ohne das Passwort zu ändern; Tokens ohne `pwf` (ausgestellt vor 3.5.0) werden abgelehnt und müssen neu geholt werden. Der Client erkennt solche Tokens an der 401-Antwort mit dem Header `WWW-Authenticate: Bearer error="invalid_token", error_description="Token issued before 365CMS 3.5.0 …"`; `POST /api/v1/auth/refresh` meldet zusätzlich im JSON-Feld `error`, dass eine neue Anmeldung über `POST /api/v1/auth/token` nötig ist. Alle Tokens lassen sich zusätzlich durch Ändern von `JWT_SECRET` ungültig machen. Laufzeit über `JWT_TTL` (Standard 3600 s).
 - Endpunkte mit CSRF-Pflicht (`/api/upload`, `/api/v1/admin/*/test`) verlangen auch bei Bearer-Anmeldung ihr CSRF-Token.
 
 ```bash

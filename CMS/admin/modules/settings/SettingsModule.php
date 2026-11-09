@@ -783,6 +783,15 @@ class SettingsModule
             }
         }
 
+        // Schlüssel für gespeicherte Geheimnisse und der Backup-Pfad müssen erhalten bleiben,
+        // sonst wären verschlüsselte Einstellungen, TOTP-Secrets und Backups nicht mehr lesbar.
+        $preservedConstants = '';
+        foreach (['CMS_ENCRYPTION_KEY', 'CMS_ENCRYPTION_KEYS_PREVIOUS', 'CMS_BACKUP_PATH'] as $constant) {
+            $value = defined($constant) ? constant($constant) : '';
+            $value = is_array($value) ? implode(',', array_map('strval', $value)) : (is_scalar($value) ? (string) $value : '');
+            $preservedConstants .= "defined('{$constant}') || define('{$constant}', '" . $escape($value) . "');\n";
+        }
+
         $content = <<<PHP
 <?php
 /**
@@ -882,6 +891,8 @@ defined('SMTP_PASS')       || define('SMTP_PASS',       '');
 defined('SMTP_ENCRYPTION') || define('SMTP_ENCRYPTION', 'tls');
 defined('SMTP_FROM_EMAIL') || define('SMTP_FROM_EMAIL', ADMIN_EMAIL);
 defined('SMTP_FROM_NAME')  || define('SMTP_FROM_NAME',  SITE_NAME);
+
+{$preservedConstants}
 PHP;
 
         $validationResult = $this->validateGeneratedPhpFile($content, 'config/app.php');

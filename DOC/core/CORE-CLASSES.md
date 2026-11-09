@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Klassenübersicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -25,7 +25,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `AuditLogger` | `core/AuditLogger.php` | Audit-Log in `cms_audit_log` | `log()`, `loginSuccess()`, `loginFailed()`, `pluginAction()`, `themeSwitch()`, `userRoleChange()`, `backupAction()`, `getRecent()` |
 | `Debug` | `core/Debug.php` | Checkpoints und Query-Telemetrie bei `CMS_DEBUG` | `checkpoint()`, `query()` |
 | `Json` | `core/Json.php` | sichere JSON-Hilfen | `decodeArray()` u. a. |
-| `Version` | `core/Version.php` | `CURRENT = '3.5.0'`, `RELEASE_DATE = '2026-10-14'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
+| `Version` | `core/Version.php` | `CURRENT = '4.0.0'`, `RELEASE_DATE = '2026-11-08'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
 | `VendorRegistry` | `core/VendorRegistry.php` | Inventar und Laden gebündelter Bibliotheken | `loadAssetsAutoloader()`, `loadPackage()`, `getDiagnostics()` |
 | `WP_Error` | `core/WP_Error.php` | WordPress-kompatibles Fehlerobjekt | `get_error_code()`, `get_error_message()`, `get_error_data()`, `add()` |
 | `Api` | `core/Api.php` | generische JSON-API (Rate-Limit, `pages`, `users`) | `handleRequest()` |
@@ -35,11 +35,11 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | Klasse | Datei | Aufgabe |
 |---|---|---|
 | `Security` | `core/Security.php` | Header, CSP-Nonce, Session-Start, CSRF-Tokens, Rate-Limits, Passwort-Hash, Client-IP (`getClientIp()`), Sanitizing |
-| `Auth` | `core/Auth.php` | Login, Registrierung, Session-Benutzer, Rollen/Capabilities, Passwortrichtlinie, MFA (TOTP), Geräte-Cookie, Logout |
+| `Auth` | `core/Auth.php` | Login (inkl. Verzögerung je Konto), Registrierung, Session-Benutzer, Rollen/Capabilities, Passwortrichtlinie, MFA (TOTP über `TotpAdapter`), Geräte-Cookie, Logout, „Überall abmelden“ (`revokeAllSessions()`, seit 4.0.0) |
 | `Auth\AuthManager` | `core/Auth/AuthManager.php` | Fassade für Passwort-, Passkey-, LDAP-, MFA-Anmeldung; `getAvailableProviders()` |
 | `Auth\Passkey\WebAuthnAdapter` | `core/Auth/Passkey/` | WebAuthn-Registrierung und -Anmeldung |
 | `Auth\LDAP\LdapAuthProvider` | `core/Auth/LDAP/` | LDAP/AD-Anmeldung, Verzeichnis-Sync |
-| `Auth\MFA\TotpAdapter`, `BackupCodesManager` | `core/Auth/MFA/` | Zweiter Faktor, Backup-Codes |
+| `Auth\MFA\TotpAdapter`, `BackupCodesManager` | `core/Auth/MFA/` | Zweiter Faktor (Secrets seit 4.0.0 verschlüsselt über `CryptoService`), Backup-Codes |
 | `Totp` | `core/Totp.php` | RFC-6238-TOTP: Secret, Code, `otpauth://`-URI, QR-Code |
 
 ### Inhalte, Themes, Plugins, Abos
@@ -60,7 +60,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `ApiRouter` | `/api/v1/*`, `/api/upload`, `/api/media` |
 | `AdminRouter` | `/admin`, `/admin/:page`, `/admin/logs/:section`, `/admin/plugins/:plugin/:page` |
 | `MemberRouter` | `/member`, `/member/:page`, `/member/plugin/:slug[/:action[/:id]]`, `/dashboard` |
-| `PublicRouter` | Login/Registrierung/Passwort, Logout, MFA, `/order`, `/comments/post`, `/cookie-einstellungen`, `/media-file` |
+| `PublicRouter` | Login/Registrierung/Passwort, Bestätigungslinks (`/cms-verify-email`, `/cms-confirm-email-change`), Logout, MFA, `/order`, `/comments/post`, `/cookie-einstellungen`, `/media-file` |
 | `ThemeRouter` | `/`, `/blog`, Beitrags-Permalinks, Archive, `/search`, `/sitemap`, `/sitemap.xml`, `/robots.txt`, `/feed`, `/contact`, Autoren, `/security.txt`, IndexNow-Key, Tabellen-Export |
 | `ThemeArchiveRepository` | Datenabfragen für Kategorie-/Tag-/Autoren-Archive |
 

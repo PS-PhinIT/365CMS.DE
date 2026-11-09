@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Updates
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/updates` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_updates`
 
 ## English (summary)
@@ -17,7 +17,7 @@
 | Datenbank | installierte und Ziel-Schema-Version (`SchemaManager::SCHEMA_VERSION = v23`), Downgrade-Erkennung |
 | Plugins | installierte vs. verfügbare Versionen aus der Plugin-Registry |
 | Theme | aktives Theme vs. Marktplatz-Version |
-| Systemvoraussetzungen | PHP-Version, MySQL/MariaDB-Version, Erweiterungen (`pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`), Schreibrechte (`uploads`, `cache`, `logs`, `backups`, `assets`), freier Speicherplatz |
+| Systemvoraussetzungen | PHP-Version, MySQL/MariaDB-Version, Erweiterungen (`pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`), Schreibrechte (`uploads`, `cache`, `logs`, Backup-Verzeichnis – `backups` bzw. seit 4.0.0 `CMS_BACKUP_PATH` –, `assets`), freier Speicherplatz |
 | Historie | letzte Update-Vorgänge |
 
 ### Update-Quellen

@@ -218,7 +218,7 @@ $requiresImmediateSession = static function (): bool {
     $path = preg_replace('#^/[a-z]{2}(?:-[a-z]{2})?(?=/|$)#i', '', $path) ?: '/';
 
     return preg_match(
-        '#^/(?:admin|member|api|install|orders\.php|order|checkout|cms-login|login|cms-register|register|cms-password-forgot|forgot-password|cms-verify-email|logout|mfa-[a-z-]+)(?:/|$)#i',
+        '#^/(?:admin|member|api|install|orders\.php|order|checkout|cms-login|login|cms-register|register|cms-password-forgot|forgot-password|cms-verify-email|cms-confirm-email-change|logout|mfa-[a-z-]+)(?:/|$)#i',
         $path
     ) === 1;
 };
