@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Recommended order for every release: **backup → check → core → database → plugins/theme → verify**. The admin page `/admin/updates` reads the core source (`core_update_url`, default `https://365cms.de/marketplace/core/365cms/update.json`, GitHub fallback), plugin registry and theme marketplace (results cached one hour). Installation is refused without a valid SHA-256 checksum; archives are extracted with limits (5,000 entries, 256 MB per file, 512 MB total). Core swaps preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `uploads/`. Keep a separate copy of `config/app.php`; since 4.0.0 it holds `CMS_ENCRYPTION_KEY`, without which encrypted settings, TOTP secrets and encrypted backups cannot be read. Afterwards run the database update (idempotent `CREATE`/`ALTER` migrations up to schema `v23`). For manual deployments (Git/SFTP) the same rules apply: never overwrite `config/` and `uploads/`, then open `/admin/updates` and run the database update.
+Recommended order for every release: **backup → check → core → database → plugins/theme → verify**. The admin page `/admin/updates` reads the core source (`core_update_url`, default `https://365cms.de/marketplace/core/365cms/update.json`, GitHub fallback), plugin registry and theme marketplace (results cached one hour). Installation is refused without a valid SHA-256 checksum; archives are extracted with limits (5,000 entries, 256 MB per file, 512 MB total). Core swaps preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `uploads/`. Keep a separate copy of `config/app.php`; since 4.0.0 it holds `CMS_ENCRYPTION_KEY`, without which encrypted settings, TOTP secrets and encrypted backups cannot be read. Afterwards run the database update (idempotent `CREATE`/`ALTER` migrations up to schema `v24`). For manual deployments (Git/SFTP) the same rules apply: never overwrite `config/` and `uploads/`, then open `/admin/updates` and run the database update.
 
 ## Deutsch
 
@@ -62,7 +62,7 @@ Prüfen, ob der Cron-Aufruf weiterläuft (`php CMS/cron.php --task=all` bzw. die
 
 - [ ] Backup erstellt und validiert, `config/app.php` separat gesichert
 - [ ] Release-Notizen gelesen, PHP-Version passt
-- [ ] Core aktualisiert, Datenbank-Update ausgeführt, Schema = `v23`
+- [ ] Core aktualisiert, Datenbank-Update ausgeführt, Schema = `v24`
 - [ ] Plugins/Theme aktualisiert
 - [ ] Cache geleert, Audit ohne kritische Befunde
 - [ ] Login, Admin, Member-Bereich, Kontaktformular, Mailversand getestet

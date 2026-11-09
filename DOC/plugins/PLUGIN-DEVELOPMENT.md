@@ -1,5 +1,5 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02 (Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`)
+> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 4.0.0
+> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-09 (Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`, `AdminNavigationService`, `PluginSiteAssignmentService`)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 
 # 365CMS Plugin Development
@@ -33,7 +33,7 @@ Keep the bootstrap small. Load classes from the plugin directory, initialize one
 
 #### User-visible integration
 
-Use `/admin/plugins` to activate or deactivate the plugin. A plugin admin page should be reachable below `/admin/plugins/<plugin>/<page>` after registering a top-level menu and optional submenus. Member features should be exposed through a capability-aware menu item or dashboard widget and should require an authenticated member.
+Use `/admin/plugins` to activate or deactivate the plugin. A plugin admin page should be reachable below `/admin/plugins/<plugin>/<page>` after registering a top-level menu and optional submenus. In the admin sidebar every plugin menu becomes one entry in the group **"Plugins"** (sorted alphabetically, between the core groups and "Verwaltung"); registered submenus are nested below it. Since 4.0.0, *Einstellungen › Plugins › Plugin-Zuweisung* controls per site in which admin a plugin's menu entries appear (default: all sites; see [../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)). Member features should be exposed through a capability-aware menu item or dashboard widget and should require an authenticated member.
 
 Use templates for HTML, the central admin shell for admin pages, and plugin-prefixed CSS such as `.my-plugin-card`. Do not use generic classes such as `.card` for plugin-specific styling, inline styles, inline scripts, or unescaped request values.
 
@@ -97,6 +97,12 @@ Use `add_menu_page()` for a top-level menu and `add_submenu_page()` for child pa
 - the central shell when the callback does not provide a complete layout.
 
 Admin callbacks should render content only. They should use `renderAdminLayoutStart()` and `renderAdminLayoutEnd()` only when the compatibility path requires it, because the router already supplies the current shell for ordinary plugin callbacks.
+
+Sidebar presentation (4.0.0): the registration contract above is unchanged – the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. `CMS\Services\AdminNavigationService` only reads `get_registered_admin_menus()`, groups and renders the entries:
+
+- one entry per menu in the group "Plugins"; submenus are nested, and "Übersicht" is prepended when the top-level slug is not registered as a submenu itself; menus without submenus render as a plain link;
+- icon (6th argument of `add_menu_page()`): a Tabler class (`ti-…`), inline `<svg>` up to 20,000 characters, a `data:image/…;base64` URI, a same-origin path/URL or text/emoji of at most 4 characters; anything else falls back to the neutral default icon (`puzzle`);
+- the per-site plugin assignment only filters the display. A menu is mapped to its plugin via the file of its (sub)menu callbacks under `CMS/plugins/<slug>/` (fallback: `menu_slug` equals the plugin slug or starts with `<slug>-`). Pages stay reachable; opening one in a site the plugin is not assigned to shows an info banner.
 
 #### Unified admin design
 
@@ -215,7 +221,7 @@ Halten Sie die Bootstrap-Datei klein. Laden Sie Klassen aus dem Plugin-Ordner, v
 
 #### Sichtbare Integration
 
-Über `/admin/plugins` wird das Plugin aktiviert oder deaktiviert. Eine Plugin-Adminseite liegt nach der Registrierung eines Hauptmenüs und optionaler Untermenüs unter `/admin/plugins/<plugin>/<page>`. In der Admin-Sidebar erscheinen alle Plugin-Hauptmenüs alphabetisch sortiert im eigenen Abschnitt **„Plugin-Erweiterungen“** unterhalb sämtlicher 365CMS-Kernbereiche; eine Einsortierung zwischen Core-Menüpunkten ist nicht vorgesehen. Member-Funktionen werden über einen berechtigungsgeprüften Menüeintrag oder ein Dashboard-Widget angeboten und verlangen einen angemeldeten Member.
+Über `/admin/plugins` wird das Plugin aktiviert oder deaktiviert. Eine Plugin-Adminseite liegt nach der Registrierung eines Hauptmenüs und optionaler Untermenüs unter `/admin/plugins/<plugin>/<page>`. In der Admin-Sidebar erscheint jedes Plugin-Hauptmenü als ein Eintrag in der eigenen Gruppe **„Plugins“** (alphabetisch, zwischen den 365CMS-Kerngruppen und „Verwaltung“), registrierte Untermenüs eingerückt darunter; eine Einsortierung zwischen Core-Menüpunkten ist nicht vorgesehen. Seit 4.0.0 legt *Einstellungen › Plugins › Plugin-Zuweisung* je Site fest, in welcher Administration die Menüeinträge eines Plugins erscheinen (Standard: alle Sites; siehe [../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)). Member-Funktionen werden über einen berechtigungsgeprüften Menüeintrag oder ein Dashboard-Widget angeboten und verlangen einen angemeldeten Member.
 
 Verwenden Sie Templates für HTML, die zentrale Admin-Shell für Adminseiten und Plugin-Präfixe wie `.my-plugin-card` für CSS. Generische Klassen wie `.card` für Plugin-Styles, Inline-Styles, Inline-Scripts und ungeescapte Request-Werte sind unzulässig.
 
@@ -279,6 +285,12 @@ Für ein Hauptmenü wird `add_menu_page()`, für Unterseiten `add_submenu_page()
 - zentrale Shell, wenn der Callback kein vollständiges Layout liefert.
 
 Admin-Callbacks rendern ausschließlich Inhalt. `renderAdminLayoutStart()` und `renderAdminLayoutEnd()` werden nur im Kompatibilitätspfad verwendet, weil der Router bei normalen Plugin-Callbacks bereits die aktuelle Shell bereitstellt.
+
+Darstellung in der Seitenleiste (4.0.0): Der Registrierungsvertrag oben bleibt unverändert – Hook `cms_admin_menu`, Signaturen von `add_menu_page()` / `add_submenu_page()` und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `CMS\Services\AdminNavigationService` liest nur `get_registered_admin_menus()`, gruppiert und rendert die Einträge:
+
+- ein Eintrag je Menü in der Gruppe „Plugins“; Untermenüs werden eingerückt, „Übersicht“ wird vorangestellt, wenn der Hauptslug nicht selbst als Untermenü registriert ist; Menüs ohne Untermenüs sind ein einfacher Link;
+- Icon (6. Parameter von `add_menu_page()`): Tabler-Klasse (`ti-…`), Inline-`<svg>` bis 20.000 Zeichen, `data:image/…;base64`-URI, Pfad/URL derselben Herkunft oder Text/Emoji mit höchstens 4 Zeichen; alles andere ergibt das neutrale Standard-Icon (`puzzle`);
+- die Plugin-Zuweisung je Site filtert nur die Anzeige. Ein Menü wird seinem Plugin über die Datei seiner (Unter-)Menü-Callbacks unter `CMS/plugins/<slug>/` zugeordnet (Fallback: `menu_slug` entspricht dem Plugin-Slug oder beginnt mit `<slug>-`). Seiten bleiben erreichbar; in einer nicht zugewiesenen Site erscheint nur ein Info-Banner.
 
 #### Einheitliches Admin-Design
 

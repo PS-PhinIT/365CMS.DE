@@ -110,10 +110,12 @@ function cms_admin_section_shell_normalize_page_assets(mixed $pageAssets): array
     $resolvedPageAssets = is_array($pageAssets) ? $pageAssets : [];
     $cssAssets = is_array($resolvedPageAssets['css'] ?? null) ? array_values($resolvedPageAssets['css']) : [];
     $jsAssets = is_array($resolvedPageAssets['js'] ?? null) ? array_values($resolvedPageAssets['js']) : [];
+    $moduleAssets = is_array($resolvedPageAssets['modules'] ?? null) ? array_values($resolvedPageAssets['modules']) : [];
 
     return [
         'css' => array_values(array_filter($cssAssets, static fn (mixed $asset): bool => is_string($asset) && trim($asset) !== '')),
         'js' => array_values(array_filter($jsAssets, static fn (mixed $asset): bool => is_string($asset) && trim($asset) !== '')),
+        'modules' => array_values(array_filter($moduleAssets, static fn (mixed $asset): bool => is_string($asset) && trim($asset) !== '')),
     ];
 }
 
@@ -459,6 +461,7 @@ try {
         'exception' => $exception->getMessage(),
     ]);
 
+    echo '</main><!-- /#cms-main -->';
     echo '</div><!-- /.page-wrapper -->';
     echo '</div><!-- /.page -->';
     echo '</body></html>';

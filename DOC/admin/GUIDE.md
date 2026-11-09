@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Bedienleitfaden
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -14,12 +14,14 @@ Operator guide for day-to-day work in the 365CMS administration: sign-in, naviga
 2. Benutzername/E-Mail und Passwort eingeben; je nach Konto folgt die Abfrage des Authenticator-Codes (`/mfa-challenge`) oder die Anmeldung per Passkey.
 3. Nur Konten mit der Rolle **Administrator** gelangen in den Adminbereich; alle anderen landen im Mitgliederbereich `/member`.
 
-Abmelden über das Benutzermenü oben rechts oder in der Sidebar (sichere POST-Abmeldung).
+Abmelden über das Benutzermenü im Fußbereich der Seitenleiste (Klick auf den Avatar; `/logout` mit CSRF-Token).
 
 ### 2. Orientierung
 
-- Die **Sidebar** ist nach Abschnitten gegliedert (Kernsystem, Inhalte, Benutzer, Marketing & Gestaltung, Sicherheit & Protokolle, System, Plugin-Erweiterungen).
-- Fehlende Menüpunkte bedeuten: Modul deaktiviert (`/admin/modules`) oder Marketplace ausgeschaltet.
+- Die **Seitenleiste** beginnt mit dem Site-Umschalter (phinit.de / 365network.de) und ist in einklappbare Gruppen gegliedert: Übersicht, Inhalte, Benutzer, Gestaltung & Marketing, Sicherheit & Recht, Plugins, Verwaltung. Standardmäßig sind die ersten beiden Gruppen geöffnet; eigene Auf-/Zuklapp-Entscheidungen und die eingeklappte Icon-Leiste (Schalter oben in der Seitenleiste) werden je Benutzer gespeichert. Unter 992 px Breite öffnet das Menü-Symbol in der Kopfzeile die Seitenleiste als Drawer.
+- In der Gruppe **Plugins** erscheint je Plugin ein Eintrag mit seinen Unterseiten. Welche Plugins in welcher Site erscheinen, legt *Einstellungen › Plugins › Plugin-Zuweisung* fest ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-zuweisung)).
+- Ein Punkt am Avatar im Fußbereich zeigt Systemhinweise (fehlgeschlagener Cron-Lauf, Backup älter als 24 Stunden, verfügbare Updates); ein Klick öffnet die Liste.
+- Fehlende Menüpunkte bedeuten: Modul deaktiviert (`/admin/modules`), Marketplace ausgeschaltet oder – bei Plugins – das Plugin ist der aktuellen Site nicht zugewiesen.
 - Das **Dashboard** zeigt offene Aufgaben unter „Nächste Aufmerksamkeit“ und lässt sich je Administrator personalisieren (sichtbare Bereiche, Widgets, Favoriten).
 
 ### 3. Häufige Aufgaben

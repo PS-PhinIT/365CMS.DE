@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: INDEX
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -52,7 +52,7 @@ Die Core-Dokumente beschreiben Bootstrap, Routing, Schema, Services, Hooks, APIs
 | [core/README.md](core/README.md) | Core documentation entry |
 | [core/ARCHITECTURE.md](core/ARCHITECTURE.md) | Bootstrap, routing, services, modules |
 | [core/CORE-CLASSES.md](core/CORE-CLASSES.md) | Central core classes |
-| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (`SCHEMA_VERSION = v23`) |
+| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (`SCHEMA_VERSION = v24`) |
 | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) | Actions, filters, integration points |
 | [core/API-REFERENCE.md](core/API-REFERENCE.md) | Technical interfaces |
 | [core/SERVICES.md](core/SERVICES.md) | Service layer |
@@ -74,11 +74,11 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 
 | Document / Dokument | Purpose / Zweck |
 |---|---|
-| [admin/README.md](admin/README.md) | Navigation and area overview |
+| [admin/README.md](admin/README.md) | Navigation (sidebar groups, admin shell) and area overview |
 | [admin/GUIDE.md](admin/GUIDE.md) | Operator guide |
 | [admin/FILESTRUCTURE.md](admin/FILESTRUCTURE.md) | Admin file structure and routing |
 | [admin/PANEL-INTEGRATION.md](admin/PANEL-INTEGRATION.md) | Custom admin page integration |
-| [admin/ADMIN-API-AJAX.md](admin/ADMIN-API-AJAX.md) | Admin API / AJAX |
+| [admin/ADMIN-API-AJAX.md](admin/ADMIN-API-AJAX.md) | Admin API / AJAX (incl. `/admin/admin-ui`, `/admin/post-editor-api`) |
 | [admin/PRUEF-CHECKLISTE.md](admin/PRUEF-CHECKLISTE.md) | Admin review checklist |
 
 ### Admin areas | Wichtige Teilbereiche
@@ -86,13 +86,13 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Area / Bereich | Document / Dokument |
 |---|---|
 | Dashboard | [admin/dashboard/README.md](admin/dashboard/README.md) |
-| Pages & posts | [admin/pages-posts/README.md](admin/pages-posts/README.md) |
+| Pages & posts (editor, publish checklist, revisions: [POSTS.md](admin/pages-posts/POSTS.md)) | [admin/pages-posts/README.md](admin/pages-posts/README.md) |
 | Media | [admin/media/README.md](admin/media/README.md) |
 | Users & groups | [admin/users-groups/README.md](admin/users-groups/README.md) |
 | Auth settings | [admin/users-groups/AUTH-SETTINGS.md](admin/users-groups/AUTH-SETTINGS.md) |
 | Themes & design | [admin/themes-design/README.md](admin/themes-design/README.md) |
 | CMS login page | [admin/themes-design/CMS-LOGINPAGE.md](admin/themes-design/CMS-LOGINPAGE.md) |
-| Plugins | [admin/plugins/PLUGINS.md](admin/plugins/PLUGINS.md) |
+| Plugins, plugin assignment per site | [admin/plugins/PLUGINS.md](admin/plugins/PLUGINS.md) |
 | SEO | [admin/seo/SEO.md](admin/seo/SEO.md) |
 | Legal | [admin/legal/README.md](admin/legal/README.md) |
 | Security | [admin/security/README.md](admin/security/README.md) |

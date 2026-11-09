@@ -5,9 +5,9 @@
   "version": "4.0.0",
   "released": "2026-11-08",
   "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
-  "checksum_sha256": "8a8633e7987bc3a9f3e11dbf3bc51dbf116d4560f392b5c6760e60af6eb3bda9",
+  "checksum_sha256": "f44b779ce762e2018989e52729ec9a590193da61808518e82cdbbe044b4e8a90",
   "requires_php": "8.4.1",
-  "schema_version": "v23",
+  "schema_version": "v24",
   "critical": true,
-  "notes": "Vollständiges Core-Updatepaket (Sicherheitsrelease). Der Update-Swap bewahrt config/, config.php, uploads/, cache/, logs/ und backups/. Anschließend unter Admin > Updates das Datenbank-Update ausführen (Schema bleibt v23)."
+  "notes": "Vollständiges Core-Updatepaket (Sicherheitsrelease). Der Update-Swap bewahrt config/, config.php, uploads/, cache/, logs/ und backups/. Anschließend unter Admin > Updates das Datenbank-Update ausführen (Schema v24: neue Spalten in cms_post_revisions)."
 }

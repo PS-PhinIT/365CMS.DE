@@ -179,6 +179,14 @@ final class CronRunnerService
                 $success = $success && !empty($result['feed_queue_recovery']['success']);
             }
 
+            $failedSteps = [];
+            foreach ($result as $step => $stepResult) {
+                if (is_array($stepResult) && array_key_exists('success', $stepResult) && empty($stepResult['success'])) {
+                    $failedSteps[] = (string) $step;
+                }
+            }
+            $this->recordRunStatus($success, $task, $failedSteps === [] ? '' : 'Fehlgeschlagene Schritte: ' . implode(', ', $failedSteps));
+
             return [
                 'success' => $success,
                 'task' => $task,
@@ -197,6 +205,8 @@ final class CronRunnerService
                 'source' => $source,
             ]);
 
+            $this->recordRunStatus(false, $task, 'Ausnahme: ' . get_class($e));
+
             return [
                 'success' => false,
                 'task' => $task,
@@ -208,6 +218,22 @@ final class CronRunnerService
             ];
         } finally {
             $this->releaseLock($lockHandle);
+        }
+    }
+
+    /**
+     * Letzten Cron-Lauf für Systemhinweise festhalten (Gruppe `cron`: last_run_at/_status/_task/last_error).
+     */
+    private function recordRunStatus(bool $success, string $task, string $error): void
+    {
+        try {
+            $settings = SettingsService::getInstance();
+            $settings->set('cron', 'last_run_at', (string) time());
+            $settings->set('cron', 'last_run_status', $success ? 'ok' : 'failed');
+            $settings->set('cron', 'last_run_task', $task);
+            $settings->set('cron', 'last_error', $success ? '' : $this->truncateForLog($error, 300));
+        } catch (\Throwable) {
+            // Statusprotokoll darf den Cron-Lauf nie beeinträchtigen.
         }
     }
 

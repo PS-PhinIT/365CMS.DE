@@ -30,7 +30,7 @@ class MigrationManager
      * Aktuelle Schema-Version – erhöhen wenn neue Migrations hinzukommen.
      * Wird in cms_settings (option_name = 'db_schema_version') gespeichert.
      */
-    public const SCHEMA_VERSION = 'v23';
+    public const SCHEMA_VERSION = 'v24';
 
     public function __construct(Database $db)
     {
@@ -189,6 +189,15 @@ class MigrationManager
             "ALTER TABLE `{$p}posts` ADD INDEX `idx_status_published` (`status`, `published_at`)",
             // v23: idx_key doppelte den UNIQUE-Index auf option_name und kostete nur Schreibzeit.
             "ALTER TABLE `{$p}settings` DROP INDEX `idx_key`",
+            // v24: Revisionen im Beitragseditor (PostRevisionService). Erfasst werden zusätzlich
+            // Revisionstyp (manual/autosave/restore/baseline; Bestandszeilen = legacy), der auslösende
+            // Benutzer, Beitragsbild und Meta-Felder sowie ein Fingerabdruck gegen Duplikate.
+            "ALTER TABLE `{$p}post_revisions` ADD COLUMN `revision_type` VARCHAR(20) NOT NULL DEFAULT 'legacy'",
+            "ALTER TABLE `{$p}post_revisions` ADD COLUMN `created_by` INT UNSIGNED DEFAULT NULL",
+            "ALTER TABLE `{$p}post_revisions` ADD COLUMN `featured_image` VARCHAR(500) DEFAULT NULL",
+            "ALTER TABLE `{$p}post_revisions` ADD COLUMN `meta_title` VARCHAR(255) DEFAULT NULL",
+            "ALTER TABLE `{$p}post_revisions` ADD COLUMN `meta_description` TEXT DEFAULT NULL",
+            "ALTER TABLE `{$p}post_revisions` ADD COLUMN `fingerprint` CHAR(40) DEFAULT NULL",
         ];
 
         foreach ($migrations as $sql) {

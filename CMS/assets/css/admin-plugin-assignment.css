@@ -1,0 +1,162 @@
+/**
+ * Einstellungen › Plugins › Plugin-Zuweisung
+ * Nutzt ausschließlich die Design-Tokens aus admin-tabler.css (--cms-*).
+ */
+
+.cms-assignment__intro {
+    max-width: 72ch;
+}
+
+.cms-assignment-table {
+    margin-bottom: 0;
+}
+
+body.admin-body .table.cms-assignment-table thead th {
+    vertical-align: bottom;
+}
+
+body.admin-body .table.cms-assignment-table tbody th {
+    border-bottom: 0;
+    background: var(--cms-bg);
+}
+
+body.admin-body .table.cms-assignment-table tbody tr:hover > * {
+    background: var(--cms-admin-table-row-hover);
+}
+
+.cms-assignment-table__site {
+    min-width: 176px;
+    text-align: center;
+}
+
+.cms-assignment-table__site-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--cms-text);
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.cms-assignment-table__current {
+    padding: 1px 6px;
+    border-radius: 999px;
+    color: var(--cms-accent-strong);
+    background: var(--cms-accent-soft);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.cms-assignment-table__bulk {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.cms-assignment-table__bulk .btn {
+    min-width: var(--cms-target-size);
+    min-height: var(--cms-target-size);
+    border-radius: var(--cms-radius);
+}
+
+.cms-assignment-table__plugin {
+    min-width: 220px;
+    font-weight: 400;
+}
+
+.cms-assignment-table__name {
+    display: block;
+    color: var(--cms-text);
+    font-weight: 600;
+}
+
+.cms-assignment-table__meta {
+    display: block;
+    color: var(--cms-text-muted);
+    font-family: var(--cms-font-mono);
+    font-size: 0.75rem;
+}
+
+.cms-assignment-table__warning {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: var(--cms-radius);
+    color: var(--cms-danger);
+    background: var(--cms-danger-soft);
+    font-size: 0.8125rem;
+}
+
+.cms-assignment-table__menu {
+    white-space: nowrap;
+}
+
+.cms-assignment-table__cell {
+    text-align: center;
+}
+
+.cms-assignment-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: var(--cms-text-muted);
+    background: var(--cms-hover);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.cms-assignment-pill--active {
+    color: var(--cms-success);
+    background: var(--cms-success-soft);
+}
+
+.cms-assignment__check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--cms-target-size);
+    min-height: var(--cms-target-size);
+    margin: 0;
+    border-radius: var(--cms-radius);
+    cursor: pointer;
+}
+
+.cms-assignment__check:hover {
+    background: var(--cms-hover);
+}
+
+.cms-assignment__check .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.cms-assignment__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.cms-assignment__status {
+    margin: 0 auto 0 0;
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+}
+
+.cms-assignment__status.is-dirty {
+    color: var(--cms-warning);
+    font-weight: 600;
+}
+
+.cms-assignment__footer .btn {
+    min-height: var(--cms-target-size);
+}
+
+.cms-assignment-empty .btn {
+    min-height: var(--cms-target-size);
+}

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: DEVLIST
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -284,7 +284,7 @@ Login-Branding / öffentliche Auth-Seiten: Admin-Route `/admin/cms-loginpage` un
 - Wrapper: `CMS/core/Database.php` (PDO, singleton, `get_instance()` alias for plugins)
 - Prefix: `DB_PREFIX` (default `cms_`)
 - Charset: `DB_CHARSET` (default `utf8mb4`)
-- Schema create: `SchemaManager` (`SCHEMA_VERSION = 'v23'`)
+- Schema create: `SchemaManager` (`SCHEMA_VERSION = 'v24'`)
 - Incremental: `MigrationManager`, `DatabaseUpdateRunner`
 
 Installer and admin updater show installed vs. target core and schema versions. Schema markers must not be rolled back through the admin updater. Table `ai_quota_usage` belongs to `v22`.
@@ -298,7 +298,7 @@ Authoritative table docs: [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md).
 - Wrapper: `CMS/core/Database.php` (PDO, Singleton, Alias `get_instance()` für Plugins)
 - Präfix: `DB_PREFIX` (Standard `cms_`)
 - Zeichensatz: `DB_CHARSET` (Standard `utf8mb4`)
-- Schema-Anlage: `SchemaManager` (`SCHEMA_VERSION = 'v23'`)
+- Schema-Anlage: `SchemaManager` (`SCHEMA_VERSION = 'v24'`)
 - Inkrementell: `MigrationManager`, `DatabaseUpdateRunner`
 
 Installer und Admin-Updater zeigen installierte und Ziel-Versionen. Schema-Marker dürfen über den Admin-Updater nicht zurückgesetzt werden. Tabelle `ai_quota_usage` gehört zu `v22`.

@@ -10,12 +10,8 @@
  * @package CMSv2\Assets
  */
 
-/* NOTE: @import admin-sidebar.css entfernt – Sidebar nutzt Tabler .navbar-vertical */
-/* NOTE: CSS-Variablen sind in admin-tabler.css definiert */
-
-/* OLD: .admin-header, .admin-container entfernt – Tabler-Layout nutzt .page > .page-wrapper */
-
-/* OLD: .admin-content margin-left entfernt – Tabler .page-wrapper handled by admin-tabler.css */
+/* NOTE: Design-Tokens (--cms-*) und Tabler-Mapping sind in admin-tabler.css definiert */
+/* NOTE: Admin-Shell (Seitenleiste, Topbar, Drawer, Popover) liegt in admin-shell.css */
 
 .admin-page-header {
     display: flex;
@@ -6891,6 +6887,17 @@ input:checked + .slider:before { transform: translateX(22px); }
         padding: 0.35rem;
     }
 
+    /* Gruppierte Schnellleiste: Symbol bleibt sichtbar (Name kommt aus aria-label), Ziel ≥ 44px */
+    .editorjs-toolbar button .cms-editor-toolbar-icon {
+        display: inline-flex;
+    }
+
+    .cms-editor-toolbar-grouped button {
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
     .editorjs-holder .cms-editorjs-gallery__controls {
         left: auto;
         right: auto;
@@ -7092,9 +7099,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .info-box-cs strong { display: block; margin-bottom: 0.25rem; color: #92400e; }
 
-
-/* OLD: .admin-sidebar Override-Sektion entfernt – Sidebar nutzt jetzt Tabler .navbar-vertical */
-/* Styles in admin-tabler.css unter NAVBAR VERTICAL */
 
 /* ═══════════════════════════════════════════════════════
    MEDIA SETTINGS – Card Grid Layout
@@ -8739,18 +8743,9 @@ button.content-shortcode-chip {
 }
 
 /* ──────────────────────────────────────────────────────────
-   Global Admin UI Hardening (17.05.2026)
-   Buttons/Karten: max. 2px Radius + Nested-Kontrast
+   Globale Radien (4.0.0): 8px Einträge/Buttons, 12px Karten
+   (ersetzt das 2px-Hardening vom 17.05.2026; Tokens: admin-tabler.css)
    ────────────────────────────────────────────────────────── */
-body.admin-body {
-    --cms-admin-radius-hard: 2px;
-    --tblr-border-radius: 2px;
-    --tblr-border-radius-sm: 2px;
-    --tblr-border-radius-lg: 2px;
-    --tblr-border-radius-xl: 2px;
-    --tblr-border-radius-pill: 2px;
-}
-
 body.admin-body .btn,
 body.admin-body .btn-group > .btn,
 body.admin-body .btn-group-vertical > .btn,
@@ -8761,28 +8756,25 @@ body.admin-body .gridjs-table-actions .gridjs-action-btn,
 body.admin-body .badge,
 body.admin-body .status-badge,
 body.admin-body .role-badge {
-    border-radius: var(--cms-admin-radius-hard) !important;
+    border-radius: var(--cms-radius) !important;
 }
 
 body.admin-body .rounded,
 body.admin-body .rounded-1,
 body.admin-body .rounded-2,
-body.admin-body .rounded-3,
-body.admin-body .rounded-4,
-body.admin-body .rounded-5,
-body.admin-body .rounded-pill {
-    border-radius: var(--cms-admin-radius-hard) !important;
+body.admin-body .rounded-3 {
+    border-radius: var(--cms-radius) !important;
 }
 
 body.admin-body :is(.card, .admin-card, .admin-section, .stat-card, .info-card, .quick-actions, .users-table-container, .empty-state, .plugin-card, .theme-card, .table-responsive, .alert, .admin-redesign-info-box, .preview-box, .preview-card, .svc-card, .dw-panel, .dw-card, .data-box, .backup-item, .backup-list) {
-    border-radius: var(--cms-admin-radius-hard) !important;
+    border-radius: var(--cms-radius-card) !important;
 }
 
 body.admin-body :is(.card, .admin-card, .admin-section, .stat-card, .info-card, .quick-actions, .users-table-container, .admin-redesign-info-box)
     :is(.card, .admin-card, .admin-section, .stat-card, .info-card, .quick-actions, .users-table-container, .border.rounded, .border.rounded-1, .border.rounded-2, .border.rounded-3, .border.rounded-4, .border.rounded-5, .alert, .table-responsive, .preview-box, .preview-card, .svc-card, .dw-card, .data-box) {
-    background: #f3f7fb;
-    border-color: #c7d3e0 !important;
-    box-shadow: inset 0 0 0 1px rgba(183, 197, 214, 0.28);
+    background: var(--cms-sidebar-bg);
+    border-color: var(--cms-border) !important;
+    box-shadow: none;
 }
 
 body.admin-body .admin-section-toolbar,
@@ -8801,69 +8793,6 @@ body.admin-body .admin-section-toolbar__actions {
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-}
-
-/* Sidebar: konsistente Child-Icons fuer Gruppen-Items */
-#sidebar-menu .nav-link .nav-link-icon,
-#sidebar-menu .dropdown-menu .dropdown-item .dropdown-item-icon {
-    width: 18px;
-    min-width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-}
-
-#sidebar-menu .nav-link .nav-link-icon i,
-#sidebar-menu .dropdown-menu .dropdown-item .dropdown-item-icon i {
-    font-size: 18px;
-    line-height: 1;
-}
-
-#sidebar-menu .dropdown-menu .dropdown-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-}
-
-#sidebar-menu .dropdown-menu .dropdown-item .dropdown-item-icon {
-    display: inline-flex;
-    width: 1rem;
-    min-width: 1rem;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.62);
-}
-
-#sidebar-menu .dropdown-menu .dropdown-item.active .dropdown-item-icon {
-    color: rgba(255, 255, 255, 0.94);
-}
-
-@media (max-width: 899.98px) {
-    body.sidebar-collapsed .navbar-vertical {
-        width: 82px;
-    }
-
-    body.sidebar-collapsed .navbar-vertical .navbar-brand img {
-        max-height: 44px;
-        height: 44px !important;
-    }
-
-    body.sidebar-collapsed #sidebar-menu .nav-link {
-        justify-content: center;
-    }
-
-    body.sidebar-collapsed #sidebar-menu .nav-link .nav-link-title,
-    body.sidebar-collapsed #sidebar-menu .dropdown-menu .dropdown-item-title,
-    body.sidebar-collapsed .navbar-vertical .navbar-nav.flex-row .nav-link-title {
-        display: none;
-    }
-
-    body.sidebar-collapsed #sidebar-menu .dropdown-menu .dropdown-item {
-        justify-content: center;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
 }
 
 .js-inline-toggle-list-button {
@@ -8964,540 +8893,6 @@ body.admin-body .admin-section-toolbar__actions {
     bottom: 24px;
     right: 24px;
     z-index: 100;
-}
-
-/* Admin Sidebar + Topbar Redesign */
-.navbar-vertical.navbar-expand-lg {
-    width: var(--cms-sidebar-width, 240px);
-    height: 100vh;
-    max-height: 100vh;
-    background: linear-gradient(180deg, #101a2e 0%, #0d1628 100%);
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.navbar-vertical.navbar-expand-lg > .container-fluid {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: 100%;
-}
-
-.admin-sidebar__header {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 14px 6px;
-}
-
-.admin-sidebar__brand {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    margin-bottom: 0;
-}
-
-.admin-sidebar__brand-logo {
-    width: auto;
-    max-height: 42px;
-    max-width: 168px;
-    object-fit: contain;
-}
-
-.admin-sidebar__site-meta {
-    display: none;
-}
-
-.admin-sidebar__site-name,
-.admin-sidebar__site-domain {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.admin-sidebar__site-name {
-    color: #f8fafc;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.admin-sidebar__site-domain {
-    color: rgba(226, 232, 240, 0.78);
-    font-size: 11px;
-}
-
-.admin-sidebar__divider {
-    height: 1px;
-    margin: 4px 12px 4px;
-    background: rgba(255, 255, 255, 0.08);
-}
-
-#sidebar-menu {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding-bottom: 10px;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-}
-
-#sidebar-menu .navbar-nav {
-    /* Lange Plugin-Menüs müssen in der vertikalen Sidebar stapeln und scrollen. */
-    display: flex;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    gap: 3px;
-    padding-top: 0.25rem !important;
-}
-
-#sidebar-menu .nav-item,
-#sidebar-menu .nav-item--plugin {
-    position: relative;
-    flex: 0 0 auto;
-    min-height: 0;
-}
-
-#sidebar-menu .nav-section-label {
-    padding: 11px 14px 5px;
-    color: rgba(191, 209, 233, 0.78);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-}
-
-#sidebar-menu .nav-divider {
-    margin: 9px 12px 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Grenze zwischen 365CMS-Kernnavigation und Plugin-Erweiterungen */
-#sidebar-menu .nav-divider--plugins {
-    margin: 18px 12px 4px;
-    border-top: 2px solid rgba(56, 189, 248, 0.45);
-    background: none;
-    height: 0;
-}
-
-/* Plugin-Menüs „Familie | Name“: vollständig lesbar (Umbruch statt Abschneiden), Präfix dezent */
-#sidebar-menu .nav-item--plugin > .nav-link .nav-link-title {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    overflow-wrap: anywhere;
-    line-height: 1.3;
-}
-
-#sidebar-menu .nav-item--plugin .nav-link-prefix {
-    color: rgba(191, 209, 233, 0.6);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-
-#sidebar-menu .nav-item--plugin.active .nav-link-prefix,
-#sidebar-menu .nav-item--plugin .nav-link:hover .nav-link-prefix {
-    color: rgba(229, 240, 255, 0.72);
-}
-
-#sidebar-menu .nav-section-label--plugins {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px 8px;
-    color: #7dd3fc;
-}
-
-#sidebar-menu .nav-section-label--plugins::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #38bdf8;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
-    flex: 0 0 auto;
-}
-
-#sidebar-menu .nav-link {
-    min-height: 38px;
-    margin: 0 9px;
-    border-radius: 2px;
-    color: rgba(215, 228, 244, 0.86);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 11px 8px 12px;
-    gap: 10px;
-    position: relative;
-    border: 1px solid transparent;
-    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-
-#sidebar-menu .nav-link:hover {
-    color: #f4f8ff;
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(143, 167, 201, 0.16);
-}
-
-#sidebar-menu .nav-item.active > .nav-link,
-#sidebar-menu .nav-item.is-active-parent > .nav-link {
-    color: #f3f8ff;
-    background: linear-gradient(90deg, rgba(41, 58, 86, 0.9), rgba(37, 54, 81, 0.92));
-    border-color: rgba(129, 160, 202, 0.48);
-}
-
-#sidebar-menu .nav-item.active > .nav-link::before,
-#sidebar-menu .nav-item.is-active-parent > .nav-link::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 6px;
-    width: 2px;
-    height: calc(100% - 12px);
-    border-radius: 2px;
-    background: #8ab0e0;
-}
-
-#sidebar-menu .nav-link .nav-link-icon {
-    width: 18px;
-    min-width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(175, 198, 229, 0.9);
-}
-
-#sidebar-menu .nav-link .nav-link-icon i {
-    font-size: 18px;
-    line-height: 1;
-    display: inline-block;
-}
-
-#sidebar-menu .nav-link:hover .nav-link-icon,
-#sidebar-menu .nav-item.active > .nav-link .nav-link-icon,
-#sidebar-menu .nav-item.is-active-parent > .nav-link .nav-link-icon {
-    color: #e5f0ff;
-}
-
-#sidebar-menu .nav-link .nav-link-title {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-#sidebar-menu .dropdown-toggle::after {
-    display: none;
-}
-
-.admin-nav-chevron {
-    width: 12px;
-    min-width: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(184, 203, 227, 0.72);
-    transition: transform 0.2s ease;
-}
-
-.admin-nav-chevron i {
-    font-size: 12px;
-    line-height: 1;
-}
-
-.nav-item.is-active-parent > .nav-link .admin-nav-chevron,
-.nav-link.show .admin-nav-chevron {
-    transform: rotate(180deg);
-}
-
-.admin-nav-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.admin-nav-badge--red {
-    background: #ef4444;
-    color: #fff;
-}
-
-.admin-nav-badge--blue {
-    background: #2563eb;
-    color: #fff;
-}
-
-.admin-nav-badge--green {
-    background: #16a34a;
-    color: #fff;
-}
-
-#sidebar-menu .dropdown-menu {
-    /* Bootstrap/Popper-Dropdowns in der Sidebar bleiben im normalen Dokumentfluss. */
-    position: static !important;
-    inset: auto !important;
-    transform: none !important;
-    float: none;
-    min-width: 0;
-    width: auto;
-    margin: 5px 12px 9px 26px;
-    padding: 4px 0;
-    background: transparent;
-    border: 0;
-    border-left: 1px solid rgba(151, 173, 204, 0.34);
-    box-shadow: none;
-}
-
-#sidebar-menu .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 8px 7px 12px;
-    color: rgba(198, 214, 236, 0.85);
-    font-size: 12px;
-    border-radius: 2px;
-    border: 1px solid transparent;
-    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-
-#sidebar-menu .dropdown-item .dropdown-item-icon {
-    width: 16px;
-    min-width: 16px;
-    height: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(177, 198, 227, 0.9);
-}
-
-#sidebar-menu .dropdown-item .dropdown-item-icon i {
-    font-size: 14px;
-    line-height: 1;
-    display: inline-block;
-}
-
-#sidebar-menu .dropdown-item:hover {
-    color: #f4f8ff;
-    background: rgba(255, 255, 255, 0.045);
-    border-color: rgba(143, 167, 201, 0.15);
-}
-
-#sidebar-menu .dropdown-item.active {
-    color: #d7e7ff;
-    background: rgba(57, 78, 113, 0.7);
-    border-color: rgba(135, 166, 206, 0.38);
-    font-weight: 600;
-}
-
-#sidebar-menu .dropdown-item.active .dropdown-item-icon {
-    color: #dceaff;
-}
-
-.admin-sidebar__footer {
-    flex: 0 0 auto;
-    padding: 8px 10px 12px;
-}
-
-.admin-sidebar__footer-link {
-    min-height: 34px;
-    padding: 8px 10px !important;
-    margin: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border-radius: 8px;
-    color: rgba(226, 232, 240, 0.86);
-    font-size: 13px;
-}
-
-.admin-sidebar__footer-link i {
-    font-size: 16px;
-}
-
-.admin-sidebar__footer-link:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.06);
-}
-
-.admin-sidebar__divider--footer {
-    margin: 8px 0;
-}
-
-.admin-sidebar__footer-link--danger,
-.admin-sidebar__footer-link--danger .nav-link-title {
-    color: #fda4af;
-}
-
-.admin-sidebar__footer-link--danger i {
-    color: #fb7185;
-}
-
-.admin-sidebar__footer-link--danger:hover {
-    background: rgba(244, 63, 94, 0.16);
-}
-
-.admin-topbar {
-    height: 56px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.admin-topbar__context {
-    flex: 1;
-    min-width: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #64748b;
-    font-size: 13px;
-}
-
-.admin-topbar__site-name {
-    color: #0f172a;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.admin-topbar__separator {
-    color: #94a3b8;
-}
-
-.admin-topbar__crumb {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.admin-topbar__crumb--current {
-    color: #334155;
-    font-weight: 600;
-}
-
-.admin-topbar__actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.admin-topbar__identity {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding-left: 2px;
-}
-
-.admin-topbar__icon-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #475569;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.admin-topbar__icon-btn i {
-    font-size: 17px;
-}
-
-.admin-topbar__icon-btn:hover {
-    background: #f8fafc;
-    color: #0f172a;
-}
-
-.admin-topbar__unread-dot {
-    position: absolute;
-    right: 7px;
-    top: 7px;
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    border: 2px solid #fff;
-    background: #ef4444;
-}
-
-.admin-topbar__help-btn,
-.admin-topbar__cta-btn {
-    height: 34px;
-    border-radius: 8px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 0 11px;
-}
-
-.admin-topbar__help-btn {
-    border: 1px solid #e2e8f0;
-    color: #334155;
-    background: #fff;
-}
-
-.admin-topbar__help-btn:hover {
-    color: #0f172a;
-    background: #f8fafc;
-}
-
-.admin-topbar__cta-btn {
-    border: 1px solid #2563eb;
-    color: #fff;
-    background: #2563eb;
-}
-
-.admin-topbar__cta-btn:hover {
-    color: #fff;
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-}
-
-.admin-topbar__avatar-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.admin-topbar__avatar-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-}
-
-.admin-topbar__avatar-initials {
-    width: 26px;
-    height: 26px;
-    border-radius: 8px;
-    background: #0f172a;
-    color: #f8fafc;
-    font-size: 11px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
 }
 
 /* EditorJS – Zitat-Block: leichte Design-Vorschau im Editorbereich */

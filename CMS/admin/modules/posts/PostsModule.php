@@ -22,6 +22,8 @@ use CMS\Logger;
 use CMS\Services\ContentLocalizationService;
 use CMS\Services\ContentMediaPlacementService;
 use CMS\Services\PermalinkService;
+use CMS\Services\PostPublishChecklistService;
+use CMS\Services\PostRevisionService;
 use CMS\Services\RedirectService;
 use CMS\Services\SEOService;
 
@@ -612,7 +614,11 @@ class PostsModule
             'postTags'   => array_map(fn($t) => (array)$t, $postTags),
             'postTemplates' => $this->getPostTemplateDefinitions(),
             'seoMeta'    => $id !== null ? SEOService::getInstance()->getContentMeta('post', $id) : SEOService::getInstance()->getContentMeta('post', 0),
-            'revisionHistory' => $this->buildPostRevisionHistory($postData, array_map(fn($t) => (array) $t, $postTags)),
+            'revisions'  => $postData !== null ? $this->listPostRevisions((int) ($postData['id'] ?? 0)) : [],
+            // Gespeicherter Veröffentlichungszustand (bleibt beim Inline-Rendern nach Fehlern unverändert).
+            'storedPublishState' => $postData !== null
+                ? ['status' => (string) ($postData['status'] ?? ''), 'published_at' => $postData['published_at'] ?? null]
+                : null,
         ];
     }
 
@@ -778,7 +784,10 @@ class PostsModule
         return $this->save($post, $userId);
     }
 
-    public function save(array $post, int $userId): array
+    /**
+     * @param string $revisionType Revisionstyp für den gespeicherten Stand (manual oder autosave).
+     */
+    public function save(array $post, int $userId, string $revisionType = PostRevisionService::TYPE_MANUAL): array
     {
         $invalidInputField = $this->findUnexpectedNonScalarInput($post, ['additional_category_ids', 'post_meta']);
         if ($invalidInputField !== '') {
@@ -795,7 +804,8 @@ class PostsModule
         if ($id > 0 && !$this->canAccessPost($id)) {
             return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
         }
-        $title      = $this->sanitizePlainText((string)($post['title'] ?? ''), 255);
+        // Titel sind einzeilig (Editor nutzt eine Textarea) – Zeilenumbrüche werden zu Leerzeichen.
+        $title      = $this->sanitizePlainText($this->collapseLineBreaks((string)($post['title'] ?? '')), 255);
         $slug       = trim((string)($post['slug'] ?? ''));
         $slugEn     = trim((string)($post['slug_en'] ?? ''));
         $defaultStatus = function_exists('get_option') ? (string)get_option('setting_post_default_status', 'draft') : 'draft';
@@ -804,8 +814,16 @@ class PostsModule
         }
 
         $status     = in_array((string)($post['status'] ?? ''), ['published', 'draft', 'private'], true) ? (string)$post['status'] : $defaultStatus;
+        // „Veröffentlichen“/„Planen“ in der Editor-Kopfleiste setzen den Zielstatus unabhängig vom Statusfeld.
+        $publishIntent = strtolower(trim(is_scalar($post['publish_intent'] ?? null) ? (string) $post['publish_intent'] : ''));
+        if (!in_array($publishIntent, ['publish', 'schedule'], true)) {
+            $publishIntent = '';
+        }
+        if ($publishIntent !== '') {
+            $status = 'published';
+        }
         $content    = $this->preserveOriginalEditorContentIfUnchanged($post['content'] ?? '', $post['content_original'] ?? '');
-        $titleEn    = $this->sanitizePlainText((string)($post['title_en'] ?? ''), 255);
+        $titleEn    = $this->sanitizePlainText($this->collapseLineBreaks((string)($post['title_en'] ?? '')), 255);
         $contentEn  = $this->preserveOriginalEditorContentIfUnchanged($post['content_en'] ?? '', $post['content_en_original'] ?? '');
         $excerpt    = $this->sanitizePlainText((string)($post['excerpt'] ?? ''), 2000);
         $excerptEn  = $this->sanitizePlainText((string)($post['excerpt_en'] ?? ''), 2000);
@@ -874,20 +892,8 @@ class PostsModule
             return ['success' => false, 'error' => 'Dieser englische Slug ist bereits vergeben.'];
         }
 
-        try {
-            $contentMediaPlacement = ContentMediaPlacementService::getInstance();
-            [$content, $contentEn] = $contentMediaPlacement->relocateTemporaryContentMediaBatch([$content, $contentEn], 'post', $slug);
-            $featuredImage = $contentMediaPlacement->relocateTemporaryFeaturedImage($featuredImage, $featuredImageTempPath, 'post', $slug);
-        } catch (\Throwable $e) {
-            Logger::instance()->withChannel('admin.posts')->warning('Temporäre Beitragsmedien konnten beim Speichern nicht vollständig verarbeitet werden.', [
-                'post_id' => $id,
-                'slug' => $slug,
-                'featured_image' => $featuredImage,
-                'featured_image_temp_path' => $featuredImageTempPath,
-                'exception' => $e->getMessage(),
-            ]);
-        }
-
+        // Datums- und Checklistenprüfung vor dem Verschieben temporärer Medien: abgelehnte
+        // Speichervorgänge sollen keine Dateien bewegen, auf die das Formular noch verweist.
         $publishedAtInput = $this->normalizePublishedAtInput($publishDateRaw, $publishTimeRaw);
         if ($publishedAtInput['error'] !== null) {
             return ['success' => false, 'error' => (string) $publishedAtInput['error']];
@@ -901,9 +907,56 @@ class PostsModule
             return ['success' => false, 'error' => (string) $contentUpdatedAtInput['error']];
         }
         $treatUpdateAsNew = !empty($post['treat_update_as_new']);
-            if ($treatUpdateAsNew && $contentUpdatedAtInput['value'] === null) {
-                return ['success' => false, 'error' => 'Bitte zuerst ein Aktualisierungsdatum angeben, um den Beitrag als neu zu behandeln.'];
+        if ($treatUpdateAsNew && $contentUpdatedAtInput['value'] === null) {
+            return ['success' => false, 'error' => 'Bitte zuerst ein Aktualisierungsdatum angeben, um den Beitrag als neu zu behandeln.'];
+        }
+
+        if ($publishIntent === 'schedule' && !$this->isFutureDateTime($publishedAtInput['value'])) {
+            return ['success' => false, 'error' => 'Zum Planen bitte Datum und Uhrzeit in der Zukunft wählen.'];
+        }
+
+        $existing = $id > 0
+            ? $this->db->get_row("SELECT slug, slug_en, status, published_at, created_at FROM {$this->prefix}posts WHERE id = ? LIMIT 1", [$id])
+            : null;
+        $treatAsNewPublishedAt = $id > 0 && $treatUpdateAsNew ? $contentUpdatedAtInput['value'] : null;
+
+        $checklistError = $this->checkPublishChecklist(
+            $status,
+            $this->resolveTargetPublishedAt($status, $publishedAtInput['value'], $existing, $publishIntent, $treatAsNewPublishedAt),
+            $existing,
+            $featuredImage !== '' ? $featuredImage : $featuredImageTempPath,
+            $metaDesc,
+            $categoryId
+        );
+        if ($checklistError !== null) {
+            return $checklistError;
+        }
+
+        // Autosave verschiebt keine temporären Medien: Der geöffnete Editor verweist weiter auf die
+        // temp-URLs; erst das manuelle Speichern (mit Neuladen des Editors) verschiebt sie.
+        $isAutosave = $revisionType === PostRevisionService::TYPE_AUTOSAVE;
+        // EditorJS vergibt bei jedem Speichern einen neuen Zeitstempel („time“). Bei einem Autosave ohne
+        // inhaltliche Änderung (z. B. ausgelöst durch nicht-semantische DOM-Mutationen im Editor) bleibt der
+        // gespeicherte JSON-String erhalten – Zeile und updated_at bleiben dann unverändert.
+        if ($isAutosave && $existingPost !== []) {
+            $content = $this->keepStoredEditorContentWhenBlocksUnchanged((string) $content, (string) ($existingPost['content'] ?? ''));
+            $contentEn = $this->keepStoredEditorContentWhenBlocksUnchanged((string) $contentEn, (string) ($existingPost['content_en'] ?? ''));
+        }
+        try {
+            if (!$isAutosave) {
+                $contentMediaPlacement = ContentMediaPlacementService::getInstance();
+                [$content, $contentEn] = $contentMediaPlacement->relocateTemporaryContentMediaBatch([$content, $contentEn], 'post', $slug);
+                $featuredImage = $contentMediaPlacement->relocateTemporaryFeaturedImage($featuredImage, $featuredImageTempPath, 'post', $slug);
             }
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('admin.posts')->warning('Temporäre Beitragsmedien konnten beim Speichern nicht vollständig verarbeitet werden.', [
+                'post_id' => $id,
+                'slug' => $slug,
+                'featured_image' => $featuredImage,
+                'featured_image_temp_path' => $featuredImageTempPath,
+                'exception' => $e->getMessage(),
+            ]);
+        }
 
         $savePayload = [
             'title' => $title,
@@ -935,21 +988,38 @@ class PostsModule
 
         try {
             if ($id > 0) {
-                $existing = $this->db->get_row("SELECT slug, slug_en, status, published_at, created_at FROM {$this->prefix}posts WHERE id = ? LIMIT 1", [$id]);
-                $resolvedPublishedAt = $this->resolvePublishedAtValue((string) $savePayload['status'], $savePayload['published_at'], $existing);
-                if ($treatUpdateAsNew && $contentUpdatedAtInput['value'] !== null) {
-                    $resolvedPublishedAt = $contentUpdatedAtInput['value'];
+                $resolvedPublishedAt = $this->resolveTargetPublishedAt((string) $savePayload['status'], $savePayload['published_at'], $existing, $publishIntent, $treatAsNewPublishedAt);
+                // Erneut mit den endgültigen Werten (nach Medienverschiebung und Filter cms_prepare_post_save_payload).
+                $checklistError = $this->checkPublishChecklist(
+                    (string) $savePayload['status'],
+                    $resolvedPublishedAt,
+                    $existing,
+                    (string) $savePayload['featured_image'],
+                    (string) $savePayload['meta_description'],
+                    (int) ($savePayload['category_id'] ?? 0)
+                );
+                if ($checklistError !== null) {
+                    return $checklistError;
                 }
-                $currentRevisionSource = $this->getCurrentPostRevisionSource($id);
-                $revisionComparisonPayload = $savePayload;
-                $revisionComparisonPayload['published_at'] = $resolvedPublishedAt;
-                if ($this->hasTrackedPostRevisionChanges($currentRevisionSource, $revisionComparisonPayload) && !$this->storePostRevisionSnapshot($currentRevisionSource)) {
-                    return $this->failResult(
-                        'posts.revision.snapshot_failed',
-                        'Beitragsrevision konnte vor dem Speichern nicht gesichert werden.',
-                        null,
-                        ['post_id' => $id]
-                    );
+
+                // Bestandsbeiträge ohne Revision aus 4.0.0: bisherigen Stand vor dem Überschreiben sichern.
+                $revisionService = PostRevisionService::getInstance();
+                if (!$revisionService->hasTrackedRevisions($id)) {
+                    $currentRevisionSource = $revisionService->buildSnapshotFromPost($id);
+                    $revisionComparisonPayload = $savePayload;
+                    $revisionComparisonPayload['published_at'] = $resolvedPublishedAt;
+                    if (
+                        $currentRevisionSource !== null
+                        && $this->hasTrackedPostRevisionChanges($currentRevisionSource, $revisionComparisonPayload)
+                        && !$revisionService->captureBaseline($id, $currentRevisionSource)
+                    ) {
+                        return $this->failResult(
+                            'posts.revision.snapshot_failed',
+                            'Beitragsrevision konnte vor dem Speichern nicht gesichert werden.',
+                            null,
+                            ['post_id' => $id]
+                        );
+                    }
                 }
 
                 $saveStatement = $this->db->execute(
@@ -1005,10 +1075,26 @@ class PostsModule
                     ]
                 );
                 Hooks::doAction('cms_after_post_save', $id, $savePayload, $post);
-                $this->clearContentCacheIfEnabled('post_update', $id);
-                return ['success' => true, 'id' => $id, 'message' => 'Beitrag aktualisiert.'];
+                $revision = $this->recordPostRevision($id, $revisionType, $userId);
+                // Autosave betrifft nur Entwürfe (nicht öffentlich) – kein minütliches Leeren des gesamten Caches.
+                if (!$isAutosave) {
+                    $this->clearContentCacheIfEnabled('post_update', $id);
+                }
+                return ['success' => true, 'id' => $id, 'message' => $this->buildSaveMessage('Beitrag aktualisiert.', $publishIntent, $resolvedPublishedAt), 'revision' => $revision];
             } else {
-                $resolvedPublishedAt = $this->resolvePublishedAtValue((string) $savePayload['status'], $savePayload['published_at'], null);
+                $resolvedPublishedAt = $this->resolveTargetPublishedAt((string) $savePayload['status'], $savePayload['published_at'], null, $publishIntent, null);
+                $checklistError = $this->checkPublishChecklist(
+                    (string) $savePayload['status'],
+                    $resolvedPublishedAt,
+                    null,
+                    (string) $savePayload['featured_image'],
+                    (string) $savePayload['meta_description'],
+                    (int) ($savePayload['category_id'] ?? 0)
+                );
+                if ($checklistError !== null) {
+                    return $checklistError;
+                }
+
                 $this->db->execute(
                     "INSERT INTO {$this->prefix}posts
                      (title, title_en, slug, slug_en, content, content_en, excerpt, excerpt_en, status, category_id, featured_image, tags, meta_title, meta_description, author_id, author_display_name, author_display_url, post_template, post_meta_json, published_at, content_updated_at, created_at, updated_at)
@@ -1042,8 +1128,9 @@ class PostsModule
                 $this->syncPostTags($newId, $rawTags);
                 $this->syncPostCategories($newId, $assignedCategoryIds !== [] ? $assignedCategoryIds : ($savePayload['category_id'] !== null ? [(int) $savePayload['category_id']] : []));
                 Hooks::doAction('cms_after_post_save', $newId, $savePayload, $post);
+                $revision = $this->recordPostRevision($newId, $revisionType, $userId);
                 $this->clearContentCacheIfEnabled('post_create', $newId);
-                return ['success' => true, 'id' => $newId, 'message' => 'Beitrag erstellt.'];
+                return ['success' => true, 'id' => $newId, 'message' => $this->buildSaveMessage('Beitrag erstellt.', $publishIntent, $resolvedPublishedAt), 'revision' => $revision];
             }
         } catch (\Throwable $e) {
             return $this->failResult(
@@ -1068,7 +1155,8 @@ class PostsModule
         }
 
         try {
-            $currentPost = $this->getCurrentPostRevisionSource($id);
+            $revisionService = PostRevisionService::getInstance();
+            $currentPost = $revisionService->buildSnapshotFromPost($id) ?? [];
             if ($currentPost === []) {
                 return ['success' => false, 'error' => 'Der Beitrag wurde nicht gefunden.'];
             }
@@ -1088,7 +1176,11 @@ class PostsModule
             ];
 
             $comparisonPayload = array_merge($currentPost, $newData);
-            if ($this->hasTrackedPostRevisionChanges($currentPost, $comparisonPayload) && !$this->storePostRevisionSnapshot($currentPost)) {
+            if (
+                !$revisionService->hasTrackedRevisions($id)
+                && $this->hasTrackedPostRevisionChanges($currentPost, $comparisonPayload)
+                && !$revisionService->captureBaseline($id, $currentPost)
+            ) {
                 return ['success' => false, 'error' => 'Beitragsrevision konnte vor dem Kopieren nicht gesichert werden.'];
             }
 
@@ -1105,6 +1197,7 @@ class PostsModule
             );
 
             Hooks::doAction('cms_after_post_copy_de_to_en', $id, $newData, $userId);
+            $this->recordPostRevision($id, PostRevisionService::TYPE_MANUAL, $userId);
             $this->clearContentCacheIfEnabled('post_copy_de_to_en', $id);
             AuditLogger::instance()->log(
                 AuditLogger::CAT_CONTENT,
@@ -1220,9 +1313,25 @@ class PostsModule
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge gelöscht.'];
 
                 case 'publish':
-                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published', published_at = COALESCE(published_at, NOW()) WHERE id IN ({$placeholders})", $ids);
-                    $this->clearContentCacheIfEnabled('post_bulk_publish', (int) $ids[0]);
-                    return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge veröffentlicht.'];
+                    // Veröffentlichungs-Checkliste wie im Editor: Entwürfe/private Beiträge ohne Beitragsbild,
+                    // passende Meta-Beschreibung oder Kategorie bleiben unverändert.
+                    [$publishIds, $skippedTitles] = $this->partitionPostsByPublishChecklist($ids);
+                    if ($publishIds === []) {
+                        return [
+                            'success' => false,
+                            'error' => 'Keine Beiträge veröffentlicht – die Veröffentlichungs-Checkliste ist unvollständig (Beitragsbild, Meta-Beschreibung mit 120–160 Zeichen, Kategorie): ' . $this->formatTitleList($skippedTitles) . '.',
+                        ];
+                    }
+
+                    $publishPlaceholders = implode(',', array_fill(0, count($publishIds), '?'));
+                    $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published', published_at = COALESCE(published_at, NOW()) WHERE id IN ({$publishPlaceholders})", $publishIds);
+                    $this->clearContentCacheIfEnabled('post_bulk_publish', (int) $publishIds[0]);
+                    $message = count($publishIds) . ' Beitrag/Beiträge veröffentlicht.';
+                    if ($skippedTitles !== []) {
+                        $message .= ' Nicht veröffentlicht, weil die Checkliste unvollständig ist: ' . $this->formatTitleList($skippedTitles) . '.';
+                    }
+
+                    return ['success' => true, 'message' => $message];
 
                 case 'draft':
                     $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})", $ids);
@@ -2016,177 +2125,352 @@ class PostsModule
         }
     }
 
+    // ── Editor 4.0.0: Autosave, Revisionen, Veröffentlichungs-Checkliste ──
+
     /**
-     * @param array<string,mixed>|null $postData
-     * @param array<int,array<string,mixed>> $postTags
+     * Autosave aus dem Beitragseditor.
+     *
+     * Entwürfe werden gespeichert (Revision höchstens alle zehn Minuten). Veröffentlichte, geplante und
+     * private Beiträge erhalten nur eine Autosave-Revision, damit ungeprüfte Zwischenstände nicht live gehen.
+     *
      * @return array<string,mixed>
      */
-    private function buildPostRevisionHistory(?array $postData, array $postTags): array
+    public function autosave(array $post, int $userId): array
     {
-        $postId = (int) ($postData['id'] ?? 0);
-        if ($postId <= 0) {
+        $invalidInputField = $this->findUnexpectedNonScalarInput($post, ['additional_category_ids', 'post_meta']);
+        if ($invalidInputField !== '') {
+            return ['success' => false, 'error' => 'Ungültige Eingabe für das Feld „' . $invalidInputField . '“. Bitte die Seite neu laden.'];
+        }
+
+        $id = (int) ($post['id'] ?? 0);
+        if ($id <= 0) {
+            return ['success' => false, 'error' => 'Neue Beiträge bitte zuerst manuell speichern.'];
+        }
+
+        if (!$this->canAccessPost($id)) {
+            return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
+        }
+
+        $status = (string) ($this->db->get_var("SELECT status FROM {$this->prefix}posts WHERE id = ? LIMIT 1", [$id]) ?? '');
+        if ($status === '') {
+            return ['success' => false, 'error' => 'Der Beitrag existiert nicht mehr. Bitte Liste neu laden.'];
+        }
+
+        if ($status === 'draft') {
+            $post['status'] = 'draft';
+            unset($post['publish_intent'], $post['treat_update_as_new']);
+            $result = $this->save($post, $userId, PostRevisionService::TYPE_AUTOSAVE);
+            $result['mode'] = 'saved';
+
+            return $result;
+        }
+
+        try {
+            $snapshot = $this->buildRevisionSnapshotFromInput($post, $id);
+            if ($snapshot === null) {
+                return ['success' => false, 'error' => 'Der Beitrag existiert nicht mehr. Bitte Liste neu laden.'];
+            }
+
+            $revision = PostRevisionService::getInstance()->record($id, PostRevisionService::TYPE_AUTOSAVE, $userId, $snapshot);
+        } catch (\Throwable $e) {
+            return $this->failResult('posts.autosave.failed', 'Zwischenstand konnte nicht gesichert werden.', $e, ['post_id' => $id]);
+        }
+
+        if ($revision['reason'] === 'failed') {
+            return ['success' => false, 'error' => 'Zwischenstand konnte nicht gesichert werden.'];
+        }
+
+        return [
+            'success' => true,
+            'id' => $id,
+            'mode' => 'revision',
+            'revision' => $revision,
+            'message' => 'Zwischenstand als Revision gesichert – der Beitrag selbst bleibt bis zum Speichern unverändert.',
+        ];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function listPostRevisions(int $postId): array
+    {
+        if ($postId <= 0 || !$this->canAccessPost($postId)) {
+            return [];
+        }
+
+        try {
+            return PostRevisionService::getInstance()->listRevisions($postId);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('admin.posts')->warning('Beitragsrevisionen konnten nicht geladen werden.', [
+                'post_id' => $postId,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function comparePostRevision(int $postId, int $revisionId): array
+    {
+        if ($postId <= 0 || $revisionId <= 0) {
+            return ['success' => false, 'error' => 'Ungültige Revision.'];
+        }
+
+        if (!$this->canAccessPost($postId)) {
+            return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
+        }
+
+        try {
+            $comparison = PostRevisionService::getInstance()->compare($postId, $revisionId);
+        } catch (\Throwable $e) {
+            return $this->failResult('posts.revision.compare_failed', 'Die Revisionen konnten nicht verglichen werden.', $e, ['post_id' => $postId, 'revision_id' => $revisionId]);
+        }
+
+        if ($comparison === null) {
+            return ['success' => false, 'error' => 'Die Revision wurde nicht gefunden.'];
+        }
+
+        return ['success' => true, 'comparison' => $comparison];
+    }
+
+    /**
+     * Stellt Titel, Inhalte, Kurzfassungen, Beitragsbild, Meta-Felder, Kategorie, Tags und Autorenangaben
+     * einer Revision wieder her. Status, Slugs und Datumswerte bleiben unverändert. Der bisherige Stand
+     * wird vorher gesichert, die Wiederherstellung selbst als neue Revision abgelegt – es wird nie
+     * Historie gelöscht.
+     *
+     * @return array<string,mixed>
+     */
+    public function restorePostRevision(int $postId, int $revisionId, int $userId): array
+    {
+        if ($postId <= 0 || $revisionId <= 0) {
+            return ['success' => false, 'error' => 'Ungültige Revision.'];
+        }
+
+        if (!$this->canAccessPost($postId)) {
+            return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
+        }
+
+        $revisionService = PostRevisionService::getInstance();
+        $revision = $revisionService->getRevision($postId, $revisionId);
+        if ($revision === null) {
+            return ['success' => false, 'error' => 'Die Revision wurde nicht gefunden.'];
+        }
+
+        $current = $revisionService->buildSnapshotFromPost($postId);
+        if ($current === null) {
+            return ['success' => false, 'error' => 'Der Beitrag existiert nicht mehr. Bitte Liste neu laden.'];
+        }
+
+        $restored = $current;
+        foreach (['title', 'title_en', 'content', 'content_en', 'excerpt', 'excerpt_en', 'featured_image', 'meta_title', 'meta_description', 'author_display_name', 'author_display_url', 'tags'] as $field) {
+            // NULL = Feld wurde in dieser (älteren) Revision nicht erfasst → aktuellen Wert behalten.
+            if (array_key_exists($field, $revision) && $revision[$field] !== null) {
+                $restored[$field] = (string) $revision[$field];
+            }
+        }
+
+        $notice = '';
+        $revisionCategoryId = (int) ($revision['category_id'] ?? 0);
+        if ($revisionCategoryId > 0 && !$this->categoryExists($revisionCategoryId)) {
+            $revisionCategoryId = (int) $current['category_id'];
+            $notice = ' Die damalige Kategorie existiert nicht mehr; die aktuelle Kategorie wurde beibehalten.';
+        }
+
+        $additionalCategoryIds = array_values(array_filter(
+            $this->getPostCategoryIds($postId),
+            static fn(int $categoryId): bool => $categoryId !== (int) $current['category_id']
+        ));
+        $assignedCategoryIds = $this->normalizeSelectedCategoryIds($revisionCategoryId, $additionalCategoryIds);
+        if ($revisionCategoryId <= 0 && $assignedCategoryIds !== []) {
+            $revisionCategoryId = (int) $assignedCategoryIds[0];
+        }
+        $restored['category_id'] = $revisionCategoryId;
+
+        $checklist = PostPublishChecklistService::getInstance();
+        $currentState = ['status' => $current['status'], 'published_at' => $current['published_at']];
+        if ($checklist->isScheduled($currentState)) {
+            $checklistResult = $checklist->evaluate([
+                'featured_image' => $restored['featured_image'],
+                'meta_description' => $restored['meta_description'],
+                'category_id' => $restored['category_id'],
+            ]);
+            if (!$checklistResult['passed']) {
+                return [
+                    'success' => false,
+                    'error' => $checklist->buildErrorMessage($checklistResult, 'Wiederherstellen'),
+                    'checklist' => $checklistResult,
+                ];
+            }
+        }
+
+        if ($revisionService->computeFingerprint($restored) === $revisionService->computeFingerprint($current)) {
             return [
-                'total' => 0,
-                'displayed' => 0,
-                'has_more' => false,
-                'items' => [],
+                'success' => true,
+                'id' => $postId,
+                'unchanged' => true,
+                'message' => 'Diese Version entspricht bereits dem aktuellen Stand – es wurde nichts geändert.',
             ];
         }
 
-        $currentPost = $this->buildCurrentPostComparisonState($postData, $postTags);
-        $rawRevisions = $this->getPostRevisions($postId);
-        $items = [];
-
-        foreach (array_slice($rawRevisions, 0, 6) as $revision) {
-            if (!is_array($revision)) {
-                continue;
-            }
-
-            $comparison = $this->buildPostRevisionComparison($currentPost, $revision);
-            $items[] = [
-                'id' => (int) ($revision['id'] ?? 0),
-                'created_at' => (string) ($revision['created_at'] ?? ''),
-                'created_at_label' => $this->formatAdminTimestamp((string) ($revision['created_at'] ?? '')),
-                'author_label' => $this->resolveRevisionAuthorLabel($revision),
-                'changed_fields' => $comparison['changed_fields'],
-                'field_diffs' => $comparison['field_diffs'],
-            ];
+        if (!$revisionService->captureBaseline($postId, $current, false)) {
+            return ['success' => false, 'error' => 'Der aktuelle Stand konnte vor der Wiederherstellung nicht gesichert werden.'];
         }
+
+        try {
+            $legacyTags = $this->serializeTagsForLegacyColumn((string) $restored['tags']);
+            $this->db->execute(
+                "UPDATE {$this->prefix}posts
+                 SET title = ?, title_en = ?, content = ?, content_en = ?, excerpt = ?, excerpt_en = ?,
+                     category_id = ?, featured_image = ?, tags = ?, meta_title = ?, meta_description = ?,
+                     author_display_name = ?, author_display_url = ?, updated_at = NOW()
+                 WHERE id = ?",
+                [
+                    (string) $restored['title'],
+                    (string) $restored['title_en'],
+                    (string) $restored['content'],
+                    (string) $restored['content_en'],
+                    (string) $restored['excerpt'],
+                    (string) $restored['excerpt_en'],
+                    $revisionCategoryId > 0 ? $revisionCategoryId : null,
+                    (string) $restored['featured_image'],
+                    $legacyTags,
+                    (string) $restored['meta_title'],
+                    (string) $restored['meta_description'],
+                    (string) $restored['author_display_name'],
+                    (string) $restored['author_display_url'],
+                    $postId,
+                ]
+            );
+            $this->syncPostTags($postId, (string) $restored['tags']);
+            $this->syncPostCategories($postId, $assignedCategoryIds !== [] ? $assignedCategoryIds : ($revisionCategoryId > 0 ? [$revisionCategoryId] : []));
+
+            $savePayload = [
+                'title' => (string) $restored['title'],
+                'title_en' => (string) $restored['title_en'],
+                'slug' => (string) $current['slug'],
+                'slug_en' => (string) $current['slug_en'] !== '' ? (string) $current['slug_en'] : null,
+                'content' => (string) $restored['content'],
+                'content_en' => (string) $restored['content_en'],
+                'excerpt' => (string) $restored['excerpt'],
+                'excerpt_en' => (string) $restored['excerpt_en'],
+                'status' => (string) $current['status'],
+                'category_id' => $revisionCategoryId > 0 ? $revisionCategoryId : null,
+                'featured_image' => (string) $restored['featured_image'],
+                'tags' => $legacyTags,
+                'meta_title' => (string) $restored['meta_title'],
+                'meta_description' => (string) $restored['meta_description'],
+                'author_display_name' => (string) $restored['author_display_name'],
+                'author_display_url' => (string) $restored['author_display_url'],
+                'published_at' => $current['published_at'],
+                'content_updated_at' => $current['content_updated_at'],
+            ];
+            // Suchindex, Sitemaps und IndexNow hängen an cms_after_post_save – eine Wiederherstellung ist ein Speichervorgang.
+            Hooks::doAction('cms_after_post_save', $postId, $savePayload, []);
+            $record = $this->recordPostRevision($postId, PostRevisionService::TYPE_RESTORE, $userId);
+            $this->clearContentCacheIfEnabled('post_revision_restore', $postId);
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_CONTENT,
+                'posts.revision_restore',
+                'Beitragsrevision wiederhergestellt.',
+                'posts',
+                $postId,
+                ['post_id' => $postId, 'revision_id' => $revisionId, 'new_revision_id' => $record['revision_id'], 'user_id' => $userId],
+                'info'
+            );
+        } catch (\Throwable $e) {
+            return $this->failResult(
+                'posts.revision.restore_failed',
+                'Die Version konnte nicht wiederhergestellt werden.',
+                $e,
+                ['post_id' => $postId, 'revision_id' => $revisionId, 'user_id' => $userId]
+            );
+        }
+
+        $meta = $revisionService->buildRevisionMeta($revision);
 
         return [
-            'total' => count($rawRevisions),
-            'displayed' => count($items),
-            'has_more' => count($rawRevisions) > count($items),
-            'items' => $items,
+            'success' => true,
+            'id' => $postId,
+            'revision_id' => $record['revision_id'],
+            'message' => 'Version vom ' . $meta['created_at_label'] . ' wiederhergestellt.' . $notice,
         ];
     }
 
     /**
-     * @param array<string,mixed>|null $postData
-     * @param array<int,array<string,mixed>> $postTags
-     * @return array<string,mixed>
+     * Snapshot aus Formulardaten für Autosave-Revisionen nicht veröffentlichter Zwischenstände.
+     * Spiegelt die Sprachlogik von save(): Felder der anderen Sprache bleiben auf dem gespeicherten Stand.
+     *
+     * @param array<string,mixed> $post
+     * @return array<string,mixed>|null
      */
-    private function buildCurrentPostComparisonState(?array $postData, array $postTags): array
+    private function buildRevisionSnapshotFromInput(array $post, int $id): ?array
     {
-        $postData = is_array($postData) ? $postData : [];
-        $tagNames = [];
-        foreach ($postTags as $tag) {
-            $name = trim((string) ($tag['name'] ?? ''));
-            if ($name !== '') {
-                $tagNames[] = $name;
-            }
+        $snapshot = PostRevisionService::getInstance()->buildSnapshotFromPost($id);
+        if ($snapshot === null) {
+            return null;
         }
 
-        if ($tagNames === []) {
-            $tagNames = $this->normalizeTagNamesFromString((string) ($postData['tags'] ?? ''));
-        }
-
-        $categoryId = (int) ($postData['category_id'] ?? 0);
-
-        return [
-            'title' => (string) ($postData['title'] ?? ''),
-            'title_en' => (string) ($postData['title_en'] ?? ''),
-            'slug' => (string) ($postData['slug'] ?? ''),
-            'slug_en' => (string) ($postData['slug_en'] ?? ''),
-            'content' => $postData['content'] ?? '',
-            'content_en' => $postData['content_en'] ?? '',
-            'excerpt' => (string) ($postData['excerpt'] ?? ''),
-            'excerpt_en' => (string) ($postData['excerpt_en'] ?? ''),
-            'status' => (string) ($postData['status'] ?? ''),
-            'category_id' => $categoryId,
-            'category_name' => $this->resolveCategoryName($categoryId),
-            'tags' => implode(', ', $tagNames),
-            'author_display_name' => (string) ($postData['author_display_name'] ?? ''),
-            'author_display_url' => (string) ($postData['author_display_url'] ?? ''),
-            'published_at' => (string) ($postData['published_at'] ?? ''),
-                'content_updated_at' => (string) ($postData['content_updated_at'] ?? ''),
-        ];
-    }
-
-    /**
-     * @return array<int,array<string,mixed>>
-     */
-    private function getPostRevisions(int $postId): array
-    {
-        if ($postId <= 0) {
-            return [];
-        }
-
-        $stmt = $this->db->prepare(
-            "SELECT pr.id,
-                    pr.post_id,
-                    pr.title,
-                    pr.title_en,
-                    pr.slug,
-                    pr.slug_en,
-                    pr.content,
-                    pr.content_en,
-                    pr.excerpt,
-                    pr.excerpt_en,
-                    pr.status,
-                    pr.category_id,
-                    pr.category_name,
-                    pr.tags,
-                    pr.author_id,
-                    pr.author_display_name,
-                    pr.author_display_url,
-                    pr.published_at,
-                        pr.content_updated_at,
-                    pr.created_at,
-                    u.username,
-                    u.display_name
-             FROM {$this->prefix}post_revisions pr
-             LEFT JOIN {$this->prefix}users u ON u.id = pr.author_id
-             WHERE pr.post_id = ?
-             ORDER BY pr.created_at DESC, pr.id DESC"
+        $editorLocale = strtolower(trim((string) ($post['editor_locale'] ?? 'de'))) === 'en' ? 'en' : 'de';
+        $suffix = $editorLocale === 'en' ? '_en' : '';
+        $snapshot['title' . $suffix] = $this->sanitizePlainText((string) ($post['title' . $suffix] ?? ''), 255);
+        $snapshot['content' . $suffix] = $this->preserveOriginalEditorContentIfUnchanged(
+            $post['content' . $suffix] ?? '',
+            $post['content' . $suffix . '_original'] ?? ''
         );
-
-        $stmt->execute([$postId]);
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        return is_array($rows) ? $rows : [];
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    private function getCurrentPostRevisionSource(int $postId): array
-    {
-        if ($postId <= 0) {
-            return [];
+        $snapshot['excerpt' . $suffix] = $this->sanitizePlainText((string) ($post['excerpt' . $suffix] ?? ''), 2000);
+        $slug = $this->normalizeSlug(trim((string) ($post['slug' . $suffix] ?? '')));
+        if ($slug !== '') {
+            $snapshot['slug' . $suffix] = $slug;
         }
 
-        $row = $this->db->get_row(
-            "SELECT p.id, p.title, p.title_en, p.slug, p.slug_en, p.content, p.content_en, p.excerpt, p.excerpt_en,
-                    p.status, p.category_id, p.tags, p.author_id, p.author_display_name, p.author_display_url, p.published_at, p.content_updated_at,
-                    c.name AS category_name
-             FROM {$this->prefix}posts p
-             LEFT JOIN {$this->prefix}post_categories c ON c.id = p.category_id
-             WHERE p.id = ?
-             LIMIT 1",
-            [$postId]
-        );
+        $snapshot['featured_image'] = $this->sanitizeMediaReference((string) ($post['featured_image'] ?? ''));
+        $snapshot['meta_title'] = $this->sanitizePlainText((string) ($post['meta_title'] ?? ''), 255);
+        $snapshot['meta_description'] = $this->sanitizePlainText((string) ($post['meta_description'] ?? ''), 2000);
+        $snapshot['author_display_name'] = $this->sanitizeAuthorDisplayName((string) ($post['author_display_name'] ?? ''));
+        $snapshot['author_display_url'] = $this->sanitizeAuthorDisplayUrl((string) ($post['author_display_url'] ?? ''));
+        $snapshot['tags'] = $this->serializeTagsForLegacyColumn(is_array($post['tags'] ?? null) ? $post['tags'] : (string) ($post['tags'] ?? ''));
 
-        if (!is_object($row)) {
-            return [];
+        $categoryId = (int) ($post['category_id'] ?? 0);
+        $assignedCategoryIds = $this->normalizeSelectedCategoryIds($categoryId, $post['additional_category_ids'] ?? []);
+        if (!in_array($categoryId, $assignedCategoryIds, true)) {
+            $categoryId = (int) ($assignedCategoryIds[0] ?? 0);
         }
-
-        $snapshot = (array) $row;
-        $tagNames = $this->getPostTagNames($postId);
-        if ($tagNames !== []) {
-            $snapshot['tags'] = implode(', ', $tagNames);
-        } else {
-            $snapshot['tags'] = implode(', ', $this->normalizeTagNamesFromString((string) ($snapshot['tags'] ?? '')));
-        }
-
-        $snapshot['category_name'] = trim((string) ($snapshot['category_name'] ?? ''));
+        $snapshot['category_id'] = $categoryId;
+        $snapshot['category_name'] = $categoryId > 0
+            ? trim((string) ($this->db->get_var("SELECT name FROM {$this->prefix}post_categories WHERE id = ? LIMIT 1", [$categoryId]) ?? ''))
+            : '';
 
         return $snapshot;
     }
 
+    /**
+     * Revision nach einem erfolgreichen Speichervorgang anlegen. Fehler blockieren das bereits
+     * gespeicherte Ergebnis nicht, sondern werden protokolliert.
+     *
+     * @return array{stored:bool,reason:string,revision_id:int}
+     */
+    private function recordPostRevision(int $postId, string $type, int $userId): array
+    {
+        try {
+            return PostRevisionService::getInstance()->record($postId, $type, $userId > 0 ? $userId : null);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('admin.posts')->warning('Beitragsrevision konnte nach dem Speichern nicht angelegt werden.', [
+                'post_id' => $postId,
+                'revision_type' => $type,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return ['stored' => false, 'reason' => 'failed', 'revision_id' => 0];
+        }
+    }
+
     private function hasTrackedPostRevisionChanges(array $currentPost, array $newData): bool
     {
-        foreach (['title', 'title_en', 'slug', 'slug_en', 'content', 'content_en', 'excerpt', 'excerpt_en', 'status', 'tags', 'author_display_name', 'author_display_url', 'published_at', 'content_updated_at'] as $field) {
+        foreach (['title', 'title_en', 'slug', 'slug_en', 'content', 'content_en', 'excerpt', 'excerpt_en', 'status', 'tags', 'featured_image', 'meta_title', 'meta_description', 'author_display_name', 'author_display_url', 'published_at', 'content_updated_at'] as $field) {
             if (!array_key_exists($field, $newData)) {
                 continue;
             }
@@ -2203,230 +2487,155 @@ class PostsModule
         return false;
     }
 
-    private function storePostRevisionSnapshot(array $post): bool
+    /**
+     * Ziel-Veröffentlichungsdatum inkl. „Als neu behandeln“ und Kopfleisten-Aktion „Veröffentlichen“
+     * (geht sofort live, auch wenn noch ein künftiges Datum eingetragen ist).
+     */
+    private function resolveTargetPublishedAt(string $status, ?string $requestedPublishedAt, ?object $existing, string $publishIntent, ?string $treatAsNewPublishedAt): ?string
     {
-        $postId = (int) ($post['id'] ?? 0);
-        if ($postId <= 0) {
+        $resolved = $this->resolvePublishedAtValue($status, $requestedPublishedAt, $existing);
+        if ($treatAsNewPublishedAt !== null) {
+            $resolved = $treatAsNewPublishedAt;
+        }
+
+        if ($status === 'published' && $publishIntent === 'publish' && $this->isFutureDateTime($resolved)) {
+            $resolved = date('Y-m-d H:i:s');
+        }
+
+        return $resolved;
+    }
+
+    private function buildSaveMessage(string $default, string $publishIntent, ?string $resolvedPublishedAt): string
+    {
+        if ($publishIntent === 'publish') {
+            return 'Beitrag veröffentlicht.';
+        }
+
+        $timestamp = $publishIntent === 'schedule' ? strtotime((string) $resolvedPublishedAt) : false;
+        if ($timestamp !== false) {
+            return 'Beitrag für ' . date('d.m.Y, H:i', $timestamp) . ' Uhr geplant.';
+        }
+
+        return $default;
+    }
+
+    private function isFutureDateTime(?string $value): bool
+    {
+        $value = trim((string) $value);
+        if ($value === '' || str_starts_with($value, '0000-00-00')) {
             return false;
-        }
-
-        $stmt = $this->db->prepare(
-            "INSERT INTO {$this->prefix}post_revisions (
-                post_id, title, title_en, slug, slug_en, content, content_en, excerpt, excerpt_en,
-                status, category_id, category_name, tags, author_id, author_display_name, author_display_url, published_at, content_updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-
-        return $stmt->execute([
-            $postId,
-            (string) ($post['title'] ?? ''),
-            (string) ($post['title_en'] ?? ''),
-            (string) ($post['slug'] ?? ''),
-            (string) ($post['slug_en'] ?? ''),
-            (string) ($post['content'] ?? ''),
-            (string) ($post['content_en'] ?? ''),
-            (string) ($post['excerpt'] ?? ''),
-            (string) ($post['excerpt_en'] ?? ''),
-            (string) ($post['status'] ?? ''),
-            (int) ($post['category_id'] ?? 0) ?: null,
-            (string) ($post['category_name'] ?? ''),
-            (string) ($post['tags'] ?? ''),
-            (int) ($post['author_id'] ?? 0) ?: null,
-            (string) ($post['author_display_name'] ?? ''),
-            (string) ($post['author_display_url'] ?? ''),
-            $this->normalizeRevisionTimestampValue($post['published_at'] ?? null),
-            $this->normalizeRevisionTimestampValue($post['content_updated_at'] ?? null),
-        ]);
-    }
-
-    /**
-     * @param array<string,mixed> $currentPost
-     * @param array<string,mixed> $revision
-     * @return array{changed_fields: array<int,string>, field_diffs: array<int,array<string,mixed>>}
-     */
-    private function buildPostRevisionComparison(array $currentPost, array $revision): array
-    {
-        $changedFields = [];
-        $fieldDiffs = [];
-
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Titel (DE)', $currentPost['title'] ?? '', $revision['title'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Titel (EN)', $currentPost['title_en'] ?? '', $revision['title_en'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Slug (DE)', $currentPost['slug'] ?? '', $revision['slug'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Slug (EN)', $currentPost['slug_en'] ?? '', $revision['slug_en'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Teaser (DE)', $currentPost['excerpt'] ?? '', $revision['excerpt'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Teaser (EN)', $currentPost['excerpt_en'] ?? '', $revision['excerpt_en'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Status', $currentPost['status'] ?? '', $revision['status'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Kategorie', $currentPost['category_name'] ?? '', $revision['category_name'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Tags', $currentPost['tags'] ?? '', $revision['tags'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Autorenname im Artikel', $currentPost['author_display_name'] ?? '', $revision['author_display_name'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Website des alternativen Autors', $currentPost['author_display_url'] ?? '', $revision['author_display_url'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Veröffentlichung', $this->formatRevisionTimestampLabel($currentPost['published_at'] ?? null), $this->formatRevisionTimestampLabel($revision['published_at'] ?? null));
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Aktualisierungsdatum', $this->formatRevisionTimestampLabel($currentPost['content_updated_at'] ?? null), $this->formatRevisionTimestampLabel($revision['content_updated_at'] ?? null));
-        $this->appendRevisionContentDiff($changedFields, $fieldDiffs, 'Inhalt (DE)', $currentPost['content'] ?? '', $revision['content'] ?? '');
-        $this->appendRevisionContentDiff($changedFields, $fieldDiffs, 'Inhalt (EN)', $currentPost['content_en'] ?? '', $revision['content_en'] ?? '');
-
-        return [
-            'changed_fields' => array_values(array_unique($changedFields)),
-            'field_diffs' => $fieldDiffs,
-        ];
-    }
-        /**
-     * @param array<int,array<string,mixed>> $fieldDiffs
-     */
-    private function appendRevisionTextDiff(array &$changedFields, array &$fieldDiffs, string $label, mixed $current, mixed $revision): void
-    {
-        $currentValue = $this->normalizeRevisionTextValue($current);
-        $revisionValue = $this->normalizeRevisionTextValue($revision);
-
-        if ($currentValue === $revisionValue) {
-            return;
-        }
-
-        $changedFields[] = $label;
-        $fieldDiffs[] = [
-            'label' => $label,
-            'type' => 'text',
-            'current_label' => 'Aktuell',
-            'current_value' => $this->formatRevisionDisplayText($currentValue),
-            'revision_label' => 'Revision',
-            'revision_value' => $this->formatRevisionDisplayText($revisionValue),
-        ];
-    }
-
-    /**
-     * @param array<int,string> $changedFields
-     * @param array<int,array<string,mixed>> $fieldDiffs
-     */
-    private function appendRevisionContentDiff(array &$changedFields, array &$fieldDiffs, string $label, mixed $current, mixed $revision): void
-    {
-        $currentSummary = $this->summarizeEditorContentValue($current);
-        $revisionSummary = $this->summarizeEditorContentValue($revision);
-
-        if (($currentSummary['sha1'] ?? '') === ($revisionSummary['sha1'] ?? '')) {
-            return;
-        }
-
-        $changedFields[] = $label;
-        $fieldDiffs[] = [
-            'label' => $label,
-            'type' => 'content',
-            'current_label' => 'Aktuell',
-            'current_summary' => $this->formatContentSummaryForView($currentSummary),
-            'revision_label' => 'Revision',
-            'revision_summary' => $this->formatContentSummaryForView($revisionSummary),
-        ];
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    private function formatContentSummaryForView(array $summary): array
-    {
-        return [
-            'preview' => trim((string) ($summary['preview'] ?? '')) !== '' ? (string) ($summary['preview'] ?? '') : '— leer —',
-            'length' => (int) ($summary['length'] ?? 0),
-            'json_blocks' => isset($summary['json_blocks']) && is_numeric($summary['json_blocks']) ? (int) $summary['json_blocks'] : null,
-            'first_block_type' => trim((string) ($summary['first_block_type'] ?? '')),
-            'is_empty' => !empty($summary['is_empty']),
-        ];
-    }
-
-    private function normalizeRevisionTextValue(mixed $value): string
-    {
-        $stringValue = is_scalar($value) || $value === null ? (string) $value : '';
-        $stringValue = preg_replace('/\s+/u', ' ', trim(strip_tags($stringValue))) ?? '';
-
-        return $stringValue;
-    }
-
-    private function formatRevisionDisplayText(string $value): string
-    {
-        if ($value === '') {
-            return '— leer —';
-        }
-
-        $maxLength = 180;
-        $truncated = function_exists('mb_substr') ? mb_substr($value, 0, $maxLength) : substr($value, 0, $maxLength);
-        $fullLength = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
-
-        return $fullLength > $maxLength ? $truncated . ' …' : $truncated;
-    }
-
-    private function formatAdminTimestamp(string $value): string
-    {
-        if ($value === '') {
-            return 'Unbekanntes Datum';
         }
 
         $timestamp = strtotime($value);
 
-        return $timestamp !== false ? date('d.m.Y H:i', $timestamp) : $value;
+        return $timestamp !== false && $timestamp > time();
     }
 
     /**
-     * @param array<string,mixed> $revision
+     * Serverseitige Veröffentlichungs-Checkliste (gleiche Regeln wie im Editor).
+     *
+     * @return array<string,mixed>|null Fehlerergebnis oder null, wenn gespeichert werden darf.
      */
-    private function resolveRevisionAuthorLabel(array $revision): string
+    private function checkPublishChecklist(string $status, ?string $targetPublishedAt, ?object $existing, string $featuredImage, string $metaDescription, int $categoryId): ?array
     {
-        $displayName = trim((string) ($revision['display_name'] ?? ''));
-        if ($displayName !== '') {
-            return $displayName;
+        $checklist = PostPublishChecklistService::getInstance();
+        $existingState = $existing !== null
+            ? ['status' => (string) ($existing->status ?? ''), 'published_at' => $existing->published_at ?? null]
+            : null;
+
+        if (!$checklist->requiresChecklist($status, $targetPublishedAt, $existingState)) {
+            return null;
         }
 
-        $username = trim((string) ($revision['username'] ?? ''));
-        if ($username !== '') {
-            return $username;
+        $result = $checklist->evaluate([
+            'featured_image' => $featuredImage,
+            'meta_description' => $metaDescription,
+            'category_id' => $categoryId,
+        ]);
+        if ($result['passed']) {
+            return null;
         }
 
-        $authorId = (int) ($revision['author_id'] ?? 0);
-
-        return $authorId > 0 ? 'Benutzer #' . $authorId : 'Unbekannt';
-    }
-
-    private function resolveCategoryName(int $categoryId): string
-    {
-        if ($categoryId <= 0) {
-            return '';
-        }
-
-        return trim((string) ($this->db->get_var(
-            "SELECT name FROM {$this->prefix}post_categories WHERE id = ? LIMIT 1",
-            [$categoryId]
-        ) ?: ''));
+        return [
+            'success' => false,
+            'error' => $checklist->buildErrorMessage($result, $this->isFutureDateTime($targetPublishedAt) ? 'Planen' : 'Veröffentlichen', false),
+            'details' => $result['missing'],
+            'checklist' => $result,
+        ];
     }
 
     /**
-     * @return array<int,string>
+     * Teilt Beitrags-IDs für die Bulk-Aktion „Veröffentlichen“: bereits veröffentlichte/geplante Beiträge
+     * bleiben unverändert erlaubt, alle anderen müssen die Checkliste erfüllen.
+     *
+     * @param list<int> $ids
+     * @return array{0:list<int>,1:list<string>}
      */
-    private function normalizeTagNamesFromString(string $value): array
+    private function partitionPostsByPublishChecklist(array $ids): array
     {
-        $entries = preg_split('/[\r\n,]+/', $value) ?: [];
-        $names = [];
-        foreach ($entries as $entry) {
-            $name = trim((string) $entry);
-            if ($name !== '') {
-                $names[] = $name;
+        if ($ids === []) {
+            return [[], []];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $relationSelect = $this->db->tableExists($this->prefix . 'post_category_rel')
+            ? "(SELECT MIN(r.category_id) FROM {$this->prefix}post_category_rel r WHERE r.post_id = p.id)"
+            : 'NULL';
+        $rows = $this->db->get_results(
+            "SELECT p.id, p.title, p.title_en, p.status, p.featured_image, p.meta_description, p.category_id,
+                    {$relationSelect} AS rel_category_id
+             FROM {$this->prefix}posts p
+             WHERE p.id IN ({$placeholders})",
+            $ids
+        ) ?: [];
+
+        $checklist = PostPublishChecklistService::getInstance();
+        $publishIds = [];
+        $skippedTitles = [];
+        foreach ($rows as $row) {
+            $postId = (int) ($row->id ?? 0);
+            if ((string) ($row->status ?? '') === 'published') {
+                $publishIds[] = $postId;
+                continue;
             }
+
+            $categoryId = (int) ($row->category_id ?? 0);
+            if ($categoryId <= 0) {
+                $categoryId = (int) ($row->rel_category_id ?? 0);
+            }
+
+            $result = $checklist->evaluate([
+                'featured_image' => (string) ($row->featured_image ?? ''),
+                'meta_description' => (string) ($row->meta_description ?? ''),
+                'category_id' => $categoryId,
+            ]);
+            if ($result['passed']) {
+                $publishIds[] = $postId;
+                continue;
+            }
+
+            $title = trim((string) ($row->title ?? ''));
+            if ($title === '') {
+                $title = trim((string) ($row->title_en ?? ''));
+            }
+            $skippedTitles[] = $title !== '' ? $title : 'Beitrag #' . $postId;
         }
 
-        return array_values(array_unique($names));
+        return [$publishIds, $skippedTitles];
     }
 
-    private function normalizeRevisionTimestampValue(mixed $value): ?string
+    /**
+     * @param list<string> $titles
+     */
+    private function formatTitleList(array $titles): string
     {
-        $normalized = trim((string) $value);
+        $visible = array_map(
+            static fn(string $title): string => '„' . (function_exists('mb_substr') ? mb_substr($title, 0, 80) : substr($title, 0, 80)) . '“',
+            array_slice($titles, 0, 5)
+        );
+        $remaining = count($titles) - count($visible);
 
-        return $normalized !== '' ? $normalized : null;
-    }
-
-    private function formatRevisionTimestampLabel(mixed $value): string
-    {
-        $normalized = trim((string) $value);
-        if ($normalized === '') {
-            return '— leer —';
-        }
-
-        return $this->formatAdminTimestamp($normalized);
+        return implode(', ', $visible) . ($remaining > 0 ? ' und ' . $remaining . ' weitere' : '');
     }
 
     private function sanitizeAuthorDisplayName(string $value): string
@@ -2696,41 +2905,9 @@ class PostsModule
         return $this->sanitizePlainText($stringValue, $type === 'textarea' ? 2000 : 500);
     }
 
-    /**
-     * @return array<string,mixed>
-     */
-    private function summarizeEditorContentValue(mixed $value): array
+    private function collapseLineBreaks(string $value): string
     {
-        $stringValue = is_string($value)
-            ? $value
-            : (is_scalar($value) || $value === null ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-
-        if (!is_string($stringValue)) {
-            $stringValue = '';
-        }
-
-        $normalizedPreview = preg_replace('/\s+/u', ' ', trim($stringValue)) ?? '';
-        $summary = [
-            'length' => strlen($stringValue),
-            'sha256' => hash('sha256', $stringValue),
-            'is_empty' => trim($stringValue) === '',
-            'preview' => $this->truncateText($normalizedPreview, 180),
-        ];
-
-        try {
-            $decoded = json_decode($stringValue, true, 512, JSON_THROW_ON_ERROR);
-            if (is_array($decoded) && isset($decoded['blocks']) && is_array($decoded['blocks'])) {
-                $summary['json_blocks'] = count($decoded['blocks']);
-
-                if (!empty($decoded['blocks'][0]) && is_array($decoded['blocks'][0])) {
-                    $summary['first_block_type'] = (string) ($decoded['blocks'][0]['type'] ?? '');
-                }
-            }
-        } catch (\Throwable $_error) {
-            $summary['json_blocks'] = null;
-        }
-
-        return $summary;
+        return preg_replace('/\s*[\r\n]+\s*/u', ' ', $value) ?? $value;
     }
 
     private function sanitizePlainText(string $value, int $maxLength): string
@@ -2769,6 +2946,24 @@ class PostsModule
         }
 
         return '';
+    }
+
+    private function keepStoredEditorContentWhenBlocksUnchanged(string $submitted, string $stored): string
+    {
+        if ($submitted === $stored || $submitted === '' || $stored === '') {
+            return $submitted;
+        }
+
+        $decodedSubmitted = json_decode(trim($submitted), true);
+        $decodedStored = json_decode(trim($stored), true);
+        if (
+            !is_array($decodedSubmitted) || !is_array($decodedSubmitted['blocks'] ?? null)
+            || !is_array($decodedStored) || !is_array($decodedStored['blocks'] ?? null)
+        ) {
+            return $submitted;
+        }
+
+        return $decodedSubmitted['blocks'] === $decodedStored['blocks'] ? $stored : $submitted;
     }
 
     private function preserveOriginalEditorContentIfUnchanged(mixed $submittedValue, mixed $originalValue): string

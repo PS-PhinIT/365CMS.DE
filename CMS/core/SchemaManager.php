@@ -31,7 +31,7 @@ if (!class_exists(__NAMESPACE__ . '\\SchemaManager', false)) {
 class SchemaManager
 {
     /** Flag-Datei-Version – erhöhen wenn Schema geändert wird */
-    public const SCHEMA_VERSION = 'v23';
+    public const SCHEMA_VERSION = 'v24';
 
     private Database $db;
     private string $prefix;
@@ -424,6 +424,12 @@ class SchemaManager
                 author_display_url VARCHAR(500) DEFAULT NULL,
                 published_at TIMESTAMP NULL,
                     content_updated_at DATETIME DEFAULT NULL,
+                revision_type VARCHAR(20) NOT NULL DEFAULT 'legacy',
+                created_by INT UNSIGNED DEFAULT NULL,
+                featured_image VARCHAR(500) DEFAULT NULL,
+                meta_title VARCHAR(255) DEFAULT NULL,
+                meta_description TEXT DEFAULT NULL,
+                fingerprint CHAR(40) DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_post_id (post_id),
                 INDEX idx_author_id (author_id),

@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Datenbank & Schema
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** `v23` | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** `v24` | **Status:** Stable
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (45 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v23'`, flag file `CMS/cache/db_schema_v23.flag`). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (45 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v24'`, flag file `CMS/cache/db_schema_v24.flag`). Schema `v24` (4.0.0) adds revision columns to `cms_post_revisions` for the post editor's revision history. Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
 
 ## Deutsch
 
@@ -57,7 +57,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.4.21, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`) |
 | `page_revisions` | id, page_id, title, title_en, slug, slug_en, content, content_en, excerpt, status, author_id, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT), created_at |
 | `posts` | id, title (+ title_en), slug, slug_en, content (+ content_en), excerpt (+ excerpt_en), featured_image, status, author_id, author_display_name, author_display_url, post_template, post_meta_json, category_id, tags, views, allow_comments, meta_title, meta_description, created_at, updated_at, published_at, content_updated_at |
-| `post_revisions` | Snapshot je Speichern (Titel, Slugs, Inhalte DE/EN, Status, Kategorie, Tags, Autor-Anzeige, Datumswerte) |
+| `post_revisions` | Snapshot je Speichern (Titel, Slugs, Inhalte DE/EN, Status, Kategorie, Tags, Autor-Anzeige, Datumswerte); seit v24 zusätzlich `revision_type` (`manual`, `autosave`, `restore`, `baseline`, Bestandszeilen `legacy`), `created_by`, `featured_image`, `meta_title`, `meta_description` und `fingerprint` (SHA-1 des Inhaltsstands gegen doppelte Revisionen). `PostRevisionService` behält je Beitrag die letzten 30 |
 | `post_categories` | id, name, slug, slug_en, description, parent_id, sort_order, replacement_category_id, created_at |
 | `post_tags` | id, name, slug, slug_en, description, post_count, created_at |
 | `post_tag_rel`, `post_category_rel` | Zuordnungen (CASCADE auf `posts`) |
@@ -101,6 +101,17 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `mail_queue` | recipient, subject, body, headers, status, attempts, max_attempts, available_at, sent_at, locked_at, attachment_*, error_category, last_error |
 | `ai_quota_usage` | scope_name, period_key, user_id, provider_id, request_count, character_count |
 
+### Schema v24 (4.0.0)
+
+| Änderung | Zweck |
+|---|---|
+| `post_revisions`: Spalte `revision_type` VARCHAR(20) NOT NULL DEFAULT `'legacy'` | Herkunft der Revision (`manual` = Speichern, `autosave` = Autosave höchstens alle 10 Minuten, `restore` = Wiederherstellung, `baseline` = „Ausgangsstand“, der vor der ersten erfassten Änderung bzw. vor einer Wiederherstellung gesichert wird); vorhandene Zeilen werden als `legacy` („Ältere Version“) gekennzeichnet |
+| `post_revisions`: Spalte `created_by` INT UNSIGNED NULL | Benutzer, der die Revision ausgelöst hat (Anzeige „Autor“ im Revisions-Panel); `author_id` bleibt der Beitragsautor |
+| `post_revisions`: Spalten `featured_image` VARCHAR(500), `meta_title` VARCHAR(255), `meta_description` TEXT (alle NULL) | Vergleich und Wiederherstellung von Beitragsbild und Meta-Feldern; `NULL` = in älteren Revisionen nicht erfasst, die Wiederherstellung behält dann den aktuellen Wert |
+| `post_revisions`: Spalte `fingerprint` CHAR(40) NULL | SHA-1 über Titel, Slugs, Inhalte, Auszüge, Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige (ohne Status und Datumswerte); identische Stände werden nicht doppelt gespeichert |
+
+Die Migration ergänzt nur Spalten (keine Daten werden umgeschrieben oder gelöscht) und läuft idempotent über `MigrationManager::run()` bzw. *Admin → Updates*; Neuinstallationen erhalten die Spalten über `SchemaManager`. Weitere Daten der Admin-Oberfläche benötigen keine neuen Tabellen: Benutzer-Präferenzen liegen in `cms_user_meta` (`admin_ui_prefs`), Plugin-Zuweisung und Site-Liste in `cms_settings` (`admin_plugin_site_assignments`, `admin_sites`).
+
 ### Schema v23 (3.4.13)
 
 | Änderung | Zweck |
@@ -140,6 +151,8 @@ Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 | `email_verification_token`, `email_verification_expires`, `email_verified_at` | Bestätigung neuer Konten (Token als SHA-256-Hash) bzw. Zeitpunkt der letzten Bestätigung |
 | `pending_email`, `pending_email_token`, `pending_email_expires` | ausstehende E-Mail-Änderung (seit 4.0.0; Token als SHA-256-Hash, 48 Stunden gültig) |
 
+Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.0.0, `AdminUiPreferenceService`) speichert als JSON den eingeklappten Zustand der Seitenleiste (`sidebar_collapsed`), manuell auf- oder zugeklappte Gruppen und Plugin-Einträge (`groups`, höchstens 200 Schlüssel) und den gewählten Site-Kontext (`site`).
+
 ### Wichtige Optionen in `cms_settings`
 
 | Option | Inhalt |
@@ -147,9 +160,11 @@ Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 | `db_schema_version`, `installed_cms_version`, `installed_cms_schema_version` | Versionsstände |
 | `active_plugins` | JSON-Liste aktiver Plugin-Slugs |
 | `active_theme` | aktives Theme |
+| `admin_plugin_site_assignments` | Plugin-Zuweisung je Site (seit 4.0.0): JSON `{"<plugin-slug>": ["<site-key>", …]}`; Plugins ohne Eintrag gelten für alle Sites ([../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)) |
+| `admin_sites` | optionale Site-Liste der Admin-Oberfläche (seit 4.0.0): JSON-Liste mit `key`, `label`, optional `url`, `accent`, `hosts`; ohne Option gelten `phinit.de` und `365network.de` |
 | `site_name`, `site_url`, `language`, … | allgemeine Einstellungen ([../admin/system-settings/SYSTEM.md](../admin/system-settings/SYSTEM.md)) |
 | `seo_*`, `perf_*`, `firewall_*`, `antispam_*`, `cookie_*`, `member_*`, `legal_*`, `cms_loginpage_*` | Einstellungen der jeweiligen Bereiche |
-| Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`json:`; Secrets seit 4.0.0 `enc:v2:<alg>:<Schlüssel-ID>:<Daten>` über `CryptoService`, Altwerte `enc:` werden automatisch neu verschlüsselt) |
+| Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`json:`; Secrets seit 4.0.0 `enc:v2:<alg>:<Schlüssel-ID>:<Daten>` über `CryptoService`, Altwerte `enc:` werden automatisch neu verschlüsselt). Die Gruppe `cron` enthält seit 4.0.0 außerdem `last_run_at`, `last_run_status` (`ok`/`failed`), `last_run_task` und `last_error` des letzten Laufs (Systemhinweise im Admin) |
 
 ### Hinweise für Entwickler
 

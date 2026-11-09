@@ -1,5 +1,5 @@
 # ASSET-Übersicht 365CMS
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Aktuell
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Aktuell
 
 ## Inhaltsverzeichnis
 - <a>Aktive Runtime-Bundles</a>
@@ -39,6 +39,7 @@ Führende Quelle für **aktive Laufzeitpfade** ist `CMS/assets/` sowie der dokum
 | `melbahja-seo` | gebündelter Snapshot | SEO-Helfer | `CMS/assets/melbahja-seo/` | `ASSETS/melbahja-seo/` | mittelfristig in Core-Services zerlegbar | [packagist.org/packages/melbahja/seo](https://packagist.org/packages/melbahja/seo) | [melbahja/seo](https://github.com/melbahja/seo) |
 | `psr` | Log 3.0.2, EventDispatcher 1.0.0, Container 2.0.2, Clock 1.0.0 | PSR-Interfaces | `CMS/assets/psr/` | Packagist `psr/*` | vollständige Originalpakete statt Minimal-Shim | [php-fig.org/psr](https://www.php-fig.org/psr/) | [php-fig](https://github.com/php-fig) |
 | `dompdf` | `3.1.6` | PDF-Erzeugung | `CMS/vendor/dompdf/` | `CMS_ASSETS/dompdf-3.1.6.zip` (`dompdf/vendor/`), dazu `PHP-CSS-Parser-9.5.0.zip` und `html5-php-2.11.0.zip` | **kein** `CMS/assets`-Bundle, sondern Vendor-Sonderfall; `sabberworm/php-css-parser` 9.5.0 und `masterminds/html5` 2.11.0 ersetzen die im Dompdf-Archiv enthaltenen 8.9.0/2.10.0, `composer/`-Autoload (inkl. `autoload_files.php`) dafür neu erzeugt | [dompdf.github.io](https://dompdf.github.io/) | [dompdf/dompdf](https://github.com/dompdf/dompdf) |
+| `fonts` | Inter `5.3.0`, JetBrains Mono `5.3.0`, Source Serif 4 `5.3.1` (Fontsource-Variable-Pakete) | Admin-Schriften: UI, Code, Beitragstitel im Editor (seit 4.0.0) | `CMS/assets/fonts/<schrift>/` | npm `@fontsource-variable/inter`, `@fontsource-variable/jetbrains-mono`, `@fontsource-variable/source-serif-4` (`files/*-latin-wght-normal.woff2`, `*-latin-ext-wght-normal.woff2`) | nur die variablen WOFF2-Dateien (latin, latin-ext) plus `LICENSE` (SIL OFL 1.1); eingebunden per `@font-face` in `admin-tabler.css`, keine externen Font-Requests | [fontsource.org](https://fontsource.org/) | [fontsource/font-files](https://github.com/fontsource/font-files) |
 | `css/js/images` | intern | 365CMS-eigene Runtime-Assets | `CMS/assets/css/`, `CMS/assets/js/`, `CMS/assets/images/` | `ASSETS/css/`, `ASSETS/js/`, `ASSETS/images/` | kein Third-Party-Bundle; Bildinventar siehe [`DOC/assets/images/README.md`](images/README.md) | – | – |
 
 Zusätzlich produktiv relevant:
@@ -72,13 +73,15 @@ Wichtige Regeln im aktuellen Stand:
 
 - **Basis:** `Tabler` plus 365CMS-spezifische Overrides in `CMS/assets/css/`
 - **Produktive Styles:** `admin.css`, `admin-tabler.css`, `admin-hub-*`, `hub-sites.css`, `main.css`, `member-dashboard.css`, `cms-cookie-consent.css`
+- **Admin-Shell (seit 4.0.0):** Design-Tokens `--cms-*` (auf `--tblr-*` abgebildet), Site-Akzente und `@font-face` in `admin-tabler.css`; Layout in `admin-shell.css`; bereichsbezogen `admin-post-editor.css`, `admin-plugin-assignment.css`
 - **Editor-Sonderfälle:** `SunEditor` bringt eigenes CSS mit; `Editor.js` nutzt eigene Tool-/Block-Assets
 - **Theme-Trennung:** Themes liefern zusätzliches Frontend-CSS in `CMS/themes/<theme>/`; globale Runtime-Assets bleiben davon getrennt
 
 ### JavaScript
 
 - **Zentrale Runtime-Zone:** `CMS/assets/js/`
-- **Wichtige produktive Dateien:** `admin.js`, `admin-content-editor.js`, `admin-media-integrations.js`, `admin-seo-redirects.js`, `admin-system-cron.js`, `member-dashboard.js`, `photoswipe-init.js`, `cookieconsent-init.js`
+- **Wichtige produktive Dateien:** `admin.js`, `admin-content-editor.js`, `admin-media-integrations.js`, `admin-seo-redirects.js`, `admin-system-cron.js`, `admin-plugin-assignment.js`, `member-dashboard.js`, `photoswipe-init.js`, `cookieconsent-init.js`
+- **ES-Module ohne Build-Schritt (seit 4.0.0):** `js/admin-shell/` (Seitenleiste, Drawer, Site-Umschalter, Benutzermenü/Systemhinweise; Einstieg `shell.js`) und `js/post-editor/` (Checkliste, Fokusmodus, Autosave, Revisionen; Einstieg `editor.js`). Die Importmap in `admin/partials/header.php` bildet `cms-admin/<datei>.js` auf `js/admin-shell/` und `cms-editor/<datei>.js` auf `js/post-editor/` ab (versionierte URLs); Seiten binden Module über `page_assets['modules']` ein
 - **Editor-Zonen:**
   - `Editor.js` = kuratierter Block-Editor mit mehreren Plugin-Builds
   - `SunEditor` = Legacy-WYSIWYG für HTML-Eingabe

@@ -443,7 +443,7 @@ final class AdminRouter
         }
 
         return str_contains($normalized, 'admin-body')
-            && str_contains($normalized, 'navbar-vertical')
+            && (str_contains($normalized, 'navbar-vertical') || str_contains($normalized, 'cms-sidebar'))
             && str_contains($normalized, 'page-wrapper');
     }
 
@@ -536,11 +536,11 @@ final class AdminRouter
 
     private function renderPluginUnavailableCard(string $plugin, string $page): string
     {
-        return '<main class="page-body"><div class="container-xl">'
+        return '<div class="page-body"><div class="container-xl">'
             . '<div class="alert alert-warning" role="alert">'
             . '<h2 class="alert-title">Plugin-Adminseite nicht gefunden</h2>'
             . '<div>Für <strong>' . htmlspecialchars($plugin, ENT_QUOTES, 'UTF-8') . '</strong> wurde keine passende Admin-Callback-Seite für <strong>' . htmlspecialchars($page, ENT_QUOTES, 'UTF-8') . '</strong> registriert.</div>'
-            . '</div></div></main>';
+            . '</div></div></div>';
     }
 
     private function renderPluginExceptionCard(string $plugin, string $page, \Throwable $e): string
@@ -550,12 +550,12 @@ final class AdminRouter
             ? '<details class="mt-3"><summary>Technische Details</summary><pre class="mt-2 mb-0">' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</pre></details>'
             : '';
 
-        return '<main class="page-body"><div class="container-xl">'
+        return '<div class="page-body"><div class="container-xl">'
             . '<div class="alert alert-danger" role="alert">'
             . '<h2 class="alert-title">Plugin-Adminseite konnte nicht geladen werden</h2>'
             . '<div>Die Seite <strong>' . htmlspecialchars($plugin . ' / ' . $page, ENT_QUOTES, 'UTF-8') . '</strong> hat einen Fehler ausgelöst. Der Fehler wurde protokolliert; die Admin-Shell bleibt weiterhin nutzbar.</div>'
             . $details
-            . '</div></div></main>';
+            . '</div></div></div>';
     }
 
     private function logPluginAdminError(string $plugin, string $page, \Throwable $e, string $context): void

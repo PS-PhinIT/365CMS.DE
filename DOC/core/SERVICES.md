@@ -125,6 +125,18 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `CsvExchange` | CSV-Export/-Import im Admin (BOM, Trennzeichen-Erkennung, Schutz vor Formel-Injection) |
 | `MarketplaceEndpoints` | zentrale Marketplace- und Core-Update-URLs mit Fallback auf die offiziellen Werte |
 
+### Admin-Oberfläche (seit 4.0.0)
+
+| Service | Aufgabe |
+|---|---|
+| `AdminNavigationService` | baut die Seitenleiste: Kerngruppen, Gruppe „Plugins“ (ein Eintrag je Plugin-Menü, Untermenüs verschachtelt, Standard-Icon `puzzle`), „Verwaltung“; aktiver Eintrag, Standard-Aufklappzustand (erste zwei Gruppen). Liest die registrierten Plugin-Menüs nur, ändert sie nicht |
+| `AdminUiPreferenceService` | Admin-Oberflächen-Präferenzen je Benutzer in `user_meta` (`admin_ui_prefs`): eingeklappte Seitenleiste, Gruppenzustände, gewählte Site |
+| `AdminSiteContextService` | Site-Kontext der Administration (Standard phinit.de und 365network.de, überschreibbar über Option `admin_sites`): Akzentfarben, `<html data-site>`, Site-Wechsel. Auflösung: Benutzer-Präferenz > Request-Host > erste Site |
+| `PluginSiteAssignmentService` | Plugin-Zuweisung je Site (Option `admin_plugin_site_assignments`, ohne Eintrag = alle Sites), Zuordnung Menü → Plugin; Grundlage für den Hinweis-Banner (`partials/sidebar.php`), wenn eine Plugin-Seite in einer nicht zugewiesenen Site aufgerufen wird |
+| `AdminNoticeService` | Systemhinweise für den Sidebar-Footer: letzter Cron-Lauf fehlgeschlagen, letztes Backup älter als 24 h oder keines vorhanden, Core-/Plugin-Updates; Cache 5 Minuten (Plugin-Update-Abfrage zusätzlich 1 Stunde) |
+| `PostPublishChecklistService` | Veröffentlichungs-Checkliste (Beitragsbild, Meta-Beschreibung 120–160 Zeichen, Kategorie), serverseitige Prüfung beim Veröffentlichen/Planen |
+| `PostRevisionService` | Beitragsrevisionen (Tabelle `post_revisions`, max. 30 je Beitrag, Autosave-Revision höchstens alle 10 Minuten), Vergleich blockweise, Wiederherstellen als neue Revision |
+
 ### Konventionen für eigene Services (Plugins)
 
 - Singleton mit `getInstance()`, keine globalen Variablen.

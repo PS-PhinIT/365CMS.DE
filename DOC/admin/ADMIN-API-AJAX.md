@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – API, AJAX und JSON-Endpunkte
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-Admin screens are classic server-rendered forms (Post/Redirect/Get). Asynchronous calls use a small set of JSON endpoints: the REST-style routes of `CMS/core/Routing/ApiRouter.php` (`/api/v1/…`, `/api/upload`, `/api/media`), the protected AI endpoints under `/admin/ai-*`, plugin AJAX calls to `/admin/plugins/<plugin>/<page>` and a few module-specific AJAX actions (media processing jobs, dashboard preferences). All of them rely on the session login, server-side capability checks and CSRF tokens; JavaScript is never an authorization boundary. A Bearer/JWT login for the API is prepared (`JwtService`) but not wired into the routes in 3.5.0.
+Admin screens are classic server-rendered forms (Post/Redirect/Get). Asynchronous calls use a small set of JSON endpoints: the REST-style routes of `CMS/core/Routing/ApiRouter.php` (`/api/v1/…`, `/api/upload`, `/api/media`), the protected AI endpoints under `/admin/ai-*`, the admin shell endpoint `/admin/admin-ui` (sidebar preferences, site switch, system notices) and the post editor endpoint `/admin/post-editor-api` (autosave, revisions) added in 4.0.0, plugin AJAX calls to `/admin/plugins/<plugin>/<page>` and a few module-specific AJAX actions (media processing jobs, dashboard preferences). All of them rely on the session login, server-side capability checks and CSRF tokens; JavaScript is never an authorization boundary. A Bearer/JWT login for the API is prepared (`JwtService`) but not wired into the routes in 3.5.0.
 
 ## Deutsch
 
@@ -38,11 +38,27 @@ Fehlerantworten sind JSON (`{"error":"…"}`) mit passendem HTTP-Status (401, 40
 
 Diese Endpunkte senden `Cache-Control: private`, `X-Robots-Tag: noindex` und verlangen `POST`.
 
+**Admin-Shell und Beitragseditor (seit 4.0.0)** – lesende Aktionen per `GET`, zustandsändernde nur per `POST` mit CSRF-Token (Feld `csrf_token`). Beide verlangen Anmeldung und `isAdmin()`, antworten mit JSON und `X-Robots-Tag: noindex, nofollow, noarchive`. Abgelaufene Tokens ergeben `403` mit `{"success":false,"code":"csrf"}`; das Frontend holt dann über `action=token` ein frisches Token und wiederholt den Aufruf einmal.
+
+| Methode & Pfad | Zugriff / CSRF-Aktion | Zweck |
+|---|---|---|
+| `GET /admin/admin-ui?action=notices` | `read` + `manage_system` | Systemhinweise für den Sidebar-Footer (Cron-Fehler, Backup-Alter, Core-/Plugin-Updates); serverseitig 5 Minuten gecacht, Antwort mit `Cache-Control: private, max-age=300` |
+| `GET /admin/admin-ui?action=token` | `read` | frisches Token für `admin_ui` |
+| `POST /admin/admin-ui` `action=prefs` | `read` + `admin_ui` | Sidebar-Zustand je Benutzer speichern: `sidebar_collapsed` (0/1) und/oder `groups` (JSON `{id: bool}`) |
+| `POST /admin/admin-ui` `action=switch_site` | `read` + `admin_ui` | Site-Kontext wechseln (`site` = Schlüssel aus `AdminSiteContextService`) |
+| `GET /admin/post-editor-api?action=revisions` | `posts.view` oder Bearbeiten-Capability | Revisionsliste eines Beitrags (`post_id`) |
+| `GET /admin/post-editor-api?action=compare` | wie oben | Revision (`revision_id`) gegen ihre Vorgängerversion |
+| `GET /admin/post-editor-api?action=token` | wie oben, nur gleiche Herkunft | frisches Token für `admin_post_editor` |
+| `POST /admin/post-editor-api` `action=autosave` | `edit_all_posts`, `edit_own_posts` oder `posts.edit` + `admin_post_editor` | Autosave ([POSTS.md](pages-posts/POSTS.md#revisionen-und-autosave)) |
+| `POST /admin/post-editor-api` `action=restore` | wie oben | Revision wiederherstellen (legt eine neue Revision an) |
+
+Die Plugin-Zuweisung (`/admin/plugin-assignment`, `manage_settings`, CSRF `admin_plugin_assignment`) ist ein klassisches Formular mit PRG, kein JSON-Endpunkt.
+
 ### AJAX innerhalb von Admin-Seiten
 
 - **Plugin-Seiten:** Requests mit `X-Requested-With: XMLHttpRequest` an `/admin/plugins/<plugin>/<seite>` rufen den Plugin-Callback ohne Layout auf; Exceptions ergeben `500` mit `{"success":false,"error":"…"}`.
 - **Medien:** Verarbeitungsjobs (`start_/process_/cancel_media_processing_job`) werden per Fetch an `/admin/media` gesendet.
-- **Editor:** Medienupload über `/api/media`, Übersetzung/SEO über die KI-Endpunkte; Token werden als Template-Variablen (`editorMediaToken`, `aiTranslationToken`, `aiSeoMetadataToken`) in die Seite gegeben.
+- **Editor:** Medienupload über `/api/media`, Übersetzung/SEO über die KI-Endpunkte; Token werden als Template-Variablen (`editorMediaToken`, `aiTranslationToken`, `aiSeoMetadataToken`) in die Seite gegeben. Der Beitragseditor nutzt zusätzlich `/admin/post-editor-api` (Token `postEditorApiToken`).
 
 ### Regeln für eigene Endpunkte
 

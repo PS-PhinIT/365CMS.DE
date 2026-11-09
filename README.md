@@ -1,6 +1,6 @@
 # 365CMS
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
 
 ## English
 
@@ -12,15 +12,15 @@
 |---|---|
 | Core version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-11-08, status `stable`) |
 | PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v23` |
+| Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v24` |
 | Shipped theme / plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress importer) |
 
 ### Core capabilities
 
 | Area | Current runtime capability |
 |---|---|
-| Content | Pages, posts, Editor.js blocks (SunEditor as legacy option), revisions, categories, tags, scheduled publishing, DE/EN content, hub sites, site tables, TOC |
-| Administration | Dashboard, users, groups, roles/capabilities, settings, media library, menus, themes, customizer, fonts, module manager |
+| Content | Pages, posts, Editor.js blocks (SunEditor as legacy option), post revisions with block diff and restore, publish checklist, focus mode, categories, tags, scheduled publishing, DE/EN content, hub sites, site tables, TOC |
+| Administration | Dashboard, users, groups, roles/capabilities, settings, media library, menus, themes, customizer, fonts, module manager; collapsible sidebar with site switcher, per-site plugin assignment and system notices (cron, backups, updates) |
 | Members | Member area under `/member`: dashboard, profile, security (MFA, passkeys, sessions), media, messages, notifications, favorites, privacy, subscriptions, plugin sections |
 | SEO & legal | Meta/OG/schema, sitemaps, redirects/404 monitor, analytics with consent, legal-text generator, cookie manager, GDPR export/deletion requests |
 | Security | CSRF tokens per action, capability checks, CSP with nonces and Trusted Types, rate limits, MFA/TOTP, WebAuthn, LDAP, audit log, hardened uploads |
@@ -77,15 +77,15 @@ Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](C
 |---|---|
 | Core-Version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-11-08, Status `stable`) |
 | PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v23` |
+| Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v24` |
 | Mitgeliefertes Theme / Plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress-Import) |
 
 ### Zentrale Funktionen
 
 | Bereich | Aktuelle Runtime-Funktion |
 |---|---|
-| Inhalte | Seiten, Beiträge, Editor.js-Blöcke (SunEditor als Legacy-Option), Revisionen, Kategorien, Tags, geplante Veröffentlichung, DE/EN-Inhalte, Hub-Sites, Site-Tabellen, Inhaltsverzeichnis |
-| Administration | Dashboard, Benutzer, Gruppen, Rollen/Capabilities, Einstellungen, Medienbibliothek, Menüs, Themes, Customizer, Schriften, Modul-Manager |
+| Inhalte | Seiten, Beiträge, Editor.js-Blöcke (SunEditor als Legacy-Option), Beitragsrevisionen mit Block-Vergleich und Wiederherstellung, Veröffentlichungs-Checkliste, Fokusmodus, Kategorien, Tags, geplante Veröffentlichung, DE/EN-Inhalte, Hub-Sites, Site-Tabellen, Inhaltsverzeichnis |
+| Administration | Dashboard, Benutzer, Gruppen, Rollen/Capabilities, Einstellungen, Medienbibliothek, Menüs, Themes, Customizer, Schriften, Modul-Manager; einklappbare Seitenleiste mit Site-Umschalter, Plugin-Zuweisung je Site und Systemhinweisen (Cron, Backups, Updates) |
 | Mitglieder | Mitgliederbereich unter `/member`: Dashboard, Profil, Sicherheit (MFA, Passkeys, Sitzungen), Medien, Nachrichten, Benachrichtigungen, Favoriten, Datenschutz, Abos, Plugin-Bereiche |
 | SEO & Recht | Meta/OG/Schema, Sitemaps, Weiterleitungen/404-Monitor, Analytics mit Einwilligung, Rechtstexte-Generator, Cookie-Manager, DSGVO-Auskunft/-Löschung |
 | Sicherheit | CSRF-Token je Aktion, Capability-Prüfungen, CSP mit Nonces und Trusted Types, Rate-Limits, MFA/TOTP, WebAuthn, LDAP, Audit-Log, gehärtete Uploads |

@@ -5,7 +5,8 @@ declare(strict_types=1);
  * Admin Partial: Footer – Scripts + Closing Tags
  *
  * Erwartet optional:
- *   $pageAssets['js']  – array  Zusätzliche Script-Pfade
+ *   $pageAssets['js']       – array  Zusätzliche Script-Pfade (defer)
+ *   $pageAssets['modules']  – array  Zusätzliche ES-Module (type="module")
  *   $inlineJs          – string Inline-JavaScript (ohne <script>-Tags)
  *
  * @package CMSv2\Admin
@@ -19,6 +20,7 @@ $siteUrl    = defined('SITE_URL') ? SITE_URL : '';
 $pageAssets = $pageAssets ?? [];
 $inlineJs   = $inlineJs ?? '';
 ?>
+        </main><!-- /#cms-main -->
         </div><!-- /.page-wrapper -->
     </div><!-- /.page -->
 
@@ -36,6 +38,17 @@ $inlineJs   = $inlineJs ?? '';
     if (!empty($pageAssets['js'])):
         foreach ($pageAssets['js'] as $js): ?>
             <script src="<?= htmlspecialchars($js) ?>" defer></script>
+        <?php endforeach;
+    endif;
+    ?>
+
+    <!-- Admin-Shell (ES-Module: Seitenleiste, Drawer, Site-Umschalter, Systemhinweise) -->
+    <script type="module" src="<?= htmlspecialchars(cms_asset_url('js/admin-shell/shell.js'), ENT_QUOTES) ?>"></script>
+    <?php
+    // Seitenspezifische ES-Module aus $pageAssets['modules']
+    if (!empty($pageAssets['modules'])):
+        foreach ($pageAssets['modules'] as $module): ?>
+            <script type="module" src="<?= htmlspecialchars((string) $module, ENT_QUOTES) ?>"></script>
         <?php endforeach;
     endif;
     ?>

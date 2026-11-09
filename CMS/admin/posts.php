@@ -450,10 +450,14 @@ function cms_admin_posts_view_config(object $module, string $view, ?array $overr
 
         $pageAssets['css'] = $pageAssets['css'] ?? [];
         $pageAssets['js'] = $pageAssets['js'] ?? [];
+        $pageAssets['modules'] = $pageAssets['modules'] ?? [];
         if (!class_exists(CoreModuleService::class) || CoreModuleService::getInstance()->isModuleEnabled('seo')) {
             $pageAssets['js'][] = cms_asset_url('js/admin-seo-editor.js');
         }
         $pageAssets['js'][] = cms_asset_url('js/admin-content-editor.js');
+        // Editor-Layout, Veröffentlichungs-Checkliste, Fokusmodus, Autosave und Revisionen (ES-Module, 4.0.0).
+        $pageAssets['css'][] = cms_asset_url('css/admin-post-editor.css');
+        $pageAssets['modules'][] = cms_asset_url('js/post-editor/editor.js');
 
         return [
             'section' => 'edit',
@@ -464,6 +468,8 @@ function cms_admin_posts_view_config(object $module, string $view, ?array $overr
             'template_vars' => array_replace($baseTemplateVars, [
                 'useEditorJs' => $useEditorJs,
                 'editData' => $editData,
+                'postEditorApiUrl' => '/admin/post-editor-api',
+                'postEditorApiToken' => Security::instance()->generateToken('admin_post_editor'),
             ]),
             'data' => $editData,
         ];

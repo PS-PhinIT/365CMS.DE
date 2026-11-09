@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Panel-Integration
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -10,6 +10,8 @@ There are two ways to add an admin screen:
 2. **Plugin page** – registered in the hook `cms_admin_menu` with `add_menu_page()` / `add_submenu_page()` (`CMS/includes/functions/admin-menu.php`) and rendered by `AdminRouter::renderPluginPage()` at `/admin/plugins/<menu>/<page>`.
 
 Both inherit authentication (role `admin`), the sidebar, flash messages, CSRF handling and the Tabler-based admin layout.
+
+Since 4.0.0 the sidebar is a presentation layer (`CMS\Services\AdminNavigationService`): core entries are defined in `buildCoreGroups()`, plugin menus are read unchanged from `get_registered_admin_menus()` and shown in the group "Plugins", filtered by the per-site plugin assignment. The plugin API (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) is unchanged. Pages can load ES modules via `page_assets['modules']`.
 
 ## Deutsch
 
@@ -29,9 +31,9 @@ Both inherit authentication (role `admin`), the sidebar, flash messages, CSRF ha
 |---|---|
 | `route_path` | kanonische Route, z. B. `/admin/meine-seite` |
 | `view_file` | Pfad zur View unter `CMS/admin/views/…` (muss existieren) |
-| `page_title`, `active_page` | Titel und aktiver Sidebar-Eintrag |
+| `page_title`, `active_page` | Titel und aktiver Sidebar-Eintrag (Slug aus `AdminNavigationService::buildCoreGroups()`, z. B. `posts`, `settings`) |
 | `section` | logischer Bereich (für Handler und Redirects) |
-| `page_assets` | `['css' => [...], 'js' => [...]]` – nur externe Dateien (CSP) |
+| `page_assets` | `['css' => [...], 'js' => [...], 'modules' => [...]]` – nur externe Dateien (CSP); `modules` werden seit 4.0.0 im Footer als `<script type="module">` geladen |
 | `csrf_action` / `csrf_actions` | Token-Aktion(en); `csrf_persistent_validation` für mehrfach nutzbare Tokens |
 | `module_file`, `module_factory` | Modulklasse unter `CMS/admin/modules/<bereich>/` |
 | `access_checker`, `access_denied_route` | Berechtigungsprüfung |
@@ -71,7 +73,7 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 
 **Alt-Routen** werden mit `CMS/admin/partials/redirect-alias-shell.php` umgeleitet (`$adminRedirectAliasConfig` mit `access_checker`, `target_url`, `fallback_url`).
 
-**Sidebar-Eintrag:** Core-Menüs sind in `CMS/admin/partials/sidebar.php` definiert; die Sichtbarkeit hängt am Core-Modul (`CoreModuleService::isAdminPageEnabled()`).
+**Sidebar-Eintrag:** Core-Menüs sind seit 4.0.0 in `CMS\Services\AdminNavigationService::buildCoreGroups()` definiert (Zeilen `[Label, active_page-Slug, Pfad]` in den Gruppen *Übersicht*, *Inhalte*, *Benutzer*, *Gestaltung & Marketing*, *Sicherheit & Recht* und *Verwaltung*); `CMS/admin/partials/sidebar.php` rendert nur noch. Die Sichtbarkeit hängt weiterhin am Core-Modul (`CoreModuleService::filterSidebarChildren()` bzw. `isAdminPageEnabled()`).
 
 ### 2. Plugin-Adminseite
 
@@ -95,9 +97,24 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 - AJAX an dieselbe URL mit Header `X-Requested-With: XMLHttpRequest` ruft den Callback ohne Layout auf.
 - Eigene Formulare brauchen eigene CSRF-Tokens (`\CMS\Security::instance()->generateToken('mein_plugin')` / `verifyToken()`).
 
+**Darstellung in der Seitenleiste (seit 4.0.0):** Die Registrierung oben bleibt unverändert – Hook-Name, Signaturen und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `AdminNavigationService` liest das Ergebnis von `get_registered_admin_menus()` nur aus:
+
+- Jedes Plugin-Menü wird ein Eintrag in der Gruppe **Plugins** (sortiert nach dem Namen ohne „Familie |“-Präfix). Unterseiten erscheinen eingerückt darunter; ist der Hauptpunkt nicht selbst als Unterseite registriert, wird „Übersicht“ als erster Unterpunkt ergänzt. Menüs ohne Unterseiten werden ein einfacher Link, `hidden` gesetzte Menüs entfallen.
+- Aktiv ist der Eintrag, dessen Pfad der aufgerufenen URL entspricht (`aria-current="page"`); Gruppe und Plugin-Eintrag klappen dann automatisch auf.
+- **Icon** (6. Parameter von `add_menu_page()`): Tabler-Klasse (`ti-chart-bar` bzw. `ti ti-chart-bar`), Inline-`<svg>` bis 20.000 Zeichen (wird als Bild ausgegeben), `data:image/…;base64`-URI, Pfad oder URL derselben Herkunft, oder Text/Emoji mit höchstens 4 Zeichen. Alles andere sowie ein leerer Wert ergibt das neutrale Standard-Icon (Tabler `puzzle`).
+- **Plugin-Zuweisung:** Unter *Einstellungen › Plugins › Plugin-Zuweisung* wird festgelegt, in welcher Site-Administration die Menüs eines Plugins erscheinen (Standard: alle Sites). Wird eine Plugin-Seite in einer nicht zugewiesenen Site direkt aufgerufen, zeigt die Shell nur ein Info-Banner; die Seite bleibt nutzbar. Details: [plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-zuweisung).
+
 ### Gestaltung
 
 Admin-Oberfläche auf Basis von **Tabler** (`CMS/assets/tabler/`) mit Tabler-Icons, CSS in `CMS/assets/css/admin*.css`, JavaScript in `CMS/assets/js/admin-*.js`. Keine Inline-Skripte oder Inline-Styles verwenden – die Content-Security-Policy blockiert sie.
+
+Seit 4.0.0 gelten zusätzlich:
+
+- **Design-Tokens** als CSS-Custom-Properties in `CMS/assets/css/admin-tabler.css` (`--cms-bg`, `--cms-sidebar-bg`, `--cms-border`, `--cms-text`, `--cms-text-muted`, `--cms-accent`, `--cms-accent-soft`, `--cms-accent-strong`, `--cms-hover`, Radien `--cms-radius` 8 px / `--cms-radius-card` 12 px, Seitenleiste 264 px bzw. 76 px eingeklappt), auf Tablers `--tblr-*`-Variablen abgebildet. Eigene Styles sollten diese Tokens statt fester Farben nutzen.
+- **Site-Akzent** über `<html data-site="…">`: phinit.de `#4f46e5`, 365network.de `#0f766e`.
+- **Schriften** lokal unter `CMS/assets/fonts/`: Inter (Oberfläche), Source Serif 4 (Beitragstitel im Editor), JetBrains Mono (Code).
+- **Layout-Shell** in `CMS/assets/css/admin-shell.css` und den ES-Modulen unter `CMS/assets/js/admin-shell/` (Seitenleiste, Drawer, Site-Umschalter, Benutzermenü). Neue Skripte als kleine ES-Module über `page_assets['modules']` einbinden, ohne Build-Schritt und ohne Inline-Handler.
+- **Barrierefreiheit:** sichtbarer Fokus (2 px Akzent-Outline mit Abstand), Touch-Ziele ≥ 44 px, `aria-label` an Icon-Buttons, `prefers-reduced-motion` respektieren.
 
 ### Verwandte Dokumente
 
