@@ -10,6 +10,7 @@
 declare(strict_types=1);
 namespace CMS;
 
+use CMS\Auth\MFA\TotpAdapter;
 use CMS\Services\EmailVerificationService;
 use CMS\Services\UserService;
 
@@ -35,6 +36,19 @@ class Auth
     private const SESSION_LIFETIME_OPTION_MEMBER = 'perf_session_timeout_member';
     private const DEFAULT_SESSION_LIFETIME_ADMIN = 28_800;
     private const DEFAULT_SESSION_LIFETIME_MEMBER = 2_592_000;
+    /** user_meta-Schlüssel der Token-Version: erhöhen beendet alle Sitzungen und API-Tokens. */
+    public const TOKEN_VERSION_META_KEY = 'auth_token_version';
+    /** login_attempts.action für Fehlversuche je Konto (Folgeaudit OFFEN-25). */
+    private const ACCOUNT_FAILURE_ACTION = 'login_account';
+    private const ACCOUNT_FAILURE_WINDOW = 900;
+    private const ACCOUNT_FAILURE_FREE_ATTEMPTS = 5;
+    private const ACCOUNT_FAILURE_MAX_DELAY = 30;
+    private const REGISTRATION_NOTICE_LIMIT = 3;
+    private const REGISTRATION_NOTICE_WINDOW = 3600;
+    private const USERNAME_MIN_LENGTH = 3;
+    private const USERNAME_MAX_LENGTH = 50;
+    private const EMAIL_MAX_LENGTH = 100;
+    private const DISPLAY_NAME_MAX_LENGTH = 100;
 
     private static ?self $instance = null;
     private ?object $currentUser = null;
@@ -182,11 +196,7 @@ class Auth
             return;
         }
 
-        $hash = Database::instance()->get_var(
-            "SELECT password FROM " . Database::instance()->getPrefix() . "users WHERE id = ? LIMIT 1",
-            [$userId]
-        );
-        $_SESSION['auth_password_fingerprint'] = self::passwordFingerprint((string) $hash);
+        $_SESSION['auth_password_fingerprint'] = $this->loadPasswordFingerprint($userId);
         $this->removeSessionRegistryEntry();
         if (!headers_sent()) {
             session_regenerate_id(true);
@@ -207,9 +217,96 @@ class Auth
         );
     }
 
-    private static function passwordFingerprint(string $passwordHash): string
+    /**
+     * Beendet alle Sitzungen und macht alle API-Tokens (Access und Refresh) des Kontos ungültig,
+     * ohne das Passwort zu ändern (Folgeaudit OFFEN-23). Gehört die aktuelle Sitzung zu diesem
+     * Konto, bleibt sie angemeldet.
+     */
+    public function revokeAllSessions(int $userId, string $initiator = 'self'): bool
     {
-        return $passwordHash === '' ? '' : hash_hmac('sha256', $passwordHash, 'cms-session-password-binding');
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $db = Database::instance();
+        $prefix = $db->getPrefix();
+
+        try {
+            $current = $db->get_var(
+                "SELECT meta_value FROM {$prefix}user_meta WHERE user_id = ? AND meta_key = ? LIMIT 1",
+                [$userId, self::TOKEN_VERSION_META_KEY]
+            );
+            $db->execute(
+                "INSERT INTO {$prefix}user_meta (user_id, meta_key, meta_value) VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)",
+                [$userId, self::TOKEN_VERSION_META_KEY, (string) (self::normalizeTokenVersion($current) + 1)]
+            );
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('auth')->error('Sitzungen konnten nicht widerrufen werden.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+            ]);
+
+            return false;
+        }
+
+        try {
+            $db->execute("DELETE FROM {$prefix}sessions WHERE user_id = ?", [$userId]);
+        } catch (\Throwable) {
+        }
+
+        // Die eigene Sitzung auf die neue Token-Version heben, alle anderen enden beim nächsten Request.
+        $this->refreshPasswordFingerprint($userId);
+
+        AuditLogger::instance()->log(
+            AuditLogger::CAT_SECURITY,
+            'sessions_revoked',
+            'Alle Sitzungen und API-Tokens des Kontos wurden widerrufen.',
+            'user',
+            $userId,
+            ['initiator' => $initiator],
+            'warning'
+        );
+        Hooks::doAction('user_sessions_revoked', $userId, $initiator);
+
+        return true;
+    }
+
+    /**
+     * Bindungswert für Sitzungen und API-Tokens: Passwort-Hash plus Token-Version. Version 0
+     * entspricht der Formel vor 4.0.0, damit bestehende Sitzungen das Update überstehen.
+     */
+    private static function passwordFingerprint(string $passwordHash, int $tokenVersion = 0): string
+    {
+        if ($passwordHash === '') {
+            return '';
+        }
+
+        $material = $tokenVersion > 0 ? $passwordHash . '|token-version:' . $tokenVersion : $passwordHash;
+
+        return hash_hmac('sha256', $material, 'cms-session-password-binding');
+    }
+
+    private static function normalizeTokenVersion(mixed $value): int
+    {
+        return is_numeric($value) ? max(0, (int) $value) : 0;
+    }
+
+    private function loadPasswordFingerprint(int $userId): string
+    {
+        $db = Database::instance();
+        $prefix = $db->getPrefix();
+        $row = $db->get_row(
+            "SELECT u.password, tv.meta_value AS token_version
+             FROM {$prefix}users u
+             LEFT JOIN {$prefix}user_meta tv ON tv.user_id = u.id AND tv.meta_key = ?
+             WHERE u.id = ? LIMIT 1",
+            [self::TOKEN_VERSION_META_KEY, $userId]
+        );
+
+        return is_object($row)
+            ? self::passwordFingerprint((string) ($row->password ?? ''), self::normalizeTokenVersion($row->token_version ?? null))
+            : '';
     }
 
     /**
@@ -271,11 +368,17 @@ class Auth
         $stmt = $db->prepare("SELECT id, username, email, password, display_name, role, status FROM {$db->getPrefix()}users WHERE username = ? OR email = ? LIMIT 1");
         $stmt->execute([$username, $username]);
         $user = $stmt->fetchObject();
+
+        // Folgeaudit OFFEN-25: zusätzlich zum IP-Limit wachsende Verzögerung je Konto. Keine harte
+        // Sperre, damit Dritte ein Konto nicht aussperren können; unbekannte Namen verhalten sich gleich.
+        $accountKey = $user ? 'uid:' . (int) $user->id : 'login:' . mb_strtolower($username, 'UTF-8');
+        $this->delayRepeatedAccountFailures($accountKey, $username);
         
         if (!$user) {
             // Gleiche Laufzeit wie bei falschem Passwort, damit Benutzernamen nicht per Timing erkennbar sind.
             $security->verifyPassword($password, self::LOGIN_TIMING_DUMMY_HASH);
             $this->logLoginAttempt($username);
+            $this->recordAccountLoginFailure($accountKey);
             // H-01: Fehlgeschlagenen Login protokollieren
             AuditLogger::instance()->loginFailed($username);
             if (function_exists('cms_log')) {
@@ -286,6 +389,7 @@ class Auth
         
         if (!$security->verifyPassword($password, $user->password)) {
             $this->logLoginAttempt($username);
+            $this->recordAccountLoginFailure($accountKey);
             // H-01: Fehlgeschlagenen Login protokollieren
             AuditLogger::instance()->loginFailed($username);
             if (function_exists('cms_log')) {
@@ -293,6 +397,8 @@ class Auth
             }
             return 'Ungültige Anmeldedaten.';
         }
+
+        $this->clearAccountLoginFailures($accountKey);
         
         if ($user->status === EmailVerificationService::STATUS_UNVERIFIED) {
             // Erst nach korrektem Passwort erreichbar – verrät also nichts über fremde Konten.
@@ -407,6 +513,11 @@ class Auth
             return "Feld 'username' ist erforderlich.";
         }
 
+        if (strlen($username) < self::USERNAME_MIN_LENGTH || strlen($username) > self::USERNAME_MAX_LENGTH) {
+            return 'Der Benutzername muss ' . self::USERNAME_MIN_LENGTH . ' bis ' . self::USERNAME_MAX_LENGTH
+                . ' Zeichen lang sein (Buchstaben, Zahlen, Unterstrich).';
+        }
+
         if ($email === '') {
             return "Feld 'email' ist erforderlich.";
         }
@@ -418,6 +529,10 @@ class Auth
         // Validate email
         if (!$security->validateEmail($email)) {
             return 'Ungültige E-Mail-Adresse.';
+        }
+
+        if (strlen($email) > self::EMAIL_MAX_LENGTH) {
+            return 'Die E-Mail-Adresse darf höchstens ' . self::EMAIL_MAX_LENGTH . ' Zeichen lang sein.';
         }
 
         // M-18: Passwort-Policy prüfen (min. 12 Zeichen, Komplexität)
@@ -433,11 +548,18 @@ class Auth
             return 'Benutzername bereits vergeben.';
         }
         
-        // Check if email exists
-        $stmt = $db->prepare("SELECT COUNT(*) as count FROM {$db->getPrefix()}users WHERE email = ?");
-        $stmt->execute([$email]);
-        if ($stmt->fetch()->count > 0) {
-            return 'E-Mail-Adresse bereits registriert.';
+        // Folgeaudit OFFEN-24: Eine bereits registrierte Adresse wird nicht verraten. Der Inhaber
+        // erhält einen Hinweis, die Antwort gleicht einer erfolgreichen Registrierung.
+        $existingUserId = (int) $db->get_var(
+            "SELECT id FROM {$db->getPrefix()}users WHERE email = ? LIMIT 1",
+            [$email]
+        );
+        if ($existingUserId > 0) {
+            // Gleicher Aufwand wie bei einer echten Registrierung (Passwort-Hash).
+            $security->hashPassword($password);
+            $this->notifyExistingAccountOfRegistration($existingUserId, $email);
+
+            return true;
         }
         
         $requiresVerification = $this->isEmailVerificationRequired();
@@ -531,7 +653,7 @@ class Auth
 
     private function normalizeDisplayName(mixed $value, string $fallback): string
     {
-        $displayName = $this->normalizeScalarString($value, 120);
+        $displayName = $this->normalizeScalarString($value, self::DISPLAY_NAME_MAX_LENGTH);
         $displayName = trim(strip_tags($displayName));
 
         return $displayName !== '' ? $displayName : $fallback;
@@ -867,14 +989,23 @@ class Auth
     private function getUserById(int $id): ?object
     {
         $db = Database::instance();
-        $stmt = $db->prepare("SELECT id, username, email, display_name, role, status, password FROM {$db->getPrefix()}users WHERE id = ? AND status = 'active' LIMIT 1");
-        $stmt->execute([$id]);
+        $prefix = $db->getPrefix();
+        $stmt = $db->prepare(
+            "SELECT u.id, u.username, u.email, u.display_name, u.role, u.status, u.password, tv.meta_value AS auth_token_version
+             FROM {$prefix}users u
+             LEFT JOIN {$prefix}user_meta tv ON tv.user_id = u.id AND tv.meta_key = ?
+             WHERE u.id = ? AND u.status = 'active' LIMIT 1"
+        );
+        $stmt->execute([self::TOKEN_VERSION_META_KEY, $id]);
 
         $user = $stmt->fetch() ?: null;
         if (is_object($user)) {
             // Der Hash selbst verlässt diese Methode nicht.
-            $user->password_fingerprint = self::passwordFingerprint((string) ($user->password ?? ''));
-            unset($user->password);
+            $user->password_fingerprint = self::passwordFingerprint(
+                (string) ($user->password ?? ''),
+                self::normalizeTokenVersion($user->auth_token_version ?? null)
+            );
+            unset($user->password, $user->auth_token_version);
         }
 
         return $user;
@@ -896,6 +1027,108 @@ class Auth
             'ip_address'   => $security->getClientIp(),
             'action'       => Security::normalizeRateLimitAction($action),
         ]);
+    }
+
+    /**
+     * Wartezeit vor der Passwortprüfung nach wiederholten Fehlversuchen für ein Konto:
+     * die ersten fünf Versuche ohne Verzögerung, danach 1, 2, 4, 8, 16 und höchstens 30 Sekunden.
+     */
+    public static function accountFailureDelaySeconds(int $failures): int
+    {
+        if ($failures < self::ACCOUNT_FAILURE_FREE_ATTEMPTS) {
+            return 0;
+        }
+
+        return min(self::ACCOUNT_FAILURE_MAX_DELAY, 2 ** min(5, $failures - self::ACCOUNT_FAILURE_FREE_ATTEMPTS));
+    }
+
+    private function delayRepeatedAccountFailures(string $accountKey, string $loginIdentifier): void
+    {
+        $failures = Security::countDbIdentifierAttempts($accountKey, self::ACCOUNT_FAILURE_ACTION, self::ACCOUNT_FAILURE_WINDOW);
+        $delay = self::accountFailureDelaySeconds($failures);
+        if ($delay <= 0) {
+            return;
+        }
+
+        if (function_exists('cms_log')) {
+            cms_log('notice', "Login um {$delay} s verzögert: {$failures} Fehlversuche für '{$loginIdentifier}' in 15 Minuten", [
+                'category' => 'auth',
+                'username' => $loginIdentifier,
+            ]);
+        }
+
+        sleep($delay);
+    }
+
+    private function recordAccountLoginFailure(string $accountKey): void
+    {
+        Security::recordDbRateLimitAttempt(Security::getClientIp(), self::ACCOUNT_FAILURE_ACTION, $accountKey);
+    }
+
+    private function clearAccountLoginFailures(string $accountKey): void
+    {
+        try {
+            $db = Database::instance();
+            $db->execute(
+                "DELETE FROM {$db->getPrefix()}login_attempts WHERE username = ? AND action = ?",
+                [Security::normalizeRateLimitIdentifier($accountKey), self::ACCOUNT_FAILURE_ACTION]
+            );
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
+     * Hinweis an den Inhaber einer bereits registrierten Adresse (Folgeaudit OFFEN-24), höchstens
+     * REGISTRATION_NOTICE_LIMIT Mails je Adresse und Stunde.
+     */
+    private function notifyExistingAccountOfRegistration(int $userId, string $email): void
+    {
+        $identifier = 'regnotice:' . strtolower($email);
+        if (!Security::checkDbIdentifierRateLimit($identifier, 'register_existing', self::REGISTRATION_NOTICE_LIMIT, self::REGISTRATION_NOTICE_WINDOW)) {
+            return;
+        }
+        Security::recordDbRateLimitAttempt(Security::getClientIp(), 'register_existing', $identifier);
+
+        $siteName = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
+        $loginUrl = '';
+        $forgotUrl = '';
+        try {
+            $authPages = Services\CmsAuthPageService::getInstance();
+            $loginUrl = $authPages->getPublicUrl('login');
+            $forgotUrl = $authPages->getPublicUrl('forgot-password');
+        } catch (\Throwable) {
+        }
+
+        $body = "Hallo,\n\n"
+            . "soeben wurde versucht, mit dieser E-Mail-Adresse ein neues Konto bei {$siteName} anzulegen. "
+            . "Für diese Adresse besteht bereits ein Konto, deshalb wurde kein weiteres angelegt.\n\n"
+            . "Warst du das? Dann melde dich mit deinem bestehenden Konto an"
+            . ($loginUrl !== '' ? ":\n{$loginUrl}\n" : ".\n")
+            . 'Passwort vergessen? Du kannst es hier zurücksetzen'
+            . ($forgotUrl !== '' ? ":\n{$forgotUrl}\n\n" : ".\n\n")
+            . "Warst du das nicht, kannst du diese E-Mail ignorieren. An deinem Konto wurde nichts geändert.\n\n"
+            . "Viele Grüße\n{$siteName}";
+
+        $sent = false;
+        try {
+            $sent = function_exists('cms_mail')
+                && \cms_mail($email, '[' . $siteName . '] Registrierungsversuch mit deiner E-Mail-Adresse', $body, ['Content-Type' => 'text/plain; charset=UTF-8']);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('auth.register')->warning('Hinweis an bestehendes Konto konnte nicht versendet werden.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+            ]);
+        }
+
+        AuditLogger::instance()->log(
+            AuditLogger::CAT_SECURITY,
+            'register_existing_email',
+            'Registrierung mit bereits verwendeter E-Mail-Adresse; Inhaber benachrichtigt.',
+            'user',
+            $userId,
+            ['notice_sent' => $sent],
+            'info'
+        );
     }
 
     /**
@@ -936,142 +1169,53 @@ class Auth
     }
 
     // ── H-02: TOTP / MFA ─────────────────────────────────────────────────────
+    // Einzige Implementierung ist TotpAdapter (verschlüsselte Secrets, Audit-Log, Backup-Codes).
 
     /**
-     * Prüft ob MFA für den Nutzer aktiv ist.
-     * MFA-Status wird in user_meta gespeichert (Key: mfa_enabled).
+     * Prüft ob MFA für den Nutzer aktiv ist (user_meta mfa_enabled).
      */
     public function isMfaEnabled(int $userId): bool
     {
-        return $this->getUserMeta($userId, 'mfa_enabled') === '1';
+        return TotpAdapter::instance()->isEnabled($userId);
     }
 
     /**
      * Beginnt den MFA-Einrichtungsflow: erzeugt ein neues TOTP-Secret,
-     * speichert es als "pending" (noch nicht aktiv) in user_meta und
-     * gibt die Setup-Daten für das Frontend zurück.
+     * speichert es verschlüsselt als "pending" und gibt die Setup-Daten zurück.
      *
      * @return array{secret: string, qr_url: string, otp_uri: string, qr_data_uri: string}
      */
     public function setupMfaSecret(int $userId): array
     {
-        // Account-Label: Benutzername oder E-Mail
         $user  = $this->getUserById($userId);
         $label = $user ? $user->email : (string)$userId;
 
-        return \CMS\Auth\MFA\TotpAdapter::instance()->startSetup($userId, $label);
+        return TotpAdapter::instance()->startSetup($userId, $label);
     }
 
     /**
-     * Bestätigt die MFA-Einrichtung: prüft den ersten TOTP-Code gegen das
-     * Pending-Secret und aktiviert MFA, wenn der Code korrekt ist.
+     * Bestätigt die MFA-Einrichtung mit dem ersten TOTP-Code. Ein aktiver Authenticator
+     * wird nie überschrieben; mit $expectedSecret nur das in dieser Sitzung angezeigte Secret.
      */
-    public function confirmMfaSetup(int $userId, string $code): bool
+    public function confirmMfaSetup(int $userId, string $code, ?string $expectedSecret = null): bool
     {
-        // Aktiven Authenticator nie überschreiben – Wechsel nur über die Deaktivierung (mit Passwort).
-        if ($this->isMfaEnabled($userId)) {
-            return false;
-        }
-
-        $pendingSecret = $this->getUserMeta($userId, 'mfa_pending_secret');
-        if (!$pendingSecret) {
-            return false;
-        }
-
-        if (!Totp::instance()->verifyCode($pendingSecret, $code)) {
-            return false;
-        }
-
-        // MFA aktivieren: Active-Secret setzen + Pending-Secret löschen
-        $this->setUserMeta($userId, 'mfa_secret', $pendingSecret);
-        $this->setUserMeta($userId, 'mfa_enabled', '1');
-        $this->deleteUserMeta($userId, 'mfa_pending_secret');
-
-        AuditLogger::instance()->log(
-            AuditLogger::CAT_SECURITY,
-            'mfa_enabled',
-            'MFA (TOTP) aktiviert.',
-            'user',
-            $userId,
-            [],
-            'info'
-        );
-
-        return true;
+        return TotpAdapter::instance()->confirmSetup($userId, $code, $expectedSecret);
     }
 
     /**
      * Verifiziert einen TOTP-Code gegen das gespeicherte Secret.
-     * Wird beim Login-Challenge aufgerufen.
      */
     public function verifyMfaCode(int $userId, string $code): bool
     {
-        $secret = $this->getUserMeta($userId, 'mfa_secret');
-        if (!$secret) {
-            return false;
-        }
-
-        return Totp::instance()->verifyCode($secret, $code);
+        return TotpAdapter::instance()->verifyCode($userId, $code);
     }
 
     /**
-     * Deaktiviert MFA für einen Nutzer und löscht alle MFA-Meta-Keys.
+     * Deaktiviert MFA (Secrets, Status und Backup-Codes).
      */
     public function disableMfa(int $userId): void
     {
-        $this->deleteUserMeta($userId, 'mfa_secret');
-        $this->deleteUserMeta($userId, 'mfa_enabled');
-        $this->deleteUserMeta($userId, 'mfa_pending_secret');
-
-        AuditLogger::instance()->log(
-            AuditLogger::CAT_SECURITY,
-            'mfa_disabled',
-            'MFA (TOTP) deaktiviert.',
-            'user',
-            $userId,
-            [],
-            'warning'
-        );
-    }
-
-    /**
-     * Liest einen einzelnen user_meta-Wert.
-     */
-    private function getUserMeta(int $userId, string $key): ?string
-    {
-        $db   = Database::instance();
-        $stmt = $db->prepare(
-            "SELECT meta_value FROM {$db->getPrefix()}user_meta WHERE user_id = ? AND meta_key = ? LIMIT 1"
-        );
-        $stmt->execute([$userId, $key]);
-        $row = $stmt->fetch();
-        return $row ? (string)$row->meta_value : null;
-    }
-
-    /**
-     * Setzt (INSERT OR UPDATE) einen user_meta-Wert.
-     */
-    private function setUserMeta(int $userId, string $key, string $value): void
-    {
-        $db = Database::instance();
-        $db->execute(
-            "INSERT INTO {$db->getPrefix()}user_meta (user_id, meta_key, meta_value)
-             VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)",
-            [$userId, $key, $value]
-        );
-    }
-
-    /**
-     * Löscht einen user_meta-Eintrag.
-     */
-    private function deleteUserMeta(int $userId, string $key): void
-    {
-        $db = Database::instance();
-        $db->execute(
-            "DELETE FROM {$db->getPrefix()}user_meta WHERE user_id = ? AND meta_key = ?",
-            [$userId, $key]
-        );
+        TotpAdapter::instance()->disable($userId);
     }
 
     private function hasValidDeviceCookie(int $userId): bool
@@ -1209,17 +1353,11 @@ class Auth
 
     private function completeAuthenticatedSession(object $user, bool $remember): void
     {
-        $passwordHash = (string) ($user->password ?? '');
-        if ($passwordHash === '') {
-            $passwordHash = (string) Database::instance()->get_var(
-                "SELECT password FROM " . Database::instance()->getPrefix() . "users WHERE id = ? LIMIT 1",
-                [(int) $user->id]
-            );
-        }
+        $fingerprint = $this->loadPasswordFingerprint((int) $user->id);
         unset($user->password, $user->password_fingerprint);
 
         session_regenerate_id(true);
-        $_SESSION['auth_password_fingerprint'] = self::passwordFingerprint($passwordHash);
+        $_SESSION['auth_password_fingerprint'] = $fingerprint;
         $_SESSION['user_id'] = $user->id;
         $_SESSION['user_role'] = $user->role;
         $_SESSION['session_start_time'] = time();

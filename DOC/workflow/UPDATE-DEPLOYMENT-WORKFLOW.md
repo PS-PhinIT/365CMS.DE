@@ -1,19 +1,19 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Update und Deployment
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 > **Quellen:** `CMS/admin/updates.php`, `CMS/admin/modules/system/UpdatesModule.php`, `CMS/core/Services/UpdateService.php`, `CMS/core/Services/BackupService.php`, `CMS/core/Services/OpcacheWarmupService.php`, `CMS/core/SchemaManager.php`, `CMS/install.php`, `CMS/install/`, `CMS/update.json`
 
 ## English (summary)
 
-Recommended order for every release: **backup → check → core → database → plugins/theme → verify**. The admin page `/admin/updates` reads the core source (`core_update_url`, default `https://365cms.de/marketplace/core/365cms/update.json`, GitHub fallback), plugin registry and theme marketplace (results cached one hour). Installation is refused without a valid SHA-256 checksum; archives are extracted with limits (5,000 entries, 256 MB per file, 512 MB total). Core swaps preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `uploads/`. Afterwards run the database update (idempotent `CREATE`/`ALTER` migrations up to schema `v23`). For manual deployments (Git/SFTP) the same rules apply: never overwrite `config/` and `uploads/`, then open `/admin/updates` and run the database update.
+Recommended order for every release: **backup → check → core → database → plugins/theme → verify**. The admin page `/admin/updates` reads the core source (`core_update_url`, default `https://365cms.de/marketplace/core/365cms/update.json`, GitHub fallback), plugin registry and theme marketplace (results cached one hour). Installation is refused without a valid SHA-256 checksum; archives are extracted with limits (5,000 entries, 256 MB per file, 512 MB total). Core swaps preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `uploads/`. Keep a separate copy of `config/app.php`; since 4.0.0 it holds `CMS_ENCRYPTION_KEY`, without which encrypted settings, TOTP secrets and encrypted backups cannot be read. Afterwards run the database update (idempotent `CREATE`/`ALTER` migrations up to schema `v23`). For manual deployments (Git/SFTP) the same rules apply: never overwrite `config/` and `uploads/`, then open `/admin/updates` and run the database update.
 
 ## Deutsch
 
 ### Voraussetzungen
 
 - PHP **8.4+** (`CMS_MIN_PHP_VERSION`), Erweiterungen `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`.
-- Schreibrechte auf `uploads/`, `cache/`, `logs/`, `backups/`, `assets/` und – für Core-Updates – den CMS-Ordner.
+- Schreibrechte auf `uploads/`, `cache/`, `logs/`, das Backup-Verzeichnis (`backups/` bzw. seit 4.0.0 `CMS_BACKUP_PATH`), `assets/` und – für Core-Updates – den CMS-Ordner.
 - Mindestens 1 GB freier Speicher (Warnung unter 2 GB).
-- Aktuelles Backup **inklusive** separat gesicherter `CMS/config/app.php` (nicht Bestandteil des CMS-Backups).
+- Aktuelles Backup **inklusive** separat gesicherter `CMS/config/app.php` (nicht Bestandteil des CMS-Backups). Sie enthält seit 4.0.0 auch `CMS_ENCRYPTION_KEY`: Ohne diesen Schlüssel sind verschlüsselte Einstellungen, TOTP-Secrets und verschlüsselte Backups nicht mehr lesbar.
 
 ### A) Update über das Admin-Panel
 
@@ -28,7 +28,7 @@ Recommended order for every release: **backup → check → core → database �
 
 1. Wartungsfenster ankündigen; Backup wie oben.
 2. Neue Dateien nach `CMS/` übertragen, **ohne** `config/`, `config.php`, `uploads/`, `cache/`, `logs/`, `backups/` zu überschreiben. Bei Git-basierten Deployments diese Pfade außerhalb der Arbeitskopie halten oder ignorieren.
-3. Datei-Rechte prüfen (Webserver-Benutzer muss `uploads/`, `cache/`, `logs/`, `backups/` schreiben können).
+3. Datei-Rechte prüfen (Webserver-Benutzer muss `uploads/`, `cache/`, `logs/` und das Backup-Verzeichnis – `backups/` bzw. `CMS_BACKUP_PATH` – schreiben können).
 4. OPcache leeren (PHP-FPM-Reload) oder auf die automatische Erkennung im Bootstrap vertrauen.
 5. Als Administrator `/admin/updates` öffnen → `run_database_update`.
 6. Nacharbeiten wie in A) Schritt 6.
@@ -42,7 +42,7 @@ rsync -av --delete \
   ./CMS/ user@server:/var/www/365cms/
 ```
 
-> **Achtung `config/app.php`:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Wird `config/app.php` durch ein Deployment ersetzt oder vom Installer neu erzeugt, gehen eigene Konstanten verloren. Eigene Werte daher dokumentieren und nach jedem Installer-Lauf prüfen (siehe [core/STATUS.md](../core/STATUS.md)).
+> **Achtung `config/app.php`:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Wird `config/app.php` durch ein Deployment ersetzt oder vom Installer neu erzeugt, gehen eigene Konstanten verloren. Eigene Werte daher dokumentieren und nach jedem Installer-Lauf prüfen (siehe [core/STATUS.md](../core/STATUS.md)). Das gilt besonders für `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` und `CMS_BACKUP_PATH` (seit 4.0.0).
 
 ### C) Neuinstallation
 

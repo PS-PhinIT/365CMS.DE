@@ -50,6 +50,7 @@ function cms_admin_backups_allowed_actions(): array
         'download' => true,
         'restore' => true,
         'delete' => true,
+        'set_encryption' => true,
     ];
 }
 
@@ -151,7 +152,8 @@ function cms_admin_backups_consume_download_token(mixed $value): ?array
 function cms_admin_backups_resolve_safe_download_path(string $path): ?string
 {
     $resolvedPath = realpath($path);
-    $backupRoot = realpath((string) ABSPATH . 'backups');
+    // Gleicher Root wie BackupService (CMS_BACKUP_PATH oder CMS/backups/).
+    $backupRoot = realpath(\CMS\Services\BackupService::resolveConfiguredBackupRoot());
 
     if (!is_string($resolvedPath) || !is_string($backupRoot)) {
         return null;
@@ -234,6 +236,7 @@ function cms_admin_backups_action_handlers(BackupsModule $module): array
         ),
         'restore' => static fn (array $post): array => $module->restoreBackup(cms_admin_backups_normalize_backup_name($post)),
         'delete' => static fn (array $post): array => $module->deleteBackup(cms_admin_backups_normalize_backup_name($post)),
+        'set_encryption' => static fn (array $post): array => $module->setEncryption((string) ($post['backup_encryption'] ?? '0') === '1'),
     ];
 }
 

@@ -1,13 +1,13 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Allgemeine Einstellungen
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/settings` (Tabs `general`, `content`) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_settings`
 
 ## English (summary)
 
 `/admin/settings` (`CMS/admin/settings.php` → `CMS/admin/modules/settings/SettingsModule.php` → `CMS/admin/views/settings/general.php`) holds the site-wide configuration. Tab `general` covers website identity, localisation, mail hints, member/registration hints, marketplace and update endpoints, maintenance mode and advanced options; tab `content` is described in [../pages-posts/SETTINGS.md](../pages-posts/SETTINGS.md). Actions: `save`, `run_site_url_migration`, `repair_imported_slugs`.
 
-**Important:** `save` writes most values to `cms_settings` and updates only `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` and `CMS_DEBUG` in `CMS/config/app.php`. Other constants such as `LDAP_*`, `JWT_*`, `SMTP_*`, `CMS_HTTPS_REDIRECT_STRATEGY` or the time zone are kept. The file is rebuilt from the template, resetting such constants, only if one of the four constants is missing or defined more than once. Before every change the previous file is copied to `config/app.backup-<date>.php` with mode `0640`, and the last five copies are kept. Saving without changes leaves `config/app.php` untouched.
+**Important:** `save` writes most values to `cms_settings` and updates only `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` and `CMS_DEBUG` in `CMS/config/app.php`. Other constants such as `LDAP_*`, `JWT_*`, `SMTP_*`, `CMS_HTTPS_REDIRECT_STRATEGY` or the time zone are kept. The file is rebuilt from the template, resetting such constants, only if one of the four constants is missing or defined more than once; since 4.0.0 the rebuild keeps `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` and `CMS_BACKUP_PATH`. Before every change the previous file is copied to `config/app.backup-<date>.php` with mode `0640`, and the last five copies are kept. Saving without changes leaves `config/app.php` untouched.
 
 ## Deutsch
 
@@ -40,7 +40,7 @@ Die angezeigte „aktive Runtime-URL“ ist der tatsächlich verwendete Wert aus
 
 **Sicherungskopien:** Vor jeder Änderung legt das CMS `config/app.backup-<Datum>.php` an. Die Kopie entsteht wie `config/app.php` über eine temporäre Datei (`0600`, danach `0640`) und ist zu keinem Zeitpunkt für andere lokale Konten lesbar; die `.php`-Endung sorgt dafür, dass ein direkter Abruf ohne `.htaccess`-Schutz nichts ausgibt. Aufbewahrt werden die letzten fünf Kopien. Ältere löscht das CMS beim nächsten Speichern, verbliebene Kopien mit Leserechten für alle (z. B. `0644` aus Versionen vor 4.0.0) setzt es auf `0640`. Speichern ohne geänderte Werte schreibt weder `config/app.php` noch eine Kopie.
 
-> **Achtung:** Fehlt eine der vier Konstanten oder ist sie mehrfach definiert, erzeugt das CMS `config/app.php` aus der Vorlage neu. Dabei werden `LDAP_*`, `JWT_*`, `SMTP_*`, HTTPS-/HSTS-Konstanten (`CMS_HTTPS_REDIRECT_STRATEGY`, `CMS_HSTS_*`) und die Zeitzone (`Europe/Berlin`) auf Standardwerte gesetzt; die vorherige Fassung liegt dann als Sicherungskopie vor. Ein Auslagern nach `CMS/config.php` hilft nicht, weil `CMS/index.php` `config/app.php` zuerst lädt. Mail-Zugangsdaten gehören ohnehin in `/admin/mail-settings` (verschlüsselt in der Datenbank).
+> **Achtung:** Fehlt eine der vier Konstanten oder ist sie mehrfach definiert, erzeugt das CMS `config/app.php` aus der Vorlage neu. Dabei werden `LDAP_*`, `JWT_*`, `SMTP_*`, HTTPS-/HSTS-Konstanten (`CMS_HTTPS_REDIRECT_STRATEGY`, `CMS_HSTS_*`) und die Zeitzone (`Europe/Berlin`) auf Standardwerte gesetzt; die vorherige Fassung liegt dann als Sicherungskopie vor. Erhalten bleiben seit 4.0.0 `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` und `CMS_BACKUP_PATH`, damit verschlüsselte Einstellungen, TOTP-Secrets und Backups lesbar und auffindbar bleiben. Ein Auslagern nach `CMS/config.php` hilft nicht, weil `CMS/index.php` `config/app.php` zuerst lädt. Mail-Zugangsdaten gehören ohnehin in `/admin/mail-settings` (verschlüsselt in der Datenbank).
 
 ### Weitere Systemseiten
 

@@ -17,6 +17,7 @@ $availableRoles = $data['availableRoles'] ?? [];
 $availableStatuses = $data['availableStatuses'] ?? [];
 $securityEvents = is_array($data['securityEvents'] ?? null) ? $data['securityEvents'] : [];
 $securityEventsUnavailable = !empty($data['securityEventsUnavailable']);
+$pendingEmail = is_array($data['pendingEmail'] ?? null) ? $data['pendingEmail'] : null;
 $roleImpactPreview = is_array($data['roleImpactPreview'] ?? null) ? $data['roleImpactPreview'] : [];
 $roleImpactAvailable = !empty($roleImpactPreview['available']) && is_array($roleImpactPreview['roles'] ?? null);
 $selectedRole = (string)($user->role ?? ($roleImpactPreview['current_role'] ?? 'member'));
@@ -106,7 +107,20 @@ $roleColors = [
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label required" for="email">E-Mail</label>
-                                    <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user->email ?? ''); ?>" required maxlength="190" autocomplete="email">
+                                    <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user->email ?? ''); ?>" required maxlength="100" autocomplete="email">
+                                    <?php if (!$isNew): ?>
+                                        <span class="form-hint">Eine neue Adresse wird erst übernommen, wenn der Benutzer den Link in der Bestätigungs-E-Mail öffnet. Die bisherige Adresse erhält einen Hinweis.</span>
+                                        <label class="form-check mt-2 mb-0">
+                                            <input class="form-check-input" type="checkbox" name="email_skip_confirmation" value="1">
+                                            <span class="form-check-label">Neue Adresse ohne Bestätigung übernehmen</span>
+                                        </label>
+                                        <?php if ($pendingEmail !== null): ?>
+                                            <div class="alert alert-info mt-2 mb-0 py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2" role="status">
+                                                <span>Ausstehend: <strong><?php echo htmlspecialchars((string) $pendingEmail['email'], ENT_QUOTES); ?></strong> (Link gültig bis <?php echo htmlspecialchars(date('d.m.Y H:i', (int) $pendingEmail['expires_at']), ENT_QUOTES); ?> Uhr)</span>
+                                                <button type="submit" form="cancelEmailChangeForm" class="btn btn-sm btn-outline-secondary">Änderung verwerfen</button>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label <?php echo $isNew ? 'required' : ''; ?>" for="password">Passwort</label>
@@ -304,6 +318,14 @@ $roleColors = [
                         </div>
                     </div>
 
+                    <div class="card mt-3">
+                        <div class="card-header"><h3 class="card-title mb-0">Sitzungen &amp; API-Tokens</h3></div>
+                        <div class="card-body">
+                            <p class="text-secondary mb-3">Meldet den Benutzer auf allen Geräten ab und macht ausgestellte API-Tokens ungültig, ohne das Passwort zu ändern – etwa bei Verdacht auf eine übernommene Sitzung.</p>
+                            <button type="submit" form="revokeSessionsForm" class="btn btn-outline-warning w-100">Überall abmelden</button>
+                        </div>
+                    </div>
+
                     <div class="card border-danger-subtle mt-3">
                         <div class="card-header"><h3 class="card-title text-danger mb-0">Benutzer dauerhaft löschen</h3></div>
                         <div class="card-body">
@@ -327,6 +349,20 @@ $roleColors = [
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?php echo $userId; ?>">
             </form>
+            <form id="revokeSessionsForm" method="post" action="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>" class="d-none"
+                  data-confirm-message="Alle Sitzungen und API-Tokens dieses Benutzers beenden?" data-confirm-title="Überall abmelden" data-confirm-text="Abmelden" data-confirm-class="btn-warning" data-confirm-status-class="bg-warning">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                <input type="hidden" name="action" value="revoke_sessions">
+                <input type="hidden" name="id" value="<?php echo $userId; ?>">
+            </form>
+            <?php if ($pendingEmail !== null): ?>
+                <form id="cancelEmailChangeForm" method="post" action="<?php echo htmlspecialchars($usersAdminPath, ENT_QUOTES); ?>" class="d-none"
+                      data-confirm-message="Ausstehende Änderung der E-Mail-Adresse verwerfen?" data-confirm-title="Änderung verwerfen" data-confirm-text="Verwerfen" data-confirm-class="btn-secondary" data-confirm-status-class="bg-secondary">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                    <input type="hidden" name="action" value="cancel_email_change">
+                    <input type="hidden" name="id" value="<?php echo $userId; ?>">
+                </form>
+            <?php endif; ?>
         <?php endif; ?>
 
     </div>

@@ -2,11 +2,13 @@
 /**
  * TotpAdapter – TOTP-MFA über RobThree/TwoFactorAuth
  *
- * Ergänzt die bestehende CMS\Totp-Klasse um die robustere Library-Implementierung
- * von robthree/twofactorauth (v3.0.3). Bietet dasselbe Interface wie CMS\Totp,
- * nutzt aber die externe Library mit QR-Code-Support und Zeitsynchronisierung.
+ * Einzige Implementierung für Einrichtung, Prüfung und Abschalten von TOTP
+ * (Auth::*Mfa*() delegiert hierher). Nutzt robthree/twofactorauth (v3.0.3) mit
+ * QR-Code-Support und Zeitsynchronisierung; ohne Library delegiert an CMS\Totp.
  *
- * Fallback: Wenn die Library nicht verfügbar ist, delegiert an CMS\Totp.
+ * Secrets (`mfa_secret`, `mfa_pending_secret`) liegen seit 4.0.0 verschlüsselt in
+ * `user_meta` (CryptoService, Kontext „mfa“, an Benutzer und Meta-Key gebunden).
+ * Klartext-Altwerte werden beim Lesen bzw. einmal je Schlüsselstand migriert.
  *
  * @package CMSv2\Core\Auth\MFA
  * @see     https://github.com/RobThree/TwoFactorAuth
@@ -20,11 +22,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use CMS\AuditLogger;
 use CMS\Database;
+use CMS\Logger;
+use CMS\Services\CryptoService;
 use CMS\Totp;
 
 final class TotpAdapter
 {
+    private const SECRET_KEYS = ['mfa_secret', 'mfa_pending_secret'];
+
     private static ?self $instance = null;
 
     /** @var \RobThree\Auth\TwoFactorAuth|null */
@@ -169,7 +176,7 @@ final class TotpAdapter
     public function startSetup(int $userId, string $accountLabel): array
     {
         $secret = $this->generateSecret();
-        $this->setUserMeta($userId, 'mfa_pending_secret', $secret);
+        $this->storeSecret($userId, 'mfa_pending_secret', $secret);
 
         $otpUri = $this->getOtpAuthUri($secret, $accountLabel);
         $qrDataUri = $this->getQrCodeDataUri($secret, $accountLabel);
@@ -194,7 +201,7 @@ final class TotpAdapter
             return false;
         }
 
-        $pendingSecret = $this->getUserMeta($userId, 'mfa_pending_secret');
+        $pendingSecret = $this->readSecret($userId, 'mfa_pending_secret');
         if ($pendingSecret === null) {
             return false;
         }
@@ -207,21 +214,46 @@ final class TotpAdapter
             return false;
         }
 
-        $this->setUserMeta($userId, 'mfa_secret', $pendingSecret);
+        $this->storeSecret($userId, 'mfa_secret', $pendingSecret);
         $this->setUserMeta($userId, 'mfa_enabled', '1');
         $this->deleteUserMeta($userId, 'mfa_pending_secret');
+
+        AuditLogger::instance()->log(
+            AuditLogger::CAT_SECURITY,
+            'mfa_enabled',
+            'MFA (TOTP) aktiviert.',
+            'user',
+            $userId,
+            [],
+            'info'
+        );
 
         return true;
     }
 
     /**
-     * MFA deaktivieren.
+     * MFA deaktivieren: Secrets, Status und Backup-Codes entfernen.
      */
     public function disable(int $userId): void
     {
+        $wasEnabled = $this->isEnabled($userId);
+
         $this->deleteUserMeta($userId, 'mfa_secret');
         $this->deleteUserMeta($userId, 'mfa_enabled');
         $this->deleteUserMeta($userId, 'mfa_pending_secret');
+        BackupCodesManager::instance()->deleteAll($userId);
+
+        if ($wasEnabled) {
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                'mfa_disabled',
+                'MFA (TOTP) deaktiviert.',
+                'user',
+                $userId,
+                [],
+                'warning'
+            );
+        }
     }
 
     /**
@@ -232,12 +264,112 @@ final class TotpAdapter
         return $this->getUserMeta($userId, 'mfa_enabled') === '1';
     }
 
-    // ── user_meta-Zugriff ────────────────────────────────────────────────────
+    /**
+     * Verschlüsselt Klartext-Secrets bzw. Secrets mit älterer Schlüssel-ID neu.
+     * Verarbeitet höchstens $limit Einträge je Aufruf.
+     *
+     * @return bool true, wenn keine weiteren Einträge offen sind
+     */
+    public function migrateStoredSecrets(int $limit = 500): bool
+    {
+        $db = Database::instance();
+        $placeholders = implode(', ', array_fill(0, count(self::SECRET_KEYS), '?'));
+        $rows = $db->get_results(
+            "SELECT user_id, meta_key, meta_value FROM {$db->getPrefix()}user_meta WHERE meta_key IN ({$placeholders})",
+            self::SECRET_KEYS
+        ) ?: [];
+
+        $crypto = CryptoService::getInstance();
+        $migrated = 0;
+        foreach ($rows as $row) {
+            $storedValue = (string) ($row->meta_value ?? '');
+            if ($storedValue === '' || ($crypto->isEncrypted($storedValue) && !$crypto->needsReencryption($storedValue))) {
+                continue;
+            }
+
+            if ($migrated >= $limit) {
+                return false;
+            }
+
+            // Nicht entschlüsselbare Einträge (Schlüssel fehlt) werden protokolliert und nicht gezählt.
+            if ($this->readSecret((int) $row->user_id, (string) $row->meta_key, $storedValue) !== null) {
+                $migrated++;
+            }
+        }
+
+        return true;
+    }
+
+    // ── Secret-Speicher ──────────────────────────────────────────────────────
 
     private function getUserSecret(int $userId): ?string
     {
-        return $this->getUserMeta($userId, 'mfa_secret');
+        return $this->readSecret($userId, 'mfa_secret');
     }
+
+    private function storeSecret(int $userId, string $metaKey, string $secret): void
+    {
+        $this->setUserMeta(
+            $userId,
+            $metaKey,
+            CryptoService::getInstance()->encrypt($secret, CryptoService::CONTEXT_MFA, $userId . ':' . $metaKey)
+        );
+    }
+
+    /**
+     * Liest und entschlüsselt ein Secret. Klartext-Altwerte und Werte mit älterer
+     * Schlüssel-ID werden dabei neu verschlüsselt (nur wenn der Eintrag unverändert ist).
+     */
+    private function readSecret(int $userId, string $metaKey, ?string $storedValue = null): ?string
+    {
+        $storedValue ??= $this->getUserMeta($userId, $metaKey);
+        if ($storedValue === null || $storedValue === '') {
+            return null;
+        }
+
+        $crypto = CryptoService::getInstance();
+        $binding = $userId . ':' . $metaKey;
+
+        if ($crypto->isEncrypted($storedValue)) {
+            try {
+                $secret = $crypto->decrypt($storedValue, CryptoService::CONTEXT_MFA, $binding);
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('auth.mfa')->error('TOTP-Secret konnte nicht entschlüsselt werden.', [
+                    'user_id' => $userId,
+                    'meta_key' => $metaKey,
+                    'exception' => $e,
+                ]);
+                return null;
+            }
+
+            if (!$crypto->needsReencryption($storedValue)) {
+                return $secret;
+            }
+        } else {
+            $secret = strtoupper(trim($storedValue));
+            if (preg_match('/^[A-Z2-7]{16,128}=*$/', $secret) !== 1) {
+                return null;
+            }
+        }
+
+        try {
+            $db = Database::instance();
+            $db->execute(
+                "UPDATE {$db->getPrefix()}user_meta SET meta_value = ? WHERE user_id = ? AND meta_key = ? AND meta_value = ?",
+                [$crypto->encrypt($secret, CryptoService::CONTEXT_MFA, $binding), $userId, $metaKey, $storedValue]
+            );
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('auth.mfa')->warning('TOTP-Secret konnte nicht neu verschlüsselt werden.', [
+                'user_id' => $userId,
+                'meta_key' => $metaKey,
+                'exception' => $e,
+            ]);
+        }
+
+        return $secret;
+    }
+
+    // ── user_meta-Zugriff ────────────────────────────────────────────────────
 
     private function getUserMeta(int $userId, string $key): ?string
     {

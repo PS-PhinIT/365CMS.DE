@@ -1,5 +1,5 @@
 > **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 4.0.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-08 (Sicherheitsaudit 4.0.0: Nachrichten-Empfänger, Datenexport, eigene Bestellungen)
+> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-09 (Sicherheitsaudit 4.0.0: Nachrichten-Empfänger, Datenexport, eigene Bestellungen; Folgeaudit: E-Mail-Änderung mit Bestätigung, „Überall sonst abmelden“)
 > **Kurzbeschreibung:** Vollständige Referenz des privaten Member-Bereichs mit Seiten, Routing, Einstellungen, Erweiterungspunkten, Sicherheit und Fallbacks. Die Angaben entsprechen dem Code-Stand von Version 4.0.0.
 
 # 365CMS Member Area
@@ -82,11 +82,13 @@ Alle Formulare senden `POST` an die eigene Seite mit Feld `action` und `csrf_tok
 
 | Seite | `action` | Wirkung |
 |---|---|---|
-| `/member/profile` | `profile_save` | Stammdaten und aktivierte Profilfelder (inkl. eigener Felder) speichern; Pflichtfelder laut Admin-Konfiguration |
+| `/member/profile` | `profile_save` | Stammdaten und aktivierte Profilfelder (inkl. eigener Felder) speichern; Pflichtfelder laut Admin-Konfiguration. Eine neue E-Mail-Adresse verlangt das aktuelle Passwort und gilt seit 4.0.0 erst nach Bestätigung des Links an die neue Adresse ([MEMBER-SECURITY.md](MEMBER-SECURITY.md)) |
+| | `email_change_cancel` | ausstehende Änderung der E-Mail-Adresse verwerfen (seit 4.0.0) |
 | `/member/security` | `password_change` | Passwort ändern (aktuelles Passwort, Richtlinie: 12 Zeichen + Zeichenklassen), setzt `password_changed_at` |
 | | `totp_start` / `totp_confirm` / `totp_disable` | Authenticator-App einrichten (QR-Code), mit Code bestätigen → Backup-Codes werden einmalig angezeigt; deaktivieren |
 | | `backup_generate` | neue Backup-Codes erzeugen (alte werden ungültig) |
 | | `passkey_register` / `passkey_delete` | Passkey (WebAuthn) hinzufügen bzw. entfernen |
+| | `sessions_revoke_all` | „Überall sonst abmelden“: alle anderen Sitzungen beenden und API-Tokens ungültig machen (aktuelles Passwort, seit 4.0.0) |
 | `/member/notifications` | `notifications_save` | E-Mail-Benachrichtigungen (Sicherheit, Updates, Marketing), Browser-/Desktop-/Mobil-Hinweise, Häufigkeit, neue Funktionen/Aktionen |
 | `/member/messages` | `message_send` | Nachricht an Benutzer-ID, Benutzername, E-Mail-Adresse oder Anzeigenamen senden (in dieser Reihenfolge; ein Anzeigename nur, wenn ihn genau ein aktives Konto trägt), Antwort über `parent_id` (Thread) |
 | `/member/media` | `media_folder_create`, `media_folder_delete`, `media_delete`, `media_rename`, `media_move` | eigene Dateien unter `uploads/member/user-<id>/` verwalten; Löschen nur bei `member_delete_own` |
@@ -95,7 +97,7 @@ Alle Formulare senden `POST` an die eigene Seite mit Feld `action` und `csrf_tok
 | | `privacy_export` | sofortiger JSON-Download aller eigenen Daten (`member-export-<id>.json`); Zugangsgeheimnisse (MFA-/TOTP-Secrets, Backup-Codes, Passkey-, LDAP-, Token- und Passwort-Metadaten) sind ausgenommen |
 | | `privacy_delete_request` | Löschantrag: Status `pending_deletion`, Ausführung frühestens nach 30 Tagen durch Administratoren ([../admin/legal/DELETION-REQUESTS.md](../admin/legal/DELETION-REQUESTS.md)) |
 | `/member/favorites` | – | Liste gemerkter Beiträge/Seiten (Merken über das Theme) |
-| `/member/subscription` | – | aktuelles Paket, Limits/Nutzung, Verlängerungshinweise, eigene Bestellungen (nur angemeldet aufgegebene, also mit `user_id` des Kontos; Gastbestellungen mit derselben E-Mail-Adresse erscheinen nicht, sie bleiben unter *Aboverwaltung → Bestellungen & Zuweisung* sichtbar) |
+| `/member/subscription` | – | aktuelles Paket, Limits/Nutzung, Verlängerungshinweise, eigene Bestellungen (nur angemeldet aufgegebene, also mit `user_id` des Kontos; Gastbestellungen mit derselben E-Mail-Adresse werden seit 4.0.0 dem Konto zugeordnet, sobald die Adresse bestätigt ist – per Link aus der Registrierung (`/cms-verify-email`) oder nach einer bestätigten E-Mail-Änderung; bis dahin bleiben sie nur unter *Aboverwaltung → Bestellungen & Zuweisung* sichtbar) |
 
 ### Menü
 

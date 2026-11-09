@@ -1,11 +1,11 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Sicherheits-Audit
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/security-audit` | **Capability:** `manage_settings` | **Core-Modul:** `security`
 
 ## English (summary)
 
-`/admin/security-audit` (`CMS/admin/security-audit.php` → `CMS/admin/modules/security/SecurityAuditModule.php` → `CMS/admin/views/security/audit.php`) runs an on-demand configuration check of the installation (`run_audit`) and lists the latest 50 audit-log entries. `clear_log` deletes security audit entries older than 30 days. Each check reports `ok`, `warning` or `critical`. Since 4.0.0 the backup check recognises the backup directories written by *System → Backup & Restore* (before, it only looked for `backups/*.sql*` and reported existing backups as missing), `install.php` counts as safe while `config/install.lock` locks it, and file permissions are judged by the group/world write bits.
+`/admin/security-audit` (`CMS/admin/security-audit.php` → `CMS/admin/modules/security/SecurityAuditModule.php` → `CMS/admin/views/security/audit.php`) runs an on-demand configuration check of the installation (`run_audit`) and lists the latest 50 audit-log entries. `clear_log` deletes security audit entries older than 30 days. Each check reports `ok`, `warning` or `critical`. Since 4.0.0 the backup check recognises the backup directories written by *System → Backup & Restore* (before, it only looked for `backups/*.sql*` and reported existing backups as missing), `install.php` counts as safe while `config/install.lock` locks it, and file permissions are judged by the group/world write bits. Since 4.0.0 the check *Backup-Speicherort & Verschlüsselung* warns when backups lie unencrypted inside the web root (`CMS_BACKUP_PATH` unset), when encryption runs without a real key, and when old backups are still unencrypted or left behind in `CMS/backups/`.
 
 ## Deutsch
 
@@ -24,7 +24,8 @@
 | Trusted Types | CSP-Direktive für Trusted Types |
 | Strict-Transport-Security | HSTS gemäß `CMS_HSTS_MODE` / `CMS_HSTS_MAX_AGE` |
 | `.htaccess`-Sicherheits-Fallback | Schutzregeln im Webroot (max. 128 KB gelesen) |
-| Letztes Backup | Jüngstes **vollständiges** lokales Backup unter `backups/` (Voll- und Datenbank-Backups mit Manifest, ältere Einzel-Dumps `database_*.sql[.gz]`): bis 7 Tage OK, bis 30 Tage Warnung, älter oder keines kritisch. Unvollständige Backups werden genannt, zählen aber nicht. Externe Hoster-Backups erkennt die Prüfung nicht |
+| Letztes Backup | Jüngstes **vollständiges** lokales Backup im Backup-Verzeichnis (`backups/` bzw. `CMS_BACKUP_PATH`; Voll- und Datenbank-Backups mit Manifest, ältere Einzel-Dumps `database_*.sql[.gz]`): bis 7 Tage OK, bis 30 Tage Warnung, älter oder keines kritisch. Unvollständige Backups werden genannt, zählen aber nicht. Externe Hoster-Backups erkennt die Prüfung nicht |
+| Backup-Speicherort & Verschlüsselung (ab 4.0.0) | Warnung, wenn Backups unverschlüsselt im Webroot liegen (nur `.htaccess`-Schutz, nginx/IIS ignorieren ihn), wenn die Verschlüsselung ohne echten Schlüssel läuft (Platzhalter in `config/app.php`), wenn bei aktiver Verschlüsselung ältere Backups unverschlüsselt im Webroot liegen oder nach dem Umstellen auf `CMS_BACKUP_PATH` noch Alt-Backups in `CMS/backups/` liegen; ist das Verzeichnis nicht nutzbar, ebenfalls Warnung. OK bei Speicherort außerhalb des Webroots oder verschlüsselten Backups (mit Hinweis, den Schlüssel getrennt zu sichern). Details: [../system-settings/BACKUP.md](../system-settings/BACKUP.md) |
 | Admin-Passwort-Hashes | Administratoren mit aktuellem Hash-Verfahren |
 | Firewall Runtime aktiv | Kritisch, wenn `SecurityRuntimeService` nicht im Bootstrap verdrahtet ist; Warnung, solange `firewall_enabled` nicht `1` ist (Regeln und Request-Rate-Limit greifen dann nicht, Login-Sperren schon); sonst OK |
 | AntiSpam Runtime aktiv | Kritisch bei fehlender Anbindung (Kommentare, aktive Kontakt-Plugins); Warnung, solange `antispam_enabled` nicht `1` ist und Kommentare oder Kontaktformulare aktiv sind; OK mit Liste der tatsächlich aktiven Einzelprüfungen. Sind Kommentare global aus und kein Kontakt-Plugin aktiv, ist ein deaktivierter AntiSpam OK |

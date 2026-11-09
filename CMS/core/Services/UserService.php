@@ -217,7 +217,9 @@ class UserService {
             $update_data['username'] = Security::sanitize($data['username'], 'username');
         }
         
-        // E-Mail (nur wenn geändert)
+        // E-Mail (nur wenn geändert). Folgeaudit OFFEN-22: Eine neue Adresse gilt erst nach Bestätigung
+        // des Links an diese Adresse – außer sie wird ausdrücklich ohne Bestätigung übernommen.
+        $pendingEmail = null;
         if (isset($data['email']) && $data['email'] !== $user->email) {
             $existing = $this->db->get_row(
                 "SELECT id FROM {$this->prefix}users WHERE email = ? AND id != ?",
@@ -226,7 +228,12 @@ class UserService {
             if ($existing) {
                 return new WP_Error('email_exists', 'E-Mail bereits vergeben', ['status' => 409]);
             }
-            $update_data['email'] = Security::sanitize($data['email'], 'email');
+            $email = Security::sanitize($data['email'], 'email');
+            if (strcasecmp($email, (string) $user->email) === 0) {
+                $update_data['email'] = $email;
+            } else {
+                $pendingEmail = $email;
+            }
         }
         
         // Passwort (nur wenn angegeben)
@@ -249,6 +256,25 @@ class UserService {
             }
         }
         
+        // E-Mail-Änderung vor allen übrigen Feldern: Scheitert sie (z. B. Anfragelimit), bleibt das Konto unverändert.
+        $emailLogData = [];
+        if ($pendingEmail !== null) {
+            $emailChange = EmailChangeService::getInstance();
+            if (!empty($data['email_skip_confirmation'])) {
+                $changed = $emailChange->changeWithoutConfirmation($user_id, $pendingEmail, EmailChangeService::INITIATOR_ADMIN);
+                if ($changed !== true) {
+                    return new WP_Error('email_change_failed', $changed, ['status' => 400]);
+                }
+                $emailLogData['email'] = $pendingEmail;
+            } else {
+                $requested = $emailChange->request($user_id, $pendingEmail, EmailChangeService::INITIATOR_ADMIN, true);
+                if (!$requested['success']) {
+                    return new WP_Error('email_change_failed', $requested['message'], ['status' => 400]);
+                }
+                $emailLogData['pending_email'] = $pendingEmail;
+            }
+        }
+
         // Update nur wenn Daten vorhanden
         if (!empty($update_data)) {
             $result = $this->db->update('users', $update_data, ['id' => $user_id]);
@@ -270,7 +296,7 @@ class UserService {
             // Eigene Sitzung behalten; andere Sitzungen des Kontos enden mit dem neuen Passwort.
             \CMS\Auth::instance()->refreshPasswordFingerprint($user_id);
         }
-        $this->logAction('user_updated', $user_id, $update_data);
+        $this->logAction('user_updated', $user_id, $update_data + $emailLogData);
         
         return true;
     }
@@ -526,6 +552,10 @@ class UserService {
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 return new WP_Error('invalid_email', 'Ungültige E-Mail-Adresse', ['status' => 400]);
             }
+
+            if (strlen((string) $data['email']) > EmailChangeService::EMAIL_MAX_LENGTH) {
+                return new WP_Error('invalid_email', 'Die E-Mail-Adresse darf höchstens ' . EmailChangeService::EMAIL_MAX_LENGTH . ' Zeichen lang sein', ['status' => 400]);
+            }
             
             // Passwort erforderlich
             if (empty($data['password'])) {
@@ -553,6 +583,10 @@ class UserService {
 
             if (isset($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 return new WP_Error('invalid_email', 'Ungültige E-Mail-Adresse', ['status' => 400]);
+            }
+
+            if (isset($data['email']) && strlen((string) $data['email']) > EmailChangeService::EMAIL_MAX_LENGTH) {
+                return new WP_Error('invalid_email', 'Die E-Mail-Adresse darf höchstens ' . EmailChangeService::EMAIL_MAX_LENGTH . ' Zeichen lang sein', ['status' => 400]);
             }
 
             if (isset($data['password']) && trim((string)$data['password']) !== '') {

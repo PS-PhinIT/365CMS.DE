@@ -212,6 +212,11 @@ final class EmailVerificationService
             ['via' => $via],
             'info'
         );
+
+        // Folgeaudit OFFEN-22: Gastbestellungen erst mit bestätigter Adresse dem Konto zuordnen (vgl. SEC-36).
+        $email = (string) ($this->db->get_var("SELECT email FROM {$this->prefix}users WHERE id = ?", [$userId]) ?? '');
+        EmailChangeService::getInstance()->assignGuestOrders($userId, $email);
+
         Hooks::doAction('user_email_verified', $userId);
 
         return true;

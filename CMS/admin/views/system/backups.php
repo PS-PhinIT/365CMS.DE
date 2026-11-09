@@ -17,6 +17,9 @@ if (!defined('CMS_ADMIN_SYSTEM_VIEW')) {
 
 $backups = $data['backups'];
 $history = $data['history'];
+$storage = is_array($data['storage'] ?? null) ? $data['storage'] : [];
+$serviceError = (string) ($data['service_error'] ?? '');
+$canWriteBackups = !empty($data['can_write']);
 $validationReport = is_array($alert['report_payload'] ?? null) ? $alert['report_payload'] : [];
 $restoreModalId = 'backupRestoreConfirmModal';
 $errorModalId = 'backupErrorLogModal';
@@ -68,6 +71,92 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
         <?php $alertData = $alert; $alertMarginClass = 'mb-4'; require __DIR__ . '/../partials/flash-alert.php'; ?>
     <?php endif; ?>
 
+    <?php if ($serviceError !== ''): ?>
+        <div class="alert alert-danger mb-4" role="alert">
+            <h4 class="alert-title">Backup-Verzeichnis nicht nutzbar</h4>
+            <div><?php echo htmlspecialchars($serviceError); ?></div>
+            <div class="small mt-1">In <code>config/app.php</code> <code>CMS_BACKUP_PATH</code> prüfen: eigenes, für PHP beschreibbares Verzeichnis außerhalb des Webroots – absolut oder relativ zum CMS-Verzeichnis (z. B. <code>../365cms-backups</code>).</div>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($storage !== []): ?>
+        <?php
+        $storageEncryptionEnabled = !empty($storage['encryption_enabled']);
+        $storageEncryptionAvailable = !empty($storage['encryption_available']);
+        $storageLegacyCount = (int) ($storage['legacy_webroot_backups'] ?? 0);
+        ?>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Speicherort &amp; Verschlüsselung</h3>
+                <div class="card-actions d-flex gap-2">
+                    <?php if (!empty($storage['inside_webroot'])): ?>
+                        <span class="badge bg-warning-lt text-warning">Im Webroot</span>
+                    <?php else: ?>
+                        <span class="badge bg-success-lt text-success">Außerhalb des Webroots</span>
+                    <?php endif; ?>
+                    <?php if ($storageEncryptionEnabled): ?>
+                        <span class="badge bg-success-lt text-success">Verschlüsselung aktiv</span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary-lt text-secondary">Unverschlüsselt</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="text-secondary small">Backup-Verzeichnis <?php echo !empty($storage['custom_path']) ? '(CMS_BACKUP_PATH)' : '(Standard)'; ?></div>
+                        <div class="fw-semibold text-break"><code><?php echo htmlspecialchars((string) ($storage['path'] ?? '')); ?></code></div>
+                        <?php if (empty($storage['writable'])): ?>
+                            <div class="text-danger small mt-1">Das Verzeichnis ist für PHP nicht beschreibbar.</div>
+                        <?php endif; ?>
+                        <?php if (!empty($storage['inside_webroot'])): ?>
+                            <div class="text-secondary small mt-2">Liegt im Webroot und ist nur per <code>.htaccess</code> geschützt (nginx/IIS werten sie nicht aus). Empfehlung: in <code>config/app.php</code> <code>CMS_BACKUP_PATH</code> auf ein eigenes Verzeichnis außerhalb des Webroots setzen (z. B. <code>../365cms-backups</code> oder einen Offsite-Mount) und vorhandene Backups dorthin verschieben.</div>
+                        <?php else: ?>
+                            <div class="text-secondary small mt-2">Nicht per HTTP erreichbar. Für eine Offsite-Kopie das Verzeichnis zusätzlich extern sichern (z. B. rsync/rclone; verschlüsselte Backups können unbedenklich bei Dritten liegen).</div>
+                        <?php endif; ?>
+                        <?php if ($storageLegacyCount > 0): ?>
+                            <div class="text-warning small mt-2">Im bisherigen Verzeichnis <code>backups/</code> des CMS liegen noch <?php echo $storageLegacyCount; ?> Backup(s). Diese erscheinen hier nicht mehr – in das neue Verzeichnis verschieben oder löschen.</div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="text-secondary small">Verschlüsselung neuer Backups</div>
+                        <?php if (!$storageEncryptionAvailable): ?>
+                            <div class="fw-semibold">Nicht verfügbar</div>
+                            <div class="text-secondary small mt-1">Die PHP-Erweiterung <code>sodium</code> fehlt; Backups können nicht verschlüsselt werden.</div>
+                        <?php else: ?>
+                            <div class="fw-semibold"><?php echo $storageEncryptionEnabled ? 'Aktiv – XChaCha20-Poly1305, Schlüssel-ID ' . htmlspecialchars((string) ($storage['key_id'] ?? '')) : 'Aus'; ?></div>
+                            <div class="text-secondary small mt-1">Datenbank-Dump und Datei-Archiv werden als <code>*.enc</code> gespeichert; Prüfen, Dry-Run und Restore entschlüsseln automatisch. Downloads bleiben verschlüsselt.</div>
+                            <?php if ($storageEncryptionEnabled && (int) ($storage['unencrypted_backups'] ?? 0) > 0): ?>
+                                <div class="text-warning small mt-1"><?php echo (int) $storage['unencrypted_backups']; ?> ältere(s) Backup(s) sind noch unverschlüsselt – nach einem neuen verschlüsselten Backup löschen.</div>
+                            <?php endif; ?>
+                            <?php if (!empty($storage['weak_key'])): ?>
+                                <div class="text-danger small mt-1">Es ist kein sicherer Schlüssel konfiguriert (Platzhalter in <code>config/app.php</code>) – die Verschlüsselung schützt so nicht.</div>
+                            <?php endif; ?>
+                            <div class="alert alert-warning small mt-2 mb-0" role="alert">
+                                Ohne Schlüssel ist ein verschlüsseltes Backup nicht wiederherstellbar.
+                                <?php if (!empty($storage['dedicated_key'])): ?>
+                                    <code>CMS_ENCRYPTION_KEY</code> aus <code>config/app.php</code> getrennt von den Backups sichern (z. B. Passwortmanager) und bei einem Schlüsselwechsel den alten Wert in <code>CMS_ENCRYPTION_KEYS_PREVIOUS</code> behalten.
+                                <?php else: ?>
+                                    Ohne eigenen <code>CMS_ENCRYPTION_KEY</code> wird der Schlüssel aus <code>AUTH_KEY</code>/<code>SECURE_AUTH_KEY</code> abgeleitet – diese Werte aus <code>config/app.php</code> getrennt von den Backups sichern.
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($canWriteBackups): ?>
+                                <form method="post" class="mt-3">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                                    <input type="hidden" name="action" value="set_encryption">
+                                    <input type="hidden" name="backup_encryption" value="<?php echo $storageEncryptionEnabled ? '0' : '1'; ?>">
+                                    <button type="submit" class="btn btn-sm <?php echo $storageEncryptionEnabled ? 'btn-outline-secondary' : 'btn-success'; ?>">
+                                        <?php echo $storageEncryptionEnabled ? 'Verschlüsselung deaktivieren' : 'Verschlüsselung aktivieren'; ?>
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <?php if ($validationReport !== []): ?>
         <?php
         $validationBackup = is_array($validationReport['backup'] ?? null) ? $validationReport['backup'] : [];
@@ -82,6 +171,9 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
                 <div class="card-actions d-flex gap-2 align-items-center">
                     <?php echo cms_admin_backups_render_status_badge((string) ($validationSummary['status'] ?? 'warning')); ?>
                     <span class="badge bg-blue-lt"><?php echo htmlspecialchars((string) ($validationBackup['name'] ?? 'Backup')); ?></span>
+                    <?php if (!empty($validationBackup['encrypted'])): ?>
+                        <span class="badge bg-success-lt text-success">Verschlüsselt</span>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="card-body">
@@ -248,6 +340,9 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
                                 <td>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1 text-muted" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/></svg>
                                     <?php echo htmlspecialchars($name); ?>
+                                    <?php if (!empty($backup['encrypted'])): ?>
+                                        <span class="badge bg-success-lt text-success" title="Verschlüsselt (XChaCha20-Poly1305)">Verschlüsselt</span>
+                                    <?php endif; ?>
                                     <?php if ($isFailedBackup): ?>
                                         <i class="ti ti-alert-triangle backup-failed-icon" title="Fehlerhafter Backup-Stand" aria-hidden="true"></i>
                                         <button

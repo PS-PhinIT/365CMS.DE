@@ -309,6 +309,7 @@ class SecurityAuditModule
         );
 
         $checks[] = $this->buildBackupCheck();
+        $checks[] = $this->buildBackupStorageCheck();
 
         try {
             $weakAdmins = $this->db->get_var(
@@ -397,7 +398,7 @@ class SecurityAuditModule
             return $this->buildCheck(
                 'Letztes Backup',
                 'warning',
-                'Backup-Status konnte nicht ermittelt werden – Schreib-/Leserechte von backups/ prüfen.'
+                'Backup-Status konnte nicht ermittelt werden – Backup-Verzeichnis (backups/ bzw. CMS_BACKUP_PATH) und dessen Schreib-/Leserechte prüfen.'
             );
         }
 
@@ -410,7 +411,7 @@ class SecurityAuditModule
             return $this->buildCheck(
                 'Letztes Backup',
                 'critical',
-                'Kein vollständiges lokales Backup unter backups/ gefunden. Unter System → Backup & Restore ein Backup erstellen (externe Hoster-Backups kann das Audit nicht erkennen).' . $incompleteHint
+                'Kein vollständiges lokales Backup im Backup-Verzeichnis gefunden. Unter System → Backup & Restore ein Backup erstellen (externe Hoster-Backups kann das Audit nicht erkennen).' . $incompleteHint
             );
         }
 
@@ -437,6 +438,50 @@ class SecurityAuditModule
                 $incompleteHint
             ) . ($status === 'ok' ? '' : ' Empfehlung: mindestens wöchentlich sichern.')
         );
+    }
+
+    /**
+     * Backups im Webroot schützt nur .htaccess (Apache); nginx/IIS liefern sie ohne eigene Regel aus.
+     *
+     * @return array{name:string, status:string, detail:string}
+     */
+    private function buildBackupStorageCheck(): array
+    {
+        $name = 'Backup-Speicherort & Verschlüsselung';
+
+        try {
+            $storage = \CMS\Services\BackupService::getInstance()->getStorageStatus();
+        } catch (\Throwable $e) {
+            $this->logFailure('security.audit.backup_storage_check_failed', 'Backup-Speicherort konnte für das Sicherheits-Audit nicht ermittelt werden.', [
+                'exception' => $e::class,
+            ]);
+
+            return $this->buildCheck($name, 'warning', 'Backup-Verzeichnis ist nicht nutzbar – CMS_BACKUP_PATH in config/app.php prüfen.');
+        }
+
+        $legacyHint = $storage['legacy_webroot_backups'] > 0
+            ? ' ' . $storage['legacy_webroot_backups'] . ' Alt-Backup(s) liegen noch im bisherigen Verzeichnis backups/ des CMS – verschieben oder löschen.'
+            : '';
+
+        if ($storage['encryption_enabled'] && $storage['weak_key']) {
+            return $this->buildCheck($name, 'warning', 'Backup-Verschlüsselung ist aktiv, aber ohne sicheren Schlüssel (Platzhalter in config/app.php) – CMS_ENCRYPTION_KEY setzen.' . $legacyHint);
+        }
+
+        if ($storage['inside_webroot'] && !$storage['encryption_enabled']) {
+            return $this->buildCheck($name, 'warning', 'Backups liegen unverschlüsselt im Webroot und sind nur per .htaccess geschützt (nginx/IIS ignorieren sie). CMS_BACKUP_PATH außerhalb des Webroots setzen oder unter System → Backup & Restore die Verschlüsselung aktivieren.' . $legacyHint);
+        }
+
+        if ($storage['inside_webroot'] && $storage['unencrypted_backups'] > 0) {
+            return $this->buildCheck($name, 'warning', 'Neue Backups werden verschlüsselt, ' . $storage['unencrypted_backups'] . ' ältere(s) Backup(s) liegen aber unverschlüsselt im Webroot – unter System → Backup & Restore löschen oder außerhalb des Webroots verschieben.' . $legacyHint);
+        }
+
+        $keyHint = $storage['encryption_enabled'] ? ' (Schlüssel ' . $storage['key_id'] . ' getrennt von den Backups sichern)' : '';
+        $detail = ($storage['inside_webroot']
+                ? 'Backups liegen im Webroot, werden aber verschlüsselt' . $keyHint . '.'
+                : 'Backups liegen außerhalb des Webroots' . ($storage['encryption_enabled'] ? ' und werden verschlüsselt' . $keyHint : '') . '.')
+            . $legacyHint;
+
+        return $this->buildCheck($name, $legacyHint === '' ? 'ok' : 'warning', $detail);
     }
 
     /**

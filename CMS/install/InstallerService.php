@@ -47,6 +47,9 @@ final class InstallerService
         'smtp_encryption' => 'smtp_encryption',
         'smtp_from_email' => 'smtp_from_email',
         'smtp_from_name' => 'smtp_from_name',
+        'cms_encryption_key' => 'cms_encryption_key',
+        'cms_encryption_keys_previous' => 'cms_encryption_keys_previous',
+        'cms_backup_path' => 'cms_backup_path',
     ];
 
     /**
@@ -325,6 +328,9 @@ final class InstallerService
             'SMTP_ENCRYPTION' => 'smtp_encryption',
             'SMTP_FROM_EMAIL' => 'smtp_from_email',
             'SMTP_FROM_NAME' => 'smtp_from_name',
+            'CMS_ENCRYPTION_KEY' => 'cms_encryption_key',
+            'CMS_ENCRYPTION_KEYS_PREVIOUS' => 'cms_encryption_keys_previous',
+            'CMS_BACKUP_PATH' => 'cms_backup_path',
         ];
 
         foreach ($stringConstants as $constant => $key) {
@@ -343,7 +349,7 @@ final class InstallerService
                 continue;
             }
 
-            if (in_array($key, ['auth_key', 'secure_auth_key', 'nonce_key'], true)) {
+            if (in_array($key, ['auth_key', 'secure_auth_key', 'nonce_key', 'cms_encryption_key', 'cms_encryption_keys_previous'], true)) {
                 $config[$key] = str_contains($value, 'REPLACE_VIA_INSTALLER') ? '' : $value;
                 continue;
             }
@@ -746,6 +752,9 @@ PHP;
             'smtp_encryption' => 'tls',
             'smtp_from_email' => '',
             'smtp_from_name' => '',
+            'cms_encryption_key' => '',
+            'cms_encryption_keys_previous' => '',
+            'cms_backup_path' => '',
         ];
     }
 
@@ -772,6 +781,9 @@ PHP;
         $normalized['auth_key'] = $normalized['auth_key'] !== '' ? $normalized['auth_key'] : $this->generateSecurityKey();
         $normalized['secure_auth_key'] = $normalized['secure_auth_key'] !== '' ? $normalized['secure_auth_key'] : $this->generateSecurityKey();
         $normalized['nonce_key'] = $normalized['nonce_key'] !== '' ? $normalized['nonce_key'] : $this->generateSecurityKey();
+        // Eigener Schlüssel für verschlüsselte Einstellungen, TOTP-Secrets und Backups. Bereits
+        // mit AUTH_KEY/SECURE_AUTH_KEY verschlüsselte Werte bleiben lesbar und werden migriert.
+        $normalized['cms_encryption_key'] = $normalized['cms_encryption_key'] !== '' ? $normalized['cms_encryption_key'] : $this->generateSecurityKey();
         $normalized['jwt_issuer'] = $this->normalizeString($data['jwt_issuer'] ?? null, $normalized['site_url']);
         $normalized['smtp_from_email'] = $this->normalizeString($data['smtp_from_email'] ?? null, $normalized['admin_email']);
         $normalized['smtp_from_name'] = $this->normalizeString($data['smtp_from_name'] ?? null, $normalized['site_name']);
@@ -899,6 +911,16 @@ PHP;
             'defined(\'SMTP_ENCRYPTION\') || define(\'SMTP_ENCRYPTION\', ' . $this->exportPhpValue($data['smtp_encryption']) . ');',
             'defined(\'SMTP_FROM_EMAIL\') || define(\'SMTP_FROM_EMAIL\', ' . $smtpFromEmailValue . ');',
             'defined(\'SMTP_FROM_NAME\')  || define(\'SMTP_FROM_NAME\',  ' . $smtpFromNameValue . ');',
+            '',
+            '// ─── Verschlüsselung gespeicherter Geheimnisse ─────────────────────────────',
+            '// Schlüssel für Einstellungs-Secrets, TOTP-Secrets und verschlüsselte Backups – getrennt sichern!',
+            '// Rotation: neuen Schlüssel setzen und den bisherigen in CMS_ENCRYPTION_KEYS_PREVIOUS eintragen.',
+            'defined(\'CMS_ENCRYPTION_KEY\')           || define(\'CMS_ENCRYPTION_KEY\',           ' . $this->exportPhpValue($data['cms_encryption_key']) . ');',
+            'defined(\'CMS_ENCRYPTION_KEYS_PREVIOUS\') || define(\'CMS_ENCRYPTION_KEYS_PREVIOUS\', ' . $this->exportPhpValue($data['cms_encryption_keys_previous']) . ');',
+            '',
+            '// ─── Backups ───────────────────────────────────────────────────────────────',
+            '// Leer: CMS/backups/. Empfohlen: absoluter Pfad außerhalb des Webroots.',
+            'defined(\'CMS_BACKUP_PATH\') || define(\'CMS_BACKUP_PATH\', ' . $this->exportPhpValue($data['cms_backup_path']) . ');',
         ];
 
         return implode("\n", $lines) . "\n";

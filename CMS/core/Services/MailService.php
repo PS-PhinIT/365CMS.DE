@@ -640,6 +640,11 @@ class MailService
     private function sendMessageFallback(string $to, string $subject, string $body, array $headers, bool $isHtml): bool
     {
         $config = $this->getEffectiveConfig();
+        $extraHeaders = array_filter(
+            $this->normalizeHeaders($headers),
+            static fn ($name): bool => strcasecmp((string) $name, 'Content-Transfer-Encoding') !== 0,
+            ARRAY_FILTER_USE_KEY
+        );
         $messageHeaders = $this->buildHeaders(
             array_merge(
                 [
@@ -647,13 +652,17 @@ class MailService
                         ? 'text/html; charset=UTF-8'
                         : 'text/plain; charset=UTF-8',
                 ],
-                $this->normalizeHeaders($headers)
+                $extraHeaders,
+                // UTF-8-Text und lange HTML-Zeilen (> 998 Zeichen) nicht ungekennzeichnet als 7bit versenden.
+                ['Content-Transfer-Encoding' => 'quoted-printable']
             ),
             (string) $config['from_email'],
             (string) $config['from_name']
         );
 
-        return mail($to, $subject, $body, $messageHeaders);
+        $body = preg_replace('/\r\n|\r|\n/', "\r\n", $body) ?? $body;
+
+        return mail($to, $this->encodeMimeHeaderValue($subject), quoted_printable_encode($body), $messageHeaders);
     }
 
     private function sendWithAttachmentFallback(
@@ -695,7 +704,7 @@ class MailService
             (string) $config['from_name']
         );
 
-        return mail($to, $subject, $messageBody, $messageHeaders);
+        return mail($to, $this->encodeMimeHeaderValue($subject), $messageBody, $messageHeaders);
     }
 
     private function createPlainTextBody(string $htmlBody): string
@@ -740,7 +749,9 @@ class MailService
         $name = $this->sanitizeDisplayName($fromName !== '' ? $fromName : (defined('SMTP_FROM_NAME') ? (string) SMTP_FROM_NAME : (defined('SITE_NAME') ? (string) SITE_NAME : 'CMS')));
 
         $headers = [
-            'From' => $this->formatAddress($email, $name),
+            'From' => preg_match('/[^\x20-\x7E]/', $name) === 1
+                ? $this->encodeMimeHeaderValue($name) . ' <' . $email . '>'
+                : $this->formatAddress($email, $name),
             'Reply-To' => $email,
             'MIME-Version' => '1.0',
             'X-Mailer' => '365CMS/' . (defined('CMS_VERSION') ? CMS_VERSION : '2.0'),
@@ -761,6 +772,18 @@ class MailService
         }
 
         return implode("\r\n", $lines);
+    }
+
+    /**
+     * RFC 2047: Nicht-ASCII-Werte (Betreff, Absendername) für den mail()-Fallback kodieren.
+     */
+    private function encodeMimeHeaderValue(string $value): string
+    {
+        if ($value === '' || preg_match('/[^\x20-\x7E]/', $value) !== 1) {
+            return $value;
+        }
+
+        return mb_encode_mimeheader($value, 'UTF-8', 'B', "\r\n");
     }
 
     private function formatAddress(string $email, string $name = ''): string

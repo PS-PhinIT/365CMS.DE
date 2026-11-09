@@ -22,6 +22,9 @@ if (!defined('ABSPATH')) {
 
 final class MemberRouter
 {
+    /** Vorlagen, die nur eingebunden werden (PluginDashboardRegistry) und ohne deren Variablen nicht direkt aufrufbar sind. */
+    private const INTERNAL_MEMBER_TEMPLATES = ['plugin-section'];
+
     private FeatureUsageService $featureUsage;
 
     public function __construct(private readonly Router $router)
@@ -79,7 +82,8 @@ final class MemberRouter
             return;
         }
 
-        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $page)) {
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $page)
+            || in_array(strtolower($page), self::INTERNAL_MEMBER_TEMPLATES, true)) {
             $this->router->render404();
             return;
         }

@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 use CMS\Auth;
 
-const CMS_ADMIN_USERS_ALLOWED_ACTIONS = ['save', 'delete', 'bulk'];
+const CMS_ADMIN_USERS_ALLOWED_ACTIONS = ['save', 'delete', 'revoke_sessions', 'cancel_email_change', 'bulk'];
 const CMS_ADMIN_USERS_ALLOWED_VIEWS = ['list', 'edit'];
 const CMS_ADMIN_USERS_ALLOWED_BULK_ACTIONS = ['activate', 'deactivate', 'delete', 'hard_delete'];
 const CMS_ADMIN_USERS_WRITE_CAPABILITY = 'manage_users';
@@ -248,6 +248,28 @@ $sectionPageConfig = [
             if (!empty($result['success'])) {
                 $result['redirect_path'] = cms_admin_users_target_url();
             }
+
+            return $result;
+        }
+
+        if ($payload['action'] === 'revoke_sessions') {
+            if ($payload['id'] < 1 || !$module->hasUser($payload['id'])) {
+                return ['success' => false, 'error' => 'Ungültige Benutzer-ID.'];
+            }
+
+            $result = $module->revokeSessions($payload['id']);
+            $result['redirect_path'] = cms_admin_users_target_url($payload['id']);
+
+            return $result;
+        }
+
+        if ($payload['action'] === 'cancel_email_change') {
+            if ($payload['id'] < 1 || !$module->hasUser($payload['id'])) {
+                return ['success' => false, 'error' => 'Ungültige Benutzer-ID.'];
+            }
+
+            $result = $module->cancelEmailChange($payload['id']);
+            $result['redirect_path'] = cms_admin_users_target_url($payload['id']);
 
             return $result;
         }
