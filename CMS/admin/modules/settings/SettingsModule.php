@@ -1611,8 +1611,9 @@ PHP;
     }
 
     /**
-     * Sichert config/app.php vor dem Überschreiben. Die Kopie enthält Zugangsdaten: Sie erhält dieselben
-     * Rechte wie app.php (0640), bevor Inhalt geschrieben wird; aufbewahrt werden CONFIG_BACKUP_KEEP Kopien.
+     * Sichert config/app.php vor dem Überschreiben. Die Kopie enthält Zugangsdaten und ist zu keinem
+     * Zeitpunkt für andere lokale Konten lesbar (createConfigBackupCopy()); aufbewahrt werden
+     * CONFIG_BACKUP_KEEP Kopien.
      */
     private function backupConfigFile(string $configPath): void
     {
@@ -1622,29 +1623,7 @@ PHP;
         }
 
         $configDir = dirname($configPath);
-        // .php-Endung: bei fehlendem .htaccess-Schutz (z. B. nginx) wird die Datei ausgeführt statt
-        // als Klartext mit DB-Zugangsdaten ausgeliefert. Mikrosekunden halten die Namen eindeutig und
-        // chronologisch sortierbar (auch mehrere Kopien je Sekunde).
-        $createdBackup = null;
-        for ($attempt = 0; $attempt < 5; $attempt++) {
-            [$fraction, $seconds] = explode(' ', microtime());
-            $backupPath = $configDir . '/app.backup-' . date('Y-m-d_H-i-s', (int) $seconds)
-                . '_' . substr($fraction, 2, 6) . '.php';
-            $handle = @fopen($backupPath, 'xb');
-            if ($handle === false) {
-                continue;
-            }
-
-            @chmod($backupPath, 0640);
-            $written = fwrite($handle, $content);
-            fclose($handle);
-            if ($written === strlen($content)) {
-                $createdBackup = $backupPath;
-            } else {
-                @unlink($backupPath);
-            }
-            break;
-        }
+        $createdBackup = $this->createConfigBackupCopy($configDir, $content);
 
         // Älteste zuerst (der Name enthält den Zeitstempel); die soeben angelegte Kopie wird nie entfernt.
         $backups = array_values(array_filter(
@@ -1661,6 +1640,52 @@ PHP;
                 @chmod($backupFile, 0640);
             }
         }
+    }
+
+    /**
+     * Legt eine Kopie wie writeFileAtomically() über tempnam() an: Die temporäre Datei hat 0600, die fertige
+     * Kopie 0640 wie app.php. Per fopen() angelegt, hätte sie bis zum chmod() die umask-Rechte (meist 0644).
+     * Gibt den Pfad der Kopie zurück, bei Fehlern null.
+     */
+    private function createConfigBackupCopy(string $configDir, string $content): ?string
+    {
+        $realDir = realpath($configDir);
+        $tempPath = $realDir !== false ? @tempnam($realDir, 'cmscfg_') : false;
+        if ($tempPath === false) {
+            return null;
+        }
+
+        // tempnam() weicht bei nicht beschreibbarem Verzeichnis auf das System-Temp-Verzeichnis aus.
+        if (dirname($tempPath) !== $realDir || file_put_contents($tempPath, $content) !== strlen($content)) {
+            @unlink($tempPath);
+            return null;
+        }
+        @chmod($tempPath, 0640);
+
+        // .php-Endung: bei fehlendem .htaccess-Schutz (z. B. nginx) wird die Datei ausgeführt statt
+        // als Klartext mit DB-Zugangsdaten ausgeliefert. Mikrosekunden halten die Namen eindeutig und
+        // chronologisch sortierbar (auch mehrere Kopien je Sekunde).
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            [$fraction, $seconds] = explode(' ', microtime());
+            $backupPath = $configDir . '/app.backup-' . date('Y-m-d_H-i-s', (int) $seconds)
+                . '_' . substr($fraction, 2, 6) . '.php';
+            // Namen exklusiv als leere Datei reservieren, dann atomar durch die fertige Kopie ersetzen.
+            $handle = @fopen($backupPath, 'xb');
+            if ($handle === false) {
+                continue;
+            }
+            fclose($handle);
+
+            if (@rename($tempPath, $backupPath)) {
+                return $backupPath;
+            }
+
+            @unlink($backupPath);
+            break;
+        }
+
+        @unlink($tempPath);
+        return null;
     }
 
     private function writeFileAtomically(string $path, string $content): bool

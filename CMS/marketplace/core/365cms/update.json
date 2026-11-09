@@ -7,7 +7,7 @@
   "released": "2026-11-08",
   "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "ccaa88401891bc1155a43d7e11bc44863a6f87078f7decb2aaf2f3ca22cc278c",
+  "checksum_sha256": "137ca15d1d7c032f052131406134f32371793d3eda6f50c7ee50447fd22810d3",
   "notes": "Release-Stand 4.0.0: Sicherheits- und Korrekturrelease nach dem Folgeaudit vom 08.11.2026 – bitte zeitnah installieren. Behoben u. a.: manipulierbarer Host-Header in Script- und Asset-URLs (Cache-Poisoning), MFA-Einrichtung ohne Passwort, Zugangsgeheimnisse im DSGVO-Export, umgehbare Installer-Sperre, SVG-Import über den WordPress-Importer (gespeichertes XSS), Plugin-Dashboards mit unbekannter Capability und Passkey-Anmeldungen ohne zweiten Faktor. Aktualisiert: DOMPurify 3.4.17, symfony/mime 8.1.10, symfony/yaml 8.1.11, symfony/serializer 8.1.11. Die Option „E-Mail-Verifizierung erzwingen“ wirkt jetzt (Bestätigungslink bei der Registrierung). Korrigiert: Benutzer anlegen im Adminbereich und die Kennzeichnung kritischer Updates. Datenbankschema bleibt v23.",
   "critical": true
 }

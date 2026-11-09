@@ -5,7 +5,7 @@
 
 ## English (summary)
 
-The application firewall runs on every web request (`Bootstrap` → `CMS\Services\SecurityRuntimeService::handleRequest()`). It evaluates rules from `cms_firewall_rules` (types `block_ip`, `block_range`, `allow_ip`, `block_ua`, `block_country`; mode `enforce` or `simulate`), applies an IP rate limit and logs events to `cms_security_log`. IPs with an `allow_ip` rule and signed-in accounts with `manage_settings` are exempt from the rate limit and its automatic blocks (since 4.0.0). Admin page: `CMS/admin/firewall.php` → `CMS/admin/modules/security/FirewallModule.php` → `CMS/admin/views/security/firewall.php`. Actions: `save_settings`, `apply_baseline_profile`, `add_rule`, `delete_rule`, `toggle_rule`, `set_rule_mode`.
+The application firewall runs on every web request (`Bootstrap` → `CMS\Services\SecurityRuntimeService::handleRequest()`). It evaluates rules from `cms_firewall_rules` (types `block_ip`, `block_range`, `allow_ip`, `block_ua`, `block_country`; mode `enforce` or `simulate`), applies an IP rate limit and logs events to `cms_security_log`. IPs with an `allow_ip` rule and signed-in accounts with `manage_settings` are exempt from the rate limit and its automatic blocks (since 4.0.0); manual block rules still apply to them. Admin page: `CMS/admin/firewall.php` → `CMS/admin/modules/security/FirewallModule.php` → `CMS/admin/views/security/firewall.php`. Actions: `save_settings`, `apply_baseline_profile`, `add_rule`, `delete_rule`, `toggle_rule`, `set_rule_mode`.
 
 ## Deutsch
 
@@ -47,13 +47,13 @@ Jede Regel hat optional Grund und Ablaufdatum (`expires_at`) und kann aktiviert/
 ### Ablauf je Anfrage
 
 1. Abgelaufene Laufzeitsperren entfernen.
-2. Regeln auswerten (`allow_ip` vor Block-Regeln).
+2. Regeln auswerten (`allow_ip` vor Block-Regeln; automatische Sperren werden für Administratoren übersprungen, siehe unten).
 3. Bei Block-Treffer: HTTP 403 und Log-Eintrag.
 4. Bei `allow_ip`-Treffer endet die Prüfung hier; die IP unterliegt keinem Rate-Limit.
 5. Rate-Limit prüfen; bei Überschreitung HTTP 429 und eine temporäre Sperre (`firewall_block_duration`, Regel `block_ip` mit Grund „Automatisches Rate-Limit“).
 6. Fehler in der Firewall selbst blockieren die Seite nicht (Warnung im Logger-Kanal `security.runtime`).
 
-**Administratoren (seit 4.0.0):** Anfragen angemeldeter Konten mit `manage_settings` zählen nicht zum Rate-Limit, und automatische Sperren gelten für sie nicht. Vorher sperrte zügiges Arbeiten im Backend mit den Standardwerten (60 Anfragen je Minute) die eigene IP für eine Stunde aus, einschließlich der Firewall-Seite. Manuell angelegte Block-Regeln gelten auch für Administratoren. Vor der Anmeldung zählen Anfragen wie die jedes anderen Besuchers; für feste Büro-IPs empfiehlt sich eine Regel „IP erlauben“.
+**Administratoren (seit 4.0.0):** Anfragen angemeldeter Konten mit `manage_settings` zählen nicht zum Rate-Limit, und automatische Sperren gelten für sie nicht. Vorher sperrte zügiges Arbeiten im Backend mit den Standardwerten (60 Anfragen je Minute) die eigene IP für eine Stunde aus, einschließlich der Firewall-Seite. Manuell angelegte Block-Regeln gelten auch für Administratoren, auch wenn für dieselbe IP zusätzlich eine automatische Sperre besteht. Vor der Anmeldung zählen Anfragen wie die jedes anderen Besuchers; für feste Büro-IPs empfiehlt sich eine Regel „IP erlauben“.
 
 Die Client-IP ermittelt `Security::getClientIp()`; hinter Proxys/CDN muss die Weitergabe der echten IP korrekt konfiguriert sein, sonst wird die Proxy-IP gesperrt.
 

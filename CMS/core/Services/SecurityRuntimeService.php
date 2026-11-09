@@ -123,9 +123,7 @@ final class SecurityRuntimeService
             $this->cleanupExpiredRuntimeBlocks();
             $decision = $this->evaluateRules($ip, $userAgent);
 
-            // Automatische Rate-Limit-Sperren gelten nicht für angemeldete Administratoren
-            // (isRateLimitExempt()); manuell angelegte Block-Regeln bleiben wirksam.
-            if ($decision['decision'] === 'block' && !($decision['automatic'] && $this->isRateLimitExempt())) {
+            if ($decision['decision'] === 'block') {
                 $this->denyRequest($ip, $uri, $userAgent, $decision['rule'], 'Firewall-Regel blockiert den Request.', 403, 0, [
                     'source' => 'firewall_rule',
                     'rule_id' => $decision['rule_id'],
@@ -214,7 +212,7 @@ final class SecurityRuntimeService
         return $this->rateLimitExempt;
     }
 
-    /** @return array{decision:string,rule:string,rule_id:int,rule_type:string,rule_mode:string,automatic:bool} */
+    /** @return array{decision:string,rule:string,rule_id:int,rule_type:string,rule_mode:string} */
     private function evaluateRules(string $ip, string $userAgent): array
     {
         $rows = $this->db->get_results(
@@ -242,28 +240,32 @@ final class SecurityRuntimeService
             $ruleMatchKey = $this->buildRuleMatchKey($ruleId);
 
             if ($type === 'allow_ip' && hash_equals($value, $ip)) {
-                return ['decision' => 'allow', 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => self::RULE_MODE_ENFORCE, 'automatic' => false];
+                return ['decision' => 'allow', 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => self::RULE_MODE_ENFORCE];
             }
 
             if ($type === 'block_ip' && hash_equals($value, $ip)) {
-                $automatic = (string)($row->reason ?? '') === self::AUTO_BLOCK_REASON;
-                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode, 'automatic' => $automatic];
+                // Automatische Rate-Limit-Sperren gelten nicht für angemeldete Administratoren
+                // (isRateLimitExempt()); manuell angelegte Regeln werden weiter geprüft.
+                if ((string)($row->reason ?? '') === self::AUTO_BLOCK_REASON && $this->isRateLimitExempt()) {
+                    continue;
+                }
+                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode];
             }
 
             if ($type === 'block_range' && $this->ipMatchesCidr($ip, $value)) {
-                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode, 'automatic' => false];
+                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode];
             }
 
             if ($type === 'block_ua' && $userAgent !== '' && stripos($userAgent, $value) !== false) {
-                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode, 'automatic' => false];
+                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode];
             }
 
             if ($type === 'block_country' && $country !== '' && hash_equals(strtoupper($value), $country)) {
-                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode, 'automatic' => false];
+                return ['decision' => $decision, 'rule' => $ruleMatchKey, 'rule_id' => $ruleId, 'rule_type' => $type, 'rule_mode' => $mode];
             }
         }
 
-        return ['decision' => 'none', 'rule' => '', 'rule_id' => 0, 'rule_type' => '', 'rule_mode' => '', 'automatic' => false];
+        return ['decision' => 'none', 'rule' => '', 'rule_id' => 0, 'rule_type' => '', 'rule_mode' => ''];
     }
 
     private function enforceRateLimit(array $settings, string $ip, string $uri, string $userAgent): void
