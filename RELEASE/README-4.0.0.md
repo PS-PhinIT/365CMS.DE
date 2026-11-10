@@ -2,9 +2,9 @@
 
 ## English
 
-This release directory documents the distributable `4.0.0` packages (release date 2026-11-08, database schema `v23`). Both packages contain deployable code only. Installation-specific configuration, uploads, caches, logs and backups are intentionally excluded; the full package ships only the protective `.htaccess`/index files of those directories.
+This release directory documents the distributable `4.0.0` packages (release date 2026-11-08, database schema `v24`). Both packages contain deployable code only. Installation-specific configuration, uploads, caches, logs and backups are intentionally excluded; the full package ships only the protective `.htaccess`/index files of those directories.
 
-Security and bug-fix release on top of 3.5.6, based on the follow-up audit of 2026-11-08 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 findings, all fixed). A second pass on 2026-11-09 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) implemented the recommendations OFFEN-20 … OFFEN-26 and fixed six further defects that had existed since 3.5.x. The update is marked as critical; install it promptly.
+Security and bug-fix release on top of 3.5.6, based on the follow-up audit of 2026-11-08 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 findings, all fixed). A second pass on 2026-11-09 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) implemented the recommendations OFFEN-20 … OFFEN-26 and fixed six further defects that had existed since 3.5.x. The update is marked as critical; install it promptly. The release also ships the redesigned administration described below.
 
 Fixed, among others:
 
@@ -36,11 +36,23 @@ Added in the second pass:
 
 Also fixed: plain-text mails sent as HTML, missing header and transfer encoding in the `mail()` fallback, dashboard links to disabled modules, exception texts in theme helpers, and the directly reachable template `/member/plugin-section`.
 
+Redesigned administration:
+
+- calm, light layout with design tokens mapped onto Tabler, locally bundled fonts (Inter, Source Serif 4, JetBrains Mono) and an accent colour per site;
+- collapsible sidebar: site switcher (phinit.de, 365network.de), collapsible groups whose state is stored per user, a 76 px icon rail with tooltips and flyouts, and an off-canvas drawer below 992 px;
+- a "Plugins" group with one entry per plugin; *Einstellungen › Plugins › Plugin-Zuweisung* controls in which sites a plugin's menu appears;
+- new post editor with a publish checklist (featured image, SEO description of 120–160 characters, category; also enforced on the server), focus mode (Ctrl+Shift+F), autosave and a revision history with block diff and restore;
+- system notices for administrators on the sidebar avatar: failed cron run, backup older than 24 hours, available core or plugin updates.
+
+Plugin menu registration (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) is unchanged; existing plugins work without modification. All existing admin URLs keep working.
+
+Database schema `v24` adds six columns to `cms_post_revisions` (`revision_type`, `created_by`, `featured_image`, `meta_title`, `meta_description`, `fingerprint`) for revision compare, restore and duplicate detection. Existing revisions are kept and marked `legacy`; no data is rewritten. User preferences (`cms_user_meta`, key `admin_ui_prefs`) and plugin assignments (`cms_settings`, options `admin_plugin_site_assignments` and `admin_sites`) use existing tables.
+
 ## Deutsch
 
-Dieses Release-Verzeichnis dokumentiert die auslieferbaren Pakete `4.0.0` (Release 08.11.2026, Datenbankschema `v23`). Update- und Vollpaket enthalten ausschließlich auslieferbaren Code; installationsspezifische Konfiguration, Uploads, Cache, Logs und Backups sind bewusst ausgeschlossen. Das Vollpaket enthält aus diesen Verzeichnissen nur die schützenden `.htaccess`-/Index-Dateien.
+Dieses Release-Verzeichnis dokumentiert die auslieferbaren Pakete `4.0.0` (Release 08.11.2026, Datenbankschema `v24`). Update- und Vollpaket enthalten ausschließlich auslieferbaren Code; installationsspezifische Konfiguration, Uploads, Cache, Logs und Backups sind bewusst ausgeschlossen. Das Vollpaket enthält aus diesen Verzeichnissen nur die schützenden `.htaccess`-/Index-Dateien.
 
-Sicherheits- und Korrekturrelease auf Basis von 3.5.6 nach dem Folgeaudit vom 08.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 Befunde, alle behoben). Ein zweiter Durchgang am 09.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) setzt die Empfehlungen OFFEN-20 bis OFFEN-26 um und behebt sechs weitere Fehler, die seit 3.5.x bestanden. Das Update ist als kritisch markiert und sollte zeitnah installiert werden. Installationen mit 3.5.6 zeigen es noch als normales Update an, weil die rote Kennzeichnung kritischer Updates erst mit 4.0.0 kommt.
+Sicherheits- und Korrekturrelease auf Basis von 3.5.6 nach dem Folgeaudit vom 08.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 Befunde, alle behoben). Ein zweiter Durchgang am 09.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) setzt die Empfehlungen OFFEN-20 bis OFFEN-26 um und behebt sechs weitere Fehler, die seit 3.5.x bestanden. Das Update ist als kritisch markiert und sollte zeitnah installiert werden. Installationen mit 3.5.6 zeigen es noch als normales Update an, weil die rote Kennzeichnung kritischer Updates erst mit 4.0.0 kommt. Außerdem enthält das Release die unten beschriebene neue Administration.
 
 Behoben wurden unter anderem:
 
@@ -72,6 +84,18 @@ Neu im zweiten Durchgang:
 
 Außerdem behoben: Klartext-Mails wurden als HTML versendet, beim Versand über `mail()` fehlten Header- und Transfer-Kodierung, das Dashboard verlinkte deaktivierte Module, Theme-Helfer zeigten Exception-Texte, und die interne Vorlage `/member/plugin-section` war direkt aufrufbar.
 
+Neue Administration:
+
+- ruhiges, helles Layout mit Design-Tokens auf Basis der Tabler-Variablen, lokal ausgelieferten Schriften (Inter, Source Serif 4, JetBrains Mono) und einer Akzentfarbe je Site;
+- einklappbare Seitenleiste: Site-Umschalter (phinit.de, 365network.de), einklappbare Gruppen mit gespeichertem Zustand je Benutzer, eingeklappt eine 76 px schmale Symbolspalte mit Tooltips und Flyouts, unter 992 px ein ausklappbares Menü (Drawer);
+- Gruppe „Plugins“ mit einem Eintrag je Plugin; unter *Einstellungen › Plugins › Plugin-Zuweisung* wird festgelegt, in welchen Sites ein Plugin-Menü erscheint;
+- neuer Beitragseditor mit Veröffentlichungs-Checkliste (Beitragsbild, SEO-Beschreibung mit 120–160 Zeichen, Kategorie; auch serverseitig geprüft), Fokusmodus (Strg+Umschalt+F), Autosave und Revisionsverlauf mit Block-Vergleich und Wiederherstellung;
+- Systemhinweise für Administratoren am Avatar der Seitenleiste: fehlgeschlagener Cron-Lauf, Backup älter als 24 Stunden, verfügbare Core- oder Plugin-Updates.
+
+Die Registrierung von Plugin-Menüs (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) ist unverändert; bestehende Plugins funktionieren ohne Anpassung. Alle bisherigen Admin-URLs bleiben gültig.
+
+Datenbankschema `v24`: Die Migration ergänzt in `cms_post_revisions` die Spalten `revision_type`, `created_by`, `featured_image`, `meta_title`, `meta_description` und `fingerprint` für Vergleich, Wiederherstellung und Duplikaterkennung von Revisionen. Vorhandene Revisionen bleiben erhalten und werden als `legacy` gekennzeichnet; Daten werden nicht umgeschrieben. Benutzer-Präferenzen (`cms_user_meta`, Schlüssel `admin_ui_prefs`) und Plugin-Zuweisungen (`cms_settings`, Optionen `admin_plugin_site_assignments` und `admin_sites`) nutzen vorhandene Tabellen.
+
 - `365CMS-4.0.0-update.zip`: vollständiges Core-Updatepaket für den automatischen Core-Updater (Wurzelordner `CMS/`).
 - `365CMS-4.0.0-full.zip`: sauberes Gesamtpaket für eine Neuinstallation. Nach dem Entpacken `CMS/install.php` aufrufen.
 - `365CMS-4.0.0-update.json`: Update-Manifest inklusive SHA-256 für das Updatepaket.
@@ -83,7 +107,7 @@ Das Updatepaket muss unter folgendem Pfad erreichbar sein:
 
 `https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip`
 
-Die Datei `CMS/marketplace/core/365cms/update.json` muss am selben Marketplace-Pfad liegen. Nach dem Core-Update den Adminbereich neu laden und unter **Admin → Updates** das idempotente Datenbank-Update ausführen (Schema bleibt `v23`, die installierte Version wird auf `4.0.0` gesetzt).
+Die Datei `CMS/marketplace/core/365cms/update.json` muss am selben Marketplace-Pfad liegen. Nach dem Core-Update den Adminbereich neu laden und unter **Admin → Updates** das idempotente Datenbank-Update ausführen (Schema `v23` → `v24`, neue Spalten in `cms_post_revisions`; die installierte Version wird auf `4.0.0` gesetzt). Der Revisionsdienst legt fehlende Spalten beim ersten Aufruf auch selbst an.
 
 Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest voraus. Der Core-Swap bewahrt `config/`, `config.php`, `uploads/`, `cache/`, `logs/` und `backups/`.
 
@@ -106,5 +130,11 @@ Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest
 - **Registrierung und Anmeldung:** Für eine vollständig neutrale Registrierung *E-Mail-Verifizierung erzwingen* einschalten. Nach fünf Fehlversuchen in 15 Minuten verzögert die Anmeldung für das betroffene Konto um bis zu 30 s.
 - **API-Tokens:** „Überall abmelden“ beendet auch alle JWTs des Kontos; Integrationen fordern danach ein neues Token an.
 - **Konfigurationskopien:** Unter `config/` bleiben nur die fünf neuesten `app.backup-*.php`; ältere entfernt das nächste Speichern mit Änderung. Kopien aus Versionen vor 3.4.12 (`app.php.backup.*`) manuell löschen.
+- **Neue Seitenleiste:** Die Menüs sind neu gruppiert (Übersicht, Inhalte, Benutzer, Gestaltung & Marketing, Sicherheit & Recht, Plugins, Verwaltung); alle bisherigen Admin-URLs bleiben gültig. Aufgeklappte Gruppen und die eingeklappte Seitenleiste speichert jeder Benutzer selbst.
+- **Sites:** Der Site-Umschalter zeigt standardmäßig `phinit.de` und `365network.de`. Andere Installationen hinterlegen ihre Sites in der Option `admin_sites` (JSON-Liste mit `key`, `label`, optional `url`, `accent`, `hosts`; siehe `DOC/core/DATABASE-SCHEMA.md`).
+- **Plugin-Zuweisung:** Plugins ohne gespeicherte Zuweisung erscheinen in allen Sites, nach dem Update fehlt also kein Menüeintrag. Unter *Einstellungen › Plugins › Plugin-Zuweisung* (`/admin/plugin-assignment`) festlegen, in welchen Sites ein Plugin-Menü erscheint. Direkt aufgerufene Plugin-Seiten bleiben erreichbar und zeigen in nicht zugewiesenen Sites einen Hinweis.
+- **Veröffentlichungs-Checkliste:** Veröffentlichen und Planen verlangen jetzt Beitragsbild, SEO-Beschreibung mit 120–160 Zeichen und Kategorie – im Editor, bei der Bulk-Aktion „Veröffentlichen“ (unvollständige Beiträge werden übersprungen) und beim Wiederherstellen einer Revision eines geplanten Beitrags. Veröffentlichte Beiträge lassen sich ohne Checkliste weiter bearbeiten. Bereits geplante Beiträge erscheinen unverändert zum geplanten Zeitpunkt, verlangen beim nächsten Speichern aber die vollständige Checkliste.
+- **Revisionen:** Je Beitrag bleiben die letzten 30 Revisionen. Bis 4.0.0 war der Verlauf unbegrenzt; die erste neue Revision eines Beitrags nach dem Update kürzt seinen Verlauf auf 30 Einträge. Wer ältere Stände braucht, sichert vorher die Datenbank.
+- **Systemhinweise:** Administratoren (`manage_system`) sehen am Avatar einen Punkt, wenn der letzte Cron-Lauf fehlschlug, kein Backup vorhanden oder das letzte älter als 24 Stunden ist, oder Core- bzw. Plugin-Updates bereitstehen. Der Cron-Status wird erst ab 4.0.0 erfasst, ein Cron-Hinweis erscheint also frühestens nach dem ersten fehlgeschlagenen Lauf. Die Hinweise werden fünf Minuten zwischengespeichert.
 - **OPcache:** Falls weiterhin der alte Stand ausgeführt wird, OPcache bzw. PHP-FPM neu starten (Hoster-Panel).
 - **Upgrade von 3.4.x:** Zusätzlich die Hinweise aus `RELEASE/README-3.5.0.md` beachten (Proxy/CDN, Lazy Sessions, JWT-Bindung, nginx-Regel).

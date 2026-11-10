@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Seiten & Beiträge
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Pages & Posts** (*Seiten & Beiträge*). All screens are rendered through the shared admin section shell and follow the same contract: capability check → CSRF token per page → normalized input → module method → flash message → Post/Redirect/Get.
+This folder documents the sidebar entry **Pages & Posts** (*Seiten & Beiträge*, group *Inhalte*). All screens are rendered through the shared admin section shell and follow the same contract: capability check → CSRF token per page → normalized input → module method → flash message → Post/Redirect/Get.
 
 ## Deutsch
 
@@ -27,6 +27,7 @@ This folder documents the sidebar group **Pages & Posts** (*Seiten & Beiträge*)
 - **Request-Shell:** `CMS/admin/partials/section-page-shell.php` lädt Modul und View, prüft das CSRF-Token (`csrf_action` je Seite), speichert Meldungen als Flash in der Session und leitet nach erfolgreichem POST weiter (PRG). Bei Validierungsfehlern wird der Editor inline mit den Eingaben erneut gerendert.
 - **Mehrsprachigkeit:** Seiten, Beiträge, Kategorien und Tags führen deutsche und englische Felder (`*_en`). Der Editor wechselt über `?lang=en` bzw. den DE/EN-Schalter.
 - **Editor:** Editor.js (lokal unter `CMS/assets/editorjs/`), alternativ SunEditor (siehe [SETTINGS.md](SETTINGS.md)).
+- **Beitragseditor (seit 4.0.0):** Kopfleiste mit Autosave-Status, Schreibbereich und Einstellungsspalte, Veröffentlichungs-Checkliste, Fokusmodus und Revisionen mit Vergleich/Wiederherstellen – siehe [POSTS.md](POSTS.md#editor-layout-seit-400).
 - **Shortcodes im Inhalt:** `[site-table id="…"]`, `[table id="…"]`, `[hub-site id="…"]`.
 - **Audit:** Speichern, Löschen und Sammelaktionen werden über `AuditLogger` bzw. den Logger-Kanal des Moduls protokolliert.
 

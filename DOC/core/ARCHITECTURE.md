@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Architektur
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** v23 | **PHP:** ≥ 8.4
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** v24 | **PHP:** ≥ 8.4
 
 ## English (summary)
 
@@ -62,7 +62,7 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 ### Bootstrap im Detail (`Bootstrap::initializeCore()`)
 
 1. **Konstanten** sicherstellen (`ensureConstants()`), Plattformprüfung der gebündelten Bibliotheken (`validateBundledPhpPlatform()` liest Mindest-PHP-Versionen aus den Vendor-Manifests).
-2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()` – läuft nur, bis `SCHEMA_VERSION = v23` erreicht ist (Flag-Datei `cache/db_schema_v23.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
+2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()` – läuft nur, bis `SCHEMA_VERSION = v24` erreicht ist (Flag-Datei `cache/db_schema_v24.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
 3. **Security** (`Security::init()`): CSP-Nonce, Sicherheitsheader, Session-Start.
 4. **Auth** (`Auth::instance()`): Session-Benutzer laden, Rollen-Lebensdauer prüfen.
 5. **Firewall** (`SecurityRuntimeService::handleRequest()`), nicht im CLI.

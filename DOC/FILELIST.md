@@ -27,13 +27,13 @@
 
 This file is the **readable structure map**. It answers: where does something live, what does the running CMS load, and which paths matter when you change code.
 
-Product version in code: `3.5.0`. PHP: 8.4.1+. Schema: `v23`.
+Product version in code: `4.0.0`. PHP: 8.4.1+. Schema: `v24`.
 
 **Deutsch**
 
 Diese Datei ist die **lesbare Strukturkarte**. Sie beantwortet: wo liegt etwas, was lädt das laufende CMS, und welche Pfade zählen bei Änderungen.
 
-Produktversion im Code: `3.5.0`. PHP: 8.4.1+. Schema: `v23`.
+Produktversion im Code: `4.0.0`. PHP: 8.4.1+. Schema: `v24`.
 
 ### 1.1 Workspace context | Workspace-Kontext
 
@@ -186,7 +186,8 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | Mail | `MailService`, `MailQueueService`, `MailLogService`, `AzureMailTokenProvider`, `GraphApiService` |
 | SEO | `SEOService`, `SeoAnalysisService`, `RedirectService`, `SitemapService` |
 | Media | `MediaService`, `MediaDeliveryService`, `FileUploadService`, `ImageService` |
-| Editor | `EditorJsService`, `EditorJsRenderer`, `EditorService` |
+| Editor | `EditorJsService`, `EditorJsRenderer`, `EditorService`, `PostPublishChecklistService`, `PostRevisionService` |
+| Admin UI (4.0.0) | `AdminNavigationService`, `AdminUiPreferenceService`, `AdminSiteContextService`, `PluginSiteAssignmentService`, `AdminNoticeService` |
 | Landing | `LandingPageService` + `Services/Landing/` |
 | AI | `Services/AI/` (admin-only in 3.5.0) |
 | Member | `MemberService`, `MessageService` |
@@ -198,7 +199,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-290 files. Layout:
+294 files. Layout:
 
 - `CMS/admin/*.php` — HTTP entry points
 - `CMS/admin/modules/<domain>/` — domain modules (`comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`)
@@ -206,11 +207,11 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 - `CMS/admin/partials/` — shared chrome (including sidebar)
 - `CMS/admin/logs/` — log UI helpers
 
-Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …).
+Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), since 4.0.0 the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`.
 
 **Deutsch**
 
-290 Dateien. Aufbau:
+294 Dateien. Aufbau:
 
 - `CMS/admin/*.php` — HTTP-Einstiege
 - `CMS/admin/modules/<domain>/` — Fachmodule
@@ -218,7 +219,7 @@ Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `
 - `CMS/admin/partials/` — gemeinsame Oberfläche (inkl. Sidebar)
 - `CMS/admin/logs/` — Log-UI
 
-Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …).
+Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), seit 4.0.0 die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`.
 
 ---
 
@@ -228,8 +229,9 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
-- `assets/css/` — 13 stylesheets (admin, hub, consent, EditorJS content, member, public)
-- `assets/js/` — 41 scripts (admin modules, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals)
+- `assets/css/` — 17 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, hub, consent, EditorJS content, member, public)
+- `assets/js/` — 40 scripts (admin modules, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 14 ES modules in `admin-shell/` and `post-editor/` (since 4.0.0, no build step)
+- `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono as local WOFF2 files (since 4.0.0)
 - bundled libraries — see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
 `cookieconsent`, `elfinder`, `filepond`, and `msgraph` directories are **not** present under `CMS/assets/` in this tree. `cookieconsent-init.js` still exists.
@@ -238,8 +240,9 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
-- `assets/css/` — 13 Stylesheets
-- `assets/js/` — 41 Skripte
+- `assets/css/` — 17 Stylesheets
+- `assets/js/` — 40 Skripte plus 14 ES-Module in `admin-shell/` und `post-editor/` (seit 4.0.0, ohne Build-Schritt)
+- `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien (seit 4.0.0)
 - gebündelte Bibliotheken — siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
 Die Ordner `cookieconsent`, `elfinder`, `filepond` und `msgraph` liegen in diesem Baum **nicht** unter `CMS/assets/`. `cookieconsent-init.js` existiert weiterhin.
@@ -346,6 +349,8 @@ Asset-Markdown liegt unter `DOC/assets/`. Das Code-Audit vom 2026-10-03 liegt un
 | EditorJS | `CMS/assets/js/admin-content-editor.js`, `CMS/core/Services/EditorJs/`, `CMS/assets/editorjs/` |
 | Member | `CMS/member/`, `CMS/core/Routing/MemberRouter.php` |
 | Admin UI | `CMS/admin/modules/`, `CMS/admin/views/`, `CMS/assets/js/admin*.js` |
+| Admin shell / sidebar | `CMS/admin/partials/`, `CMS/core/Services/AdminNavigationService.php`, `CMS/assets/css/admin-shell.css`, `CMS/assets/js/admin-shell/` |
+| Post editor (checklist, revisions) | `CMS/admin/views/posts/edit.php`, `CMS/admin/post-editor-api.php`, `CMS/core/Services/PostRevisionService.php`, `CMS/assets/js/post-editor/` |
 | Assets | `CMS/assets/` |
 | Security constants | `CMS/config/app.php`, `CMS/core/Security.php` |
 | AI (admin only) | `CMS/admin/ai-*.php`, `CMS/core/Services/AI/` |

@@ -241,6 +241,19 @@
             event.preventDefault();
             event.returnValue = '';
         });
+
+        // Additive Hooks für die Beitragseditor-Module (Autosave, Revisionen).
+        window.cmsContentEditor = window.cmsContentEditor || {};
+        window.cmsContentEditor.isDirty = function () {
+            return hasUnsavedChanges;
+        };
+        window.cmsContentEditor.markSaved = function () {
+            clearUnsaved();
+        };
+        window.cmsContentEditor.allowLeave = function () {
+            skipGuard = true;
+            clearUnsaved();
+        };
     }
 
     function enforceAccordionDefaults() {
@@ -843,7 +856,7 @@
             }
         }
 
-        function syncAllPlainEditors() {
+        function syncAllPlainEditors(silent) {
             Object.keys(editorDefinitions).forEach(function (definitionKey) {
                 var definition = editorDefinitions[definitionKey];
                 var input = definition ? getElement(definition.inputId) : null;
@@ -857,7 +870,7 @@
                     return;
                 }
 
-                syncPlainEditorState(state, true);
+                syncPlainEditorState(state, !silent);
             });
         }
 
@@ -3870,7 +3883,7 @@
             return String(definition.key).toUpperCase() + '-Inhalt';
         }
 
-        function saveEditorContent(key, allowFallback) {
+        function saveEditorContent(key, allowFallback, silent) {
             var entry = editors[key];
             var definition = getDefinition(key);
             var input = definition ? getElement(definition.inputId) : null;
@@ -3903,7 +3916,9 @@
 
                 if (activeEntry && activeEntry.input) {
                     activeEntry.input.value = JSON.stringify(normalizedOutput);
-                    emitChangeEvents(activeEntry.input);
+                    if (!silent) {
+                        emitChangeEvents(activeEntry.input);
+                    }
                 }
 
                 return normalizedOutput;
@@ -5017,6 +5032,16 @@
         if (config.aiSeoMetadata) {
             handleAiSeoMetadata(config.aiSeoMetadata);
         }
+
+        // Additiver Hook (z. B. für Autosave): schreibt alle Editor-Inhalte in ihre Formularfelder, ohne Change-Events auszulösen.
+        window.cmsContentEditor = window.cmsContentEditor || {};
+        window.cmsContentEditor.syncAll = function () {
+            syncAllPlainEditors(true);
+
+            return Promise.all(Object.keys(editorDefinitions).map(function (key) {
+                return saveEditorContent(key, true, true);
+            }));
+        };
 
         form.addEventListener('click', function (event) {
             var target = event && event.target && typeof event.target.closest === 'function'

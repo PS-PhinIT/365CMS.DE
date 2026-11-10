@@ -17,7 +17,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `Router` | `core/Router.php` | URI-Auflösung, Routenregister, Dispatch, Redirect, 404, Inhaltsaufbereitung | `addRoute()`, `dispatch()`, `redirect()`, `render404()`, `renderError()`, `getRequestLocale()`, `prepareRenderableContent()`, `streamContentAsPdf()` |
 | `Hooks` | `core/Hooks.php` | Actions/Filter | siehe [HOOKS-REFERENCE.md](HOOKS-REFERENCE.md) |
 | `Database` | `core/Database.php` | PDO-Wrapper | siehe [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
-| `SchemaManager` | `core/SchemaManager.php` | Basisschema, `SCHEMA_VERSION = 'v23'` | `createTables()`, `getFlagFile()`, `clearFlag()` |
+| `SchemaManager` | `core/SchemaManager.php` | Basisschema, `SCHEMA_VERSION = 'v24'` | `createTables()`, `getFlagFile()`, `clearFlag()` |
 | `MigrationManager` | `core/MigrationManager.php` | Migrationen je Schemaversion | `run()`, `repairTables()` |
 | `DatabaseUpdateRunner` | `core/DatabaseUpdateRunner.php` | manuelles DB-Update | `getStatus()`, `run()` |
 | `CacheManager` | `core/CacheManager.php` | Datei-/APCu-Cache (PSR-16-ähnlich), HTTP-Cache-Header | `get()`, `set()`, `delete()`, `clear()`, `clearAll()`, `getStatus()`, `sendResponseHeaders()`, `sendConditionalHeaders()` |

@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Plugins
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Plugins**: plugin management, marketplace and plugin updates. Admin pages registered by plugins appear in the separate sidebar section **Plugin Extensions** under `/admin/plugins/<plugin>/<page>`.
+This folder documents plugin management, marketplace and plugin updates (sidebar entry **Plugins** in the group *Verwaltung*). Admin pages registered by plugins appear in the separate sidebar group **Plugins** under `/admin/plugins/<plugin>/<page>`, one entry per plugin; since 4.0.0 the plugin assignment controls per site where they are shown.
 
 ## Deutsch
 
@@ -14,5 +14,6 @@ This folder documents the sidebar group **Plugins**: plugin management, marketpl
 | Marketplace | `/admin/plugin-marketplace` (nur wenn `marketplace_enabled`) | [MARKETPLACE.md](MARKETPLACE.md) |
 | Plugin-Updates | `/admin/updates` | [UPDATES.md](UPDATES.md) |
 | Plugin-Adminseiten | `/admin/plugins/<plugin>/<seite>` | [PLUGINS.md](PLUGINS.md#plugin-adminseiten) |
+| Plugin-Zuweisung (Einstellungen › Plugins) | `/admin/plugin-assignment` | [PLUGINS.md](PLUGINS.md#plugin-zuweisung) |
 
 Entwicklung eigener Plugins: [../../plugins/PLUGIN-DEVELOPMENT.md](../../plugins/PLUGIN-DEVELOPMENT.md) · Leitfaden: [../../plugins/GUIDE.md](../../plugins/GUIDE.md) · Marketplace-Paketformat: [../../plugins/PLUGIN-MARKETPLACE.md](../../plugins/PLUGIN-MARKETPLACE.md).

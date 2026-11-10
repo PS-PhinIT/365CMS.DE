@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Dateistruktur
 
-> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -43,6 +43,9 @@ CMS/admin/
 |---|---|
 | `design-settings.php`, `theme-settings.php`, `privacy-requests.php`, `deletion-requests.php`, `support.php`, `system-info.php` | Weiterleitungen über `redirect-alias-shell.php` |
 | `ai-translate-editorjs.php`, `ai-generate-seo-metadata.php` | JSON-Endpunkte für den Editor |
+| `admin-ui.php` | JSON-Endpunkt der Admin-Shell (`/admin/admin-ui`): Sidebar-Präferenzen, Site-Wechsel, Systemhinweise (seit 4.0.0) |
+| `post-editor-api.php` | JSON-Endpunkt des Beitragseditors (`/admin/post-editor-api`): Autosave, Revisionen, Vergleich, Wiederherstellen (seit 4.0.0) |
+| `plugin-assignment.php` | *Einstellungen › Plugins › Plugin-Zuweisung* (`/admin/plugin-assignment`), View `views/settings/plugin-assignment.php` (seit 4.0.0) |
 | `error-report.php` | Fehlerbericht speichern |
 | `monitor-cron-runner.php` | Cron aus dem Admin auslösen (POST) |
 
@@ -59,6 +62,20 @@ Views sind vor Direktaufruf geschützt (`ABSPATH`-Prüfung, teils `guard_constan
 ### Assets des Adminbereichs
 
 `CMS/assets/css/admin*.css`, `CMS/assets/js/admin-*.js` (je Bereich eine Datei, z. B. `admin-media-integrations.js`, `admin-seo-editor.js`), Tabler unter `CMS/assets/tabler/`, Icons unter `CMS/assets/tabler-icons/`. Einbindung über `page_assets` der Shell bzw. `cms_asset_url()`.
+
+Seit 4.0.0 zusätzlich:
+
+| Pfad | Inhalt |
+|---|---|
+| `CMS/assets/css/admin-tabler.css` | Design-Tokens (`--cms-*`, auf `--tblr-*` abgebildet), Site-Akzente, `@font-face` |
+| `CMS/assets/css/admin-shell.css` | Layout-Shell: Seitenleiste, Icon-Leiste, Drawer, Topbar, Site-Umschalter, Benutzerbereich |
+| `CMS/assets/css/admin-post-editor.css`, `admin-plugin-assignment.css` | Beitragseditor bzw. Plugin-Zuweisung |
+| `CMS/assets/js/admin-shell/` | ES-Module der Shell (`shell.js` als Einstieg, geladen in `partials/footer.php`; Importmap in `partials/header.php`) |
+| `CMS/assets/js/post-editor/` | ES-Module des Beitragseditors (`editor.js`, `checklist.js`, `dialog.js`, `focus-mode.js`, `autosave.js`, `revisions.js`) |
+| `CMS/assets/js/admin-plugin-assignment.js` | „Alle“/„Keine“ je Site-Spalte |
+| `CMS/assets/fonts/` | lokal ausgelieferte Schriften Inter, Source Serif 4, JetBrains Mono (je mit Lizenzdatei) |
+
+ES-Module werden über `page_assets['modules']` bzw. `$pageAssets['modules']` eingebunden und im Footer als `<script type="module">` geladen – ohne Build-Schritt.
 
 ### Verwandte Dokumente
 

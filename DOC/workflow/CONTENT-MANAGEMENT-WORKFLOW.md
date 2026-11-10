@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Content Management
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
-> **Quellen:** `CMS/admin/pages.php`, `CMS/admin/posts.php`, `CMS/admin/modules/pages/PagesModule.php`, `CMS/admin/modules/posts/PostsModule.php`, `CMS/admin/views/pages/`, `CMS/admin/views/posts/`, `CMS/core/PageManager.php`, `CMS/core/Services/EditorJsService.php`, `CMS/includes/functions/options-runtime.php`
+> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Quellen:** `CMS/admin/pages.php`, `CMS/admin/posts.php`, `CMS/admin/modules/pages/PagesModule.php`, `CMS/admin/modules/posts/PostsModule.php`, `CMS/admin/views/pages/`, `CMS/admin/views/posts/`, `CMS/core/PageManager.php`, `CMS/core/Services/EditorJsService.php`, `CMS/core/Services/PostPublishChecklistService.php`, `CMS/core/Services/PostRevisionService.php`, `CMS/includes/functions/options-runtime.php`
 
 ## English (summary)
 
-Pages (`/admin/pages`, capability `manage_pages`) and posts (`/admin/posts`, `edit_all_posts` or `edit_own_posts`) share one editorial flow: draft in Editor.js (German and optional English fields), set SEO data, choose a featured image, save (each save creates a revision), then publish. A post with status `published` and a future `published_at` is *scheduled* and stays invisible in frontend, archives, search and sitemap until the date is reached (`cms_post_publication_where()`). Bulk actions process at most 200 IDs per request; deletions are permanent (no trash). Optional AI helpers translate DE→EN and generate SEO metadata, but never publish automatically.
+Pages (`/admin/pages`, capability `manage_pages`) and posts (`/admin/posts`, `edit_all_posts` or `edit_own_posts`) share one editorial flow: draft in Editor.js (German and optional English fields), set SEO data, choose a featured image, save (each save creates a revision; saved posts are also autosaved), then publish. Since 4.0.0 publishing or scheduling a post requires the publish checklist (featured image, meta description with 120–160 characters, category), enforced in the editor and on the server. A post with status `published` and a future `published_at` is *scheduled* and stays invisible in frontend, archives, search and sitemap until the date is reached (`cms_post_publication_where()`). Bulk actions process at most 200 IDs per request; deletions are permanent (no trash). Optional AI helpers translate DE→EN and generate SEO metadata, but never publish automatically.
 
 ## Deutsch
 
@@ -27,9 +27,9 @@ Der Adminbereich setzt zusätzlich die Rolle `admin` voraus (`Auth::isAdmin()`);
 4. **Beitragsbild** über den Featured-Image-Picker; Referenzen werden normalisiert.
 5. **SEO:** Meta-Titel/-Beschreibung (Platzhalter wie `%title%`, `%%sitename%%` werden seit 3.4.08 bei der Ausgabe aufgelöst); erweiterte Felder (Canonical, Robots, OG, Schema-Typ, Sitemap) nur bei aktivem Modul `seo`.
 6. **Englische Fassung (optional):** Sprachumschalter DE/EN (`switch_locale`, rendert ohne Speichern neu) oder „DE → EN kopieren“ (`copy_de_to_en`, nach dem ersten Speichern). KI-Übersetzung über `/admin/ai-translate-editorjs`, wenn das Modul `ai_services` aktiv ist.
-7. **Speichern als Entwurf** (`status = draft`) – jede Speicherung legt einen Eintrag in `cms_post_revisions` an.
-8. **Vorschau/Prüfung:** Revisionsvergleich im Editor, Medien-Check (`/admin/media?tab=check`) für fehlende Beitragsbilder.
-9. **Veröffentlichen:** Status `published`. Für eine geplante Veröffentlichung `published_at` in die Zukunft setzen – die Liste zeigt den Beitrag dann unter „Geplant“.
+7. **Speichern als Entwurf** (`status = draft`) – jede manuelle Speicherung legt einen Eintrag in `cms_post_revisions` an (unveränderte Stände werden nicht doppelt gespeichert). Nach dem ersten Speichern sichert der Editor automatisch: Entwürfe höchstens jede Minute (Kopfleiste „Gespeichert um HH:MM“), veröffentlichte und geplante Beiträge nur als Revision, ohne den Live-Stand zu ändern. Eine Autosave-Revision entsteht höchstens alle 10 Minuten, je Beitrag bleiben die letzten 30 Revisionen erhalten.
+8. **Vorschau/Prüfung:** Revisionsvergleich im Editor (Panel „Revisionen“ → „Vergleichen“, „Diese Version wiederherstellen“), Medien-Check (`/admin/media?tab=check`) für fehlende Beitragsbilder. Der Fokusmodus (Strg+Umschalt+F bzw. Cmd+Umschalt+F) blendet Seitenleiste und Einstellungsspalte aus.
+9. **Veröffentlichen:** Status `published`. Für eine geplante Veröffentlichung `published_at` in die Zukunft setzen („Planen“) – die Liste zeigt den Beitrag dann unter „Geplant“. Seit 4.0.0 müssen dafür alle Punkte der Veröffentlichungs-Checkliste erfüllt sein: Beitragsbild gesetzt, Meta-Beschreibung mit 120–160 Zeichen, Kategorie gesetzt. Der Server lehnt Veröffentlichen/Planen sonst ab, ebenso die Sammelaktion `publish` für unvollständige Beiträge (Details: [admin/pages-posts/POSTS.md](../admin/pages-posts/POSTS.md#veröffentlichungs-checkliste)).
 10. **Pflege:** „Inhalt aktualisiert am“ (`content_updated_at`) setzen, wenn sich Inhalte wesentlich ändern.
 
 ### Ablauf: neue Seite
