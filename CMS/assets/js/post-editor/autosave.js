@@ -146,6 +146,15 @@ export function initAutosave(form, { client, statusText = null, statusContainer 
             if (statusText && typeof result.saved_at === 'string') {
                 statusText.dataset.savedAt = result.saved_at;
             }
+            if (result.revision?.reason === 'failed') {
+                const message = 'Entwurf gespeichert, aber die Revision konnte nicht gesichert werden.';
+                setStatus(message, 'error');
+                if (!failureAnnounced) {
+                    failureAnnounced = true;
+                    announce?.(message);
+                }
+                return;
+            }
         } else if (result.revision && result.revision.stored) {
             lastGoodText = label !== '' ? 'Zwischenstand gesichert um ' + label : 'Zwischenstand gesichert';
         } else if (result.revision && result.revision.reason === 'throttled') {

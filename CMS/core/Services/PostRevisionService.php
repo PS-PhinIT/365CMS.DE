@@ -357,16 +357,14 @@ final class PostRevisionService
     public function prune(int $postId): void
     {
         try {
-            $ids = $this->db->get_col(
-                "SELECT id FROM {$this->table} WHERE post_id = ? ORDER BY id DESC",
+            $oldestKeptId = (int) $this->db->get_var(
+                "SELECT id FROM {$this->table} WHERE post_id = ? ORDER BY id DESC LIMIT 1 OFFSET " . (self::MAX_REVISIONS_PER_POST - 1),
                 [$postId]
             );
-            $obsolete = array_slice(array_map('intval', is_array($ids) ? $ids : []), self::MAX_REVISIONS_PER_POST);
-            foreach (array_chunk($obsolete, 200) as $chunk) {
-                $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+            if ($oldestKeptId > 0) {
                 $this->db->execute(
-                    "DELETE FROM {$this->table} WHERE post_id = ? AND id IN ({$placeholders})",
-                    array_merge([$postId], $chunk)
+                    "DELETE FROM {$this->table} WHERE post_id = ? AND id < ?",
+                    [$postId, $oldestKeptId]
                 );
             }
         } catch (\Throwable $e) {

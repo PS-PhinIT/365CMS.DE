@@ -1080,7 +1080,7 @@ class PostsModule
                 if (!$isAutosave) {
                     $this->clearContentCacheIfEnabled('post_update', $id);
                 }
-                return ['success' => true, 'id' => $id, 'message' => $this->buildSaveMessage('Beitrag aktualisiert.', $publishIntent, $resolvedPublishedAt), 'revision' => $revision];
+                return ['success' => true, 'id' => $id, 'message' => $this->appendRevisionWarning($this->buildSaveMessage('Beitrag aktualisiert.', $publishIntent, $resolvedPublishedAt), $revision), 'revision' => $revision];
             } else {
                 $resolvedPublishedAt = $this->resolveTargetPublishedAt((string) $savePayload['status'], $savePayload['published_at'], null, $publishIntent, null);
                 $checklistError = $this->checkPublishChecklist(
@@ -1130,7 +1130,7 @@ class PostsModule
                 Hooks::doAction('cms_after_post_save', $newId, $savePayload, $post);
                 $revision = $this->recordPostRevision($newId, $revisionType, $userId);
                 $this->clearContentCacheIfEnabled('post_create', $newId);
-                return ['success' => true, 'id' => $newId, 'message' => $this->buildSaveMessage('Beitrag erstellt.', $publishIntent, $resolvedPublishedAt), 'revision' => $revision];
+                return ['success' => true, 'id' => $newId, 'message' => $this->appendRevisionWarning($this->buildSaveMessage('Beitrag erstellt.', $publishIntent, $resolvedPublishedAt), $revision), 'revision' => $revision];
             }
         } catch (\Throwable $e) {
             return $this->failResult(
@@ -1197,7 +1197,7 @@ class PostsModule
             );
 
             Hooks::doAction('cms_after_post_copy_de_to_en', $id, $newData, $userId);
-            $this->recordPostRevision($id, PostRevisionService::TYPE_MANUAL, $userId);
+            $revision = $this->recordPostRevision($id, PostRevisionService::TYPE_MANUAL, $userId);
             $this->clearContentCacheIfEnabled('post_copy_de_to_en', $id);
             AuditLogger::instance()->log(
                 AuditLogger::CAT_CONTENT,
@@ -1209,7 +1209,7 @@ class PostsModule
                 'info'
             );
 
-            return ['success' => true, 'id' => $id, 'message' => 'Deutsche Beitragsinhalte wurden serverseitig nach EN kopiert.'];
+            return ['success' => true, 'id' => $id, 'message' => $this->appendRevisionWarning('Deutsche Beitragsinhalte wurden serverseitig nach EN kopiert.', $revision)];
         } catch (\Throwable $e) {
             return $this->failResult('posts.copy_de_to_en.failed', 'Beitragsinhalte konnten nicht nach EN kopiert werden.', $e, ['post_id' => $id, 'user_id' => $userId]);
         }
@@ -2396,7 +2396,7 @@ class PostsModule
             'success' => true,
             'id' => $postId,
             'revision_id' => $record['revision_id'],
-            'message' => 'Version vom ' . $meta['created_at_label'] . ' wiederhergestellt.' . $notice,
+            'message' => $this->appendRevisionWarning('Version vom ' . $meta['created_at_label'] . ' wiederhergestellt.' . $notice, $record),
         ];
     }
 
@@ -2466,6 +2466,20 @@ class PostsModule
 
             return ['stored' => false, 'reason' => 'failed', 'revision_id' => 0];
         }
+    }
+
+    /**
+     * Macht einen fehlgeschlagenen Revisions-Snapshot trotz erfolgreicher Inhaltsänderung sichtbar.
+     *
+     * @param array{reason?:string} $revision
+     */
+    private function appendRevisionWarning(string $message, array $revision): string
+    {
+        if (($revision['reason'] ?? '') !== 'failed') {
+            return $message;
+        }
+
+        return $message . ' Warnung: Die Änderung wurde gespeichert, aber die Revision konnte nicht gesichert werden.';
     }
 
     private function hasTrackedPostRevisionChanges(array $currentPost, array $newData): bool

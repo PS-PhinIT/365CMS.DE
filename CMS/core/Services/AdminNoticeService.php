@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\CacheManager;
+use CMS\Logger;
 use CMS\PluginManager;
 use CMS\Version;
 
@@ -54,15 +55,37 @@ final class AdminNoticeService
         }
 
         $notices = [];
-        foreach ([$this->cronNotice(...), $this->backupNotice(...), $this->coreUpdateNotice(...), $this->pluginUpdateNotice(...)] as $check) {
+        $checkFailed = false;
+        foreach ([
+            'Cron-Status' => $this->cronNotice(...),
+            'Backup-Status' => $this->backupNotice(...),
+            'Core-Updates' => $this->coreUpdateNotice(...),
+            'Plugin-Updates' => $this->pluginUpdateNotice(...),
+        ] as $checkName => $check) {
             try {
                 $notice = $check();
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('admin.ui')->warning('Systemstatus-Prüfung fehlgeschlagen.', [
+                    'check' => $checkName,
+                    'exception_class' => get_debug_type($e),
+                    'exception' => $e->getMessage(),
+                ]);
+                $checkFailed = true;
                 $notice = null;
             }
             if ($notice !== null) {
                 $notices[] = $notice;
             }
+        }
+        if ($checkFailed) {
+            $notices[] = $this->notice(
+                'check_failed',
+                'warning',
+                'Systemstatus nicht vollständig geprüft',
+                'Mindestens eine Systemprüfung ist fehlgeschlagen. Öffnen Sie die Diagnose.',
+                '/admin/diagnose',
+                'Diagnose öffnen'
+            );
         }
 
         $payload = ['notices' => $notices, 'generated_at' => time()];
