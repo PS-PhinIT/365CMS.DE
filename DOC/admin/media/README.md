@@ -22,4 +22,4 @@ Weitere medienbezogene Seiten:
 - `/admin/monitor-disk-usage` – Speichernutzung ([../diagnose/DIAGNOSE.md](../diagnose/DIAGNOSE.md))
 - Mitglieder-Medien unter `/member/media` ([../../member/MEMBER-ROUTES.md](../../member/MEMBER-ROUTES.md))
 
-Ausführliche Beschreibung: [MEDIA.md](MEDIA.md). Ablauf eines Uploads: [../../workflow/MEDIA-UPLOAD-WORKFLOW.md](../../workflow/MEDIA-UPLOAD-WORKFLOW.md).
+Downloads (eigene Route `/admin/downloads`): [DOWNLOADS.md](DOWNLOADS.md). Ausführliche Beschreibung: [MEDIA.md](MEDIA.md). Ablauf eines Uploads: [../../workflow/MEDIA-UPLOAD-WORKFLOW.md](../../workflow/MEDIA-UPLOAD-WORKFLOW.md).
