@@ -9,6 +9,9 @@
  *
  * Ablauf je Inhaltstyp: Die Datenbank liefert per LIKE eine Vorauswahl (jedes Wort in einer der
  * Spalten, neueste zuerst), anschließend prüft PHP den reinen Text und berechnet die Relevanz.
+ * Gibt die Quelle einen Suchindex an (`index` = Typ und Sprache, siehe `SearchService`), ergänzt der
+ * Index die Vorauswahl um ältere Treffer und um Treffer in der Grundform („Häuser“ findet „Haus“);
+ * auch diese Zeilen durchlaufen die Bedingungen der Quelle und den Textabgleich.
  *
  * @package CMSv2\Core\Services
  */
@@ -42,6 +45,12 @@ final class SiteSearchService
 
     /** Vorauswahl je Inhaltstyp aus der Datenbank (neueste zuerst), bevor der Textabgleich greift. */
     private const CANDIDATE_LIMIT = 400;
+
+    /** Zusätzliche Kandidaten je Inhaltstyp aus dem Suchindex. */
+    private const INDEX_CANDIDATE_LIMIT = 200;
+
+    /** Grundformen kürzer als diese Länge gelten nicht als Treffer (zu unspezifisch). */
+    private const MIN_STEM_LENGTH = 3;
 
     /** Kurze Begriffe (≤ 3 Zeichen mit Buchstaben) müssen am Wortanfang stehen: „EWS“ trifft nicht „News“. */
     private const WORD_START_MAX_LENGTH = 3;
@@ -222,6 +231,46 @@ final class SiteSearchService
     }
 
     /**
+     * Wie matchesAll(), lässt aber je Einzelwort auch die Grundform der Sprache zu (Stemmer des Suchindex).
+     * Phrasen müssen exakt vorkommen.
+     *
+     * @param list<string> $terms gefaltete Begriffe aus parseQuery()
+     * @return list<string>|null tatsächlich gefundene Begriffe bzw. Grundformen; null = kein Treffer
+     */
+    public static function matchingTerms(string $foldedText, array $terms, string $locale): ?array
+    {
+        if ($terms === []) {
+            return null;
+        }
+
+        $stemmer = SearchService::stemmerForLocale($locale);
+        $matched = [];
+        foreach ($terms as $term) {
+            if (self::containsTerm($foldedText, $term)) {
+                $matched[] = $term;
+                continue;
+            }
+
+            if (str_contains($term, ' ')) {
+                return null;
+            }
+
+            try {
+                $stem = self::fold((string) $stemmer::stem($term));
+            } catch (\Throwable) {
+                return null;
+            }
+
+            if ($stem === $term || mb_strlen($stem) < self::MIN_STEM_LENGTH || !self::containsTerm($foldedText, $stem)) {
+                return null;
+            }
+            $matched[] = $stem;
+        }
+
+        return $matched;
+    }
+
+    /**
      * Relevanz aus Titel, Auszug und Inhalt (reiner Text).
      *
      * @param list<string> $terms
@@ -241,10 +290,11 @@ final class SiteSearchService
      * `title`, `excerpt`, `content` und `date` sind Spaltennamen in Prioritätsreihenfolge – der erste
      * nicht leere Wert gilt (z. B. `['title_en', 'title']` für englische Inhalte mit deutschem Fallback).
      * `where` schränkt die Tabelle ein (Status, Sprache). Jede Zeile erhält `_search_score` und
-     * `_search_date`.
+     * `_search_date`. Optional `index` = `['type' => …, 'locale' => …]`: Treffer des Suchindex werden
+     * zusätzlich geprüft; Treffer nur über die Grundform zählen halb.
      *
      * @param array{query:string, terms:list<string>, words:list<string>} $parsed
-     * @param array{table:string, alias:string, where:string, params?:list<mixed>, title:list<string>, excerpt:list<string>, content:list<string>, date:list<string>} $source
+     * @param array{table:string, alias:string, where:string, params?:list<mixed>, title:list<string>, excerpt:list<string>, content:list<string>, date:list<string>, index?:array{type:string, locale:string}} $source
      * @return list<array<string, mixed>>
      */
     public function searchTable(array $parsed, array $source): array
@@ -307,16 +357,33 @@ final class SiteSearchService
             return [];
         }
 
+        $indexLocale = (string) ($source['index']['locale'] ?? '');
+        $indexIds = $this->indexCandidates($parsed, $source);
+        if ($indexIds !== []) {
+            $rows = array_merge($rows, $this->loadIndexCandidates($source, $selectList, $indexIds, $rows));
+        }
+
         $hits = [];
         foreach ($rows as $row) {
             $title = self::fold(self::firstValue($row, $source['title']));
             $excerpt = self::fold(self::htmlToText(self::firstValue($row, $source['excerpt'])));
             $body = self::fold(self::plainText(self::firstValue($row, $source['content'])));
-            if (!self::matchesAll($title . ' ' . $excerpt . ' ' . $body, $parsed['terms'])) {
-                continue;
+            $terms = $parsed['terms'];
+            $weight = 1.0;
+            if (!self::matchesAll($title . ' ' . $excerpt . ' ' . $body, $terms)) {
+                $stemmed = isset($indexIds[(int) ($row['id'] ?? 0)])
+                    ? self::matchingTerms($title . ' ' . $excerpt . ' ' . $body, $terms, $indexLocale)
+                    : null;
+                if ($stemmed === null) {
+                    continue;
+                }
+                $terms = $stemmed;
+                $weight = 0.5;
             }
 
-            $row['_search_score'] = self::scoreFolded($title, $excerpt, $body, $parsed['terms']);
+            $score = self::scoreFolded($title, $excerpt, $body, $terms);
+            // Treffer nur über die Grundform stehen hinter gleichwertigen exakten Treffern.
+            $row['_search_score'] = $weight < 1.0 ? max(0.1, $score * $weight) : $score;
             $row['_search_date'] = self::firstValue($row, $source['date']);
             if ($projected) {
                 // Inhalt wird nur zum Abgleich gebraucht; hydrate() lädt ihn für die Endtreffer neu.
@@ -329,6 +396,73 @@ final class SiteSearchService
         }
 
         return $hits;
+    }
+
+    /**
+     * IDs aus dem Suchindex der Quelle (leer ohne `index` oder ohne aktiven Index).
+     *
+     * @param array{query:string, terms:list<string>, words:list<string>} $parsed
+     * @param array<string, mixed> $source
+     * @return array<int, true>
+     */
+    private function indexCandidates(array $parsed, array $source): array
+    {
+        $index = $source['index'] ?? null;
+        if (!is_array($index) || !SearchService::isValidDocumentIndexKey((string) ($index['type'] ?? ''), (string) ($index['locale'] ?? ''))) {
+            return [];
+        }
+
+        try {
+            $search = SearchService::getInstance();
+            if (!$search->hasDocumentIndex((string) $index['type'], (string) $index['locale'])) {
+                return [];
+            }
+            $scores = $search->searchDocumentIndex((string) $index['type'], (string) $index['locale'], $parsed['words'], self::INDEX_CANDIDATE_LIMIT);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('search')->warning('Seitensuche: Suchindex nicht abfragbar.', [
+                'table' => $source['table'] ?? '',
+                'exception' => $e,
+            ]);
+            return [];
+        }
+
+        return array_fill_keys(array_map('intval', array_keys($scores)), true);
+    }
+
+    /**
+     * Zeilen zu Index-Treffern, die die LIKE-Vorauswahl nicht enthält – mit denselben Bedingungen der Quelle.
+     *
+     * @param array<string, mixed> $source
+     * @param array<int, true> $indexIds
+     * @param list<array<string, mixed>> $rows bereits geladene Zeilen
+     * @return list<array<string, mixed>>
+     */
+    private function loadIndexCandidates(array $source, string $selectList, array $indexIds, array $rows): array
+    {
+        foreach ($rows as $row) {
+            unset($indexIds[(int) ($row['id'] ?? 0)]);
+        }
+        if ($indexIds === []) {
+            return [];
+        }
+
+        $ids = array_keys($indexIds);
+        $alias = $source['alias'];
+        $sql = "SELECT {$selectList} FROM {$source['table']} {$alias}"
+            . " WHERE ({$source['where']}) AND {$alias}.id IN (" . implode(', ', array_fill(0, count($ids), '?')) . ')';
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $params = array_merge(array_values($source['params'] ?? []), $ids);
+
+            return $stmt !== false && $stmt->execute($params) ? ($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []) : [];
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('search')->warning('Seitensuche: Index-Treffer konnten nicht geladen werden.', [
+                'table' => $source['table'],
+                'exception' => $e,
+            ]);
+            return [];
+        }
     }
 
     /**

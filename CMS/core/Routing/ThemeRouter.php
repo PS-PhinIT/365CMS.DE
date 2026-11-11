@@ -356,6 +356,11 @@ final class ThemeRouter
 
         $results = $siteSearch->hydrate($siteSearch->rank($results, $parsed['terms'], $sort));
 
+        if ($parsed['terms'] !== []) {
+            // Anonyme Suchbegriff-Statistik (Suchindex-Verwaltung) und Erweiterungen.
+            \CMS\Hooks::doAction('cms_after_site_search', $parsed, count($results), $contentLocale, $type);
+        }
+
         ThemeManager::instance()->render('search', [
             'results' => $results,
             'query' => $query,
@@ -394,6 +399,7 @@ final class ThemeRouter
             'excerpt' => ['excerpt'],
             'content' => $english ? ['content_en', 'content'] : ['content'],
             'date' => ['published_at', 'created_at'],
+            'index' => ['type' => 'page', 'locale' => $locale],
         ]);
 
         foreach ($rows as &$row) {
@@ -421,6 +427,7 @@ final class ThemeRouter
             'excerpt' => $english ? ['excerpt_en', 'excerpt'] : ['excerpt'],
             'content' => $english ? ['content_en', 'content'] : ['content'],
             'date' => ['published_at', 'created_at'],
+            'index' => ['type' => 'post', 'locale' => $locale],
         ]);
 
         foreach ($rows as &$row) {
