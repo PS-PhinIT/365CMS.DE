@@ -45,6 +45,9 @@ final class FeedService
     private int $cacheDuration = 3600;
     private string $userAgent;
 
+    /** @var array{code:string,detail:string} Grund des letzten fehlgeschlagenen Abrufs (nur für Admin-Protokolle). */
+    private array $lastError = ['code' => '', 'detail' => ''];
+
     public static function getInstance(): self
     {
         return self::$instance ??= new self();
@@ -307,22 +310,31 @@ final class FeedService
         $this->sendRssResponse($xml, time());
     }
 
-    public function fetch(string $url, int $maxItems = 50): array
+    /**
+     * @param bool $bypassCache true = Datei-Cache weder lesen noch schreiben (Aggregator-Abruf mit eigenem Intervall)
+     */
+    public function fetch(string $url, int $maxItems = 50, bool $bypassCache = false): array
     {
+        $this->lastError = ['code' => '', 'detail' => ''];
         if (!$this->available) {
+            $this->setLastError('parser_unavailable');
             return $this->errorResult('Feed-Parser nicht verfügbar');
         }
 
         $normalizedUrl = $this->normalizeFeedUrl($url);
         if ($normalizedUrl === '') {
+            $this->setLastError('invalid_url');
             return $this->errorResult('Ungültige Feed-URL');
         }
 
         $normalizedMaxItems = $this->normalizeMaxItems($maxItems, 50);
 
         try {
-            $feed = $this->loadFeedData($normalizedUrl);
+            $feed = $this->loadFeedData($normalizedUrl, !$bypassCache);
             if ($feed === null) {
+                if ($this->lastError['code'] === '') {
+                    $this->setLastError('empty');
+                }
                 return $this->errorResult('Feed konnte nicht geladen werden.');
             }
 
@@ -346,9 +358,48 @@ final class FeedService
                 'url' => $normalizedUrl,
                 'error' => $this->sanitizeErrorMessage($e->getMessage()),
             ]);
+            $this->setLastError('exception');
 
             return $this->errorResult('Feed konnte nicht geladen werden.');
         }
+    }
+
+    /**
+     * Grund des letzten fehlgeschlagenen `fetch()` als Code (`invalid_url`, `connection`, `http_status`,
+     * `redirect`, `too_large`, `empty`, `invalid_xml`, `unsupported_format`, `parser_unavailable`,
+     * `exception`) mit bereinigtem Detail (z. B. HTTP-Status). Öffentliche Antworten bleiben generisch.
+     *
+     * @return array{code:string,detail:string}
+     */
+    public function getLastError(): array
+    {
+        return $this->lastError;
+    }
+
+    /**
+     * Parst ein bereits geladenes RSS-/RDF-/Atom-Dokument mit denselben Regeln wie `fetch()`
+     * (Bereinigung über PurifierService, normalisierte URLs). Ohne Netzwerkzugriff.
+     *
+     * @return array<string, mixed>|null Feed-Daten (`title`, `link`, `image`, `items` …) oder null bei ungültigem XML
+     */
+    public function parseFeedString(string $xml, string $sourceUrl = ''): ?array
+    {
+        $this->lastError = ['code' => '', 'detail' => ''];
+        if (!$this->available || trim($xml) === '' || strlen($xml) > self::MAX_FEED_BYTES) {
+            $this->setLastError(trim($xml) === '' ? 'empty' : 'too_large');
+            return null;
+        }
+
+        return $this->parseFeedXml($xml, $sourceUrl);
+    }
+
+    /**
+     * Normalisiert eine entfernte Feed-URL inkl. SSRF-Prüfung (nur http/https, keine Zugangsdaten,
+     * keine lokalen/privaten Ziele nach DNS-Auflösung). Leerer String = nicht zulässig.
+     */
+    public function normalizeRemoteUrl(string $url): string
+    {
+        return $this->normalizeFeedUrl($url);
     }
 
     public function fetchMultiple(array $urls, int $maxItems = 100, bool $sortByDate = true): array
@@ -637,9 +688,9 @@ final class FeedService
         return '';
     }
 
-    private function loadFeedData(string $url): ?array
+    private function loadFeedData(string $url, bool $useCache = true): ?array
     {
-        $cacheFile = $this->buildCacheFilePath($url);
+        $cacheFile = $useCache ? $this->buildCacheFilePath($url) : null;
         if ($this->cacheEnabled && $this->cacheDuration > 0 && $cacheFile !== null && is_file($cacheFile)) {
             $cached = $this->readCacheFile($cacheFile);
             if ($cached !== null) {
@@ -794,6 +845,7 @@ final class FeedService
 
             if ($status >= 300 && $status < 400) {
                 if ($location === null || $location === '' || $redirectCount >= self::MAX_REMOTE_REDIRECTS) {
+                    $this->setLastError('redirect', (string) $status);
                     $this->logger->warning('Feed-Redirect wurde verworfen.', [
                         'url' => $currentUrl,
                         'status' => $status,
@@ -804,6 +856,7 @@ final class FeedService
 
                 $redirectUrl = $this->resolveRedirectUrl($currentUrl, $location);
                 if ($redirectUrl === '') {
+                    $this->setLastError('redirect', (string) $status);
                     $this->logger->warning('Feed-Redirect zielte auf eine unzulässige URL.', [
                         'url' => $currentUrl,
                         'location' => $this->sanitizeErrorMessage($location),
@@ -815,7 +868,16 @@ final class FeedService
                 continue;
             }
 
-            if ($status < 200 || $status >= 400 || $body === '' || strlen($body) > self::MAX_FEED_BYTES) {
+            if ($status < 200 || $status >= 400) {
+                $this->setLastError('http_status', (string) $status);
+                return null;
+            }
+            if ($body === '') {
+                $this->setLastError('empty', (string) $status);
+                return null;
+            }
+            if (strlen($body) > self::MAX_FEED_BYTES) {
+                $this->setLastError('too_large');
                 return null;
             }
 
@@ -840,6 +902,7 @@ final class FeedService
 
         $status = (int) ($response['status'] ?? 0);
         if ($status === 0) {
+            $this->setLastError('connection', (string) ($response['error'] ?? ''));
             if (!empty($response['error'])) {
                 $this->logger->warning('Feed-Abruf ist fehlgeschlagen.', [
                     'url' => $url,
@@ -866,6 +929,7 @@ final class FeedService
         libxml_use_internal_errors($previousErrors);
 
         if (!$loaded || !$dom->documentElement instanceof \DOMElement) {
+            $this->setLastError('invalid_xml');
             $this->logger->warning('Feed-XML konnte nicht geparst werden.', ['url' => $url]);
             return null;
         }
@@ -882,6 +946,7 @@ final class FeedService
             return $this->parseRssFeed($xpath, $root);
         }
 
+        $this->setLastError('unsupported_format', $rootName);
         $this->logger->warning('Feed-Typ wird nicht unterstützt.', [
             'url' => $url,
             'root' => $rootName,
@@ -948,7 +1013,7 @@ final class FeedService
             'date' => $date['date'],
             'date_timestamp' => $date['timestamp'],
             'categories' => $categories,
-            'thumbnail' => $this->normalizePublicUrl((string)$this->queryFirstScalar($xpath, $item, ['./*[local-name()="thumbnail"]/@url', './*[local-name()="content"][@medium="image"]/@url', './*[local-name()="enclosure"][starts-with(@type,"image/")]/@url'])),
+            'thumbnail' => $this->normalizePublicUrl((string)$this->queryFirstScalar($xpath, $item, ['./*[local-name()="thumbnail"]/@url', './*[local-name()="content"][@medium="image"]/@url', './*[local-name()="content"][starts-with(@type,"image/")]/@url', './*[local-name()="group"]/*[local-name()="content"][@medium="image" or starts-with(@type,"image/")]/@url', './*[local-name()="group"]/*[local-name()="thumbnail"]/@url', './*[local-name()="enclosure"][starts-with(@type,"image/")]/@url'])),
             'guid' => $this->sanitizeGuid((string)($this->queryFirstScalar($xpath, $item, ['./*[local-name()="guid"][1]']) ?: ($link ?? ''))),
         ];
     }
@@ -1057,6 +1122,11 @@ final class FeedService
     {
         $author = $this->sanitizePlainText($author, 120);
         return $author !== '' ? $author : null;
+    }
+
+    private function setLastError(string $code, string $detail = ''): void
+    {
+        $this->lastError = ['code' => $code, 'detail' => $this->sanitizeErrorMessage($detail)];
     }
 
     private function errorResult(string $message): array
