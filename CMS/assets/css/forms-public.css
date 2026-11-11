@@ -1,0 +1,365 @@
+/*
+ * 365CMS – Formulare (Kontaktseite, /contact/<schlüssel>, Editor.js-Block „Formular“)
+ *
+ * Bewusst zurückhaltend: Farben und Abstände folgen den Theme-Variablen (falls vorhanden),
+ * Akzentfarbe und Radius lassen sich unter Inhalte → Formulare → Einstellungen anpassen.
+ */
+.cms-form {
+  --cms-form-accent: var(--accent, #1d4ed8);
+  --cms-form-link: var(--accent-text, var(--cms-form-accent));
+  --cms-form-button: var(--ink, #1f2328);
+  --cms-form-radius: var(--r, 8px);
+  --cms-form-ink: var(--ink, #1f2328);
+  --cms-form-muted: var(--ink-muted, #5f6368);
+  --cms-form-border: var(--rule-heavy, #c9ccd1);
+  --cms-form-surface: var(--surface, #fff);
+  --cms-form-error: #b42318;
+  --cms-form-success: #146c43;
+  color: var(--cms-form-ink);
+  margin: 0 0 2rem;
+}
+
+.cms-form--block {
+  margin: 1.5rem 0;
+}
+
+.cms-form__heading {
+  margin: 0 0 .5rem;
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.cms-form__intro,
+.cms-form__footer {
+  color: var(--cms-form-muted);
+  margin: 0 0 1.25rem;
+}
+
+.cms-form__footer {
+  margin: 1.25rem 0 0;
+  font-size: .9rem;
+}
+
+.cms-form__intro p,
+.cms-form__footer p {
+  margin: 0 0 .5rem;
+}
+
+.cms-form__grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.cms-form__field,
+.cms-form__static {
+  grid-column: span 6;
+  min-width: 0;
+}
+
+.cms-form__field--half { grid-column: span 3; }
+.cms-form__field--third { grid-column: span 2; }
+.cms-form__field--two-third { grid-column: span 4; }
+
+.cms-form__label {
+  display: block;
+  font-weight: 600;
+  font-size: .9rem;
+  margin: 0 0 .35rem;
+  padding: 0;
+}
+
+.cms-form__req {
+  color: var(--cms-form-error);
+  font-weight: 700;
+}
+
+.cms-form__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.6rem;
+  padding: .55rem .75rem;
+  border: 1px solid var(--cms-form-border);
+  border-radius: var(--cms-form-radius);
+  background: var(--cms-form-surface);
+  color: inherit;
+  font: inherit;
+  line-height: 1.4;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+textarea.cms-form__input {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+input[type="file"].cms-form__input {
+  padding: .45rem;
+}
+
+.cms-form__input:focus,
+.cms-form__choice input:focus-visible,
+.cms-form__check input:focus-visible {
+  outline: 2px solid var(--cms-form-accent);
+  outline-offset: 1px;
+  border-color: var(--cms-form-accent);
+}
+
+.cms-form__input:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.cms-form__group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.cms-form__choice,
+.cms-form__check {
+  display: flex;
+  gap: .55rem;
+  align-items: flex-start;
+  margin: 0 0 .4rem;
+  font-size: .95rem;
+  line-height: 1.45;
+}
+
+.cms-form__choice input,
+.cms-form__check input {
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: .18rem 0 0;
+  accent-color: var(--cms-form-accent);
+}
+
+.cms-form__check-label {
+  font-weight: 400;
+}
+
+.cms-form__check-label a,
+.cms-form__static a,
+.cms-form__intro a,
+.cms-form__footer a,
+.cms-form__aside a {
+  color: var(--cms-form-link);
+}
+
+.cms-form__help {
+  margin: .3rem 0 0;
+  font-size: .82rem;
+  color: var(--cms-form-muted);
+}
+
+.cms-form__error {
+  margin: .3rem 0 0;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--cms-form-error);
+}
+
+.cms-form__error[hidden] {
+  display: none;
+}
+
+.cms-form__field.has-error .cms-form__input {
+  border-color: var(--cms-form-error);
+}
+
+.cms-form__field.has-error .cms-form__input:focus {
+  outline-color: var(--cms-form-error);
+}
+
+.cms-form__static--heading .cms-form__section-title {
+  margin: .75rem 0 0;
+  font-size: 1.1rem;
+}
+
+.cms-form__static--text p {
+  margin: 0 0 .5rem;
+  color: var(--cms-form-muted);
+}
+
+.cms-form__required-note {
+  margin: 1rem 0 0;
+  font-size: .8rem;
+  color: var(--cms-form-muted);
+}
+
+.cms-form__actions {
+  margin: 1rem 0 0;
+}
+
+.cms-form__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 2.75rem;
+  padding: .6rem 1.4rem;
+  border: 1px solid var(--cms-form-button);
+  border-radius: var(--cms-form-radius);
+  background: var(--cms-form-button);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cms-form__submit:hover {
+  filter: brightness(.94);
+}
+
+.cms-form__submit:focus-visible {
+  outline: 2px solid var(--cms-form-ink);
+  outline-offset: 2px;
+}
+
+.cms-form__submit[disabled],
+.cms-form__submit[aria-busy="true"] {
+  opacity: .7;
+  cursor: progress;
+}
+
+.cms-form__notice {
+  margin: 0 0 1.25rem;
+  padding: .9rem 1.1rem;
+  border-radius: var(--cms-form-radius);
+  border: 1px solid currentColor;
+  border-left-width: 4px;
+}
+
+.cms-form__notice:focus {
+  outline: 2px solid var(--cms-form-accent);
+  outline-offset: 2px;
+}
+
+.cms-form__notice p {
+  margin: 0;
+}
+
+.cms-form__notice p + p,
+.cms-form__notice ul {
+  margin: .5rem 0 0;
+}
+
+.cms-form__notice ul {
+  padding-left: 1.2rem;
+}
+
+.cms-form__notice a {
+  color: inherit;
+}
+
+.cms-form__notice--success {
+  color: var(--cms-form-success);
+  background: #edf7f0;
+}
+
+.cms-form__notice--error {
+  color: var(--cms-form-error);
+  background: #fdf0ef;
+}
+
+.cms-form__notice--info {
+  color: var(--cms-form-muted);
+  background: #f4f5f7;
+}
+
+.cms-form__hp {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Layouts */
+.cms-form--compact .cms-form__grid {
+  gap: .65rem 1rem;
+}
+
+.cms-form--compact .cms-form__input {
+  min-height: 2.25rem;
+  padding: .4rem .6rem;
+}
+
+.cms-form--wide {
+  max-width: none;
+}
+
+.cms-form--standard .cms-form__form,
+.cms-form--compact .cms-form__form {
+  max-width: 48rem;
+}
+
+.cms-form__split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.cms-form__aside {
+  padding: 1.25rem;
+  border: 1px solid var(--cms-form-border);
+  border-radius: var(--cms-form-radius);
+  font-size: .92rem;
+}
+
+.cms-form__aside-title {
+  margin: 0 0 .75rem;
+  font-size: 1.05rem;
+}
+
+.cms-form__aside dl {
+  margin: 0;
+}
+
+.cms-form__aside dt {
+  font-weight: 600;
+  margin-top: .6rem;
+}
+
+.cms-form__aside dd {
+  margin: 0;
+}
+
+/* Editor-Vorschau */
+.cms-form--is-preview {
+  padding: 1rem;
+  border: 1px dashed var(--cms-form-border);
+  border-radius: var(--cms-form-radius);
+}
+
+.cms-form__preview-note {
+  margin: 0 0 .75rem;
+  font-size: .8rem;
+  color: var(--cms-form-muted);
+}
+
+@media (max-width: 640px) {
+  .cms-form__field--half,
+  .cms-form__field--third,
+  .cms-form__field--two-third {
+    grid-column: span 6;
+  }
+
+  .cms-form__split {
+    grid-template-columns: 1fr;
+  }
+
+  .cms-form__submit {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cms-form__input {
+    transition: none;
+  }
+}

@@ -88,10 +88,14 @@ final class ThemeRouter
         $this->router->addRoute('GET', '/search', [$this, 'renderSearch']);
         $this->router->addRoute('GET', '/contact', [$this, 'renderContact']);
         $this->router->addRoute('GET', '/kontakt', [$this, 'renderContact']);
-        // Das Theme-Kontaktformular sendet an dieselbe URL; ohne POST-Route endete jedes Absenden mit 404.
-        // CSRF prüft das Template selbst (Token "contact_form"), siehe Router-Bypass für /contact und /kontakt.
+        // Formulare (FormService) senden an dieselbe URL bzw. an /contact/<schlüssel>. Das Token je Formular prüft
+        // der FormFrontendController, siehe Router-Bypass für /contact, /kontakt und /contact/*.
         $this->router->addRoute('POST', '/contact', [$this, 'renderContact']);
         $this->router->addRoute('POST', '/kontakt', [$this, 'renderContact']);
+        // Vor den Beitragsmustern (z. B. /:year/:slug) registriert, damit /contact/<schlüssel> kein Beitrag ist.
+        $this->router->addRoute('GET', '/contact/:slug', [$this, 'renderContactForm']);
+        $this->router->addRoute('POST', '/contact/:slug', [$this, 'renderContactForm']);
+        $this->router->addRoute('GET', '/kontakt/:slug', [$this, 'redirectLegacyContactForm']);
         $this->router->addRoute('GET', '/autoren', [$this, 'renderAuthorsIndex']);
         $this->router->addRoute('GET', '/authors', [$this, 'renderAuthorsIndex']);
         $this->router->addRoute('GET', '/author/:identifier', [$this, 'renderAuthorPage']);
@@ -544,33 +548,119 @@ final class ThemeRouter
 
     public function renderContact(): void
     {
+        $forms = Services\Forms\FormService::getInstance();
+
+        if (Services\Forms\FormFrontendController::isFormPost()) {
+            $form = $forms->findPublic(Services\Forms\FormService::normalizeKey((string) $_POST['cms_form']));
+            if ($form !== null) {
+                Services\Forms\FormFrontendController::instance()->handlePost($form, Services\Forms\FormRenderer::currentPath());
+                return;
+            }
+        }
+
+        // POST ohne Formular-Kennung: ältere Theme-Vorlagen verarbeiten ihr eigenes Formular weiterhin selbst.
+        $this->renderContactView($forms->contactForm($_GET), true);
+    }
+
+    /** `/contact/<schlüssel>`: einzelnes Formular anzeigen bzw. verarbeiten. */
+    public function renderContactForm(string $key): void
+    {
+        $form = Services\Forms\FormService::getInstance()->findPublic(Services\Forms\FormService::normalizeKey(rawurldecode($key)));
+        if ($form === null) {
+            $this->router->render404();
+            return;
+        }
+
+        if (Services\Forms\FormFrontendController::isFormPost()) {
+            Services\Forms\FormFrontendController::instance()->handlePost($form);
+            return;
+        }
+
+        $this->renderContactView($form, false);
+    }
+
+    /** Frühere Plugin-URL `/kontakt/<schlüssel>` → 301 auf `/contact/<schlüssel>` (Sprache und Abfrage bleiben). */
+    public function redirectLegacyContactForm(string $key): void
+    {
+        $target = Services\Forms\FormFrontendController::formPath(Services\Forms\FormService::normalizeKey(rawurldecode($key)), $this->router->getRequestLocale());
+        $query = (string) ($_SERVER['QUERY_STRING'] ?? '');
+        $this->router->redirect($target . ($query !== '' ? '?' . $query : ''), 301);
+    }
+
+    /**
+     * Kontaktseite bzw. Formularseite rendern: Theme-Vorlage `contact.php`, sonst veröffentlichte Seite
+     * „contact“/„kontakt“ (Formular wird angehängt, falls die Seite keinen Formular-Block enthält),
+     * sonst eine schlichte Seite mit dem Formular.
+     *
+     * @param array<string, mixed>|null $form
+     */
+    private function renderContactView(?array $form, bool $isContactPage): void
+    {
         $themeManager = ThemeManager::instance();
-        $contactTemplate = $themeManager->getThemePath() . 'contact.php';
-
-        if (is_file($contactTemplate)) {
-            $themeManager->render('contact');
-            return;
-        }
-
         $locale = $this->getResolvedContentLocale();
+        $renderForm = static fn(): string => $form !== null
+            ? Services\Forms\FormRenderer::render($form, [
+                'context' => 'page',
+                'locale' => $locale,
+                'action' => Services\Forms\FormRenderer::currentPath(),
+                // Auf /contact/<schlüssel> ist die Formular-Überschrift bereits der Seitentitel.
+                'show_heading' => $isContactPage,
+            ])
+            : '';
+        $title = $form !== null && !$isContactPage
+            ? (Services\Forms\FormI18n::pick($form['settings']['heading'] ?? [], $locale) ?: (string) $form['title'])
+            : ($locale === 'en' ? 'Contact' : 'Kontakt');
 
-        foreach (['contact', 'kontakt'] as $slug) {
-            $pageManager = PageManager::instance();
-            $page = $pageManager->getPageBySlug($slug, $locale);
-            if ($page === null || ($page['status'] ?? '') !== 'published' || !$pageManager->pageMatchesLocaleAvailability($page, $locale)) {
-                continue;
-            }
-
-            $page = Services\ContentLocalizationService::getInstance()->localizePage($page, $locale);
-            if (!empty($page['content'])) {
-                $page['content'] = $this->router->prepareRenderableContent((string)$page['content'], 'page', (int)($page['id'] ?? 0));
-            }
-
-            $themeManager->render('page', ['page' => $page, 'contentLocale' => $locale]);
+        if (is_file($themeManager->getThemePath() . 'contact.php')) {
+            $themeManager->render('contact', [
+                'title' => $title,
+                'contactForm' => $form,
+                'contactFormHtml' => $renderForm(),
+                'isContactPage' => $isContactPage,
+                'contentLocale' => $locale,
+            ]);
             return;
         }
 
-        $this->router->render404();
+        if ($isContactPage) {
+            foreach (['contact', 'kontakt'] as $slug) {
+                $pageManager = PageManager::instance();
+                $page = $pageManager->getPageBySlug($slug, $locale);
+                if ($page === null || ($page['status'] ?? '') !== 'published' || !$pageManager->pageMatchesLocaleAvailability($page, $locale)) {
+                    continue;
+                }
+
+                $page = Services\ContentLocalizationService::getInstance()->localizePage($page, $locale);
+                $content = !empty($page['content'])
+                    ? $this->router->prepareRenderableContent((string)$page['content'], 'page', (int)($page['id'] ?? 0))
+                    : '';
+                if ($form !== null && !str_contains($content, 'data-cms-form="')) {
+                    $content .= $renderForm();
+                }
+                $page['content'] = $content;
+
+                $themeManager->render('page', ['page' => $page, 'contentLocale' => $locale]);
+                return;
+            }
+        }
+
+        if ($form === null) {
+            $this->router->render404();
+            return;
+        }
+
+        $themeManager->render('page', [
+            'title' => $title,
+            'page' => [
+                'id' => 0,
+                'title' => $title,
+                'slug' => $isContactPage ? 'contact' : 'contact/' . $form['form_key'],
+                'content' => $renderForm(),
+                'meta_description' => '',
+                'content_updated_at' => '',
+            ],
+            'contentLocale' => $locale,
+        ]);
     }
 
     public function streamSiteTableExport(string $id, string $format): void
