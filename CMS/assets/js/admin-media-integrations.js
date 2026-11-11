@@ -842,7 +842,7 @@
                     var path = button.dataset.deletePath || '';
                     var name = button.dataset.deleteName || 'Element';
                     var itemType = button.dataset.deleteType || 'Element';
-                    var message = name + ' wirklich löschen?';
+                    var message = name + ' in den Papierkorb verschieben? Aus dem Papierkorb lässt es sich wiederherstellen.';
 
                     if (!path) {
                         return;
@@ -850,9 +850,9 @@
 
                     if (typeof cmsConfirm === 'function') {
                         cmsConfirm({
-                            title: itemType + ' löschen',
+                            title: itemType + ' in den Papierkorb',
                             message: message,
-                            confirmText: 'Löschen',
+                            confirmText: 'In den Papierkorb',
                             confirmClass: 'btn-danger',
                             onConfirm: function () {
                                 submitDelete(path);
@@ -1036,17 +1036,34 @@
                     return;
                 }
 
-                if (bulkActionField.value === 'delete' && !window.confirm('Die ausgewählten Medien wirklich löschen?')) {
+                var bulkConfirm = null;
+                if (bulkActionField.value === 'delete') {
+                    bulkConfirm = { title: 'In den Papierkorb', message: 'Die ausgewählten Medien in den Papierkorb verschieben? Aus dem Papierkorb lassen sie sich wiederherstellen.', confirmText: 'In den Papierkorb' };
+                } else if (bulkActionField.value === 'tag_replace' || bulkActionField.value === 'tag_clear') {
+                    bulkConfirm = { title: 'Tags überschreiben', message: 'Die Tags der ausgewählten Dateien wirklich überschreiben bzw. entfernen?', confirmText: 'Übernehmen' };
+                }
+                if (bulkConfirm && bulkForm.dataset.confirmed !== '1') {
                     event.preventDefault();
                     setSubmittingState(bulkForm, false);
+                    if (typeof cmsConfirm === 'function') {
+                        cmsConfirm({
+                            title: bulkConfirm.title,
+                            message: bulkConfirm.message,
+                            confirmText: bulkConfirm.confirmText,
+                            confirmClass: 'btn-danger',
+                            onConfirm: function () {
+                                bulkForm.dataset.confirmed = '1';
+                                if (typeof bulkForm.requestSubmit === 'function') {
+                                    bulkForm.requestSubmit();
+                                } else {
+                                    bulkForm.submit();
+                                }
+                            }
+                        });
+                    }
                     return;
                 }
-
-                if ((bulkActionField.value === 'tag_replace' || bulkActionField.value === 'tag_clear') && !window.confirm('Die Tags der ausgewählten Dateien wirklich überschreiben bzw. entfernen?')) {
-                    event.preventDefault();
-                    setSubmittingState(bulkForm, false);
-                    return;
-                }
+                bulkForm.dataset.confirmed = '';
 
                 setSubmittingState(bulkForm, true);
             });

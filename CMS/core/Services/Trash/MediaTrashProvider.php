@@ -900,6 +900,12 @@ final class MediaTrashProvider implements TrashProvider
         );
     }
 
+    /** Ist der Medien-Papierkorb einsatzbereit (Tabelle `trash_media` vorhanden)? */
+    public function isAvailable(): bool
+    {
+        return $this->hasTrashTable();
+    }
+
     private function hasTrashTable(): bool
     {
         return $this->trashTableExists ??= $this->db->tableExists($this->prefix . 'trash_media');

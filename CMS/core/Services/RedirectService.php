@@ -1196,6 +1196,7 @@ final class RedirectService
                     JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) AS hub_slug
              FROM {$this->prefix}site_tables
              WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'
+               AND trashed_at IS NULL
              ORDER BY table_name ASC"
         ) ?: [];
 
@@ -1432,6 +1433,7 @@ final class RedirectService
                     JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) AS hub_slug
              FROM {$this->prefix}site_tables
              WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'
+               AND trashed_at IS NULL
              ORDER BY table_name ASC
              LIMIT 300"
         ) ?: [];

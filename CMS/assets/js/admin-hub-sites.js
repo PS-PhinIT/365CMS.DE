@@ -106,12 +106,12 @@
                 var siteName = button.getAttribute('data-hub-site-name') || '';
                 showConfirm(
                     {
-                        title: 'Routing / Hub Site löschen',
-                        message: 'Routing / Hub-Site "' + siteName + '" wirklich löschen?',
-                        confirmText: 'Löschen',
+                        title: 'Hub-Site in den Papierkorb',
+                        message: 'Hub-Site "' + siteName + '" in den Papierkorb verschieben? Sie ist danach nicht mehr erreichbar und lässt sich wiederherstellen.',
+                        confirmText: 'In den Papierkorb',
                         confirmClass: 'btn-danger',
                     },
-                    'Routing / Hub Site "' + siteName + '" wirklich löschen?',
+                    'Hub-Site "' + siteName + '" in den Papierkorb verschieben?',
                     function () {
                         submitHiddenForm(deleteIdInput, deleteForm, siteId);
                     }
@@ -133,7 +133,7 @@
                     {
                         title: 'Template löschen',
                         message: 'Template <strong>' + templateName + '</strong> wirklich löschen?',
-                        confirmText: 'Löschen',
+                        confirmText: 'In den Papierkorb',
                         confirmClass: 'btn-danger',
                     },
                     'Template "' + templateName + '" wirklich löschen?',

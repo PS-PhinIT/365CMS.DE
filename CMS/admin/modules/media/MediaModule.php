@@ -1007,6 +1007,22 @@ class MediaModule
             return ['success' => false, 'error' => 'Das gewählte Element existiert nicht mehr.'];
         }
 
+        // Papierkorb: Datei bzw. Ordner samt Derivaten wandern in den geschützten Papierkorb und lassen sich
+        // wiederherstellen. Nur ohne Papierkorb-Tabelle (Migration ausstehend) wird sofort gelöscht.
+        $trash = \CMS\Services\ContentTypes\ContentTypeRegistry::getInstance()->trashProvider(\CMS\Services\Trash\MediaTrashProvider::TYPE);
+        if ($trash instanceof \CMS\Services\Trash\MediaTrashProvider && $trash->isAvailable()) {
+            $trashResult = $trash->trashPath($normalizedPath, (int) (Auth::instance()->currentUser()->id ?? 0));
+            if (!$trashResult->ok) {
+                return ['success' => false, 'error' => $trashResult->message !== '' ? $trashResult->message : 'Element konnte nicht in den Papierkorb verschoben werden.'];
+            }
+
+            return [
+                'success' => true,
+                'message' => $trashResult->message !== '' ? $trashResult->message : 'In den Papierkorb verschoben.',
+                'details' => ['Pfad: ' . $normalizedPath],
+            ];
+        }
+
         $result = $this->service->deleteItem($normalizedPath);
         if ($result instanceof WP_Error) {
             return $this->buildGenericFailureFromWpError($result, [
@@ -1229,7 +1245,7 @@ class MediaModule
             } elseif ($normalizedBulkAction === 'delete') {
                 $deleteResult = $this->deleteItem($selectedPath);
                 $actionResult = !empty($deleteResult['success'])
-                    ? ['status' => 'success', 'detail' => 'Gelöscht: ' . $selectedPath]
+                    ? ['status' => 'success', 'detail' => (string) ($deleteResult['message'] ?? 'Gelöscht') . ' (' . $selectedPath . ')']
                     : [
                         'status' => 'error',
                         'detail' => $selectedPath . ': ' . trim((string) ($deleteResult['error'] ?? 'Fehler')),
@@ -1268,7 +1284,7 @@ class MediaModule
 
         $verb = match ($normalizedBulkAction) {
             'move' => 'verschoben',
-            'delete' => 'gelöscht',
+            'delete' => 'in den Papierkorb verschoben bzw. gelöscht',
             'assign_category' => $normalizedCategory !== '' ? 'kategorisiert' : 'von Kategorien befreit',
             'tag_add' => 'mit Tags ergänzt',
             'tag_replace' => 'mit Tags ersetzt',

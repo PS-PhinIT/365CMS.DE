@@ -62,6 +62,7 @@ final class SiteTableRepository
              FROM {$this->prefix}site_tables
              WHERE table_slug = ?
                AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'
+               AND trashed_at IS NULL
              LIMIT 1",
             [$slug]
         );
@@ -80,7 +81,7 @@ final class SiteTableRepository
             $rows = $this->db->fetchAll(
                 "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at, table_slug
                  FROM {$this->prefix}site_tables
-                 WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'"
+                 WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub' AND trashed_at IS NULL"
             );
             $this->hubRowsCache = is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
         }

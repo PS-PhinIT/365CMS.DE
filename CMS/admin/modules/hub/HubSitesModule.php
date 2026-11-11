@@ -100,7 +100,7 @@ class HubSitesModule
                     JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.hub_slug')) AS hub_slug,
                     created_at, updated_at
              FROM {$this->prefix}site_tables
-             WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'{$where}
+             WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub' AND trashed_at IS NULL{$where}
              ORDER BY updated_at DESC
              LIMIT 200",
             $params
@@ -394,6 +394,17 @@ class HubSitesModule
     {
         if ($id <= 0) {
             return ['success' => false, 'error' => 'Ungültige Hub-Site-ID.'];
+        }
+
+        // Papierkorb: Die Hub-Site ist sofort nicht mehr erreichbar und lässt sich unter Papierkorb wiederherstellen.
+        $trash = \CMS\Services\ContentTypes\ContentTypeRegistry::getInstance()->trashProvider(\CMS\Services\Trash\HubSiteTrashProvider::TYPE);
+        if ($trash instanceof \CMS\Services\Trash\HubSiteTrashProvider) {
+            $result = $trash->trash($id, (int) (\CMS\Auth::instance()->currentUser()->id ?? 0));
+            $this->resetHubDomainAssignmentsCache();
+
+            return $result->ok
+                ? ['success' => true, 'message' => $result->message]
+                : ['success' => false, 'error' => $result->message !== '' ? $result->message : 'Hub-Site konnte nicht in den Papierkorb verschoben werden.'];
         }
 
         try {
@@ -974,7 +985,7 @@ class HubSitesModule
         $rows = $this->db->get_results(
             "SELECT id, settings_json
              FROM {$this->prefix}site_tables
-             WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub'",
+             WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') = 'hub' AND trashed_at IS NULL",
             []
         ) ?: [];
 
