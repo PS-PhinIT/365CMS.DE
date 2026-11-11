@@ -8,6 +8,10 @@
  * serverseitig erzwingen PostsModule::save(), die Bulk-Aktion „Veröffentlichen“ und die
  * Revisions-Wiederherstellung geplanter Beiträge diese Prüfung.
  *
+ * Zusätzlicher Punkt „Downloads“ (nur wenn der Inhalt Download-Blöcke enthält): Beitrag verweist auf
+ * nicht verfügbare Downloads. Der Inhalt kommt aus `$state['content']` (String oder Liste) oder – beim
+ * Speichern – aus {@see setPendingContents()} (gesetzt von DownloadHooks über `cms_prepare_post_save_payload`).
+ *
  * @package CMS\Services
  */
 
@@ -25,6 +29,9 @@ final class PostPublishChecklistService
     public const META_DESCRIPTION_MAX = 160;
 
     private static ?self $instance = null;
+
+    /** @var list<string>|null Inhalte des laufenden Speichervorgangs (content/content_en). */
+    private ?array $pendingContents = null;
 
     public static function getInstance(): self
     {
@@ -96,6 +103,11 @@ final class PostPublishChecklistService
             ],
         ];
 
+        $downloadsItem = $this->evaluateDownloadReferences($state);
+        if ($downloadsItem !== null) {
+            $items[] = $downloadsItem;
+        }
+
         $missing = [];
         foreach ($items as $item) {
             if (!$item['passed']) {
@@ -108,6 +120,21 @@ final class PostPublishChecklistService
             'items' => $items,
             'missing' => $missing,
         ];
+    }
+
+    /**
+     * Inhalte des laufenden Speichervorgangs für inhaltsbezogene Prüfpunkte setzen.
+     *
+     * @param list<mixed> $contents
+     */
+    public function setPendingContents(array $contents): void
+    {
+        $this->pendingContents = $this->normalizeContents($contents);
+    }
+
+    public function clearPendingContents(): void
+    {
+        $this->pendingContents = null;
     }
 
     /**
@@ -178,6 +205,63 @@ final class PostPublishChecklistService
         }
 
         return $message . ': ' . implode(' ', $result['missing'] ?? []);
+    }
+
+    /**
+     * Prüfpunkt „Downloads“: nur aktiv, wenn der Inhalt Download-Blöcke enthält.
+     *
+     * @param array<string,mixed> $state
+     * @return array{id:string,label:string,passed:bool,hint:string,field:string}|null
+     */
+    private function evaluateDownloadReferences(array $state): ?array
+    {
+        $usageClass = \CMS\Services\Downloads\DownloadUsageService::class;
+        $contents = array_key_exists('content', $state)
+            ? $this->normalizeContents(is_array($state['content']) ? $state['content'] : [$state['content']])
+            : ($this->pendingContents ?? []);
+        if ($contents === [] || !class_exists($usageClass)) {
+            return null;
+        }
+
+        $referenced = false;
+        foreach ($contents as $content) {
+            if ($usageClass::extractIds($content) !== []) {
+                $referenced = true;
+                break;
+            }
+        }
+        if (!$referenced) {
+            return null;
+        }
+
+        $unavailable = $usageClass::getInstance()->unavailableReferences($contents);
+        $labels = array_map(static fn (array $entry): string => (string) $entry['label'], $unavailable);
+
+        return [
+            'id' => 'downloads',
+            'label' => __('downloads.checklist.label'),
+            'passed' => $unavailable === [],
+            'hint' => $unavailable === []
+                ? __('downloads.checklist.ok')
+                : sprintf(__('downloads.checklist.missing'), implode(', ', $labels)),
+            'field' => 'content',
+        ];
+    }
+
+    /**
+     * @param array<mixed> $contents
+     * @return list<string>
+     */
+    private function normalizeContents(array $contents): array
+    {
+        $result = [];
+        foreach ($contents as $content) {
+            if (is_scalar($content) && trim((string) $content) !== '') {
+                $result[] = (string) $content;
+            }
+        }
+
+        return $result;
     }
 
     private function isFutureTimestamp(?string $value, int $now): bool
