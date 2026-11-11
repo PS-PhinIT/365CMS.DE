@@ -11,9 +11,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$errorCode    = $errorCode    ?? 500;
-$errorTitle   = $errorTitle   ?? 'Serverfehler';
-$errorMessage = $errorMessage ?? 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
+// Der Router übergibt `error_code`, `error_title`, `error_message`; ältere Aufrufer nutzen die camelCase-Namen.
+$errorCode    = $errorCode    ?? $error_code    ?? 500;
+$errorTitle   = $errorTitle   ?? $error_title   ?? 'Serverfehler';
+$errorMessage = $errorMessage ?? $error_message ?? 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
 
 if (!headers_sent()) {
     http_response_code((int)$errorCode);

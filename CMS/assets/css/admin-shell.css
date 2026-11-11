@@ -1400,3 +1400,50 @@ html.cms-focus-mode body.admin-body .page > .page-wrapper {
         transition: none;
     }
 }
+
+/* ── Toolbar „Cache & Wartung“ ─────────────────────────────────────────── */
+.cms-topbar__tool > button {
+    border: 0;
+    background: transparent;
+}
+
+.cms-topbar__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--tblr-danger, #d63939);
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.cms-topbar__menu-list .dropdown-item {
+    display: flex;
+    align-items: center;
+}
+
+.cms-topbar__tool.is-busy {
+    opacity: .6;
+    pointer-events: none;
+}
+
+.cms-maintenance-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 24px;
+    background: var(--tblr-danger, #d63939);
+    color: #fff;
+    font-weight: 600;
+}
+
+.cms-maintenance-banner.d-none {
+    display: none;
+}
+
+.cms-maintenance-banner a {
+    color: #fff;
+    text-decoration: underline;
+}

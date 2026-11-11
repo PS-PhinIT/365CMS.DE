@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
  * GET  ?action=token          frisches CSRF-Token (nach Ablauf)
  * POST action=prefs           Sidebar-Zustand speichern: sidebar_collapsed (0/1) und/oder groups (JSON {id: bool})
  * POST action=switch_site     Site-Kontext wechseln: site (Schlüssel aus AdminSiteContextService)
+ * POST action=cache_clear     Cache leeren: scope = all|pages|assets|opcache (Capability manage_system)
+ * POST action=maintenance     Wartungsmodus schalten: active = 0|1 (Capability manage_system)
  */
 
 use CMS\Auth;
@@ -82,6 +84,8 @@ switch ($action) {
 
     case 'prefs':
     case 'switch_site':
+    case 'cache_clear':
+    case 'maintenance':
         if ($method !== 'POST') {
             $cmsAdminUiRespond(405, ['success' => false, 'error' => 'Diese Aktion erlaubt nur POST.']);
         }
@@ -92,6 +96,28 @@ switch ($action) {
 
     default:
         $cmsAdminUiRespond(400, ['success' => false, 'error' => 'Unbekannte Aktion.']);
+}
+
+if ($action === 'cache_clear' || $action === 'maintenance') {
+    if (!$auth->hasCapability(\CMS\Services\AdminToolbarService::CAPABILITY)) {
+        $cmsAdminUiRespond(403, ['success' => false, 'error' => 'Keine Berechtigung.']);
+    }
+    $toolbar = \CMS\Services\AdminToolbarService::getInstance();
+    if ($action === 'cache_clear') {
+        $scope = strtolower(trim((string) ($_POST['scope'] ?? '')));
+        if (!in_array($scope, \CMS\Services\AdminToolbarService::CACHE_SCOPES, true)) {
+            $cmsAdminUiRespond(422, ['success' => false, 'error' => (string) __('toolbar.cache.error_scope')]);
+        }
+        $result = $toolbar->clearCache($scope, $userId);
+        $cmsAdminUiRespond($result['success'] ? 200 : 500, $result['success']
+            ? ['success' => true, 'message' => $result['message'], 'details' => $result['details']]
+            : ['success' => false, 'error' => $result['message'], 'details' => $result['details']]);
+    }
+
+    $result = $toolbar->setMaintenance((string) ($_POST['active'] ?? '') === '1', $userId);
+    $cmsAdminUiRespond($result['success'] ? 200 : 500, $result['success']
+        ? ['success' => true, 'message' => $result['message'], 'active' => $result['active']]
+        : ['success' => false, 'error' => $result['message'], 'active' => $result['active']]);
 }
 
 if ($action === 'switch_site') {
