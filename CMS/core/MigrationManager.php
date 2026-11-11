@@ -218,7 +218,21 @@ class MigrationManager
             "ALTER TABLE `{$p}site_tables` ADD COLUMN `trashed_at` DATETIME DEFAULT NULL",
             "ALTER TABLE `{$p}site_tables` ADD COLUMN `trashed_by` INT UNSIGNED DEFAULT NULL",
             "ALTER TABLE `{$p}site_tables` ADD INDEX `idx_trashed_at` (`trashed_at`)",
+            // v25: Redaktionskalender – „Geplantes Datum“ für Entwürfe (rein redaktionell, veröffentlicht nichts).
+            "ALTER TABLE `{$p}posts` ADD COLUMN `planned_at` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}posts` ADD INDEX `idx_planned_at` (`planned_at`)",
+            "ALTER TABLE `{$p}pages` ADD COLUMN `planned_at` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}pages` ADD INDEX `idx_planned_at` (`planned_at`)",
         ];
+
+        // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –
+        // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge.
+        $schemaQueries = SchemaManager::getSchemaQueries($p, $charset);
+        foreach (SchemaManager::FEATURE_TABLES as $featureTable) {
+            if (isset($schemaQueries[$featureTable])) {
+                $migrations[] = $schemaQueries[$featureTable];
+            }
+        }
 
         foreach ($migrations as $sql) {
             try {

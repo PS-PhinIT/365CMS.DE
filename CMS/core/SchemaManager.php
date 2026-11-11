@@ -33,6 +33,21 @@ class SchemaManager
     /** Flag-Datei-Version – erhöhen wenn Schema geändert wird */
     public const SCHEMA_VERSION = 'v25';
 
+    /**
+     * Tabellen der Core-Funktionen seit v25 (Formulare, Downloads, Feed-Aggregator) in Abhängigkeitsreihenfolge.
+     * Neuinstallation, Update (MigrationManager) und Laufzeit-Absicherung nutzen dieselbe Liste.
+     *
+     * @var list<string>
+     */
+    public const FEATURE_TABLES = [
+        'form_forms', 'form_submissions', 'form_submission_files',
+        'downloads_terms', 'downloads_items', 'downloads_versions', 'downloads_item_terms',
+        'downloads_property_values', 'downloads_usage', 'downloads_events', 'downloads_stats_daily',
+        'downloads_rate_limits',
+        'feeds_categories', 'feeds_sources', 'feeds_items', 'feeds_digests', 'feeds_subscriptions',
+        'feeds_fetch_queue',
+    ];
+
     private Database $db;
     private string $prefix;
     private string $charset;
@@ -155,6 +170,7 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
+                planned_at DATETIME DEFAULT NULL,
                 previous_status VARCHAR(20) DEFAULT NULL,
                 trashed_at DATETIME DEFAULT NULL,
                 trashed_by INT UNSIGNED DEFAULT NULL,
@@ -162,7 +178,8 @@ class SchemaManager
                 INDEX idx_status (status),
                 INDEX idx_author (author_id),
                 INDEX idx_category (category_id),
-                INDEX idx_trashed_at (trashed_at)
+                INDEX idx_trashed_at (trashed_at),
+                INDEX idx_planned_at (planned_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'page_revisions' => "CREATE TABLE IF NOT EXISTS {$p}page_revisions (
@@ -401,6 +418,7 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
+                planned_at DATETIME DEFAULT NULL,
                 previous_status VARCHAR(20) DEFAULT NULL,
                 trashed_at DATETIME DEFAULT NULL,
                 trashed_by INT UNSIGNED DEFAULT NULL,
@@ -409,7 +427,8 @@ class SchemaManager
                 INDEX idx_category (category_id),
                 INDEX idx_published (published_at),
                 INDEX idx_status_published (status, published_at),
-                INDEX idx_trashed_at (trashed_at)
+                INDEX idx_trashed_at (trashed_at),
+                INDEX idx_planned_at (planned_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'post_revisions' => "CREATE TABLE IF NOT EXISTS {$p}post_revisions (
@@ -818,6 +837,356 @@ class SchemaManager
                 INDEX idx_batch_jobs_lookup (job_type, scope_key, status),
                 INDEX idx_batch_jobs_updated (updated_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Lange Admin-Aufgaben (BatchJobService)'",
+
+            // v25: Formulare (FormService). Definitionen mit Feldern und Einstellungen als JSON; das
+            // Kontaktformular (`kontakt`) ist die erste eingebaute Definition. legacy_id = ID im Plugin cms-contact.
+            'form_forms' => "CREATE TABLE IF NOT EXISTS {$p}form_forms (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                form_key VARCHAR(64) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                is_builtin TINYINT(1) NOT NULL DEFAULT 0,
+                fields_json LONGTEXT NULL,
+                settings_json LONGTEXT NULL,
+                legacy_id INT UNSIGNED NULL,
+                previous_status VARCHAR(20) NULL,
+                trashed_at DATETIME NULL,
+                trashed_by INT UNSIGNED NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_form_forms_key (form_key),
+                UNIQUE KEY uniq_form_forms_legacy (legacy_id),
+                INDEX idx_form_forms_status (status),
+                INDEX idx_form_forms_trashed (trashed_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Formulardefinitionen (FormService)'",
+
+            // v25: Formulareingänge. Feldwerte als Momentaufnahme in data_json; keine IP-Adresse, kein User-Agent.
+            'form_submissions' => "CREATE TABLE IF NOT EXISTS {$p}form_submissions (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                form_id INT UNSIGNED NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'new',
+                previous_status VARCHAR(20) NULL,
+                trashed_at DATETIME NULL,
+                trashed_by INT UNSIGNED NULL,
+                user_id INT UNSIGNED NULL,
+                sender_name VARCHAR(255) NOT NULL DEFAULT '',
+                sender_email VARCHAR(254) NOT NULL DEFAULT '',
+                subject VARCHAR(500) NOT NULL DEFAULT '',
+                data_json LONGTEXT NULL,
+                meta_json MEDIUMTEXT NULL,
+                locale VARCHAR(10) NOT NULL DEFAULT 'de',
+                source_url VARCHAR(500) NOT NULL DEFAULT '',
+                consent_at DATETIME NULL,
+                read_at DATETIME NULL,
+                done_at DATETIME NULL,
+                legacy_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_form_submissions_legacy (legacy_id),
+                INDEX idx_form_submissions_form (form_id, status, created_at),
+                INDEX idx_form_submissions_status (status, created_at),
+                INDEX idx_form_submissions_retention (form_id, created_at),
+                INDEX idx_form_submissions_email (sender_email(191)),
+                INDEX idx_form_submissions_user (user_id),
+                INDEX idx_form_submissions_trashed (trashed_at),
+                CONSTRAINT fk_form_submissions_form FOREIGN KEY (form_id) REFERENCES {$p}form_forms(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Formulareingänge (FormSubmissionService)'",
+
+            // v25: hochgeladene Dateien eines Eingangs; die Dateien liegen im privaten Speicher (forms/uploads).
+            'form_submission_files' => "CREATE TABLE IF NOT EXISTS {$p}form_submission_files (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                submission_id BIGINT UNSIGNED NOT NULL,
+                field_name VARCHAR(64) NOT NULL DEFAULT '',
+                original_name VARCHAR(255) NOT NULL DEFAULT '',
+                stored_name VARCHAR(190) NOT NULL,
+                mime_type VARCHAR(127) NOT NULL DEFAULT '',
+                size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_form_submission_files_submission (submission_id),
+                CONSTRAINT fk_form_submission_files_submission FOREIGN KEY (submission_id) REFERENCES {$p}form_submissions(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Datei-Uploads der Formulareingänge'",
+
+            // v25: Downloads (DownloadService). Kategorien und Schlagwörter in einer Tabelle (term_type).
+            'downloads_terms' => "CREATE TABLE IF NOT EXISTS {$p}downloads_terms (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                term_type VARCHAR(20) NOT NULL DEFAULT 'category',
+                name VARCHAR(190) NOT NULL,
+                slug VARCHAR(190) NOT NULL,
+                description TEXT NULL,
+                icon VARCHAR(64) NOT NULL DEFAULT '',
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                sort_order INT NOT NULL DEFAULT 0,
+                legacy_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_downloads_terms_slug (term_type, slug),
+                INDEX idx_downloads_terms_sort (term_type, sort_order),
+                INDEX idx_downloads_terms_legacy (term_type, legacy_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Download-Kategorien und -Schlagwörter'",
+
+            // v25: Download-Einträge. Dateien hängen an den Versionen; download_count zählt ohne Personendaten.
+            'downloads_items' => "CREATE TABLE IF NOT EXISTS {$p}downloads_items (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                slug VARCHAR(190) NOT NULL,
+                summary TEXT NULL,
+                description MEDIUMTEXT NULL,
+                category_id INT UNSIGNED NULL,
+                cover_media VARCHAR(500) NOT NULL DEFAULT '',
+                file_type VARCHAR(20) NOT NULL DEFAULT '',
+                author_name VARCHAR(190) NOT NULL DEFAULT '',
+                license VARCHAR(190) NOT NULL DEFAULT '',
+                requirements VARCHAR(500) NOT NULL DEFAULT '',
+                external_links TEXT NULL,
+                is_signed TINYINT(1) NOT NULL DEFAULT 0,
+                signature_info VARCHAR(255) NOT NULL DEFAULT '',
+                access_level VARCHAR(20) NOT NULL DEFAULT 'public',
+                access_roles TEXT NULL,
+                access_plans TEXT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'draft',
+                previous_status VARCHAR(20) NULL,
+                trashed_at DATETIME NULL,
+                trashed_by INT UNSIGNED NULL,
+                is_featured TINYINT(1) NOT NULL DEFAULT 0,
+                sort_order INT NOT NULL DEFAULT 0,
+                seo_title VARCHAR(255) NOT NULL DEFAULT '',
+                seo_description VARCHAR(500) NOT NULL DEFAULT '',
+                seo_noindex TINYINT(1) NOT NULL DEFAULT 0,
+                download_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                download_count_base BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                legacy_id INT UNSIGNED NULL,
+                created_by INT UNSIGNED NULL,
+                updated_by INT UNSIGNED NULL,
+                published_at DATETIME NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_downloads_items_slug (slug),
+                UNIQUE KEY uniq_downloads_items_legacy (legacy_id),
+                INDEX idx_downloads_items_status (status, updated_at),
+                INDEX idx_downloads_items_category (category_id),
+                INDEX idx_downloads_items_access (access_level),
+                INDEX idx_downloads_items_type (file_type),
+                INDEX idx_downloads_items_trashed (trashed_at),
+                CONSTRAINT fk_downloads_items_category FOREIGN KEY (category_id) REFERENCES {$p}downloads_terms(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Downloads (DownloadService)'",
+
+            // v25: Versionen eines Downloads. current_flag ist 1 oder NULL; der eindeutige Index lässt je Download
+            // genau eine aktuelle Version zu. Datei im privaten Speicher (file_area + file_path) oder externer Link.
+            'downloads_versions' => "CREATE TABLE IF NOT EXISTS {$p}downloads_versions (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                download_id INT UNSIGNED NOT NULL,
+                version VARCHAR(50) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'archived',
+                current_flag TINYINT(1) NULL,
+                file_area VARCHAR(40) NOT NULL DEFAULT '',
+                file_path VARCHAR(500) NOT NULL DEFAULT '',
+                file_name VARCHAR(255) NOT NULL DEFAULT '',
+                file_ext VARCHAR(20) NOT NULL DEFAULT '',
+                mime_type VARCHAR(127) NOT NULL DEFAULT '',
+                file_size BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                sha256 CHAR(64) NOT NULL DEFAULT '',
+                external_url VARCHAR(500) NOT NULL DEFAULT '',
+                release_date DATE NULL,
+                changelog TEXT NULL,
+                download_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                legacy_id INT UNSIGNED NULL,
+                legacy_path VARCHAR(500) NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_downloads_versions_number (download_id, version),
+                UNIQUE KEY uniq_downloads_versions_current (download_id, current_flag),
+                INDEX idx_downloads_versions_legacy (legacy_id),
+                INDEX idx_downloads_versions_legacy_path (legacy_path(191)),
+                CONSTRAINT fk_downloads_versions_item FOREIGN KEY (download_id) REFERENCES {$p}downloads_items(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Download-Versionen'",
+
+            'downloads_item_terms' => "CREATE TABLE IF NOT EXISTS {$p}downloads_item_terms (
+                download_id INT UNSIGNED NOT NULL,
+                term_id INT UNSIGNED NOT NULL,
+                PRIMARY KEY (download_id, term_id),
+                INDEX idx_downloads_item_terms_term (term_id),
+                CONSTRAINT fk_downloads_item_terms_item FOREIGN KEY (download_id) REFERENCES {$p}downloads_items(id) ON DELETE CASCADE,
+                CONSTRAINT fk_downloads_item_terms_term FOREIGN KEY (term_id) REFERENCES {$p}downloads_terms(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Schlagwörter je Download'",
+
+            // v25: Werte der frei definierbaren Eigenschaftsfelder (Definition in den Download-Einstellungen).
+            'downloads_property_values' => "CREATE TABLE IF NOT EXISTS {$p}downloads_property_values (
+                download_id INT UNSIGNED NOT NULL,
+                field_key VARCHAR(40) NOT NULL,
+                value TEXT NULL,
+                PRIMARY KEY (download_id, field_key),
+                CONSTRAINT fk_downloads_property_values_item FOREIGN KEY (download_id) REFERENCES {$p}downloads_items(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Eigenschaftswerte der Downloads'",
+
+            // v25: „Verwendet in“-Index (Beiträge/Seiten mit Download-Block).
+            'downloads_usage' => "CREATE TABLE IF NOT EXISTS {$p}downloads_usage (
+                download_id INT UNSIGNED NOT NULL,
+                content_type VARCHAR(20) NOT NULL,
+                content_id INT UNSIGNED NOT NULL,
+                PRIMARY KEY (download_id, content_type, content_id),
+                INDEX idx_downloads_usage_content (content_type, content_id),
+                CONSTRAINT fk_downloads_usage_item FOREIGN KEY (download_id) REFERENCES {$p}downloads_items(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Verwendungen der Downloads in Inhalten'",
+
+            // v25: Rohzeilen der Download-Zählung ohne Personendaten (kein IP, kein User-Agent). dedupe_hash ist ein
+            // HMAC und wird nach 24 Stunden geleert; aggregierte Zeilen löscht die Aufbewahrungsregel downloads.events.
+            'downloads_events' => "CREATE TABLE IF NOT EXISTS {$p}downloads_events (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                download_id INT UNSIGNED NOT NULL,
+                version_id INT UNSIGNED NOT NULL DEFAULT 0,
+                source_type VARCHAR(20) NOT NULL DEFAULT '',
+                source_id INT UNSIGNED NOT NULL DEFAULT 0,
+                dedupe_hash CHAR(64) NULL,
+                aggregated TINYINT(1) NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                INDEX idx_downloads_events_dedupe (dedupe_hash, created_at),
+                INDEX idx_downloads_events_aggregate (aggregated, created_at),
+                INDEX idx_downloads_events_item (download_id, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Download-Abrufe (Rohzeilen, ohne Personendaten)'",
+
+            'downloads_stats_daily' => "CREATE TABLE IF NOT EXISTS {$p}downloads_stats_daily (
+                stat_date DATE NOT NULL,
+                download_id INT UNSIGNED NOT NULL,
+                version_id INT UNSIGNED NOT NULL DEFAULT 0,
+                source_type VARCHAR(20) NOT NULL DEFAULT '',
+                source_id INT UNSIGNED NOT NULL DEFAULT 0,
+                hits INT UNSIGNED NOT NULL DEFAULT 0,
+                PRIMARY KEY (stat_date, download_id, version_id, source_type, source_id),
+                INDEX idx_downloads_stats_daily_item (download_id, stat_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Download-Abrufe je Tag'",
+
+            // v25: Grenzwert je Besucher; key_hash ist ein HMAC über die IP-Adresse (keine Klartext-IP).
+            'downloads_rate_limits' => "CREATE TABLE IF NOT EXISTS {$p}downloads_rate_limits (
+                key_hash CHAR(64) NOT NULL PRIMARY KEY,
+                request_count INT UNSIGNED NOT NULL DEFAULT 0,
+                window_started_at INT UNSIGNED NOT NULL DEFAULT 0,
+                INDEX idx_downloads_rate_limits_window (window_started_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Abruf-Grenzwerte der Downloads'",
+
+            // v25: Feed-Aggregator (ehemals Plugin cms-feed): Bereiche, Quellen, Artikel, Digests, Mitglieder-Abos
+            // und Abruf-Queue. legacy_id = ID in den Plugin-Tabellen (idempotente Übernahme).
+            'feeds_categories' => "CREATE TABLE IF NOT EXISTS {$p}feeds_categories (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                name_en VARCHAR(150) NOT NULL DEFAULT '',
+                slug VARCHAR(150) NOT NULL,
+                description TEXT NULL,
+                description_en TEXT NULL,
+                icon VARCHAR(32) NOT NULL DEFAULT '',
+                is_public TINYINT(1) NOT NULL DEFAULT 1,
+                sort_order INT NOT NULL DEFAULT 0,
+                layout VARCHAR(30) NOT NULL DEFAULT 'grid',
+                items_per_page INT UNSIGNED NOT NULL DEFAULT 20,
+                legacy_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_feeds_categories_slug (slug),
+                UNIQUE KEY uniq_feeds_categories_legacy (legacy_id),
+                INDEX idx_feeds_categories_public (is_public, sort_order)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Bereiche'",
+
+            'feeds_sources' => "CREATE TABLE IF NOT EXISTS {$p}feeds_sources (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                category_id INT UNSIGNED NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                feed_url VARCHAR(2048) NOT NULL,
+                site_url VARCHAR(2048) NOT NULL DEFAULT '',
+                description TEXT NULL,
+                icon_url VARCHAR(2048) NOT NULL DEFAULT '',
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                fetch_interval INT UNSIGNED NOT NULL DEFAULT 60,
+                max_items INT UNSIGNED NOT NULL DEFAULT 50,
+                last_fetched_at DATETIME NULL,
+                last_error VARCHAR(500) NULL,
+                last_error_at DATETIME NULL,
+                error_count INT UNSIGNED NOT NULL DEFAULT 0,
+                item_count INT UNSIGNED NOT NULL DEFAULT 0,
+                legacy_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_feeds_sources_legacy (legacy_id),
+                INDEX idx_feeds_sources_category (category_id),
+                INDEX idx_feeds_sources_due (is_active, last_fetched_at),
+                INDEX idx_feeds_sources_url (feed_url(191)),
+                CONSTRAINT fk_feeds_sources_category FOREIGN KEY (category_id) REFERENCES {$p}feeds_categories(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Quellen (RSS/Atom)'",
+
+            'feeds_items' => "CREATE TABLE IF NOT EXISTS {$p}feeds_items (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                source_id INT UNSIGNED NOT NULL,
+                category_id INT UNSIGNED NOT NULL,
+                guid VARCHAR(500) NOT NULL,
+                title VARCHAR(500) NOT NULL,
+                link VARCHAR(2048) NOT NULL DEFAULT '',
+                description TEXT NULL,
+                content LONGTEXT NULL,
+                author VARCHAR(190) NOT NULL DEFAULT '',
+                image_url VARCHAR(2048) NOT NULL DEFAULT '',
+                pub_date DATETIME NOT NULL,
+                is_featured TINYINT(1) NOT NULL DEFAULT 0,
+                is_hidden TINYINT(1) NOT NULL DEFAULT 0,
+                legacy_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_feeds_items_guid (source_id, guid(191)),
+                INDEX idx_feeds_items_category (category_id, is_hidden, pub_date),
+                INDEX idx_feeds_items_pub_date (pub_date),
+                INDEX idx_feeds_items_featured (is_featured),
+                INDEX idx_feeds_items_legacy (legacy_id),
+                CONSTRAINT fk_feeds_items_source FOREIGN KEY (source_id) REFERENCES {$p}feeds_sources(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Artikel'",
+
+            'feeds_digests' => "CREATE TABLE IF NOT EXISTS {$p}feeds_digests (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                category_ids TEXT NOT NULL,
+                frequency TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                language VARCHAR(5) NOT NULL DEFAULT 'de',
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                last_sent_at DATETIME NULL,
+                legacy_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_feeds_digests_legacy (legacy_id),
+                INDEX idx_feeds_digests_active (is_active),
+                INDEX idx_feeds_digests_email (email(191))
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: E-Mail-Digests'",
+
+            // Ein Abo je Mitglied; die E-Mail-Adresse kommt beim Versand aus dem Benutzerkonto.
+            'feeds_subscriptions' => "CREATE TABLE IF NOT EXISTS {$p}feeds_subscriptions (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                source_ids LONGTEXT NULL,
+                frequency VARCHAR(20) NOT NULL DEFAULT 'daily',
+                daily_mode VARCHAR(20) NOT NULL DEFAULT '09',
+                weekly_day TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                weekly_time VARCHAR(5) NOT NULL DEFAULT '09',
+                language VARCHAR(5) NOT NULL DEFAULT 'de',
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                last_sent_at DATETIME NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_feeds_subscriptions_user (user_id),
+                INDEX idx_feeds_subscriptions_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Mitglieder-Abos'",
+
+            'feeds_fetch_queue' => "CREATE TABLE IF NOT EXISTS {$p}feeds_fetch_queue (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                source_id INT UNSIGNED NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                trigger_type VARCHAR(20) NOT NULL DEFAULT 'cron',
+                attempts INT UNSIGNED NOT NULL DEFAULT 0,
+                items_new INT UNSIGNED NOT NULL DEFAULT 0,
+                error VARCHAR(500) NULL,
+                claim_token CHAR(32) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                started_at DATETIME NULL,
+                processed_at DATETIME NULL,
+                INDEX idx_feeds_fetch_queue_status (status, id),
+                INDEX idx_feeds_fetch_queue_source (source_id, status),
+                INDEX idx_feeds_fetch_queue_claim (claim_token),
+                CONSTRAINT fk_feeds_fetch_queue_source FOREIGN KEY (source_id) REFERENCES {$p}feeds_sources(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Abruf-Queue und Protokoll'",
         ];
     }
 
@@ -1146,6 +1515,7 @@ class SchemaManager
         $this->ensureSiteTableSlugs();
         $this->ensurePostLocaleColumns();
         $this->ensureTrashColumns();
+        $this->ensureFeatureSchema();
         $this->repairViewCounterUpdatedAt();
         $this->dropRedundantIndexes();
     }
@@ -1607,6 +1977,40 @@ class SchemaManager
     /**
      * Führt ein ALTER TABLE nur aus, wenn die Spalte fehlt.
      */
+    /**
+     * v25: Tabellen der Core-Funktionen (FEATURE_TABLES) und das „Geplante Datum“ des Redaktionskalenders –
+     * auch für Installationen, die v25 vor dieser Änderung erreicht haben.
+     */
+    private function ensureFeatureSchema(): void
+    {
+        $queries = self::getSchemaQueries($this->prefix, $this->charset);
+        foreach (self::FEATURE_TABLES as $table) {
+            if (!isset($queries[$table])) {
+                continue;
+            }
+            try {
+                $this->db->getPdo()->exec($queries[$table]);
+            } catch (\Throwable $e) {
+                error_log(sprintf('SchemaManager::ensureFeatureSchema(%s) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
+            }
+        }
+
+        foreach (['posts', 'pages'] as $table) {
+            $this->ensureColumnExists(
+                $this->prefix . $table,
+                'planned_at',
+                "ALTER TABLE {$this->prefix}{$table} ADD COLUMN planned_at DATETIME DEFAULT NULL"
+            );
+            if (!isset($this->loadIndexes($this->prefix . $table)['idx_planned_at'])) {
+                try {
+                    $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX idx_planned_at (planned_at)");
+                } catch (\Throwable $e) {
+                    error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.planned_at) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
+                }
+            }
+        }
+    }
+
     /**
      * v25: Papierkorb (TrashProvider) – vorheriger Status, Zeitpunkt und Benutzer. Hub-Sites (site_tables)
      * haben keinen Status, dort markiert trashed_at den Papierkorb. Ergänzt Spalten und Index auch bei
