@@ -193,7 +193,7 @@ final class DigestMailer
             FeedI18n::text('feeds.mail.new_items', $locale, self::planLabel($subscription, $locale), count($items)),
             $items,
             $locale,
-            FeedI18n::text('feeds.mail.subscription_footer', $locale, $this->siteUrl() . '/member/feeds'),
+            FeedI18n::text('feeds.mail.subscription_footer', $locale, $this->siteUrl() . '/member/plugin/feeds'),
             $settings,
             220,
             true

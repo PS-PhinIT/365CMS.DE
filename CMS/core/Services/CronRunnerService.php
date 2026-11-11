@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\Bootstrap;
-use CMS\Database;
 use CMS\Hooks;
 
 if (!defined('ABSPATH')) {
@@ -139,11 +138,8 @@ final class CronRunnerService
                 ]);
             }
 
-            if (($isMailQueueTask || $isAllTask)
-                && (!is_array($result['hourly']) || !empty($result['hourly']['skipped']))) {
-                $result['feed_queue_recovery'] = $this->repairFeedProcessingQueue();
-                $result['feed_queue'] = $this->runLegacyFeedQueueBridge();
-            }
+            // Die Feed-Abruf-Queue des Cores hängt an `cms_cron_mail_queue`/`cms_cron_hourly` (FeatureHooks\FeedHooks)
+            // und setzt hängende Aufträge selbst zurück; `feed_queue*` bleiben für die Ergebnisstruktur erhalten.
 
             if ($isFeedTask) {
                 $result['feeds'] = $this->runFeedCronTask($limit, $force, $mode, $source);
@@ -552,105 +548,18 @@ final class CronRunnerService
         ];
     }
 
-    private function repairFeedProcessingQueue(): array
-    {
-        if (!class_exists('CMS_Feed_Database')) {
-            return [
-                'success' => true,
-                'requeued' => 0,
-                'mode' => 'feed-queue-not-loaded',
-            ];
-        }
-
-        try {
-            $db = Database::instance();
-            $prefix = $db->prefix();
-            $stmt = $db->prepare(
-                "UPDATE {$prefix}feed_fetch_queue
-                 SET status = 'pending',
-                     error = CASE
-                         WHEN error IS NULL OR error = '' THEN 'Queue-Task nach Timeout aus processing zurück auf pending gesetzt.'
-                         ELSE CONCAT(error, '\n[cron-recovery] Queue-Task nach Timeout aus processing zurück auf pending gesetzt.')
-                     END
-                 WHERE status = 'processing'
-                   AND created_at < DATE_SUB(NOW(), INTERVAL 20 MINUTE)
-                   AND processed_at IS NULL"
-            );
-            $stmt->execute();
-
-            return [
-                'success' => true,
-                'requeued' => (int) $stmt->rowCount(),
-                'mode' => 'core-feed-queue-recovery',
-            ];
-        } catch (\Throwable $e) {
-            \CMS\Logger::instance()->withChannel('cron')->warning('Cron feed queue recovery failed.', [
-                'exception' => $e,
-            ]);
-
-            return [
-                'success' => false,
-                'requeued' => 0,
-                'mode' => 'core-feed-queue-recovery',
-                'error' => 'Feed-Queue-Recovery fehlgeschlagen. Details wurden intern protokolliert.',
-            ];
-        }
-    }
-
-    private function runLegacyFeedQueueBridge(): ?array
-    {
-        if (!class_exists('CMS_Feed_Cron')) {
-            return null;
-        }
-
-        $feedCron = \CMS_Feed_Cron::instance();
-        if (!method_exists($feedCron, 'process_queue')) {
-            return null;
-        }
-
-        if (Hooks::hasAction('cms_cron_mail_queue', [$feedCron, 'run_cron_tick'], 20)
-            || Hooks::hasAction('cms_cron_mail_queue', [$feedCron, 'drain_pending_queue'], 20)) {
-            return null;
-        }
-
-        $result = $feedCron->process_queue();
-
-        return [
-            'success' => true,
-            'executed' => true,
-            'mode' => 'legacy-core-bridge',
-            'result' => $result,
-        ];
-    }
-
     private function runFeedCronTask(?int $limit, bool $forceRun, string $mode, string $source): array
     {
-        if (!class_exists('CMS_Feed_Cron')) {
-            return [
-                'success' => true,
-                'executed' => false,
-                'mode' => 'feed-cron-not-loaded',
-                'message' => 'CMS Feed ist nicht geladen oder nicht aktiv.',
-            ];
-        }
-
         try {
-            $feedCron = \CMS_Feed_Cron::instance();
-            if (method_exists($feedCron, 'run_cron_tick')) {
-                $feedResult = $feedCron->run_cron_tick([
-                    'limit' => $limit,
-                    'force' => $forceRun,
-                    'source' => 'cron.php',
-                    'mode' => $mode,
-                    'task' => 'feeds',
-                ]);
-            } else {
-                $feedResult = method_exists($feedCron, 'process_queue') ? $feedCron->process_queue() : [];
+            $context = ['force' => $forceRun];
+            if ($limit !== null && $limit > 0) {
+                $context['limit'] = $limit;
             }
+            $feedResult = \CMS\Services\FeatureHooks\FeedHooks::runCron($context);
 
             return [
-                'success' => true,
-                'executed' => true,
+                'success' => !isset($feedResult['error']),
+                'executed' => !empty($feedResult['executed']),
                 'mode' => 'feed-cron-task',
                 'source' => $source,
                 'result' => $feedResult,
