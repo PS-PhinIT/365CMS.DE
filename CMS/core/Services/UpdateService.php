@@ -2032,6 +2032,9 @@ class UpdateService
         $preservedCoreEntries = $type === 'core'
             ? ['backups', 'cache', 'config', 'config.php', 'logs', 'uploads']
             : [];
+        // In plugins/ und themes/ ersetzt ein Core-Update nur die mitgelieferten Unterordner;
+        // nachinstallierte Plugins und eigene Themes bleiben erhalten.
+        $mergedCoreEntries = $type === 'core' ? ['plugins', 'themes'] : [];
 
         try {
             foreach ($this->listDirectoryEntries($targetDir) as $entry) {
@@ -2039,10 +2042,23 @@ class UpdateService
                     continue;
                 }
 
-                $from = $targetDir . DIRECTORY_SEPARATOR . $entry;
-                $to = $backupPath . DIRECTORY_SEPARATOR . $entry;
+                if (in_array($entry, $mergedCoreEntries, true) && is_dir($targetDir . DIRECTORY_SEPARATOR . $entry)) {
+                    $packagedDir = $sourceDir . DIRECTORY_SEPARATOR . $entry;
+                    foreach (is_dir($packagedDir) ? $this->listDirectoryEntries($packagedDir) : [] as $child) {
+                        $relative = $entry . DIRECTORY_SEPARATOR . $child;
+                        $existing = $targetDir . DIRECTORY_SEPARATOR . $relative;
+                        if (!file_exists($existing) && !is_link($existing)) {
+                            continue;
+                        }
+                        if (!$this->moveUpdateEntry($targetDir, $backupPath, $relative)) {
+                            throw new \RuntimeException('Bestehender Zielinhalt konnte nicht ins Rollback-Verzeichnis verschoben werden: ' . $relative);
+                        }
+                        $backedUpEntries[] = $relative;
+                    }
+                    continue;
+                }
 
-                if (!rename($from, $to)) {
+                if (!$this->moveUpdateEntry($targetDir, $backupPath, $entry)) {
                     throw new \RuntimeException('Bestehender Zielinhalt konnte nicht ins Rollback-Verzeichnis verschoben werden: ' . $entry);
                 }
 
@@ -2054,10 +2070,21 @@ class UpdateService
                     throw new \RuntimeException('Core-Update-Paket enthält einen installationsspezifischen Laufzeitpfad: ' . $entry);
                 }
 
-                $from = $sourceDir . DIRECTORY_SEPARATOR . $entry;
-                $to = $targetDir . DIRECTORY_SEPARATOR . $entry;
+                if (in_array($entry, $mergedCoreEntries, true)
+                    && is_dir($sourceDir . DIRECTORY_SEPARATOR . $entry)
+                    && is_dir($targetDir . DIRECTORY_SEPARATOR . $entry)
+                ) {
+                    foreach ($this->listDirectoryEntries($sourceDir . DIRECTORY_SEPARATOR . $entry) as $child) {
+                        $relative = $entry . DIRECTORY_SEPARATOR . $child;
+                        if (!$this->moveUpdateEntry($sourceDir, $targetDir, $relative)) {
+                            throw new \RuntimeException('Staging-Inhalt konnte nicht in das Ziel verschoben werden: ' . $relative);
+                        }
+                        $movedEntries[] = $relative;
+                    }
+                    continue;
+                }
 
-                if (!rename($from, $to)) {
+                if (!$this->moveUpdateEntry($sourceDir, $targetDir, $entry)) {
                     throw new \RuntimeException('Staging-Inhalt konnte nicht in das Ziel verschoben werden: ' . $entry);
                 }
 
@@ -2067,10 +2094,9 @@ class UpdateService
             $rollbackFailures = [];
             foreach (array_reverse($movedEntries) as $entry) {
                 $current = $targetDir . DIRECTORY_SEPARATOR . $entry;
-                $rollback = $sourceDir . DIRECTORY_SEPARATOR . $entry;
 
-                if (file_exists($current)) {
-                    if (!rename($current, $rollback)) {
+                if (file_exists($current) || is_link($current)) {
+                    if (!$this->moveUpdateEntry($targetDir, $sourceDir, $entry)) {
                         $rollbackFailures[] = 'Neuer Eintrag konnte nicht ins Staging zurückverschoben werden: ' . $entry;
                     }
                 }
@@ -2078,10 +2104,9 @@ class UpdateService
 
             foreach (array_reverse($backedUpEntries) as $entry) {
                 $current = $backupPath . DIRECTORY_SEPARATOR . $entry;
-                $rollback = $targetDir . DIRECTORY_SEPARATOR . $entry;
 
-                if (file_exists($current)) {
-                    if (!rename($current, $rollback)) {
+                if (file_exists($current) || is_link($current)) {
+                    if (!$this->moveUpdateEntry($backupPath, $targetDir, $entry)) {
                         $rollbackFailures[] = 'Backup-Eintrag konnte nicht wiederhergestellt werden: ' . $entry;
                     }
                 }
@@ -2102,6 +2127,18 @@ class UpdateService
         if (is_dir($backupPath)) {
             $this->removeDirectory($backupPath);
         }
+    }
+
+    /** Verschiebt `$relative` von `$fromRoot` nach `$toRoot` und legt fehlende Elternordner an. */
+    private function moveUpdateEntry(string $fromRoot, string $toRoot, string $relative): bool
+    {
+        $to = $toRoot . DIRECTORY_SEPARATOR . $relative;
+        $parent = dirname($to);
+        if (!is_dir($parent) && !mkdir($parent, 0755, true) && !is_dir($parent)) {
+            return false;
+        }
+
+        return rename($fromRoot . DIRECTORY_SEPARATOR . $relative, $to);
     }
 
     private function removeDirectory(string $directory): void
