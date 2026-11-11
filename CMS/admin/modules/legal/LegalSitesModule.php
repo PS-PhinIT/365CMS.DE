@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * LegalSitesModule – Impressum, Datenschutz, AGB, Widerruf verwalten
+ * LegalSitesModule – Impressum, Datenschutz, AGB, Widerruf und Erklärung zur Barrierefreiheit verwalten
  */
 
 if (!defined('ABSPATH')) {
@@ -13,6 +13,7 @@ use CMS\AuditLogger;
 use CMS\Auth;
 use CMS\Logger;
 use CMS\Services\ErrorReportService;
+use CMS\Services\Legal\AccessibilityStatementService;
 
 class LegalSitesModule
 {
@@ -27,12 +28,16 @@ class LegalSitesModule
     private readonly string $prefix;
     private readonly Logger $logger;
 
+    /** @var array{status:string,location:?string}|null Ergebnis des letzten Footer-Abgleichs der Barrierefreiheitserklärung */
+    private ?array $lastFooterSync = null;
+
     /** @var list<string> */
     private const array LEGAL_KEYS = [
         'legal_imprint',
         'legal_privacy',
         'legal_terms',
         'legal_revocation',
+        'legal_accessibility',
     ];
 
     /** @var array<string, string> */
@@ -41,6 +46,7 @@ class LegalSitesModule
         'legal_privacy'    => 'Datenschutzerklärung',
         'legal_terms'      => 'AGB',
         'legal_revocation' => 'Widerrufsbelehrung',
+        'legal_accessibility' => 'Barrierefreiheitserklärung',
     ];
 
     /** @var array<string, array<string, string>> */
@@ -72,6 +78,13 @@ class LegalSitesModule
             'title'       => 'Widerrufsbelehrung',
             'slug'        => 'widerruf',
             'meta_desc'   => 'Informationen zum gesetzlichen Widerrufsrecht.',
+        ],
+        'accessibility' => [
+            'setting_key' => 'legal_accessibility',
+            'page_id_key' => 'accessibility_page_id',
+            'title'       => 'Erklärung zur Barrierefreiheit',
+            'slug'        => 'barrierefreiheit',
+            'meta_desc'   => 'Erklärung zur Barrierefreiheit dieser Website.',
         ],
     ];
 
@@ -211,6 +224,7 @@ class LegalSitesModule
             'template_profiles' => $this->getTemplateProfiles(),
             'template_meta'   => $this->getTemplateMetadata($settings),
             'page_configs'   => self::PAGE_CONFIG,
+            'accessibility'  => $this->getAccessibilityData($this->loadProfile($settings)),
             'stats'          => [
                 'areas' => count(self::LEGAL_KEYS),
                 'assigned_pages' => count(array_filter($assignedPages, static fn (string $value): bool => trim($value) !== '' && trim($value) !== '0')),
@@ -423,6 +437,18 @@ class LegalSitesModule
             return $this->buildLegalFailureResult('Ungültiger Benutzerkontext für die Seitenerstellung.', 'legal_page_invalid_user', ['User-ID: ' . $userId], ['user_id' => $userId, 'page_type' => $type]);
         }
 
+        if ($type === 'accessibility') {
+            $errors = AccessibilityStatementService::validate(AccessibilityStatementService::getInstance()->getFields());
+            if ($errors !== []) {
+                return $this->buildLegalFailureResult(
+                    __('a11y.page.invalid'),
+                    'legal_accessibility_invalid',
+                    AccessibilityStatementService::errorMessages($errors),
+                    ['page_type' => $type, 'errors' => $errors]
+                );
+            }
+        }
+
         try {
             $profile = $this->loadProfile();
             $templates = $this->getTemplates($profile);
@@ -430,6 +456,7 @@ class LegalSitesModule
             if ($content === '') {
                 return $this->buildLegalFailureResult('Für diesen Bereich konnte kein Inhalt generiert werden.', 'legal_page_missing_content', ['Seitentyp: ' . $type], ['page_type' => $type]);
             }
+            $this->lastFooterSync = null;
 
             $this->saveSetting($config['setting_key'], $content);
             $this->recordTemplateApplication($type, $profile);
@@ -442,14 +469,14 @@ class LegalSitesModule
             if ($pageId > 0) {
                 $page = $this->pageManager->getPage($pageId);
                 if ($page !== null) {
-                    $this->pageManager->updatePage($pageId, [
+                    $this->pageManager->updatePage($pageId, array_merge([
                         'title'            => $title,
                         'slug'             => $slug,
                         'content'          => $content,
                         'status'           => 'published',
                         'meta_title'       => $title,
                         'meta_description' => $metaDesc,
-                    ]);
+                    ], $this->localizedPageData($type, $profile, $pageId)));
 
                     $this->saveSetting($config['page_id_key'], (string)$pageId);
                     $this->syncRelatedSettingsForType($type, $pageId);
@@ -464,28 +491,28 @@ class LegalSitesModule
                         'warning'
                     );
 
-                    return ['success' => true, 'message' => $title . ' wurde aktualisiert.', 'page_id' => $pageId, 'details' => ['Seitentyp: ' . $type, 'Seiten-ID: ' . $pageId, 'Vorlagenversion: ' . self::TEMPLATE_VERSION]];
+                    return ['success' => true, 'message' => $title . ' wurde aktualisiert.', 'page_id' => $pageId, 'details' => array_merge(['Seitentyp: ' . $type, 'Seiten-ID: ' . $pageId, 'Vorlagenversion: ' . self::TEMPLATE_VERSION], $this->footerSyncDetails())];
                 }
             }
 
             $existingBySlug = $this->pageManager->getPageBySlug($slug);
             if ($existingBySlug !== null && !empty($existingBySlug['id'])) {
                 $pageId = (int)$existingBySlug['id'];
-                $this->pageManager->updatePage($pageId, [
+                $this->pageManager->updatePage($pageId, array_merge([
                     'title'            => $title,
                     'slug'             => $slug,
                     'content'          => $content,
                     'status'           => 'published',
                     'meta_title'       => $title,
                     'meta_description' => $metaDesc,
-                ]);
+                ], $this->localizedPageData($type, $profile, $pageId)));
             } else {
                 $pageId = $this->pageManager->createPage($title, $content, 'published', $userId, 0);
-                $this->pageManager->updatePage($pageId, [
+                $this->pageManager->updatePage($pageId, array_merge([
                     'slug'             => $slug,
                     'meta_title'       => $title,
                     'meta_description' => $metaDesc,
-                ]);
+                ], $this->localizedPageData($type, $profile, $pageId)));
             }
 
             $this->saveSetting($config['page_id_key'], (string)$pageId);
@@ -501,7 +528,7 @@ class LegalSitesModule
                 'warning'
             );
 
-            return ['success' => true, 'message' => $title . ' wurde als Seite erstellt.', 'page_id' => $pageId, 'details' => ['Seitentyp: ' . $type, 'Seiten-ID: ' . $pageId, 'Vorlagenversion: ' . self::TEMPLATE_VERSION]];
+            return ['success' => true, 'message' => $title . ' wurde als Seite erstellt.', 'page_id' => $pageId, 'details' => array_merge(['Seitentyp: ' . $type, 'Seiten-ID: ' . $pageId, 'Vorlagenversion: ' . self::TEMPLATE_VERSION], $this->footerSyncDetails())];
         } catch (\Throwable $e) {
 			return $this->failResult('legal.page.create_or_update_failed', 'Rechtstext-Seite konnte nicht erstellt oder aktualisiert werden.', $e);
         }
@@ -514,7 +541,24 @@ class LegalSitesModule
         }
 
         $created = [];
+        $skipped = [];
         foreach (array_keys(self::PAGE_CONFIG) as $type) {
+            // Die Barrierefreiheitserklärung ist optional: nur aktualisieren, wenn sie schon als Seite existiert,
+            // und unvollständige Angaben nicht zum Abbruch der übrigen Rechtstexte führen lassen.
+            if ($type === 'accessibility') {
+                if (AccessibilityStatementService::getInstance()->getPublishedPage() === null) {
+                    continue;
+                }
+
+                $result = $this->createOrUpdatePage($type, $userId);
+                if ($result['success']) {
+                    $created[] = self::PAGE_CONFIG[$type]['title'];
+                } else {
+                    $skipped[] = self::PAGE_CONFIG[$type]['title'] . ': ' . (string) ($result['error'] ?? '');
+                }
+                continue;
+            }
+
             $result = $this->createOrUpdatePage($type, $userId);
             if (!$result['success']) {
                 $result['details'] = array_values(array_filter(array_merge(
@@ -531,8 +575,223 @@ class LegalSitesModule
         return [
             'success' => true,
             'message' => 'Rechtstext-Seiten erstellt/aktualisiert: ' . implode(', ', $created) . '.',
-            'details' => ['Bereiche: ' . count($created), 'Seiten: ' . implode(', ', $created)],
+            'details' => array_merge(
+                ['Bereiche: ' . count($created), 'Seiten: ' . implode(', ', $created)],
+                array_map(static fn (string $entry): string => 'Übersprungen – ' . $entry, $skipped)
+            ),
         ];
+    }
+
+    /**
+     * Speichert die Angaben der Barrierefreiheitserklärung; optional wird die Seite direkt erzeugt/aktualisiert.
+     *
+     * @param array<string, mixed> $post normalisierte Felder (ohne `a11y_`-Präfix) plus optional `update_page`
+     */
+    public function saveAccessibility(array $post, int $userId): array
+    {
+        if (!$this->canAccess()) {
+            return $this->buildLegalFailureResult('Sie dürfen die Barrierefreiheitserklärung nicht bearbeiten.', 'legal_accessibility_access_denied');
+        }
+
+        $service = AccessibilityStatementService::getInstance();
+        $fields = AccessibilityStatementService::normalize($post);
+        $errors = AccessibilityStatementService::validate($fields);
+        if ($errors !== []) {
+            $result = $this->buildLegalFailureResult(
+                __('a11y.save.invalid'),
+                'legal_accessibility_validation_failed',
+                AccessibilityStatementService::errorMessages($errors),
+                ['errors' => $errors]
+            );
+            $result['accessibility'] = ['fields' => $fields, 'errors' => $errors];
+
+            return $result;
+        }
+
+        try {
+            $before = $service->getFields();
+            if (!$service->saveFields($fields)) {
+                throw new \RuntimeException('Einstellungen konnten nicht gespeichert werden.');
+            }
+
+            $changed = array_keys(array_diff_assoc($fields, $before));
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SETTING,
+                'legal.accessibility.save',
+                'Angaben zur Barrierefreiheitserklärung gespeichert',
+                'legal_accessibility',
+                null,
+                ['changed' => $changed, 'status' => $fields['status'], 'footer_link' => $fields['footer_link']],
+                'info'
+            );
+
+            $details = [sprintf(__('a11y.save.changed'), count($changed))];
+            if (!empty($post['update_page'])) {
+                $pageResult = $this->createOrUpdatePage('accessibility', $userId);
+                if (!($pageResult['success'] ?? false)) {
+                    return $pageResult;
+                }
+
+                return [
+                    'success' => true,
+                    'message' => __('a11y.save.page_updated'),
+                    'details' => array_merge($details, is_array($pageResult['details'] ?? null) ? $pageResult['details'] : []),
+                ];
+            }
+
+            $this->lastFooterSync = null;
+            if ($service->getPageId() > 0) {
+                $this->syncAccessibilityFooter($service->getPageId());
+            }
+
+            return [
+                'success' => true,
+                'message' => __('a11y.save.success'),
+                'details' => array_merge($details, $this->footerSyncDetails()),
+            ];
+        } catch (\Throwable $e) {
+            return $this->failResult('legal.accessibility.save_failed', 'Barrierefreiheitserklärung konnte nicht gespeichert werden.', $e);
+        }
+    }
+
+    /** Bestätigt die jährliche Prüfung (Prüfdatum = heute) und aktualisiert eine vorhandene Seite. */
+    public function markAccessibilityReviewed(int $userId): array
+    {
+        if (!$this->canAccess()) {
+            return $this->buildLegalFailureResult('Sie dürfen die Barrierefreiheitserklärung nicht bearbeiten.', 'legal_accessibility_access_denied');
+        }
+
+        $service = AccessibilityStatementService::getInstance();
+        $fields = $service->getFields();
+        $today = new \DateTimeImmutable('today');
+        if ($fields['created_at'] === '') {
+            $fields['created_at'] = $today->format('Y-m-d');
+        }
+        $fields['reviewed_at'] = $today->format('Y-m-d');
+
+        $errors = AccessibilityStatementService::validate($fields, $today);
+        if ($errors !== []) {
+            return $this->buildLegalFailureResult(
+                __('a11y.review.invalid'),
+                'legal_accessibility_review_invalid',
+                AccessibilityStatementService::errorMessages($errors),
+                ['errors' => $errors]
+            );
+        }
+
+        try {
+            if (!$service->saveFields($fields)) {
+                throw new \RuntimeException('Prüfdatum konnte nicht gespeichert werden.');
+            }
+
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SETTING,
+                'legal.accessibility.reviewed',
+                'Prüfung der Barrierefreiheitserklärung bestätigt',
+                'legal_accessibility',
+                null,
+                ['reviewed_at' => $fields['reviewed_at']],
+                'info'
+            );
+
+            $details = [sprintf(__('a11y.review.next'), AccessibilityStatementService::formatDate($today->modify('+1 year')))];
+            if ($service->getPublishedPage() !== null) {
+                $pageResult = $this->createOrUpdatePage('accessibility', $userId);
+                if (!($pageResult['success'] ?? false)) {
+                    return $pageResult;
+                }
+                $details = array_merge($details, is_array($pageResult['details'] ?? null) ? $pageResult['details'] : []);
+            }
+
+            return ['success' => true, 'message' => __('a11y.review.success'), 'details' => $details];
+        } catch (\Throwable $e) {
+            return $this->failResult('legal.accessibility.review_failed', 'Prüfung der Barrierefreiheitserklärung konnte nicht gespeichert werden.', $e);
+        }
+    }
+
+    /** @return array<string, mixed> Daten für die Karte „Erklärung zur Barrierefreiheit“ */
+    private function getAccessibilityData(array $profile): array
+    {
+        $service = AccessibilityStatementService::getInstance();
+        $fields = $service->getFields();
+        $pageId = $service->getPageId();
+        $page = $pageId > 0 ? $this->pageManager->getPage($pageId) : null;
+        $published = $service->getPublishedPage($pageId);
+        $slug = trim((string) ($published['slug'] ?? ''), '/');
+        $slugEn = trim((string) ($published['slug_en'] ?? ''), '/');
+
+        return [
+            'fields' => $fields,
+            'complete' => AccessibilityStatementService::validate($fields) === [],
+            'review' => AccessibilityStatementService::reviewState($fields),
+            'page_id' => $pageId,
+            'page_exists' => $page !== null,
+            'page_published' => $published !== null,
+            'page_url' => $slug !== '' ? '/' . $slug : '',
+            'page_url_en' => $published !== null ? '/en/' . ($slugEn !== '' ? $slugEn : $slug) : '',
+            'footer_location' => $service->getFooterLocation(),
+            'footer_linked' => $published !== null && $service->isFooterLinked($pageId),
+            'preview_en' => sanitize_html(AccessibilityStatementService::buildStatement($fields, $this->accessibilityContext($profile), 'en'), 'default'),
+            'errors' => [],
+        ];
+    }
+
+    /** @return array{provider:string,website:string} */
+    private function accessibilityContext(array $profile): array
+    {
+        return [
+            'provider' => $this->getProfileDisplayName($profile, ''),
+            'website' => $this->profileValue($profile, 'legal_profile_website', defined('SITE_URL') ? (string) SITE_URL : ''),
+        ];
+    }
+
+    /** @return array<string, string> zusätzliche Seitenfelder (EN-Fassung der Barrierefreiheitserklärung) */
+    private function localizedPageData(string $type, array $profile, int $pageId): array
+    {
+        if ($type !== 'accessibility') {
+            return [];
+        }
+
+        $data = AccessibilityStatementService::getInstance()->localizedPageFields($this->accessibilityContext($profile));
+        $conflict = $this->db->get_var(
+            "SELECT id FROM {$this->prefix}pages WHERE (slug_en = ? OR slug = ?) AND id <> ? LIMIT 1",
+            [$data['slug_en'], $data['slug_en'], $pageId]
+        );
+        if ($conflict !== null) {
+            $data['slug_en'] .= '-statement';
+        }
+
+        return $data;
+    }
+
+    private function syncAccessibilityFooter(int $pageId): void
+    {
+        $service = AccessibilityStatementService::getInstance();
+        try {
+            $this->lastFooterSync = $service->syncFooterLink($pageId);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Footer-Link der Barrierefreiheitserklärung konnte nicht abgeglichen werden.', [
+                'exception' => $e::class,
+                'message' => $this->sanitizeErrorContext($e->getMessage()),
+            ]);
+            $this->lastFooterSync = ['status' => 'failed', 'location' => null];
+        }
+
+        $service->clearNoticeCache();
+    }
+
+    /** @return list<string> */
+    private function footerSyncDetails(): array
+    {
+        if ($this->lastFooterSync === null) {
+            return [];
+        }
+
+        return [sprintf(
+            __('a11y.footer.detail'),
+            __('a11y.footer.status.' . $this->lastFooterSync['status']),
+            (string) ($this->lastFooterSync['location'] ?? '–')
+        )];
     }
 
     /** @return array<string, string> */
@@ -543,6 +802,11 @@ class LegalSitesModule
             'privacy'    => $this->buildPrivacyTemplate($profile),
             'terms'      => $this->buildTermsTemplate($profile),
             'revocation' => $this->buildRevocationTemplate($profile),
+            'accessibility' => sanitize_html(AccessibilityStatementService::buildStatement(
+                AccessibilityStatementService::getInstance()->getFields(),
+                $this->accessibilityContext($profile),
+                'de'
+            ), 'default'),
         ];
     }
 
@@ -1199,6 +1463,11 @@ class LegalSitesModule
                 $this->syncRelatedSettingsForType($type, $pageId);
             }
         }
+
+        // Zuordnung entfernt oder geändert: Footer-Link der Barrierefreiheitserklärung nachziehen.
+        if (array_key_exists('accessibility_page_id', $post)) {
+            $this->syncAccessibilityFooter((int) ($post['accessibility_page_id'] ?? 0));
+        }
     }
 
     private function syncRelatedSettingsForType(string $type, int $pageId): void
@@ -1218,6 +1487,10 @@ class LegalSitesModule
 
             case 'revocation':
                 $this->saveSetting('cancellation_page_id', (string)$pageId);
+                break;
+
+            case 'accessibility':
+                $this->syncAccessibilityFooter($pageId);
                 break;
         }
     }
@@ -1405,7 +1678,7 @@ class LegalSitesModule
     /** @return list<string> */
     private function getAssignmentKeys(): array
     {
-        return ['imprint_page_id', 'privacy_page_id', 'terms_page_id', 'revocation_page_id'];
+        return ['imprint_page_id', 'privacy_page_id', 'terms_page_id', 'revocation_page_id', 'accessibility_page_id'];
     }
 
     /**

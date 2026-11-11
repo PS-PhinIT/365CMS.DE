@@ -401,6 +401,18 @@
     line-height: 1.55;
 }
 
+/* Credit-Zeile (Urheber/Lizenz aus der Mediathek, #11); Themes können sie per Filter abschalten. */
+.cms-media-credit {
+    display: block;
+    margin-top: .2rem;
+    font-size: .85em;
+    opacity: .85;
+}
+
+.cms-media-credit a {
+    color: inherit;
+}
+
 .editorjs-image__source {
     display: inline-flex;
     align-items: center;

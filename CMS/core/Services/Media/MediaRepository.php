@@ -540,6 +540,7 @@ final class MediaRepository
                     'mime_type' => mime_content_type($itemPath),
                     'category' => $category,
                     'tags' => $this->normalizeTags((array) ($metaData['tags'] ?? [])),
+                    'license' => is_array($metaData['license'] ?? null) ? $metaData['license'] : [],
                     'uploader_id' => $uploaderId,
                     'uploaded_by' => $uploadedBy,
                     'is_system' => $isSystem,
@@ -834,6 +835,11 @@ final class MediaRepository
             $tags = $this->normalizeTags((array) ($fileMeta['tags'] ?? []));
             if ($tags !== []) {
                 $normalizedMeta['tags'] = $tags;
+            }
+
+            $license = MediaLicenseService::normalize($fileMeta[MediaLicenseService::META_KEY] ?? []);
+            if ($license !== []) {
+                $normalizedMeta[MediaLicenseService::META_KEY] = $license;
             }
 
             $files[$normalizedPath] = $normalizedMeta;

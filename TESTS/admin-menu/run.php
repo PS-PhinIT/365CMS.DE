@@ -92,7 +92,6 @@ const RESERVED_FILES = [
     'admin/translations.php' => 'WP2: Übersetzungen',
     'admin/search-index.php' => 'WP2: Suchindex',
     'admin/content-exchange.php' => 'WP2: Import/Export',
-    'admin/data-retention.php' => 'WP3: Löschfristen',
     'admin/media-tools.php' => 'WP4: Medien-Werkzeuge',
 ];
 
@@ -183,6 +182,7 @@ const NOT_IN_MENU = [
     'admin/error-report.php' => ['endpoint', 'Fehlerbericht senden (POST)'],
     'admin/monitor-cron-runner.php' => ['endpoint', 'Cron-Runner der Monitore'],
     'admin/post-editor-api.php' => ['endpoint', 'API des Beitragseditors (JSON)'],
+    'admin/media-license-api.php' => ['endpoint', 'Medien: Urheber & Lizenz speichern (JSON)'],
     'admin/ai-page.php' => ['renderer', 'KI-Dienste'],
     'admin/logs-page.php' => ['renderer', 'Protokolle'],
     'admin/member-dashboard-page.php' => ['renderer', 'Mitgliederbereich'],

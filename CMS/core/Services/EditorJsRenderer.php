@@ -738,9 +738,12 @@ final class EditorJsRenderer
 
         $html = '<figure class="' . implode(' ', $classes) . '"' . $dataAttributes . $styleAttr . '>';
         $html .= '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $imageStyleAttr . $this->getLazyLoadingAttribute() . '>';
-        if (!$isGeneratedCaption && $caption !== '') {
-            $html .= '<figcaption>' . $caption . '</figcaption>';
-        }
+        $html .= $this->renderImageFigcaption(
+            !$isGeneratedCaption ? $caption : '',
+            $imageUrl,
+            'image',
+            $this->normalizeRenderableAssetUrl((string)($file['url'] ?? $data['url'] ?? ''), true)
+        );
         if ($sourceUrl !== '') {
             $html .= '<a class="editorjs-image__source" href="' . htmlspecialchars($sourceUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer external" aria-label="Bildquelle in neuem Tab öffnen">';
             $html .= '<span class="editorjs-image__source-label">QUELLE</span>';
@@ -750,6 +753,25 @@ final class EditorJsRenderer
         $html .= '</figure>';
 
         return $html;
+    }
+
+    /**
+     * Bildunterschrift inkl. optionaler Credit-Zeile (Filter `cms_image_figcaption_credit`, #11).
+     * Ohne Bildunterschrift und ohne Credit entsteht kein `figcaption`.
+     */
+    private function renderImageFigcaption(string $captionHtml, string $imageUrl, string $context, string $originalUrl = ''): string
+    {
+        $credit = \CMS\Hooks::applyFilters('cms_image_figcaption_credit', '', $imageUrl, [
+            'context' => $context,
+            'original_url' => $originalUrl !== '' ? $originalUrl : $imageUrl,
+        ]);
+        $credit = is_string($credit) ? trim($credit) : '';
+
+        if ($captionHtml === '' && $credit === '') {
+            return '';
+        }
+
+        return '<figcaption>' . $captionHtml . ($captionHtml !== '' && $credit !== '' ? ' ' : '') . $credit . '</figcaption>';
     }
 
     /** @param array<string,mixed> $data */
@@ -1033,9 +1055,7 @@ final class EditorJsRenderer
         foreach ($images as $image) {
             $html .= '<figure class="editorjs-gallery__item">';
             $html .= '<img src="' . htmlspecialchars($image['url'], ENT_QUOTES, 'UTF-8') . '" alt="' . $image['alt'] . '"' . $this->getLazyLoadingAttribute() . '>';
-            if ($image['caption'] !== '' && !$image['is_generated_caption']) {
-                $html .= '<figcaption>' . $image['caption'] . '</figcaption>';
-            }
+            $html .= $this->renderImageFigcaption(!$image['is_generated_caption'] ? $image['caption'] : '', $image['url'], 'gallery');
             $html .= '</figure>';
         }
         $html .= '</div>';
@@ -1432,9 +1452,11 @@ final class EditorJsRenderer
             $caption = $this->sanitizeInline((string)($item['caption'] ?? ''));
             $html .= '<figure class="editorjs-carousel__item">';
             $html .= '<img src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt=""' . $this->getLazyLoadingAttribute() . '>';
-            if ($caption !== '' && !$this->isGeneratedFilenameCaption($caption, $url)) {
-                $html .= '<figcaption>' . $caption . '</figcaption>';
-            }
+            $html .= $this->renderImageFigcaption(
+                $caption !== '' && !$this->isGeneratedFilenameCaption($caption, $url) ? $caption : '',
+                $url,
+                'carousel'
+            );
             $html .= '</figure>';
         }
         $html .= '</div>';
