@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-`CMS\Hooks` (`CMS/core/Hooks.php`) is a WordPress-like action/filter registry. Callbacks are stored per tag and priority (lower runs first). WordPress-style wrappers (`add_action`, `do_action`, `add_filter`, `apply_filters`) live in `CMS/includes/functions/wordpress-compat.php`. `before_footer` and `body_end` fire at most once per request. This document lists every hook fired by the core, the admin, the member area and the shipped theme in 4.0.0, with its arguments. New in 4.0.0: account hooks for e-mail verification and confirmed e-mail changes (`user_email_verified`, `user_email_change_requested`, `user_email_changed`, `guest_orders_assigned`), `user_sessions_revoked` and the `cms_data_retention_days` filter.
+`CMS\Hooks` (`CMS/core/Hooks.php`) is a WordPress-like action/filter registry. Callbacks are stored per tag and priority (lower runs first). WordPress-style wrappers (`add_action`, `do_action`, `add_filter`, `apply_filters`) live in `CMS/includes/functions/wordpress-compat.php`. `before_footer` and `body_end` fire at most once per request. This document lists every hook fired by the core, the admin, the member area and the shipped theme in 4.0.0, with its arguments. New in 4.0.0: account hooks for e-mail verification and confirmed e-mail changes (`user_email_verified`, `user_email_change_requested`, `user_email_changed`, `guest_orders_assigned`), `user_sessions_revoked`, the `cms_data_retention_days` filter and `cms_register_content_type_providers` (content type providers for trash, export/import and search).
 
 ## Deutsch
 
@@ -114,6 +114,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `performance_cdn_purge_requested` | Action | `$payload` (CDN-Purge durch Plugin) |
 | `cms_data_retention_days` | Filter | `$days` – Tage je Bereich (`page_views`, `core_web_vitals`, `not_found_logs`, `log_files`, `activity_log`, `audit_log`); 0 = nicht löschen, sonst mindestens 7 Tage (Protokolle 90), höchstens 3650 (`DataRetentionService::getRetentionDays()`) |
 | `theme_customizer_save` | Action | `$themeSlug, $tab, $sections, $context` |
+| `cms_register_content_type_providers` (`ContentTypeRegistry::REGISTER_ACTION`) | Action | `ContentTypeRegistry $registry` – Inhaltstyp-Provider für Papierkorb, Export/Import und Suchindex anmelden; einmal beim ersten Zugriff auf die Registry ausgelöst (seit 4.0.0, [CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)) |
 
 ### Member-Bereich
 
@@ -162,4 +163,4 @@ Hooks::addFilter('search_results', static function (array $results, string $quer
 
 ### Verwandte Dokumente
 
-[ARCHITECTURE.md](ARCHITECTURE.md) · [../plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md) · [../theme/THEME-DEVELOPMENT.md](../theme/THEME-DEVELOPMENT.md)
+[ARCHITECTURE.md](ARCHITECTURE.md) · [CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md) · [../plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md) · [../theme/THEME-DEVELOPMENT.md](../theme/THEME-DEVELOPMENT.md)

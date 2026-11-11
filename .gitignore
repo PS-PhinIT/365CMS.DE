@@ -126,6 +126,11 @@ AUDIT
 !/TESTS/ai-services/run.php
 !/TESTS/runtime-warning-regressions/run.php
 !/TESTS/admin-menu/run.php
+!/TESTS/run-all.php
+!/TESTS/lib/
+!/TESTS/lib/TestRunner.php
+!/TESTS/content-types/
+!/TESTS/content-types/run.php
 /STAGING/tests/
 */Test/*
 CMS/assets/translation/Test/

@@ -65,7 +65,10 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `DOC/` | documentation |
 | `RELEASE/` | release zips and checksums |
 | `SCREENSHOTS/` | screenshots |
+| `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
+| `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
+| `TESTS/content-types/` | content type provider registry test / Test der Inhaltstyp-Provider (`php TESTS/content-types/run.php [-v]`) |
 | `CODE_OF_CONDUCT.md` | code of conduct |
 | `README.md` | public README |
 | `Changelog.md` | changelog |
@@ -190,7 +193,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | Editor | `EditorJsService`, `EditorJsRenderer`, `EditorService`, `PostPublishChecklistService`, `PostRevisionService` |
 | Admin UI (4.0.0) | `AdminNavigationService`, `AdminUiPreferenceService`, `AdminSiteContextService`, `PluginSiteAssignmentService`, `AdminNoticeService` |
 | Admin menu (4.0.0) | `Services/AdminMenu/`: `CoreCatalog`, `ProfileLayouts`, `MenuRegistry`, `MenuBuilder`, `LayoutValidator`, `LayoutRepository`, `BadgeProvider`, `AdminMenuService` ([admin/ADMIN-MENU.md](admin/ADMIN-MENU.md)) |
-| Extension points (4.0.0) | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry` |
+| Extension points (4.0.0) | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
 | Landing | `LandingPageService` + `Services/Landing/` |
 | AI | `Services/AI/` (admin-only in 3.5.0) |
 | Member | `MemberService`, `MessageService` |

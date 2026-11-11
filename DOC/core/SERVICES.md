@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Business logic lives in `CMS/core/Services/` (namespace `CMS\Services`). Services are singletons (`Service::getInstance()`); the most important ones are also registered in the DI container under their class name and a short alias (`Bootstrap::initializeCore()`), e.g. `'mail'`, `'seo'`, `'search'`, `'settings'`. Larger domains are split into sub-namespaces: `AI\`, `AdminMenu\`, `EditorJs\`, `FeatureHooks\`, `Landing\`, `Media\`, `PluginMigration\`, `Retention\`, `SEO\`, `SiteTable\`. Since 4.0.0 shared extension points serve the core features: `FeatureHooks\Registry`, `BatchJobService` (table `batch_jobs`), `PrivateStorageService` (`CMS_PRIVATE_PATH`), `IntegratedPluginService` with `PluginMigration\PluginMigrator`, `EditorJs\EditorJsBlockRegistry`, retention rules (`DataRetentionService::registerRule()`) and notice checks (`AdminNoticeService::registerCheck()`). Admin modules and themes should call services instead of accessing tables directly.
+Business logic lives in `CMS/core/Services/` (namespace `CMS\Services`). Services are singletons (`Service::getInstance()`); the most important ones are also registered in the DI container under their class name and a short alias (`Bootstrap::initializeCore()`), e.g. `'mail'`, `'seo'`, `'search'`, `'settings'`. Larger domains are split into sub-namespaces: `AI\`, `AdminMenu\`, `ContentTypes\`, `EditorJs\`, `FeatureHooks\`, `Landing\`, `Media\`, `PluginMigration\`, `Retention\`, `SEO\`, `SiteTable\`. Since 4.0.0 shared extension points serve the core features: `FeatureHooks\Registry`, `BatchJobService` (table `batch_jobs`), `PrivateStorageService` (`CMS_PRIVATE_PATH`), `IntegratedPluginService` with `PluginMigration\PluginMigrator`, `EditorJs\EditorJsBlockRegistry`, retention rules (`DataRetentionService::registerRule()`), notice checks (`AdminNoticeService::registerCheck()`) and the content type provider registry `ContentTypes\ContentTypeRegistry` for trash, export/import and search. Admin modules and themes should call services instead of accessing tables directly.
 
 ## Deutsch
 
@@ -40,7 +40,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `ThemeCustomizer` | Theme-Optionen speichern/lesen, CSS generieren, Import/Export |
 | `TranslationService` | UI-Übersetzungen (`CMS/lang/*.yaml`, Symfony Translation) |
 | `PdfService` | PDF-Erzeugung mit Dompdf (`CMS/vendor/dompdf/`) |
-| `FeedService` | natives RSS/Atom-Parsing für Plugins/Widgets |
+| `FeedService` | öffentlicher RSS-2.0-Feed `/feed` mit Kategorie-, Tag- und Sprachvarianten (`serveRssFeed()`, Einstellungen `feeds.*`, ETag/304, Cache-Invalidierung über `FeatureHooks\FeedHooks`, [FEEDS.md](../admin/system-settings/FEEDS.md)) sowie natives RSS/Atom-Parsing für Plugins/Widgets |
 
 ### Suche & SEO
 
@@ -151,6 +151,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `PrivateStorageService` | privater Dateispeicher für geschützte Downloads, Formular-Uploads und Import-/Exportdateien: `CMS_PRIVATE_PATH` (absolut, empfohlen außerhalb des Webroots), sonst `CMS/private/`. `path('<bereich>')` legt Bereiche an, `resolve()` prüft Pfade per `realpath` gegen Traversal, `randomFilename()` vergibt nicht erratbare Namen. Jeder Ordner erhält `.htaccess` und `index.html`; Nginx siehe [../INSTALLATION.md](../INSTALLATION.md) |
 | `IntegratedPluginService`, `PluginMigration\PluginMigrator` | in den Core übernommene Plugins (`cms-feed`, `cms-downloads`, `cms-contact`): aktive Exemplare werden deaktiviert (nicht gelöscht) und nicht mehr geladen. Ihre Daten übernimmt je Plugin ein idempotenter Migrator in Blöcken (bei Admin-Aufrufen mit 5 s Zeitbudget und im täglichen Cron mit 60 s). Alte Plugin-Adminseiten leiten per 301 auf die Core-Seiten um; der Sidebar-Footer zeigt 30 Tage lang den Hinweis „jetzt Teil des Cores“. Das alles greift je Plugin erst, wenn sein Core-Ersatz im Code vorhanden ist (`isIntegrated()` prüft die Migrator-Klasse); bis dahin läuft das Plugin unverändert weiter |
 | `EditorJs\EditorJsBlockRegistry` | zusätzliche Editor.js-Blöcke aus Core-Funktionen (z. B. Download, Formular): ein Eintrag registriert das Tool-Skript (vor `editor-init.js`, Anmeldung über `window.CMS_EDITORJS_BLOCKS`), den Sanitizer beim Speichern und den Frontend-Renderer |
+| `ContentTypes\ContentTypeRegistry` | Inhaltstyp-Provider für Papierkorb (`TrashProvider`), Export/Import (`ExchangeProvider`) und Suchindex (`SearchDocumentProvider`); Anmeldung über die Action `cms_register_content_type_providers`. Diese Funktionen enthalten keine Sonderfälle je Typ ([CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)) |
 | `Retention\RetentionRule` | Aufbewahrungsregel eines Funktionsbereichs (Frist, Trockenlauf-Zählung, Löschen oder Anonymisieren), registriert über `DataRetentionService::registerRule()`. Der tägliche Cron ruft `prune()` auf; die Seite *Löschfristen* (`/admin/data-retention`) zeigt Frist, Trockenlauf und letzten Lauf |
 
 ### Konventionen für eigene Services (Plugins)
@@ -162,4 +163,4 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 ### Verwandte Dokumente
 
-[CORE-CLASSES.md](CORE-CLASSES.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [HOOKS-REFERENCE.md](HOOKS-REFERENCE.md)
+[CORE-CLASSES.md](CORE-CLASSES.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [HOOKS-REFERENCE.md](HOOKS-REFERENCE.md) · [CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)

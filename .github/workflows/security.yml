@@ -69,5 +69,5 @@ jobs:
           fi | \
           xargs -0 -n1 php -l
 
-      - name: Admin-Menü-Test (statisch, ohne Datenbank)
-        run: php TESTS/admin-menu/run.php
+      - name: Test-Suiten (statisch, ohne Datenbank)
+        run: php TESTS/run-all.php

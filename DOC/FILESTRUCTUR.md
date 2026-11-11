@@ -50,6 +50,7 @@ Verified top-level entries of this repository:
 | `RELEASE/` | directory | release packages and checksums (including `365CMS-3.4.0-*`) |
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
+| `TESTS/content-types/` | directory | content type provider registry test: `php TESTS/content-types/run.php [-v]`; all suites: `php TESTS/run-all.php` (shared runner `TESTS/lib/TestRunner.php`) |
 | `README.md` | file | public project README |
 | `Changelog.md` | file | project changelog |
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
@@ -70,6 +71,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (einschließlich `365CMS-3.4.0-*`) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
+| `TESTS/content-types/` | Verzeichnis | Test der Inhaltstyp-Provider-Registry: `php TESTS/content-types/run.php [-v]`; alle Suiten: `php TESTS/run-all.php` (gemeinsamer Runner `TESTS/lib/TestRunner.php`) |
 | `README.md` | Datei | öffentliches Projekt-README |
 | `Changelog.md` | Datei | Projekt-Changelog |
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
