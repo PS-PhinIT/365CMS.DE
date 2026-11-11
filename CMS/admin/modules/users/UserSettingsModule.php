@@ -81,8 +81,8 @@ class UserSettingsModule
                 'secret_source' => defined('JWT_SECRET') && (string)JWT_SECRET !== '' ? 'JWT_SECRET' : 'AUTH_KEY (Fallback)',
             ],
             'security' => [
-                'max_login_attempts' => defined('MAX_LOGIN_ATTEMPTS') ? (int)MAX_LOGIN_ATTEMPTS : 5,
-                'login_timeout_seconds' => defined('LOGIN_TIMEOUT') ? (int)LOGIN_TIMEOUT : 300,
+                'max_login_attempts' => \CMS\Services\LoginThrottleSettings::maxAttempts(),
+                'login_timeout_seconds' => \CMS\Services\LoginThrottleSettings::lockoutSeconds(),
                 'password_min_length' => (int) ($passwordPolicy['min_length'] ?? 12),
                 'password_requires_uppercase' => !empty($passwordRequirements['uppercase']),
                 'password_requires_lowercase' => !empty($passwordRequirements['lowercase']),

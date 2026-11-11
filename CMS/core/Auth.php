@@ -347,7 +347,10 @@ class Auth
         $db = Database::instance();
         
         // H-05: DB-basiertes Rate-Limiting (schützt auch gegen verteilte Brute-Force)
-        if (!$security->checkDbRateLimit($security->getClientIp(), 'login', MAX_LOGIN_ATTEMPTS, LOGIN_TIMEOUT)) {
+        // Grenzwerte: Einstellung unter Einstellungen → Login & Sperren, sonst MAX_LOGIN_ATTEMPTS/LOGIN_TIMEOUT.
+        $maxLoginAttempts = Services\LoginThrottleSettings::maxAttempts();
+        $loginLockout = Services\LoginThrottleSettings::lockoutSeconds();
+        if (!$security->checkDbRateLimit($security->getClientIp(), 'login', $maxLoginAttempts, $loginLockout)) {
             AuditLogger::instance()->log(
                 AuditLogger::CAT_SECURITY,
                 'login_blocked',
@@ -357,7 +360,8 @@ class Auth
                 ['ip' => $security->getClientIp()],
                 'warning'
             );
-            return 'Zu viele Login-Versuche. Bitte warten Sie ' . (LOGIN_TIMEOUT / 60) . ' Minuten.';
+            $lockoutMinutes = max(1, (int) ceil($loginLockout / 60));
+            return 'Zu viele Login-Versuche. Bitte warten Sie ' . $lockoutMinutes . ($lockoutMinutes === 1 ? ' Minute.' : ' Minuten.');
         }
         
         $username = $this->normalizeLoginIdentifier($username);

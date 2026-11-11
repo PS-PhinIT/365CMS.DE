@@ -452,11 +452,13 @@ final class CmsAuthPageService
         $clientIp = $security->getClientIp();
         $tokenRateLimitKey = hash('sha256', $token);
 
+        // Höchstens so großzügig wie das Login-Limit (Einstellungen → Login & Sperren), mindestens das Zeitfenster
+        // des Logins: Tokenversuche sind wie Passwortversuche zu behandeln.
         if (!$security->checkDbRateLimit(
             $clientIp,
             'forgot_password_reset',
-            self::FORGOT_PASSWORD_RESET_RATE_LIMIT_ATTEMPTS,
-            self::FORGOT_PASSWORD_RESET_RATE_LIMIT_WINDOW
+            min(self::FORGOT_PASSWORD_RESET_RATE_LIMIT_ATTEMPTS, max(LoginThrottleSettings::maxAttempts(), LoginThrottleSettings::MIN_ATTEMPTS)),
+            max(self::FORGOT_PASSWORD_RESET_RATE_LIMIT_WINDOW, LoginThrottleSettings::lockoutSeconds())
         )) {
             $this->logger->warning('Passwort-Reset wegen Rate-Limit geblockt.', [
                 'ip' => $clientIp,

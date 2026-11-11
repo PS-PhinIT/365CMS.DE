@@ -82,7 +82,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/settings-tabs/security.php' => 'WP1: Login & Sperren',
     'admin/content-changes.php' => 'WP2: Letzte Änderungen',
     'admin/translations.php' => 'WP2: Übersetzungen',
     'admin/content-exchange.php' => 'WP2: Import/Export',
