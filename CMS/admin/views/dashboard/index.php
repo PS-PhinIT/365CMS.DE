@@ -441,6 +441,84 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
         </section>
         <?php endif; ?>
 
+        <?php
+        $editorialWidgets = is_array($data['editorial_widgets'] ?? null) ? $data['editorial_widgets'] : [];
+        $editorialDrafts = is_array($editorialWidgets['drafts'] ?? null) ? $editorialWidgets['drafts'] : [];
+        $editorialUpcoming = is_array($editorialWidgets['upcoming'] ?? null) ? $editorialWidgets['upcoming'] : [];
+        $editorialCalendarUrl = (string) ($editorialWidgets['calendar_url'] ?? '');
+        $editorialEsc = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+        ?>
+        <?php if ($editorialDrafts !== [] || $editorialUpcoming !== []): ?>
+        <section class="dashboard-section dashboard-section--editorial" aria-label="<?= $editorialEsc(__('calendar.widget.section_label')) ?>">
+        <div class="dashboard-overview-grid">
+            <?php if ($editorialDrafts !== []): ?>
+            <div class="card dashboard-compact-card" id="dashboard-my-drafts">
+                <div class="card-header">
+                    <h3 class="card-title"><?= $editorialEsc(__('calendar.widget.my_drafts')) ?></h3>
+                </div>
+                <div class="list-group list-group-flush">
+                    <?php foreach ($editorialDrafts as $draft): ?>
+                        <?php $draftIsPage = ($draft['type'] ?? '') === 'page'; ?>
+                        <a href="<?= $editorialEsc(dashboardUrl((string) ($draft['edit_url'] ?? ''), '/admin')) ?>" class="list-group-item list-group-item-action">
+                            <span class="d-flex align-items-start gap-2">
+                                <i class="ti <?= $draftIsPage ? 'ti-file' : 'ti-article' ?> text-secondary mt-1" aria-hidden="true"></i>
+                                <span class="flex-fill text-truncate">
+                                    <span class="d-block text-truncate fw-medium"><?= $editorialEsc($draft['title'] ?? '') ?></span>
+                                    <span class="d-block text-secondary small text-truncate">
+                                        <?= $editorialEsc(__($draftIsPage ? 'calendar.type.page' : 'calendar.type.post')) ?>
+                                        · <?= $editorialEsc(sprintf(__('calendar.widget.updated'), (string) ($draft['updated_label'] ?? ''))) ?>
+                                        <?php if (($draft['planned_label'] ?? '') !== ''): ?>
+                                            · <?= $editorialEsc(sprintf(__('calendar.widget.planned'), (string) $draft['planned_label'])) ?>
+                                        <?php endif; ?>
+                                    </span>
+                                </span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($editorialUpcoming !== []): ?>
+            <div class="card dashboard-compact-card" id="dashboard-upcoming">
+                <div class="card-header">
+                    <h3 class="card-title"><?= $editorialEsc(__('calendar.widget.upcoming')) ?></h3>
+                    <span class="card-subtitle ms-2 text-secondary"><?= $editorialEsc(__('calendar.widget.upcoming_hint')) ?></span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <?php foreach ($editorialUpcoming as $upcoming): ?>
+                        <?php
+                        $upcomingIsPage = ($upcoming['type'] ?? '') === 'page';
+                        $upcomingIsScheduled = ($upcoming['kind'] ?? '') === 'scheduled';
+                        ?>
+                        <a href="<?= $editorialEsc(dashboardUrl((string) ($upcoming['edit_url'] ?? ''), '/admin')) ?>" class="list-group-item list-group-item-action">
+                            <span class="d-flex align-items-start gap-2">
+                                <i class="ti <?= $upcomingIsPage ? 'ti-file' : 'ti-article' ?> text-secondary mt-1" aria-hidden="true"></i>
+                                <span class="flex-fill text-truncate">
+                                    <span class="d-block text-truncate fw-medium"><?= $editorialEsc($upcoming['title'] ?? '') ?></span>
+                                    <span class="d-block text-secondary small text-truncate">
+                                        <?= $editorialEsc((string) ($upcoming['when_label'] ?? '')) ?>
+                                        · <?= $editorialEsc(__($upcomingIsPage ? 'calendar.type.page' : 'calendar.type.post')) ?>
+                                    </span>
+                                </span>
+                                <span class="badge <?= $upcomingIsScheduled ? 'bg-azure-lt' : 'bg-orange-lt' ?>"><?= $editorialEsc(__($upcomingIsScheduled ? 'calendar.kind.scheduled' : 'calendar.kind.planned')) ?></span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php if ($editorialCalendarUrl !== ''): ?>
+                    <div class="card-footer">
+                        <a href="<?= $editorialEsc(dashboardUrl($editorialCalendarUrl, '/admin')) ?>" class="btn btn-sm btn-outline-primary">
+                            <i class="ti ti-calendar-event me-1" aria-hidden="true"></i><?= $editorialEsc(__('calendar.widget.open_calendar')) ?>
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        </section>
+        <?php endif; ?>
+
         <?php if (dashboardSectionVisible($visibleDashboardSections, 'favorites_recent')): ?>
         <section class="dashboard-section dashboard-section--favorites">
         <div class="dashboard-overview-grid">

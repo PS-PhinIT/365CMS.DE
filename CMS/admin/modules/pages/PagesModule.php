@@ -389,6 +389,14 @@ class PagesModule
         if ($contentUpdatedAtInput['error'] !== null) {
             return ['success' => false, 'error' => (string) $contentUpdatedAtInput['error']];
         }
+        // Redaktionskalender: „Geplantes Datum“ prüfen; gespeichert wird es über FeatureHooks\EditorialCalendarHooks.
+        $plannedAtInput = \CMS\Services\EditorialCalendarService::normalizePlannedAtInput(
+            is_scalar($post['planned_date'] ?? null) ? (string) $post['planned_date'] : '',
+            is_scalar($post['planned_time'] ?? null) ? (string) $post['planned_time'] : ''
+        );
+        if ($plannedAtInput['error'] !== null) {
+            return ['success' => false, 'error' => (string) $plannedAtInput['error']];
+        }
         if ($id > 0 && $existingPage === []) {
             return ['success' => false, 'error' => 'Die Seite existiert nicht mehr. Bitte Liste neu laden.'];
         }

@@ -287,6 +287,12 @@ function cms_admin_pages_build_inline_edit_data(PagesModule $module, array $post
         $draftPage['content_en'] = $existingPage['content_en'] ?? ($draftPage['content_en'] ?? '');
     }
 
+    // Redaktionskalender: eingegebenes „Geplantes Datum“ nach einem abgelehnten Speichervorgang erhalten.
+    if (array_key_exists('planned_date', $post)) {
+        $draftPage['planned_date'] = trim((string) $post['planned_date']);
+        $draftPage['planned_time'] = trim((string) ($post['planned_time'] ?? ''));
+    }
+
     if ($hasTemplateSelection) {
         $templateValue = preg_replace('/[^a-z0-9_-]/i', '', cms_admin_pages_scalar_string($post['page_template'] ?? '')) ?? '';
         $templateMeta = [];

@@ -409,6 +409,7 @@ class DashboardModule
             'quickLinks'    => $this->getQuickLinks(),
             'alerts'        => $this->filterAdminLinks(array_merge($this->buildDashboardHealthAlerts($meta), $this->getAlerts($stats, $pendingComments)), false),
             'attention'     => $this->filterAdminLinks($this->service->getAttentionItems($stats), false),
+            'editorial_widgets' => $this->service->getEditorialWidgets($this->getCurrentUserId(), Auth::instance()->hasCapability('view_editorial_calendar')),
             'subscription_enabled' => $subscriptionEnabled,
             'recent_orders' => $subscriptionOrdersEnabled ? $this->service->getRecentOrders() : [],
             'orders'        => $orders,

@@ -911,6 +911,15 @@ class PostsModule
             return ['success' => false, 'error' => 'Bitte zuerst ein Aktualisierungsdatum angeben, um den Beitrag als neu zu behandeln.'];
         }
 
+        // Redaktionskalender: „Geplantes Datum“ prüfen; gespeichert wird es über FeatureHooks\EditorialCalendarHooks.
+        $plannedAtInput = \CMS\Services\EditorialCalendarService::normalizePlannedAtInput(
+            is_scalar($post['planned_date'] ?? null) ? (string) $post['planned_date'] : '',
+            is_scalar($post['planned_time'] ?? null) ? (string) $post['planned_time'] : ''
+        );
+        if ($plannedAtInput['error'] !== null) {
+            return ['success' => false, 'error' => (string) $plannedAtInput['error']];
+        }
+
         if ($publishIntent === 'schedule' && !$this->isFutureDateTime($publishedAtInput['value'])) {
             return ['success' => false, 'error' => 'Zum Planen bitte Datum und Uhrzeit in der Zukunft wählen.'];
         }

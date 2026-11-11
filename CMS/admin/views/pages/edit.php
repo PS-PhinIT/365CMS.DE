@@ -237,6 +237,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                 }
             }
             $pageFeaturedImageValue = (string)($page->featured_image ?? '');
+            $pagePlannedAtField = \CMS\Services\EditorialCalendarService::getInstance()->getPlannedAtFieldValues($page ?? null);
             $pagePreviewSlug = ltrim($pageSlugValue, '/');
             $pagePreviewSlugEn = ltrim($pageSlugEnValue !== '' ? $pageSlugEnValue : $pageSlugValue, '/');
             $pagePreviewUrl = $pagePreviewSlug !== '' ? '/' . $pagePreviewSlug : '/';
@@ -431,6 +432,18 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 </select>
                             </div>
                             <?php require __DIR__ . '/../partials/page-template-fields.php'; ?>
+                            <fieldset class="mb-3">
+                                <legend class="form-label"><?= htmlspecialchars(__('calendar.planned_at.label')) ?></legend>
+                                <div class="row g-2">
+                                    <div class="col-sm-7">
+                                        <input type="date" class="form-control" id="pagePlannedDate" name="planned_date" aria-label="<?= htmlspecialchars(__('calendar.planned_at.date_label')) ?>" aria-describedby="pagePlannedAtHint" value="<?= htmlspecialchars($pagePlannedAtField['date']) ?>">
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <input type="time" class="form-control" id="pagePlannedTime" name="planned_time" aria-label="<?= htmlspecialchars(__('calendar.planned_at.time_label')) ?>" aria-describedby="pagePlannedAtHint" value="<?= htmlspecialchars($pagePlannedAtField['time']) ?>" step="60">
+                                    </div>
+                                </div>
+                                <div class="form-hint" id="pagePlannedAtHint"><?= htmlspecialchars(trim(__('calendar.planned_at.hint') . ' ' . $pagePlannedAtField['timezone_hint'])) ?></div>
+                            </fieldset>
                             <div class="mb-0">
                                 <label class="form-label" for="pageContentUpdatedDate">Aktualisierungsdatum (öffentlich sichtbar)</label>
                                 <div class="row g-2">

@@ -656,6 +656,32 @@ class DashboardService {
     }
 
     /**
+     * Redaktions-Widgets „Meine Entwürfe“ (zuletzt bearbeitete eigene Entwürfe) und „Demnächst geplant“
+     * (geplante Inhalte der nächsten 7 Tage; ohne Kalenderrecht nur eigene Inhalte).
+     *
+     * @return array{drafts:list<array<string,mixed>>,upcoming:list<array<string,mixed>>,calendar_url:string}
+     */
+    public function getEditorialWidgets(int $userId, bool $canViewCalendar): array {
+        $widgets = [
+            'drafts' => [],
+            'upcoming' => [],
+            'calendar_url' => $canViewCalendar ? '/admin/editorial-calendar' : '',
+        ];
+
+        try {
+            $calendar = EditorialCalendarService::getInstance();
+            $widgets['drafts'] = $calendar->getMyDrafts($userId, 5);
+            $widgets['upcoming'] = $calendar->getUpcoming($userId, $canViewCalendar, 7, 10);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('dashboard')->warning('Editorial widgets could not be loaded.', [
+                'exception' => $e,
+            ]);
+        }
+
+        return $widgets;
+    }
+
+    /**
      * Kompakte Aufgabenliste für das Dashboard.
      */
     public function getAttentionItems(?array $stats = null): array {

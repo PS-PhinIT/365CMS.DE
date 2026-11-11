@@ -125,6 +125,30 @@ final class ContentLocalizationService
         return $content('_' . $locale);
     }
 
+    /**
+     * Wie postLocaleAvailabilityExpression() für Seiten (ohne Kurzfassung; Seiten führen kein `excerpt_*`).
+     *
+     * - `de`: deutscher Titel oder Inhalt vorhanden
+     * - `en`: englischer Titel/Inhalt vorhanden oder englischer Slug gesetzt
+     * - andere Sprachen: Titel oder Inhalt in `*_{locale}` vorhanden
+     */
+    public static function pageLocaleAvailabilityExpression(string $locale, string $alias = ''): string
+    {
+        $p = self::columnPrefix($alias);
+        $filled = static fn (string $column): string => "CHAR_LENGTH(TRIM(COALESCE({$p}{$column}, ''))) > 0";
+        $content = static fn (string $suffix): string => '(' . $filled('content' . $suffix) . ' OR ' . $filled('title' . $suffix) . ')';
+
+        if ($locale === '' || $locale === 'de') {
+            return $content('');
+        }
+
+        if ($locale === 'en') {
+            return '(' . $content('_en') . ' OR ' . $filled('slug_en') . ')';
+        }
+
+        return $content('_' . $locale);
+    }
+
     private function hasPostLocaleColumns(): bool
     {
         try {
