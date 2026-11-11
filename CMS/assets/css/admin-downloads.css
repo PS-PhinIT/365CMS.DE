@@ -1,0 +1,76 @@
+/* Downloads im Admin: Liste, Bearbeiten, Statistik. */
+
+.cms-dl-chart {
+    margin: 0;
+}
+
+.cms-dl-chart__bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 160px;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--tblr-border-color, #dadfe5);
+}
+
+.cms-dl-chart__bar {
+    flex: 1 1 0;
+    min-width: 1px;
+    height: 0;
+    border-radius: 2px 2px 0 0;
+    background: var(--tblr-primary, #206bc4);
+}
+
+.cms-dl-chart__bar--0 {
+    height: 1px;
+    background: var(--tblr-border-color, #dadfe5);
+}
+.cms-dl-chart__bar--1 { height: 5%; }
+.cms-dl-chart__bar--2 { height: 10%; }
+.cms-dl-chart__bar--3 { height: 15%; }
+.cms-dl-chart__bar--4 { height: 20%; }
+.cms-dl-chart__bar--5 { height: 25%; }
+.cms-dl-chart__bar--6 { height: 30%; }
+.cms-dl-chart__bar--7 { height: 35%; }
+.cms-dl-chart__bar--8 { height: 40%; }
+.cms-dl-chart__bar--9 { height: 45%; }
+.cms-dl-chart__bar--10 { height: 50%; }
+.cms-dl-chart__bar--11 { height: 55%; }
+.cms-dl-chart__bar--12 { height: 60%; }
+.cms-dl-chart__bar--13 { height: 65%; }
+.cms-dl-chart__bar--14 { height: 70%; }
+.cms-dl-chart__bar--15 { height: 75%; }
+.cms-dl-chart__bar--16 { height: 80%; }
+.cms-dl-chart__bar--17 { height: 85%; }
+.cms-dl-chart__bar--18 { height: 90%; }
+.cms-dl-chart__bar--19 { height: 95%; }
+.cms-dl-chart__bar--20 { height: 100%; }
+
+.cms-dl-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 1rem;
+}
+
+.cms-dl-kpi__value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.cms-dl-sections {
+    flex-wrap: wrap;
+}
+
+.cms-dl-hash {
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+.cms-dl-version--current {
+    box-shadow: inset 3px 0 0 var(--tblr-primary, #206bc4);
+}
+
+.cms-dl-bulk-extra[hidden] {
+    display: none !important;
+}

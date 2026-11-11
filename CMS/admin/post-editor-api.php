@@ -16,6 +16,8 @@ if (!defined('ABSPATH')) {
  * POST action=block_preview, type, data, tunes      Server-Vorschau eines registrierten Core-Blocks
  *                                                  (EditorJsBlockRegistry, Kontext „preview“); data/tunes als JSON
  * GET  ?action=form_choices                        aktive Formulare für den Block „Formular“ (Schlüssel, Titel)
+ * GET  ?action=download_search[&q&category&type&ids] Downloads für den Block „Download“ (upload_downloads)
+ * POST action=download_upload, file[, title, version]  Datei hochladen und als Download anlegen (upload_downloads)
  *
  * Alle Aktionen: angemeldete Admin-Rolle + Beitrags-Capability + Besitzprüfung im PostsModule;
  * schreibende Aktionen zusätzlich mit CSRF-Token (Aktion admin_post_editor). `token` und `block_preview`
@@ -55,9 +57,14 @@ $canRead = $canWrite || $auth->hasCapability('posts.view');
 // Seiteneditor: nur Token-Erneuerung und Block-Vorschau.
 $canEditPages = $auth->hasCapability('manage_pages');
 
-$readActions = ['revisions', 'compare', 'token', 'form_choices'];
-$writeActions = ['autosave', 'restore', 'block_preview'];
-$pageEditorActions = ['token', 'block_preview', 'form_choices'];
+$readActions = ['revisions', 'compare', 'token', 'form_choices', 'download_search'];
+$writeActions = ['autosave', 'restore', 'block_preview', 'download_upload'];
+$pageEditorActions = ['token', 'block_preview', 'form_choices', 'download_search', 'download_upload'];
+// Download-Block: Auswählen und Hochladen erfordern zusätzlich upload_downloads (oder manage_downloads).
+$canUseDownloads = $auth->hasCapability('upload_downloads') || $auth->hasCapability('manage_downloads');
+if (in_array($action, ['download_search', 'download_upload'], true) && !$canUseDownloads) {
+    $cmsPostEditorApiRespond(403, ['success' => false, 'error' => 'Keine Berechtigung für Downloads.']);
+}
 
 if (in_array($action, $readActions, true)) {
     if ($method !== 'GET') {
@@ -107,6 +114,77 @@ if ($action === 'form_choices') {
         'success' => true,
         'forms' => $formChoices,
         'manage_url' => $auth->hasCapability('manage_forms') && is_file(ABSPATH . 'admin/forms.php') ? '/admin/forms' : '',
+    ]);
+}
+
+if ($action === 'download_search') {
+    $downloadService = \CMS\Services\Downloads\DownloadService::getInstance();
+    if (!$downloadService->isAvailable()) {
+        $cmsPostEditorApiRespond(200, ['success' => true, 'items' => [], 'categories' => [], 'file_types' => []]);
+    }
+    $searchFilters = [
+        'search' => \CMS\Services\Downloads\DownloadService::plainText(is_scalar($_GET['q'] ?? null) ? (string) $_GET['q'] : '', 100),
+        'category_id' => max(0, (int) ($_GET['category'] ?? 0)),
+        'file_type' => is_scalar($_GET['type'] ?? null) ? (string) $_GET['type'] : '',
+        'access_level' => is_scalar($_GET['access'] ?? null) ? (string) $_GET['access'] : '',
+    ];
+    if (isset($_GET['ids']) && is_scalar($_GET['ids'])) {
+        $searchFilters = ['ids' => array_slice(array_map('intval', explode(',', (string) $_GET['ids'])), 0, 50)];
+    }
+    $found = $downloadService->list($searchFilters, 1, 30, 'updated');
+    $foundItems = [];
+    foreach ($found['items'] as $foundItem) {
+        $foundItems[(int) $foundItem['id']] = $foundItem;
+    }
+    $foundVersions = $foundItems !== [] ? $downloadService->repository()->versionsForItems(array_keys($foundItems)) : [];
+    $payload = [];
+    foreach ($foundItems as $foundId => $foundItem) {
+        $payload[] = [
+            'id' => $foundId,
+            'title' => (string) $foundItem['title'],
+            'status' => (string) $foundItem['status'],
+            'access' => (string) $foundItem['access_level'],
+            'type' => (string) $foundItem['file_type'],
+            'version' => (string) ($foundItem['current_version'] ?? ''),
+            'size' => (int) ($foundItem['current_size'] ?? 0) > 0 ? \CMS\Services\Downloads\DownloadSecurity::formatBytes((int) $foundItem['current_size']) : '',
+            'count' => (int) $foundItem['download_count'],
+            'versions' => array_values(array_map(static fn (array $row): string => (string) $row['version'], $foundVersions[$foundId] ?? [])),
+            'edit_url' => '/admin/downloads?action=edit&id=' . $foundId,
+        ];
+    }
+    $cmsPostEditorApiRespond(200, [
+        'success' => true,
+        'items' => $payload,
+        'total' => $found['total'],
+        'categories' => array_map(static fn (array $term): array => ['id' => (int) $term['id'], 'name' => (string) $term['name']], $downloadService->categories(true)),
+        'file_types' => $downloadService->repository()->usedFileTypes(),
+        'can_manage' => $auth->hasCapability('manage_downloads'),
+    ]);
+}
+
+if ($action === 'download_upload') {
+    $downloadService = \CMS\Services\Downloads\DownloadService::getInstance();
+    $uploadFile = is_array($_FILES['file'] ?? null) ? $_FILES['file'] : null;
+    if ($uploadFile === null) {
+        $cmsPostEditorApiRespond(422, ['success' => false, 'error' => __('downloads.error.no_file')]);
+    }
+    $uploadResult = $downloadService->createFromUpload($uploadFile, [
+        'title' => is_scalar($_POST['title'] ?? null) ? (string) $_POST['title'] : '',
+        'version' => is_scalar($_POST['version'] ?? null) ? (string) $_POST['version'] : '',
+    ], (int) ($auth->getCurrentUser()->id ?? 0));
+    if (empty($uploadResult['success'])) {
+        $cmsPostEditorApiRespond(422, ['success' => false, 'error' => (string) ($uploadResult['error'] ?? __('downloads.error.upload_failed'))]);
+    }
+    $uploaded = $downloadService->get((int) $uploadResult['id']);
+    $cmsPostEditorApiRespond(200, [
+        'success' => true,
+        'item' => [
+            'id' => (int) $uploadResult['id'],
+            'title' => (string) ($uploaded['title'] ?? ''),
+            'status' => (string) ($uploaded['status'] ?? ''),
+            'version' => (string) ($uploaded['current_version'] ?? ''),
+            'edit_url' => '/admin/downloads?action=edit&id=' . (int) $uploadResult['id'],
+        ],
     ]);
 }
 

@@ -97,6 +97,8 @@
             select.appendChild(new Option('Formulare werden geladen …', ''));
             status.setAttribute('role', 'status');
             preview.setAttribute('aria-live', 'polite');
+            // Server-Vorschau: Änderungen am Markup sind keine Inhaltsänderung des Blocks.
+            preview.dataset.mutationFree = 'true';
 
             controls.appendChild(label);
             controls.appendChild(select);
