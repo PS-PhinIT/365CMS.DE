@@ -31,6 +31,7 @@ Most pages require `manage_settings`; backups, mail and documentation also accep
 | Allgemeine Einstellungen | `/admin/settings` | Einstellungen › *Allgemein* | Konfiguration › *Allgemein* | [SYSTEM.md](SYSTEM.md) (Tab *Beiträge & Sites*: [../pages-posts/SETTINGS.md](../pages-posts/SETTINGS.md)) |
 | MultiSites | `/admin/multisites` | Einstellungen › *Allgemein* | Konfiguration › *Allgemein* | [MULTISITES.md](MULTISITES.md) |
 | E-Mail & OAuth2 | `/admin/mail-settings` | Einstellungen › *Allgemein* | Konfiguration › *Allgemein* | [MAIL.md](MAIL.md) |
+| RSS-Feeds | `/admin/settings?tab=feeds` | Einstellungen › *Allgemein* | Konfiguration › *Allgemein* | [FEEDS.md](FEEDS.md) |
 | Module | `/admin/modules` | Plugins | Erweitern | [MODULES.md](MODULES.md) |
 | Backups | `/admin/backups` | Werkzeuge | Konfiguration › *Wartung* | [BACKUP.md](BACKUP.md) |
 | Updates | `/admin/updates` | direkter Link mit Badge | direkter Link mit Badge | [UPDATES.md](UPDATES.md) |

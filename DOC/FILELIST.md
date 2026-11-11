@@ -202,27 +202,27 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-304 files. Layout:
+306 files. Layout:
 
 - `CMS/admin/*.php` — HTTP entry points
 - `CMS/admin/modules/<domain>/` — domain modules (`comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`)
 - `CMS/admin/views/` — templates
 - `CMS/admin/partials/` — shared chrome (including sidebar)
 - `CMS/admin/logs/` — log UI helpers
-- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (since 4.0.0: `admin-menu.php`)
+- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`)
 
 Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), since 4.0.0 the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`, `multisites.php` (MultiSites) and `configuration.php` (tile pages `/admin/configuration[?group=…]`).
 
 **Deutsch**
 
-304 Dateien. Aufbau:
+306 Dateien. Aufbau:
 
 - `CMS/admin/*.php` — HTTP-Einstiege
 - `CMS/admin/modules/<domain>/` — Fachmodule
 - `CMS/admin/views/` — Templates
 - `CMS/admin/partials/` — gemeinsame Oberfläche (inkl. Sidebar)
 - `CMS/admin/logs/` — Log-UI
-- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (seit 4.0.0: `admin-menu.php`)
+- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`)
 
 Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), seit 4.0.0 die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`, `multisites.php` (MultiSites) und `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`).
 

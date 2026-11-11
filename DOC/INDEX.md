@@ -102,6 +102,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | MultiSites (admin context per domain: accent, site switcher, plugin assignment, menu layout) | [admin/system-settings/MULTISITES.md](admin/system-settings/MULTISITES.md) |
 | AI services (admin) | [admin/system-settings/AI-SERVICES.md](admin/system-settings/AI-SERVICES.md) |
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
+| RSS feeds | [admin/system-settings/FEEDS.md](admin/system-settings/FEEDS.md) |
 | Core modules | [admin/system-settings/MODULES.md](admin/system-settings/MODULES.md) |
 | Backups / updates / monitoring | [admin/system-settings/BACKUP.md](admin/system-settings/BACKUP.md) · [UPDATES.md](admin/system-settings/UPDATES.md) · [MONITORING.md](admin/system-settings/MONITORING.md) |
 | Diagnostics | [admin/diagnose/DIAGNOSE.md](admin/diagnose/DIAGNOSE.md) |

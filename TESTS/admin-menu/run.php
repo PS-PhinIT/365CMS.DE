@@ -159,7 +159,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/settings-tabs/feeds.php' => 'Phase B: Feeds (cms-feed)',
     'admin/downloads.php' => 'Phase B: Downloads (cms-downloads)',
     'admin/forms.php' => 'Phase B: Formulare (cms-contact)',
     'admin/form-submissions.php' => 'Phase B: Eingänge (cms-contact)',

@@ -63,6 +63,7 @@ Von oben nach unten folgen Site-Umschalter, Menübaum und Benutzerbereich.
 | [legal/](legal/README.md) | *Einstellungen* › Recht & Datenschutz | *Konfiguration* › Recht & Datenschutz |
 | [security/](security/README.md) | *Einstellungen* › Sicherheit; Sicherheits-Audit unter *Website-Zustand* | *Konfiguration* › Sicherheit; Sicherheits-Audit unter *Berichte* |
 | [performance/](performance/README.md) | *Einstellungen* › Performance | *Konfiguration* › Performance |
+| [RSS-Feeds](system-settings/FEEDS.md) | *Einstellungen* | *Konfiguration* |
 | [diagnose/](diagnose/README.md), [info/](info/README.md) | *Website-Zustand* (Kachelseite: Protokolle, Monitore, System, Hilfe) | *Berichte* (Kachelseite) |
 | Plugin-Menüs ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-adminseiten), [ADMIN-MENU.md](ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil)) | Auffanggruppe *Plugins*, eigene Gruppe direkt danach oder Wunschplatz | Auffanggruppe *Erweitern*, eigene Gruppe oder Wunschplatz |
 

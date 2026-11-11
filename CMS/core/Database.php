@@ -185,25 +185,11 @@ class Database implements DatabaseInterface
             Services\OptionStore::getInstance()->flush();
         }
 
-        // RSS-Feed-Cache (Routing\ThemeRouter::serveRssFeed) bei Änderungen an Beiträgen/Kategorien verwerfen;
-        // der Aufrufzähler (`views = views + 1`) zählt nicht als Inhaltsänderung.
-        if (preg_match('/`?' . preg_quote($this->prefix, '/') . '(?:posts|post_categories)`?(?![a-z0-9_])/i', $sql) === 1
+        // RSS-Feed-Cache (Services\FeedService::serveRssFeed) auch bei Massenänderungen und Taxonomie-Pflege
+        // verwerfen, die keine Inhalts-Hooks auslösen; der Aufrufzähler (`views = views + 1`) zählt nicht.
+        if (preg_match('/`?' . preg_quote($this->prefix, '/') . '(?:posts|post_categories|post_category_rel|post_tags|post_tag_rel)`?(?![a-z0-9_])/i', $sql) === 1
             && preg_match('/^\s*UPDATE\s+\S+\s+SET\s+views\s*=\s*views\s*\+\s*1\s*(?:,\s*updated_at\s*=\s*updated_at\s*)?WHERE/i', $sql) !== 1) {
-            self::invalidateFeedCache();
-        }
-    }
-
-    /**
-     * Löscht die zwischengespeicherten RSS-Feeds (cache/feed/*.xml).
-     */
-    public static function invalidateFeedCache(): void
-    {
-        if (!defined('ABSPATH')) {
-            return;
-        }
-
-        foreach (glob(rtrim((string) ABSPATH, '/\\') . '/cache/feed/*.xml') ?: [] as $file) {
-            @unlink($file);
+            Services\FeedService::invalidatePublicFeedCache();
         }
     }
 
