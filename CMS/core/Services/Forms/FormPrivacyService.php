@@ -69,7 +69,7 @@ final class FormPrivacyService
                 'locale' => (string) $submission['locale'],
                 'source_url' => (string) $submission['source_url'],
                 'consent_at' => $submission['consent_at'],
-                'consent_text' => (string) ($submission['meta']['consent_text'] ?? ''),
+                'consent_text' => (string) ($submission['meta']['consent']['text'] ?? ''),
                 'sender_name' => (string) $submission['sender_name'],
                 'sender_email' => (string) $submission['sender_email'],
                 'subject' => (string) $submission['subject'],

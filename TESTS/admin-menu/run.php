@@ -83,8 +83,6 @@ const OPTIONAL_MODULES = [
  */
 const RESERVED_FILES = [
     'admin/downloads.php' => 'Phase B: Downloads (cms-downloads)',
-    'admin/forms.php' => 'Phase B: Formulare (cms-contact)',
-    'admin/form-submissions.php' => 'Phase B: Eingänge (cms-contact)',
     'admin/trash.php' => 'WP1: Papierkorb',
     'admin/settings-tabs/security.php' => 'WP1: Login & Sperren',
     'admin/content-changes.php' => 'WP2: Letzte Änderungen',

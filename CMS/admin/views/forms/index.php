@@ -37,6 +37,8 @@ $fmDays = static function (int $days): string {
 $fmTabs = ['forms' => 'forms.admin.tab_forms', 'settings' => 'forms.admin.tab_settings'];
 $fmViewFile = in_array($fmView, ['list', 'edit', 'settings'], true) ? $fmView : 'list';
 $fmSubmissionsUrl = (string) ($fmData['submissions_url'] ?? '');
+$fmInboxUrl = is_file(ABSPATH . 'admin/form-submissions.php') && \CMS\Auth::instance()->hasCapability('view_form_submissions') ? '/admin/form-submissions' : '';
+$fmInboxNew = $fmInboxUrl !== '' && !empty($fmData['available']) ? \CMS\Services\Forms\FormSubmissionService::getInstance()->countNew() : 0;
 ?>
 
 <div class="page-header d-print-none admin-redesign-header">
@@ -78,6 +80,16 @@ $fmSubmissionsUrl = (string) ($fmData['submissions_url'] ?? '');
                                href="<?= $fmE($fmTabKey === 'forms' ? '/admin/forms' : '/admin/forms?tab=' . $fmTabKey) ?>"><?= $fmT($fmTabLabel) ?></a>
                         </li>
                     <?php endforeach; ?>
+                    <?php if ($fmInboxUrl !== ''): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?= $fmE($fmInboxUrl) ?>">
+                                <?= $fmT('forms.inbox.tab_inbox') ?>
+                                <?php if ($fmInboxNew > 0): ?>
+                                    <span class="badge bg-blue-lt ms-1"><?= $fmT('forms.admin.new_count', $fmInboxNew) ?></span>
+                                <?php endif; ?>
+                            </a>
+                        </li>
+                    <?php endif; ?>
                 </ul>
             <?php endif; ?>
 

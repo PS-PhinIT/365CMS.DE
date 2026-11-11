@@ -9006,3 +9006,75 @@ body.admin-body .admin-section-toolbar__actions {
 .badge.bg-green     { --tblr-badge-color: var(--tblr-green-fg, #fff); }
 .badge.bg-teal      { --tblr-badge-color: var(--tblr-teal-fg, #fff); }
 .badge.bg-cyan      { --tblr-badge-color: var(--tblr-cyan-fg, #fff); }
+
+/* Editor.js: Core-Blöcke mit Server-Vorschau (Formular, Download) */
+.cms-editorjs-tool--form,
+.cms-editorjs-tool--download {
+    border: 1px solid var(--tblr-border-color, #dadfe5);
+    border-radius: var(--tblr-border-radius, 6px);
+    background: var(--tblr-bg-surface, #fff);
+}
+
+.cms-editorjs-form-block__controls,
+.cms-editorjs-download-block__controls {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--tblr-bg-surface-secondary, #f6f8fb);
+    border-bottom: 1px solid var(--tblr-border-color, #dadfe5);
+    border-radius: var(--tblr-border-radius, 6px) var(--tblr-border-radius, 6px) 0 0;
+}
+
+.cms-editorjs-form-block__options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+}
+
+.cms-editorjs-form-block__preview,
+.cms-editorjs-download-block__preview {
+    padding: 1rem;
+}
+
+.cms-editorjs-form-block__preview.is-loading,
+.cms-editorjs-download-block__preview.is-loading {
+    opacity: 0.55;
+}
+
+.cms-editorjs-form-block__preview .cms-form__grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.cms-editorjs-form-block__preview .cms-form__label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.cms-editorjs-form-block__preview .cms-form__input,
+.cms-editorjs-form-block__preview input[type="text"],
+.cms-editorjs-form-block__preview input[type="email"],
+.cms-editorjs-form-block__preview input[type="tel"],
+.cms-editorjs-form-block__preview input[type="url"],
+.cms-editorjs-form-block__preview input[type="number"],
+.cms-editorjs-form-block__preview input[type="date"],
+.cms-editorjs-form-block__preview select,
+.cms-editorjs-form-block__preview textarea {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--tblr-border-color, #dadfe5);
+    border-radius: 4px;
+    background: var(--tblr-bg-surface, #fff);
+}
+
+.cms-editorjs-form-block__preview .cms-form__preview-note,
+.cms-editorjs-form-block__preview .cms-form__required-note,
+.cms-editorjs-form-block__preview .cms-form__help {
+    color: var(--tblr-secondary, #667382);
+    font-size: 0.8125rem;
+}
+
+.cms-editorjs-form-block__preview .cms-form__hp {
+    display: none;
+}
