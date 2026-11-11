@@ -98,8 +98,11 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | SEO | [admin/seo/SEO.md](admin/seo/SEO.md) |
 | Legal | [admin/legal/README.md](admin/legal/README.md) |
 | Security | [admin/security/README.md](admin/security/README.md) |
+| Login thresholds and lockout | [admin/security/LOGIN-THRESHOLDS.md](admin/security/LOGIN-THRESHOLDS.md) |
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
+| Toolbar: cache & maintenance mode | [admin/system-settings/TOOLBAR.md](admin/system-settings/TOOLBAR.md) |
+| Trash (pages, posts, media, hub sites, downloads, forms) | [admin/pages-posts/TRASH.md](admin/pages-posts/TRASH.md) |
 | MultiSites (admin context per domain: accent, site switcher, plugin assignment, menu layout) | [admin/system-settings/MULTISITES.md](admin/system-settings/MULTISITES.md) |
 | AI services (admin) | [admin/system-settings/AI-SERVICES.md](admin/system-settings/AI-SERVICES.md) |
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
