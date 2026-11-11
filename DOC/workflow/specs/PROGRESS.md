@@ -60,7 +60,7 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 | B2.5 | Templates Kompakt/Karte/Hervorgehoben, Theme-Overrides, Zugriffsschutz, Checklisten-Prüfung | ⬜ | |
 | B2.6 | Frontend `/downloads`, `/downloads/{slug}`, Schema.org, Kompatibilität alter Shortcodes/Blöcke | ⬜ | |
 | B3 | cms-contact → generischer `FormService`, Kontaktformular als erste Definition, `/kontakt`, Antispam, Consent, Mails, Eingangsübersicht, DSGVO | ⬜ | |
-| B4 | Migration v25 idempotent, Plugins automatisch deaktivieren + Hinweis, Marketplace `index.json`, Plugin-Zuweisung bereinigen | 🟡 | Stilllegung/Hinweis/Umleitung fertig, Datenmigration offen |
+| B4 | Migration v25 idempotent, Plugins automatisch deaktivieren + Hinweis, Marketplace `index.json`, Plugin-Zuweisung bereinigen | 🟡 | Stilllegung, 30-Tage-Hinweis und 301-Umleitung der alten Plugin-Adminseiten fertig. Beim Stilllegen wird die MultiSite-Plugin-Zuweisung bereinigt (`PluginSiteAssignmentService::removePlugins()`). Marketplace: Katalogfeld `integrated_in_core`, Kennzeichnung „Im Core enthalten“ mit Link zur Core-Funktion, keine Installation und keine Update-Angebote; die Update-Prüfung überspringt integrierte Plugins (Details: [Marketplace](../../admin/plugins/MARKETPLACE.md#im-core-enthaltene-plugins)). Die Datenmigration je Plugin folgt mit B1–B3. |
 | B5 | Admin-Menüeinträge + Capabilities | 🟡 | Capabilities fertig |
 | B6 | Doku, Sprachdateien | 🟡 | Feed-Einstellungen in DE/EN sowie [FEEDS.md](../../admin/system-settings/FEEDS.md) ergänzt; restliche Plugin-Dokumentation folgt mit Downloads und Formularen. |
 
