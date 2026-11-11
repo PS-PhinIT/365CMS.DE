@@ -41,7 +41,7 @@ final class ImageProcessor
 
         $targetPath = preg_replace('/\.[^.]+$/', '.webp', $filePath);
         if ($targetPath === null || $targetPath === '') {
-            imagedestroy($source);
+            unset($source);
             return new WP_Error('target_path_invalid', 'WebP-Zielpfad konnte nicht erzeugt werden');
         }
 
@@ -50,7 +50,7 @@ final class ImageProcessor
         imagesavealpha($source, true);
 
         $success = $this->writeWebp($source, $targetPath, max(1, min($quality, 100)));
-        imagedestroy($source);
+        unset($source);
 
         if (!$success) {
             return new WP_Error('webp_conversion_failed', 'WebP-Konvertierung fehlgeschlagen');
@@ -100,14 +100,14 @@ final class ImageProcessor
             }
 
             $saved = $this->writeImageResource($resized, $thumbnailPath, $mimeType, $quality);
-            imagedestroy($resized);
+            unset($resized);
 
             if ($saved) {
                 $generatedPaths[] = $thumbnailPath;
             }
         }
 
-        imagedestroy($source);
+        unset($source);
 
         return $generatedPaths;
     }
@@ -145,14 +145,14 @@ final class ImageProcessor
         }
 
         $resized = $this->createResizedCanvas($source, $sourceWidth, $sourceHeight, $maxWidth, $maxHeight, $mimeType);
-        imagedestroy($source);
+        unset($source);
 
         if ($resized === false) {
             return new WP_Error('image_resize_failed', 'Bild konnte nicht skaliert werden');
         }
 
         $saved = $this->writeImageResource($resized, $filePath, $mimeType, $quality);
-        imagedestroy($resized);
+        unset($resized);
 
         if (!$saved) {
             return new WP_Error('image_save_failed', 'Skaliertes Bild konnte nicht gespeichert werden');
@@ -265,7 +265,7 @@ final class ImageProcessor
         ));
 
         if ($resampled !== true) {
-            imagedestroy($canvas);
+            unset($canvas);
             return false;
         }
 

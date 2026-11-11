@@ -274,7 +274,7 @@ final class EditorJsUploadService
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo !== false) {
                 $detectedMime = finfo_file($finfo, $tmpName);
-                finfo_close($finfo);
+                unset($finfo);
 
                 if (is_string($detectedMime) && trim($detectedMime) !== '') {
                     $mimeCandidates[] = strtolower(trim($detectedMime));

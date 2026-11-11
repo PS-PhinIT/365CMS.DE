@@ -240,7 +240,8 @@ final class Client
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $contentType = strtolower(trim((string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE)));
         $primaryIp = defined('CURLINFO_PRIMARY_IP') ? trim((string) curl_getinfo($ch, CURLINFO_PRIMARY_IP)) : '';
-        curl_close($ch);
+        // curl_close() ist seit PHP 8.0 wirkungslos und seit 8.5 veraltet; das Handle wird mit unset() freigegeben.
+        unset($ch);
 
         if ($contentType !== '' && str_contains($contentType, ';')) {
             $contentType = trim((string) strtok($contentType, ';'));
