@@ -903,6 +903,7 @@ function cms_admin_media_view_config(MediaModule $module, string $tab): array
             'page_assets' => [
                 'js' => [
                     cms_asset_url('js/admin-media-integrations.js'),
+                    cms_asset_url('js/admin-media-license.js'),
                 ],
             ],
             'data' => $module->getLibraryData(),

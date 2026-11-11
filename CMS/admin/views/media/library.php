@@ -319,6 +319,26 @@ function renderMediaDuplicateSummary(array $file, bool $compact = false): string
 }
 }
 
+if (!function_exists('renderMediaLicenseButton')) {
+/** Spalte/Kachelzeile „Urheber & Lizenz“ (#11): Kurzfassung als Button, öffnet #mediaLicenseModal. */
+function renderMediaLicenseButton(array $file, string $context): string {
+    $license = \CMS\Services\Media\MediaLicenseService::normalize($file['license'] ?? []);
+    $summary = \CMS\Services\Media\MediaLicenseService::summary($license);
+    $licenseJson = json_encode((object) $license, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+    $label = $summary !== '' ? $summary : __('media_license.column_empty');
+
+    return '<button type="button" class="btn btn-link btn-sm p-0 text-start text-reset js-media-license-edit' . ($context === 'grid' ? ' small' : '') . '"'
+        . ' data-media-path="' . htmlspecialchars((string)($file['path'] ?? ''), ENT_QUOTES) . '"'
+        . ' data-media-name="' . htmlspecialchars((string)($file['name'] ?? ''), ENT_QUOTES) . '"'
+        . ' data-media-license="' . htmlspecialchars($licenseJson, ENT_QUOTES) . '"'
+        . ' data-media-credit="' . htmlspecialchars(\CMS\Services\Media\MediaLicenseService::creditText($license), ENT_QUOTES) . '"'
+        . ' aria-label="' . htmlspecialchars(sprintf(__('media_license.edit_for'), (string)($file['name'] ?? '')), ENT_QUOTES) . '">'
+        . '<i class="ti ti-license me-1" aria-hidden="true"></i>'
+        . '<span class="js-media-license-summary' . ($summary === '' ? ' text-secondary' : '') . '">' . htmlspecialchars($label) . '</span>'
+        . '</button>';
+}
+}
+
 ?>
 
 <?php
@@ -824,6 +844,7 @@ if ($modifiedFilter !== 'all') {
                                     <?php endif; ?>
                                     <div class="media-grid-meta"><?php echo htmlspecialchars((string)($file['category_label'] ?? 'Ohne Kategorie')); ?></div>
                                     <div class="media-grid-meta small"><?php echo renderMediaTags($file); ?></div>
+                                    <div class="media-grid-meta small"><?php echo renderMediaLicenseButton($file, 'grid'); ?></div>
                                     <div class="media-grid-meta small"><?php echo renderMediaUsageSummaryBlock($file); ?></div>
                                     <?php echo renderMediaDuplicateSummary($file, true); ?>
                                 </div>
@@ -843,6 +864,7 @@ if ($modifiedFilter !== 'all') {
                                         <th>Name</th>
                                         <th>Kategorie</th>
                                         <th class="media-col-tags">Tags</th>
+                                        <th class="media-col-license"><?php echo htmlspecialchars(__('media_license.column')); ?></th>
                                         <th class="media-col-usage">Eingebunden in</th>
                                         <th class="media-col-size-header" id="mediaSizeColumnLabel">Größe</th>
                                         <th>Geändert</th>
@@ -874,6 +896,7 @@ if ($modifiedFilter !== 'all') {
                                                 <?php endif; ?>
                                             </td>
                                             <td class="media-col-tags"><span class="text-secondary">—</span></td>
+                                            <td class="media-col-license"><span class="text-secondary">—</span></td>
                                             <td class="media-col-usage"><span class="text-secondary">—</span></td>
                                             <td class="text-secondary media-col-size media-folder-entry-count"><?php echo (int)($folder['items_count'] ?? 0); ?> Einträge</td>
                                             <td class="text-secondary"><?php echo htmlspecialchars((string)($folder['modified_label'] ?? '—')); ?></td>
@@ -970,6 +993,7 @@ if ($modifiedFilter !== 'all') {
                                                 </form>
                                             </td>
                                             <td class="media-col-tags"><?php echo renderMediaTags($file); ?></td>
+                                            <td class="media-col-license"><?php echo renderMediaLicenseButton($file, 'list'); ?></td>
                                             <td class="media-col-usage"><?php echo renderMediaUsageList((array)($file['usage_items'] ?? []), is_array($file['usage_summary'] ?? null) ? $file['usage_summary'] : []); ?></td>
                                             <td class="text-secondary media-col-size"><?php echo htmlspecialchars((string)($file['formatted_size'] ?? '—')); ?></td>
                                             <td class="text-secondary"><?php echo htmlspecialchars((string)($file['modified_label'] ?? '—')); ?></td>
@@ -1120,6 +1144,98 @@ if ($modifiedFilter !== 'all') {
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Verschieben</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php
+$mediaLicenseOptions = \CMS\Services\Media\MediaLicenseService::licenseOptions();
+$mediaLicenseToken = \CMS\Security::instance()->generateToken('admin_media_license');
+?>
+<div class="modal modal-blur fade" id="mediaLicenseModal" tabindex="-1" aria-hidden="true" aria-labelledby="mediaLicenseModalTitle"
+     data-endpoint="<?php echo htmlspecialchars('/admin/media-license-api', ENT_QUOTES); ?>"
+     data-csrf-token="<?php echo htmlspecialchars($mediaLicenseToken, ENT_QUOTES); ?>"
+     data-label-title-single="<?php echo htmlspecialchars(__('media_license.modal_title'), ENT_QUOTES); ?>"
+     data-label-title-bulk="<?php echo htmlspecialchars(__('media_license.modal_title_bulk'), ENT_QUOTES); ?>"
+     data-label-bulk-button="<?php echo htmlspecialchars(__('media_license.bulk_button'), ENT_QUOTES); ?>"
+     data-label-bulk-count="<?php echo htmlspecialchars(__('media_license.bulk_count'), ENT_QUOTES); ?>"
+     data-label-no-selection="<?php echo htmlspecialchars(__('media_license.no_selection'), ENT_QUOTES); ?>"
+     data-label-column-empty="<?php echo htmlspecialchars(__('media_license.column_empty'), ENT_QUOTES); ?>"
+     data-label-credit-preview="<?php echo htmlspecialchars(__('media_license.credit_preview'), ENT_QUOTES); ?>"
+     data-label-error="<?php echo htmlspecialchars(__('media_license.error.save_failed'), ENT_QUOTES); ?>">
+    <div class="modal-dialog modal-lg">
+        <form class="modal-content" id="mediaLicenseForm" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="mediaLicenseModalTitle"><?php echo htmlspecialchars(__('media_license.modal_title')); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo htmlspecialchars(__('media_license.close'), ENT_QUOTES); ?>"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-secondary small mb-3" id="mediaLicenseTarget"></div>
+                <div class="mb-3 d-none" id="mediaLicenseBulkMode">
+                    <div class="form-label"><?php echo htmlspecialchars(__('media_license.bulk_mode')); ?></div>
+                    <label class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" value="merge" checked>
+                        <span class="form-check-label"><?php echo htmlspecialchars(__('media_license.bulk_mode_merge')); ?></span>
+                    </label>
+                    <label class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" value="replace">
+                        <span class="form-check-label"><?php echo htmlspecialchars(__('media_license.bulk_mode_replace')); ?></span>
+                    </label>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="mediaLicenseCreator"><?php echo htmlspecialchars(__('media_license.field.creator')); ?></label>
+                        <input class="form-control" id="mediaLicenseCreator" name="creator" type="text" maxlength="200" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mediaLicenseLicense"><?php echo htmlspecialchars(__('media_license.field.license')); ?></label>
+                        <select class="form-select" id="mediaLicenseLicense" name="license">
+                            <option value=""><?php echo htmlspecialchars(__('media_license.license.none')); ?></option>
+                            <?php foreach ($mediaLicenseOptions as $licenseKey => $licenseLabel): ?>
+                                <option value="<?php echo htmlspecialchars((string)$licenseKey, ENT_QUOTES); ?>"><?php echo htmlspecialchars((string)$licenseLabel); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-none" id="mediaLicenseCustomWrap">
+                        <label class="form-label" for="mediaLicenseCustom"><?php echo htmlspecialchars(__('media_license.field.license_custom')); ?></label>
+                        <input class="form-control" id="mediaLicenseCustom" name="license_custom" type="text" maxlength="120" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mediaLicenseUrl"><?php echo htmlspecialchars(__('media_license.field.license_url')); ?></label>
+                        <input class="form-control" id="mediaLicenseUrl" name="license_url" type="url" maxlength="500" placeholder="https://" autocomplete="off">
+                        <div class="form-hint"><?php echo htmlspecialchars(__('media_license.field.license_url_hint')); ?></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mediaLicenseSource"><?php echo htmlspecialchars(__('media_license.field.source_url')); ?></label>
+                        <input class="form-control" id="mediaLicenseSource" name="source_url" type="url" maxlength="500" placeholder="https://" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mediaLicenseCopyright"><?php echo htmlspecialchars(__('media_license.field.copyright')); ?></label>
+                        <input class="form-control" id="mediaLicenseCopyright" name="copyright" type="text" maxlength="300" autocomplete="off">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="mediaLicenseCredit"><?php echo htmlspecialchars(__('media_license.field.credit')); ?></label>
+                        <input class="form-control" id="mediaLicenseCredit" name="credit" type="text" maxlength="300" autocomplete="off">
+                        <div class="form-hint"><?php echo htmlspecialchars(__('media_license.field.credit_hint')); ?></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-check form-switch mt-md-4">
+                            <input class="form-check-input" type="checkbox" id="mediaLicenseAi" name="ai_generated" value="1">
+                            <span class="form-check-label"><?php echo htmlspecialchars(__('media_license.field.ai_generated')); ?></span>
+                        </label>
+                    </div>
+                    <div class="col-md-6 d-none" id="mediaLicenseAiToolWrap">
+                        <label class="form-label" for="mediaLicenseAiTool"><?php echo htmlspecialchars(__('media_license.field.ai_tool')); ?></label>
+                        <input class="form-control" id="mediaLicenseAiTool" name="ai_tool" type="text" maxlength="120" autocomplete="off">
+                    </div>
+                </div>
+                <div class="text-secondary small mt-3" id="mediaLicensePreview" aria-live="polite"></div>
+                <div class="alert alert-danger mt-3 mb-0 d-none" role="alert" id="mediaLicenseError"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-bs-dismiss="modal"><?php echo htmlspecialchars(__('media_license.cancel')); ?></button>
+                <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('media_license.save')); ?></button>
             </div>
         </form>
     </div>

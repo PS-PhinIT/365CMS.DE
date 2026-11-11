@@ -131,7 +131,7 @@ final class UploadHandler
             'uploader_id' => isset($currentUser->id) ? (int)$currentUser->id : null,
             'original_name' => $originalName,
             'category' => $category,
-        ]);
+        ] + $this->licenseMetaFromFile($targetPath));
 
         if ($convertImagesToWebP && $this->isConvertibleImage($targetPath)) {
             $this->imageProcessor->convertToWebP($targetPath);
@@ -476,6 +476,32 @@ final class UploadHandler
     {
         $mimeType = mime_content_type($filePath) ?: '';
         return in_array($mimeType, ['image/jpeg', 'image/png', 'image/gif'], true);
+    }
+
+    /**
+     * Urheber-/Lizenz-Vorbelegung aus IPTC/EXIF/XMP (#11). Läuft vor dem Entfernen der
+     * EXIF-Daten und bricht einen Upload nie ab.
+     *
+     * @return array{license?: array<string, mixed>}
+     */
+    private function licenseMetaFromFile(string $absolutePath): array
+    {
+        try {
+            if (!MediaLicenseService::getInstance()->isPrefillEnabled()) {
+                return [];
+            }
+
+            $license = MediaLicenseService::normalize(ImageMetadataReader::readLicenseHints($absolutePath));
+        } catch (\Throwable $e) {
+            $this->logger->warning('Lizenzangaben konnten nicht aus den Bild-Metadaten gelesen werden.', [
+                'path' => $absolutePath,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        return $license !== [] ? [MediaLicenseService::META_KEY => $license] : [];
     }
 
     private function resolveUploadFileMode(string $relativePath): int
