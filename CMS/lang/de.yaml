@@ -311,3 +311,8 @@ default:
   "admin.feeds.error.csrf": "Sicherheitstoken ungültig. Bitte erneut versuchen."
   "admin.feeds.error.validation": "Bitte prüfe Eintragszahl und Inhaltsformat."
   "admin.feeds.error.save": "Feed-Einstellungen konnten nicht gespeichert werden."
+  "admin.marketplace.integrated.filter": "Im Core enthalten"
+  "admin.marketplace.integrated.badge": "Im Core enthalten"
+  "admin.marketplace.integrated.reason": "Seit 365CMS %s Teil des Cores – keine Installation nötig."
+  "admin.marketplace.integrated.remove_hint": "Das deaktivierte Plugin-Verzeichnis kann entfernt werden."
+  "admin.marketplace.integrated.open": "Zur Core-Funktion"

@@ -11,6 +11,36 @@
       "is_paid": false,
       "install_supported": false,
       "update_url": "https://365cms.de/plugins/cms-importer/update.json"
+    },
+    {
+      "slug": "cms-feed",
+      "name": "CMS Feed",
+      "description": "RSS-/Atom-Feeds und Feed-Aggregator. Seit 365CMS 4.0.0 Teil des Cores (Einstellungen › Feeds).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-downloads",
+      "name": "CMS Downloads",
+      "description": "Download-Verwaltung mit Versionen, Zugriffsregeln und Statistik. Seit 365CMS 4.0.0 Teil des Cores (Medien › Downloads).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-contact",
+      "name": "CMS Contact",
+      "description": "Kontakt- und Formularbaukasten mit Eingangsfach. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Formulare).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
     }
   ]
 }

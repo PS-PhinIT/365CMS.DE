@@ -211,6 +211,11 @@ class UpdateService
         $updates = [];
         
         foreach ($plugins as $folder => $plugin) {
+            if (IntegratedPluginService::isIntegrated((string) $folder)) {
+                // Teil des Cores: Plugin bleibt deaktiviert, Updates entfallen.
+                continue;
+            }
+
             $currentVersion = $plugin['version'] ?? '1.0.0';
 
             $localUpdateData = [];
