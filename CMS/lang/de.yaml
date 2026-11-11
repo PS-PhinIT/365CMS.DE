@@ -316,3 +316,4 @@ default:
   "admin.marketplace.integrated.reason": "Seit 365CMS %s Teil des Cores – keine Installation nötig."
   "admin.marketplace.integrated.remove_hint": "Das deaktivierte Plugin-Verzeichnis kann entfernt werden."
   "admin.marketplace.integrated.open": "Zur Core-Funktion"
+  "admin_menu.section.active_plugins": "Aktive Plugins"

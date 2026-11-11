@@ -131,7 +131,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 |---|---|
 | `AdminMenu\AdminMenuService` | Einstieg für den Menübaum der Seitenleiste ([ADMIN-MENU.md](../admin/ADMIN-MENU.md)): wählt Profil bzw. eigenes Layout (je Site oder global), liest Katalog und registrierte Plugin-Menüs ein (nur lesend) und cacht den Baum. Der Cache-Schlüssel enthält Rechte, Site, Profil, Layout-Version, Core-Module, vorhandene Seitendateien, Marketplace-Einstellung, Sprache und Plugin-Fingerprint |
 | `AdminMenu\CoreCatalog`, `AdminMenu\ProfileLayouts` | Katalog aller Core-Seiten (Route, Capabilities, Seitendatei, Kachelkategorie, Badge) und die Bäume der Profile *Klassisch* und *Strukturiert* |
-| `AdminMenu\MenuRegistry`, `AdminMenu\MenuBuilder` | Registry aus Katalog, Plugin-Menüs (Standard-Icon `puzzle`) und Wunschplätzen; der Builder setzt Layout, Rechte, Module und Plugin-Einträge zum Baum zusammen |
+| `AdminMenu\MenuRegistry`, `AdminMenu\MenuBuilder` | Registry aus Katalog und Plugin-Menüs (Standard-Icon `puzzle`); der Builder setzt Layout, Rechte, Module und Plugin-Einträge zum Baum zusammen und sammelt nicht platzierte Plugin-Seiten im Abschnitt „Aktive Plugins“ |
 | `AdminMenu\LayoutValidator`, `AdminMenu\LayoutRepository` | prüft eigene Layouts (Editor, Import) bzw. speichert sie in der Tabelle `admin_menu_layouts` (global oder je Site, mit Version) |
 | `AdminMenu\BadgeProvider` | Badge-Zähler (Updates, Kommentare, Protokolle, DSGVO-Anfragen); nie gecacht, weitere Quellen über `register()` |
 | `AdminNavigationService` | bereitet den Baum für die Ausgabe auf (`build()`): aktiver Eintrag, Badges, Brotkrumen, Aufklappzustand (Abschnitte offen, Gruppen zu, aktive Gruppe offen), Kachelseiten und Plugin-Hinweis |
