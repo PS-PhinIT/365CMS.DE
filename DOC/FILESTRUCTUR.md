@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: FILESTRUCTUR
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-10
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -49,12 +49,13 @@ Verified top-level entries of this repository:
 | `DOC/` | directory | public project documentation |
 | `RELEASE/` | directory | release packages and checksums (including `365CMS-3.4.0-*`) |
 | `SCREENSHOTS/` | directory | screenshots |
+| `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
 | `README.md` | file | public project README |
 | `Changelog.md` | file | project changelog |
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/`, `TESTS/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-10-02); they exist only in local maintainer workspaces.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-10-02); they exist only in local maintainer workspaces. Of `TESTS/`, only `TESTS/admin-menu/` is versioned (4.0.0); the other suites whitelisted in `.gitignore` exist only locally.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -68,12 +69,13 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `DOC/` | Verzeichnis | öffentliche Projektdokumentation |
 | `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (einschließlich `365CMS-3.4.0-*`) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
+| `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
 | `README.md` | Datei | öffentliches Projekt-README |
 | `Changelog.md` | Datei | Projekt-Changelog |
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/`, `TESTS/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-10-02); sie existieren nur in lokalen Maintainer-Arbeitsständen.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-10-02); sie existieren nur in lokalen Maintainer-Arbeitsständen. Von `TESTS/` ist nur `TESTS/admin-menu/` versioniert (4.0.0); die übrigen in `.gitignore` freigegebenen Suites existieren nur lokal.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 

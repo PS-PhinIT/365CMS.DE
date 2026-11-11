@@ -964,6 +964,9 @@ class Bootstrap
         });
         Debug::checkpoint('bootstrap.opcache_checked');
 
+        // Core-Funktionsbereiche (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise).
+        Services\FeatureHooks\Registry::register();
+
         Hooks::doAction('cms_init');
         Hooks::doAction('cms_init_' . $this->mode); // H-12: Modus-spezifischer Hook
         Debug::checkpoint('bootstrap.hooks_initialized', ['mode' => $this->mode]);

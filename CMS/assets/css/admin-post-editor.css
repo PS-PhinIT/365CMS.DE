@@ -292,7 +292,7 @@ body.admin-body .cms-editor-title-input::placeholder {
 .cms-editor-writing .editorjs-wrap .cms-editor-commandbar {
     border-bottom-color: var(--cms-border);
     border-radius: var(--cms-radius-card) var(--cms-radius-card) 0 0;
-    background: var(--cms-sidebar-bg);
+    background: var(--cms-surface-soft);
 }
 
 .cms-editor-writing .editorjs-holder {
@@ -317,6 +317,23 @@ body.admin-body .cms-editor-title-input::placeholder {
 }
 
 .cms-editor-extras > .card {
+    margin-bottom: 0;
+}
+
+/* Lesbarkeit + SERP-/Social-Vorschau: nebeneinander, sobald Platz ist.
+   Die geteilten Partials tragen .h-100 – ohne Gegenregel wird jede Karte so hoch
+   wie das ganze Paar und schiebt sich über die folgenden SEO-Karten. */
+.cms-editor-extras__pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.cms-editor-extras__pair > .card {
+    height: auto !important;
+    min-width: 0;
     margin-bottom: 0;
 }
 
@@ -617,7 +634,7 @@ body.admin-body .cms-editor-title-input::placeholder {
     padding: 1rem;
     border: 1px dashed var(--cms-border-strong);
     border-radius: var(--cms-radius);
-    background: var(--cms-sidebar-bg);
+    background: var(--cms-surface-soft);
     color: var(--cms-text-muted);
     font-size: 0.8125rem;
     text-align: center;
@@ -673,7 +690,7 @@ body.admin-body .cms-editor-title-input::placeholder {
     padding: 0.625rem 0.75rem;
     border: 1px solid var(--cms-border);
     border-radius: var(--cms-radius);
-    background: var(--cms-sidebar-bg);
+    background: var(--cms-surface-soft);
 }
 
 .cms-editor-permalink__head {

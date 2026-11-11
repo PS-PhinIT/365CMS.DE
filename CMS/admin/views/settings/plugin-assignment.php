@@ -43,17 +43,7 @@ $esc = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT
     </div>
 
     <div class="cms-settings-toolbar">
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link" href="/admin/settings">Allgemein</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="<?= $esc(\CMS\Services\PluginSiteAssignmentService::ADMIN_PATH) ?>" aria-current="page">Plugins</a>
-            </li>
-            <li class="nav-item ms-auto">
-                <a class="nav-link" href="/admin/settings?tab=content">Beiträge &amp; Sites</a>
-            </li>
-        </ul>
+        <?php $settingsTabsActive = 'plugins'; require __DIR__ . '/partials-tabs.php'; ?>
     </div>
 
     <?php if ($assignmentPlugins === []): ?>
@@ -72,7 +62,7 @@ $esc = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT
                 <h3 class="card-title" id="cms-assignment-title">Plugin-Menüs je Site</h3>
             </div>
             <div class="card-body cms-assignment__intro">
-                <p class="mb-2">Legt fest, in welcher Site-Administration die Menüeinträge eines Plugins in der Seitenleiste erscheinen. Plugins ohne gespeicherte Zuweisung sind allen Sites zugewiesen.</p>
+                <p class="mb-2">Legt fest, in welcher Site-Administration die Menüeinträge eines Plugins in der Seitenleiste erscheinen. Plugins ohne gespeicherte Zuweisung sind allen Sites zugewiesen. Die Sites selbst werden unter <a href="<?= $esc(\CMS\Services\AdminSiteContextService::ADMIN_PATH) ?>">Einstellungen › MultiSites</a> verwaltet.</p>
                 <p class="text-secondary mb-0">Die Registrierung der Plugins bleibt unverändert und ihre Seiten bleiben erreichbar – wird eine Plugin-Seite in einer nicht zugewiesenen Site direkt aufgerufen, erscheint lediglich ein Hinweis.</p>
             </div>
 

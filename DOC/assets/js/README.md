@@ -13,6 +13,12 @@ Der Ordner `CMS/assets/js/` enthält interne 365CMS-Skripte für Admin, Frontend
 - u. a. `photoswipe-init.js`, `editor-init.js`, `site-tables.js`
 - zentrale Ergänzung zu externen Bibliotheken
 
+## Admin-Helfer (seit 4.0.0)
+
+- `admin-sidebar-editor.js` – Editor der Admin-Seitenleiste (Profil „Eigenes Layout“ unter *Einstellungen › Admin-Menü*, siehe [../../admin/ADMIN-MENU.md](../../admin/ADMIN-MENU.md)); nicht verwechseln mit `admin-menu-editor.js` (Menüs des Themes)
+- `admin-batch-runner.js` – Browser-Gegenstück zu `BatchJobService`: `window.cmsBatchRunner.create({ container, endpoint, token, stepAction, cancelAction, extra, onDone, onProgress })`, danach `runner.start(jobId)`. Ruft die Schritte nacheinander auf, zeigt den Fortschritt und kann pausieren, fortsetzen und abbrechen (Bestätigung über `cmsConfirm`)
+- `cmsToast(type, message, { timeout })` – kurze Rückmeldung unten rechts (`success`, `info`, `warning`, `danger`; `aria-live`), definiert in `admin/partials/footer.php`
+
 ## CSP-Infrastruktur
 
 - `cms-csp-runtime.js` – Trusted-Types-`default`-Policy (DOMPurify) und Style-Nonce für dynamisch erzeugte `<style>`-Elemente; wird über `cms_csp_runtime_tags()` als erstes Script im `<head>` geladen (siehe [../dompurify/README.md](../dompurify/README.md))

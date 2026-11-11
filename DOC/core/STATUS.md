@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Implementierungsstatus
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** v24 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** v25 | **Status:** Stable
 
 ## English (summary)
 
@@ -13,7 +13,7 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Merkmal | Wert | Quelle |
 |---|---|---|
 | Core-Version | `4.0.0`, Release `2026-11-08`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
-| Schema | `v24` | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` |
+| Schema | `v25` | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.0.9 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |

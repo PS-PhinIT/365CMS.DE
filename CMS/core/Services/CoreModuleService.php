@@ -386,6 +386,59 @@ final class CoreModuleService
     }
 
     /**
+     * Wie isAdminPageEnabled(), aber ohne Datenbank für gegebene Modulzustände (Installer-Vorschau
+     * des Admin-Menüs). Schaltbare Module nehmen den übergebenen Zustand, alle anderen ihren Standard;
+     * Abhängigkeiten zählen wie in isModuleEnabled().
+     *
+     * @param array<string, bool> $toggleStates Slug des schaltbaren Moduls => aktiv
+     */
+    public static function isAdminPageEnabledForStates(string $pageSlug, array $toggleStates): bool
+    {
+        $normalizedSlug = trim($pageSlug);
+        if ($normalizedSlug === '') {
+            return true;
+        }
+
+        $matched = false;
+        foreach (self::MODULES as $slug => $definition) {
+            if (!in_array($normalizedSlug, (array) ($definition['admin_pages'] ?? []), true)) {
+                continue;
+            }
+
+            $matched = true;
+            if (self::isModuleEnabledForStates($slug, $toggleStates)) {
+                return true;
+            }
+        }
+
+        return !$matched;
+    }
+
+    /** @param array<string, bool> $toggleStates */
+    private static function isModuleEnabledForStates(string $slug, array $toggleStates): bool
+    {
+        $definition = self::MODULES[$slug] ?? null;
+        if ($definition === null) {
+            return true;
+        }
+
+        $enabled = self::isToggleableDefinition($definition) && array_key_exists($slug, $toggleStates)
+            ? !empty($toggleStates[$slug])
+            : (bool) ($definition['default_enabled'] ?? true);
+        if (!$enabled) {
+            return false;
+        }
+
+        foreach ((array) ($definition['dependencies'] ?? []) as $dependencySlug) {
+            if (!self::isModuleEnabledForStates((string) $dependencySlug, $toggleStates)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $children
      * @return array<int, array<string, mixed>>
      */

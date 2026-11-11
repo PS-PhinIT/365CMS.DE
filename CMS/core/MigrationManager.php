@@ -30,7 +30,7 @@ class MigrationManager
      * Aktuelle Schema-Version – erhöhen wenn neue Migrations hinzukommen.
      * Wird in cms_settings (option_name = 'db_schema_version') gespeichert.
      */
-    public const SCHEMA_VERSION = 'v24';
+    public const SCHEMA_VERSION = 'v25';
 
     public function __construct(Database $db)
     {
@@ -79,6 +79,7 @@ class MigrationManager
 
         $p   = $this->prefix;
         $pdo = $this->db->getPdo();
+        $charset = defined('DB_CHARSET') ? (string) DB_CHARSET : 'utf8mb4';
 
         $migrations = [
             "CREATE TABLE IF NOT EXISTS `{$p}passkey_credentials` (
@@ -198,6 +199,11 @@ class MigrationManager
             "ALTER TABLE `{$p}post_revisions` ADD COLUMN `meta_title` VARCHAR(255) DEFAULT NULL",
             "ALTER TABLE `{$p}post_revisions` ADD COLUMN `meta_description` TEXT DEFAULT NULL",
             "ALTER TABLE `{$p}post_revisions` ADD COLUMN `fingerprint` CHAR(40) DEFAULT NULL",
+            // v25: eigene Admin-Sidebar-Layouts (AdminMenu\LayoutRepository) und lange Admin-Aufgaben
+            // (BatchJobService). Die Definitionen stammen aus SchemaManager, damit Neuinstallation, Update
+            // und Laufzeitprüfung dieselben Tabellen anlegen.
+            SchemaManager::getSchemaQueries($p, $charset)['admin_menu_layouts'],
+            SchemaManager::getSchemaQueries($p, $charset)['batch_jobs'],
         ];
 
         foreach ($migrations as $sql) {

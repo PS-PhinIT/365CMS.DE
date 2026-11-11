@@ -783,10 +783,11 @@ class SettingsModule
             }
         }
 
-        // Schlüssel für gespeicherte Geheimnisse und der Backup-Pfad müssen erhalten bleiben,
-        // sonst wären verschlüsselte Einstellungen, TOTP-Secrets und Backups nicht mehr lesbar.
+        // Schlüssel für gespeicherte Geheimnisse sowie Backup- und Privatspeicher-Pfad müssen erhalten
+        // bleiben, sonst wären verschlüsselte Einstellungen, TOTP-Secrets, Backups und private Dateien
+        // (geschützte Downloads, Formular-Uploads) nicht mehr lesbar.
         $preservedConstants = '';
-        foreach (['CMS_ENCRYPTION_KEY', 'CMS_ENCRYPTION_KEYS_PREVIOUS', 'CMS_BACKUP_PATH'] as $constant) {
+        foreach (['CMS_ENCRYPTION_KEY', 'CMS_ENCRYPTION_KEYS_PREVIOUS', 'CMS_BACKUP_PATH', 'CMS_PRIVATE_PATH'] as $constant) {
             $value = defined($constant) ? constant($constant) : '';
             $value = is_array($value) ? implode(',', array_map('strval', $value)) : (is_scalar($value) ? (string) $value : '');
             $preservedConstants .= "defined('{$constant}') || define('{$constant}', '" . $escape($value) . "');\n";

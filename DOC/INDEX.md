@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: INDEX
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -52,7 +52,7 @@ Die Core-Dokumente beschreiben Bootstrap, Routing, Schema, Services, Hooks, APIs
 | [core/README.md](core/README.md) | Core documentation entry |
 | [core/ARCHITECTURE.md](core/ARCHITECTURE.md) | Bootstrap, routing, services, modules |
 | [core/CORE-CLASSES.md](core/CORE-CLASSES.md) | Central core classes |
-| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (`SCHEMA_VERSION = v24`) |
+| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (`SCHEMA_VERSION = v25`) |
 | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) | Actions, filters, integration points |
 | [core/API-REFERENCE.md](core/API-REFERENCE.md) | Technical interfaces |
 | [core/SERVICES.md](core/SERVICES.md) | Service layer |
@@ -74,7 +74,8 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 
 | Document / Dokument | Purpose / Zweck |
 |---|---|
-| [admin/README.md](admin/README.md) | Navigation (sidebar groups, admin shell) and area overview |
+| [admin/README.md](admin/README.md) | Navigation (sidebar profiles, admin shell) and area overview |
+| [admin/ADMIN-MENU.md](admin/ADMIN-MENU.md) | Admin menu: profiles Classic/Structured/Custom, page catalogue, sidebar editor, tile pages, plugin menu placement |
 | [admin/GUIDE.md](admin/GUIDE.md) | Operator guide |
 | [admin/FILESTRUCTURE.md](admin/FILESTRUCTURE.md) | Admin file structure and routing |
 | [admin/PANEL-INTEGRATION.md](admin/PANEL-INTEGRATION.md) | Custom admin page integration |
@@ -98,6 +99,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Security | [admin/security/README.md](admin/security/README.md) |
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
+| MultiSites (admin context per domain: accent, site switcher, plugin assignment, menu layout) | [admin/system-settings/MULTISITES.md](admin/system-settings/MULTISITES.md) |
 | AI services (admin) | [admin/system-settings/AI-SERVICES.md](admin/system-settings/AI-SERVICES.md) |
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
 | Core modules | [admin/system-settings/MODULES.md](admin/system-settings/MODULES.md) |

@@ -475,6 +475,11 @@ final class EditorJsAssetService
             $urls[] = $this->buildAssetUrl('editorjs/' . $file);
         }
 
+        // Zusätzliche Core-Blöcke (EditorJsBlockRegistry) vor der Factory laden.
+        foreach (EditorJsBlockRegistry::scripts() as $script) {
+            $urls[] = $this->buildAssetUrl($script);
+        }
+
         $urls[] = $this->buildAssetUrl('js/editor-init.js');
 
         return $urls;

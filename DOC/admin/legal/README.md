@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Recht & Datenschutz
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Legal** (*Recht*, core module `legal`): legal pages (imprint, privacy policy, terms, revocation), the cookie/consent manager and GDPR data requests (access/export Art. 15 and erasure Art. 17). All pages require `manage_settings`.
+This folder documents the admin area **Legal** (*Recht*, core module `legal`): legal pages (imprint, privacy policy, terms, revocation), the cookie/consent manager and GDPR data requests (access/export Art. 15 and erasure Art. 17). All pages require `manage_settings`.
 
 ## Deutsch
 

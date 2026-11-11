@@ -22,6 +22,18 @@
         'mediaText',
         'button'
     ];
+    // Zusätzliche Core-Blöcke (EditorJsBlockRegistry): Skripte laden vor dieser Datei und melden sich
+    // per window.CMS_EDITORJS_BLOCKS.push({ name, toolClass, definition }) an.
+    var EXTRA_BLOCKS = (Array.isArray(window.CMS_EDITORJS_BLOCKS) ? window.CMS_EDITORJS_BLOCKS : []).filter(function (block) {
+        return !!block
+            && typeof block.name === 'string'
+            && /^[a-zA-Z][a-zA-Z0-9]{1,40}$/.test(block.name)
+            && typeof block.toolClass === 'function'
+            && BLOCK_TOOL_NAMES.indexOf(block.name) === -1;
+    });
+    EXTRA_BLOCKS.forEach(function (block) {
+        BLOCK_TOOL_NAMES.push(block.name);
+    });
     var INLINE_TOOL_NAMES = ['inlineCode', 'underline', 'strikethrough', 'hyperlink', 'marker', 'spoiler', 'textColor'];
     var TUNE_TOOL_NAMES = ['anchor', 'alignmentTune', 'indentTune', 'textVariant', 'blockClipboard'];
     var PLUGIN_NAMES = ['undo', 'dragDrop'];
@@ -5502,6 +5514,11 @@
         }, availableBlockTunes), true);
 
         addTool(tools, 'button', withBlockTunes({}, availableBlockTunes), true);
+
+        EXTRA_BLOCKS.forEach(function (block) {
+            var definition = block.definition && typeof block.definition === 'object' ? block.definition : {};
+            tools[block.name] = Object.assign(withBlockTunes(definition, availableBlockTunes), { class: block.toolClass });
+        });
 
         return tools;
     }

@@ -1,11 +1,11 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Core-Module (Feature-Schalter)
 
-> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/modules` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_modules`
 
 ## English (summary)
 
-`/admin/modules` (`CMS/admin/modules.php` → `CMS/admin/modules/system/ModulesModule.php` → `CMS/admin/views/system/modules.php`) switches whole core feature areas on or off. Definitions live in `CMS\Services\CoreModuleService::MODULES`; states are stored in the settings group `core_modules`. A disabled module hides its sidebar group, its admin entry points refuse access (`isAdminPageEnabled()`), and runtime features check `isModuleEnabled()`. Dependencies are resolved automatically; some modules mirror a legacy setting.
+`/admin/modules` (`CMS/admin/modules.php` → `CMS/admin/modules/system/ModulesModule.php` → `CMS/admin/views/system/modules.php`) switches whole core feature areas on or off. Definitions live in `CMS\Services\CoreModuleService::MODULES`; states are stored in the settings group `core_modules`. A disabled module hides its pages in every sidebar profile. Groups and tile pages left empty disappear, so the optional groups SEO, AI services, members and subscriptions appear only while their module is active, or while a plugin places its menu there ([../ADMIN-MENU.md](../ADMIN-MENU.md)). Its admin entry points refuse access (`isAdminPageEnabled()`), and runtime features check `isModuleEnabled()`. Dependencies are resolved automatically; some modules mirror a legacy setting.
 
 ## Deutsch
 
@@ -32,7 +32,7 @@ Alle Module sind standardmäßig **aktiv**. Die Abo-Untermodule sind hier nicht 
 
 ### Wirkung eines deaktivierten Moduls
 
-1. Die zugehörige Sidebar-Gruppe verschwindet.
+1. Die Seiten des Moduls verschwinden in jedem Sidebar-Profil. `AdminMenuService` prüft dafür je Menüeintrag `CoreModuleService::isAdminPageEnabled('<seite>')`. Leere Gruppen und Kachelseiten entfallen. Deshalb erscheinen die optionalen Gruppen *SEO*, *KI-Dienste*, *Mitgliederbereich* und *Abos* nur bei aktivem Modul. Ausnahme: Ein Plugin hat die Gruppe als Wunschplatz gewählt. Der Modulzustand ist Teil des Menü-Cache-Schlüssels, siehe [../ADMIN-MENU.md](../ADMIN-MENU.md#9-cache-und-sidebar-zustand).
 2. Die Admin-Einstiege prüfen `CoreModuleService::isAdminPageEnabled('<seite>')` und verweigern den Zugriff.
 3. Laufzeitfunktionen fragen `isModuleEnabled('<slug>')` ab, z. B.:
    - `seo` aus → keine erweiterten SEO-Felder im Editor,

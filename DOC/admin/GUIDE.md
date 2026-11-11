@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Bedienleitfaden
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -18,10 +18,15 @@ Abmelden über das Benutzermenü im Fußbereich der Seitenleiste (Klick auf den 
 
 ### 2. Orientierung
 
-- Die **Seitenleiste** beginnt mit dem Site-Umschalter (phinit.de / 365network.de) und ist in einklappbare Gruppen gegliedert: Übersicht, Inhalte, Benutzer, Gestaltung & Marketing, Sicherheit & Recht, Plugins, Verwaltung. Standardmäßig sind die ersten beiden Gruppen geöffnet; eigene Auf-/Zuklapp-Entscheidungen und die eingeklappte Icon-Leiste (Schalter oben in der Seitenleiste) werden je Benutzer gespeichert. Unter 992 px Breite öffnet das Menü-Symbol in der Kopfzeile die Seitenleiste als Drawer.
-- In der Gruppe **Plugins** erscheint je Plugin ein Eintrag mit seinen Unterseiten. Welche Plugins in welcher Site erscheinen, legt *Einstellungen › Plugins › Plugin-Zuweisung* fest ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-zuweisung)).
+- Die **Seitenleiste** beginnt mit dem Site-Umschalter (Sites aus *Einstellungen › MultiSites*). Darunter folgt der Menübaum des gewählten **Sidebar-Profils** (*Einstellungen › Admin-Menü*, Details in [ADMIN-MENU.md](ADMIN-MENU.md)):
+  - *Klassisch* (Standard): drei Abschnitte, *Arbeit* (Dashboard, Updates, Beiträge, Medien, Seiten, Kommentare), *Gestaltung* (Design, Plugins) und *Verwaltung* (Benutzer, Werkzeuge, Einstellungen, Website-Zustand).
+  - *Strukturiert*: aufgabenorientierte Gruppen wie Inhalt, Medien, Redaktion, Struktur, Personen, Konfiguration und Berichte.
+  - Ein eigenes Layout lässt sich im Sidebar-Editor zusammenstellen.
+
+  Gruppen optionaler Module (z. B. SEO, KI-Dienste, Mitgliederbereich, Abos) erscheinen nur bei aktivem Modul. Gruppen sind zugeklappt, bis man sie öffnet; die Gruppe der aktiven Seite ist immer offen. *Einstellungen*, *Website-Zustand*, *Konfiguration* und *Berichte* öffnen Kachelseiten. Auf-/Zuklapp-Zustände und die eingeklappte Icon-Leiste (Schalter oben in der Seitenleiste) werden je Benutzer gespeichert. Unter 992 px Breite öffnet das Menü-Symbol in der Kopfzeile die Seitenleiste als Drawer.
+- Plugin-Seiten stehen in der Gruppe *Plugins* bzw. *Erweitern*; Plugins mit mehreren Seiten erhalten eine eigene Gruppe direkt danach. Welche Plugins in welcher Site erscheinen, legt *Einstellungen › Plugins › Plugin-Zuweisung* fest ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-zuweisung)).
 - Ein Punkt am Avatar im Fußbereich zeigt Systemhinweise (fehlgeschlagener Cron-Lauf, Backup älter als 24 Stunden, verfügbare Updates); ein Klick öffnet die Liste.
-- Fehlende Menüpunkte bedeuten: Modul deaktiviert (`/admin/modules`), Marketplace ausgeschaltet oder – bei Plugins – das Plugin ist der aktuellen Site nicht zugewiesen.
+- Fehlende Menüpunkte bedeuten: Modul deaktiviert (`/admin/modules`), Marketplace ausgeschaltet, der Eintrag ist im eigenen Layout ausgeblendet oder – bei Plugins – das Plugin ist der aktuellen Site nicht zugewiesen.
 - Das **Dashboard** zeigt offene Aufgaben unter „Nächste Aufmerksamkeit“ und lässt sich je Administrator personalisieren (sichtbare Bereiche, Widgets, Favoriten).
 
 ### 3. Häufige Aufgaben

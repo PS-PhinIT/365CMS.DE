@@ -1,0 +1,1175 @@
+/**
+ * Einstellungen › Admin-Menü: Übersicht (/admin/settings?tab=admin-menu) und Menü-Editor (&view=editor).
+ * Gehört zu admin-sidebar-editor.js. Nutzt ausschließlich die Design-Tokens aus admin-tabler.css (--cms-*).
+ * Nicht verwechseln mit dem Menü-Editor des Themes (admin-menu-editor.js).
+ */
+
+/* ── Gemeinsam ───────────────────────────────────────────────── */
+
+.cms-am-lead {
+    max-width: 75ch;
+    margin: 0 0 1.25rem;
+    color: var(--cms-text-muted);
+    line-height: 1.55;
+}
+
+.cms-am-hint {
+    margin: 0 0 0.75rem;
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.cms-am-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--cms-hover);
+    color: var(--cms-text-muted);
+    font-size: 0.71875rem;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.cms-am-chip--active {
+    border-color: color-mix(in srgb, var(--cms-success) 30%, transparent);
+    background: var(--cms-success-soft);
+    color: var(--cms-success);
+}
+
+.cms-am-chip--scope,
+.cms-am-chip--accent {
+    border-color: color-mix(in srgb, var(--cms-accent) 30%, transparent);
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+}
+
+.cms-am-chip--muted {
+    border-color: var(--cms-border-strong);
+    background: var(--cms-surface-soft);
+    color: var(--cms-text-muted);
+}
+
+.cms-am-chip--locked {
+    border-color: var(--cms-sidebar-border);
+    background: var(--cms-sidebar-bg);
+    color: var(--cms-text);
+}
+
+.cms-am-chip--warning {
+    border-color: color-mix(in srgb, var(--cms-warning) 30%, transparent);
+    background: var(--cms-warning-soft);
+    color: var(--cms-warning);
+}
+
+.cms-am-chip--danger {
+    border-color: color-mix(in srgb, var(--cms-danger) 30%, transparent);
+    background: var(--cms-danger-soft);
+    color: var(--cms-danger);
+}
+
+.cms-am-chip--info {
+    border-color: var(--cms-border-strong);
+    background: var(--cms-bg);
+    color: var(--cms-text);
+}
+
+.cms-am-chip--plugin {
+    border-color: var(--cms-border-strong);
+    border-style: dashed;
+    background: transparent;
+    color: var(--cms-text-muted);
+}
+
+.cms-am-page .page-title {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+}
+
+.cms-am-page .page-title .cms-am-chip {
+    margin-left: 0.625rem;
+    font-size: 0.75rem;
+}
+
+/* ── Übersicht: Profilwahl mit Vorschau ──────────────────────── */
+
+.cms-am-profiles__grid {
+    display: grid;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (min-width: 992px) {
+    .cms-am-profiles__grid {
+        grid-template-columns: minmax(0, 1fr) minmax(280px, calc(var(--cms-sidebar-width) + 24px));
+    }
+}
+
+.cms-am-profiles__choices {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.cms-am-profile__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--cms-text);
+    font-weight: 600;
+}
+
+.cms-am-profile__desc {
+    margin-top: 0.25rem;
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.cms-am-profile__meta {
+    margin-top: 0.5rem;
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+}
+
+.cms-am-profiles__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cms-am-profiles__footer form {
+    margin: 0;
+}
+
+/* Vorschau der Seitenleiste (Markup aus partials/sidebar-nav.php, Stile aus admin-shell.css) */
+.cms-am-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.cms-am-preview__caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.cms-am-preview__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 32px;
+    border-radius: 4px;
+    color: var(--cms-accent-strong);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cms-am-preview__action:hover {
+    color: var(--cms-accent-strong);
+    text-decoration: underline;
+}
+
+.cms-am-preview__frame {
+    width: 100%;
+    max-width: calc(var(--cms-sidebar-width) + 2px);
+    max-height: min(640px, 70vh);
+    padding: 8px 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--cms-sidebar-border);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-sidebar-bg);
+    color: var(--cms-text);
+    font-size: 0.90625rem;
+    scrollbar-color: var(--cms-border-strong) transparent;
+    scrollbar-width: thin;
+}
+
+.cms-am-preview__nav {
+    min-width: 0;
+}
+
+.cms-am-preview__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 280px;
+    padding: 1.5rem;
+    border: 1px dashed var(--cms-border-strong);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-surface-soft);
+    color: var(--cms-text-muted);
+    text-align: center;
+}
+
+.cms-am-preview__empty > .ti {
+    font-size: 2rem;
+}
+
+.cms-am-preview__empty p {
+    margin: 0;
+}
+
+.cms-am-preview__warnings {
+    margin: 0.75rem 0 0;
+    padding: 0.625rem 0.75rem 0.625rem 1.75rem;
+    border: 1px solid color-mix(in srgb, var(--cms-warning) 35%, transparent);
+    border-radius: var(--cms-radius);
+    background: var(--cms-warning-soft);
+    color: var(--cms-text);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.cms-am-preview__warnings.is-error {
+    border-color: color-mix(in srgb, var(--cms-danger) 35%, transparent);
+    background: var(--cms-danger-soft);
+}
+
+.cms-am-preview__warnings li + li {
+    margin-top: 0.25rem;
+}
+
+.cms-am-preview__error {
+    margin: 0;
+    padding: 1rem;
+    color: var(--cms-danger);
+    font-size: 0.875rem;
+}
+
+/* ── Übersicht: Layouts je Site, Import/Export, Hilfe ────────── */
+
+.cms-am-scopes__table th[scope="row"] {
+    font-weight: 400;
+}
+
+.cms-am-scopes__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--cms-text);
+    font-weight: 600;
+}
+
+.cms-am-scopes__url {
+    display: block;
+    margin-top: 0.125rem;
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.cms-am-scopes__stand {
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+}
+
+.cms-am-scopes__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.375rem;
+}
+
+.cms-am-scopes__actions form {
+    margin: 0;
+}
+
+.cms-am-scopes__footer {
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+}
+
+.cms-am-exchange__form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    height: 100%;
+    margin: 0;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--cms-border);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-surface-soft);
+}
+
+.cms-am-exchange__form > .mb-3 {
+    align-self: stretch;
+}
+
+.cms-am-exchange__form > .btn {
+    margin-top: auto;
+}
+
+.cms-am-exchange__title {
+    margin: 0 0 0.375rem;
+    color: var(--cms-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.cms-am-exchange__text {
+    margin: 0 0 1rem;
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.cms-am-help__list {
+    display: grid;
+    gap: 0.625rem;
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--cms-text);
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.cms-am-help__list li::marker {
+    color: var(--cms-text-muted);
+}
+
+/* ── Menü-Editor: Kopf, Werkzeugleiste, Arbeitsfläche ────────── */
+
+.cms-am-editor-page .page-pretitle a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.cms-am-editor-page .page-pretitle a:hover {
+    color: var(--cms-accent-strong);
+    text-decoration: underline;
+}
+
+.cms-am-editor__subtitle {
+    margin: 0.375rem 0 0;
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+}
+
+.cms-am-editor {
+    /* Höhe der Werkzeugleiste setzt admin-sidebar-editor.js (ResizeObserver); 58px als Startwert. */
+    --cms-am-sticky-top: calc(var(--cms-topbar-height) + var(--cms-am-toolbar-height, 58px) + 16px);
+    container: cms-am-editor / inline-size;
+}
+
+.cms-am-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--cms-border-strong);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-bg);
+    box-shadow: var(--cms-shadow-sm);
+}
+
+.cms-am-toolbar__group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cms-am-toolbar__group--end {
+    margin-left: auto;
+}
+
+.cms-am-toolbar__select {
+    width: auto;
+    min-width: 13rem;
+}
+
+.cms-am-toolbar .btn {
+    white-space: nowrap;
+}
+
+/* Import: das Dateifeld ist visuell versteckt, der Fokus soll trotzdem am Button sichtbar sein */
+.cms-am-toolbar label.btn:focus-within {
+    outline: var(--cms-focus-outline);
+    outline-offset: var(--cms-focus-offset);
+}
+
+.cms-am-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.cms-am-workspace .card.cms-am-pane {
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.cms-am-pane__body {
+    container: cms-am-pane / inline-size;
+}
+
+.cms-am-side {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    min-width: 0;
+}
+
+.cms-am-count {
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.cms-am-count.is-limit {
+    color: var(--cms-danger);
+    font-weight: 600;
+}
+
+.cms-am-pane__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Zwei Spalten: Verfügbare Einträge (über die ganze Höhe) | Layout, rechts darunter Eigenschaften und Vorschau.
+   Die mitlaufende linke Spalte darf keine weiteren Bereiche enthalten, sonst überdeckt sie diese:
+   Grenze für sticky ist das gesamte Raster, nicht die Rasterzeile. */
+@container cms-am-editor (min-width: 700px) {
+    .cms-am-toolbar {
+        position: sticky;
+        top: var(--cms-topbar-height);
+        z-index: 20;
+    }
+
+    .cms-am-workspace {
+        grid-template-columns: minmax(240px, 5fr) minmax(0, 7fr);
+    }
+
+    .cms-am-side {
+        grid-column: 2;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cms-am-workspace .card.cms-am-pane--available {
+        grid-row: span 2;
+        position: sticky;
+        top: var(--cms-am-sticky-top);
+        max-height: calc(100vh - var(--cms-am-sticky-top) - 1rem);
+        max-height: calc(100dvh - var(--cms-am-sticky-top) - 1rem);
+    }
+
+    .cms-am-pane--available .cms-am-pane__body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .cms-am-pane--available .cms-am-available {
+        flex: 1 1 auto;
+        min-height: 120px;
+        max-height: none;
+    }
+}
+
+/* Drei Spalten: Verfügbare Einträge | Layout | Eigenschaften + Vorschau (mitlaufend) */
+@container cms-am-editor (min-width: 980px) {
+    .cms-am-workspace {
+        grid-template-columns: minmax(240px, 0.85fr) minmax(360px, 1.3fr) minmax(280px, 0.95fr);
+    }
+
+    .cms-am-workspace .card.cms-am-pane--available {
+        grid-row: auto;
+    }
+
+    .cms-am-side {
+        position: sticky;
+        top: var(--cms-am-sticky-top);
+        grid-column: auto;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(240px, 1fr);
+        align-items: stretch;
+        max-height: calc(100vh - var(--cms-am-sticky-top) - 1rem);
+        max-height: calc(100dvh - var(--cms-am-sticky-top) - 1rem);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+
+    .cms-am-workspace .card.cms-am-pane--preview {
+        min-height: 0;
+    }
+
+    .cms-am-pane--preview .cms-am-pane__preview {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .cms-am-pane--preview .cms-am-preview__frame {
+        flex: 1 1 auto;
+        min-height: 120px;
+        max-height: none;
+    }
+}
+
+/* ── Verfügbare Einträge ─────────────────────────────────────── */
+
+.cms-am-available__controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.cms-am-available {
+    max-height: 60vh;
+    margin: 0 -6px;
+    padding: 0 6px 6px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--cms-radius);
+    scrollbar-width: thin;
+    transition: background-color var(--cms-duration) var(--cms-ease);
+}
+
+.cms-am-available.is-drop-remove {
+    outline: 2px dashed var(--cms-danger);
+    outline-offset: -2px;
+    background: var(--cms-danger-soft);
+}
+
+.cms-am-area + .cms-am-area {
+    margin-top: 1rem;
+}
+
+.cms-am-area__title {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0 0 0.375rem;
+    padding: 0.375rem 0;
+    background: var(--cms-bg);
+    color: var(--cms-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.cms-am-available.is-drop-remove .cms-am-area__title {
+    background: var(--cms-danger-soft);
+}
+
+.cms-am-area__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--cms-hover);
+    color: var(--cms-text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: normal;
+}
+
+.cms-am-empty {
+    margin: 0;
+    padding: 1.25rem 1rem;
+    border: 1px dashed var(--cms-border-strong);
+    border-radius: var(--cms-radius);
+    background: var(--cms-surface-soft);
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+/* ── Layout-Baum ─────────────────────────────────────────────── */
+
+.cms-am-tree,
+.cms-am-children,
+.cms-am-avail-list {
+    --cms-am-gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--cms-am-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cms-am-tree {
+    margin-bottom: 1.5rem;
+}
+
+.cms-am-children,
+.cms-am-avail-list {
+    --cms-am-gap: 4px;
+}
+
+.cms-am-node {
+    position: relative;
+    min-width: 0;
+}
+
+.cms-am-node--group {
+    padding: 4px;
+    border: 1px solid var(--cms-border-strong);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-surface-soft);
+}
+
+.cms-am-children {
+    margin: 4px 0 2px 20px;
+    padding-left: 12px;
+    border-left: 2px solid var(--cms-border-strong);
+}
+
+/* Zeilen im Baum und in der Liste: Griff | Icon | Text | (Chips) | Aktionen */
+.cms-am-row,
+.cms-am-avail {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "handle icon main actions"
+        "handle icon chips actions";
+    align-items: center;
+    column-gap: 6px;
+    min-height: var(--cms-target-size);
+    padding: 3px 4px 3px 2px;
+    border: 1px solid var(--cms-border-strong);
+    border-radius: var(--cms-radius);
+    background: var(--cms-bg);
+    cursor: grab;
+    transition:
+        border-color var(--cms-duration) var(--cms-ease),
+        box-shadow var(--cms-duration) var(--cms-ease),
+        background-color var(--cms-duration) var(--cms-ease),
+        opacity var(--cms-duration) var(--cms-ease);
+}
+
+.cms-am-row:hover,
+.cms-am-avail:hover {
+    box-shadow: var(--cms-shadow-sm);
+}
+
+.cms-am-row--group {
+    border-color: transparent;
+    background: transparent;
+}
+
+/* Gruppen: Pfeil zum Auf-/Zuklappen links neben dem Icon */
+.cms-am-row.cms-am-row--group {
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "handle toggle icon main actions"
+        "handle toggle icon chips actions";
+}
+
+.cms-am-row__toggle {
+    grid-area: toggle;
+}
+
+.cms-am-row__toggle i {
+    transition: transform var(--cms-duration) var(--cms-ease);
+}
+
+.cms-am-row__toggle[aria-expanded="true"] i {
+    transform: rotate(90deg);
+}
+
+.cms-am-row--group:hover {
+    background: var(--cms-hover);
+    box-shadow: none;
+}
+
+.cms-am-row--separator {
+    border-style: dashed;
+    background: transparent;
+}
+
+.cms-am-row.is-selected {
+    border-color: var(--cms-accent);
+    background: var(--cms-accent-soft);
+    box-shadow: 0 0 0 1px var(--cms-accent);
+}
+
+.cms-am-row.is-unavailable,
+.cms-am-avail.is-unavailable {
+    border-style: dashed;
+}
+
+.cms-am-row.is-dragging,
+.cms-am-avail.is-dragging {
+    opacity: 0.45;
+}
+
+.cms-am-row__handle {
+    display: inline-flex;
+    grid-area: handle;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    width: 18px;
+    color: var(--cms-text-muted);
+    font-size: 1rem;
+    opacity: 0.65;
+}
+
+.cms-am-row:hover .cms-am-row__handle,
+.cms-am-avail:hover .cms-am-row__handle {
+    opacity: 1;
+}
+
+.cms-am-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--cms-surface-soft);
+    color: var(--cms-text-muted);
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.cms-am-icon img {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    object-fit: contain;
+}
+
+.cms-am-icon__text {
+    font-size: 0.9375rem;
+    line-height: 1;
+}
+
+.cms-am-row__icon {
+    grid-area: icon;
+}
+
+.cms-am-row--group .cms-am-icon,
+.cms-am-row.is-selected .cms-am-icon {
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+}
+
+.cms-am-row--group.is-selected .cms-am-icon {
+    background: var(--cms-bg);
+}
+
+.cms-am-row--separator .cms-am-icon {
+    background: transparent;
+}
+
+.cms-am-row__main {
+    display: flex;
+    grid-area: main;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    min-height: 36px;
+    padding: 2px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.cms-am-avail__text {
+    display: flex;
+    grid-area: main;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 2px 4px;
+}
+
+.cms-am-row__label {
+    color: var(--cms-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.cms-am-row--group .cms-am-row__label {
+    font-weight: 600;
+}
+
+.cms-am-row--separator .cms-am-row__label {
+    color: var(--cms-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.cms-am-row__meta {
+    overflow: hidden;
+    color: var(--cms-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-am-row.is-muted .cms-am-row__label,
+.cms-am-avail.is-muted .cms-am-row__label {
+    color: var(--cms-text-muted);
+    font-style: italic;
+}
+
+.cms-am-row.is-muted .cms-am-icon,
+.cms-am-avail.is-muted .cms-am-icon {
+    opacity: 0.55;
+}
+
+.cms-am-row__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+}
+
+.cms-am-row > .cms-am-row__chips,
+.cms-am-avail > .cms-am-row__chips {
+    grid-area: chips;
+    padding: 0 6px 4px;
+}
+
+.cms-am-row__actions {
+    display: inline-flex;
+    grid-area: actions;
+    align-items: center;
+    gap: 2px;
+}
+
+.cms-am-icon-btn {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--cms-text-muted);
+    font-size: 1.0625rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--cms-duration) var(--cms-ease), color var(--cms-duration) var(--cms-ease);
+}
+
+.cms-am-icon-btn:hover:not(:disabled) {
+    border-color: var(--cms-border);
+    background: var(--cms-hover);
+    color: var(--cms-text);
+}
+
+.cms-am-icon-btn[data-am-act="remove"]:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--cms-danger) 30%, transparent);
+    background: var(--cms-danger-soft);
+    color: var(--cms-danger);
+}
+
+.cms-am-icon-btn[data-am-act="add"]:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--cms-accent) 30%, transparent);
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+}
+
+.cms-am-icon-btn[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--cms-warning) 30%, transparent);
+    background: var(--cms-warning-soft);
+    color: var(--cms-warning);
+}
+
+.cms-am-icon-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+}
+
+/* Breiter Layout-Bereich: Chips in derselben Zeile wie die Bezeichnung */
+@container cms-am-pane (min-width: 520px) {
+    .cms-am-row {
+        grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "handle icon main chips actions";
+    }
+
+    .cms-am-row.cms-am-row--group {
+        grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "handle toggle icon main chips actions";
+    }
+
+    .cms-am-row > .cms-am-row__chips {
+        justify-content: flex-end;
+        max-width: 18rem;
+        padding: 0;
+    }
+}
+
+/* Einspaltig (Smartphone): Der Griff ist nur Deko – gezogen wird die ganze Zeile, verschoben auch per Pfeil.
+   Sein Platz geht an Bezeichnung und Angaben, die hier umbrechen statt abgeschnitten zu werden. */
+@container cms-am-editor (max-width: 699.98px) {
+    .cms-am-row__handle {
+        display: none;
+    }
+
+    .cms-am-row__meta {
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+}
+
+/* Ablageziele beim Ziehen */
+.cms-am-node.is-drop-before::before,
+.cms-am-node.is-drop-after::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    left: 0;
+    z-index: 3;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--cms-accent);
+    box-shadow: 0 0 0 1px var(--cms-bg);
+    pointer-events: none;
+}
+
+.cms-am-node.is-drop-before::before {
+    top: calc(var(--cms-am-gap, 6px) / -2 - 1.5px);
+}
+
+.cms-am-node.is-drop-after::after {
+    bottom: calc(var(--cms-am-gap, 6px) / -2 - 1.5px);
+}
+
+.cms-am-row.is-drop-into {
+    border-color: var(--cms-accent);
+    background: var(--cms-accent-soft);
+    box-shadow: 0 0 0 2px var(--cms-accent);
+}
+
+/* Ende einer Gruppe bzw. der ersten Ebene: nur bei leerer Gruppe oder (erste Ebene) während des Ziehens */
+.cms-am-dropend {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 6px 12px;
+    border: 1px dashed var(--cms-border-strong);
+    border-radius: var(--cms-radius);
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    text-align: center;
+    transition: background-color var(--cms-duration) var(--cms-ease), border-color var(--cms-duration) var(--cms-ease);
+}
+
+.cms-am-dropend.is-empty,
+.cms-am-editor.is-dragging .cms-am-dropend--root {
+    display: flex;
+}
+
+.cms-am-dropend--root.is-empty {
+    min-height: 120px;
+    background: var(--cms-surface-soft);
+}
+
+.cms-am-dropend.is-drop-into {
+    border-style: solid;
+    border-color: var(--cms-accent);
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+}
+
+/* Layout-Einstellungen unter dem Baum */
+.cms-am-settings {
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid var(--cms-border);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-surface-soft);
+}
+
+.cms-am-settings__title {
+    float: none;
+    width: auto;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    color: var(--cms-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* ── Eigenschaften und Vorschau ──────────────────────────────── */
+
+.cms-am-inspector__head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.cms-am-inspector__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--cms-radius);
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+    font-size: 1.375rem;
+}
+
+.cms-am-inspector__icon img {
+    width: 24px;
+    height: 24px;
+}
+
+.cms-am-inspector__heading {
+    min-width: 0;
+}
+
+.cms-am-inspector__title {
+    color: var(--cms-text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.cms-am-inspector__id {
+    display: block;
+    margin-top: 2px;
+    padding: 0;
+    background: none;
+    color: var(--cms-text-muted);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+.cms-am-inspector__route {
+    margin: 0 0 0.75rem;
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.cms-am-pane__preview .cms-am-preview__frame {
+    margin-inline: auto;
+}
+
+.cms-am-preview-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+}
+
+.cms-am-preview-state:not(:empty)::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.cms-am-preview-state.is-pending::before {
+    animation: cms-am-pulse 1s ease-in-out infinite;
+}
+
+.cms-am-preview-state.is-ok {
+    color: var(--cms-success);
+}
+
+.cms-am-preview-state.is-error {
+    color: var(--cms-danger);
+    font-weight: 600;
+}
+
+@keyframes cms-am-pulse {
+    50% {
+        opacity: 0.25;
+    }
+}
+
+/* Gespeichertes Layout zurücksetzen (unter dem Editor) */
+.cms-am-editor__reset {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--cms-border-strong);
+}
+
+/* ── Fokus und Bewegung ──────────────────────────────────────── */
+
+.cms-am-preview__action:focus-visible,
+.cms-am-preview__frame:focus-visible,
+.cms-am-row__main:focus-visible,
+.cms-am-icon-btn:focus-visible,
+.cms-am-editor-page .page-pretitle a:focus-visible {
+    outline: var(--cms-focus-outline);
+    outline-offset: var(--cms-focus-offset);
+}
+
+.cms-am-row__main:focus-visible,
+.cms-am-icon-btn:focus-visible {
+    outline-offset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cms-am-row,
+    .cms-am-avail,
+    .cms-am-available,
+    .cms-am-icon-btn,
+    .cms-am-row__toggle i,
+    .cms-am-dropend {
+        transition: none;
+    }
+
+    .cms-am-preview-state.is-pending::before {
+        animation: none;
+    }
+}

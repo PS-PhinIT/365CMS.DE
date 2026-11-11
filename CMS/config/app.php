@@ -136,3 +136,8 @@ defined('CMS_ENCRYPTION_KEYS_PREVIOUS') || define('CMS_ENCRYPTION_KEYS_PREVIOUS'
 // ─── Backups ───────────────────────────────────────────────────────────────
 // Leer: CMS/backups/ (nur per .htaccess geschützt). Empfohlen: absoluter Pfad außerhalb des Webroots.
 defined('CMS_BACKUP_PATH') || define('CMS_BACKUP_PATH', '');
+
+// ─── Privater Speicher (geschützte Downloads, Formular-Uploads, Import/Export) ─
+// Leer oder relativ: CMS/private/ (nur per .htaccess geschützt; Nginx: /private/ sperren).
+// Empfohlen: absoluter Pfad außerhalb des Webroots.
+defined('CMS_PRIVATE_PATH') || define('CMS_PRIVATE_PATH', '');

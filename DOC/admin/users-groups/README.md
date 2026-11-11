@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer & Gruppen
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Users & Groups** (*Benutzer & Gruppen*): user accounts, groups, roles/capabilities and authentication settings. All pages require capability `manage_users` (and, like the whole admin area, role `admin`).
+This folder documents the admin area **Users & Groups** (*Benutzer & Gruppen*): user accounts, groups, roles/capabilities and authentication settings. All pages require capability `manage_users` (and, like the whole admin area, role `admin`).
 
 ## Deutsch
 

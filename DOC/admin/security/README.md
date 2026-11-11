@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Sicherheit
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Security** (core module `security`): anti-spam, application firewall and security audit. All pages require `manage_settings`.
+This folder documents the admin area **Security** (core module `security`): anti-spam, application firewall and security audit. All pages require `manage_settings`.
 
 ## Deutsch
 

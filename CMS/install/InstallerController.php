@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 final class InstallerController
 {
-    private const ALLOWED_REDIRECTS = ['?step=1', '?step=2', '?step=3', '?step=4', '?step=5'];
+    private const ALLOWED_REDIRECTS = ['?step=1', '?step=2', '?step=3', '?step=4', '?step=5', '?step=6'];
 
     private array|bool $existingConfig;
     private bool $isReinstall;
@@ -45,8 +45,9 @@ final class InstallerController
             'update' => $this->handleUpdate(),
             '2' => $this->handleDatabaseStep(),
             '3' => $this->handleSiteStep(),
-            '4' => $this->handleAdminStep(),
-            '5' => $this->renderSuccess(),
+            '4' => $this->handleLayoutStep(),
+            '5' => $this->handleAdminStep(),
+            '6' => $this->renderSuccess(),
             default => $this->redirect('?step=1'),
         };
     }
@@ -166,7 +167,7 @@ final class InstallerController
                         'is_update' => true,
                         'tables_created' => $newTables,
                     ];
-                    $this->redirect('?step=5');
+                    $this->redirect('?step=6');
                 } catch (PDOException $e) {
                     $updateErrors[] = 'Datenbankfehler: ' . $e->getMessage();
                 } catch (\RuntimeException $e) {
@@ -272,13 +273,18 @@ final class InstallerController
             }
 
             if ($this->errors === []) {
-                $_SESSION['site_config'] = [
+                $siteConfig = [
                     'site_name' => $siteName,
                     'site_url' => $siteUrl,
                     'admin_email' => $adminEmail,
                     'debug_mode' => isset($_POST['debug_mode']) ? 'true' : 'false',
                     'core_modules' => $this->service->normalizeInstallableCoreModuleStates($_POST['core_modules'] ?? []),
                 ];
+                // Beim Zurückblättern bleibt das schon gewählte Admin-Layout erhalten.
+                if (isset($_SESSION['site_config']['admin_menu_profile'])) {
+                    $siteConfig['admin_menu_profile'] = $_SESSION['site_config']['admin_menu_profile'];
+                }
+                $_SESSION['site_config'] = $siteConfig;
                 $this->redirect('?step=4');
             }
         }
@@ -299,10 +305,35 @@ final class InstallerController
         ]);
     }
 
+    private function handleLayoutStep(): void
+    {
+        if (!isset($_SESSION['db_config'])) {
+            $this->redirect('?step=2');
+        }
+        if (!isset($_SESSION['site_config'])) {
+            $this->redirect('?step=3');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_layout'])) {
+            $_SESSION['site_config']['admin_menu_profile'] = $this->service->normalizeAdminMenuProfile($_POST['admin_menu_profile'] ?? '');
+            $this->redirect('?step=5');
+        }
+
+        $this->render('layout', [
+            'selectedProfile' => $this->service->normalizeAdminMenuProfile($_SESSION['site_config']['admin_menu_profile'] ?? ''),
+            'profiles' => $this->service->getAdminMenuProfilePreviews(
+                is_array($_SESSION['site_config']['core_modules'] ?? null) ? $_SESSION['site_config']['core_modules'] : []
+            ),
+        ]);
+    }
+
     private function handleAdminStep(): void
     {
         if (!isset($_SESSION['db_config'], $_SESSION['site_config'])) {
             $this->redirect('?step=2');
+        }
+        if (!isset($_SESSION['site_config']['admin_menu_profile'])) {
+            $this->redirect('?step=4');
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
@@ -356,7 +387,8 @@ final class InstallerController
                             $siteConfig['site_name'],
                             $siteConfig['admin_email'],
                             $prefix,
-                            is_array($siteConfig['core_modules'] ?? null) ? $siteConfig['core_modules'] : []
+                            is_array($siteConfig['core_modules'] ?? null) ? $siteConfig['core_modules'] : [],
+                            (string) $siteConfig['admin_menu_profile']
                         );
                         $this->service->initializeLandingPageData($pdo, $prefix);
 
@@ -368,7 +400,7 @@ final class InstallerController
                                 'site_url' => $siteConfig['site_url'],
                             ];
                             unset($_SESSION['is_reinstall']);
-                            $this->redirect('?step=5');
+                            $this->redirect('?step=6');
                         }
 
                         $this->errors[] = (string) $adminResult;

@@ -1,0 +1,196 @@
+/**
+ * Kachelseiten des Admin-Menüs (/admin/configuration[?group=<id>])
+ * Nutzt ausschließlich die Design-Tokens aus admin-tabler.css (--cms-*).
+ */
+
+.cms-configuration-page__icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--cms-accent);
+}
+
+.cms-configuration-page__icon .cms-tile__icon-img {
+    width: 24px;
+    height: 24px;
+}
+
+.cms-configuration-page .page-title .cms-tile__badge {
+    margin-left: 0.5rem;
+}
+
+/* Sprungmarken zu den Kategorien */
+.cms-tiles-jump {
+    margin-bottom: 1.5rem;
+}
+
+.cms-tiles-jump__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cms-tiles-jump__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0.25rem 0.875rem;
+    border: 1px solid var(--cms-border-strong);
+    border-radius: 999px;
+    background: var(--cms-bg);
+    color: var(--cms-text);
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: background-color var(--cms-duration) var(--cms-ease), border-color var(--cms-duration) var(--cms-ease);
+}
+
+.cms-tiles-jump__link:hover {
+    border-color: var(--cms-accent);
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+    text-decoration: none;
+}
+
+.cms-tiles-jump__link:focus-visible {
+    outline: var(--cms-focus-outline);
+    outline-offset: var(--cms-focus-offset);
+}
+
+/* Kategorie mit Kachelraster */
+.cms-tiles {
+    margin-bottom: 2rem;
+}
+
+.cms-tiles__heading {
+    margin: 0 0 0.875rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--cms-border-strong);
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    scroll-margin-top: calc(var(--cms-topbar-height) + 16px);
+}
+
+.cms-tiles__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cms-tiles__cell {
+    display: flex;
+    min-width: 0;
+}
+
+.cms-tile {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    width: 100%;
+    min-height: var(--cms-target-size);
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--cms-border);
+    border-radius: var(--cms-radius-card);
+    background: var(--cms-bg);
+    box-shadow: var(--cms-shadow-card);
+    color: var(--cms-text);
+    text-decoration: none;
+    transition: border-color var(--cms-duration) var(--cms-ease), box-shadow var(--cms-duration) var(--cms-ease);
+}
+
+.cms-tile:hover {
+    border-color: var(--cms-accent);
+    box-shadow: var(--cms-shadow-md);
+    color: var(--cms-text);
+    text-decoration: none;
+}
+
+.cms-tile:focus-visible {
+    outline: var(--cms-focus-outline);
+    outline-offset: var(--cms-focus-offset);
+}
+
+.cms-tile__icon {
+    display: inline-flex;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--cms-radius);
+    background: var(--cms-accent-soft);
+    color: var(--cms-accent-strong);
+    font-size: 1.25rem;
+}
+
+.cms-tile--plugin .cms-tile__icon {
+    background: var(--cms-surface-soft);
+    color: var(--cms-text-muted);
+}
+
+.cms-tile__icon-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.cms-tile__icon-text {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.cms-tile__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.cms-tile__title {
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.cms-tile__text {
+    color: var(--cms-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.cms-tile__badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--cms-danger);
+    color: #ffffff;
+    font-size: 0.71875rem;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.cms-tile__external {
+    flex: 0 0 auto;
+    color: var(--cms-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cms-tile,
+    .cms-tiles-jump__link {
+        transition: none;
+    }
+}

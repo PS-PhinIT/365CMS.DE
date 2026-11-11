@@ -150,6 +150,48 @@ final class PluginSiteAssignmentService
             $stored[$slug] = $selected;
         }
 
+        return $this->persist($stored);
+    }
+
+    /**
+     * Entfernt Verweise auf nicht mehr vorhandene Sites (nach dem Löschen unter Einstellungen ›
+     * MultiSites). Plugins, die danach allen verbleibenden Sites zugewiesen sind, gelten wieder als
+     * Standard (kein gespeicherter Eintrag).
+     */
+    public function pruneUnknownSites(): bool
+    {
+        $this->assignments = null;
+        $siteCount = count(AdminSiteContextService::getInstance()->getSites());
+        $stored = $this->getStoredAssignments();
+
+        foreach ($stored as $slug => $siteKeys) {
+            if (count($siteKeys) === $siteCount) {
+                unset($stored[$slug]);
+            }
+        }
+
+        return $this->persist($stored);
+    }
+
+    /**
+     * Entfernt gespeicherte Zuweisungen der angegebenen Plugins (z. B. nach der Integration in den Core).
+     *
+     * @param list<string> $pluginSlugs
+     */
+    public function removePlugins(array $pluginSlugs): bool
+    {
+        $this->assignments = null;
+        $stored = $this->getStoredAssignments();
+        $remaining = array_diff_key($stored, array_flip(array_map(fn (string $slug): string => $this->normalizeSlug($slug), $pluginSlugs)));
+
+        return count($remaining) === count($stored) || $this->persist($remaining);
+    }
+
+    /**
+     * @param array<string, list<string>> $stored
+     */
+    private function persist(array $stored): bool
+    {
         ksort($stored);
         $saved = function_exists('update_option')
             && update_option(self::OPTION, $stored === [] ? '{}' : (string) json_encode($stored, JSON_UNESCAPED_SLASHES));

@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Datenbank & Schema
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** `v24` | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** `v25` | **Status:** Stable
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (45 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v24'`, flag file `CMS/cache/db_schema_v24.flag`). Schema `v24` (4.0.0) adds revision columns to `cms_post_revisions` for the post editor's revision history. Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (46 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v25'`, flag file `CMS/cache/db_schema_v25.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds the tables `cms_admin_menu_layouts` (custom admin sidebar layouts) and `cms_batch_jobs` (long-running admin tasks processed in steps). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
 
 ## Deutsch
 
@@ -100,6 +100,17 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `mail_log` | recipient, subject, status, transport, provider, message_id, error_message, meta, source |
 | `mail_queue` | recipient, subject, body, headers, status, attempts, max_attempts, available_at, sent_at, locked_at, attachment_*, error_category, last_error |
 | `ai_quota_usage` | scope_name, period_key, user_id, provider_id, request_count, character_count |
+| `admin_menu_layouts` | id, site_key (eindeutig; `''` = global, sonst Site-Schlüssel aus *Einstellungen › MultiSites*), layout_json (MEDIUMTEXT, nur validierte Layouts; `NULL` = zurückgesetzt), version (steigt bei jedem Speichern und Zurücksetzen), updated_by, created_at, updated_at – seit v25, eigene Sidebar-Layouts ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
+| `batch_jobs` | id, job_type, scope_key, status (`pending`, `running`, `done`, `failed`, `cancelled`), total, processed, failed, state_json (Cursor und Optionen), errors_json, message, lock_token, locked_until, created_by, created_at, updated_at, finished_at – seit v25, lange Admin-Aufgaben in Schritten (`BatchJobService`) |
+
+### Schema v25 (4.0.0)
+
+| Änderung | Zweck |
+|---|---|
+| neue Tabelle `admin_menu_layouts` (Spalten siehe oben, `UNIQUE KEY uniq_admin_menu_layouts_site (site_key)`) | eigene Layouts der Admin-Seitenleiste (Profil „Eigenes Layout“): eine Zeile global und höchstens eine je Site. Zurücksetzen leert `layout_json` und erhöht den Versionszähler, die Zeile bleibt erhalten. So wiederholt sich keine Version, und der Menü-Cache (Version im Schlüssel) liefert kein veraltetes Layout |
+| neue Tabelle `batch_jobs` (Spalten siehe oben, Indizes `idx_batch_jobs_lookup (job_type, scope_key, status)` und `idx_batch_jobs_updated (updated_at)`) | lange Admin-Aufgaben in Schritten (z. B. Suchindex-Neuaufbau, Thumbnails, Import): je Typ und Scope höchstens ein aktiver Auftrag, jeder Schritt unter einer Sperre mit Ablaufzeit (120 s). Aufträge lassen sich nach dem Neuladen der Seite oder per Cron fortsetzen; abgeschlossene Aufträge werden nach 30 Tagen entfernt |
+
+Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Das gewählte Profil steht in der Option `admin_menu_profile`.
 
 ### Schema v24 (4.0.0)
 
@@ -110,7 +121,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `post_revisions`: Spalten `featured_image` VARCHAR(500), `meta_title` VARCHAR(255), `meta_description` TEXT (alle NULL) | Vergleich und Wiederherstellung von Beitragsbild und Meta-Feldern; `NULL` = in älteren Revisionen nicht erfasst, die Wiederherstellung behält dann den aktuellen Wert |
 | `post_revisions`: Spalte `fingerprint` CHAR(40) NULL | SHA-1 über Titel, Slugs, Inhalte, Auszüge, Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige (ohne Status und Datumswerte); identische Stände werden nicht doppelt gespeichert |
 
-Die Migration ergänzt nur Spalten (keine Daten werden umgeschrieben oder gelöscht) und läuft idempotent über `MigrationManager::run()` bzw. *Admin → Updates*; Neuinstallationen erhalten die Spalten über `SchemaManager`. Weitere Daten der Admin-Oberfläche benötigen keine neuen Tabellen: Benutzer-Präferenzen liegen in `cms_user_meta` (`admin_ui_prefs`), Plugin-Zuweisung und Site-Liste in `cms_settings` (`admin_plugin_site_assignments`, `admin_sites`).
+Die Migration ergänzt nur Spalten (keine Daten werden umgeschrieben oder gelöscht) und läuft idempotent über `MigrationManager::run()` bzw. *Admin → Updates*; Neuinstallationen erhalten die Spalten über `SchemaManager`. Die übrigen Daten der neuen Admin-Oberfläche liegen in bestehenden Tabellen: Benutzer-Präferenzen in `cms_user_meta` (`admin_ui_prefs`), Plugin-Zuweisung, Site-Liste und Menüprofil in `cms_settings` (`admin_plugin_site_assignments`, `admin_sites`, `admin_menu_profile`); nur die eigenen Sidebar-Layouts haben mit v25 eine eigene Tabelle.
 
 ### Schema v23 (3.4.13)
 
@@ -161,7 +172,8 @@ Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.
 | `active_plugins` | JSON-Liste aktiver Plugin-Slugs |
 | `active_theme` | aktives Theme |
 | `admin_plugin_site_assignments` | Plugin-Zuweisung je Site (seit 4.0.0): JSON `{"<plugin-slug>": ["<site-key>", …]}`; Plugins ohne Eintrag gelten für alle Sites ([../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)) |
-| `admin_sites` | optionale Site-Liste der Admin-Oberfläche (seit 4.0.0): JSON-Liste mit `key`, `label`, optional `url`, `accent`, `hosts`; ohne Option gelten `phinit.de` und `365network.de` |
+| `admin_menu_profile` | Profil der Admin-Seitenleiste (seit 4.0.0): `classic` (Standard), `structured` oder `custom`; gesetzt im Installer oder unter *Einstellungen › Admin-Menü* ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
+| `admin_sites` | Site-Liste der Admin-Oberfläche (seit 4.0.0, *Einstellungen › MultiSites*): JSON-Liste mit `key`, `label`, `url`, `accent`, `accent_soft`, `accent_strong`, `hosts`; ohne Option gilt die Haupt-URL der Installation (`SITE_URL`) als einzige Site ([../admin/system-settings/MULTISITES.md](../admin/system-settings/MULTISITES.md)) |
 | `site_name`, `site_url`, `language`, … | allgemeine Einstellungen ([../admin/system-settings/SYSTEM.md](../admin/system-settings/SYSTEM.md)) |
 | `seo_*`, `perf_*`, `firewall_*`, `antispam_*`, `cookie_*`, `member_*`, `legal_*`, `cms_loginpage_*` | Einstellungen der jeweiligen Bereiche |
 | Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`json:`; Secrets seit 4.0.0 `enc:v2:<alg>:<Schlüssel-ID>:<Daten>` über `CryptoService`, Altwerte `enc:` werden automatisch neu verschlüsselt). Die Gruppe `cron` enthält seit 4.0.0 außerdem `last_run_at`, `last_run_status` (`ok`/`failed`), `last_run_task` und `last_error` des letzten Laufs (Systemhinweise im Admin) |

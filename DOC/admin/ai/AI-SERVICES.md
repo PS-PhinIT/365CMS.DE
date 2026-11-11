@@ -1,11 +1,11 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – KI-Dienste (AI Services)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 > **Routen:** `/admin/ai-services`, `/admin/ai-translation`, `/admin/ai-content-creator`, `/admin/ai-seo-creator`, `/admin/ai-settings` | **Core-Modul:** `ai_services` | **CSRF-Aktion:** `admin_ai_services`
 
 ## English (summary)
 
-The sidebar group **AI Services** (*KI-Dienste*) bundles five admin screens sharing one controller, `CMS/admin/ai-page.php` (sections `overview`, `translation`, `content_creator`, `seo_creator`, `settings`), with `CMS/admin/modules/system/AiServicesModule.php` and the view `CMS/admin/views/system/ai-services.php`. Read access: administrator plus `manage_settings`, `manage_system` or `manage_ai_services`; write access: `manage_settings`. Two protected JSON endpoints serve the page/post editor: `POST /admin/ai-translate-editorjs` and `POST /admin/ai-generate-seo-metadata`. There are no public AI routes and AI output is never published automatically.
+The optional sidebar group **AI Services** (*KI-Dienste*, visible only while the core module `ai_services` is active) holds four of the five admin screens. The fifth, *KI-Einstellungen*, is a tile under *Einstellungen* (Classic) or *Konfiguration* (Structured). All five share one controller, `CMS/admin/ai-page.php` (sections `overview`, `translation`, `content_creator`, `seo_creator`, `settings`), with `CMS/admin/modules/system/AiServicesModule.php` and the view `CMS/admin/views/system/ai-services.php`. Read access: administrator plus `manage_settings`, `manage_system` or `manage_ai_services`; write access: `manage_settings`. Two protected JSON endpoints serve the page/post editor: `POST /admin/ai-translate-editorjs` and `POST /admin/ai-generate-seo-metadata`. There are no public AI routes and AI output is never published automatically.
 
 The complete user and technical documentation (providers, policies, quotas, contracts, prompts, security) is in **[../../ai/AI-SERVICES.md](../../ai/AI-SERVICES.md)**.
 
@@ -19,7 +19,7 @@ The complete user and technical documentation (providers, policies, quotas, cont
 | Übersetzung | `/admin/ai-translation` | `translation` | `save_translation`, `save_translation_prompts` |
 | Inhaltsassistent | `/admin/ai-content-creator` | `content_creator` | `save_content_prompts`, `generate_content_draft` |
 | SEO-Assistent | `/admin/ai-seo-creator` | `seo_creator` | `save_seo_prompts` |
-| Einstellungen | `/admin/ai-settings` | `settings` | `save_providers`, `delete_provider`, `save_features`, `save_logging`, `save_quotas`, `check_provider_health` |
+| KI-Einstellungen (Kachel unter *Einstellungen* bzw. *Konfiguration*) | `/admin/ai-settings` | `settings` | `save_providers`, `delete_provider`, `save_features`, `save_logging`, `save_quotas`, `check_provider_health` |
 
 Aktionen werden nur im passenden Bereich akzeptiert; unbekannte Aktionen werden abgelehnt.
 

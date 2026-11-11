@@ -33,7 +33,8 @@ try {
     $adminShellCurrentSite = $adminShellSiteContext->getCurrentSite();
     $adminShellSiteKey = (string) ($adminShellCurrentSite['key'] ?? '');
 
-    if ($adminShellSiteKey !== '' && !$adminShellSiteContext->hasStaticAccent($adminShellSiteKey)) {
+    // Akzentfarbe der aktiven Site (Einstellungen › MultiSites); Werte sind validiertes #rrggbb.
+    if ($adminShellSiteKey !== '') {
         $adminShellAccent = (string) $adminShellCurrentSite['accent'];
         $adminShellAccentRgb = implode(', ', array_map('hexdec', str_split(substr($adminShellAccent, 1), 2)));
         $adminShellAccentCss = 'html:root{--cms-accent:' . $adminShellAccent

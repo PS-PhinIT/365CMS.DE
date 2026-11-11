@@ -1,6 +1,6 @@
 # 365CMS
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
 
 ## English
 
@@ -12,7 +12,7 @@
 |---|---|
 | Core version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-11-08, status `stable`) |
 | PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v24` |
+| Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v25` |
 | Shipped theme / plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress importer) |
 
 ### Core capabilities
@@ -77,7 +77,7 @@ Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](C
 |---|---|
 | Core-Version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-11-08, Status `stable`) |
 | PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v24` |
+| Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v25` |
 | Mitgeliefertes Theme / Plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress-Import) |
 
 ### Zentrale Funktionen

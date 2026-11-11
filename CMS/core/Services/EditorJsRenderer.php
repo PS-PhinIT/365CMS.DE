@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace CMS\Services;
 
+use CMS\Services\EditorJs\EditorJsBlockRegistry;
 use CMS\Services\EditorJs\EditorJsContentNormalizer;
 use CMS\Services\EditorJs\EditorJsHtmlSanitizer;
 
@@ -157,7 +158,9 @@ final class EditorJsRenderer
             'changelog' => $this->renderChangelog($data),
             'prosCons' => $this->renderProsCons($data),
             'details' => $this->renderDetails($data),
-            default => $this->renderUnknownBlockFallback($data),
+            default => EditorJsBlockRegistry::has($type)
+                ? EditorJsBlockRegistry::render($type, $data, $tunes)
+                : $this->renderUnknownBlockFallback($data),
         };
 
         return $this->applyBlockTuneAttributes($html, $tunes);

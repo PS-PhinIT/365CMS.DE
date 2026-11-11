@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Themes & Gestaltung
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Themes & Design** (*Themes & Gestaltung*). It covers theme management, the theme customizer (`/admin/theme-editor`), the theme file explorer, menus, the landing page, the font manager, the CMS login page and the theme marketplace. All pages require role `admin` and capability `manage_settings`.
+This folder documents the admin area **Themes & Design** (*Themes & Gestaltung*). It covers theme management, the theme customizer (`/admin/theme-editor`), the theme file explorer, menus, the landing page, the font manager, the CMS login page and the theme marketplace. All pages require role `admin` and capability `manage_settings`.
 
 ## Deutsch
 

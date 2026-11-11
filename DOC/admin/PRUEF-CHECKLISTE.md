@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Prüf-Checkliste
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -13,7 +13,7 @@ Checklist for reviewing a change to the administration (core page, module, view 
 **Routing & Struktur**
 - [ ] Route `/admin/<seite>` löst über `AdminRouter` auf die vorgesehene Datei auf; Slug nur `[a-zA-Z0-9_-]`.
 - [ ] Einstieg, Modul und View existieren und folgen der Schichtentrennung ([FILESTRUCTURE.md](FILESTRUCTURE.md)).
-- [ ] Neue Seite ist in der Seitenleiste eingetragen (`AdminNavigationService::buildCoreGroups()`) und – falls Teil eines Feature-Bereichs – in `CoreModuleService::MODULES[...]['admin_pages']`.
+- [ ] Neue Seite hat eine Zeile in `CMS\Services\AdminMenu\CoreCatalog` und einen Platz in beiden Profilen (`ProfileLayouts`: *Klassisch* und *Strukturiert*); `php TESTS/admin-menu/run.php` ist grün. Gehört sie zu einem Feature-Bereich, steht sie zusätzlich in `CoreModuleService::MODULES[...]['admin_pages']`.
 - [ ] Alt-Routen leiten weiter statt 404.
 
 **Zugriff & Eingaben**
@@ -40,9 +40,9 @@ Checklist for reviewing a change to the administration (core page, module, view 
 ### B. Smoke-Test nach Deployment / Update
 
 - [ ] `/admin` lädt, Sidebar vollständig, keine PHP-Warnungen im `/admin/logs/php-errors`.
-- [ ] Seitenleiste: Gruppen auf-/zuklappen und einklappen (Icon-Leiste) bleiben nach dem Neuladen erhalten; Gruppe „Plugins“ zeigt alle aktiven Plugins mit Menüeinträgen; unter 992 px öffnet sich die Seitenleiste als Drawer (Escape schließt).
+- [ ] Seitenleiste: Gruppen auf-/zuklappen und einklappen (Icon-Leiste) bleiben nach dem Neuladen erhalten; Auffanggruppe (*Plugins* bzw. *Erweitern*) und Plugin-Gruppen zeigen alle aktiven, der Site zugewiesenen Plugins mit Menüeinträgen; das gewählte Sidebar-Profil und Kachelseiten (`/admin/configuration?group=<id>`, unbekannte Gruppe = 404) stimmen mit [ADMIN-MENU.md](ADMIN-MENU.md) überein; unter 992 px öffnet sich die Seitenleiste als Drawer (Escape schließt).
 - [ ] *Einstellungen › Plugins › Plugin-Zuweisung*: nach einem Update sind alle Plugins allen Sites zugewiesen.
-- [ ] `/admin/updates`: installierte = erwartete Core- und Schema-Version (`4.0.0`, `v24`); ggf. `run_database_update`.
+- [ ] `/admin/updates`: installierte = erwartete Core- und Schema-Version (`4.0.0`, `v25`); ggf. `run_database_update`.
 - [ ] `/admin/monitor-health-check` ohne kritische Befunde.
 - [ ] `/admin/security-audit` ausgeführt; `install.php` nicht erreichbar, Debug aus, HTTPS aktiv.
 - [ ] Seite und Beitrag speichern, Medien-Upload, Vorschau im Frontend; Beitrag ohne Beitragsbild lässt sich nicht veröffentlichen (Checkliste), Revisionen erscheinen im Editor.

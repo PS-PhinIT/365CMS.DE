@@ -16,8 +16,8 @@ if (!defined('ABSPATH')) {
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); min-height: 100vh; padding: 2rem; }
         .container { max-width: 800px; margin: 0 auto; }
         .card { background: white; border-radius: 16px; padding: 3rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .progress { display: flex; justify-content: center; margin-bottom: 2rem; gap: 0.5rem; }
-        .step { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: #e2e8f0; color: #64748b; }
+        .progress { display: flex; justify-content: center; align-items: center; margin-bottom: 2rem; gap: 0.5rem; }
+        .step { width: 40px; aspect-ratio: 1; min-width: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: #e2e8f0; color: #64748b; }
         .step.active { background: #2563eb; color: white; }
         .step.completed { background: #10b981; color: white; }
         h1 { color: #1e293b; font-size: 2rem; margin-bottom: 0.5rem; }
@@ -42,8 +42,9 @@ if (!defined('ABSPATH')) {
             <div class="step completed">✓</div>
             <div class="step completed">✓</div>
             <div class="step completed">✓</div>
-            <div class="step active">4</div>
-            <div class="step">5</div>
+            <div class="step completed">✓</div>
+            <div class="step active">5</div>
+            <div class="step">6</div>
         </div>
         <h1>👤 Administrator anlegen</h1>
         <p class="subtitle">Erstellen Sie das erste Administratorkonto.</p>
@@ -77,7 +78,7 @@ if (!defined('ABSPATH')) {
             </div>
 
             <div class="btn-group">
-                <a href="?step=3" class="btn btn-secondary">← Zurück</a>
+                <a href="?step=4" class="btn btn-secondary">← Zurück</a>
                 <button type="submit" class="btn btn-primary">Installation abschließen →</button>
             </div>
         </form>

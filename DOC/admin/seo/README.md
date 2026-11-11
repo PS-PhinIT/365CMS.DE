@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – SEO
 
-> **Stand:** 2026-11-08 | **Version:** 3.5.6 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **SEO**. The group is controlled by the core module `seo` (`/admin/modules`); all pages require `manage_settings` (analytics also accepts `view_analytics`).
+This folder documents the admin area **SEO**. The group is controlled by the core module `seo` (`/admin/modules`); all pages require `manage_settings` (analytics also accepts `view_analytics`).
 
 ## Deutsch
 

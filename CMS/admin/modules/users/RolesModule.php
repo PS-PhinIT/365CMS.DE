@@ -32,6 +32,10 @@ class RolesModule
         'ai'       => ['manage_ai_services', 'use_ai_translation', 'use_ai_rewrite', 'use_ai_summary', 'use_ai_seo_meta'],
         'analytics'=> ['view_analytics'],
         'comments' => ['comments.view', 'comments.moderate', 'comments.delete'],
+        'content'  => ['manage_trash', 'view_editorial_calendar', 'manage_translations', 'import_export'],
+        'forms'    => ['manage_forms', 'view_form_submissions'],
+        'downloads'=> ['manage_downloads', 'upload_downloads', 'view_download_stats'],
+        'system'   => ['manage_search_index', 'manage_feeds', 'manage_admin_menu'],
     ];
 
     public function __construct()

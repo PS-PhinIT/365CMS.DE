@@ -31,7 +31,7 @@ if (!class_exists(__NAMESPACE__ . '\\SchemaManager', false)) {
 class SchemaManager
 {
     /** Flag-Datei-Version – erhöhen wenn Schema geändert wird */
-    public const SCHEMA_VERSION = 'v24';
+    public const SCHEMA_VERSION = 'v25';
 
     private Database $db;
     private string $prefix;
@@ -771,6 +771,42 @@ class SchemaManager
                 FOREIGN KEY (post_id) REFERENCES {$p}posts(id) ON DELETE CASCADE,
                 FOREIGN KEY (category_id) REFERENCES {$p}post_categories(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Post-Kategorie-Zuordnung'",
+
+            // v25: eigene Admin-Sidebar-Layouts (AdminMenu\LayoutRepository), eine Zeile je Bereich:
+            // site_key '' = global, sonst Site-Schlüssel aus Einstellungen › MultiSites.
+            'admin_menu_layouts' => "CREATE TABLE IF NOT EXISTS {$p}admin_menu_layouts (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                site_key VARCHAR(64) NOT NULL DEFAULT '',
+                layout_json MEDIUMTEXT NULL,
+                version INT UNSIGNED NOT NULL DEFAULT 1,
+                updated_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                UNIQUE KEY uniq_admin_menu_layouts_site (site_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Eigene Admin-Sidebar-Layouts'",
+
+            // v25: lange Admin-Aufgaben in Schritten (BatchJobService, admin-batch-runner.js), je Typ und
+            // Scope höchstens ein aktiver Job; Cursor und Zähler in state_json, Sperre per lock_token.
+            'batch_jobs' => "CREATE TABLE IF NOT EXISTS {$p}batch_jobs (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                job_type VARCHAR(60) NOT NULL,
+                scope_key VARCHAR(120) NOT NULL DEFAULT '',
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                total INT UNSIGNED NOT NULL DEFAULT 0,
+                processed INT UNSIGNED NOT NULL DEFAULT 0,
+                failed INT UNSIGNED NOT NULL DEFAULT 0,
+                state_json LONGTEXT NULL,
+                errors_json MEDIUMTEXT NULL,
+                message VARCHAR(255) NOT NULL DEFAULT '',
+                lock_token CHAR(32) NULL,
+                locked_until DATETIME NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                finished_at DATETIME NULL,
+                INDEX idx_batch_jobs_lookup (job_type, scope_key, status),
+                INDEX idx_batch_jobs_updated (updated_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Lange Admin-Aufgaben (BatchJobService)'",
         ];
     }
 

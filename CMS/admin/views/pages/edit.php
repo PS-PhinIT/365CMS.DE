@@ -447,8 +447,6 @@ $isEnglishEditorView = $editorLocale === 'en';
                     </div>
                 </div>
 
-                <?php include __DIR__ . '/../partials/page-template-fields.php'; ?>
-
                 <div class="col-12 cms-editor-primary">
                     <div class="card cms-edit-card cms-editor-card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
@@ -517,260 +515,264 @@ $isEnglishEditorView = $editorLocale === 'en';
 
                         </div>
                     </div>
-                </div>
 
-                <div class="col-xl-4 d-flex cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
-                    <details class="card cms-edit-card h-100 w-100 cms-collapsible-card cms-collapsible-card--seo">
-                        <summary class="card-header cms-collapsible-card__summary">
-                            <h3 class="card-title mb-0">SEO-Card</h3>
-                            <span class="cms-collapsible-card__chevron" aria-hidden="true"></span>
-                        </summary>
-                        <div class="card-body">
-                            <?php if ($aiSeoMetadataEnabled): ?>
-                                <div class="alert alert-info py-2 mb-3">
-                                    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                                        <span class="small">Erzeugt SEO-Metadaten aus dem Haupttext. Seitentitel, Slug und URL-Felder bleiben unverändert.</span>
-                                        <button type="button" class="btn btn-primary btn-sm" id="generatePageSeoMetadataButton">SEO mit AI füllen</button>
-                                    </div>
-                                </div>
-                            <?php elseif ($aiSeoMetadataUnavailableReason !== ''): ?>
-                                <div class="alert alert-warning py-2 mb-3 small" role="status">
-                                    <strong>SEO mit AI ist hier nicht verfügbar.</strong>
-                                    <?= htmlspecialchars($aiSeoMetadataUnavailableReason) ?>
-                                    <?php if ($aiSettingsUrl !== ''): ?>
-                                        <a href="<?= htmlspecialchars($aiSettingsUrl) ?>">Zu den AI-Einstellungen</a>
+                    <div class="cms-page-editor-extras" id="pageEditorExtras">
+                        <div class="cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
+                            <details class="card cms-edit-card h-100 w-100 cms-collapsible-card cms-collapsible-card--seo">
+                                <summary class="card-header cms-collapsible-card__summary">
+                                    <h3 class="card-title mb-0">SEO-Card</h3>
+                                    <span class="cms-collapsible-card__chevron" aria-hidden="true"></span>
+                                </summary>
+                                <div class="card-body">
+                                    <?php if ($aiSeoMetadataEnabled): ?>
+                                        <div class="alert alert-info py-2 mb-3">
+                                            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                                <span class="small">Erzeugt SEO-Metadaten aus dem Haupttext. Seitentitel, Slug und URL-Felder bleiben unverändert.</span>
+                                                <button type="button" class="btn btn-primary btn-sm" id="generatePageSeoMetadataButton">SEO mit AI füllen</button>
+                                            </div>
+                                        </div>
+                                    <?php elseif ($aiSeoMetadataUnavailableReason !== ''): ?>
+                                        <div class="alert alert-warning py-2 mb-3 small" role="status">
+                                            <strong>SEO mit AI ist hier nicht verfügbar.</strong>
+                                            <?= htmlspecialchars($aiSeoMetadataUnavailableReason) ?>
+                                            <?php if ($aiSettingsUrl !== ''): ?>
+                                                <a href="<?= htmlspecialchars($aiSettingsUrl) ?>">Zu den AI-Einstellungen</a>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="pageFocusKeyphrase">Fokus-Keyphrase</label>
+                                        <input type="text" name="focus_keyphrase" class="form-control" id="pageFocusKeyphrase" placeholder="z. B. Mitgliedschaft B2B-Netzwerk" value="<?= htmlspecialchars($pageFocusKeyphraseValue) ?>">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="pageSeoKeywords">SEO-Tags / Keywords</label>
+                                        <input type="text" name="keywords" class="form-control" id="pageSeoKeywords" placeholder="z. B. Microsoft 365, Managed Services, IT-Sicherheit" value="<?= htmlspecialchars($pageKeywordsValue) ?>">
+                                        <small class="form-hint">Nur für SEO-Metadaten: Kommagetrennte Begriffe werden im Head als Keywords ausgegeben, aber nicht sichtbar auf der Seite angezeigt.</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="pageMetaTitle" class="form-label">Meta-Titel</label>
+                                        <input type="text" name="meta_title" class="form-control" id="pageMetaTitle" placeholder="SEO-Titel (Standard: Seitentitel)" maxlength="70" value="<?= htmlspecialchars($pageMetaTitleValue) ?>">
+                                        <small class="form-hint"><span id="metaTitleCount">0</span>/70 Zeichen</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="pageMetaDescription" class="form-label">Meta-Beschreibung</label>
+                                        <textarea name="meta_description" class="form-control" rows="3" id="pageMetaDescription" placeholder="Kurze Beschreibung für Suchmaschinen…" maxlength="160"><?= htmlspecialchars($pageMetaDescriptionValue) ?></textarea>
+                                        <small class="form-hint"><span id="metaDescriptionCount">0</span>/160 Zeichen</small>
+                                    </div>
+                                    <div id="pageSeoOverrideNotice" class="alert alert-info d-none cms-seo-override-notice" role="status" aria-live="polite">
+                                        <div class="cms-seo-override-header">
+                                            <div class="fw-semibold cms-seo-override-title">SEO-Default-Hinweis</div>
+                                        </div>
+                                        <div class="cms-seo-override-actions">
+                                            <button type="button" class="btn btn-sm btn-outline-primary d-none" id="pageSeoResetMetaTitle">Meta-Titel auf Default zurücksetzen</button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary d-none" id="pageSeoResetMetaDescription">Meta-Beschreibung auf Default zurücksetzen</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="pageSeoResetAllMetaDefaults">Alle lokalen SEO-Felder auf Default zurücksetzen</button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="pageCanonicalUrl">Kanonische URL</label>
+                                        <input type="text" name="canonical_url" id="pageCanonicalUrl" class="form-control" value="<?= htmlspecialchars($pageCanonicalUrlValue) ?>" placeholder="Automatisch self-referencing, wenn leer">
+                                    </div>
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><span class="text-secondary small">Vorschau-URL</span><span class="badge bg-success-lt text-success" id="pageSlugState">Slug gültig</span></div>
+                                    <div class="form-control-plaintext text-break small mb-3" id="pagePreviewUrl"><?= htmlspecialchars($activePagePreviewUrl) ?></div>
+                                    <div id="pagePublishWarning" class="alert alert-warning mb-0" role="alert"></div>
                                 </div>
-                            <?php endif; ?>
-                            <div class="mb-3">
-                                <label class="form-label" for="pageFocusKeyphrase">Fokus-Keyphrase</label>
-                                <input type="text" name="focus_keyphrase" class="form-control" id="pageFocusKeyphrase" placeholder="z. B. Mitgliedschaft B2B-Netzwerk" value="<?= htmlspecialchars($pageFocusKeyphraseValue) ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="pageSeoKeywords">SEO-Tags / Keywords</label>
-                                <input type="text" name="keywords" class="form-control" id="pageSeoKeywords" placeholder="z. B. Microsoft 365, Managed Services, IT-Sicherheit" value="<?= htmlspecialchars($pageKeywordsValue) ?>">
-                                <small class="form-hint">Nur für SEO-Metadaten: Kommagetrennte Begriffe werden im Head als Keywords ausgegeben, aber nicht sichtbar auf der Seite angezeigt.</small>
-                            </div>
-                            <div class="mb-3">
-                                <label for="pageMetaTitle" class="form-label">Meta-Titel</label>
-                                <input type="text" name="meta_title" class="form-control" id="pageMetaTitle" placeholder="SEO-Titel (Standard: Seitentitel)" maxlength="70" value="<?= htmlspecialchars($pageMetaTitleValue) ?>">
-                                <small class="form-hint"><span id="metaTitleCount">0</span>/70 Zeichen</small>
-                            </div>
-                            <div class="mb-3">
-                                <label for="pageMetaDescription" class="form-label">Meta-Beschreibung</label>
-                                <textarea name="meta_description" class="form-control" rows="3" id="pageMetaDescription" placeholder="Kurze Beschreibung für Suchmaschinen…" maxlength="160"><?= htmlspecialchars($pageMetaDescriptionValue) ?></textarea>
-                                <small class="form-hint"><span id="metaDescriptionCount">0</span>/160 Zeichen</small>
-                            </div>
-                            <div id="pageSeoOverrideNotice" class="alert alert-info d-none cms-seo-override-notice" role="status" aria-live="polite">
-                                <div class="cms-seo-override-header">
-                                    <div class="fw-semibold cms-seo-override-title">SEO-Default-Hinweis</div>
-                                </div>
-                                <div class="cms-seo-override-actions">
-                                    <button type="button" class="btn btn-sm btn-outline-primary d-none" id="pageSeoResetMetaTitle">Meta-Titel auf Default zurücksetzen</button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary d-none" id="pageSeoResetMetaDescription">Meta-Beschreibung auf Default zurücksetzen</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="pageSeoResetAllMetaDefaults">Alle lokalen SEO-Felder auf Default zurücksetzen</button>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="pageCanonicalUrl">Kanonische URL</label>
-                                <input type="text" name="canonical_url" id="pageCanonicalUrl" class="form-control" value="<?= htmlspecialchars($pageCanonicalUrlValue) ?>" placeholder="Automatisch self-referencing, wenn leer">
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><span class="text-secondary small">Vorschau-URL</span><span class="badge bg-success-lt text-success" id="pageSlugState">Slug gültig</span></div>
-                            <div class="form-control-plaintext text-break small mb-3" id="pagePreviewUrl"><?= htmlspecialchars($activePagePreviewUrl) ?></div>
-                            <div id="pagePublishWarning" class="alert alert-warning mb-0" role="alert"></div>
+                            </details>
                         </div>
-                    </details>
-                </div>
 
-                <div class="col-xl-4 d-flex cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
-                    <?php
-                    $readabilityCard = [
-                        'badgeId' => 'pageReadabilityBadge',
-                        'summaryId' => 'pageReadabilitySummary',
-                        'metrics' => [
-                            ['id' => 'pageWordCount', 'label' => 'Wörter'],
-                            ['id' => 'pageDensity', 'label' => 'Keyphrase-Dichte'],
-                            ['id' => 'pageInternalLinks', 'label' => 'Interne Links'],
-                            ['id' => 'pageExternalLinks', 'label' => 'Externe Links'],
-                            ['id' => 'pageTransitionWords', 'label' => 'Signalwörter'],
-                            ['id' => 'pageMissingAlt', 'label' => 'Bilder ohne Alt'],
-                            ['id' => 'pageLongSentences', 'label' => 'Lange Sätze'],
-                            ['id' => 'pageLongParagraphs', 'label' => 'Lange Absätze'],
-                        ],
-                    ];
-                    require __DIR__ . '/../partials/content-readability-card.php';
-                    ?>
-                </div>
-
-                <div class="col-xl-4 d-flex cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
-                    <?php
-                    $previewCard = [
-                        'serpTitleId' => 'pageSerpTitle',
-                        'serpTitle' => $pageMetaTitleValue ?: $activePageTitleValue,
-                        'serpUrlId' => 'pageSerpUrl',
-                        'serpUrl' => $activePagePreviewUrl,
-                        'serpDescriptionId' => 'pageSerpDescription',
-                        'serpDescription' => $pageMetaDescriptionValue ?: 'Meta-Beschreibung wird automatisch aus dem ersten Absatz erzeugt.',
-                        'socialImageId' => 'pageSocialImage',
-                        'socialImage' => $pageOgImageValue !== '' ? $pageOgImageValue : $pageFeaturedImageValue,
-                        'socialImageVisible' => $pageOgImageValue !== '' || $pageFeaturedImageValue !== '',
-                        'socialTitleId' => 'pageSocialTitle',
-                        'socialTitle' => $pageOgTitleValue !== '' ? $pageOgTitleValue : ($pageMetaTitleValue ?: $activePageTitleValue),
-                        'socialDescriptionId' => 'pageSocialDescription',
-                        'socialDescription' => $pageOgDescriptionValue !== '' ? $pageOgDescriptionValue : ($pageMetaDescriptionValue ?: 'Social-Vorschau aus SEO-Daten'),
-                    ];
-                    require __DIR__ . '/../partials/content-preview-card.php';
-                    ?>
-                </div>
-
-                <div class="col-12 cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
-                    <?php
-                    $seoScorePanel = [
-                        'badgeId' => 'pageSeoScoreBadge',
-                        'scoreLabelId' => 'pageSeoScoreLabel',
-                        'scoreBarId' => 'pageSeoScoreBar',
-                        'rulesId' => 'pageSeoRules',
-                        'hintBadgeContainerId' => 'pageSeoHintBadges',
-                        'summaryCards' => [
-                            ['width' => 'col-md-3', 'label' => 'Titel', 'valueId' => 'pageTitleCount', 'suffix' => 'Zeichen'],
-                            ['width' => 'col-md-3', 'label' => 'Slug', 'valueId' => 'pageSlugCount', 'suffix' => 'Zeichen'],
-                            ['width' => 'col-md-3', 'label' => 'Status', 'badgeId' => 'pageStatusBadge', 'badgeText' => 'Entwurf', 'badgeClass' => 'badge bg-yellow-lt text-yellow'],
-                            ['width' => 'col-md-3', 'label' => 'Hinweis', 'bodyText' => $isEnglishEditorView ? 'EN-Ansicht mit separatem Save-Flow.' : 'DE-Ansicht mit separatem Save-Flow.'],
-                        ],
-                    ];
-                    require __DIR__ . '/../partials/content-seo-score-panel.php';
-                    ?>
-                </div>
-
-                <?php if (!$isNew): ?>
-                <div class="col-12 cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
-                    <details class="card cms-edit-card">
-                        <summary class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap" style="cursor:pointer; list-style:none;">
-                            <div>
-                                <h3 class="card-title mb-0">Revisionen & Vergleich</h3>
-                                <div class="text-secondary small mt-1">Gespeicherte Snapshots zeigen Unterschiede zwischen aktuellem Stand und früheren Versionen der Seite – inklusive DE/EN-Titel, Slugs und Inhalte.</div>
+                        <div class="cms-page-editor-extras__pair">
+                            <div class="d-flex cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
+                                <?php
+                                $readabilityCard = [
+                                    'badgeId' => 'pageReadabilityBadge',
+                                    'summaryId' => 'pageReadabilitySummary',
+                                    'metrics' => [
+                                        ['id' => 'pageWordCount', 'label' => 'Wörter'],
+                                        ['id' => 'pageDensity', 'label' => 'Keyphrase-Dichte'],
+                                        ['id' => 'pageInternalLinks', 'label' => 'Interne Links'],
+                                        ['id' => 'pageExternalLinks', 'label' => 'Externe Links'],
+                                        ['id' => 'pageTransitionWords', 'label' => 'Signalwörter'],
+                                        ['id' => 'pageMissingAlt', 'label' => 'Bilder ohne Alt'],
+                                        ['id' => 'pageLongSentences', 'label' => 'Lange Sätze'],
+                                        ['id' => 'pageLongParagraphs', 'label' => 'Lange Absätze'],
+                                    ],
+                                ];
+                                require __DIR__ . '/../partials/content-readability-card.php';
+                                ?>
                             </div>
-                            <span class="badge bg-blue-lt text-blue"><?= (int) ($revisionHistory['total'] ?? 0) ?> Revision(en)</span>
-                        </summary>
-                        <div class="card-body">
-                            <?php if ($pageRevisionItems === []): ?>
-                                <div class="text-secondary">Noch keine gespeicherten Revisionen vorhanden. Beim nächsten inhaltlichen Speichern wird automatisch ein Snapshot angelegt.</div>
-                            <?php else: ?>
-                                <div class="alert alert-info" role="status">
-                                    Die Ansicht bleibt bewusst read-only: Sie dient dem sicheren Vergleich, ohne versehentlich alte Inhalte direkt zurückzuschreiben. Kleine Zeitmaschine, große Vorsicht. 🕰️
-                                </div>
-                                <div class="d-flex flex-column gap-3">
-                                    <?php foreach ($pageRevisionItems as $revision): ?>
-                                        <?php
-                                        $revisionChangedFields = is_array($revision['changed_fields'] ?? null) ? $revision['changed_fields'] : [];
-                                        $revisionFieldDiffs = is_array($revision['field_diffs'] ?? null) ? $revision['field_diffs'] : [];
-                                        ?>
-                                        <details class="border rounded-3 p-3">
-                                            <summary class="d-flex flex-wrap align-items-center gap-2" style="cursor:pointer; list-style:none;">
-                                                <strong><?= htmlspecialchars((string) ($revision['created_at_label'] ?? 'Unbekanntes Datum')) ?></strong>
-                                                <span class="text-secondary">von <?= htmlspecialchars((string) ($revision['author_label'] ?? 'Unbekannt')) ?></span>
-                                                <?php if ($revisionChangedFields !== []): ?>
-                                                    <span class="text-secondary">· geändert:</span>
-                                                    <?php foreach ($revisionChangedFields as $fieldLabel): ?>
-                                                        <span class="badge bg-azure-lt text-azure"><?= htmlspecialchars((string) $fieldLabel) ?></span>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </summary>
 
-                                            <?php if ($revisionFieldDiffs === []): ?>
-                                                <div class="text-secondary small mt-3">Zu den aktuell verglichenen Feldern wurden keine Unterschiede erkannt.</div>
-                                            <?php else: ?>
-                                                <div class="row g-3 mt-1">
-                                                    <?php foreach ($revisionFieldDiffs as $fieldDiff): ?>
-                                                        <div class="col-xl-6 d-flex">
-                                                            <div class="card card-sm w-100">
-                                                                <div class="card-header">
-                                                                    <h4 class="card-title mb-0"><?= htmlspecialchars((string) ($fieldDiff['label'] ?? 'Unterschied')) ?></h4>
-                                                                </div>
-                                                                <div class="card-body">
-                                                                    <div class="row g-3">
-                                                                        <div class="col-md-6">
-                                                                            <div class="text-secondary text-uppercase small mb-1"><?= htmlspecialchars((string) ($fieldDiff['current_label'] ?? 'Aktuell')) ?></div>
-                                                                            <?php if (($fieldDiff['type'] ?? '') === 'content'): ?>
-                                                                                <?php $currentSummary = is_array($fieldDiff['current_summary'] ?? null) ? $fieldDiff['current_summary'] : []; ?>
-                                                                                <div class="fw-semibold mb-1"><?= htmlspecialchars((string) ($currentSummary['preview'] ?? '— leer —')) ?></div>
-                                                                                <div class="small text-secondary"><?= htmlspecialchars($pageRevisionContentMeta($currentSummary)) ?></div>
-                                                                            <?php else: ?>
-                                                                                <div class="fw-semibold"><?= htmlspecialchars((string) ($fieldDiff['current_value'] ?? '— leer —')) ?></div>
-                                                                            <?php endif; ?>
+                            <div class="d-flex cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
+                                <?php
+                                $previewCard = [
+                                    'serpTitleId' => 'pageSerpTitle',
+                                    'serpTitle' => $pageMetaTitleValue ?: $activePageTitleValue,
+                                    'serpUrlId' => 'pageSerpUrl',
+                                    'serpUrl' => $activePagePreviewUrl,
+                                    'serpDescriptionId' => 'pageSerpDescription',
+                                    'serpDescription' => $pageMetaDescriptionValue ?: 'Meta-Beschreibung wird automatisch aus dem ersten Absatz erzeugt.',
+                                    'socialImageId' => 'pageSocialImage',
+                                    'socialImage' => $pageOgImageValue !== '' ? $pageOgImageValue : $pageFeaturedImageValue,
+                                    'socialImageVisible' => $pageOgImageValue !== '' || $pageFeaturedImageValue !== '',
+                                    'socialTitleId' => 'pageSocialTitle',
+                                    'socialTitle' => $pageOgTitleValue !== '' ? $pageOgTitleValue : ($pageMetaTitleValue ?: $activePageTitleValue),
+                                    'socialDescriptionId' => 'pageSocialDescription',
+                                    'socialDescription' => $pageOgDescriptionValue !== '' ? $pageOgDescriptionValue : ($pageMetaDescriptionValue ?: 'Social-Vorschau aus SEO-Daten'),
+                                ];
+                                require __DIR__ . '/../partials/content-preview-card.php';
+                                ?>
+                            </div>
+                        </div>
+
+                        <div class="cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
+                            <?php
+                            $seoScorePanel = [
+                                'badgeId' => 'pageSeoScoreBadge',
+                                'scoreLabelId' => 'pageSeoScoreLabel',
+                                'scoreBarId' => 'pageSeoScoreBar',
+                                'rulesId' => 'pageSeoRules',
+                                'hintBadgeContainerId' => 'pageSeoHintBadges',
+                                'summaryCards' => [
+                                    ['width' => 'col-md-3', 'label' => 'Titel', 'valueId' => 'pageTitleCount', 'suffix' => 'Zeichen'],
+                                    ['width' => 'col-md-3', 'label' => 'Slug', 'valueId' => 'pageSlugCount', 'suffix' => 'Zeichen'],
+                                    ['width' => 'col-md-3', 'label' => 'Status', 'badgeId' => 'pageStatusBadge', 'badgeText' => 'Entwurf', 'badgeClass' => 'badge bg-yellow-lt text-yellow'],
+                                    ['width' => 'col-md-3', 'label' => 'Hinweis', 'bodyText' => $isEnglishEditorView ? 'EN-Ansicht mit separatem Save-Flow.' : 'DE-Ansicht mit separatem Save-Flow.'],
+                                ],
+                            ];
+                            require __DIR__ . '/../partials/content-seo-score-panel.php';
+                            ?>
+                        </div>
+
+                        <?php if (!$isNew): ?>
+                        <div class="cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
+                            <details class="card cms-edit-card">
+                                <summary class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap" style="cursor:pointer; list-style:none;">
+                                    <div>
+                                        <h3 class="card-title mb-0">Revisionen & Vergleich</h3>
+                                        <div class="text-secondary small mt-1">Gespeicherte Snapshots zeigen Unterschiede zwischen aktuellem Stand und früheren Versionen der Seite – inklusive DE/EN-Titel, Slugs und Inhalte.</div>
+                                    </div>
+                                    <span class="badge bg-blue-lt text-blue"><?= (int) ($revisionHistory['total'] ?? 0) ?> Revision(en)</span>
+                                </summary>
+                                <div class="card-body">
+                                    <?php if ($pageRevisionItems === []): ?>
+                                        <div class="text-secondary">Noch keine gespeicherten Revisionen vorhanden. Beim nächsten inhaltlichen Speichern wird automatisch ein Snapshot angelegt.</div>
+                                    <?php else: ?>
+                                        <div class="alert alert-info" role="status">
+                                            Die Ansicht bleibt bewusst read-only: Sie dient dem sicheren Vergleich, ohne versehentlich alte Inhalte direkt zurückzuschreiben. Kleine Zeitmaschine, große Vorsicht. 🕰️
+                                        </div>
+                                        <div class="d-flex flex-column gap-3">
+                                            <?php foreach ($pageRevisionItems as $revision): ?>
+                                                <?php
+                                                $revisionChangedFields = is_array($revision['changed_fields'] ?? null) ? $revision['changed_fields'] : [];
+                                                $revisionFieldDiffs = is_array($revision['field_diffs'] ?? null) ? $revision['field_diffs'] : [];
+                                                ?>
+                                                <details class="border rounded-3 p-3">
+                                                    <summary class="d-flex flex-wrap align-items-center gap-2" style="cursor:pointer; list-style:none;">
+                                                        <strong><?= htmlspecialchars((string) ($revision['created_at_label'] ?? 'Unbekanntes Datum')) ?></strong>
+                                                        <span class="text-secondary">von <?= htmlspecialchars((string) ($revision['author_label'] ?? 'Unbekannt')) ?></span>
+                                                        <?php if ($revisionChangedFields !== []): ?>
+                                                            <span class="text-secondary">· geändert:</span>
+                                                            <?php foreach ($revisionChangedFields as $fieldLabel): ?>
+                                                                <span class="badge bg-azure-lt text-azure"><?= htmlspecialchars((string) $fieldLabel) ?></span>
+                                                            <?php endforeach; ?>
+                                                        <?php endif; ?>
+                                                    </summary>
+
+                                                    <?php if ($revisionFieldDiffs === []): ?>
+                                                        <div class="text-secondary small mt-3">Zu den aktuell verglichenen Feldern wurden keine Unterschiede erkannt.</div>
+                                                    <?php else: ?>
+                                                        <div class="row g-3 mt-1">
+                                                            <?php foreach ($revisionFieldDiffs as $fieldDiff): ?>
+                                                                <div class="col-xl-6 d-flex">
+                                                                    <div class="card card-sm w-100">
+                                                                        <div class="card-header">
+                                                                            <h4 class="card-title mb-0"><?= htmlspecialchars((string) ($fieldDiff['label'] ?? 'Unterschied')) ?></h4>
                                                                         </div>
-                                                                        <div class="col-md-6">
-                                                                            <div class="text-secondary text-uppercase small mb-1"><?= htmlspecialchars((string) ($fieldDiff['revision_label'] ?? 'Revision')) ?></div>
-                                                                            <?php if (($fieldDiff['type'] ?? '') === 'content'): ?>
-                                                                                <?php $revisionSummary = is_array($fieldDiff['revision_summary'] ?? null) ? $fieldDiff['revision_summary'] : []; ?>
-                                                                                <div class="fw-semibold mb-1"><?= htmlspecialchars((string) ($revisionSummary['preview'] ?? '— leer —')) ?></div>
-                                                                                <div class="small text-secondary"><?= htmlspecialchars($pageRevisionContentMeta($revisionSummary)) ?></div>
-                                                                            <?php else: ?>
-                                                                                <div class="fw-semibold"><?= htmlspecialchars((string) ($fieldDiff['revision_value'] ?? '— leer —')) ?></div>
-                                                                            <?php endif; ?>
+                                                                        <div class="card-body">
+                                                                            <div class="row g-3">
+                                                                                <div class="col-md-6">
+                                                                                    <div class="text-secondary text-uppercase small mb-1"><?= htmlspecialchars((string) ($fieldDiff['current_label'] ?? 'Aktuell')) ?></div>
+                                                                                    <?php if (($fieldDiff['type'] ?? '') === 'content'): ?>
+                                                                                        <?php $currentSummary = is_array($fieldDiff['current_summary'] ?? null) ? $fieldDiff['current_summary'] : []; ?>
+                                                                                        <div class="fw-semibold mb-1"><?= htmlspecialchars((string) ($currentSummary['preview'] ?? '— leer —')) ?></div>
+                                                                                        <div class="small text-secondary"><?= htmlspecialchars($pageRevisionContentMeta($currentSummary)) ?></div>
+                                                                                    <?php else: ?>
+                                                                                        <div class="fw-semibold"><?= htmlspecialchars((string) ($fieldDiff['current_value'] ?? '— leer —')) ?></div>
+                                                                                    <?php endif; ?>
+                                                                                </div>
+                                                                                <div class="col-md-6">
+                                                                                    <div class="text-secondary text-uppercase small mb-1"><?= htmlspecialchars((string) ($fieldDiff['revision_label'] ?? 'Revision')) ?></div>
+                                                                                    <?php if (($fieldDiff['type'] ?? '') === 'content'): ?>
+                                                                                        <?php $revisionSummary = is_array($fieldDiff['revision_summary'] ?? null) ? $fieldDiff['revision_summary'] : []; ?>
+                                                                                        <div class="fw-semibold mb-1"><?= htmlspecialchars((string) ($revisionSummary['preview'] ?? '— leer —')) ?></div>
+                                                                                        <div class="small text-secondary"><?= htmlspecialchars($pageRevisionContentMeta($revisionSummary)) ?></div>
+                                                                                    <?php else: ?>
+                                                                                        <div class="fw-semibold"><?= htmlspecialchars((string) ($fieldDiff['revision_value'] ?? '— leer —')) ?></div>
+                                                                                    <?php endif; ?>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
+                                                            <?php endforeach; ?>
                                                         </div>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </details>
-                                    <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                </details>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <?php if (!empty($revisionHistory['has_more'])): ?>
+                                            <div class="text-secondary small mt-3">Aus Performance-Gründen werden hier die letzten <?= (int) ($revisionHistory['displayed'] ?? 0) ?> Revisionen angezeigt.</div>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <?php if (!empty($revisionHistory['has_more'])): ?>
-                                    <div class="text-secondary small mt-3">Aus Performance-Gründen werden hier die letzten <?= (int) ($revisionHistory['displayed'] ?? 0) ?> Revisionen angezeigt.</div>
-                                <?php endif; ?>
-                            <?php endif; ?>
+                            </details>
                         </div>
-                    </details>
-                </div>
-                <?php endif; ?>
+                        <?php endif; ?>
 
-                <div class="col-12 cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
-                    <?php
-                    $advancedSeoPanel = [
-                        'hint' => 'Das Contentheader-Bild wird oben im Formular unter Contentheader Bild gesetzt. Hier kann ein abweichendes OG-Bild für Social Media hinterlegt werden.',
-                        'schemaTypeId' => 'pageSchemaType',
-                        'schemaTypeName' => 'schema_type',
-                        'schemaTypeValue' => \CMS\Services\SEO\SeoSchemaRenderer::selectableTypeFor($pageSchemaTypeValue, 'page'),
-                        'schemaTypeOptions' => \CMS\Services\SEO\SeoSchemaRenderer::typeOptionsFor('page'),
-                        'sitemapPriorityId' => 'pageSitemapPriority',
-                        'sitemapPriorityName' => 'sitemap_priority',
-                        'sitemapPriorityValue' => $pageSitemapPriorityValue,
-                        'sitemapChangefreqId' => 'pageSitemapChangefreq',
-                        'sitemapChangefreqName' => 'sitemap_changefreq',
-                        'sitemapChangefreqValue' => $pageSitemapChangefreqValue,
-                        'sitemapChangefreqOptions' => ['always', 'daily', 'weekly', 'monthly', 'yearly'],
-                        'robotsIndexId' => 'pageRobotsIndex',
-                        'robotsIndexName' => 'robots_index',
-                        'robotsIndexChecked' => $pageRobotsIndexValue,
-                        'robotsFollowId' => 'pageRobotsFollow',
-                        'robotsFollowName' => 'robots_follow',
-                        'robotsFollowChecked' => $pageRobotsFollowValue,
-                        'hreflangGroupId' => 'pageHreflangGroup',
-                        'hreflangGroupName' => 'hreflang_group',
-                        'hreflangGroupValue' => $pageHreflangGroupValue,
-                        'ogTitleId' => 'pageOgTitle',
-                        'ogTitleValue' => $pageOgTitleValue,
-                        'ogImageId' => 'pageOgImage',
-                        'ogImageValue' => $pageOgImageValue,
-                        'ogDescriptionId' => 'pageOgDescription',
-                        'ogDescriptionValue' => $pageOgDescriptionValue,
-                        'twitterTitleId' => 'pageTwitterTitle',
-                        'twitterTitleValue' => $pageTwitterTitleValue,
-                        'twitterCardId' => 'pageTwitterCard',
-                        'twitterCardName' => 'twitter_card',
-                        'twitterCardValue' => $pageTwitterCardValue,
-                        'twitterCardOptions' => ['summary_large_image', 'summary'],
-                        'twitterDescriptionId' => 'pageTwitterDescription',
-                        'twitterDescriptionValue' => $pageTwitterDescriptionValue,
-                        'twitterImageId' => 'pageTwitterImage',
-                        'twitterImageValue' => $pageTwitterImageValue,
-                    ];
-                    require __DIR__ . '/../partials/content-advanced-seo-panel.php';
-                    ?>
+                        <div class="cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
+                            <?php
+                            $advancedSeoPanel = [
+                                'hint' => 'Das Contentheader-Bild wird oben im Formular unter Contentheader Bild gesetzt. Hier kann ein abweichendes OG-Bild für Social Media hinterlegt werden.',
+                                'schemaTypeId' => 'pageSchemaType',
+                                'schemaTypeName' => 'schema_type',
+                                'schemaTypeValue' => \CMS\Services\SEO\SeoSchemaRenderer::selectableTypeFor($pageSchemaTypeValue, 'page'),
+                                'schemaTypeOptions' => \CMS\Services\SEO\SeoSchemaRenderer::typeOptionsFor('page'),
+                                'sitemapPriorityId' => 'pageSitemapPriority',
+                                'sitemapPriorityName' => 'sitemap_priority',
+                                'sitemapPriorityValue' => $pageSitemapPriorityValue,
+                                'sitemapChangefreqId' => 'pageSitemapChangefreq',
+                                'sitemapChangefreqName' => 'sitemap_changefreq',
+                                'sitemapChangefreqValue' => $pageSitemapChangefreqValue,
+                                'sitemapChangefreqOptions' => ['always', 'daily', 'weekly', 'monthly', 'yearly'],
+                                'robotsIndexId' => 'pageRobotsIndex',
+                                'robotsIndexName' => 'robots_index',
+                                'robotsIndexChecked' => $pageRobotsIndexValue,
+                                'robotsFollowId' => 'pageRobotsFollow',
+                                'robotsFollowName' => 'robots_follow',
+                                'robotsFollowChecked' => $pageRobotsFollowValue,
+                                'hreflangGroupId' => 'pageHreflangGroup',
+                                'hreflangGroupName' => 'hreflang_group',
+                                'hreflangGroupValue' => $pageHreflangGroupValue,
+                                'ogTitleId' => 'pageOgTitle',
+                                'ogTitleValue' => $pageOgTitleValue,
+                                'ogImageId' => 'pageOgImage',
+                                'ogImageValue' => $pageOgImageValue,
+                                'ogDescriptionId' => 'pageOgDescription',
+                                'ogDescriptionValue' => $pageOgDescriptionValue,
+                                'twitterTitleId' => 'pageTwitterTitle',
+                                'twitterTitleValue' => $pageTwitterTitleValue,
+                                'twitterCardId' => 'pageTwitterCard',
+                                'twitterCardName' => 'twitter_card',
+                                'twitterCardValue' => $pageTwitterCardValue,
+                                'twitterCardOptions' => ['summary_large_image', 'summary'],
+                                'twitterDescriptionId' => 'pageTwitterDescription',
+                                'twitterDescriptionValue' => $pageTwitterDescriptionValue,
+                                'twitterImageId' => 'pageTwitterImage',
+                                'twitterImageValue' => $pageTwitterImageValue,
+                            ];
+                            require __DIR__ . '/../partials/content-advanced-seo-panel.php';
+                            ?>
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>

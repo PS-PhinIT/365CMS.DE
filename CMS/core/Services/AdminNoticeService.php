@@ -26,7 +26,8 @@ final class AdminNoticeService
 {
     public const CACHE_KEY = 'admin_system_notices_v1';
     public const CACHE_TTL = 300;
-    private const PLUGIN_UPDATES_CACHE_KEY = 'admin_system_notices_plugin_updates_v1';
+    /** Cache der Plugin-Update-Prüfung (auch vom Update-Badge im Admin-Menü gelesen). */
+    public const PLUGIN_UPDATES_CACHE_KEY = 'admin_system_notices_plugin_updates_v1';
     private const PLUGIN_UPDATES_CACHE_TTL = 3600;
     private const BACKUP_MAX_AGE = 86400;
 
@@ -37,8 +38,38 @@ final class AdminNoticeService
         return self::$instance ??= new self();
     }
 
+    /** @var array<string, callable(): ?array> zusätzliche Prüfungen der Funktionsbereiche */
+    private static array $registeredChecks = [];
+
     private function __construct()
     {
+    }
+
+    /**
+     * Registriert eine zusätzliche Prüfung für die Systemhinweise im Sidebar-Footer.
+     * Die Prüfung liefert `null` oder ein Array aus `AdminNoticeService::makeNotice()`.
+     *
+     * @param callable(): ?array $check
+     */
+    public static function registerCheck(string $name, callable $check): void
+    {
+        self::$registeredChecks[$name] = $check;
+    }
+
+    /**
+     * @param 'info'|'warning'|'danger' $severity
+     * @return array{id:string,severity:string,title:string,text:string,url:string,link_label:string}
+     */
+    public static function makeNotice(string $id, string $severity, string $title, string $text, string $url, string $linkLabel): array
+    {
+        return [
+            'id' => $id,
+            'severity' => in_array($severity, ['info', 'warning', 'danger'], true) ? $severity : 'info',
+            'title' => $title,
+            'text' => $text,
+            'url' => $url,
+            'link_label' => $linkLabel,
+        ];
     }
 
     /**
@@ -61,7 +92,7 @@ final class AdminNoticeService
             'Backup-Status' => $this->backupNotice(...),
             'Core-Updates' => $this->coreUpdateNotice(...),
             'Plugin-Updates' => $this->pluginUpdateNotice(...),
-        ] as $checkName => $check) {
+        ] + self::$registeredChecks as $checkName => $check) {
             try {
                 $notice = $check();
             } catch (\Throwable $e) {
@@ -187,16 +218,7 @@ final class AdminNoticeService
             $cache->set(self::PLUGIN_UPDATES_CACHE_KEY, $known, self::PLUGIN_UPDATES_CACHE_TTL);
         }
 
-        // Bereits installierte Updates sofort ausblenden, ohne erneute Remote-Abfrage.
-        $installed = PluginManager::instance()->getAvailablePlugins();
-        $pending = [];
-        foreach ($known as $folder => $update) {
-            $current = (string) ($installed[$folder]['version'] ?? '');
-            $newVersion = (string) ($update['new_version'] ?? '');
-            if ($current !== '' && $newVersion !== '' && version_compare($newVersion, $current, '>')) {
-                $pending[] = (string) ($update['name'] ?? $folder);
-            }
-        }
+        $pending = self::pendingPluginUpdates($known, PluginManager::instance()->getAvailablePlugins());
 
         if ($pending === []) {
             return null;
@@ -213,6 +235,31 @@ final class AdminNoticeService
             '/admin/updates',
             'Updates öffnen'
         );
+    }
+
+    /**
+     * Noch nicht installierte Plugin-Updates aus dem Update-Cache, ohne erneute Remote-Abfrage.
+     * Bereits installierte Updates fallen sofort heraus.
+     *
+     * @param array<array-key, mixed> $known Cache-Inhalt {Ordner: {name, new_version}}
+     * @param array<array-key, mixed> $installed PluginManager::getAvailablePlugins()
+     * @return list<string> Plugin-Namen
+     */
+    public static function pendingPluginUpdates(array $known, array $installed): array
+    {
+        $pending = [];
+        foreach ($known as $folder => $update) {
+            if (!is_array($update)) {
+                continue;
+            }
+            $current = (string) ($installed[$folder]['version'] ?? '');
+            $newVersion = (string) ($update['new_version'] ?? '');
+            if ($current !== '' && $newVersion !== '' && version_compare($newVersion, $current, '>')) {
+                $pending[] = (string) ($update['name'] ?? $folder);
+            }
+        }
+
+        return $pending;
     }
 
     /**

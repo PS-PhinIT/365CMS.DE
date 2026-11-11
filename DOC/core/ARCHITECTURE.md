@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Architektur
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Schema:** v24 | **PHP:** ≥ 8.4
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** v25 | **PHP:** ≥ 8.4
 
 ## English (summary)
 
@@ -62,7 +62,7 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 ### Bootstrap im Detail (`Bootstrap::initializeCore()`)
 
 1. **Konstanten** sicherstellen (`ensureConstants()`), Plattformprüfung der gebündelten Bibliotheken (`validateBundledPhpPlatform()` liest Mindest-PHP-Versionen aus den Vendor-Manifests).
-2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()` – läuft nur, bis `SCHEMA_VERSION = v24` erreicht ist (Flag-Datei `cache/db_schema_v24.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
+2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()` – läuft nur, bis `SCHEMA_VERSION = v25` erreicht ist (Flag-Datei `cache/db_schema_v25.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
 3. **Security** (`Security::init()`): CSP-Nonce, Sicherheitsheader, Session-Start.
 4. **Auth** (`Auth::instance()`): Session-Benutzer laden, Rollen-Lebensdauer prüfen.
 5. **Firewall** (`SecurityRuntimeService::handleRequest()`), nicht im CLI.
@@ -71,7 +71,8 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 8. **Frontend-Hooks** (nur `web`): Cookie-Consent, Analytics (consent-gesteuert, CSP-Quellen über `cms_csp_prepare`), Core-Web-Vitals-Skript, PhotoSwipe für Galerien/Hub-Seiten, Hub-Styles.
 9. **Cron-Hooks**: `cms_cron_mail_queue`, `cms_cron_hourly` (Broken-Links, SEO-Trend, Monitoring-Trend, Sicherheitsalarme, IndexNow-Versand), `cms_cron_daily` (Sitemap, Daten-Aufbewahrung über `DataRetentionService`).
 10. **OPcache-Warmup** nach Deployments als Shutdown-Funktion.
-11. `cms_init`, `cms_init_<modus>`.
+11. **Core-Funktionsbereiche** (seit 4.0.0): `FeatureHooks\Registry::register()` ruft je Bereich `register()` auf (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise). Fehlt eine Klasse oder wirft sie, bleiben die übrigen Bereiche aktiv; der Fehler landet im Kanal `core.features`.
+12. `cms_init`, `cms_init_<modus>`.
 
 ### Routing (`CMS\Router`)
 

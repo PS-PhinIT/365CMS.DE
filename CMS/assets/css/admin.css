@@ -2366,6 +2366,10 @@ body.admin-body .container-xl.cms-settings-page {
     .cms-settings-actions > .me-auto {
         margin-right: 0 !important;
     }
+    /* Umbrochene Tab-Leiste: letzten Tab nicht an den rechten Rand schieben */
+    .cms-settings-toolbar .nav-tabs > .nav-item.ms-auto {
+        margin-left: 0 !important;
+    }
     .cms-settings-metrics {
         grid-template-columns: 1fr;
     }
@@ -4300,6 +4304,8 @@ input:checked + .slider:before { transform: translateX(22px); }
         row-gap: 0.75rem;
         grid-auto-rows: max-content;
         align-items: start;
+        /* Die .row-Negativränder gehören zu den Gutter-Paddings, die das Grid unten abschaltet */
+        margin: 0;
     }
 
     .cms-content-editor-layout > [class*="col-"] {
@@ -4329,7 +4335,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
 
     .cms-content-editor-layout > :not(.cms-editor-primary) .cms-edit-card {
-        background: #fbfcfe;
         min-width: 0;
     }
 
@@ -4340,19 +4345,19 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 
 .cms-edit-card {
-    border: 1px solid #e7edf5;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
-    background: rgb(248, 250, 253);
+    border: 1px solid var(--cms-border);
+    box-shadow: var(--cms-shadow-card);
+    background: var(--cms-bg);
 }
 
 .cms-edit-card .card-header {
-    background: #fbfcfe;
-    border-bottom: 1px solid #eef2f7;
+    background: var(--cms-surface-soft);
+    border-bottom: 1px solid var(--cms-border);
 }
 
 .cms-edit-card .card-footer {
-    background: #fcfdff;
-    border-top: 1px solid #eef2f7;
+    background: var(--cms-surface-soft);
+    border-top: 1px solid var(--cms-border);
 }
 
 .cms-edit-top-card {
@@ -4428,6 +4433,31 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 
 .cms-content-editor-layout--post > .cms-editor-sidebar-slot .cms-edit-card {
+    margin-bottom: 0;
+}
+
+/* Seiten-Editor: SEO-Karten unter dem Editor in der Hauptspalte (wie im Beitrags-Editor) */
+.cms-page-editor-extras {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+    margin-top: 1rem;
+}
+
+.cms-page-editor-extras__pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+    gap: 1rem;
+    min-width: 0;
+}
+
+/* Die geteilten SEO-Partials tragen .h-100 – hier zählt die eigene Inhaltshöhe */
+.cms-page-editor-extras .cms-edit-card.h-100 {
+    height: auto !important;
+}
+
+.cms-page-editor-extras .cms-edit-card {
     margin-bottom: 0;
 }
 
@@ -5259,6 +5289,18 @@ input:checked + .slider:before { transform: translateX(22px); }
 .cms-unsaved-indicator.is-visible {
     opacity: 1;
     visibility: visible;
+}
+
+/* Im Seitentitel des Seiten-Editors hinter dem Titel statt davor –
+   unsichtbar darf der Hinweis den Titel nicht um ~200px einrücken. */
+.page-header .page-title > .cms-unsaved-indicator {
+    order: 1;
+    margin-right: 0;
+    margin-left: 0.75rem;
+}
+
+.page-header .page-title > .cms-unsaved-indicator:not(.is-visible) {
+    display: none;
 }
 
 .cms-unsaved-indicator__dot {
@@ -8772,7 +8814,7 @@ body.admin-body :is(.card, .admin-card, .admin-section, .stat-card, .info-card, 
 
 body.admin-body :is(.card, .admin-card, .admin-section, .stat-card, .info-card, .quick-actions, .users-table-container, .admin-redesign-info-box)
     :is(.card, .admin-card, .admin-section, .stat-card, .info-card, .quick-actions, .users-table-container, .border.rounded, .border.rounded-1, .border.rounded-2, .border.rounded-3, .border.rounded-4, .border.rounded-5, .alert, .table-responsive, .preview-box, .preview-card, .svc-card, .dw-card, .data-box) {
-    background: var(--cms-sidebar-bg);
+    background: var(--cms-surface-soft);
     border-color: var(--cms-border) !important;
     box-shadow: none;
 }

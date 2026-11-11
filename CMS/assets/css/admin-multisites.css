@@ -1,0 +1,184 @@
+/**
+ * Einstellungen › MultiSites
+ * Nutzt ausschließlich die Design-Tokens aus admin-tabler.css (--cms-*).
+ */
+
+.cms-multisites-notice {
+    max-width: 100%;
+}
+
+.cms-multisites__count {
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+}
+
+.cms-multisites-table {
+    margin-bottom: 0;
+}
+
+/* Zeilenkopf (th scope=row) verhält sich wie die übrigen Zellen der Zeile. */
+body.admin-body .table.cms-multisites-table tbody th {
+    font-weight: 400;
+    vertical-align: middle;
+    background: var(--cms-bg);
+}
+
+body.admin-body .table.cms-multisites-table tbody tr:nth-child(even) > * {
+    background: var(--cms-admin-table-row-stripe);
+}
+
+body.admin-body .table.cms-multisites-table tbody tr:hover > * {
+    background: var(--cms-admin-table-row-hover);
+}
+
+body.admin-body .table.cms-multisites-table tbody tr.is-editing > * {
+    background: var(--cms-accent-soft);
+}
+
+.cms-multisites-table__site {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 220px;
+}
+
+.cms-site-swatch.cms-multisites-table__swatch {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.16);
+}
+
+.cms-multisites-table__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cms-multisites-table__name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--cms-text);
+    font-weight: 600;
+}
+
+.cms-multisites-table__url {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.cms-multisites-table__url .ti {
+    font-size: 0.875rem;
+}
+
+.cms-multisites-table__meta {
+    color: var(--cms-text-muted);
+    font-size: 0.75rem;
+}
+
+.cms-multisites-table__meta code,
+.cms-multisites-hosts code,
+.cms-multisites-form__key code {
+    padding: 0 4px;
+    color: var(--cms-text);
+    background: var(--cms-hover);
+    font-size: 0.75rem;
+}
+
+.cms-multisites-badge {
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: var(--cms-text-muted);
+    background: var(--cms-hover);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.cms-multisites-badge--default {
+    color: var(--cms-accent-strong);
+    background: var(--cms-accent-soft);
+}
+
+.cms-multisites-hosts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cms-multisites-table__actions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.cms-multisites-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.cms-multisites-actions form {
+    margin: 0;
+}
+
+.cms-multisites-actions .btn-icon {
+    width: var(--cms-target-size);
+    min-width: var(--cms-target-size);
+    height: var(--cms-target-size);
+    border-radius: var(--cms-radius);
+}
+
+.cms-multisites__footer,
+.cms-multisites-form__key {
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+}
+
+.cms-multisites-accent {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cms-multisites-accent .form-control-color,
+.cms-multisites-accent .form-control-color.is-invalid {
+    width: 88px;
+    min-height: var(--cms-target-size);
+    padding: 4px;
+    background-image: none;
+    cursor: pointer;
+}
+
+.cms-multisites-form__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cms-multisites-help__list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding-left: 1.25rem;
+    max-width: 90ch;
+}
+
+@media (max-width: 575.98px) {
+    .cms-multisites-table__site {
+        min-width: 180px;
+    }
+
+    .cms-multisites-actions {
+        flex-wrap: wrap;
+    }
+}

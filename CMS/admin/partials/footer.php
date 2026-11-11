@@ -120,7 +120,7 @@ $inlineJs   = $inlineJs ?? '';
         const msgEl = document.getElementById('confirmModalMessage');
         const btnEl = document.getElementById('confirmModalBtn');
         const statusEl = modal.querySelector('.modal-status');
-        const cancelBtn = modal.querySelector('[data-bs-dismiss="modal"]');
+        const cancelBtn = modal.querySelector('.modal-footer [data-bs-dismiss="modal"]');
 
         if (!titleEl || !msgEl || !btnEl || !statusEl || !cancelBtn) {
             return fallbackConfirm();
@@ -144,6 +144,19 @@ $inlineJs   = $inlineJs ?? '';
                 options.onConfirm();
             }
         });
+
+        // Fokus nach dem Schließen zum Auslöser zurückgeben – nur wenn er sonst verloren wäre.
+        const returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !modal.contains(document.activeElement)
+            ? document.activeElement
+            : null;
+        if (returnFocus) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const active = document.activeElement;
+                if (returnFocus.isConnected && (!active || active === document.body || modal.contains(active))) {
+                    returnFocus.focus({ preventScroll: true });
+                }
+            }, { once: true });
+        }
 
         bsModal.show();
 
@@ -176,6 +189,44 @@ $inlineJs   = $inlineJs ?? '';
         wrapper.prepend(alert);
         setTimeout(function() { alert.remove(); }, 8000);
     }
+
+    /**
+     * Globale Toast-Meldung (unten rechts, aria-live, verschwindet automatisch).
+     * cmsToast('success'|'info'|'warning'|'danger', 'Text', { timeout: 5000 })
+     */
+    function cmsToast(type, message, options) {
+        options = options && typeof options === 'object' ? options : {};
+        let region = document.getElementById('cms-toast-region');
+        if (!region) {
+            region = document.createElement('div');
+            region.id = 'cms-toast-region';
+            region.className = 'cms-toast-region';
+            region.setAttribute('aria-live', 'polite');
+            document.body.appendChild(region);
+        }
+        const variant = ['success', 'info', 'warning', 'danger'].indexOf(type) !== -1 ? type : 'info';
+        const toast = document.createElement('div');
+        toast.className = 'cms-toast cms-toast--' + variant;
+        toast.setAttribute('role', variant === 'danger' ? 'alert' : 'status');
+        const text = document.createElement('div');
+        text.className = 'cms-toast__text';
+        text.textContent = String(message === undefined || message === null ? '' : message);
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'btn-close cms-toast__close';
+        close.setAttribute('aria-label', 'Schließen');
+        close.addEventListener('click', function() { toast.remove(); });
+        toast.appendChild(text);
+        toast.appendChild(close);
+        region.appendChild(toast);
+        const timeout = typeof options.timeout === 'number' ? options.timeout : (variant === 'danger' ? 10000 : 5000);
+        if (timeout > 0) {
+            setTimeout(function() { toast.remove(); }, timeout);
+        }
+
+        return toast;
+    }
+    window.cmsToast = cmsToast;
     </script>
 
     <?php \CMS\Hooks::doAction('body_end'); ?>
