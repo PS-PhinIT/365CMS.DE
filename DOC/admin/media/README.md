@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Medien
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Media** (*Medienverwaltung*). All entries open tabs of the single route `/admin/media`; see [MEDIA.md](MEDIA.md).
+This folder documents the admin area **Media** (*Medienverwaltung*). All entries open tabs of the single route `/admin/media`; see [MEDIA.md](MEDIA.md).
 
 ## Deutsch
 

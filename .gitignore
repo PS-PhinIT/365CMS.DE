@@ -117,6 +117,7 @@ AUDIT
 !/TESTS/security-baseline/
 !/TESTS/ai-services/
 !/TESTS/runtime-warning-regressions/
+!/TESTS/admin-menu/
 !/TESTS/release-smoke/run.php
 !/TESTS/pdf-service/run.php
 !/TESTS/sitemap-service/run.php
@@ -124,6 +125,7 @@ AUDIT
 !/TESTS/security-baseline/run.php
 !/TESTS/ai-services/run.php
 !/TESTS/runtime-warning-regressions/run.php
+!/TESTS/admin-menu/run.php
 /STAGING/tests/
 */Test/*
 CMS/assets/translation/Test/

@@ -54,7 +54,7 @@ final class EditorJsSanitizer
         ];
 
         $type = (string) ($block['type'] ?? '');
-        if (!in_array($type, $allowedTypes, true)) {
+        if (!in_array($type, $allowedTypes, true) && !EditorJsBlockRegistry::has($type)) {
             return null;
         }
 
@@ -80,6 +80,10 @@ final class EditorJsSanitizer
 
     private function sanitizeBlockData(string $type, array $data): array
     {
+        if (EditorJsBlockRegistry::has($type)) {
+            return EditorJsBlockRegistry::sanitize($type, $data);
+        }
+
         $cleanInline = static fn(mixed $value): string => EditorJsHtmlSanitizer::sanitizeInline((string) $value);
 
         switch ($type) {

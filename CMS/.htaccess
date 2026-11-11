@@ -52,7 +52,8 @@ ErrorDocument 429 /index.php
     # Block access to sensitive files and private runtime directories.
     RewriteRule ^(?:config\.php|\.env(?:\..*)?|composer\.(?:json|lock)|package(?:-lock)?\.json|phpunit\.xml(?:\.dist)?|README(?:\.md)?|Changelog(?:_old)?\.md)$ - [F,L,NC]
     RewriteRule ^\.git(?:/|$) - [F,L,NC]
-    RewriteRule ^(?:config|core|logs|backups|cache)(?:/|$) - [F,L,NC]
+    # private/ = Standard-Speicherort von PrivateStorageService (ohne CMS_PRIVATE_PATH).
+    RewriteRule ^(?:config|core|logs|backups|cache|private)(?:/|$) - [F,L,NC]
 
     # Gebündelte PHP-Libraries werden ausschließlich serverseitig per Autoloader
     # geladen. vendor/ komplett sowie PHP-Dateien, Paket-Metadaten und versteckte

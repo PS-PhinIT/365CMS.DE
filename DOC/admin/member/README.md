@@ -1,17 +1,19 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Mitglieder-Dashboard
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/member-dashboard` (+ Unterseiten) | **Capabilities:** `manage_settings` bzw. `manage_users` | **CSRF-Aktion:** `admin_member_dashboard`
 
 ## English (summary)
 
-The sidebar group **Member Dashboard** configures the personal member area under `/member`. Entry `CMS/admin/member-dashboard.php` shows an overview; each section has its own entry `CMS/admin/member-dashboard-<section>.php` which is rendered via `member-dashboard-page.php`. Logic lives in `CMS/admin/modules/member/MemberDashboardModule.php`, views in `CMS/admin/views/member/`. All values are stored as `member_*` / `member_dashboard_*` options in `cms_settings`.
+The tile page **Mitgliederbereich** (`/admin/configuration?group=members`) configures the personal member area under `/member`. In both sidebar profiles it is a single link, shown while the core module `member_dashboard` is active (default: on). Entry `CMS/admin/member-dashboard.php` shows an overview; each section has its own entry `CMS/admin/member-dashboard-<section>.php` which is rendered via `member-dashboard-page.php`. Logic lives in `CMS/admin/modules/member/MemberDashboardModule.php`, views in `CMS/admin/views/member/`. All values are stored as `member_*` / `member_dashboard_*` options in `cms_settings`.
 
 Sections: `general`, `design`, `frontend-modules`, `widgets`, `plugin-widgets`, `profile-fields` (needs `manage_users`), `notifications`, `onboarding`. Only action: `save` (per section, field `settings_section`).
 
 ## Deutsch
 
 ### Unterseiten
+
+In beiden Sidebar-Profilen ist *Mitgliederbereich* ein einzelner Link auf die Kachelseite `/admin/configuration?group=members`; jede Unterseite ist dort eine Kachel. Der Link erscheint nur bei aktivem Core-Modul `member_dashboard` (Standard: an).
 
 | Menüpunkt | Route | Capability | View |
 |---|---|---|---|

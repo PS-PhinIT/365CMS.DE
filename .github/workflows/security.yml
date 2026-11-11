@@ -68,3 +68,6 @@ jobs:
             find CMS -type f -name "*.php" -print0
           fi | \
           xargs -0 -n1 php -l
+
+      - name: Admin-Menü-Test (statisch, ohne Datenbank)
+        run: php TESTS/admin-menu/run.php

@@ -30,6 +30,10 @@ $groupLabels = [
     'plugins'  => 'Plugins',
     'settings' => 'Einstellungen',
     'comments' => 'Kommentare',
+    'content'  => 'Inhalte & Redaktion',
+    'forms'    => 'Formulare',
+    'downloads'=> 'Downloads',
+    'system'   => 'System & Werkzeuge',
 ];
 
 $capLabels = [

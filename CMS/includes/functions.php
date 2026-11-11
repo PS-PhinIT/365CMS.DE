@@ -25,6 +25,7 @@ $cmsFunctionFiles = [
     __DIR__ . '/functions/redirects-auth.php',
     __DIR__ . '/functions/roles.php',
     __DIR__ . '/functions/admin-menu.php',
+    __DIR__ . '/functions/admin-menu-profiles.php',
     __DIR__ . '/functions/wordpress-compat.php',
     __DIR__ . '/functions/mail.php',
     __DIR__ . '/functions/plugin-public-i18n.php',

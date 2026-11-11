@@ -16,9 +16,12 @@
      --bg → --cms-bg            --sidebar-bg → --cms-sidebar-bg   --border → --cms-border
      --text → --cms-text        --text-muted → --cms-text-muted   --hover → --cms-hover
      --accent → --cms-accent    --accent-soft → --cms-accent-soft --accent-strong → --cms-accent-strong
+   Ergänzend: --cms-page-bg (Seitenhintergrund hinter den Karten), --cms-surface-soft
+   (Kartenköpfe, verschachtelte Boxen) und --cms-sidebar-hover/--cms-sidebar-border
+   (nur Seitenleiste) – --cms-sidebar-bg ist ausschließlich die Fläche der Seitenleiste.
    Die Tabler-Zuordnung liegt bewusst auf :root (wie in tabler.min.css), damit abgeleitete
    Werte wie --tblr-primary-darken, --tblr-link-color oder der Fokus-Ring den Site-Akzent erben.
-   Akzent je Site: <html data-site="…"> (statisch unten; weitere Sites per Nonce-Style aus header.php).
+   Akzent je Site: header.php setzt ihn aus Einstellungen › MultiSites per Nonce-Style.
    ═══════════════════════════════════════════════════════ */
 
 /* Schriften: lokal gebündelt (CSP font-src 'self'), variable Gewichte, SIL OFL 1.1 */
@@ -77,16 +80,21 @@
 }
 
 :root {
-    /* Flächen & Text */
+    /* Flächen & Text – Ebenen von dunkel nach hell:
+       Seitenleiste → Seitenhintergrund → Kartenkopf/verschachtelte Box → Karte (--cms-bg). */
     --cms-bg:                   #ffffff;
-    --cms-sidebar-bg:           #fafaf9;
-    --cms-border:               #e7e5e4;
-    --cms-border-strong:        #d6d3d1;
+    --cms-page-bg:              #f1f0ee; /* = AdminSiteContextService::PAGE_BACKGROUND (Kontrastprüfung der Site-Akzente) */
+    --cms-surface-soft:         #f7f6f4;
+    --cms-sidebar-bg:           #e7e5e4;
+    --cms-sidebar-hover:        #dad7d3;
+    --cms-sidebar-border:       #d0ccc8;
+    --cms-border:               #dedbd7;
+    --cms-border-strong:        #cfcac5;
     --cms-text:                 #1c1917;
     --cms-text-muted:           #57534e;
     --cms-hover:                #f0efed;
 
-    /* Akzent – Standard (phinit.de); je Site über html[data-site] */
+    /* Akzent – Standard ohne Site-Kontext; je Site per Nonce-Style aus header.php */
     --cms-accent:               #4f46e5;
     --cms-accent-rgb:           79, 70, 229;
     --cms-accent-soft:          #eef2ff;
@@ -112,6 +120,7 @@
     --cms-duration:             180ms;
     --cms-ease:                 cubic-bezier(0.2, 0, 0, 1);
     --cms-shadow-sm:            0 1px 2px rgba(28, 25, 23, 0.05);
+    --cms-shadow-card:          0 1px 2px rgba(28, 25, 23, 0.06), 0 2px 6px rgba(28, 25, 23, 0.04);
     --cms-shadow-md:            0 6px 18px rgba(28, 25, 23, 0.08);
     --cms-shadow-lg:            0 16px 40px rgba(28, 25, 23, 0.16);
 
@@ -126,7 +135,7 @@
     --tblr-body-bg:             var(--cms-bg);
     --tblr-body-color:          var(--cms-text);
     --tblr-bg-surface:          var(--cms-bg);
-    --tblr-bg-surface-secondary: var(--cms-sidebar-bg);
+    --tblr-bg-surface-secondary: var(--cms-surface-soft);
     --tblr-border-color:        var(--cms-border);
     --tblr-secondary-color:     var(--cms-text-muted);
     --tblr-border-radius:       var(--cms-radius);
@@ -137,23 +146,23 @@
     --tblr-font-monospace:      var(--cms-font-mono);
 
     /* Legacy-Aliase (bestehende Admin-Seiten und Plugins) */
-    --cms-admin-page-solid:     var(--cms-bg);
+    --cms-admin-page-solid:     var(--cms-page-bg);
     --cms-admin-page-bg:        none;
     --cms-admin-card-bg:        var(--cms-bg);
-    --cms-admin-card-bg-soft:   var(--cms-sidebar-bg);
-    --cms-admin-card-header-bg: var(--cms-sidebar-bg);
+    --cms-admin-card-bg-soft:   var(--cms-surface-soft);
+    --cms-admin-card-header-bg: var(--cms-surface-soft);
     --cms-admin-border:         var(--cms-border);
     --cms-admin-border-strong:  var(--cms-border-strong);
     --cms-admin-text:           var(--cms-text);
     --cms-admin-text-muted:     var(--cms-text-muted);
     --cms-admin-text-soft:      #44403c;
-    --cms-admin-table-head-bg:  var(--cms-sidebar-bg);
-    --cms-admin-table-row-stripe: #fcfcfb;
-    --cms-admin-table-row-hover: #f5f5f4;
+    --cms-admin-table-head-bg:  #f3f2f0;
+    --cms-admin-table-row-stripe: #fbfaf9;
+    --cms-admin-table-row-hover: #f4f3f1;
     --cms-admin-selection-bg:   var(--cms-accent-soft);
     --cms-admin-selection-border: rgba(var(--cms-accent-rgb), 0.32);
     --cms-admin-input-bg:       #ffffff;
-    --cms-admin-input-bg-soft:  var(--cms-sidebar-bg);
+    --cms-admin-input-bg-soft:  var(--cms-surface-soft);
     --cms-admin-input-border:   var(--cms-border-strong);
     --cms-admin-input-focus:    var(--cms-accent);
     --cms-admin-input-ring:     rgba(var(--cms-accent-rgb), 0.16);
@@ -169,26 +178,14 @@
     --sidebar-width:            var(--cms-sidebar-width);
     --card-radius:              var(--cms-radius-card);
     --card-border:              1px solid var(--cms-border);
-    --card-shadow:              none;
-    --card-shadow-hover:        var(--cms-shadow-sm);
+    --card-shadow:              var(--cms-shadow-card);
+    --card-shadow-hover:        var(--cms-shadow-md);
     --card-bg:                  var(--cms-bg);
-    --card-header-bg:           var(--cms-bg);
+    --card-header-bg:           var(--cms-surface-soft);
 }
 
-/* Site-Akzente (statisch; weitere Sites setzt header.php per Nonce-Style) */
-html[data-site="phinit.de"] {
-    --cms-accent:               #4f46e5;
-    --cms-accent-rgb:           79, 70, 229;
-    --cms-accent-soft:          #eef2ff;
-    --cms-accent-strong:        #3730a3;
-}
-
-html[data-site="365network.de"] {
-    --cms-accent:               #0f766e;
-    --cms-accent-rgb:           15, 118, 110;
-    --cms-accent-soft:          #e6f6f3;
-    --cms-accent-strong:        #115e59;
-}
+/* Site-Akzente: header.php setzt die Akzentfarbe der aktiven Site (Einstellungen › MultiSites)
+   per Nonce-Style auf html:root; ohne Site-Kontext gilt der Standard-Akzent oben. */
 
 
 /* ═══════════════════════════════════════════════════════
@@ -196,7 +193,7 @@ html[data-site="365network.de"] {
    ═══════════════════════════════════════════════════════ */
 
 body.admin-body {
-    background: var(--cms-bg);
+    background: var(--cms-page-bg);
     color: var(--cms-text);
     font-family: var(--cms-font-sans);
     -webkit-font-smoothing: antialiased;
@@ -622,7 +619,7 @@ body.admin-body .gridjs-cms .gridjs-table th.gridjs-action-cell {
     margin-bottom: 1.25rem;
     border: 1px solid var(--cms-border);
     border-radius: var(--cms-radius-card);
-    background: var(--cms-sidebar-bg);
+    background: var(--cms-bg);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
     backdrop-filter: blur(8px);
 }
@@ -1232,6 +1229,6 @@ body.admin-body .alert {
 
 body.admin-body :is(.card, .admin-card, .admin-section, .info-card, .stat-card, .quick-actions, .users-table-container)
     :is(.card, .admin-card, .admin-section, .info-card, .stat-card, .quick-actions, .users-table-container, .border.rounded, .border.rounded-1, .border.rounded-2, .border.rounded-3, .border.rounded-4, .border.rounded-5, .alert, .table-responsive) {
-    background: var(--cms-sidebar-bg);
+    background: var(--cms-surface-soft);
     border-color: var(--cms-border) !important;
 }

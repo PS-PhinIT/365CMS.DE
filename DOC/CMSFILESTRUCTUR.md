@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: CMSFILESTRUCTUR
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-10
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -25,13 +25,13 @@
 
 **English**
 
-This file is the **CMS runtime inventory** for `CMS/`, counts updated on 2026-11-09 (release 4.0.0). It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
+This file is the **CMS runtime inventory** for `CMS/`, counts updated on 2026-11-10 (release 4.0.0). It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
 
 Out of scope for a full file listing: deep vendor trees (`CMS/vendor/dompdf/`, large library trees under `CMS/assets/` such as `htmlpurifier`, `tabler`, `editorjs`). Those directories exist and are loaded at runtime; listing every vendor file is not useful for GitHub readers.
 
 **Deutsch**
 
-Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, Zählung aktualisiert am 2026-11-09 (Release 4.0.0). Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
+Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, Zählung aktualisiert am 2026-11-10 (Release 4.0.0). Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
 
 Nicht vollständig ausgerollt: tiefe Vendor-Bäume (`CMS/vendor/dompdf/`, große Bibliotheksbäume unter `CMS/assets/` wie `htmlpurifier`, `tabler`, `editorjs`). Diese Verzeichnisse existieren und werden zur Laufzeit geladen; jede Vendor-Datei aufzulisten ist für GitHub-Leser nicht sinnvoll.
 
@@ -49,18 +49,18 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 
 | Area / Bereich | Files / Dateien |
 |---|---:|
-| `CMS/admin/` | 294 |
-| `CMS/assets/` | 3070 (mostly bundled libraries) |
-| `CMS/core/` | 175 |
+| `CMS/admin/` | 304 |
+| `CMS/assets/` | 3075 (mostly bundled libraries) |
+| `CMS/core/` | 191 |
 | `CMS/themes/` | 41 |
 | `CMS/member/` | 17 |
 | `CMS/plugins/` | 15 |
-| `CMS/includes/` | 11 |
-| `CMS/install/` | 9 |
+| `CMS/includes/` | 12 |
+| `CMS/install/` | 10 |
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
-| `CMS/assets/css/` | 17 stylesheets |
-| `CMS/assets/js/` | 40 scripts + 14 ES modules (`admin-shell/`, `post-editor/`) |
+| `CMS/assets/css/` | 20 stylesheets |
+| `CMS/assets/js/` | 42 scripts + 14 ES modules (`admin-shell/`, `post-editor/`) |
 
 ---
 
@@ -155,7 +155,7 @@ Root-Klassen in `CMS/core/`:
 - `PageManager.php`
 - `PluginManager.php`
 - `Router.php`
-- `SchemaManager.php` (`SCHEMA_VERSION = 'v24'`)
+- `SchemaManager.php` (`SCHEMA_VERSION = 'v25'`)
 - `Security.php`
 - `SubscriptionManager.php`
 - `TableOfContents.php`
@@ -176,9 +176,14 @@ Subdirectories:
 | `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `ThemeArchiveRepository.php`, `ThemeRouter.php` |
 | `core/Services/` | domain services (see [FILELIST.md](FILELIST.md) and [DEVLIST.md](DEVLIST.md)) |
 
-Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `CmsAuthPageService`, `CommentService`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `JwtService`, `LandingPageService`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TrustedProxyService`, `UpdateService`, `UserService`.
+Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `BatchJobService`, `CmsAuthPageService`, `CommentService`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `IntegratedPluginService`, `JwtService`, `LandingPageService`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PrivateStorageService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TrustedProxyService`, `UpdateService`, `UserService`.
 
-Service subfolders: `AI/`, `EditorJs/`, `Landing/`, `Media/`, `SEO/`, `SiteTable/`.
+Service subfolders: `AdminMenu/`, `AI/`, `EditorJs/`, `FeatureHooks/`, `Landing/`, `Media/`, `PluginMigration/`, `Retention/`, `SEO/`, `SiteTable/`.
+
+New in 4.0.0 / Neu in 4.0.0:
+
+- `Services/AdminMenu/` — admin sidebar with profiles / Admin-Sidebar mit Profilen: `AdminMenuItem`, `AdminMenuService`, `BadgeProvider`, `CoreCatalog`, `LayoutRepository`, `LayoutValidator`, `MenuBuilder`, `MenuRegistry`, `ProfileLayouts` (see / siehe [admin/ADMIN-MENU.md](admin/ADMIN-MENU.md))
+- `Services/FeatureHooks/Registry.php`, `Services/PluginMigration/PluginMigrator.php`, `Services/Retention/RetentionRule.php`, `Services/EditorJs/EditorJsBlockRegistry.php` — shared extension points / gemeinsame Erweiterungspunkte
 
 ---
 
@@ -188,6 +193,7 @@ Service subfolders: `AI/`, `EditorJs/`, `Landing/`, `Media/`, `SEO/`, `SiteTable
 
 - `includes/functions.php`
 - `includes/subscription-helpers.php`
+- `includes/functions/admin-menu-profiles.php`
 - `includes/functions/admin-menu.php`
 - `includes/functions/escaping.php`
 - `includes/functions/mail.php`
@@ -214,6 +220,7 @@ Service subfolders: `AI/`, `EditorJs/`, `Landing/`, `Media/`, `SEO/`, `SiteTable
 - `install/views/admin.php`
 - `install/views/blocked.php`
 - `install/views/database.php`
+- `install/views/layout.php`
 - `install/views/site.php`
 - `install/views/success.php`
 - `install/views/update.php`
@@ -308,13 +315,16 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 
 ### CSS (`CMS/assets/css/`)
 
+- `admin-configuration.css`
 - `admin-dashboard.css`
 - `admin-hub-site-edit.css`
 - `admin-hub-template-editor.css`
+- `admin-multisites.css`
 - `admin-plugin-assignment.css`
 - `admin-plugins.css`
 - `admin-post-editor.css`
 - `admin-shell.css`
+- `admin-sidebar-editor.css`
 - `admin-sidebar.css`
 - `admin-site-tables.css`
 - `admin-tabler.css`
@@ -329,6 +339,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 ### JavaScript (`CMS/assets/js/`)
 
 - `admin-ai-services.js`
+- `admin-batch-runner.js`
 - `admin-comments.js`
 - `admin-content-editor.js`
 - `admin-cookie-manager.js`
@@ -349,6 +360,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `admin-seo-meta.js`
 - `admin-seo-redirects.js`
 - `admin-settings.js`
+- `admin-sidebar-editor.js`
 - `admin-site-tables.js`
 - `admin-subscriptions.js`
 - `admin-system-cron.js`
@@ -387,19 +399,19 @@ These folders were **not** found under `CMS/assets/` (older docs mentioned them)
 
 **English**
 
-`CMS/admin/` contains 294 files: PHP entry points, `modules/`, `views/`, `partials/`, and `logs/`.
+`CMS/admin/` contains 304 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
 
 Module directories: `comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`.
 
-Entry examples that match public admin routes include `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, plus the other `CMS/admin/*.php` files in that folder. New in 4.0.0: `admin-ui.php` (JSON endpoint of the admin shell), `post-editor-api.php` (JSON endpoint of the post editor) and `plugin-assignment.php` (plugin assignment per site, view `views/settings/plugin-assignment.php`).
+Entry examples that match public admin routes include `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, plus the other `CMS/admin/*.php` files in that folder. New in 4.0.0: `admin-ui.php` (JSON endpoint of the admin shell), `post-editor-api.php` (JSON endpoint of the post editor) and `plugin-assignment.php` (plugin assignment per site, view `views/settings/plugin-assignment.php`). Also new: `multisites.php` (MultiSites settings area, view `views/settings/multisites.php`), `configuration.php` (tile pages `/admin/configuration[?group=…]`, views `views/configuration/`), `settings-tabs/admin-menu.php` (settings tab "Admin menu" with the sidebar editor, views `views/settings/admin-menu.php` and `views/settings/admin-sidebar-editor.php`), `partials/sidebar-nav.php` (sidebar list, also used by the preview) and `views/settings/partials-tabs.php` (shared tab bar of the settings areas).
 
 **Deutsch**
 
-`CMS/admin/` enthält 294 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/` und `logs/`.
+`CMS/admin/` enthält 304 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
 
 Modulverzeichnisse: `comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`.
 
-Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php` sowie die übrigen `CMS/admin/*.php`-Dateien. Neu in 4.0.0: `admin-ui.php` (JSON-Endpunkt der Admin-Shell), `post-editor-api.php` (JSON-Endpunkt des Beitragseditors) und `plugin-assignment.php` (Plugin-Zuweisung je Site, View `views/settings/plugin-assignment.php`).
+Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php` sowie die übrigen `CMS/admin/*.php`-Dateien. Neu in 4.0.0: `admin-ui.php` (JSON-Endpunkt der Admin-Shell), `post-editor-api.php` (JSON-Endpunkt des Beitragseditors) und `plugin-assignment.php` (Plugin-Zuweisung je Site, View `views/settings/plugin-assignment.php`). Ebenfalls neu: `multisites.php` (Einstellungsbereich MultiSites, View `views/settings/multisites.php`), `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`, Views `views/configuration/`), `settings-tabs/admin-menu.php` (Einstellungs-Tab „Admin-Menü“ mit dem Sidebar-Editor, Views `views/settings/admin-menu.php` und `views/settings/admin-sidebar-editor.php`), `partials/sidebar-nav.php` (Sidebar-Liste, auch für die Vorschau) und `views/settings/partials-tabs.php` (gemeinsame Tab-Leiste der Einstellungsbereiche).
 
 ---
 

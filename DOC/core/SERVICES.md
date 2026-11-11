@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Service-Schicht
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-Business logic lives in `CMS/core/Services/` (namespace `CMS\Services`). Services are singletons (`Service::getInstance()`); the most important ones are also registered in the DI container under their class name and a short alias (`Bootstrap::initializeCore()`), e.g. `'mail'`, `'seo'`, `'search'`, `'settings'`. Larger domains are split into sub-namespaces: `AI\`, `EditorJs\`, `Landing\`, `Media\`, `SEO\`, `SiteTable\`. Admin modules and themes should call services instead of accessing tables directly.
+Business logic lives in `CMS/core/Services/` (namespace `CMS\Services`). Services are singletons (`Service::getInstance()`); the most important ones are also registered in the DI container under their class name and a short alias (`Bootstrap::initializeCore()`), e.g. `'mail'`, `'seo'`, `'search'`, `'settings'`. Larger domains are split into sub-namespaces: `AI\`, `AdminMenu\`, `EditorJs\`, `FeatureHooks\`, `Landing\`, `Media\`, `PluginMigration\`, `Retention\`, `SEO\`, `SiteTable\`. Since 4.0.0 shared extension points serve the core features: `FeatureHooks\Registry`, `BatchJobService` (table `batch_jobs`), `PrivateStorageService` (`CMS_PRIVATE_PATH`), `IntegratedPluginService` with `PluginMigration\PluginMigrator`, `EditorJs\EditorJsBlockRegistry`, retention rules (`DataRetentionService::registerRule()`) and notice checks (`AdminNoticeService::registerCheck()`). Admin modules and themes should call services instead of accessing tables directly.
 
 ## Deutsch
 
@@ -120,7 +120,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `OpcacheWarmupService` | OPcache-Vorwärmen |
 | `AssetOptimizerService` | Asset-Versionierung/Minifizierung |
 | `PerformanceSafetyNetService` | Snapshots/Rollback für Wartungsaktionen |
-| `DataRetentionService` | tägliches Löschen alter Telemetrie- und Protokolldaten (Filter `cms_data_retention_days`) |
+| `DataRetentionService` | tägliches Löschen alter Telemetrie- und Protokolldaten (Filter `cms_data_retention_days`); weitere Regeln über `registerRule()` (siehe unten) |
 | `OptionStore` | Request-Cache für die Tabelle `settings` (Autoload-Werte in einer Abfrage) |
 | `CsvExchange` | CSV-Export/-Import im Admin (BOM, Trennzeichen-Erkennung, Schutz vor Formel-Injection) |
 | `MarketplaceEndpoints` | zentrale Marketplace- und Core-Update-URLs mit Fallback auf die offiziellen Werte |
@@ -129,13 +129,29 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 | Service | Aufgabe |
 |---|---|
-| `AdminNavigationService` | baut die Seitenleiste: Kerngruppen, Gruppe „Plugins“ (ein Eintrag je Plugin-Menü, Untermenüs verschachtelt, Standard-Icon `puzzle`), „Verwaltung“; aktiver Eintrag, Standard-Aufklappzustand (erste zwei Gruppen). Liest die registrierten Plugin-Menüs nur, ändert sie nicht |
+| `AdminMenu\AdminMenuService` | Einstieg für den Menübaum der Seitenleiste ([ADMIN-MENU.md](../admin/ADMIN-MENU.md)): wählt Profil bzw. eigenes Layout (je Site oder global), liest Katalog und registrierte Plugin-Menüs ein (nur lesend) und cacht den Baum. Der Cache-Schlüssel enthält Rechte, Site, Profil, Layout-Version, Core-Module, vorhandene Seitendateien, Marketplace-Einstellung, Sprache und Plugin-Fingerprint |
+| `AdminMenu\CoreCatalog`, `AdminMenu\ProfileLayouts` | Katalog aller Core-Seiten (Route, Capabilities, Seitendatei, Kachelkategorie, Badge) und die Bäume der Profile *Klassisch* und *Strukturiert* |
+| `AdminMenu\MenuRegistry`, `AdminMenu\MenuBuilder` | Registry aus Katalog, Plugin-Menüs (Standard-Icon `puzzle`) und Wunschplätzen; der Builder setzt Layout, Rechte, Module und Plugin-Einträge zum Baum zusammen |
+| `AdminMenu\LayoutValidator`, `AdminMenu\LayoutRepository` | prüft eigene Layouts (Editor, Import) bzw. speichert sie in der Tabelle `admin_menu_layouts` (global oder je Site, mit Version) |
+| `AdminMenu\BadgeProvider` | Badge-Zähler (Updates, Kommentare, Protokolle, DSGVO-Anfragen); nie gecacht, weitere Quellen über `register()` |
+| `AdminNavigationService` | bereitet den Baum für die Ausgabe auf (`build()`): aktiver Eintrag, Badges, Brotkrumen, Aufklappzustand (Abschnitte offen, Gruppen zu, aktive Gruppe offen), Kachelseiten und Plugin-Hinweis |
 | `AdminUiPreferenceService` | Admin-Oberflächen-Präferenzen je Benutzer in `user_meta` (`admin_ui_prefs`): eingeklappte Seitenleiste, Gruppenzustände, gewählte Site |
-| `AdminSiteContextService` | Site-Kontext der Administration (Standard phinit.de und 365network.de, überschreibbar über Option `admin_sites`): Akzentfarben, `<html data-site>`, Site-Wechsel. Auflösung: Benutzer-Präferenz > Request-Host > erste Site |
+| `AdminSiteContextService` | Site-Kontext der Administration (Sites aus Option `admin_sites`, gepflegt unter *Einstellungen › MultiSites*; ohne Einträge nur die Haupt-Site aus `SITE_URL`): Akzentfarben, `<html data-site>`, Site-Wechsel. Auflösung: Benutzer-Präferenz > Request-Host > erste Site |
 | `PluginSiteAssignmentService` | Plugin-Zuweisung je Site (Option `admin_plugin_site_assignments`, ohne Eintrag = alle Sites), Zuordnung Menü → Plugin; Grundlage für den Hinweis-Banner (`partials/sidebar.php`), wenn eine Plugin-Seite in einer nicht zugewiesenen Site aufgerufen wird |
-| `AdminNoticeService` | Systemhinweise für den Sidebar-Footer: letzter Cron-Lauf fehlgeschlagen, letztes Backup älter als 24 h oder keines vorhanden, Core-/Plugin-Updates; Cache 5 Minuten (Plugin-Update-Abfrage zusätzlich 1 Stunde) |
+| `AdminNoticeService` | Systemhinweise für den Sidebar-Footer: letzter Cron-Lauf fehlgeschlagen, letztes Backup älter als 24 h oder keines vorhanden, Core-/Plugin-Updates; Cache 5 Minuten (Plugin-Update-Abfrage zusätzlich 1 Stunde). Weitere Prüfungen über `registerCheck()`, Einträge über `makeNotice()` |
 | `PostPublishChecklistService` | Veröffentlichungs-Checkliste (Beitragsbild, Meta-Beschreibung 120–160 Zeichen, Kategorie), serverseitige Prüfung beim Veröffentlichen/Planen |
 | `PostRevisionService` | Beitragsrevisionen (Tabelle `post_revisions`, max. 30 je Beitrag, Autosave-Revision höchstens alle 10 Minuten), Vergleich blockweise, Wiederherstellen als neue Revision |
+
+### Erweiterungspunkte der Core-Funktionen (seit 4.0.0)
+
+| Service | Aufgabe |
+|---|---|
+| `FeatureHooks\Registry` | registriert am Ende von `Bootstrap::initializeCore()` die Core-Funktionsbereiche: je Bereich eine Klasse `FeatureHooks\<Bereich>Hooks` mit `register()` (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise). Noch nicht vorhandene Klassen werden übersprungen; wirft ein Bereich, bleiben die übrigen aktiv (Kanal `core.features`) |
+| `BatchJobService` | lange Admin-Aufgaben in Schritten (Tabelle `batch_jobs`, [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md)): `start()`, `step()` mit Worker-Callback, `cancel()`, `findActive()`. Je Typ und Scope höchstens ein aktiver Auftrag; jeder Schritt läuft unter einer Sperre mit Ablaufzeit. Browser-Gegenstück: `assets/js/admin-batch-runner.js` |
+| `PrivateStorageService` | privater Dateispeicher für geschützte Downloads, Formular-Uploads und Import-/Exportdateien: `CMS_PRIVATE_PATH` (absolut, empfohlen außerhalb des Webroots), sonst `CMS/private/`. `path('<bereich>')` legt Bereiche an, `resolve()` prüft Pfade per `realpath` gegen Traversal, `randomFilename()` vergibt nicht erratbare Namen. Jeder Ordner erhält `.htaccess` und `index.html`; Nginx siehe [../INSTALLATION.md](../INSTALLATION.md) |
+| `IntegratedPluginService`, `PluginMigration\PluginMigrator` | in den Core übernommene Plugins (`cms-feed`, `cms-downloads`, `cms-contact`): aktive Exemplare werden deaktiviert (nicht gelöscht) und nicht mehr geladen. Ihre Daten übernimmt je Plugin ein idempotenter Migrator in Blöcken (bei Admin-Aufrufen mit 5 s Zeitbudget und im täglichen Cron mit 60 s). Alte Plugin-Adminseiten leiten per 301 auf die Core-Seiten um; der Sidebar-Footer zeigt 30 Tage lang den Hinweis „jetzt Teil des Cores“. Das alles greift je Plugin erst, wenn sein Core-Ersatz im Code vorhanden ist (`isIntegrated()` prüft die Migrator-Klasse); bis dahin läuft das Plugin unverändert weiter |
+| `EditorJs\EditorJsBlockRegistry` | zusätzliche Editor.js-Blöcke aus Core-Funktionen (z. B. Download, Formular): ein Eintrag registriert das Tool-Skript (vor `editor-init.js`, Anmeldung über `window.CMS_EDITORJS_BLOCKS`), den Sanitizer beim Speichern und den Frontend-Renderer |
+| `Retention\RetentionRule` | Aufbewahrungsregel eines Funktionsbereichs (Frist, Trockenlauf-Zählung, Löschen oder Anonymisieren), registriert über `DataRetentionService::registerRule()`. Der tägliche Cron ruft `prune()` auf; die Seite *Löschfristen* (`/admin/data-retention`) zeigt Frist, Trockenlauf und letzten Lauf |
 
 ### Konventionen für eigene Services (Plugins)
 

@@ -16,6 +16,27 @@ use CMS\Security;
 const CMS_ADMIN_SETTINGS_CAPABILITY = 'manage_settings';
 const CMS_ADMIN_SETTINGS_FORM_STATE_SESSION_KEY = 'admin_settings_form_state';
 
+/**
+ * Eigenständige Einstellungsbereiche, die als Tab unter /admin/settings?tab=<schlüssel> erscheinen.
+ * Jede Datei unter admin/settings-tabs/ ist ein vollständiger Controller (GET/POST, eigenes CSRF,
+ * eigenes isAdmin- und Capability-Gate) und nutzt für die Tab-Leiste views/settings/partials-tabs.php.
+ * Die Weiche steht deshalb vor dem manage_settings-Gate dieser Seite: Ein Tab kann eine andere
+ * Capability verlangen (z. B. manage_feeds, manage_admin_menu).
+ */
+const CMS_ADMIN_SETTINGS_EXTENSION_TABS = [
+    'feeds' => 'feeds.php',
+    'security' => 'security.php',
+    'admin-menu' => 'admin-menu.php',
+];
+
+$cmsSettingsExtensionTab = (string) ($_GET['tab'] ?? '');
+if (isset(CMS_ADMIN_SETTINGS_EXTENSION_TABS[$cmsSettingsExtensionTab])
+    && is_file(__DIR__ . '/settings-tabs/' . CMS_ADMIN_SETTINGS_EXTENSION_TABS[$cmsSettingsExtensionTab])
+) {
+    require __DIR__ . '/settings-tabs/' . CMS_ADMIN_SETTINGS_EXTENSION_TABS[$cmsSettingsExtensionTab];
+    return;
+}
+
 function cms_admin_settings_can_access(): bool
 {
     return Auth::instance()->isAdmin()

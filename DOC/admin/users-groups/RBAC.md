@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Rollen & Rechte (RBAC)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/roles` (Alt-Route `/admin/rbac` leitet um) | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_roles`
 
 ## English (summary)
@@ -16,7 +16,7 @@ Roles and capabilities are managed at `/admin/roles` (`CMS/admin/roles.php` → 
 | Rolle | Anzeigename | Kernrechte (Standard) |
 |---|---|---|
 | `admin` | Administrator | **alle** Capabilities (fest in `Auth::hasCapability()`) |
-| `editor` | Editor | `manage_pages`, `edit_all_posts`, `delete_all_posts`, `manage_media`, alle `pages.*`/`posts.*`/`media.*`, `use_ai_*`, `comments.*` |
+| `editor` | Editor | `manage_pages`, `edit_all_posts`, `delete_all_posts`, `manage_media`, alle `pages.*`/`posts.*`/`media.*`, `use_ai_*`, `comments.*`; seit 4.0.0 zusätzlich `manage_trash`, `view_editorial_calendar`, `manage_translations`, `upload_downloads`, `view_form_submissions` |
 | `author` | Autor | `edit_own_posts`, `pages.view/create/edit`, `posts.view/create/edit`, `media.view/upload`, `comments.view` |
 | `member` | Mitglied | `read`, `edit_profile`, `view_content`, `*.view` |
 | `subscriber`, `contributor` | WordPress-kompatible Zusatzrollen | minimale Leserechte bzw. Beitragsentwürfe |
@@ -37,6 +37,10 @@ Alle Rollen besitzen `read`, `edit_profile` und `view_content`. Der Alias `admin
 | KI | `manage_ai_services`, `use_ai_translation`, `use_ai_rewrite`, `use_ai_summary`, `use_ai_seo_meta` |
 | Analyse | `view_analytics` |
 | Kommentare | `comments.view`, `comments.moderate`, `comments.delete` |
+| Inhalte & Redaktion (seit 4.0.0) | `manage_trash`, `view_editorial_calendar`, `manage_translations`, `import_export` |
+| Formulare (seit 4.0.0) | `manage_forms`, `view_form_submissions` |
+| Downloads (seit 4.0.0) | `manage_downloads`, `upload_downloads`, `view_download_stats` |
+| System & Werkzeuge (seit 4.0.0) | `manage_search_index`, `manage_feeds`, `manage_admin_menu` (Sidebar-Editor, [../ADMIN-MENU.md](../ADMIN-MENU.md)) |
 
 Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden zu `.`).
 

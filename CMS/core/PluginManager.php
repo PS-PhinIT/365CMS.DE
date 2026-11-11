@@ -83,6 +83,15 @@ class PluginManager
     public function loadPlugins(): void
     {
         $this->activePlugins = $this->getActivePlugins();
+
+        // In den Core integrierte Plugins (cms-feed, cms-downloads, cms-contact) nie mehr laden.
+        $integratedPlugins = Services\IntegratedPluginService::getInstance();
+        [$this->activePlugins, $retiredPlugins] = $integratedPlugins->filterActivePlugins($this->activePlugins);
+        if ($retiredPlugins !== []) {
+            $this->saveActivePlugins();
+            $integratedPlugins->markRetired($retiredPlugins);
+        }
+
         $availableBootstrapFiles = $this->getPluginBootstrapMap();
         $disabledPlugins = array_values(array_diff($this->activePlugins, array_keys($availableBootstrapFiles)));
 
@@ -244,6 +253,13 @@ class PluginManager
     public function activatePlugin(string $plugin): bool|string
     {
         $plugin = $this->canonicalPluginSlug($plugin);
+        if (Services\IntegratedPluginService::isIntegrated($plugin)) {
+            return sprintf(
+                'Dieses Plugin ist seit 365CMS %s Teil des Cores und kann nicht mehr aktiviert werden.',
+                Services\IntegratedPluginService::SINCE_VERSION
+            );
+        }
+
         $pluginFile = $this->resolvePluginBootstrapFile($plugin);
         if ($pluginFile === '' || !file_exists($pluginFile)) {
             return 'Plugin-Datei nicht gefunden.';

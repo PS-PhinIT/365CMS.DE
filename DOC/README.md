@@ -1,9 +1,9 @@
 # 365CMS – Projektdokumentation | Abschnitt: README
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.0.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-08, `stable`), PHP 8.4+, schema `v24`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.0.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-08, `stable`), PHP 8.4+, schema `v25`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -31,18 +31,18 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 ### Eckdaten 4.0.0
 
 - `CMS/core/Version.php`: `CURRENT = '4.0.0'`, `RELEASE_DATE = '2026-11-08'`, `STATUS = 'stable'`
-- `SchemaManager::SCHEMA_VERSION = 'v24'`, Tabellenpräfix `cms_`
+- `SchemaManager::SCHEMA_VERSION = 'v25'`, Tabellenpräfix `cms_`
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
-- Release 3.5.0 bündelt alle Änderungen seit 3.4.00 (Zwischenstände 3.4.01–3.4.25 und Folgeaudit vom 14.10.2026); 3.5.2 enthält die Korrekturen aus 3.5.1 (Speichern von Seiten); 3.5.3 ergänzt die Bearbeitung von Kommentaren im Adminbereich; 3.5.4 lädt lokale Google Fonts als WOFF2 statt TTF; 3.5.5 setzt das Aktualisierungsdatum von Beiträgen und Seiten nur noch bei echten Änderungen; 3.5.6 bündelt alle suchmaschinenbezogenen Einstellungen im neuen SEO-Bereich „Suchmaschinen“ (IndexNow mit Key-Generator und automatischer Meldung, Google Search Console, Webmaster-Verifizierung); 4.0.0 ist ein Sicherheits- und Korrekturrelease nach dem Folgeaudit vom 08.11.2026 (Host-Header, MFA, Datenexport, Installer, Importer, Bibliotheken, E-Mail-Verifizierung, Benutzer anlegen; [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md)) und bringt die neu gestaltete Administration (einklappbare Seitenleiste mit Site-Umschalter, Plugin-Zuweisung je Site, Systemhinweise; Beitragseditor mit Veröffentlichungs-Checkliste, Fokusmodus und Revisionen, Schema `v24`) ([../Changelog.md](../Changelog.md))
+- Release 3.5.0 bündelt alle Änderungen seit 3.4.00 (Zwischenstände 3.4.01–3.4.25 und Folgeaudit vom 14.10.2026); 3.5.2 enthält die Korrekturen aus 3.5.1 (Speichern von Seiten); 3.5.3 ergänzt die Bearbeitung von Kommentaren im Adminbereich; 3.5.4 lädt lokale Google Fonts als WOFF2 statt TTF; 3.5.5 setzt das Aktualisierungsdatum von Beiträgen und Seiten nur noch bei echten Änderungen; 3.5.6 bündelt alle suchmaschinenbezogenen Einstellungen im neuen SEO-Bereich „Suchmaschinen“ (IndexNow mit Key-Generator und automatischer Meldung, Google Search Console, Webmaster-Verifizierung); 4.0.0 ist ein Sicherheits- und Korrekturrelease nach dem Folgeaudit vom 08.11.2026 (Host-Header, MFA, Datenexport, Installer, Importer, Bibliotheken, E-Mail-Verifizierung, Benutzer anlegen; [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md)) und bringt die neu gestaltete Administration (einklappbare Seitenleiste mit Site-Umschalter, Plugin-Zuweisung je Site, Systemhinweise; Beitragseditor mit Veröffentlichungs-Checkliste, Fokusmodus und Revisionen, Schema `v25`) ([../Changelog.md](../Changelog.md))
 
 ### Dokumentationsbereiche
 
 | Ordner | Inhalt |
 |---|---|
 | [`core/`](core/) | Architektur, Bootstrap/Routing, Klassen, Services, Hooks, Datenbank, API, Sicherheit, Status |
-| [`admin/`](admin/) | Jede Admin-Seite nach Fachbereich (Inhalte, Medien, Benutzer, Abos, Design, SEO, Performance, Sicherheit, Recht, System, Diagnose, Plugins; Seitenleisten-Gruppen siehe [admin/README.md](admin/README.md)) inkl. neuer Dokumente [MAIL.md](admin/system-settings/MAIL.md) und [MODULES.md](admin/system-settings/MODULES.md) |
+| [`admin/`](admin/) | Jede Admin-Seite nach Fachbereich (Inhalte, Medien, Benutzer, Abos, Design, SEO, Performance, Sicherheit, Recht, System, Diagnose, Plugins; Seitenleisten-Profile siehe [admin/README.md](admin/README.md) und [admin/ADMIN-MENU.md](admin/ADMIN-MENU.md)) inkl. [MAIL.md](admin/system-settings/MAIL.md), [MODULES.md](admin/system-settings/MODULES.md) und [MULTISITES.md](admin/system-settings/MULTISITES.md) |
 | [`member/`](member/) | Mitgliederbereich: Routen, Dashboard, Plugin-Registry, Sicherheit |
 | [`theme/`](theme/) | Theme-Entwicklung, Templates, JavaScript, Komponenten, Design-System |
 | [`plugins/`](plugins/) | Quick Start, Entwicklerhandbuch, Marketplace |

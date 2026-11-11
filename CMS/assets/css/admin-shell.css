@@ -75,7 +75,7 @@ body.admin-body .codex-editor [contenteditable="true"]:focus-visible {
     flex-direction: column;
     width: var(--cms-sidebar-current-width);
     background: var(--cms-sidebar-bg);
-    border-right: 1px solid var(--cms-border);
+    border-right: 1px solid var(--cms-sidebar-border);
     color: var(--cms-text);
     font-size: 0.90625rem;
     transition: width var(--cms-duration) var(--cms-ease);
@@ -135,7 +135,7 @@ body.admin-body .page > .page-wrapper {
 
 button.cms-site-switcher__toggle:hover,
 button.cms-site-switcher__toggle[aria-expanded="true"] {
-    background: var(--cms-hover);
+    background: var(--cms-sidebar-hover);
 }
 
 .cms-site-switcher__mark {
@@ -283,7 +283,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 
 .cms-sidebar__collapse:hover,
 .cms-sidebar__close:hover {
-    background: var(--cms-hover);
+    background: var(--cms-sidebar-hover);
     color: var(--cms-text);
 }
 
@@ -299,7 +299,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 2px 0 12px;
-    scrollbar-color: var(--cms-border-strong) transparent;
+    scrollbar-color: #a8a29e transparent;
     scrollbar-width: thin;
 }
 
@@ -317,6 +317,17 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 
 .cms-nav__group + .cms-nav__group {
     margin-top: 2px;
+}
+
+/* Abschnitt ohne Überschrift (Dashboard/Updates, Profil „Strukturiert“): immer offen, kein Umschalter */
+.cms-nav__group--plain > .cms-nav__list > li:first-child {
+    padding-top: 6px;
+}
+
+.cms-nav__group--plain + .cms-nav__group:not(.cms-nav__group--plain) {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--cms-sidebar-border);
 }
 
 .cms-nav__group-toggle {
@@ -340,7 +351,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 }
 
 .cms-nav__group-toggle:hover {
-    background: var(--cms-hover);
+    background: var(--cms-sidebar-hover);
     color: var(--cms-text);
 }
 
@@ -410,7 +421,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 }
 
 .cms-nav__link:hover {
-    background: var(--cms-hover);
+    background: var(--cms-sidebar-hover);
     color: var(--cms-text);
     text-decoration: none;
 }
@@ -504,7 +515,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
     bottom: 6px;
     left: 21px;
     width: 1px;
-    background: var(--cms-border);
+    background: var(--cms-sidebar-border);
 }
 
 .cms-nav__sublist > li {
@@ -514,6 +525,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 .cms-nav__sublink {
     display: flex;
     align-items: center;
+    gap: 8px;
     min-height: var(--cms-target-size);
     padding: 0 10px;
     border-radius: var(--cms-radius);
@@ -525,7 +537,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 }
 
 .cms-nav__sublink:hover {
-    background: var(--cms-hover);
+    background: var(--cms-sidebar-hover);
     color: var(--cms-text);
     text-decoration: none;
 }
@@ -534,6 +546,15 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
     background: var(--cms-accent-soft);
     color: var(--cms-accent-strong);
     font-weight: 600;
+}
+
+.cms-nav__sublabel {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cms-nav__sublink .cms-nav__badge {
+    margin-left: auto;
 }
 
 .cms-nav__flyout-title {
@@ -564,7 +585,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 .cms-sidebar__footer {
     position: relative;
     padding: 8px 12px 12px;
-    border-top: 1px solid var(--cms-border);
+    border-top: 1px solid var(--cms-sidebar-border);
 }
 
 .cms-user__toggle {
@@ -583,7 +604,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 
 .cms-user__toggle:hover,
 .cms-user__toggle[aria-expanded="true"] {
-    background: var(--cms-hover);
+    background: var(--cms-sidebar-hover);
 }
 
 .cms-user__avatar {
@@ -781,6 +802,8 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 
 /* ═══════════════════════════════════════════════════════
    ICON-LEISTE (≥ 992px, html[data-sidebar="collapsed"])
+   Navigationsregeln nur innerhalb von .cms-sidebar: Menü-Vorschauen
+   (Einstellungen › Admin-Menü) bleiben in voller Breite.
    ═══════════════════════════════════════════════════════ */
 
 @media (min-width: 992px) {
@@ -802,15 +825,15 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
 
     html[data-sidebar="collapsed"] .cms-site-switcher__chevron,
     html[data-sidebar="collapsed"] .cms-user__more,
-    html[data-sidebar="collapsed"] .cms-nav__group-toggle,
-    html[data-sidebar="collapsed"] .cms-nav__hint,
-    html[data-sidebar="collapsed"] .cms-nav__toggle .cms-nav__chevron {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__group-toggle,
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__hint,
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__toggle .cms-nav__chevron {
         display: none;
     }
 
     /* Beschriftungen visuell ausblenden, als zugänglicher Name erhalten */
     html[data-sidebar="collapsed"] .cms-site-switcher__text,
-    html[data-sidebar="collapsed"] .cms-nav__label,
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__label,
     html[data-sidebar="collapsed"] .cms-user__text {
         position: absolute !important;
         width: 1px !important;
@@ -829,34 +852,34 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
         width: 248px;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__group {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__group {
         padding: 0 10px;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__group + .cms-nav__group::before {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__group + .cms-nav__group::before {
         content: "";
         display: block;
         height: 1px;
         margin: 6px 8px;
-        background: var(--cms-border);
+        background: var(--cms-sidebar-border);
     }
 
     /* Gruppen in der Icon-Leiste immer geöffnet (Gruppenzustand bleibt gespeichert) */
-    html[data-sidebar="collapsed"] .cms-collapse[data-cms-collapse="group"] {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-collapse[data-cms-collapse="group"] {
         grid-template-rows: 1fr;
         visibility: visible;
         transition: none;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__list > li {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__list > li {
         padding: 2px 0;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__list > li:first-child {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__list > li:first-child {
         padding-top: 4px;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__link {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__link {
         position: relative;
         justify-content: center;
         width: 48px;
@@ -864,7 +887,7 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
         padding: 0;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__item--parent > .cms-nav__toggle::after {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__item--parent > .cms-nav__toggle::after {
         content: "";
         position: absolute;
         right: 5px;
@@ -875,16 +898,16 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
     }
 
     /* Aktive Unterseite ist in der Leiste verborgen → Eltern-Icon trägt die Markierung */
-    html[data-sidebar="collapsed"] .cms-nav__item--parent.is-active > .cms-nav__toggle {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__item--parent.is-active > .cms-nav__toggle {
         background: var(--cms-accent-soft);
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__item--parent.is-active > .cms-nav__toggle::after {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__item--parent.is-active > .cms-nav__toggle::after {
         border-right-color: var(--cms-accent);
         border-bottom-color: var(--cms-accent);
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__badge {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__badge {
         position: absolute;
         top: 4px;
         right: 2px;
@@ -895,11 +918,11 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
     }
 
     /* Untereinträge öffnen als Flyout neben der Leiste (Position per JS) */
-    html[data-sidebar="collapsed"] .cms-nav__sub {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub {
         display: none;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open {
         position: fixed;
         top: 0;
         left: calc(var(--cms-sidebar-width-collapsed) + 8px);
@@ -918,28 +941,41 @@ button.cms-site-switcher__toggle[aria-expanded="true"] {
         animation: cms-flyout-in var(--cms-duration) var(--cms-ease);
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open > .cms-collapse__inner {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open > .cms-collapse__inner {
         overflow: visible;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open .cms-nav__flyout-title {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open .cms-nav__flyout-title {
         display: block;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open .cms-nav__sublist {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open .cms-nav__sublist {
         padding: 0;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open .cms-nav__sublist::before {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open .cms-nav__sublist::before {
         display: none;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open .cms-nav__sublist > li {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open .cms-nav__sublist > li {
         padding: 1px 0;
     }
 
-    html[data-sidebar="collapsed"] .cms-nav__sub.is-flyout-open .cms-nav__sublink {
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open .cms-nav__sublink {
         color: var(--cms-text);
+    }
+
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sublink .cms-nav__badge {
+        position: static;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 5px;
+        font-size: 0.6875rem;
+    }
+
+    /* Flyout ist weiß: helles Hover statt der Seitenleisten-Variante */
+    html[data-sidebar="collapsed"] .cms-sidebar .cms-nav__sub.is-flyout-open .cms-nav__sublink:hover {
+        background: var(--cms-hover);
     }
 
     html[data-sidebar="collapsed"] .cms-sidebar__collapse .ti {
@@ -1260,5 +1296,87 @@ html.cms-focus-mode body.admin-body .page > .page-wrapper {
     body.admin-body .page > .page-wrapper {
         transition: none !important;
         animation: none !important;
+    }
+}
+
+/* ── Toasts (cmsToast) ─────────────────────────────────────────────────── */
+.cms-toast-region {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1090;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(420px, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+.cms-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem 0.75rem 1rem;
+    border: 1px solid var(--cms-border-strong);
+    border-left: 4px solid var(--cms-accent);
+    border-radius: var(--cms-radius);
+    background: var(--cms-bg);
+    color: var(--cms-text);
+    box-shadow: var(--cms-shadow-lg);
+    pointer-events: auto;
+}
+
+.cms-toast--success { border-left-color: var(--cms-success); }
+.cms-toast--warning { border-left-color: var(--cms-warning); }
+.cms-toast--danger  { border-left-color: var(--cms-danger); }
+
+.cms-toast__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.cms-toast__close {
+    flex: 0 0 auto;
+    margin-top: 0.125rem;
+}
+
+/* ── Fortschritt langer Aufgaben (admin-batch-runner.js) ───────────────── */
+.cms-batch {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.cms-batch__meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--cms-text-muted);
+    font-size: 0.875rem;
+}
+
+.cms-batch__actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.cms-batch__errors {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--cms-border);
+    border-radius: var(--cms-radius);
+    background: var(--cms-warning-soft);
+    font-size: 0.875rem;
+}
+
+.cms-batch__errors ul {
+    max-height: 14rem;
+    overflow: auto;
+    padding-left: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cms-batch .progress-bar {
+        transition: none;
     }
 }

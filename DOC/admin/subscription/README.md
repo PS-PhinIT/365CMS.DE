@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Aboverwaltung
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-This folder documents the sidebar group **Subscriptions** (*Aboverwaltung*): packages, orders/assignments and global subscription settings. All pages require `manage_settings` and the corresponding core modules (see [SUBSCRIPTION-SYSTEM.md](SUBSCRIPTION-SYSTEM.md)).
+This folder documents the admin area **Subscriptions** (*Aboverwaltung*): packages, orders/assignments and global subscription settings. All pages require `manage_settings` and the corresponding core modules (see [SUBSCRIPTION-SYSTEM.md](SUBSCRIPTION-SYSTEM.md)).
 
 ## Deutsch
 

@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Firewall
 
-> **Stand:** 2026-11-08 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/firewall` (Alt-Route `/admin/cms-firewall` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_firewall` | **Core-Modul:** `security`
 
 ## English (summary)
@@ -62,7 +62,7 @@ Die Client-IP ermittelt `Security::getClientIp()`; hinter Proxys/CDN muss die We
 - `cms_firewall_rules` (`rule_type`, `rule_mode`, `value`, `reason`, `is_active`, `expires_at`)
 - `cms_security_log` (`action` z. B. `blocked`, `simulated`, `allowed`, `ip_address`, `request_uri`, `user_agent`, `rule_matched`, `user_id`, `extra`)
 
-Auswertung im Admin unter *Protokolle & Audit → Sicherheits-Audit* (`/admin/logs/security-audit`, siehe [../README.md](../README.md)).
+Auswertung im Admin über die Kachel *Sicherheits-Audit-Log* (Kategorie Protokolle) auf *Website-Zustand* bzw. *Berichte* (`/admin/logs/security-audit`, siehe [../diagnose/DIAGNOSE.md](../diagnose/DIAGNOSE.md#protokolle-adminlogs)).
 
 ### Verwandte Dokumente
 

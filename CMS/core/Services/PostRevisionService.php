@@ -868,7 +868,7 @@ final class PostRevisionService
         return [
             'status' => $status,
             'type' => $type,
-            'type_label' => self::BLOCK_TYPE_LABELS[$type] ?? $type,
+            'type_label' => self::BLOCK_TYPE_LABELS[$type] ?? \CMS\Services\EditorJs\EditorJsBlockRegistry::label($type) ?? $type,
             'segments' => $segments,
         ];
     }

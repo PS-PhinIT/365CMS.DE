@@ -142,6 +142,13 @@ final class AdminRouter
             return;
         }
 
+        // In den Core integrierte Plugins (seit 4.0.0): alte Adminseiten dauerhaft umleiten.
+        $integratedTarget = \CMS\Services\IntegratedPluginService::adminRedirectFor($plugin, $page);
+        if ($integratedTarget !== null) {
+            header('Location: ' . $integratedTarget, true, 301);
+            exit;
+        }
+
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
             && strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 

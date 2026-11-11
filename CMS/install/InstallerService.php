@@ -50,6 +50,7 @@ final class InstallerService
         'cms_encryption_key' => 'cms_encryption_key',
         'cms_encryption_keys_previous' => 'cms_encryption_keys_previous',
         'cms_backup_path' => 'cms_backup_path',
+        'cms_private_path' => 'cms_private_path',
     ];
 
     /**
@@ -208,6 +209,77 @@ final class InstallerService
         return $normalized;
     }
 
+    /**
+     * Profil des Admin-Menüs für die Neuinstallation: classic oder structured, Standard classic.
+     * „Eigenes Layout“ gibt es erst nach dem Speichern im Menü-Editor.
+     */
+    public function normalizeAdminMenuProfile(mixed $profile): string
+    {
+        $this->loadAdminMenuClasses();
+        $profile = is_string($profile) ? trim($profile) : '';
+
+        return in_array($profile, \CMS\Services\AdminMenu\ProfileLayouts::PROFILES, true)
+            ? $profile
+            : \CMS\Services\AdminMenu\ProfileLayouts::CLASSIC;
+    }
+
+    /**
+     * Skizzen der Sidebar je Profil für den Installer-Schritt „Admin-Layout“. Gebaut vom echten
+     * MenuBuilder mit allen Rechten, den vorhandenen Seitendateien und den gewählten Core-Modulen.
+     *
+     * @param array<string, bool> $coreModuleStates
+     * @return array<string, array{label:string, description:string, sections:list<array{label:string, nodes:list<array{label:string, kind:string, display:string}>}>}>
+     */
+    public function getAdminMenuProfilePreviews(array $coreModuleStates): array
+    {
+        $this->loadAdminMenuClasses();
+        require_once $this->rootDir . '/core/Services/CoreModuleService.php';
+
+        $states = $this->normalizeInstallableCoreModuleStates($coreModuleStates);
+        $rootDir = $this->rootDir;
+        $builder = new \CMS\Services\AdminMenu\MenuBuilder(
+            static fn (array $capabilities): bool => true,
+            static fn (string $pageSlug): bool => \CMS\Services\CoreModuleService::isAdminPageEnabledForStates($pageSlug, $states),
+            static fn (string $file): bool => is_file($rootDir . '/' . $file),
+        );
+        $registry = \CMS\Services\AdminMenu\MenuRegistry::create([]);
+
+        $previews = [];
+        foreach (\CMS\Services\AdminMenu\ProfileLayouts::PROFILES as $profile) {
+            $tree = $builder->build($registry, \CMS\Services\AdminMenu\ProfileLayouts::get($profile), $profile);
+            $sections = [];
+            foreach ($tree['sections'] as $section) {
+                $nodes = [];
+                foreach ($section['nodes'] as $node) {
+                    $nodes[] = [
+                        'label' => (string) $node['label'],
+                        'kind' => (string) $node['kind'],
+                        'display' => (string) ($node['display'] ?? ''),
+                    ];
+                }
+                $sections[] = ['label' => (string) $section['label'], 'nodes' => $nodes];
+            }
+
+            $previews[$profile] = [
+                'label' => \CMS\Services\AdminMenu\ProfileLayouts::LABELS[$profile],
+                'description' => \CMS\Services\AdminMenu\ProfileLayouts::DESCRIPTIONS[$profile],
+                'sections' => $sections,
+            ];
+        }
+
+        return $previews;
+    }
+
+    /**
+     * Der Installer hat keinen Autoloader; die Menü-Klassen kommen ohne Datenbank und ohne weitere Abhängigkeiten aus.
+     */
+    private function loadAdminMenuClasses(): void
+    {
+        foreach (['AdminMenuItem', 'CoreCatalog', 'LayoutValidator', 'ProfileLayouts', 'MenuRegistry', 'MenuBuilder'] as $class) {
+            require_once $this->rootDir . '/core/Services/AdminMenu/' . $class . '.php';
+        }
+    }
+
     public function getInstallerLockPath(): string
     {
         return $this->rootDir . '/config/install.lock';
@@ -331,6 +403,7 @@ final class InstallerService
             'CMS_ENCRYPTION_KEY' => 'cms_encryption_key',
             'CMS_ENCRYPTION_KEYS_PREVIOUS' => 'cms_encryption_keys_previous',
             'CMS_BACKUP_PATH' => 'cms_backup_path',
+            'CMS_PRIVATE_PATH' => 'cms_private_path',
         ];
 
         foreach ($stringConstants as $constant => $key) {
@@ -755,6 +828,7 @@ PHP;
             'cms_encryption_key' => '',
             'cms_encryption_keys_previous' => '',
             'cms_backup_path' => '',
+            'cms_private_path' => '',
         ];
     }
 
@@ -921,6 +995,10 @@ PHP;
             '// ─── Backups ───────────────────────────────────────────────────────────────',
             '// Leer: CMS/backups/. Empfohlen: absoluter Pfad außerhalb des Webroots.',
             'defined(\'CMS_BACKUP_PATH\') || define(\'CMS_BACKUP_PATH\', ' . $this->exportPhpValue($data['cms_backup_path']) . ');',
+            '',
+            '// ─── Privater Speicher (geschützte Downloads, Formular-Uploads, Import/Export) ─',
+            '// Leer: CMS/private/. Empfohlen: absoluter Pfad außerhalb des Webroots.',
+            'defined(\'CMS_PRIVATE_PATH\') || define(\'CMS_PRIVATE_PATH\', ' . $this->exportPhpValue($data['cms_private_path']) . ');',
         ];
 
         return implode("\n", $lines) . "\n";
@@ -1034,7 +1112,7 @@ PHP;
         }
     }
 
-    public function createDefaultSettings(PDO $pdo, string $siteName, string $adminEmail, string $prefix = 'cms_', array $coreModuleStates = []): bool
+    public function createDefaultSettings(PDO $pdo, string $siteName, string $adminEmail, string $prefix = 'cms_', array $coreModuleStates = [], string $adminMenuProfile = 'classic'): bool
     {
         try {
             $normalizedCoreModuleStates = $coreModuleStates !== []
@@ -1056,6 +1134,7 @@ PHP;
                 ['active_theme', 'cms-default'],
                 ['active_plugins', '[]'],
                 ['landing_page_content', ''],
+                ['admin_menu_profile', $this->normalizeAdminMenuProfile($adminMenuProfile)],
             ];
 
             foreach ($this->getInstallableCoreModules() as $module) {

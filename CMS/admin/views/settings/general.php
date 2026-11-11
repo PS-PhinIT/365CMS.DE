@@ -105,23 +105,7 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
 
         <div class="cms-settings-toolbar">
             <?php if (!$hideSettingsTabs): ?>
-            <ul class="nav nav-tabs">
-                <li class="nav-item">
-                    <a class="nav-link <?php echo $currentTab === 'general' ? 'active' : ''; ?>" href="<?php echo htmlspecialchars($settingsBaseUrl); ?>">
-                        Allgemein
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo htmlspecialchars(\CMS\Services\PluginSiteAssignmentService::ADMIN_PATH); ?>">
-                        Plugins
-                    </a>
-                </li>
-                <li class="nav-item ms-auto">
-                    <a class="nav-link <?php echo $currentTab === 'content' ? 'active' : ''; ?>" href="<?php echo htmlspecialchars($settingsBaseUrl); ?>?tab=content">
-                        Beiträge &amp; Sites
-                    </a>
-                </li>
-            </ul>
+            <?php $settingsTabsActive = $currentTab; require __DIR__ . '/partials-tabs.php'; ?>
             <?php endif; ?>
 
             <div class="cms-settings-actions">

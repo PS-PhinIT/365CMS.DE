@@ -53,6 +53,8 @@ class UpdateService
     private const DEFAULT_GITHUB_API = 'https://api.github.com';
     private const DEFAULT_CORE_UPDATE_URL = MarketplaceEndpoints::CORE_UPDATE_URL;
     private const CACHE_DURATION = 3600; // 1 hour
+    /** Cache-Eintrag der Core-Update-Prüfung (auch vom Update-Badge im Admin-Menü gelesen). */
+    public const CORE_UPDATE_CACHE_KEY = 'core_update_check';
 
     /** Aktive Konfiguration (aus DB oder Fallback) */
     private string $githubRepo;
@@ -112,7 +114,7 @@ class UpdateService
         $currentVersion = CMS_VERSION ?? Version::CURRENT;
         
         // Check cache first
-        $cacheKey = 'core_update_check';
+        $cacheKey = self::CORE_UPDATE_CACHE_KEY;
         $cached = $this->getCache($cacheKey);
         
         if ($cached !== null) {

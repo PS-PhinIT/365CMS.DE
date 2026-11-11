@@ -1,11 +1,11 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Monitoring, Cron & Benachrichtigungen
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
 > **Routen:** `/admin/monitor-response-time`, `/admin/monitor-cron-status`, `/admin/monitor-disk-usage`, `/admin/monitor-scheduled-tasks`, `/admin/monitor-health-check`, `/admin/monitor-email-alerts`, `/admin/monitor-warnings` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)
 
-The monitoring pages belong to the sidebar group *Diagnose* and are rendered by `CMS/admin/system-monitor-page.php` with `CMS/admin/modules/system/SystemInfoModule.php` (views in `CMS/admin/views/system/`). Trend data is collected hourly by `MonitoringTrendService`; security alerts by `SecurityAlertService`. Scheduled work runs through `CMS/cron.php` → `CronRunnerService` with the tasks `all`, `mail-queue`, `hourly`, `daily`, `feeds` (and generic `cms_cron_*` hooks). Web cron requires the token shown under *Mail → Queue*.
+The monitoring pages are tiles in the category *Monitore*: on the **Website-Zustand** tile page in the *Classic* sidebar profile and on **Berichte** in *Structured* ([../ADMIN-MENU.md](../ADMIN-MENU.md)). They are rendered by `CMS/admin/system-monitor-page.php` with `CMS/admin/modules/system/SystemInfoModule.php` (views in `CMS/admin/views/system/`). Trend data is collected hourly by `MonitoringTrendService`; security alerts by `SecurityAlertService`. Scheduled work runs through `CMS/cron.php` → `CronRunnerService` with the tasks `all`, `mail-queue`, `hourly`, `daily`, `feeds` (and generic `cms_cron_*` hooks). Web cron requires the token shown under *Mail → Queue*.
 
 ## Deutsch
 
