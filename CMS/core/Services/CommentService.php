@@ -33,6 +33,18 @@ class CommentService
     private const MAX_FILTER_SEARCH_LENGTH = 80;
     private const FLOOD_WINDOW_MINUTES = 15;
     private const MAX_COMMENTS_PER_WINDOW = 5;
+    private const IP_RETENTION_BATCH_SIZE = 500;
+    private const IP_RETENTION_MAX_BATCHES = 40;
+
+    /** Kommentar-IPs nach Ablauf der Frist kürzen (IPv4 /24, IPv6 /48) bzw. entfernen. */
+    public const IP_RETENTION_ANONYMIZE = 'anonymize';
+    public const IP_RETENTION_REMOVE = 'remove';
+
+    /**
+     * Bereits gekürzte Adressen (Fixpunkte von anonymizeIpAddress()); gilt für PHP (`preg_match`) und
+     * MySQL/MariaDB (`REGEXP`), damit der Probelauf sie nicht erneut zählt.
+     */
+    public const ANONYMIZED_IP_PATTERN = '^([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.]0|([0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4}){0,2})?::)$';
     private const ANTISPAM_SETTING_KEYS = [
         'antispam_enabled',
         'antispam_honeypot',
@@ -432,6 +444,116 @@ class CommentService
         }
 
         return count($ids);
+    }
+
+    /**
+     * Kürzt eine IP-Adresse: IPv4 auf /24 (letztes Oktett 0), IPv6 auf /48. Ungültige Werte ergeben ''.
+     * Das Ergebnis ist ein Fixpunkt: erneutes Anwenden ändert nichts.
+     */
+    public static function anonymizeIpAddress(string $ipAddress): string
+    {
+        $packed = @inet_pton(trim($ipAddress));
+        if (!is_string($packed) || !in_array(strlen($packed), [4, 16], true)) {
+            return '';
+        }
+
+        $packed = strlen($packed) === 4
+            ? substr($packed, 0, 3) . "\0"
+            : substr($packed, 0, 6) . str_repeat("\0", 10);
+        $result = @inet_ntop($packed);
+
+        return is_string($result) ? $result : '';
+    }
+
+    public static function isAnonymizedIpAddress(string $ipAddress): bool
+    {
+        return preg_match('/' . self::ANONYMIZED_IP_PATTERN . '/', trim($ipAddress)) === 1;
+    }
+
+    /**
+     * Probelauf der Aufbewahrungsregel „Kommentar-IP-Adressen“: Kommentare älter als `$days` Tage, deren
+     * IP-Adresse noch gekürzt bzw. entfernt werden müsste. Bereits gekürzte Adressen zählen beim Kürzen nicht.
+     */
+    public function countIpsDue(int $days, string $mode): int
+    {
+        if ($days <= 0) {
+            return 0;
+        }
+
+        [$where, $params] = $this->buildIpRetentionCondition($days, $mode);
+
+        return (int) $this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}comments WHERE {$where}", $params);
+    }
+
+    /**
+     * Kürzt bzw. entfernt die IP-Adressen fälliger Kommentare blockweise. Der Kommentar selbst bleibt bestehen.
+     *
+     * @return int Anzahl geänderter Kommentare
+     */
+    public function pruneIps(int $days, string $mode): int
+    {
+        if ($days <= 0) {
+            return 0;
+        }
+
+        [$where, $params] = $this->buildIpRetentionCondition($days, $mode);
+        $changed = 0;
+
+        for ($batch = 0; $batch < self::IP_RETENTION_MAX_BATCHES; $batch++) {
+            if ($mode === self::IP_RETENTION_REMOVE) {
+                $stmt = $this->db->execute(
+                    "UPDATE {$this->prefix}comments SET author_ip = '' WHERE {$where} LIMIT " . self::IP_RETENTION_BATCH_SIZE,
+                    $params
+                );
+                $affected = $stmt->rowCount();
+                $changed += $affected;
+                if ($affected < self::IP_RETENTION_BATCH_SIZE) {
+                    break;
+                }
+                continue;
+            }
+
+            $rows = $this->db->get_results(
+                "SELECT id, author_ip FROM {$this->prefix}comments WHERE {$where} ORDER BY id ASC LIMIT " . self::IP_RETENTION_BATCH_SIZE,
+                $params
+            ) ?: [];
+
+            $groups = [];
+            foreach ($rows as $row) {
+                $groups[self::anonymizeIpAddress((string) ($row->author_ip ?? ''))][] = (int) $row->id;
+            }
+
+            foreach ($groups as $anonymizedIp => $ids) {
+                $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+                $this->db->execute(
+                    "UPDATE {$this->prefix}comments SET author_ip = ? WHERE id IN ({$placeholders})",
+                    array_merge([(string) $anonymizedIp], $ids)
+                );
+                $changed += count($ids);
+            }
+
+            if (count($rows) < self::IP_RETENTION_BATCH_SIZE) {
+                break;
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
+     * @return array{0:string,1:list<int|string>}
+     */
+    private function buildIpRetentionCondition(int $days, string $mode): array
+    {
+        $where = "post_date < (NOW() - INTERVAL ? DAY) AND author_ip IS NOT NULL AND author_ip <> ''";
+        $params = [max(1, min(3650, $days))];
+
+        if ($mode !== self::IP_RETENTION_REMOVE) {
+            $where .= ' AND author_ip NOT REGEXP ?';
+            $params[] = self::ANONYMIZED_IP_PATTERN;
+        }
+
+        return [$where, $params];
     }
 
     private function sanitizeAuthorName(string $authorName): string

@@ -92,7 +92,6 @@ const RESERVED_FILES = [
     'admin/translations.php' => 'WP2: Übersetzungen',
     'admin/search-index.php' => 'WP2: Suchindex',
     'admin/content-exchange.php' => 'WP2: Import/Export',
-    'admin/data-retention.php' => 'WP3: Löschfristen',
     'admin/media-tools.php' => 'WP4: Medien-Werkzeuge',
 ];
 

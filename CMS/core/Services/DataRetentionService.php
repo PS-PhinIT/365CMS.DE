@@ -61,6 +61,9 @@ final class DataRetentionService
     /** Option mit Zeitpunkt und Ergebnis des letzten Laufs (JSON). */
     public const LAST_RUN_OPTION = 'data_retention_last_run';
 
+    /** Option mit dem letzten Lauf je Regel (JSON: Schlüssel => {at, count, error}), auch für Einzelläufe. */
+    public const RULE_RUNS_OPTION = 'data_retention_rule_runs';
+
     /** Admin-Übersicht aller Regeln. */
     public const ADMIN_PATH = '/admin/data-retention';
 
@@ -145,8 +148,120 @@ final class DataRetentionService
         }
 
         $this->storeLastRun($result, array_keys($errors));
+        $this->storeRuleRuns($result, array_keys($errors));
 
         return $result;
+    }
+
+    /**
+     * Führt eine einzelne Regel sofort aus (Übersicht „Jetzt ausführen“) und speichert ihren letzten Lauf.
+     *
+     * @return array{count:int,error:bool}|null null = unbekannte Regel
+     */
+    public function runRule(string $key): ?array
+    {
+        $rules = $this->getRules();
+        if (!isset($rules[$key])) {
+            return null;
+        }
+
+        $count = 0;
+        $error = false;
+        try {
+            $count = isset(self::DEFAULT_RETENTION_DAYS[$key])
+                ? $this->runBuiltInRule($key, (int) ($this->getRetentionDays()[$key] ?? 0))
+                : $rules[$key]->prune();
+        } catch (\Throwable $e) {
+            $this->logFailure($key, $e);
+            $error = true;
+        }
+
+        if ($count > 0) {
+            Logger::instance()->withChannel('retention')->info('Datenaufbewahrung: Regel manuell ausgeführt.', [$key => $count]);
+        }
+
+        $this->storeRuleRuns([$key => $count], $error ? [$key] : []);
+
+        return ['count' => $count, 'error' => $error];
+    }
+
+    /** Core-Regel (feste Frist dieses Dienstes) statt einer registrierten Regel eines Funktionsbereichs. */
+    public function isCoreRule(string $key): bool
+    {
+        return isset(self::DEFAULT_RETENTION_DAYS[$key]);
+    }
+
+    /**
+     * Letzter Lauf je Regel. Regeln ohne eigenen Eintrag übernehmen den letzten Gesamtlauf.
+     *
+     * @return array<string, array{at:string,count:int,error:bool}>
+     */
+    public function getRuleRuns(): array
+    {
+        $raw = $this->readOption(self::RULE_RUNS_OPTION);
+        $decoded = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+        $runs = [];
+        foreach (is_array($decoded) ? $decoded : [] as $key => $entry) {
+            if (!is_string($key) || !is_array($entry) || !is_string($entry['at'] ?? null)) {
+                continue;
+            }
+            $runs[$key] = [
+                'at' => $entry['at'],
+                'count' => max(0, (int) ($entry['count'] ?? 0)),
+                'error' => !empty($entry['error']),
+            ];
+        }
+
+        $lastRun = $this->getLastRun();
+        foreach ($lastRun['results'] ?? [] as $key => $count) {
+            if (is_string($key) && !isset($runs[$key])) {
+                $runs[$key] = [
+                    'at' => $lastRun['at'],
+                    'count' => max(0, (int) $count),
+                    'error' => in_array($key, $lastRun['errors'], true),
+                ];
+            }
+        }
+
+        return $runs;
+    }
+
+    private function runBuiltInRule(string $key, int $retentionDays): int
+    {
+        if ($retentionDays <= 0) {
+            return 0;
+        }
+
+        if (isset(self::TABLE_DATE_COLUMNS[$key])) {
+            return $this->pruneTable($key, self::TABLE_DATE_COLUMNS[$key], $retentionDays);
+        }
+
+        return match ($key) {
+            'not_found_logs' => RedirectService::getInstance()->pruneNotFoundLogs($retentionDays),
+            'log_files' => $this->pruneLogFiles($retentionDays),
+            default => 0,
+        };
+    }
+
+    /**
+     * @param array<string, int> $result
+     * @param list<string>       $errors
+     */
+    private function storeRuleRuns(array $result, array $errors): void
+    {
+        try {
+            $raw = $this->readOption(self::RULE_RUNS_OPTION);
+            $runs = is_string($raw) && $raw !== '' ? json_decode($raw, true) : [];
+            $runs = is_array($runs) ? $runs : [];
+            $at = date('c');
+            foreach ($result as $key => $count) {
+                $runs[$key] = ['at' => $at, 'count' => (int) $count, 'error' => in_array($key, $errors, true)];
+            }
+
+            $this->writeOption(self::RULE_RUNS_OPTION, (string) json_encode($runs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        } catch (\Throwable $e) {
+            $this->logFailure('rule_runs', $e);
+        }
     }
 
     /**
