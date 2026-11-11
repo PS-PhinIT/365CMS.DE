@@ -26,12 +26,17 @@ $categories = $listData['categories'] ?? [];
 $filter  = (string)($listData['filter'] ?? '');
 $catFilter = (int)($listData['catFilter'] ?? 0);
 $search  = (string)($listData['search'] ?? '');
+$trashData = is_array($listData['trash'] ?? null) ? $listData['trash'] : [];
+$isTrashView = !empty($trashData['is_view']);
+$trashCount = (int)($counts['trash'] ?? 0);
 
 $statusLabels = [
     'published' => ['Veröffentlicht', 'bg-green-lt text-green'],
     'draft'     => ['Entwurf',        'bg-yellow-lt text-yellow'],
     'private'   => ['Privat',         'bg-purple-lt text-purple'],
+    'trash'     => [\CMS\Services\Trash\TrashSupport::t('trash.list.status_label'), 'bg-red-lt text-red'],
 ];
+$tt = static fn (string $key, string|int ...$args): string => htmlspecialchars(\CMS\Services\Trash\TrashSupport::t($key, ...$args), ENT_QUOTES, 'UTF-8');
 
 $pagesHasActiveFilters = ($filter !== '') || ($catFilter > 0) || ($search !== '');
 $pagesAuthorKeys = [];
@@ -55,6 +60,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                     <span>Veröffentlicht: <?php echo (int)($counts['published'] ?? 0); ?></span>
                     <span>Entwurf: <?php echo (int)($counts['drafts'] ?? 0); ?></span>
                     <span>Privat: <?php echo (int)($counts['private'] ?? 0); ?></span>
+                    <span><a href="<?= $pagesAdminBaseUrl ?>?status=trash" class="<?= $isTrashView ? 'fw-semibold' : 'text-reset' ?>"><?= $tt('trash.list.status_label') ?>: <?= $trashCount ?></a></span>
                 </div>
             </div>
             <a href="<?= $pagesAdminBaseUrl ?>?action=edit" class="btn btn-primary d-print-none">
@@ -74,6 +80,20 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
         include __DIR__ . '/../partials/flash-alert.php';
         ?>
 
+        <?php if ($isTrashView && is_array($trashData['confirmation'] ?? null)): ?>
+            <?php
+            $trashConfirmation = $trashData['confirmation'];
+            $trashConfirmationForm = [
+                'action' => $pagesAdminBaseUrl,
+                'csrf_token' => (string) $csrfToken,
+                'fields' => ['action' => 'bulk', 'bulk_action' => 'delete_permanently', 'list_status' => 'trash'],
+                'id_field' => 'ids[]',
+                'dismiss_url' => $pagesAdminBaseUrl . '?status=trash',
+            ];
+            require __DIR__ . '/../partials/trash-confirmation.php';
+            ?>
+        <?php endif; ?>
+
         <div class="card content-listing-card">
             <div class="card-header content-listing-toolbar">
                 <div class="content-listing-toolbar__label">Filter &amp; Suche</div>
@@ -85,6 +105,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                             <option value="published"<?= $filter === 'published' ? ' selected' : '' ?>>Veröffentlicht</option>
                             <option value="draft"<?= $filter === 'draft' ? ' selected' : '' ?>>Entwurf</option>
                             <option value="private"<?= $filter === 'private' ? ' selected' : '' ?>>Privat</option>
+                            <option value="trash"<?= $isTrashView ? ' selected' : '' ?>><?= $tt('trash.list.filter_option', $trashCount) ?></option>
                         </select>
                     </div>
                     <div class="content-listing-filters__group">
@@ -115,11 +136,36 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                 <form method="get" action="<?= $pagesAdminBaseUrl ?>" id="pagesFilterForm" class="js-pages-filter-form"></form>
             </div>
 
+            <?php if ($isTrashView): ?>
+                <?php
+                $trashBar = [
+                    'count' => $trashCount,
+                    'retention_days' => (int)($trashData['retention_days'] ?? 0),
+                    'form_action' => $pagesAdminBaseUrl,
+                    'csrf_token' => (string) $csrfToken,
+                    'fields' => ['action' => 'empty_trash'],
+                    'central_link' => \CMS\Services\Trash\TrashService::getInstance()->canManage(),
+                ];
+                require __DIR__ . '/../partials/trash-list-bar.php';
+                ?>
+            <?php endif; ?>
+
             <div class="card-body border-bottom py-2 d-none content-listing-bulkbar" id="bulkBarPages">
                 <form method="post" action="<?= $pagesAdminBaseUrl ?>" id="bulkFormPages" class="d-flex flex-wrap align-items-center gap-2">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="action" value="bulk">
+                    <input type="hidden" name="list_status" value="<?= htmlspecialchars($filter, ENT_QUOTES, 'UTF-8') ?>">
                     <span class="text-secondary"><strong id="selectedCountPages">0</strong> ausgewählt</span>
+                    <?php if ($isTrashView): ?>
+                    <label for="bulkActionPages" class="form-label mb-0 small text-secondary"><?= $tt('trash.list.bulk_label') ?></label>
+                    <select name="bulk_action" id="bulkActionPages" class="form-select form-select-sm w-auto">
+                        <option value=""><?= $tt('trash.list.bulk_placeholder') ?></option>
+                        <option value="restore"><?= $tt('trash.action.restore') ?></option>
+                        <option value="delete_permanently"><?= $tt('trash.action.delete_permanently') ?></option>
+                    </select>
+                    <button type="submit" id="bulkSubmitPages" class="btn btn-sm btn-primary" disabled>Anwenden</button>
+                    <button type="button" id="bulkDeletePages" class="btn btn-sm btn-danger" data-bulk-action="delete_permanently"><?= $tt('trash.action.delete_permanently') ?></button>
+                    <?php else: ?>
                     <label for="bulkActionPages" class="form-label mb-0 small text-secondary">Status ändern</label>
                     <select name="bulk_action" id="bulkActionPages" class="form-select form-select-sm w-auto">
                         <option value="">Status wählen…</option>
@@ -127,6 +173,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                         <option value="draft">Als Entwurf setzen</option>
                         <option value="set_category">Kategorie setzen</option>
                         <option value="clear_category">Kategorie entfernen</option>
+                        <option value="trash"><?= $tt('trash.action.move') ?></option>
                     </select>
                     <select name="bulk_category_id" id="bulkCategoryPages" aria-label="Kategorie für ausgewählte Seiten wählen" class="form-select form-select-sm w-auto d-none">
                         <option value="0">Kategorie wählen…</option>
@@ -135,7 +182,8 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                         <?php endforeach; ?>
                     </select>
                     <button type="submit" id="bulkSubmitPages" class="btn btn-sm btn-primary" disabled>Anwenden</button>
-                    <button type="button" id="bulkDeletePages" class="btn btn-sm btn-danger">Löschen</button>
+                    <button type="button" id="bulkDeletePages" class="btn btn-sm btn-danger" data-bulk-action="trash"><?= $tt('trash.action.move') ?></button>
+                    <?php endif; ?>
                     <button type="button" id="bulkCancelPages" class="btn btn-sm btn-link p-0 text-decoration-none">Abbrechen</button>
                 </form>
             </div>
@@ -164,7 +212,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                             <?php endif; ?>
                             <th class="text-nowrap">
                                 <button type="button" class="content-listing-sort js-content-sort" data-sort-key="updated" data-sort-type="number">
-                                    Aktualisiert <i class="ti ti-arrows-sort" aria-hidden="true"></i>
+                                    <?= $isTrashView ? $tt('trash.list.column_trashed') : 'Aktualisiert' ?> <i class="ti ti-arrows-sort" aria-hidden="true"></i>
                                 </button>
                             </th>
                             <th class="w-1"></th>
@@ -174,8 +222,8 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                     <?php if (empty($pages)): ?>
                         <?php
                         $emptyStateColspan = $pagesHasMultipleAuthors ? 8 : 7;
-                        $emptyStateMessage = 'Keine Seiten gefunden.';
-                        $emptyStateSubtitle = 'Prüfen Sie Filter oder Suche – die serverseitige Liste liefert aktuell keine Einträge.';
+                        $emptyStateMessage = $isTrashView && $search === '' ? \CMS\Services\Trash\TrashSupport::t('trash.list.empty') : 'Keine Seiten gefunden.';
+                        $emptyStateSubtitle = $isTrashView && $search === '' ? \CMS\Services\Trash\TrashSupport::t('trash.list.empty_hint') : 'Prüfen Sie Filter oder Suche – die serverseitige Liste liefert aktuell keine Einträge.';
                         $emptyStateIcon = 'file-text';
                         require __DIR__ . '/../partials/empty-table-row.php';
                         ?>
@@ -199,6 +247,14 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                                 }
                             }
                             $pageUpdatedSort = $pageUpdatedTimestamp ?? strtotime((string)($page->created_at ?? '')) ?? 0;
+                            $pagePreviousStatus = (string)($page->previous_status ?? '');
+                            $pageTrashedBy = trim((string)($page->trashed_by_name ?? ''));
+                            if ($isTrashView) {
+                                $pageTrashedAt = trim((string)($page->trashed_at ?? ''));
+                                $pageTrashedTimestamp = $pageTrashedAt !== '' ? strtotime($pageTrashedAt) : false;
+                                $pageUpdatedAtLabel = $pageTrashedTimestamp !== false ? date('d.m.Y · H:i', $pageTrashedTimestamp) : '';
+                                $pageUpdatedSort = $pageTrashedTimestamp !== false ? $pageTrashedTimestamp : 0;
+                            }
                             $pageHasEnglishVariant = !empty($page->has_english_variant);
                             $pageIsEnglishOnly = !empty($page->is_english_only);
                             $pageAuthorEmail = filter_var($pageAuthor, FILTER_VALIDATE_EMAIL) ? $pageAuthor : '';
@@ -221,7 +277,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                             $pageAuthorHue = abs((int)crc32($pageAuthorSeed !== '' ? $pageAuthorSeed : 'na')) % 360;
                             ?>
                             <tr class="content-listing-table__row"
-                                data-edit-url="<?= $pagesAdminBaseUrl ?>?action=edit&id=<?= $pageId ?>"
+                                <?php if (!$isTrashView): ?>data-edit-url="<?= $pagesAdminBaseUrl ?>?action=edit&id=<?= $pageId ?>"<?php endif; ?>
                                 data-sort-title="<?= htmlspecialchars(strtolower((string)($pageTitle !== '' ? $pageTitle : 'Ohne Titel')), ENT_QUOTES, 'UTF-8') ?>"
                                 data-sort-status="<?= htmlspecialchars(strtolower((string)$pageStatusLabel), ENT_QUOTES, 'UTF-8') ?>"
                                 data-sort-updated="<?= (int)$pageUpdatedSort ?>">
@@ -229,9 +285,13 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                                     <input class="form-check-input" type="checkbox" name="ids[]" value="<?= $pageId ?>" form="bulkFormPages" aria-label="Seite #<?= $pageId ?> auswählen">
                                 </td>
                                 <td class="content-listing-table__title-cell">
+                                    <?php if ($isTrashView): ?>
+                                        <span class="fw-medium"><?= htmlspecialchars($pageTitle !== '' ? $pageTitle : 'Ohne Titel') ?></span>
+                                    <?php else: ?>
                                     <a href="<?= $pagesAdminBaseUrl ?>?action=edit&id=<?= $pageId ?>" class="text-reset fw-medium">
                                         <?= htmlspecialchars($pageTitle !== '' ? $pageTitle : 'Ohne Titel') ?>
                                     </a>
+                                    <?php endif; ?>
                                     <span class="content-listing-id-badge">#<?= $pageId ?></span>
                                     <?php if ($pageIsEnglishOnly): ?>
                                         <span class="badge bg-blue-lt ms-2">Nur EN</span>
@@ -254,6 +314,9 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                                 </td>
                                 <td>
                                     <span class="badge <?= htmlspecialchars($pageStatusClass) ?>"><?= htmlspecialchars($pageStatusLabel) ?></span>
+                                    <?php if ($isTrashView && isset($statusLabels[$pagePreviousStatus])): ?>
+                                        <div class="small text-secondary mt-1"><?= $tt('trash.list.previous_status', $statusLabels[$pagePreviousStatus][0]) ?></div>
+                                    <?php endif; ?>
                                 </td>
                                 <?php if ($pagesHasMultipleAuthors): ?>
                                     <td>
@@ -267,20 +330,47 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                                         </div>
                                     </td>
                                 <?php endif; ?>
-                                <td class="text-secondary"><?= htmlspecialchars($pageUpdatedAtLabel !== '' ? $pageUpdatedAtLabel : '–') ?></td>
+                                <td class="text-secondary">
+                                    <?= htmlspecialchars($pageUpdatedAtLabel !== '' ? $pageUpdatedAtLabel : '–') ?>
+                                    <?php if ($isTrashView && $pageTrashedBy !== ''): ?>
+                                        <div class="small"><?= $tt('trash.list.trashed_by', $pageTrashedBy) ?></div>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="table-actions content-listing-table__actions-cell">
                                     <div class="table-row-actions table-row-actions--icons">
+                                        <?php if ($isTrashView): ?>
+                                        <form method="post" action="<?= $pagesAdminBaseUrl ?>" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                            <input type="hidden" name="action" value="restore">
+                                            <input type="hidden" name="id" value="<?= $pageId ?>">
+                                            <input type="hidden" name="list_status" value="trash">
+                                            <button type="submit" class="btn btn-outline-success btn-sm btn-icon js-row-action" aria-label="<?= $tt('trash.action.restore') ?>" title="<?= $tt('trash.action.restore') ?>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14l-4 -4l4 -4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+                                            </button>
+                                        </form>
+                                        <form method="post" action="<?= $pagesAdminBaseUrl ?>" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                            <input type="hidden" name="action" value="delete_permanently">
+                                            <input type="hidden" name="id" value="<?= $pageId ?>">
+                                            <input type="hidden" name="list_status" value="trash">
+                                            <button type="button" class="btn btn-ghost-danger btn-sm btn-icon content-listing-delete-action js-row-action" aria-label="<?= $tt('trash.action.delete_permanently') ?>" title="<?= $tt('trash.action.delete_permanently') ?>" data-cms-confirm-modal data-cms-confirm-title="<?= $tt('trash.confirm.delete_title') ?>" data-cms-confirm-message="<?= $tt('trash.confirm.delete_message') ?>" data-cms-confirm-text="<?= $tt('trash.action.delete_permanently') ?>" data-cms-confirm-class="btn-danger">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7h16"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/><path d="M10 12l4 4m0 -4l-4 4"/></svg>
+                                            </button>
+                                        </form>
+                                        <?php else: ?>
                                         <a href="<?= $pagesAdminBaseUrl ?>?action=edit&id=<?= $pageId ?>" class="btn btn-outline-primary btn-sm btn-icon js-row-action" aria-label="Seite bearbeiten" title="Bearbeiten">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h10v10H7z" opacity="0"/><path d="M16.474 5.408a2.077 2.077 0 1 1 2.937 2.937l-9.19 9.19a6 6 0 0 1 -2.52 1.51l-2.093 .698l.698 -2.093a6 6 0 0 1 1.51 -2.52z"/><path d="M14.474 7.408l2.118 2.118"/></svg>
                                         </a>
                                         <form method="post" action="<?= $pagesAdminBaseUrl ?>" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="action" value="trash">
                                             <input type="hidden" name="id" value="<?= $pageId ?>">
-                                            <button type="button" class="btn btn-ghost-danger btn-sm btn-icon content-listing-delete-action js-row-action" aria-label="Seite löschen" title="Löschen" data-cms-confirm-modal data-cms-confirm-title="Seite löschen?" data-cms-confirm-message="Diese Seite wird unwiderruflich gelöscht." data-cms-confirm-text="Löschen" data-cms-confirm-class="btn-danger">
+                                            <input type="hidden" name="list_status" value="<?= htmlspecialchars($filter, ENT_QUOTES, 'UTF-8') ?>">
+                                            <button type="button" class="btn btn-ghost-danger btn-sm btn-icon content-listing-delete-action js-row-action" aria-label="<?= $tt('trash.action.move') ?>" title="<?= $tt('trash.action.move') ?>" data-cms-confirm-modal data-cms-confirm-title="<?= $tt('trash.confirm.move_title') ?>" data-cms-confirm-message="<?= $tt('trash.confirm.move_message') ?>" data-cms-confirm-text="<?= $tt('trash.action.move') ?>" data-cms-confirm-class="btn-danger">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7l1 -3h4l1 3"/></svg>
                                             </button>
                                         </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -315,6 +405,15 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
 
 <script <?= \CMS\Security::instance()->nonceAttr() ?>>
 document.addEventListener('DOMContentLoaded', function () {
+    var trashTexts = <?= json_encode([
+        'move' => \CMS\Services\Trash\TrashSupport::t('trash.action.move'),
+        'restore' => \CMS\Services\Trash\TrashSupport::t('trash.action.restore'),
+        'deletePermanently' => \CMS\Services\Trash\TrashSupport::t('trash.action.delete_permanently'),
+        'moveTitle' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_move_title'),
+        'moveMessage' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_move_message'),
+        'deleteTitle' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_delete_title'),
+        'deleteMessage' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_delete_message'),
+    ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
     var selectAll = document.getElementById('pagesSelectAll');
     var bulkForm = document.getElementById('bulkFormPages');
     var bulkBar = document.getElementById('bulkBarPages');
@@ -355,7 +454,12 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'clear_category':
                 return { text: 'Kategorie entfernen', className: 'btn btn-sm btn-outline-secondary' };
             case 'delete':
-                return { text: 'Seiten löschen', className: 'btn btn-sm btn-danger' };
+            case 'trash':
+                return { text: trashTexts.move, className: 'btn btn-sm btn-danger' };
+            case 'restore':
+                return { text: trashTexts.restore, className: 'btn btn-sm btn-success' };
+            case 'delete_permanently':
+                return { text: trashTexts.deletePermanently, className: 'btn btn-sm btn-danger' };
             default:
                 return { text: 'Anwenden', className: 'btn btn-sm btn-primary' };
         }
@@ -473,6 +577,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function syncBulkCategoryVisibility() {
         if (!bulkAction || !bulkCategory) {
+            syncBulkSubmitState();
             return;
         }
 
@@ -553,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!bulkAction || bulkDelete.disabled) {
                 return;
             }
-            bulkAction.value = 'delete';
+            bulkAction.value = bulkDelete.getAttribute('data-bulk-action') || 'trash';
             syncBulkCategoryVisibility();
             if (bulkForm) {
                 bulkForm.requestSubmit();
@@ -637,21 +742,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            if (bulkAction.value === 'delete') {
+            if (bulkAction.value === 'delete' || bulkAction.value === 'trash' || bulkAction.value === 'delete_permanently') {
                 if (bulkForm.dataset.bulkDeleteConfirmed === '1') {
                     bulkForm.dataset.bulkDeleteConfirmed = '0';
                     return;
                 }
-                var deleteMessage = selectedCheckboxes.length === 1
-                    ? 'Soll die ausgewählte Seite wirklich gelöscht werden?'
-                    : 'Sollen die ' + selectedCheckboxes.length + ' ausgewählten Seiten wirklich gelöscht werden?';
+                var isPermanent = bulkAction.value === 'delete_permanently';
+                var deleteMessage = (isPermanent ? trashTexts.deleteMessage : trashTexts.moveMessage).replace('%d', String(selectedCheckboxes.length));
 
                 event.preventDefault();
                 if (typeof cmsConfirm === 'function') {
                     cmsConfirm({
-                        title: 'Seiten gesammelt löschen?',
+                        title: isPermanent ? trashTexts.deleteTitle : trashTexts.moveTitle,
                         message: deleteMessage,
-                        confirmText: 'Löschen',
+                        confirmText: isPermanent ? trashTexts.deletePermanently : trashTexts.move,
                         confirmClass: 'btn-danger',
                         onConfirm: function () {
                             bulkForm.dataset.bulkDeleteConfirmed = '1';

@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Seiten – Entry Point
  *
  * Route: /admin/pages
- * Actions: list (default), edit, save, delete, bulk
+ * Actions: list (default), edit, save, delete/trash, restore, delete_permanently, empty_trash, bulk
  *
  * @package CMSv2\Admin
  */
@@ -21,9 +21,10 @@ use CMS\Services\AI\AiSettingsService;
 use CMS\Services\CoreModuleService;
 use CMS\Services\EditorJsService;
 
-const CMS_ADMIN_PAGES_ALLOWED_ACTIONS = ['save', 'delete', 'bulk', 'switch_locale', 'copy_de_to_en'];
+const CMS_ADMIN_PAGES_ALLOWED_ACTIONS = ['save', 'delete', 'trash', 'restore', 'delete_permanently', 'empty_trash', 'bulk', 'switch_locale', 'copy_de_to_en'];
+const CMS_ADMIN_PAGES_LIST_STATUSES = ['published', 'draft', 'private', 'trash'];
 const CMS_ADMIN_PAGES_ALLOWED_VIEWS = ['list', 'edit'];
-const CMS_ADMIN_PAGES_ALLOWED_BULK_ACTIONS = ['delete', 'publish', 'draft', 'set_category', 'clear_category'];
+const CMS_ADMIN_PAGES_ALLOWED_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently', 'publish', 'draft', 'set_category', 'clear_category'];
 const CMS_ADMIN_PAGES_WRITE_CAPABILITY = 'manage_pages';
 
 function cms_admin_pages_can_access(): bool
@@ -158,6 +159,18 @@ function cms_admin_pages_target_url(?int $id = null, string $editorLocale = 'de'
     }
 
     return '/admin/pages';
+}
+
+/**
+ * Listen-URL mit erhaltenem Statusfilter (z. B. `?status=trash` nach Papierkorb-Aktionen).
+ */
+function cms_admin_pages_list_url(mixed $listStatus = ''): string
+{
+    $listStatus = trim(cms_admin_pages_scalar_string($listStatus));
+
+    return in_array($listStatus, CMS_ADMIN_PAGES_LIST_STATUSES, true)
+        ? '/admin/pages?status=' . rawurlencode($listStatus)
+        : '/admin/pages';
 }
 
 function cms_admin_pages_normalize_action(mixed $action): string
@@ -379,6 +392,14 @@ function cms_admin_pages_view_config(PagesModule $module, string $view, ?array $
             cms_admin_section_shell_redirect(cms_admin_pages_target_url());
         }
 
+        if ($id > 0 && (string) ($editData['page']->status ?? '') === 'trash') {
+            cms_admin_section_shell_flash('admin_alert', [
+                'type' => 'warning',
+                'message' => (string) __('trash.edit.blocked'),
+            ]);
+            cms_admin_section_shell_redirect(cms_admin_pages_list_url('trash'));
+        }
+
         return [
             'section' => 'edit',
             'view_file' => __DIR__ . '/views/pages/edit.php',
@@ -546,15 +567,26 @@ $sectionPageConfig = [
                 return $result;
 
             case 'delete':
+            case 'trash':
+            case 'restore':
+            case 'delete_permanently':
                 $id = cms_admin_pages_normalize_positive_id($post['id'] ?? 0);
                 if ($id < 1) {
                     return ['success' => false, 'error' => 'Ungültige Seiten-ID.'];
                 }
 
-                $result = $module->delete($id);
-                if (!empty($result['success'])) {
-                    $result['redirect_path'] = cms_admin_pages_target_url();
-                }
+                $result = match ($postAction) {
+                    'restore' => $module->restore($id),
+                    'delete_permanently' => $module->deletePermanently($id, cms_admin_pages_scalar_string($post['confirmed'] ?? '') === '1'),
+                    default => $module->trash($id),
+                };
+                $result['redirect_path'] = cms_admin_pages_list_url($post['list_status'] ?? '');
+
+                return $result;
+
+            case 'empty_trash':
+                $result = $module->emptyTrash(cms_admin_pages_scalar_string($post['confirmed'] ?? '') === '1');
+                $result['redirect_path'] = cms_admin_pages_list_url('trash');
 
                 return $result;
 
@@ -569,9 +601,10 @@ $sectionPageConfig = [
                     return ['success' => false, 'error' => 'Bitte mindestens eine gültige Seite auswählen.'];
                 }
 
+                $post['confirmed'] = cms_admin_pages_scalar_string($post['confirmed'] ?? '') === '1';
                 $result = $module->bulkAction($bulkAction, $bulkIds, $post);
-                if (!empty($result['success'])) {
-                    $result['redirect_path'] = cms_admin_pages_target_url();
+                if (!empty($result['success']) || in_array($bulkAction, ['delete', 'trash', 'restore', 'delete_permanently'], true)) {
+                    $result['redirect_path'] = cms_admin_pages_list_url($post['list_status'] ?? '');
                 }
 
                 return $result;

@@ -18,12 +18,18 @@ $counts     = is_array($data['counts'] ?? null) ? $data['counts'] : [];
 $filter     = (string)($data['filter'] ?? '');
 $catFilter  = (int)($data['catFilter'] ?? 0);
 $search     = (string)($data['search'] ?? '');
+$trashData  = is_array($data['trash'] ?? null) ? $data['trash'] : [];
+$isTrashView = !empty($trashData['is_view']);
+$trashCount = (int)($counts['trash'] ?? 0);
+$listStatusValue = $filter;
 $statusLabels = [
     'published' => ['Veröffentlicht', 'bg-green-lt text-green'],
     'scheduled' => ['Geplant', 'bg-azure-lt text-azure'],
     'draft'     => ['Entwurf', 'bg-yellow-lt text-yellow'],
     'private'   => ['Privat', 'bg-purple-lt text-purple'],
+    'trash'     => [\CMS\Services\Trash\TrashSupport::t('trash.list.status_label'), 'bg-red-lt text-red'],
 ];
+$tt = static fn (string $key, string|int ...$args): string => htmlspecialchars(\CMS\Services\Trash\TrashSupport::t($key, ...$args), ENT_QUOTES, 'UTF-8');
 ?>
 
 <?php
@@ -50,6 +56,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                     <span>Geplant: <?php echo (int)($counts['scheduled'] ?? 0); ?></span>
                     <span>Entwurf: <?php echo (int)($counts['drafts'] ?? 0); ?></span>
                     <span>Privat: <?php echo (int)($counts['private'] ?? 0); ?></span>
+                    <span><a href="/admin/posts?status=trash" class="<?php echo $isTrashView ? 'fw-semibold' : 'text-reset'; ?>"><?php echo $tt('trash.list.status_label'); ?>: <?php echo $trashCount; ?></a></span>
                 </div>
             </div>
             <a href="/admin/posts?action=edit" class="btn btn-primary">
@@ -67,6 +74,20 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
             <?php $alertData = $alert; $alertMarginClass = 'mb-3'; require __DIR__ . '/../partials/flash-alert.php'; ?>
         <?php endif; ?>
 
+        <?php if ($isTrashView && is_array($trashData['confirmation'] ?? null)): ?>
+            <?php
+            $trashConfirmation = $trashData['confirmation'];
+            $trashConfirmationForm = [
+                'action' => '/admin/posts',
+                'csrf_token' => (string) $csrfToken,
+                'fields' => ['action' => 'bulk', 'bulk_action' => 'delete_permanently', 'list_status' => 'trash'],
+                'id_field' => 'ids[]',
+                'dismiss_url' => '/admin/posts?status=trash',
+            ];
+            require __DIR__ . '/../partials/trash-confirmation.php';
+            ?>
+        <?php endif; ?>
+
         <div class="card content-listing-card">
             <div class="card-header content-listing-toolbar">
                 <div class="content-listing-toolbar__label">Filter &amp; Suche</div>
@@ -79,6 +100,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                             <option value="scheduled" <?php if ($filter === 'scheduled') echo 'selected'; ?>>Geplant</option>
                             <option value="draft" <?php if ($filter === 'draft') echo 'selected'; ?>>Entwurf</option>
                             <option value="private" <?php if ($filter === 'private') echo 'selected'; ?>>Privat</option>
+                            <option value="trash" <?php if ($isTrashView) echo 'selected'; ?>><?php echo $tt('trash.list.filter_option', $trashCount); ?></option>
                         </select>
                     </div>
                     <div class="content-listing-filters__group">
@@ -112,11 +134,36 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                 </form>
             </div>
 
+            <?php if ($isTrashView): ?>
+                <?php
+                $trashBar = [
+                    'count' => $trashCount,
+                    'retention_days' => (int)($trashData['retention_days'] ?? 0),
+                    'form_action' => '/admin/posts',
+                    'csrf_token' => (string) $csrfToken,
+                    'fields' => ['action' => 'empty_trash'],
+                    'central_link' => \CMS\Services\Trash\TrashService::getInstance()->canManage(),
+                ];
+                require __DIR__ . '/../partials/trash-list-bar.php';
+                ?>
+            <?php endif; ?>
+
             <div class="card-body py-2 d-none content-listing-bulkbar" id="bulkBarPosts">
                 <form method="post" action="/admin/posts" id="bulkFormPosts" class="d-flex flex-wrap align-items-center gap-2">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                     <input type="hidden" name="action" value="bulk">
+                    <input type="hidden" name="list_status" value="<?php echo htmlspecialchars($listStatusValue, ENT_QUOTES, 'UTF-8'); ?>">
                     <span class="text-secondary"><strong id="selectedCountPosts">0</strong> ausgewählt</span>
+                    <?php if ($isTrashView): ?>
+                    <label for="bulkActionPosts" class="form-label mb-0 small text-secondary"><?php echo $tt('trash.list.bulk_label'); ?></label>
+                    <select name="bulk_action" id="bulkActionPosts" class="form-select form-select-sm w-auto">
+                        <option value=""><?php echo $tt('trash.list.bulk_placeholder'); ?></option>
+                        <option value="restore"><?php echo $tt('trash.action.restore'); ?></option>
+                        <option value="delete_permanently"><?php echo $tt('trash.action.delete_permanently'); ?></option>
+                    </select>
+                    <button type="submit" id="bulkSubmitPosts" class="btn btn-sm btn-primary" disabled>Anwenden</button>
+                    <button type="button" id="bulkDeletePosts" class="btn btn-sm btn-danger" data-bulk-action="delete_permanently"><?php echo $tt('trash.action.delete_permanently'); ?></button>
+                    <?php else: ?>
                     <label for="bulkActionPosts" class="form-label mb-0 small text-secondary">Status ändern</label>
                     <select name="bulk_action" id="bulkActionPosts" class="form-select form-select-sm w-auto">
                         <option value="">Status wählen…</option>
@@ -126,6 +173,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                         <option value="clear_category">Kategorie entfernen</option>
                         <option value="set_author_display_name">Autoren-Anzeigenamen setzen</option>
                         <option value="clear_author_display_name">Autoren-Anzeigenamen zurücksetzen</option>
+                        <option value="trash"><?php echo $tt('trash.action.move'); ?></option>
                     </select>
                     <select name="bulk_category_ids[]" id="bulkCategoryPosts" class="form-select form-select-sm w-auto d-none" multiple size="6" aria-label="Bulk-Kategorien auswählen">
                         <?php foreach ($categories as $cat): ?>
@@ -139,7 +187,8 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                            maxlength="150"
                            placeholder="Neuer Anzeigename für ausgewählte Beiträge">
                     <button type="submit" id="bulkSubmitPosts" class="btn btn-sm btn-primary" disabled>Anwenden</button>
-                    <button type="button" id="bulkDeletePosts" class="btn btn-sm btn-danger">Löschen</button>
+                    <button type="button" id="bulkDeletePosts" class="btn btn-sm btn-danger" data-bulk-action="trash"><?php echo $tt('trash.action.move'); ?></button>
+                    <?php endif; ?>
                     <button type="button" id="bulkCancelPosts" class="btn btn-sm btn-link p-0 text-decoration-none">Abbrechen</button>
                 </form>
             </div>
@@ -168,7 +217,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                             <?php endif; ?>
                             <th class="text-nowrap">
                                 <button type="button" class="content-listing-sort js-content-sort" data-sort-key="updated">
-                                    Aktualisiert <i class="ti ti-arrows-sort" aria-hidden="true"></i>
+                                    <?php echo $isTrashView ? $tt('trash.list.column_trashed') : 'Aktualisiert'; ?> <i class="ti ti-arrows-sort" aria-hidden="true"></i>
                                 </button>
                             </th>
                             <th class="w-1"></th>
@@ -178,8 +227,8 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                     <?php if (empty($posts)): ?>
                         <?php
                         $emptyStateColspan = $postsHasMultipleAuthors ? 8 : 7;
-                        $emptyStateMessage = 'Keine Beiträge gefunden.';
-                        $emptyStateSubtitle = 'Prüfen Sie Filter oder Suche – die serverseitige Liste liefert aktuell keine Einträge.';
+                        $emptyStateMessage = $isTrashView && $search === '' ? \CMS\Services\Trash\TrashSupport::t('trash.list.empty') : 'Keine Beiträge gefunden.';
+                        $emptyStateSubtitle = $isTrashView && $search === '' ? \CMS\Services\Trash\TrashSupport::t('trash.list.empty_hint') : 'Prüfen Sie Filter oder Suche – die serverseitige Liste liefert aktuell keine Einträge.';
                         $emptyStateIcon = 'file-text';
                         require __DIR__ . '/../partials/empty-table-row.php';
                         ?>
@@ -210,6 +259,14 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                                 }
                             }
                             $postUpdatedSort = $postUpdatedTimestamp ?? strtotime((string)($post['created_at'] ?? '')) ?? 0;
+                            $postPreviousStatus = (string)($post['previous_status'] ?? '');
+                            $postTrashedBy = trim((string)($post['trashed_by_name'] ?? ''));
+                            if ($isTrashView) {
+                                $postTrashedAt = trim((string)($post['trashed_at'] ?? ''));
+                                $postTrashedTimestamp = $postTrashedAt !== '' ? strtotime($postTrashedAt) : false;
+                                $postUpdatedAtLabel = $postTrashedTimestamp !== false ? date('d.m.Y · H:i', $postTrashedTimestamp) : '';
+                                $postUpdatedSort = $postTrashedTimestamp !== false ? $postTrashedTimestamp : 0;
+                            }
                             $postHasEnglishVariant = $postSlugEn !== '' && $postSlugEn !== $postSlug;
                             $postAuthorEmail = filter_var($postAuthor, FILTER_VALIDATE_EMAIL) ? $postAuthor : '';
                             $postAuthorLabel = $postAuthorEmail !== '' ? explode('@', $postAuthorEmail)[0] : $postAuthor;
@@ -231,7 +288,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                             $postAuthorHue = abs((int)crc32($postAuthorSeed !== '' ? $postAuthorSeed : 'na')) % 360;
                             ?>
                             <tr class="content-listing-table__row"
-                                data-edit-url="/admin/posts?action=edit&id=<?php echo $postId; ?>"
+                                <?php if (!$isTrashView): ?>data-edit-url="/admin/posts?action=edit&id=<?php echo $postId; ?>"<?php endif; ?>
                                 data-sort-title="<?php echo htmlspecialchars(strtolower((string)($postTitle !== '' ? $postTitle : 'Ohne Titel')), ENT_QUOTES, 'UTF-8'); ?>"
                                 data-sort-status="<?php echo htmlspecialchars(strtolower((string)$postStatusLabel), ENT_QUOTES, 'UTF-8'); ?>"
                                 data-sort-updated="<?php echo (int)$postUpdatedSort; ?>">
@@ -239,9 +296,13 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                                     <input class="form-check-input" type="checkbox" name="ids[]" value="<?php echo $postId; ?>" form="bulkFormPosts" aria-label="Beitrag #<?php echo $postId; ?> auswählen">
                                 </td>
                                 <td class="content-listing-table__title-cell">
+                                    <?php if ($isTrashView): ?>
+                                        <span class="fw-medium"><?php echo htmlspecialchars($postTitle !== '' ? $postTitle : 'Ohne Titel', ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php else: ?>
                                     <a href="/admin/posts?action=edit&id=<?php echo $postId; ?>" class="text-reset fw-medium">
                                         <?php echo htmlspecialchars($postTitle !== '' ? $postTitle : 'Ohne Titel', ENT_QUOTES, 'UTF-8'); ?>
                                     </a>
+                                    <?php endif; ?>
                                     <span class="content-listing-id-badge">#<?php echo $postId; ?></span>
                                     <?php if ($postHasEnglishVariant): ?>
                                         <span class="badge bg-secondary-lt ms-2">EN</span>
@@ -260,7 +321,12 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                                         <span class="text-secondary">–</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><span class="badge <?php echo htmlspecialchars($postStatusClass, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($postStatusLabel, ENT_QUOTES, 'UTF-8'); ?></span></td>
+                                <td>
+                                    <span class="badge <?php echo htmlspecialchars($postStatusClass, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($postStatusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php if ($isTrashView && isset($statusLabels[$postPreviousStatus])): ?>
+                                        <div class="small text-secondary mt-1"><?php echo $tt('trash.list.previous_status', $statusLabels[$postPreviousStatus][0]); ?></div>
+                                    <?php endif; ?>
+                                </td>
                                 <?php if ($postsHasMultipleAuthors): ?>
                                     <td>
                                         <div class="content-listing-author">
@@ -273,20 +339,47 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                                         </div>
                                     </td>
                                 <?php endif; ?>
-                                <td class="text-secondary"><?php echo htmlspecialchars($postUpdatedAtLabel !== '' ? $postUpdatedAtLabel : '–', ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td class="text-secondary">
+                                    <?php echo htmlspecialchars($postUpdatedAtLabel !== '' ? $postUpdatedAtLabel : '–', ENT_QUOTES, 'UTF-8'); ?>
+                                    <?php if ($isTrashView && $postTrashedBy !== ''): ?>
+                                        <div class="small"><?php echo $tt('trash.list.trashed_by', $postTrashedBy); ?></div>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="table-actions content-listing-table__actions-cell">
                                     <div class="table-row-actions table-row-actions--icons">
+                                        <?php if ($isTrashView): ?>
+                                        <form method="post" action="/admin/posts" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <input type="hidden" name="action" value="restore">
+                                            <input type="hidden" name="id" value="<?php echo $postId; ?>">
+                                            <input type="hidden" name="list_status" value="trash">
+                                            <button type="submit" class="btn btn-outline-success btn-sm btn-icon js-row-action" aria-label="<?php echo $tt('trash.action.restore'); ?>" title="<?php echo $tt('trash.action.restore'); ?>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14l-4 -4l4 -4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+                                            </button>
+                                        </form>
+                                        <form method="post" action="/admin/posts" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <input type="hidden" name="action" value="delete_permanently">
+                                            <input type="hidden" name="id" value="<?php echo $postId; ?>">
+                                            <input type="hidden" name="list_status" value="trash">
+                                            <button type="button" class="btn btn-ghost-danger btn-sm btn-icon content-listing-delete-action js-row-action" aria-label="<?php echo $tt('trash.action.delete_permanently'); ?>" title="<?php echo $tt('trash.action.delete_permanently'); ?>" data-cms-confirm-modal data-cms-confirm-title="<?php echo $tt('trash.confirm.delete_title'); ?>" data-cms-confirm-message="<?php echo $tt('trash.confirm.delete_message'); ?>" data-cms-confirm-text="<?php echo $tt('trash.action.delete_permanently'); ?>" data-cms-confirm-class="btn-danger">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7h16"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/><path d="M10 12l4 4m0 -4l-4 4"/></svg>
+                                            </button>
+                                        </form>
+                                        <?php else: ?>
                                         <a href="/admin/posts?action=edit&id=<?php echo $postId; ?>" class="btn btn-outline-primary btn-sm btn-icon js-row-action" aria-label="Beitrag bearbeiten" title="Bearbeiten">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h10v10H7z" opacity="0"/><path d="M16.474 5.408a2.077 2.077 0 1 1 2.937 2.937l-9.19 9.19a6 6 0 0 1 -2.52 1.51l-2.093 .698l.698 -2.093a6 6 0 0 1 1.51 -2.52z"/><path d="M14.474 7.408l2.118 2.118"/></svg>
                                         </a>
                                         <form method="post" action="/admin/posts" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
-                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="action" value="trash">
                                             <input type="hidden" name="id" value="<?php echo $postId; ?>">
-                                            <button type="button" class="btn btn-ghost-danger btn-sm btn-icon content-listing-delete-action js-row-action" aria-label="Beitrag löschen" title="Löschen" data-cms-confirm-modal data-cms-confirm-title="Beitrag löschen?" data-cms-confirm-message="Dieser Beitrag wird unwiderruflich gelöscht." data-cms-confirm-text="Löschen" data-cms-confirm-class="btn-danger">
+                                            <input type="hidden" name="list_status" value="<?php echo htmlspecialchars($listStatusValue, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <button type="button" class="btn btn-ghost-danger btn-sm btn-icon content-listing-delete-action js-row-action" aria-label="<?php echo $tt('trash.action.move'); ?>" title="<?php echo $tt('trash.action.move'); ?>" data-cms-confirm-modal data-cms-confirm-title="<?php echo $tt('trash.confirm.move_title'); ?>" data-cms-confirm-message="<?php echo $tt('trash.confirm.move_message'); ?>" data-cms-confirm-text="<?php echo $tt('trash.action.move'); ?>" data-cms-confirm-class="btn-danger">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7l1 -3h4l1 3"/></svg>
                                             </button>
                                         </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -334,6 +427,15 @@ function applyFilters() {
 }
 
 (function() {
+    var trashTexts = <?php echo json_encode([
+        'move' => \CMS\Services\Trash\TrashSupport::t('trash.action.move'),
+        'restore' => \CMS\Services\Trash\TrashSupport::t('trash.action.restore'),
+        'deletePermanently' => \CMS\Services\Trash\TrashSupport::t('trash.action.delete_permanently'),
+        'moveTitle' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_move_title'),
+        'moveMessage' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_move_message'),
+        'deleteTitle' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_delete_title'),
+        'deleteMessage' => \CMS\Services\Trash\TrashSupport::t('trash.confirm.bulk_delete_message'),
+    ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE); ?>;
     var bulkForm = document.getElementById('bulkFormPosts');
     var bulkBar = document.getElementById('bulkBarPosts');
     var countEl = document.getElementById('selectedCountPosts');
@@ -373,7 +475,12 @@ function applyFilters() {
             case 'clear_author_display_name':
                 return { text: 'Autorenname zurücksetzen', className: 'btn btn-sm btn-outline-secondary' };
             case 'delete':
-                return { text: 'Beiträge löschen', className: 'btn btn-sm btn-danger' };
+            case 'trash':
+                return { text: trashTexts.move, className: 'btn btn-sm btn-danger' };
+            case 'restore':
+                return { text: trashTexts.restore, className: 'btn btn-sm btn-success' };
+            case 'delete_permanently':
+                return { text: trashTexts.deletePermanently, className: 'btn btn-sm btn-danger' };
             default:
                 return { text: 'Anwenden', className: 'btn btn-sm btn-primary' };
         }
@@ -460,6 +567,7 @@ function applyFilters() {
 
     function updateBulkActionUi() {
         if (!bulkActionSelect || !bulkAuthorDisplayName || !bulkCategorySelect) {
+            updateBulkSubmitState();
             return;
         }
 
@@ -571,10 +679,10 @@ function applyFilters() {
             return;
         }
 
-        if (bulkActionSelect && bulkActionSelect.value === 'delete') {
-            var deleteMessage = checkedBoxes.length === 1
-                ? 'Soll der ausgewählte Beitrag wirklich gelöscht werden?'
-                : 'Sollen die ' + checkedBoxes.length + ' ausgewählten Beiträge wirklich gelöscht werden?';
+        var confirmAction = bulkActionSelect ? bulkActionSelect.value : '';
+        if (confirmAction === 'delete' || confirmAction === 'trash' || confirmAction === 'delete_permanently') {
+            var isPermanent = confirmAction === 'delete_permanently';
+            var deleteMessage = (isPermanent ? trashTexts.deleteMessage : trashTexts.moveMessage).replace('%d', String(checkedBoxes.length));
 
             if (bulkForm.dataset.bulkDeleteConfirmed === '1') {
                 bulkForm.dataset.bulkDeleteConfirmed = '0';
@@ -583,9 +691,9 @@ function applyFilters() {
             event.preventDefault();
             if (typeof cmsConfirm === 'function') {
                 cmsConfirm({
-                    title: 'Beiträge gesammelt löschen?',
+                    title: isPermanent ? trashTexts.deleteTitle : trashTexts.moveTitle,
                     message: deleteMessage,
-                    confirmText: 'Löschen',
+                    confirmText: isPermanent ? trashTexts.deletePermanently : trashTexts.move,
                     confirmClass: 'btn-danger',
                     onConfirm: function () {
                         bulkForm.dataset.bulkDeleteConfirmed = '1';
@@ -617,7 +725,7 @@ function applyFilters() {
             if (!bulkActionSelect || bulkDelete.disabled) {
                 return;
             }
-            bulkActionSelect.value = 'delete';
+            bulkActionSelect.value = bulkDelete.getAttribute('data-bulk-action') || 'trash';
             updateBulkActionUi();
             if (bulkForm) {
                 bulkForm.requestSubmit();

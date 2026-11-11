@@ -26,6 +26,11 @@ use CMS\Services\PostPublishChecklistService;
 use CMS\Services\PostRevisionService;
 use CMS\Services\RedirectService;
 use CMS\Services\SEOService;
+use CMS\Services\Trash\PostTrashProvider;
+use CMS\Services\Trash\TrashConfirmationStore;
+use CMS\Services\Trash\TrashListActions;
+use CMS\Services\Trash\TrashService;
+use CMS\Services\Trash\TrashSupport;
 
 if (!class_exists('PostsModule', false)) {
 class PostsModule
@@ -33,6 +38,7 @@ class PostsModule
     private Database $db;
     private string $prefix;
     private PostsCategoryViewModelBuilder $categoryViewModelBuilder;
+    private ?PostTrashProvider $trashProvider = null;
 
     private function canManageAllPosts(): bool
     {
@@ -124,11 +130,17 @@ class PostsModule
     ];
 
     /** @var string[] */
-    private const ALLOWED_LIST_STATUSES = ['published', 'scheduled', 'draft', 'private'];
+    private const ALLOWED_LIST_STATUSES = ['published', 'scheduled', 'draft', 'private', 'trash'];
+
+    /** @var string[] Papierkorb-Aktionen; „delete“ verschiebt (wie „trash“) in den Papierkorb. */
+    private const TRASH_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently'];
 
     /** @var string[] */
     private const ALLOWED_BULK_ACTIONS = [
         'delete',
+        'trash',
+        'restore',
+        'delete_permanently',
         'publish',
         'draft',
         'set_category',
@@ -474,9 +486,12 @@ class PostsModule
         $visibilityWhere = [];
         $visibilityParams = [];
         $this->addOwnershipFilter($visibilityWhere, $visibilityParams);
-        $visibilityClause = $visibilityWhere ? ' WHERE ' . implode(' AND ', $visibilityWhere) : '';
         $total = (int) $this->db->get_var(
-            "SELECT COUNT(*) FROM {$this->prefix}posts p{$visibilityClause}",
+            "SELECT COUNT(*) FROM {$this->prefix}posts p WHERE " . implode(' AND ', array_merge($visibilityWhere, ["p.status <> 'trash'"])),
+            $visibilityParams
+        );
+        $trash = (int) $this->db->get_var(
+            "SELECT COUNT(*) FROM {$this->prefix}posts p WHERE " . implode(' AND ', array_merge($visibilityWhere, ["p.status = 'trash'"])),
             $visibilityParams
         );
         $publishedWhere = array_merge($visibilityWhere, [cms_post_publication_where('p')]);
@@ -507,8 +522,11 @@ class PostsModule
         $where  = [];
         $params = [];
         $this->addOwnershipFilter($where, $params);
+        $isTrashView = $statusFilter === 'trash';
+        $where[] = $isTrashView ? "p.status = 'trash'" : "p.status <> 'trash'";
+        $slugParking = $this->trashProvider()->supportsSlugParking();
 
-        if ($statusFilter !== '') {
+        if ($statusFilter !== '' && !$isTrashView) {
             if ($statusFilter === 'published') {
                 $where[] = cms_post_publication_where('p');
             } elseif ($statusFilter === 'scheduled') {
@@ -531,24 +549,35 @@ class PostsModule
             $params[] = $categoryFilter;
         }
         if ($search !== '') {
-            $where[]  = '(p.title LIKE ? OR p.title_en LIKE ? OR p.slug LIKE ? OR p.slug_en LIKE ?)';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+            $searchColumns = ['p.title', 'p.title_en', 'p.slug', 'p.slug_en'];
+            if ($isTrashView && $slugParking) {
+                $searchColumns[] = 'p.trash_slug';
+                $searchColumns[] = 'p.trash_slug_en';
+            }
+            $where[] = '(' . implode(' OR ', array_map(static fn (string $column): string => $column . ' LIKE ?', $searchColumns)) . ')';
+            foreach ($searchColumns as $ignored) {
+                $params[] = "%{$search}%";
+            }
         }
 
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+        // Im Papierkorb ist der Slug geparkt (`__trashed-<id>`); angezeigt wird der ursprüngliche.
+        $slugSelect = $isTrashView && $slugParking
+            ? "COALESCE(NULLIF(p.trash_slug, ''), p.slug) AS slug, COALESCE(NULLIF(p.trash_slug_en, ''), p.slug_en) AS slug_en"
+            : 'p.slug, p.slug_en';
 
         $posts = $this->db->get_results(
-                "SELECT p.id, p.title, p.title_en, p.slug, p.slug_en, p.status, p.category_id, p.published_at, p.created_at, p.updated_at,
+                "SELECT p.id, p.title, p.title_en, {$slugSelect}, p.status, p.category_id, p.published_at, p.created_at, p.updated_at,
+                    p.previous_status, p.trashed_at,
                     u.display_name AS author,
-                    c.name AS category_name
+                    c.name AS category_name,
+                    tu.display_name AS trashed_by_name
              FROM {$this->prefix}posts p
              LEFT JOIN {$this->prefix}users u ON p.author_id = u.id
              LEFT JOIN {$this->prefix}post_categories c ON p.category_id = c.id
+             LEFT JOIN {$this->prefix}users tu ON p.trashed_by = tu.id
              {$whereClause}
-             ORDER BY p.created_at DESC
+             ORDER BY " . ($isTrashView ? 'p.trashed_at DESC, p.id DESC' : 'p.created_at DESC') . "
              LIMIT 200",
             $params
         ) ?: [];
@@ -562,10 +591,15 @@ class PostsModule
         return [
             'posts'      => array_map(fn($p) => (array)$p, $posts),
             'categories' => $categories,
-            'counts'     => compact('total', 'published', 'scheduled', 'drafts', 'private'),
+            'counts'     => compact('total', 'published', 'scheduled', 'drafts', 'private', 'trash'),
             'filter'     => $statusFilter,
             'catFilter'  => $categoryFilter,
             'search'     => $search,
+            'trash'      => [
+                'is_view' => $isTrashView,
+                'retention_days' => TrashService::getInstance()->retentionDays(),
+                'confirmation' => $isTrashView ? TrashConfirmationStore::pull('posts') : null,
+            ],
         ];
     }
 
@@ -803,6 +837,9 @@ class PostsModule
             : [];
         if ($id > 0 && !$this->canAccessPost($id)) {
             return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
+        }
+        if ($this->isPostTrashed($id)) {
+            return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
         }
         // Titel sind einzeilig (Editor nutzt eine Textarea) – Zeilenumbrüche werden zu Leerzeichen.
         $title      = $this->sanitizePlainText($this->collapseLineBreaks((string)($post['title'] ?? '')), 255);
@@ -1163,6 +1200,10 @@ class PostsModule
             return ['success' => false, 'error' => 'Ungültige Beitrags-ID.'];
         }
 
+        if ($this->isPostTrashed($id)) {
+            return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
+        }
+
         try {
             $revisionService = PostRevisionService::getInstance();
             $currentPost = $revisionService->buildSnapshotFromPost($id) ?? [];
@@ -1225,9 +1266,75 @@ class PostsModule
     }
 
     /**
-     * Post löschen
+     * „Löschen“ verschiebt Beiträge in den Papierkorb (endgültig löschen: `deletePermanently()`).
      */
     public function delete(int $id): array
+    {
+        return $this->trash($id);
+    }
+
+    public function trash(int $id): array
+    {
+        $guard = $this->guardTrashTarget($id);
+        if ($guard !== null) {
+            return $guard;
+        }
+
+        return $this->trashActions()->trash([$id], $this->currentUserId());
+    }
+
+    public function restore(int $id): array
+    {
+        $guard = $this->guardTrashTarget($id);
+        if ($guard !== null) {
+            return $guard;
+        }
+
+        return $this->trashActions()->restore([$id], $this->currentUserId());
+    }
+
+    public function deletePermanently(int $id, bool $confirmed = false): array
+    {
+        $guard = $this->guardTrashTarget($id);
+        if ($guard !== null) {
+            return $guard;
+        }
+
+        return $this->trashActions()->delete([$id], $this->currentUserId(), $confirmed);
+    }
+
+    /**
+     * Leert den Papierkorb (Autoren mit `edit_own_posts`: nur eigene Beiträge), höchstens
+     * `TrashService::EMPTY_BATCH_LIMIT` Einträge je Aufruf.
+     */
+    public function emptyTrash(bool $confirmed = false): array
+    {
+        try {
+            $ids = $this->getTrashedPostIds(TrashService::EMPTY_BATCH_LIMIT);
+
+            return $this->trashActions()->emptyTrash(
+                $ids,
+                $this->currentUserId(),
+                $confirmed,
+                fn (): int => count($this->getTrashedPostIds(TrashService::EMPTY_BATCH_LIMIT + 1)),
+                $this->canManageAllPosts() ? 'all' : 'own'
+            );
+        } catch (\Throwable $e) {
+            return $this->failResult('posts.trash.empty_failed', TrashSupport::t('trash.error.failed'), $e);
+        }
+    }
+
+    private function trashProvider(): PostTrashProvider
+    {
+        return $this->trashProvider ??= new PostTrashProvider($this->db);
+    }
+
+    private function trashActions(): TrashListActions
+    {
+        return new TrashListActions($this->trashProvider(), 'posts');
+    }
+
+    private function guardTrashTarget(int $id): ?array
     {
         if ($id <= 0) {
             return ['success' => false, 'error' => 'Ungültige Beitrags-ID.'];
@@ -1238,37 +1345,49 @@ class PostsModule
         }
 
         if (!$this->canAccessPost($id)) {
-            return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge löschen.'];
+            return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
         }
 
-        try {
-            $statement = $this->db->execute(
-                "DELETE FROM {$this->prefix}posts WHERE id = ?"
-                . ($this->canManageAllPosts() ? '' : ' AND author_id = ?')
-                . " LIMIT 1",
-                $this->canManageAllPosts() ? [$id] : [$id, $this->currentUserId()]
-            );
+        return null;
+    }
 
-            if (!$statement instanceof \PDOStatement) {
-                return $this->failResult(
-                    'posts.delete.failed',
-                    'Beitrag konnte nicht gelöscht werden.',
-                    null,
-                    ['post_id' => $id, 'db_last_error' => trim((string) $this->db->last_error)]
-                );
-            }
+    private function isPostTrashed(int $id): bool
+    {
+        return $id > 0 && $this->trashProvider()->isTrashed($id);
+    }
 
-            if ($statement->rowCount() < 1) {
-                return ['success' => false, 'error' => 'Beitrag wurde nicht gefunden oder bereits gelöscht.'];
-            }
+    /**
+     * @return list<int>
+     */
+    private function getTrashedPostIds(int $limit): array
+    {
+        $where = ["p.status = 'trash'"];
+        $params = [];
+        $this->addOwnershipFilter($where, $params);
+        $params[] = max(1, $limit);
 
-            Hooks::doAction('post_deleted', $id);
-            $this->clearContentCacheIfEnabled('post_delete', $id);
+        return array_values(array_map('intval', $this->db->get_col(
+            "SELECT p.id FROM {$this->prefix}posts p WHERE " . implode(' AND ', $where) . ' ORDER BY p.trashed_at ASC, p.id ASC LIMIT ?',
+            $params
+        ) ?: []));
+    }
 
-            return ['success' => true, 'message' => 'Beitrag gelöscht.'];
-        } catch (\Throwable $e) {
-            return $this->failResult('posts.delete.failed', 'Beitrag konnte nicht gelöscht werden.', $e, ['post_id' => $id]);
+    /**
+     * @param list<int> $ids
+     * @return list<int>
+     */
+    private function withoutTrashedPosts(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
         }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        return array_values(array_map('intval', $this->db->get_col(
+            "SELECT id FROM {$this->prefix}posts WHERE id IN ({$placeholders}) AND status <> 'trash'",
+            $ids
+        ) ?: []));
     }
 
     /**
@@ -1306,21 +1425,26 @@ class PostsModule
 
         $ids = $existingIds;
 
+        if (in_array($action, self::TRASH_BULK_ACTIONS, true)) {
+            $userId = $this->currentUserId();
+
+            return match ($action) {
+                'restore' => $this->trashActions()->restore($ids, $userId),
+                'delete_permanently' => $this->trashActions()->delete($ids, $userId, !empty($payload['confirmed'])),
+                default => $this->trashActions()->trash($ids, $userId),
+            };
+        }
+
+        // Beiträge im Papierkorb bleiben von Status-, Kategorie- und Autorenaktionen unberührt.
+        $ids = $this->withoutTrashedPosts($ids);
+        if ($ids === []) {
+            return ['success' => false, 'error' => TrashSupport::t('trash.list.error.only_trashed')];
+        }
+
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         try {
             switch ($action) {
-                case 'delete':
-                    $this->db->execute("DELETE FROM {$this->prefix}posts WHERE id IN ({$placeholders})", $ids);
-
-                    foreach ($ids as $postId) {
-                        Hooks::doAction('post_deleted', (int) $postId);
-                    }
-
-                    $this->clearContentCacheIfEnabled('post_bulk_delete', (int) $ids[0]);
-
-                    return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge gelöscht.'];
-
                 case 'publish':
                     // Veröffentlichungs-Checkliste wie im Editor: Entwürfe/private Beiträge ohne Beitragsbild,
                     // passende Meta-Beschreibung oder Kategorie bleiben unverändert.
@@ -2165,6 +2289,10 @@ class PostsModule
             return ['success' => false, 'error' => 'Der Beitrag existiert nicht mehr. Bitte Liste neu laden.'];
         }
 
+        if ($status === 'trash') {
+            return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
+        }
+
         if ($status === 'draft') {
             $post['status'] = 'draft';
             unset($post['publish_intent'], $post['treat_update_as_new']);
@@ -2261,6 +2389,10 @@ class PostsModule
 
         if (!$this->canAccessPost($postId)) {
             return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
+        }
+
+        if ($this->isPostTrashed($postId)) {
+            return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
         }
 
         $revisionService = PostRevisionService::getInstance();
