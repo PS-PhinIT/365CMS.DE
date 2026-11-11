@@ -1,4 +1,15 @@
 <?php
+/**
+ * Einstellungen → Feeds: Rahmen mit Unternavigation des Feed-Aggregators und des RSS-Ausgangs.
+ *
+ * @var string                $feedsSection
+ * @var bool                  $feedsReady
+ * @var array<string,mixed>   $feedsData
+ * @var array<string,mixed>   $feedsSettings
+ * @var string                $feedsCsrfToken
+ * @var array<string,string>|null $feedsAlert
+ */
+
 declare(strict_types=1);
 
 if (!defined('ABSPATH')) {
@@ -6,7 +17,26 @@ if (!defined('ABSPATH')) {
 }
 
 $feedsEscape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+$feedsT = static fn (string $key, string|int ...$args): string => htmlspecialchars(FeedAggregatorModule::t($key, ...$args), ENT_QUOTES, 'UTF-8');
 $feedsAlert = is_array($feedsAlert ?? null) ? $feedsAlert : null;
+$feedsCsrfField = '<input type="hidden" name="csrf_token" value="' . $feedsEscape($feedsCsrfToken) . '">';
+$feedsUrl = static fn (array $query = []): string => htmlspecialchars(FeedAggregatorModule::url($query), ENT_QUOTES, 'UTF-8');
+$feedsNav = [
+    'overview' => 'nav.overview',
+    'sources' => 'nav.sources',
+    'items' => 'nav.items',
+    'categories' => 'nav.categories',
+    'digests' => 'nav.digests',
+    'subscriptions' => 'nav.subscriptions',
+    'log' => 'nav.log',
+    'import' => 'nav.import',
+    'settings' => 'nav.settings',
+];
+$feedsDate = static function (mixed $value, bool $withTime = true): string {
+    $time = is_string($value) && $value !== '' ? strtotime($value) : false;
+
+    return $time !== false ? date($withTime ? 'd.m.Y H:i' : 'd.m.Y', $time) : '–';
+};
 ?>
 <div class="page-wrapper">
     <div class="page-header d-print-none">
@@ -17,54 +47,45 @@ $feedsAlert = is_array($feedsAlert ?? null) ? $feedsAlert : null;
     <div class="page-body">
         <div class="container-xl">
             <?php require __DIR__ . '/partials-tabs.php'; ?>
-            <?php if ($feedsAlert !== null): ?>
+
+            <nav class="cms-fd-subnav mt-3" aria-label="<?= $feedsT('nav.label') ?>">
+                <ul class="nav nav-pills flex-wrap gap-1">
+                    <?php if ($feedsReady) : ?>
+                        <?php foreach ($feedsNav as $feedsKey => $feedsLabel) : ?>
+                            <li class="nav-item">
+                                <a class="nav-link<?= $feedsSection === $feedsKey ? ' active' : '' ?>"<?= $feedsSection === $feedsKey ? ' aria-current="page"' : '' ?>
+                                   href="<?= $feedsUrl(['section' => $feedsKey !== 'overview' ? $feedsKey : null]) ?>">
+                                    <?= $feedsT($feedsLabel) ?>
+                                    <?php if ($feedsKey === 'sources' && (int) ($feedsData['error_count'] ?? 0) > 0) : ?>
+                                        <span class="badge bg-red text-red-fg ms-1"><?= (int) $feedsData['error_count'] ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                    <li class="nav-item">
+                        <a class="nav-link<?= $feedsSection === 'rss' ? ' active' : '' ?>"<?= $feedsSection === 'rss' ? ' aria-current="page"' : '' ?> href="<?= $feedsUrl(['section' => 'rss']) ?>"><?= $feedsT('nav.rss') ?></a>
+                    </li>
+                </ul>
+            </nav>
+
+            <?php if ($feedsAlert !== null) : ?>
                 <div class="alert alert-<?= $feedsEscape((string) ($feedsAlert['type'] ?? 'info')) ?> mt-3" role="status">
                     <?= $feedsEscape((string) ($feedsAlert['message'] ?? '')) ?>
                 </div>
             <?php endif; ?>
-            <form method="post" action="/admin/settings?tab=feeds" class="card mt-3">
-                <input type="hidden" name="csrf_token" value="<?= $feedsEscape($feedsCsrfToken) ?>">
-                <div class="card-header">
-                    <h2 class="card-title"><?= $feedsEscape((string) __('admin.feeds.heading')) ?></h2>
-                </div>
-                <div class="card-body">
-                    <div class="form-check form-switch mb-4">
-                        <input class="form-check-input" type="checkbox" id="feeds-enabled" name="enabled" value="1"<?= !empty($feedsSettings['enabled']) ? ' checked' : '' ?>>
-                        <label class="form-check-label" for="feeds-enabled"><?= $feedsEscape((string) __('admin.feeds.enabled')) ?></label>
+
+            <?php if (!$feedsReady && $feedsSection !== 'rss') : ?>
+                <div class="alert alert-warning mt-3" role="status"><?= $feedsT('not_ready') ?></div>
+            <?php else : ?>
+                <?php if ($feedsSection !== 'rss' && $feedsSection !== 'settings' && empty($feedsData['enabled'])) : ?>
+                    <div class="alert alert-info mt-3" role="status">
+                        <?= $feedsT('disabled_notice') ?>
+                        <a href="<?= $feedsUrl(['section' => 'settings']) ?>"><?= $feedsT('disabled_link') ?></a>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="feeds-items"><?= $feedsEscape((string) __('admin.feeds.items_per_feed')) ?></label>
-                        <input class="form-control" type="number" id="feeds-items" name="items_per_feed" min="1" max="100" required value="<?= (int) $feedsSettings['items_per_feed'] ?>">
-                        <div class="form-hint"><?= $feedsEscape((string) __('admin.feeds.items_hint')) ?></div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label" for="feeds-content-mode"><?= $feedsEscape((string) __('admin.feeds.content_mode')) ?></label>
-                        <select class="form-select" id="feeds-content-mode" name="content_mode">
-                            <option value="excerpt"<?= ($feedsSettings['content_mode'] ?? 'excerpt') === 'excerpt' ? ' selected' : '' ?>><?= $feedsEscape((string) __('admin.feeds.excerpt')) ?></option>
-                            <option value="full"<?= ($feedsSettings['content_mode'] ?? 'excerpt') === 'full' ? ' selected' : '' ?>><?= $feedsEscape((string) __('admin.feeds.full_text')) ?></option>
-                        </select>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="feeds-image" name="include_featured_image" value="1"<?= !empty($feedsSettings['include_featured_image']) ? ' checked' : '' ?>>
-                        <label class="form-check-label" for="feeds-image"><?= $feedsEscape((string) __('admin.feeds.include_featured_image')) ?></label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="feeds-categories" name="category_feeds" value="1"<?= !empty($feedsSettings['category_feeds']) ? ' checked' : '' ?>>
-                        <label class="form-check-label" for="feeds-categories"><?= $feedsEscape((string) __('admin.feeds.category_feeds')) ?></label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="feeds-tags" name="tag_feeds" value="1"<?= !empty($feedsSettings['tag_feeds']) ? ' checked' : '' ?>>
-                        <label class="form-check-label" for="feeds-tags"><?= $feedsEscape((string) __('admin.feeds.tag_feeds')) ?></label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="feeds-languages" name="language_feeds" value="1"<?= !empty($feedsSettings['language_feeds']) ? ' checked' : '' ?>>
-                        <label class="form-check-label" for="feeds-languages"><?= $feedsEscape((string) __('admin.feeds.language_feeds')) ?></label>
-                    </div>
-                </div>
-                <div class="card-footer text-end">
-                    <button class="btn btn-primary" type="submit" name="action" value="save"><?= $feedsEscape((string) __('Save Changes')) ?></button>
-                </div>
-            </form>
+                <?php endif; ?>
+                <?php require __DIR__ . '/feeds/' . $feedsSection . '.php'; ?>
+            <?php endif; ?>
         </div>
     </div>
 </div>

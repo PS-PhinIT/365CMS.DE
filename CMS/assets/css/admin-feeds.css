@@ -1,0 +1,18 @@
+/* Einstellungen → Feeds (Feed-Aggregator) */
+.cms-fd-subnav .nav-link {
+    padding: .35rem .75rem;
+}
+
+.cms-fd-url {
+    max-width: 32rem;
+}
+
+.cms-fd-catalog-list {
+    max-height: 16rem;
+    overflow-y: auto;
+    padding-right: .5rem;
+}
+
+.cms-fd-settings h3 {
+    font-size: 1rem;
+}
