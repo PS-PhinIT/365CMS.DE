@@ -48,9 +48,10 @@ Diese Endpunkte senden `Cache-Control: private`, `X-Robots-Tag: noindex` und ver
 | `POST /admin/admin-ui` `action=switch_site` | `read` + `admin_ui` | Site-Kontext wechseln (`site` = Schlüssel aus `AdminSiteContextService`) |
 | `GET /admin/post-editor-api?action=revisions` | `posts.view` oder Bearbeiten-Capability | Revisionsliste eines Beitrags (`post_id`) |
 | `GET /admin/post-editor-api?action=compare` | wie oben | Revision (`revision_id`) gegen ihre Vorgängerversion |
-| `GET /admin/post-editor-api?action=token` | wie oben, nur gleiche Herkunft | frisches Token für `admin_post_editor` |
+| `GET /admin/post-editor-api?action=token` | wie oben oder `manage_pages`, nur gleiche Herkunft | frisches Token für `admin_post_editor` |
 | `POST /admin/post-editor-api` `action=autosave` | `edit_all_posts`, `edit_own_posts` oder `posts.edit` + `admin_post_editor` | Autosave ([POSTS.md](pages-posts/POSTS.md#revisionen-und-autosave)) |
 | `POST /admin/post-editor-api` `action=restore` | wie oben | Revision wiederherstellen (legt eine neue Revision an) |
+| `POST /admin/post-editor-api` `action=block_preview` | Bearbeiten-Capability für Beiträge oder `manage_pages` + `admin_post_editor` | Server-Vorschau eines Core-Blocks aus der `EditorJsBlockRegistry` (Felder `type`, `data` und `tunes` als JSON, höchstens 64 bzw. 8 KB): Der Server bereinigt die Daten mit dem Sanitizer des Blocks und rendert im Kontext `preview`, Antwort `{"success":true,"html":"…"}`. Unbekannter Typ `404`, zu groß `413`, kein gültiges JSON `422`. Im Browser über `window.CMSBlockPreview.render(type, data, tunes)` ([../assets/js/README.md](../assets/js/README.md)) |
 
 Die Plugin-Zuweisung (`/admin/plugin-assignment`, `manage_settings`, CSRF `admin_plugin_assignment`) ist ein klassisches Formular mit PRG, kein JSON-Endpunkt.
 

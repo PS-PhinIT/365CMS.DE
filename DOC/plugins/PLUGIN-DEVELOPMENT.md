@@ -98,11 +98,11 @@ Use `add_menu_page()` for a top-level menu and `add_submenu_page()` for child pa
 
 Admin callbacks should render content only. They should use `renderAdminLayoutStart()` and `renderAdminLayoutEnd()` only when the compatibility path requires it, because the router already supplies the current shell for ordinary plugin callbacks.
 
-Sidebar presentation (4.0.0): the registration contract above is unchanged – the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. The admin menu (`CMS\Services\AdminMenu\AdminMenuService`) only reads `get_registered_admin_menus()` and places the entries according to the active sidebar profile:
+Sidebar presentation (4.0.0): the registration contract above is unchanged – the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. The admin menu (`CMS\Services\AdminMenu\AdminMenuService`) only reads `get_registered_admin_menus()` and places the entries the same way in every sidebar profile:
 
-- a menu without submenus becomes a plain link in the profile's fallback group (*Plugins* in Classic, *Erweitern* in Structured, sorted alphabetically by title);
-- a menu with submenus becomes a group of its own directly after the fallback group; "Übersicht" is prepended when the top-level slug is not registered as a submenu itself;
-- optionally, a plugin names a preferred group per profile with `cms_admin_menu_set_preferred_parent('my-plugin', ['classic' => 'tools', 'structured' => 'extend'])` or the filter `cms_admin_menu_preferred_parents`. It applies only while the administrator has not placed the entries in the sidebar editor; the group IDs are listed in [ADMIN-MENU.md](../admin/ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil);
+- a menu without submenus becomes a plain link in the collapsed sidebar section "Aktive Plugins" (active plugins) at the end of the sidebar, sorted alphabetically by title;
+- a menu with submenus becomes a group of its own in that section; "Übersicht" is prepended when the top-level slug is not registered as a submenu itself;
+- other places can only be set by an administrator in a custom layout; `cms_admin_menu_set_preferred_parent()` and the filter `cms_admin_menu_preferred_parents` remain for compatibility but no longer affect placement.
 - icon (6th argument of `add_menu_page()`): a Tabler class (`ti-…`), inline `<svg>` up to 20,000 characters, a `data:image/…;base64` URI, a same-origin path/URL or text/emoji of at most 4 characters; anything else falls back to the neutral default icon (`puzzle`);
 - the per-site plugin assignment only filters the display. A menu is mapped to its plugin via the file of its (sub)menu callbacks under `CMS/plugins/<slug>/` (fallback: `menu_slug` equals the plugin slug or starts with `<slug>-`). Pages stay reachable; opening one in a site the plugin is not assigned to shows an info banner.
 
@@ -290,9 +290,9 @@ Admin-Callbacks rendern ausschließlich Inhalt. `renderAdminLayoutStart()` und `
 
 Darstellung in der Seitenleiste (4.0.0): Der Registrierungsvertrag oben bleibt unverändert – Hook `cms_admin_menu`, Signaturen von `add_menu_page()` / `add_submenu_page()` und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. Das Admin-Menü (`CMS\Services\AdminMenu\AdminMenuService`) liest nur `get_registered_admin_menus()` und platziert die Einträge nach dem aktiven Sidebar-Profil:
 
-- ein Menü ohne Untermenüs wird ein einfacher Link in der Auffanggruppe des Profils (*Plugins* im Profil *Klassisch*, *Erweitern* im Profil *Strukturiert*, alphabetisch nach Titel);
-- ein Menü mit Untermenüs wird eine eigene Gruppe direkt nach der Auffanggruppe; „Übersicht“ wird vorangestellt, wenn der Hauptslug nicht selbst als Untermenü registriert ist;
-- optional nennt ein Plugin je Profil eine Wunschgruppe mit `cms_admin_menu_set_preferred_parent('my-plugin', ['classic' => 'tools', 'structured' => 'extend'])` oder über den Filter `cms_admin_menu_preferred_parents`. Sie gilt nur, solange der Administrator die Einträge nicht im Sidebar-Editor platziert hat; die Gruppen-IDs stehen in [ADMIN-MENU.md](../admin/ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil);
+- ein Menü ohne Untermenüs wird ein einfacher Link im eingeklappten Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (alphabetisch nach Titel);
+- ein Menü mit Untermenüs wird dort eine eigene Gruppe; „Übersicht“ wird vorangestellt, wenn der Hauptslug nicht selbst als Untermenü registriert ist;
+- andere Plätze legt nur der Administrator in einem eigenen Layout fest; `cms_admin_menu_set_preferred_parent()` und der Filter `cms_admin_menu_preferred_parents` bleiben aus Kompatibilität erhalten, wirken aber nicht mehr.
 - Icon (6. Parameter von `add_menu_page()`): Tabler-Klasse (`ti-…`), Inline-`<svg>` bis 20.000 Zeichen, `data:image/…;base64`-URI, Pfad/URL derselben Herkunft oder Text/Emoji mit höchstens 4 Zeichen; alles andere ergibt das neutrale Standard-Icon (`puzzle`);
 - die Plugin-Zuweisung je Site filtert nur die Anzeige. Ein Menü wird seinem Plugin über die Datei seiner (Unter-)Menü-Callbacks unter `CMS/plugins/<slug>/` zugeordnet (Fallback: `menu_slug` entspricht dem Plugin-Slug oder beginnt mit `<slug>-`). Seiten bleiben erreichbar; in einer nicht zugewiesenen Site erscheint nur ein Info-Banner.
 

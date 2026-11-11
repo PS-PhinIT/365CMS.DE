@@ -10,9 +10,10 @@
  * - sichtbar = Seitendatei vorhanden, Modul aktiv, Marketplace-Bedingung erfüllt, Capability vorhanden
  *   und nicht ausgeblendet (gesperrte Einträge lassen sich nicht ausblenden)
  * - leere Gruppen und Abschnitte entfallen
- * - nicht platzierte Einträge gehen nie verloren: Core-Einträge in ihre Gruppe des Basisprofils,
- *   Plugin-Seiten zu einer bereits platzierten Seite desselben Plugins, an ihren Wunschplatz,
- *   in die Auffanggruppe (eine Seite) bzw. in eine eigene Gruppe nach der Auffanggruppe (mehrere Seiten)
+ * - nicht platzierte Einträge gehen nie verloren: Core-Einträge in ihre Gruppe des Basisprofils, sonst in die
+ *   Auffanggruppe bzw. „Weitere“; Plugin-Seiten zu einer bereits platzierten Seite desselben Plugins, in eine
+ *   Layout-Gruppe `plugin.<menü>`, sonst in den letzten Abschnitt „Aktive Plugins“ (eine Seite als Link,
+ *   mehrere als eigene Gruppe, alphabetisch; die Seitenleiste zeigt ihn standardmäßig eingeklappt)
  *
  * @package CMSv2\Core\Services\AdminMenu
  */
@@ -31,7 +32,8 @@ final class MenuBuilder
     public const MAIN_SECTION_ID = 'main';
     public const MORE_GROUP_ID = 'more';
     public const PLUGIN_AUTO_GROUP_PREFIX = 'plugin.';
-    public const PLUGIN_AUTO_FALLBACK_ID = 'plugins.more';
+    /** Abschnitt „Aktive Plugins“; der führende Unterstrich verhindert Kollisionen mit Trenner-IDs eines Layouts. */
+    public const ACTIVE_PLUGINS_SECTION_ID = '_active-plugins';
 
     /** Gründe aus hiddenReason(). */
     public const HIDDEN_FILE = 'file';
@@ -102,7 +104,7 @@ final class MenuBuilder
      * @param string               $profile classic | structured | custom
      * @return array{
      *     profile:string, base:string, root_group:string, fallback_group:string,
-     *     sections:list<array<string, mixed>>, plugin_hint:array{group:string, hidden:int}|null
+     *     sections:list<array<string, mixed>>, plugin_hint:array{section:string, hidden:int}|null
      * }
      */
     public function build(MenuRegistry $registry, array $layout, string $profile): array
@@ -159,8 +161,7 @@ final class MenuBuilder
 
         // 2. Nicht platzierte, sichtbare Einträge einsortieren.
         $append = [];
-        $autoGroups = [];
-        $morePlugins = [];
+        $activePlugins = [];
         $moreCore = [];
         $pluginSiblingGroup = [];
         foreach ($placed as $itemId => $groupId) {
@@ -184,7 +185,7 @@ final class MenuBuilder
             }
         }
 
-        $singlePluginItems = [];
+        // Plugin-Seiten: Wunschplätze (MenuRegistry::preferredParent()) beeinflussen die Platzierung nicht mehr.
         foreach ($registry->pluginMenus() as $menuKey => $menu) {
             $unplaced = array_values(array_filter(
                 $menu['items'],
@@ -194,17 +195,8 @@ final class MenuBuilder
                 continue;
             }
 
-            $target = $pluginSiblingGroup[$menuKey] ?? null;
-            if ($target === null) {
-                // Wunschplatz des Profils, sonst des Basisprofils – jeweils nur, wenn die Gruppe im Layout existiert.
-                foreach (array_unique([$profile, $base]) as $preferredProfile) {
-                    $preferred = $registry->preferredParent($menuKey, $preferredProfile);
-                    if ($preferred !== null && isset($groupIds[$preferred])) {
-                        $target = $preferred;
-                        break;
-                    }
-                }
-            }
+            $autoId = self::PLUGIN_AUTO_GROUP_PREFIX . $menuKey;
+            $target = $pluginSiblingGroup[$menuKey] ?? (isset($groupIds[$autoId]) ? $autoId : null);
             if ($target !== null) {
                 foreach ($unplaced as $id) {
                     $append[$target][] = $id;
@@ -213,18 +205,10 @@ final class MenuBuilder
             }
 
             if (count($menu['items']) === 1) {
-                $singlePluginItems[] = $unplaced[0];
+                $activePlugins[] = ['kind' => 'item', 'id' => $unplaced[0], 'sort' => $items[$unplaced[0]]->label];
                 continue;
             }
-
-            $autoId = self::PLUGIN_AUTO_GROUP_PREFIX . $menuKey;
-            if (isset($groupIds[$autoId])) {
-                foreach ($unplaced as $id) {
-                    $append[$autoId][] = $id;
-                }
-                continue;
-            }
-            $autoGroups[] = [
+            $activePlugins[] = [
                 'kind' => 'group',
                 'id' => $autoId,
                 'label' => $menu['label'],
@@ -232,54 +216,25 @@ final class MenuBuilder
                 'display' => LayoutValidator::DISPLAY_MENU,
                 'items' => $unplaced,
                 'auto' => true,
+                'sort' => $menu['label'],
             ];
         }
 
-        usort($singlePluginItems, fn (string $a, string $b): int => $this->compareLabels($items[$a]->label, $items[$b]->label, $a, $b));
-        usort($autoGroups, fn (array $a, array $b): int => $this->compareLabels($a['label'], $b['label'], $a['id'], $b['id']));
+        usort($activePlugins, fn (array $a, array $b): int => $this->compareLabels($a['sort'], $b['sort'], $a['id'], $b['id']));
 
-        if ($fallbackGroup !== '') {
-            foreach ($singlePluginItems as $id) {
-                $append[$fallbackGroup][] = $id;
-            }
-        } else {
-            $morePlugins = $singlePluginItems;
-        }
-
-        // 3. Anhängen und Auto-Gruppen einfügen.
-        foreach ($sections as $s => &$section) {
-            $nodes = [];
-            foreach ($section['nodes'] as $node) {
+        // 3. Anhängen, „Weitere“ und „Aktive Plugins“ ergänzen.
+        foreach ($sections as &$section) {
+            foreach ($section['nodes'] as &$node) {
                 if ($node['kind'] === 'group' && isset($append[$node['id']])) {
                     $node['items'] = array_values(array_unique([...$node['items'], ...$append[$node['id']]]));
                 }
-                $nodes[] = $node;
-                if ($node['kind'] === 'group' && $node['id'] === $fallbackGroup && $autoGroups !== []) {
-                    array_push($nodes, ...$autoGroups);
-                    $autoGroups = [];
-                }
             }
-            $section['nodes'] = $nodes;
+            unset($node);
         }
         unset($section);
 
-        $lastSection = count($sections) - 1;
-        if ($autoGroups !== []) {
-            array_push($sections[$lastSection]['nodes'], ...$autoGroups);
-        }
-        if ($morePlugins !== []) {
-            $sections[$lastSection]['nodes'][] = [
-                'kind' => 'group',
-                'id' => self::PLUGIN_AUTO_FALLBACK_ID,
-                'label' => $this->t('admin_menu.group.plugins_more', 'Plugins'),
-                'icon' => ['type' => 'tabler', 'name' => MenuRegistry::DEFAULT_PLUGIN_ICON],
-                'display' => LayoutValidator::DISPLAY_MENU,
-                'items' => $morePlugins,
-                'auto' => true,
-            ];
-        }
         if ($moreCore !== []) {
-            $sections[$lastSection]['nodes'][] = [
+            $sections[count($sections) - 1]['nodes'][] = [
                 'kind' => 'group',
                 'id' => self::MORE_GROUP_ID,
                 'label' => $this->t('admin_menu.group.more', 'Weitere'),
@@ -289,6 +244,16 @@ final class MenuBuilder
                 'auto' => true,
             ];
         }
+        $sections[] = [
+            'id' => self::ACTIVE_PLUGINS_SECTION_ID,
+            'label' => $this->t('admin_menu.section.active_plugins', 'Aktive Plugins'),
+            'plain' => false,
+            'nodes' => array_map(static function (array $node): array {
+                unset($node['sort']);
+
+                return $node;
+            }, $activePlugins),
+        ];
 
         // 4. Sichtbarkeit anwenden und Ausgabe erzeugen.
         $labels = is_array($layout['labels'] ?? null) ? $layout['labels'] : [];
@@ -324,7 +289,7 @@ final class MenuBuilder
                         $children[] = $resolved;
                     }
                 }
-                if ($children === [] && $node['id'] !== $fallbackGroup) {
+                if ($children === []) {
                     continue;
                 }
 
@@ -341,25 +306,19 @@ final class MenuBuilder
                 ];
             }
 
-            if ($nodes !== []) {
-                $output[] = ['id' => $section['id'], 'label' => $section['label'], 'plain' => $section['plain'], 'nodes' => $nodes];
-            }
+            $output[] = ['id' => $section['id'], 'label' => $section['label'], 'plain' => $section['plain'], 'nodes' => $nodes];
         }
 
-        // Auffanggruppe ohne Einträge nur behalten, wenn sie den Plugin-Hinweis trägt.
+        // „Aktive Plugins“ ohne Einträge bleibt nur stehen, wenn der Abschnitt den Plugin-Hinweis trägt.
         $pluginHint = null;
-        if ($registry->pluginTotal() > 0 && $pluginVisible === 0 && $registry->pluginHidden() > 0 && $fallbackGroup !== '') {
-            $pluginHint = ['group' => $fallbackGroup, 'hidden' => $registry->pluginHidden()];
+        if ($registry->pluginTotal() > 0 && $pluginVisible === 0 && $registry->pluginHidden() > 0) {
+            $pluginHint = ['section' => self::ACTIVE_PLUGINS_SECTION_ID, 'hidden' => $registry->pluginHidden()];
         }
-        foreach ($output as $s => $section) {
-            foreach ($section['nodes'] as $n => $node) {
-                if ($node['kind'] === 'group' && $node['id'] === $fallbackGroup && $node['items'] === [] && $pluginHint === null) {
-                    unset($output[$s]['nodes'][$n]);
-                }
-            }
-            $output[$s]['nodes'] = array_values($output[$s]['nodes']);
-        }
-        $output = array_values(array_filter($output, static fn (array $section): bool => $section['nodes'] !== []));
+        $output = array_values(array_filter(
+            $output,
+            static fn (array $section): bool => $section['nodes'] !== []
+                || ($pluginHint !== null && $section['id'] === self::ACTIVE_PLUGINS_SECTION_ID)
+        ));
 
         return [
             'profile' => $profile,

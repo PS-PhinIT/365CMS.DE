@@ -25,7 +25,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 | Nutzung | `CMS/core/Services/MediaUsageService.php` | Wo wird eine Datei verwendet (Beitragsbilder, Inhalte) |
 | Auslieferung | `CMS/core/Services/MediaDeliveryService.php` → `GET /media-file` | Geschützte Dateien, Member-Uploads |
 | Upload-API | `ApiRouter`: `POST /api/upload`, `GET\|POST /api/media` | Editor- und Plugin-Uploads |
-| Metadaten | `CMS/config/media-meta.json` | Kategorien, Tags, Alt-Texte, Filter-Presets |
+| Metadaten | `CMS/config/media-meta.json` | Kategorien, Tags, Alt-Texte, Filter-Presets. Schreibzugriffe laufen über `MediaRepository::updateMeta()` unter einer Dateisperre (`media-meta.json.lock`), damit sich parallele Uploads, Papierkorb und Import nicht gegenseitig überschreiben. Je Datei: `getFileMeta()`, `setFileMeta()` (ersetzen/entfernen), `mergeFileMeta()` (einzelne Felder). |
 | Einstellungen | `CMS/config/media-settings.json` | siehe Tab „Einstellungen“ |
 
 ### Tab „Bibliothek“ (`library`)

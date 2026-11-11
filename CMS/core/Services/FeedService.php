@@ -1,9 +1,9 @@
 <?php
 /**
- * Feed Service – natives RSS/Atom-Parsing ohne externe Parser-Bibliothek.
+ * Feed Service – RSS/Atom-Parsing und Ausgabe.
  *
- * Zentraler Service für das Laden, Cachen und Parsen von RSS-/Atom-Feeds.
- * Nutzt DOM/XML, einen abgesicherten Remote-Fetch und einen JSON-Datei-Cache.
+ * Zentraler Service für eingehende RSS-/Atom-Feeds und die öffentliche RSS-Ausgabe.
+ * Eingehende Feeds nutzen DOM/XML, einen abgesicherten Remote-Fetch und einen JSON-Datei-Cache.
  *
  * @package CMSv2\Core\Services
  */
@@ -21,6 +21,7 @@ if (!defined('ABSPATH')) {
 
 final class FeedService
 {
+    private const PUBLIC_FEED_CACHE_TTL = 300;
     private const MAX_ITEMS_PER_FEED = 100;
     private const MAX_FEEDS_PER_BATCH = 20;
     private const MAX_TITLE_LENGTH = 300;
@@ -61,6 +62,249 @@ final class FeedService
     public function isAvailable(): bool
     {
         return $this->available;
+    }
+
+    /**
+     * Verwirft die zwischengespeicherten öffentlichen RSS-Feeds (`cache/feed/*.xml`).
+     */
+    public static function invalidatePublicFeedCache(): void
+    {
+        if (!defined('ABSPATH')) {
+            return;
+        }
+
+        foreach (glob(rtrim((string) ABSPATH, '/\\') . '/cache/feed/*.xml') ?: [] as $file) {
+            @unlink($file);
+        }
+    }
+
+    public function serveRssFeed(string $requestLocale): never
+    {
+        $db = \CMS\Database::instance();
+        $prefix = $db->getPrefix();
+        $feedSettings = SettingsService::getInstance()->getGroup('feeds');
+        if (array_key_exists('enabled', $feedSettings) && !filter_var($feedSettings['enabled'], FILTER_VALIDATE_BOOLEAN)) {
+            http_response_code(404);
+            exit;
+        }
+
+        $localization = ContentLocalizationService::getInstance();
+        $supportedLocales = $localization->getContentLocales();
+        array_unshift($supportedLocales, 'de');
+        $languageEnabled = !array_key_exists('language_feeds', $feedSettings)
+            || filter_var($feedSettings['language_feeds'], FILTER_VALIDATE_BOOLEAN);
+        $locale = $requestLocale;
+        $requestedLocale = is_string($_GET['lang'] ?? null) ? strtolower(trim($_GET['lang'])) : '';
+        if ($languageEnabled && in_array($requestedLocale, $supportedLocales, true)) {
+            $locale = $requestedLocale;
+        }
+        if (!$languageEnabled || !in_array($locale, $supportedLocales, true)) {
+            $locale = 'de';
+        }
+
+        $localeFilter = $localization->buildPostAvailabilitySql('p', $locale);
+        $siteTitle = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
+        $siteDescription = 'Aktuelle Beiträge von ' . $siteTitle;
+        $itemsPerFeed = filter_var($feedSettings['items_per_feed'] ?? 25, FILTER_VALIDATE_INT);
+        $itemsPerFeed = max(1, min(100, $itemsPerFeed === false ? 25 : $itemsPerFeed));
+        $contentMode = ($feedSettings['content_mode'] ?? 'excerpt') === 'full' ? 'full' : 'excerpt';
+        $categoryEnabled = !array_key_exists('category_feeds', $feedSettings) || filter_var($feedSettings['category_feeds'], FILTER_VALIDATE_BOOLEAN);
+        $tagEnabled = !array_key_exists('tag_feeds', $feedSettings) || filter_var($feedSettings['tag_feeds'], FILTER_VALIDATE_BOOLEAN);
+        $includeFeaturedImage = array_key_exists('include_featured_image', $feedSettings)
+            && filter_var($feedSettings['include_featured_image'], FILTER_VALIDATE_BOOLEAN);
+        if ((!$categoryEnabled && isset($_GET['category'])) || (!$tagEnabled && isset($_GET['tag']))) {
+            http_response_code(404);
+            exit;
+        }
+        $categorySlug = $categoryEnabled && is_string($_GET['category'] ?? null)
+            ? $this->normalizePublicTaxonomySlug($_GET['category'])
+            : '';
+        $tagSlug = $tagEnabled && is_string($_GET['tag'] ?? null)
+            ? $this->normalizePublicTaxonomySlug($_GET['tag'])
+            : '';
+        if ((isset($_GET['category']) && $categorySlug === '') || (isset($_GET['tag']) && $tagSlug === '')) {
+            http_response_code(400);
+            exit;
+        }
+        if ($categorySlug !== '' && $tagSlug !== '') {
+            http_response_code(400);
+            exit;
+        }
+
+        $feedQuery = [];
+        if ($locale !== 'de' && $languageEnabled) {
+            $feedQuery['lang'] = $locale;
+        }
+        if ($categorySlug !== '') {
+            $feedQuery['category'] = $categorySlug;
+        }
+        if ($tagSlug !== '') {
+            $feedQuery['tag'] = $tagSlug;
+        }
+        $feedUrl = rtrim((string) SITE_URL, '/') . '/feed' . ($feedQuery !== [] ? '?' . http_build_query($feedQuery, '', '&', PHP_QUERY_RFC3986) : '');
+        $language = str_replace('_', '-', $locale);
+
+        // Archive routes accept the German and the English slug in every locale; unknown terms are 404.
+        $categoryIds = [];
+        $tagId = 0;
+        $termName = '';
+        if ($categorySlug !== '') {
+            $category = $db->get_row(
+                "SELECT id, name FROM {$prefix}post_categories
+                 WHERE slug = ? OR (slug_en IS NOT NULL AND slug_en != '' AND slug_en = ?)
+                 ORDER BY (slug = ?) DESC, id ASC
+                 LIMIT 1",
+                [$categorySlug, $categorySlug, $categorySlug]
+            );
+            if ($category === null) {
+                http_response_code(404);
+                exit;
+            }
+            $categoryIds = (new \CMS\Routing\ThemeArchiveRepository())->getCategoryArchiveIds((int) ($category->id ?? 0));
+            if ($categoryIds === []) {
+                $categoryIds = [(int) ($category->id ?? 0)];
+            }
+            $termName = trim((string) ($category->name ?? ''));
+        }
+        if ($tagSlug !== '') {
+            $tag = $db->get_row(
+                "SELECT id, name FROM {$prefix}post_tags
+                 WHERE slug = ? OR (slug_en IS NOT NULL AND slug_en != '' AND slug_en = ?)
+                 ORDER BY (slug = ?) DESC, id ASC
+                 LIMIT 1",
+                [$tagSlug, $tagSlug, $tagSlug]
+            );
+            if ($tag === null) {
+                http_response_code(404);
+                exit;
+            }
+            $tagId = (int) ($tag->id ?? 0);
+            $termName = trim((string) ($tag->name ?? ''));
+        }
+        if ($termName !== '') {
+            $siteDescription = $siteTitle . ' – ' . $termName;
+            $siteTitle .= ' – ' . $termName;
+        }
+
+        if (!headers_sent()) {
+            header('Content-Type: application/rss+xml; charset=utf-8');
+            header('X-Robots-Tag: noindex, follow', true);
+        }
+
+        $cacheDir = rtrim((string) ABSPATH, '/\\') . '/cache/feed';
+        $cacheKey = hash('sha256', json_encode([$locale, $categorySlug, $tagSlug, $feedSettings], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
+        $cacheFile = $cacheDir . '/rss-' . substr($cacheKey, 0, 48) . '.xml';
+        $cachedMtime = @filemtime($cacheFile);
+        if ($cachedMtime !== false && $cachedMtime > time() - self::PUBLIC_FEED_CACHE_TTL) {
+            $cached = @file_get_contents($cacheFile);
+            if (is_string($cached) && $cached !== '') {
+                $this->sendRssResponse($cached, $cachedMtime);
+            }
+        }
+
+        $where = \cms_post_publication_where('p') . " AND {$localeFilter}";
+        $params = [];
+        if ($categoryIds !== []) {
+            $categoryPlaceholders = implode(',', array_fill(0, count($categoryIds), '?'));
+            $where .= " AND (
+                p.category_id IN ({$categoryPlaceholders})
+                OR EXISTS (
+                    SELECT 1 FROM {$prefix}post_category_rel pcr
+                    WHERE pcr.post_id = p.id
+                      AND pcr.category_id IN ({$categoryPlaceholders})
+                )
+            )";
+            array_push($params, ...$categoryIds, ...$categoryIds);
+        }
+        if ($tagId > 0) {
+            $where .= " AND EXISTS (
+                SELECT 1 FROM {$prefix}post_tag_rel ptr
+                WHERE ptr.post_id = p.id AND ptr.tag_id = ?
+            )";
+            $params[] = $tagId;
+        }
+        $params[] = $itemsPerFeed;
+
+        $posts = $db->get_results(
+            "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name, c.name AS category_name
+             FROM {$prefix}posts p
+             LEFT JOIN {$prefix}users u ON u.id = p.author_id
+             LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
+             WHERE {$where}
+             ORDER BY COALESCE(p.published_at, p.created_at) DESC
+             LIMIT ?",
+            $params
+        ) ?: [];
+
+        $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">' . "\n";
+        $xml .= "<channel>\n";
+        $xml .= '  <title>' . $this->escapeXml($siteTitle) . "</title>\n";
+        $xml .= '  <link>' . $this->escapeXml(rtrim((string) SITE_URL, '/') . '/') . "</link>\n";
+        $xml .= '  <description>' . $this->escapeXml($siteDescription) . "</description>\n";
+        $xml .= '  <language>' . $this->escapeXml($language) . "</language>\n";
+        $xml .= '  <atom:link href="' . $this->escapeXml($feedUrl) . '" rel="self" type="application/rss+xml" />' . "\n";
+        $xml .= '  <lastBuildDate>' . gmdate(DATE_RSS) . "</lastBuildDate>\n";
+
+        foreach ($posts as $postRow) {
+            $postData = $localization->localizePost((array) $postRow, $locale);
+            $title = trim((string) ($postData['title'] ?? 'Beitrag'));
+            $link = SITE_URL . PermalinkService::getInstance()->buildPostPath($postData, $locale);
+            $pubDate = (string) ($postData['published_at'] ?? $postData['created_at'] ?? '');
+            $excerpt = trim((string) ($postData['excerpt'] ?? ''));
+            $content = trim((string) ($postData['content'] ?? ''));
+            $description = $this->buildPublicFeedDescription($excerpt, $content);
+            $categoryName = trim((string) ($postData['category_name'] ?? ''));
+            $author = trim((string) ($postData['author_name'] ?? ''));
+
+            $xml .= "  <item>\n";
+            $xml .= '    <title>' . $this->escapeXml($title) . "</title>\n";
+            $xml .= '    <link>' . $this->escapeXml($link) . "</link>\n";
+            $xml .= '    <guid isPermaLink="true">' . $this->escapeXml($link) . "</guid>\n";
+            if ($pubDate !== '') {
+                $timestamp = strtotime($pubDate);
+                if ($timestamp !== false) {
+                    $xml .= '    <pubDate>' . $this->escapeXml(gmdate(DATE_RSS, $timestamp)) . "</pubDate>\n";
+                }
+            }
+            if ($author !== '') {
+                $xml .= '    <author>' . $this->escapeXml($author) . "</author>\n";
+            }
+            if ($categoryName !== '') {
+                $xml .= '    <category>' . $this->escapeXml($categoryName) . "</category>\n";
+            }
+            if ($description !== '') {
+                $xml .= '    <description>' . $this->wrapCdata($description) . "</description>\n";
+            }
+            if ($contentMode === 'full' && $content !== '') {
+                $html = EditorJsRenderer::getInstance()->render($content);
+                $html = PurifierService::getInstance()->purify($html, 'default');
+                $html = preg_replace_callback(
+                    '/\b(src|href)=(["\'])\/(?!\/)/i',
+                    static fn (array $matches): string => $matches[1] . '=' . $matches[2] . rtrim((string) SITE_URL, '/') . '/',
+                    $html
+                ) ?? $html;
+                $xml .= '    <content:encoded>' . $this->wrapCdata($html) . "</content:encoded>\n";
+            }
+            $featuredImage = trim((string) ($postData['featured_image'] ?? ''));
+            if ($includeFeaturedImage && $featuredImage !== '') {
+                $imageUrl = MediaDeliveryService::getInstance()->normalizeAdminVisibleUrl($featuredImage);
+                if (preg_match('#^https?://#i', $imageUrl) === 1) {
+                    $xml .= '    <media:content url="' . $this->escapeXml($imageUrl) . '" medium="image" />' . "\n";
+                }
+            }
+            $xml .= "  </item>\n";
+        }
+
+        $xml .= "</channel>\n</rss>";
+        if ((is_dir($cacheDir) || @mkdir($cacheDir, 0755, true)) && is_writable($cacheDir)) {
+            $tmp = $cacheFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
+            if (@file_put_contents($tmp, $xml, LOCK_EX) !== false && !@rename($tmp, $cacheFile)) {
+                @unlink($tmp);
+            }
+        }
+
+        $this->sendRssResponse($xml, time());
     }
 
     public function fetch(string $url, int $maxItems = 50): array
@@ -243,6 +487,154 @@ final class FeedService
     public function setCacheDuration(int $seconds): void
     {
         $this->cacheDuration = max(0, $seconds);
+    }
+
+    private function normalizePublicTaxonomySlug(string $slug): string
+    {
+        $slug = strtolower(trim($slug));
+        return preg_match('/^[a-z0-9][a-z0-9-]{0,99}$/', $slug) === 1 ? $slug : '';
+    }
+
+    private function sendRssResponse(string $xml, int $lastModified): never
+    {
+        $etag = '"' . hash('sha256', $xml) . '"';
+        $lastModified = max(0, $lastModified);
+        $ifNoneMatch = trim((string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
+        $notModified = false;
+        if ($ifNoneMatch !== '') {
+            foreach (explode(',', $ifNoneMatch) as $candidate) {
+                $candidate = trim($candidate);
+                if ($candidate === '*' || hash_equals($etag, preg_replace('/^W\//', '', $candidate) ?? $candidate)) {
+                    $notModified = true;
+                    break;
+                }
+            }
+        } elseif (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+            $since = strtotime((string) $_SERVER['HTTP_IF_MODIFIED_SINCE']);
+            $notModified = $since !== false && $lastModified <= $since;
+        }
+
+        if (!headers_sent()) {
+            header('Cache-Control: public, max-age=' . self::PUBLIC_FEED_CACHE_TTL);
+            header('ETag: ' . $etag);
+            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+            if ($notModified) {
+                http_response_code(304);
+            }
+        }
+        if (!$notModified) {
+            echo $xml;
+        }
+        exit;
+    }
+
+    private function escapeXml(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+    }
+
+    private function wrapCdata(string $value): string
+    {
+        return '<![CDATA[' . str_replace(']]>', ']]]]><![CDATA[>', $value) . ']]>';
+    }
+
+    private function buildPublicFeedDescription(string $excerpt, string $content): string
+    {
+        $sources = array_values(array_filter([$excerpt, $content], static fn(string $value): bool => trim($value) !== ''));
+        foreach ($sources as $source) {
+            $plainText = $this->extractPublicFeedPlainText($source);
+            if ($plainText !== '') {
+                return mb_substr($plainText, 0, 320);
+            }
+        }
+
+        return '';
+    }
+
+    private function extractPublicFeedPlainText(string $source): string
+    {
+        $source = trim($source);
+        if ($source === '') {
+            return '';
+        }
+
+        $rendered = EditorService::getInstance()->renderContent($source);
+        $plainText = $this->normalizePublicFeedPlainText($rendered);
+        if ($plainText !== '' && !$this->looksLikeEditorJsPayload($plainText)) {
+            return $plainText;
+        }
+
+        $editorJsText = $this->extractEditorJsSnippet($source);
+        if ($editorJsText !== '') {
+            return $editorJsText;
+        }
+
+        if ($source !== $rendered) {
+            $plainText = $this->normalizePublicFeedPlainText($source);
+        }
+
+        return $this->looksLikeEditorJsPayload($plainText) ? '' : $plainText;
+    }
+
+    private function normalizePublicFeedPlainText(string $value): string
+    {
+        $plainText = trim(html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $plainText = preg_replace('/\s+/u', ' ', $plainText) ?? '';
+
+        return trim($plainText);
+    }
+
+    private function looksLikeEditorJsPayload(string $value): bool
+    {
+        $normalized = ltrim($value);
+
+        return str_starts_with($normalized, '{"time":')
+            || str_starts_with($normalized, '{"blocks":')
+            || str_starts_with($normalized, '{"id":')
+            || str_contains($normalized, '"blocks":[{');
+    }
+
+    private function extractEditorJsSnippet(string $source): string
+    {
+        $decoded = \CMS\Json::decodeArray($source, []);
+        if ($decoded !== [] && isset($decoded['blocks']) && is_array($decoded['blocks'])) {
+            $collected = [];
+            foreach ($decoded['blocks'] as $block) {
+                if (!is_array($block)) {
+                    continue;
+                }
+
+                $text = trim((string) ($block['data']['text'] ?? $block['data']['html'] ?? ''));
+                if ($text !== '') {
+                    $collected[] = $this->normalizePublicFeedPlainText($text);
+                }
+
+                if (count($collected) >= 3) {
+                    break;
+                }
+            }
+
+            return trim(implode(' ', array_filter($collected, static fn(string $value): bool => $value !== '')));
+        }
+
+        if (preg_match_all('/"(?:text|html)"\s*:\s*"((?:\\.|[^"\\\\])*)"/u', $source, $matches) === 1 || (isset($matches[1]) && $matches[1] !== [])) {
+            $parts = [];
+            foreach ($matches[1] as $rawMatch) {
+                $decodedMatch = json_decode('"' . $rawMatch . '"', true);
+                $text = is_string($decodedMatch) ? $decodedMatch : stripcslashes($rawMatch);
+                $text = $this->normalizePublicFeedPlainText($text);
+                if ($text !== '') {
+                    $parts[] = $text;
+                }
+                if (count($parts) >= 3) {
+                    break;
+                }
+            }
+
+            return trim(implode(' ', $parts));
+        }
+
+        return '';
     }
 
     private function loadFeedData(string $url): ?array

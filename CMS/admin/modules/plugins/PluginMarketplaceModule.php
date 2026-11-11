@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
 
 use CMS\Http\Client as HttpClient;
 use CMS\Services\ErrorReportService;
+use CMS\Services\IntegratedPluginService;
 use CMS\Services\MarketplaceEndpoints;
 use CMS\Services\UpdateService;
 
@@ -61,6 +62,7 @@ class PluginMarketplaceModule
         'requires_php',
         'min_php',
         'tested_up_to',
+        'integrated_in_core',
         'released',
         'notes',
         'submission_source',
@@ -129,6 +131,18 @@ class PluginMarketplaceModule
             $plugin['install_reason'] = $plugin['auto_install_supported']
                 ? 'Paket und SHA-256 vorhanden.'
                 : $this->getManualInstallReason($plugin);
+
+            $integratedSince = (string) ($plugin['integrated_in_core'] ?? '');
+            $plugin['integrated'] = $integratedSince !== '';
+            $plugin['integrated_url'] = '';
+            if ($plugin['integrated']) {
+                $plugin['integrated_url'] = (string) (IntegratedPluginService::PLUGINS[$pluginSlug]['url'] ?? '');
+                $plugin['auto_install_supported'] = false;
+                $plugin['manual_install_only'] = false;
+                $plugin['compatibility_reason'] = '';
+                $plugin['compatible'] = true;
+                $plugin['install_reason'] = $this->getIntegratedReason($integratedSince);
+            }
         }
         unset($plugin);
 
@@ -179,6 +193,16 @@ class PluginMarketplaceModule
                 'Slug: ' . $slug,
             ], [
                 'slug' => $slug,
+            ]);
+        }
+
+        $integratedSince = (string) ($found['integrated_in_core'] ?? '');
+        if ($integratedSince !== '') {
+            return $this->buildInstallFailureResult($this->getIntegratedReason($integratedSince), 'plugin_marketplace_integrated_in_core', [
+                'Slug: ' . $slug,
+            ], [
+                'slug' => $slug,
+                'integrated_in_core' => $integratedSince,
             ]);
         }
 
@@ -597,6 +621,7 @@ class PluginMarketplaceModule
             $normalized['requires_php'] = $this->normalizeCatalogString($normalized['requires_php'] ?? $normalized['min_php'] ?? '', 40);
             $normalized['package_size'] = $this->normalizePackageSize($normalized['package_size'] ?? null);
             $normalized['sha256'] = $this->resolveIntegrityHash($normalized);
+            $normalized['integrated_in_core'] = $this->resolveIntegratedVersion($normalized);
 
             $seenSlugs[$normalized['slug']] = true;
             $sanitized[] = $normalized;
@@ -612,11 +637,14 @@ class PluginMarketplaceModule
      */
     private function buildStats(array $plugins, array $installed): array
     {
+        $offered = array_filter($plugins, static fn(array $plugin): bool => empty($plugin['integrated']));
+
         return [
-            'available' => count($plugins),
+            'available' => count($offered),
             'installed' => count($installed),
-            'installable' => count(array_filter($plugins, fn($plugin) => empty($plugin['installed']) && !empty($plugin['auto_install_supported']))),
-            'manual_only' => count(array_filter($plugins, fn($plugin) => empty($plugin['installed']) && empty($plugin['auto_install_supported']))),
+            'installable' => count(array_filter($offered, fn($plugin) => empty($plugin['installed']) && !empty($plugin['auto_install_supported']))),
+            'manual_only' => count(array_filter($offered, fn($plugin) => empty($plugin['installed']) && empty($plugin['auto_install_supported']))),
+            'integrated' => count($plugins) - count($offered),
         ];
     }
 
@@ -645,6 +673,7 @@ class PluginMarketplaceModule
             ['value' => 'installable', 'label' => 'Automatisch installierbar'],
             ['value' => 'manual', 'label' => 'Nur manuell / Anfrage'],
             ['value' => 'installed', 'label' => 'Bereits installiert'],
+            ['value' => 'integrated', 'label' => (string) __('admin.marketplace.integrated.filter')],
         ];
     }
 
@@ -1067,13 +1096,43 @@ class PluginMarketplaceModule
         return $this->getCompatibilityFailureReason($plugin) === '';
     }
 
+    private function currentCmsVersion(): string
+    {
+        return defined('CMS_VERSION')
+            ? (string) CMS_VERSION
+            : (class_exists('\CMS\\Version') ? (string) \CMS\Version::CURRENT : '0.0.0');
+    }
+
+    /**
+     * Core-Version, seit der das Plugin Teil des Cores ist ('' = nicht integriert).
+     * Quelle: der Core selbst (IntegratedPluginService) oder `integrated_in_core` im Katalog,
+     * sofern die installierte Core-Version diese Version erreicht.
+     */
+    private function resolveIntegratedVersion(array $plugin): string
+    {
+        $slug = $this->normalizePluginSlug((string) ($plugin['slug'] ?? ''));
+        if ($slug !== '' && IntegratedPluginService::isIntegrated($slug)) {
+            return IntegratedPluginService::SINCE_VERSION;
+        }
+
+        $version = $this->normalizeCatalogString($plugin['integrated_in_core'] ?? '', 40);
+        if ($version === '' || preg_match('/^\d+\.\d+(?:\.\d+){0,2}$/', $version) !== 1) {
+            return '';
+        }
+
+        return version_compare($this->currentCmsVersion(), $version, '>=') ? $version : '';
+    }
+
+    private function getIntegratedReason(string $since): string
+    {
+        return str_replace('%s', $since, (string) __('admin.marketplace.integrated.reason'));
+    }
+
     private function getCompatibilityFailureReason(array $plugin): string
     {
         $requiresCms = trim((string) ($plugin['requires_cms'] ?? ''));
         $requiresPhp = trim((string) ($plugin['requires_php'] ?? ''));
-        $currentCms = defined('CMS_VERSION')
-            ? (string) CMS_VERSION
-            : (class_exists('\CMS\\Version') ? (string) \CMS\Version::CURRENT : '0.0.0');
+        $currentCms = $this->currentCmsVersion();
 
         if ($requiresCms !== '' && version_compare($currentCms, $requiresCms, '<')) {
             return 'Plugin erfordert mindestens 365CMS ' . $requiresCms . '.';

@@ -226,7 +226,9 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                     $downloadHostAllowed = !empty($plugin['download_host_allowed']);
                     $downloadExtensionAllowed = !empty($plugin['download_extension_allowed']);
                     $downloadHost = $escape((string)($plugin['download_host'] ?? ''));
-                    $status = $isInstalled ? 'installed' : ($autoInstallSupported ? 'installable' : 'manual');
+                    $isIntegrated = !empty($plugin['integrated']);
+                    $integratedUrl = (string)($plugin['integrated_url'] ?? '');
+                    $status = $isIntegrated ? 'integrated' : ($isInstalled ? 'installed' : ($autoInstallSupported ? 'installable' : 'manual'));
                 ?>
                 <div class="col-sm-6 col-lg-4 plugin-card" data-name="<?php echo $name; ?>" data-category="<?php echo $category; ?>" data-status="<?php echo $escape($status); ?>">
                     <div class="card">
@@ -249,7 +251,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                             <?php if ($priceAmount !== ''): ?>
                                 <div class="mb-2"><span class="badge bg-orange-lt"><?php echo $priceAmount . ' ' . $priceCurrency; ?></span></div>
                             <?php endif; ?>
-                            <?php if ($requiresCms !== '' || $requiresPhp !== ''): ?>
+                            <?php if (!$isIntegrated && ($requiresCms !== '' || $requiresPhp !== '')): ?>
                                 <div class="text-muted small mb-2">
                                     <?php if ($requiresCms !== ''): ?>365CMS ab <?php echo $requiresCms; ?><?php endif; ?>
                                     <?php if ($requiresCms !== '' && $requiresPhp !== ''): ?> · <?php endif; ?>
@@ -265,23 +267,34 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
                             <?php endif; ?>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="text-muted small">
-                                    v<?php echo $version; ?> · <?php echo $author; ?>
-                                    <?php if ($hashPresent): ?>
+                                    <?php if ($version !== ''): ?>v<?php echo $version; ?> · <?php endif; ?><?php echo $author; ?>
+                                    <?php if (!$isIntegrated && $hashPresent): ?>
                                         <div class="mt-1"><span class="badge bg-green-lt">SHA-256 <?php echo $hashShort; ?></span></div>
-                                    <?php else: ?>
+                                    <?php elseif (!$isIntegrated): ?>
                                         <div class="mt-1"><span class="badge bg-warning-lt">Auto-Install gesperrt</span></div>
                                     <?php endif; ?>
-                                    <?php if (!$packageSizeAllowed): ?>
+                                    <?php if (!$isIntegrated && !$packageSizeAllowed): ?>
                                         <div class="mt-1"><span class="badge bg-warning-lt">Paket zu groß für Auto-Install</span></div>
                                     <?php endif; ?>
-                                    <?php if ($downloadHost !== '' && !$downloadHostAllowed): ?>
+                                    <?php if (!$isIntegrated && $downloadHost !== '' && !$downloadHostAllowed): ?>
                                         <div class="mt-1"><span class="badge bg-warning-lt">Host nicht freigegeben</span></div>
                                     <?php endif; ?>
-                                    <?php if (!$downloadExtensionAllowed && $downloadHost !== ''): ?>
+                                    <?php if (!$isIntegrated && !$downloadExtensionAllowed && $downloadHost !== ''): ?>
                                         <div class="mt-1"><span class="badge bg-warning-lt">Archiv-Endung nicht erlaubt</span></div>
                                     <?php endif; ?>
                                 </div>
-                                <?php if ($isInstalled): ?>
+                                <?php if ($isIntegrated): ?>
+                                    <div class="text-end">
+                                        <span class="badge bg-blue-lt mb-2"><?php echo $escape((string) __('admin.marketplace.integrated.badge')); ?></span>
+                                        <div class="text-muted small" style="max-width: 220px;"><?php echo $installReason; ?></div>
+                                        <?php if ($isInstalled): ?>
+                                            <div class="text-muted small mt-1" style="max-width: 220px;"><?php echo $escape((string) __('admin.marketplace.integrated.remove_hint')); ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($integratedUrl !== ''): ?>
+                                            <a href="<?php echo $escape($integratedUrl); ?>" class="btn btn-outline-primary btn-sm mt-2"><?php echo $escape((string) __('admin.marketplace.integrated.open')); ?></a>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php elseif ($isInstalled): ?>
                                     <span class="badge bg-green-lt">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
                                         Installiert

@@ -431,7 +431,7 @@ class Bootstrap
         $this->container->singleton(Services\ImageService::class, fn() => Services\ImageService::getInstance());
         $this->container->singleton('image', fn() => Services\ImageService::getInstance());
 
-        // FeedService – lazy Singleton (nativer RSS/Atom-Parser)
+        // FeedService – lazy Singleton (RSS/Atom-Parser und öffentliche RSS-Ausgabe)
         $this->container->singleton(Services\FeedService::class, fn() => Services\FeedService::getInstance());
         $this->container->singleton('feed', fn() => Services\FeedService::getInstance());
 

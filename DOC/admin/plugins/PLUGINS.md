@@ -7,11 +7,7 @@
 
 Installed plugins are managed at `/admin/plugins` (`CMS/admin/plugins.php` → `CMS/admin/modules/plugins/PluginsModule.php` → `CMS/admin/views/plugins/list.php`, runtime `CMS\PluginManager`). Plugins live in `CMS/plugins/<slug>/<slug>.php`; their metadata comes from the file header (`Plugin Name`, `Description`, `Version`, `Author`, `Requires`, `Requires Plugins`, `Requires CMS`) and an optional `update.json`. Active slugs are stored in `cms_settings.option_name = 'active_plugins'`. Actions: `activate`, `deactivate`, `delete`. The shipped plugin `cms-importer` (3.0.3) is protected against deletion and upload overwrite.
 
-Plugin admin pages live at `/admin/plugins/<plugin>/<page>`. Their place in the sidebar depends on the active sidebar profile ([ADMIN-MENU.md](../ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil)):
-
-- A plugin with one page goes into the fallback group: *Plugins* in Classic, *Erweitern* in Structured, sorted alphabetically.
-- A plugin with several pages gets its own group directly after the fallback group.
-- A plugin can request a preferred group per profile with `cms_admin_menu_set_preferred_parent()`.
+Plugin admin pages live at `/admin/plugins/<plugin>/<page>`. They appear in the collapsed sidebar section **"Aktive Plugins"** (active plugins) at the end of the sidebar, in every profile ([ADMIN-MENU.md](../ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)). Only a custom layout can place them elsewhere.
 
 The plugin registration (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) is unchanged.
 
@@ -37,13 +33,11 @@ Je Plugin: Name, Beschreibung, Version, Autor, Status (aktiv/inaktiv), Abhängig
 
 - Plugins registrieren Menüs im Hook `cms_admin_menu` (`add_menu_page()` / `add_submenu_page()`, WordPress-kompatibel).
 - Aufruf: `/admin/plugins/<menü-slug>/<unterseiten-slug>` → `AdminRouter::renderPluginPage()`.
-- Wo Plugin-Menüs in der Seitenleiste erscheinen, hängt vom aktiven Sidebar-Profil ab (Details: [ADMIN-MENU.md](../ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil)):
-  - Ein Plugin mit **einer** Seite kommt als einfacher Link in die Auffanggruppe: *Plugins* im Profil *Klassisch*, *Erweitern* im Profil *Strukturiert*. Dort stehen Plugin-Einträge hinter den Core-Einträgen, alphabetisch nach Menütitel.
-  - Ein Plugin mit **mehreren** Seiten erhält eine eigene Gruppe mit seinem Menütitel und Icon direkt nach der Auffanggruppe. Fehlt der Hauptpunkt unter den Unterseiten, steht „Übersicht“ als erster Eintrag.
-  - Ein **Wunschplatz** je Profil (`cms_admin_menu_set_preferred_parent()` oder Filter `cms_admin_menu_preferred_parents`) setzt die Einträge in eine andere Gruppe. Er gilt nur, solange der Administrator die Einträge nicht im Sidebar-Editor selbst platziert hat.
-- Titel nach dem Schema `<Familie> | <Name>` (z. B. „365CMS | WP Importer“, „M365 | …“, „PHINIT | …“) zeigen das Präfix kleiner und gedämpft. In der eingeklappten Icon-Leiste zeigt der Tooltip den vollen Titel.
-- Ohne gültiges Icon erhält ein Plugin das neutrale Standard-Icon (Puzzleteil); die akzeptierten Icon-Formate stehen in [PANEL-INTEGRATION.md](../PANEL-INTEGRATION.md).
-- Die Darstellung liest nur die bereits registrierten Menüs (`get_registered_admin_menus()`). `CMS\Services\AdminMenu\AdminMenuService` setzt sie in den Menübaum ein, `CMS\Services\AdminNavigationService` bereitet ihn für die Ausgabe auf. Registrierung, Hook-Namen, Signaturen und Aufrufreihenfolge sind unverändert; bestehende Plugins funktionieren ohne Anpassung. Der Wunschplatz ist optional.
+- Seiten aktiver Plugins stehen in jedem Sidebar-Profil gesammelt im letzten Abschnitt **„Aktive Plugins“** (Details: [ADMIN-MENU.md](../ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)):
+  - Der Abschnitt ist standardmäßig eingeklappt und zeigt die Zahl seiner Einträge; der Aufklappzustand wird je Benutzer gespeichert.
+  - Ein Plugin mit **einer** Seite ist ein Link, ein Plugin mit **mehreren** Seiten eine Gruppe mit Menütitel und Icon, gemeinsam alphabetisch sortiert. Fehlt der Hauptpunkt unter den Unterseiten, steht „Übersicht“ als erster Eintrag.
+  - Andere Plätze sind nur über ein eigenes Layout im Sidebar-Editor möglich. `cms_admin_menu_set_preferred_parent()` wirkt nicht mehr.
+- Die Darstellung liest nur die bereits registrierten Menüs (`get_registered_admin_menus()`). `CMS\Services\AdminMenu\AdminMenuService` setzt sie in den Menübaum ein, `CMS\Services\AdminNavigationService` bereitet ihn für die Ausgabe auf. Registrierung, Hook-Namen, Signaturen und Aufrufreihenfolge sind unverändert; bestehende Plugins funktionieren ohne Anpassung.
 - Gibt ein Plugin kein vollständiges Layout aus, bettet der Router die Ausgabe in die Admin-Shell ein und lädt `CMS/assets/css/admin-plugins.css` (einheitliches Plugin-Design). Stylesheets aus der Plugin-Ausgabe werden in den `<head>` verschoben.
 - Exceptions im Plugin-Callback werden abgefangen, protokolliert (`error_log`) und als Fehlerkarte angezeigt – die Admin-Shell bleibt bedienbar. AJAX-Aufrufe (`X-Requested-With: XMLHttpRequest`) erhalten JSON-Fehler mit HTTP 500.
 
@@ -57,7 +51,7 @@ Je Plugin: Name, Beschreibung, Version, Autor, Status (aktiv/inaktiv), Abhängig
 | Tabelle | Eine Zeile je installiertem Plugin (Name, Status aktiv/inaktiv, Anzahl registrierter Admin-Menüeinträge) und eine Checkbox-Spalte je Site; je Spalte die Buttons „Alle“ und „Keine“ |
 | Speicherung | Option `admin_plugin_site_assignments` als JSON `{"<plugin-slug>": ["<site-key>", …]}`. Plugins, die allen Sites zugewiesen sind, werden nicht gespeichert. |
 | Standard | Plugins ohne gespeicherte Zuweisung gelten für **alle** Sites – nach dem Update verschwindet nichts. Plugins, die nach dem Laden des Formulars installiert wurden, behalten beim Speichern ihren Stand. |
-| Wirkung | Die Seitenleiste blendet in der Administration einer Site nur die Menüs der dort zugewiesenen Plugins ein. Bleibt dadurch kein Plugin-Eintrag übrig, zeigt die Auffanggruppe (*Plugins* bzw. *Erweitern*) den Hinweis „Für <Site> sind keine Plugins mit Menüeinträgen zugewiesen.“ mit Link hierher. |
+| Wirkung | Die Seitenleiste blendet in der Administration einer Site nur die Menüs der dort zugewiesenen Plugins ein. Bleibt dadurch kein Plugin-Eintrag übrig, zeigt der Abschnitt „Aktive Plugins“ den Hinweis „Für <Site> sind keine Plugins mit Menüeinträgen zugewiesen.“ mit Link hierher. |
 | Direktaufruf | Wird eine Plugin-Seite in einer nicht zugewiesenen Site direkt geöffnet, erscheint das Info-Banner „Dieses Plugin ist für <Site> nicht zugewiesen.“ mit Link „Plugin-Zuweisung öffnen“. Die Seite wird nicht blockiert. |
 
 Zuordnung Menü → Plugin (rein lesend): Liegt die Datei des registrierten Callbacks (Haupt- oder Unterpunkt) unter `CMS/plugins/<slug>/`, gehört der Menüeintrag zu diesem Plugin. Sonst wird der `menu_slug` verwendet: Er entspricht einem Plugin-Slug oder beginnt mit `<slug>-`, wobei der längste Treffer zählt. Menüs ohne Zuordnung bleiben immer sichtbar.

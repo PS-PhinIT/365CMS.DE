@@ -15,6 +15,7 @@ This folder documents the runtime core in `CMS/core/`: bootstrap and request lif
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Schichten, Einstiegspunkte, Laufzeitmodi, Bootstrap, Routing/Dispatch, Mehrsprachigkeit |
 | [CORE-CLASSES.md](CORE-CLASSES.md) | alle Kernklassen mit Aufgaben und Methoden |
 | [SERVICES.md](SERVICES.md) | Service-Schicht, Container-Aliase, Konventionen |
+| [CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md) | Inhaltstyp-Provider für Papierkorb, Export/Import und Suchindex |
 | [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) | Datenbankschicht, Migrationen, alle Tabellen |
 | [HOOKS-REFERENCE.md](HOOKS-REFERENCE.md) | sämtliche Actions und Filter mit Argumenten |
 | [API-REFERENCE.md](API-REFERENCE.md) | JSON-Endpunkte, Parameter, Fehlercodes |

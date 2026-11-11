@@ -475,8 +475,13 @@ final class EditorJsAssetService
             $urls[] = $this->buildAssetUrl('editorjs/' . $file);
         }
 
-        // Zusätzliche Core-Blöcke (EditorJsBlockRegistry) vor der Factory laden.
-        foreach (EditorJsBlockRegistry::scripts() as $script) {
+        // Zusätzliche Core-Blöcke (EditorJsBlockRegistry) vor der Factory laden, davor die gemeinsame
+        // Server-Vorschau (window.CMSBlockPreview).
+        $blockScripts = EditorJsBlockRegistry::scripts();
+        if ($blockScripts !== []) {
+            $urls[] = $this->buildAssetUrl('js/editor-blocks/block-preview.js');
+        }
+        foreach ($blockScripts as $script) {
             $urls[] = $this->buildAssetUrl($script);
         }
 

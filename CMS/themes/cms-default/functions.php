@@ -335,7 +335,21 @@ class MeridianCMSDefaultTheme
 
         echo $headTags;
         echo '<meta name="theme-color" content="#f7f6f2">' . "\n";
-        echo '<link rel="alternate" type="application/rss+xml" title="' . htmlspecialchars((defined('SITE_NAME') ? SITE_NAME : '365CMS') . ' – Feed', ENT_QUOTES, 'UTF-8') . '" href="' . htmlspecialchars(rtrim((string) SITE_URL, '/') . '/feed', ENT_QUOTES, 'UTF-8') . '">' . "\n";
+        $feedSettings = \CMS\Services\SettingsService::getInstance()->getGroup('feeds');
+        if (!array_key_exists('enabled', $feedSettings) || filter_var($feedSettings['enabled'], FILTER_VALIDATE_BOOLEAN)) {
+            $feedName = (defined('SITE_NAME') ? SITE_NAME : '365CMS') . ' – Feed';
+            $feedBaseUrl = rtrim((string) SITE_URL, '/') . '/feed';
+            echo '<link rel="alternate" type="application/rss+xml" title="' . htmlspecialchars($feedName, ENT_QUOTES, 'UTF-8') . '" href="' . htmlspecialchars($feedBaseUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+            $languageFeedsEnabled = !array_key_exists('language_feeds', $feedSettings)
+                || filter_var($feedSettings['language_feeds'], FILTER_VALIDATE_BOOLEAN);
+            if ($languageFeedsEnabled) {
+                foreach (\CMS\Services\ContentLocalizationService::getInstance()->getContentLocales() as $feedLocale) {
+                    $localizedFeedUrl = $feedBaseUrl . '?' . http_build_query(['lang' => $feedLocale], '', '&', PHP_QUERY_RFC3986);
+                    $localizedFeedName = $feedName . ' (' . strtoupper($feedLocale) . ')';
+                    echo '<link rel="alternate" type="application/rss+xml" hreflang="' . htmlspecialchars($feedLocale, ENT_QUOTES, 'UTF-8') . '" title="' . htmlspecialchars($localizedFeedName, ENT_QUOTES, 'UTF-8') . '" href="' . htmlspecialchars($localizedFeedUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+                }
+            }
+        }
     }
 
     // ─── Custom CSS aus Customizer ───────────────────────────────────────────

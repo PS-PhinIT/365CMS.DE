@@ -56,6 +56,7 @@ Die Core-Dokumente beschreiben Bootstrap, Routing, Schema, Services, Hooks, APIs
 | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) | Actions, filters, integration points |
 | [core/API-REFERENCE.md](core/API-REFERENCE.md) | Technical interfaces |
 | [core/SERVICES.md](core/SERVICES.md) | Service layer |
+| [core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md) | Content type providers for trash, export/import and search |
 | [core/SECURITY.md](core/SECURITY.md) | Core security model |
 | [core/STATUS.md](core/STATUS.md) | Implementation and operations status |
 | [core/STRUCTURE.md](core/STRUCTURE.md) | Core structure notes |
@@ -102,6 +103,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | MultiSites (admin context per domain: accent, site switcher, plugin assignment, menu layout) | [admin/system-settings/MULTISITES.md](admin/system-settings/MULTISITES.md) |
 | AI services (admin) | [admin/system-settings/AI-SERVICES.md](admin/system-settings/AI-SERVICES.md) |
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
+| RSS feeds | [admin/system-settings/FEEDS.md](admin/system-settings/FEEDS.md) |
 | Core modules | [admin/system-settings/MODULES.md](admin/system-settings/MODULES.md) |
 | Backups / updates / monitoring | [admin/system-settings/BACKUP.md](admin/system-settings/BACKUP.md) · [UPDATES.md](admin/system-settings/UPDATES.md) · [MONITORING.md](admin/system-settings/MONITORING.md) |
 | Diagnostics | [admin/diagnose/DIAGNOSE.md](admin/diagnose/DIAGNOSE.md) |

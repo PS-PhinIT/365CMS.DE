@@ -841,22 +841,20 @@ class MediaService {
             return;
         }
 
-        $meta = $this->repository->loadMeta();
-        $existingMeta = is_array($meta['files'][$normalizedPath] ?? null) ? $meta['files'][$normalizedPath] : [];
+        $existingMeta = $this->repository->getFileMeta($normalizedPath);
         $currentUser = Auth::getCurrentUser();
         $uploadedBy = (string) ($currentUser->username ?? $currentUser->email ?? 'system');
         $uploaderId = isset($currentUser->id) ? (int) $currentUser->id : null;
         $category = (string) ($existingMeta['category'] ?? $this->repository->detectSystemCategory($normalizedPath) ?? '');
 
-        $meta['files'][$normalizedPath] = array_merge($existingMeta, [
+        // Nur die Upload-Felder ersetzen; weitere Angaben der Datei (Kategorie, Tags, Lizenz) bleiben erhalten.
+        $this->repository->mergeFileMeta($normalizedPath, [
             'uploaded_at' => date('c'),
             'uploaded_by' => function_exists('mb_substr') ? mb_substr($uploadedBy, 0, 120, 'UTF-8') : substr($uploadedBy, 0, 120),
             'uploader_id' => $uploaderId,
             'original_name' => function_exists('mb_substr') ? mb_substr($originalName, 0, 180, 'UTF-8') : substr($originalName, 0, 180),
             'category' => $category,
         ]);
-
-        $this->repository->saveMeta($meta);
     }
 
 

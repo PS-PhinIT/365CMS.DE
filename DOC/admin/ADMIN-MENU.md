@@ -7,13 +7,7 @@
 
 Since 4.0.0 the admin sidebar is data-driven. A **catalog** (`CMS\Services\AdminMenu\CoreCatalog`) describes every core admin page once: ID, route, capabilities, page file, badge and tile category. A **layout** only arranges those IDs into sections, direct entries and groups, each shown as a menu or as a tile page. Two built-in profiles ship with the core: **classic** (default, WordPress-like) and **structured** (task-oriented). Administrators can also build a **custom** layout in the sidebar editor (`/admin/settings?tab=admin-menu&view=editor`), either globally or per MultiSites site. `MenuBuilder` combines catalog, plugin menus, layout, capabilities and module state into a cached tree. `AdminNavigationService` adds URLs, the active state and badges on every request; badges are never cached.
 
-Plugins keep registering their menus with `add_menu_page()` / `add_submenu_page()` in the `cms_admin_menu` hook, which is unchanged. Optionally, a plugin names a preferred group per profile:
-
-```php
-cms_admin_menu_set_preferred_parent('my-plugin', ['classic' => 'tools', 'structured' => 'reports']);
-```
-
-The filter `cms_admin_menu_preferred_parents` does the same. Without a preference, a plugin with a single page goes to the fallback group ("Plugins" in classic, "Erweitern" in structured), and a plugin with several pages gets its own group right after it. No entry is ever lost: every visible entry that the layout does not place is placed automatically.
+Plugins keep registering their menus with `add_menu_page()` / `add_submenu_page()` in the `cms_admin_menu` hook, which is unchanged. Every page of an active plugin that the layout does not place itself appears in the last sidebar section, **"Aktive Plugins"** (active plugins), in every profile. The section is collapsed by default and shows the number of its entries; it opens for the current plugin page, for "expand all" or when the user expanded it. A plugin with one page is a link, a plugin with several pages a group; both are sorted alphabetically. Only a custom layout can place plugin pages elsewhere. `cms_admin_menu_set_preferred_parent()` and the filter `cms_admin_menu_preferred_parents` remain for compatibility but no longer affect placement. No entry is ever lost.
 
 To add a core page: add a catalog row, place the ID in both profiles, update the spec trees, and run `php TESTS/admin-menu/run.php`.
 
@@ -25,7 +19,7 @@ To add a core page: add a catalog row, place the ID in both profiles, update the
 |---|---|---|
 | `AdminMenuItem` | `CMS/core/Services/AdminMenu/AdminMenuItem.php` | Unveränderliches Datenobjekt eines Menüeintrags (Core oder Plugin) |
 | `CoreCatalog` | `…/AdminMenu/CoreCatalog.php` | Alle Core-Seiten mit Kachel-Kategorien (`CATEGORY_LABELS`) und Editor-Bereichen (`AREA_LABELS`) |
-| `MenuRegistry` | `…/AdminMenu/MenuRegistry.php` | Katalog plus Plugin-Menüs aus `get_registered_admin_menus()` und Wunschplätze der Plugins |
+| `MenuRegistry` | `…/AdminMenu/MenuRegistry.php` | Katalog plus Plugin-Menüs aus `get_registered_admin_menus()` |
 | `ProfileLayouts` | `…/AdminMenu/ProfileLayouts.php` | Deklarative Profile `classic` und `structured` |
 | `LayoutValidator` | `…/AdminMenu/LayoutValidator.php` | Prüft und normalisiert eigene Layouts und JSON-Importe |
 | `LayoutRepository` | `…/AdminMenu/LayoutRepository.php` | Tabelle `admin_menu_layouts`: eine Zeile je Bereich (`''` = global, sonst Site-Schlüssel) mit Versionszähler |
@@ -34,7 +28,7 @@ To add a core page: add a catalog row, place the ID in both profiles, update the
 | `AdminMenuService` | `…/AdminMenu/AdminMenuService.php` | Fassade für Profil, Layouts, Cache, Audit-Log sowie Export und Import |
 | `AdminNavigationService` | `CMS/core/Services/AdminNavigationService.php` | Sidebar-Modell: URLs, aktiver Eintrag, Brotkrumen, Badges, Aufklappzustand, Kachelseiten |
 | Sidebar | `CMS/admin/partials/sidebar.php`, `sidebar-nav.php` | Ausgabe; `sidebar-nav.php` rendert auch die Vorschau |
-| Plugin-API | `CMS/includes/functions/admin-menu-profiles.php` | Wunschplätze für Plugin-Menüs |
+| Plugin-API | `CMS/includes/functions/admin-menu-profiles.php` | `cms_admin_menu_set_preferred_parent()` – nur noch aus Kompatibilität, ohne Wirkung |
 
 ### 2. Welches Layout gilt?
 
@@ -76,7 +70,7 @@ Ein Eintrag ist sichtbar, wenn die Seitendatei existiert, das Core-Modul aktiv i
 4. Entsteht die Seite erst später, die Datei in `RESERVED_FILES` eintragen. Seitendateien, die bewusst nicht im Menü stehen (Aliasse, JSON-Endpunkte, Renderer), gehören in `NOT_IN_MENU`.
 5. `php TESTS/admin-menu/run.php` ausführen.
 
-### 4. Plugin-Menüs und Wunschplätze je Profil
+### 4. Plugin-Menüs im Abschnitt „Aktive Plugins“
 
 Plugins registrieren ihre Menüs unverändert im Hook `cms_admin_menu` mit `add_menu_page()` und `add_submenu_page()` (`CMS/includes/functions/admin-menu.php`). Die Registry liest das Ergebnis nur.
 
@@ -87,49 +81,28 @@ Plugins registrieren ihre Menüs unverändert im Hook `cms_admin_menu` mit `add_
 
 Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können Plugin-Einträge im Editor platzieren, umbenennen und ausblenden. Die IDs bleiben stabil, solange sich die Slugs nicht ändern. Layouts behalten Plugin-IDs auch dann, wenn das Plugin gerade deaktiviert ist.
 
+**Abschnitt „Aktive Plugins“** (Nutzerentscheidung, [KLARSTELLUNGEN.md §7](../workflow/specs/KLARSTELLUNGEN.md)):
+
+- Alle Seiten aktiver Plugins, die das Layout nicht selbst platziert, stehen in jedem Profil gesammelt im letzten Abschnitt der Seitenleiste – auch die früher unter *Plugins* bzw. *Erweitern* einsortierten.
+- Der Abschnitt ist standardmäßig **eingeklappt** und zeigt im Kopf die Zahl seiner Einträge. Er öffnet sich, wenn die aktuelle Seite darin liegt, bei „Alle aufklappen“ oder wenn der Benutzer ihn aufgeklappt hat (gespeichert unter `g:_active-plugins`).
+- Ein Plugin mit **einer** Seite ist ein Link, ein Plugin mit **mehreren** Seiten eine Gruppe `plugin.<menü-slug>` mit Menütitel und Icon. Beide sind gemeinsam natürlich nach Titel sortiert.
+- Die Abschnitts-ID `_active-plugins` (`MenuBuilder::ACTIVE_PLUGINS_SECTION_ID`) beginnt mit `_` und kollidiert deshalb mit keiner Layout-ID.
+- Die Brotkrume einer Plugin-Einzelseite lautet „Aktive Plugins › <Titel>“.
+
 **Weitere Regeln für Plugin-Menüs:**
 
 - Mit `$hidden = true` registrierte Menüs erscheinen nicht.
-- Plugins, die der aktuellen Site nicht zugewiesen sind (Plugin-Zuweisung), werden ausgelassen. Ist dadurch kein Plugin-Eintrag sichtbar, zeigt die Auffanggruppe einen Hinweis mit Link zur Plugin-Zuweisung.
+- Plugins, die der aktuellen Site nicht zugewiesen sind (Plugin-Zuweisung), werden ausgelassen. Ist dadurch kein Plugin-Eintrag sichtbar, zeigt „Aktive Plugins“ einen Hinweis mit Link zur Plugin-Zuweisung.
 - Icons aus `$icon_url`: `ti ti-<name>` oder `ti-<name>` wird ein Tabler-Icon. Inline-`<svg>` und `data:image/…;base64` werden ein Bild, ebenso ein Pfad bzw. eine URL derselben Site. Bis zu 4 Zeichen (z. B. ein Emoji) werden als Text angezeigt. Alles andere ergibt das Standard-Icon `puzzle`.
-
-**Wunschplatz setzen:**
-
-```php
-\CMS\Hooks::addAction('cms_admin_menu', static function (): void {
-    add_menu_page('Mein Plugin', 'Mein Plugin', 'manage_settings', 'my-plugin', 'my_plugin_render', 'ti ti-chart-dots');
-    add_submenu_page('my-plugin', 'Berichte', 'Berichte', 'manage_settings', 'my-plugin-reports', 'my_plugin_reports');
-
-    cms_admin_menu_set_preferred_parent('my-plugin', [
-        'classic' => 'tools',
-        'structured' => 'reports',
-    ]);
-});
-```
-
-Alternativ über den Filter (Menü-Slug ⇒ [Profil ⇒ Gruppen-ID]):
-
-```php
-\CMS\Hooks::addFilter('cms_admin_menu_preferred_parents', static function (array $parents): array {
-    $parents['my-plugin']['structured'] = 'reports';
-
-    return $parents;
-});
-```
-
-Der Aufruf kann im Hook `cms_admin_menu` oder beim Laden des Plugins stehen. Die Registry liest die Wunschplätze erst nach dem Hook.
-
-- Profile: `classic`, `structured` und `custom` (eigene Layouts). Ist für `custom` kein Wunschplatz gesetzt, gilt der des Basisprofils des Layouts.
-- Spätere Aufrufe überschreiben je Profil. Unbekannte Profile und ungültige Gruppen-IDs verwirft die Registry.
-- Der Wunschplatz greift nur, solange der Administrator die Einträge nicht selbst platziert hat, und nur, wenn die Gruppe im aktiven Layout existiert.
+- Andere Plätze legt nur der Administrator in einem **eigenen Layout** (Sidebar-Editor) fest. Dort platzierte Plugin-Seiten bleiben an ihrem Platz.
+- `cms_admin_menu_set_preferred_parent()` und der Filter `cms_admin_menu_preferred_parents` bleiben aus Kompatibilität erhalten, beeinflussen die Platzierung aber nicht mehr.
 
 **Reihenfolge für nicht platzierte Einträge:**
 
-1. **Core-Einträge** kommen in ihre Gruppe des Basisprofils, sonst in die Auffanggruppe.
-2. **Plugin-Einträge** kommen zu einer bereits platzierten Seite desselben Plugins.
-3. Sonst an den **Wunschplatz** des aktiven Profils, danach an den des Basisprofils.
-4. Sonst kommt ein Plugin mit **einer** Seite in die **Auffanggruppe** (alphabetisch). Ein Plugin mit **mehreren** Seiten erhält eine eigene Gruppe `plugin.<menü-slug>` direkt nach der Auffanggruppe.
-5. Hat ein eigenes Layout keine Auffanggruppe, entstehen am Ende die Gruppen `plugins.more` (Plugins) bzw. `more` (Weitere).
+1. **Core-Einträge** kommen in ihre Gruppe des Basisprofils, sonst in die Auffanggruppe (`fallback_group`). Hat ein eigenes Layout keine Auffanggruppe, entsteht am Ende des letzten Layout-Abschnitts die Gruppe `more` („Weitere“).
+2. **Plugin-Einträge** kommen zu einer im Layout bereits in einer Gruppe platzierten Seite desselben Plugins.
+3. Sonst in eine Layout-Gruppe mit der ID `plugin.<menü-slug>`, falls vorhanden.
+4. Sonst in den Abschnitt **„Aktive Plugins“**.
 
 **Gruppen-IDs der eingebauten Profile** (Kacheln = eigene Kachelseite unter `/admin/configuration`):
 
@@ -150,18 +123,9 @@ Der Aufruf kann im Hook `cms_admin_menu` oder beim Laden des Plugins stehen. Die
 | `settings` | Einstellungen (Kacheln, Startseite) | | `reports` | Berichte (Kacheln) |
 | `health` | Website-Zustand (Kacheln) | | | |
 
-¹ Gruppe eines optionalen Core-Moduls. Ohne aktives Modul ist sie leer und damit ausgeblendet. Ein Plugin, das sie als Wunschplatz wählt, macht sie mit seinem Eintrag wieder sichtbar. Plugins, die nicht vom Modul abhängen, wählen deshalb besser eine immer vorhandene Gruppe.
+¹ Gruppe eines optionalen Core-Moduls. Ohne aktives Modul ist sie leer und damit ausgeblendet.
 
-**Empfehlung:**
-
-| Art der Plugin-Seite | Classic | Structured |
-|---|---|---|
-| Werkzeuge, Importe, Wartung | `tools` | `extend` |
-| Einstellungen | `settings` | `configuration` |
-| Berichte, Protokolle, Statistik | `health` | `reports` |
-| Inhaltsarten | `posts` oder `pages` | `content` |
-
-In Kachelgruppen erscheinen Plugin-Seiten als Kacheln in einer Kategorie mit dem Menütitel des Plugins.
+Platziert ein eigenes Layout Plugin-Seiten in einer Kachelgruppe, erscheinen sie dort als Kacheln in einer Kategorie mit dem Menütitel des Plugins.
 
 ### 5. Layout-Format (Editor, Export, Import)
 
@@ -189,7 +153,7 @@ Beispiel (gekürzt):
 ```
 
 - `base` ist das Basisprofil, aus dem nicht platzierte Core-Einträge ihre Gruppe beziehen.
-- `fallback_group` muss eine Gruppe des Layouts sein. `root_group` muss eine Kachelgruppe sein; sie öffnet unter `/admin/configuration` ohne `group`-Parameter.
+- `fallback_group` muss eine Gruppe des Layouts sein; sie nimmt nicht platzierte Core-Einträge auf. `root_group` muss eine Kachelgruppe sein; sie öffnet unter `/admin/configuration` ohne `group`-Parameter.
 - Der Export (`…&action=export`) umhüllt das Layout mit `format`, `format_version`, `exported_at`, `cms_version`, `scope` (`global` oder `site`), `site_key` und `layout`. Der Import akzeptiert die Hülle oder das reine Layout.
 
 **Validierung (`LayoutValidator`):**

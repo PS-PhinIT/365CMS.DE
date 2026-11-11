@@ -6,17 +6,14 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Wunschplätze von Plugin-Menüs in den Admin-Menü-Profilen.
+ * Wunschplätze von Plugin-Menüs in den Admin-Menü-Profilen – ohne Wirkung auf die Platzierung.
  *
- * Plugins registrieren ihre Menüs unverändert über add_menu_page()/add_submenu_page(). Optional
- * nennen sie je Profil (classic, structured, custom) die Gruppe, in der ihre Seiten erscheinen,
- * solange ein Administrator sie nicht selbst im Menü-Editor platziert hat:
+ * Seiten aktiver Plugins stehen gesammelt im Abschnitt „Aktive Plugins“ der Seitenleiste; nur ein
+ * Administrator kann sie in einem eigenen Layout an andere Stellen verschieben. Die Funktionen und der
+ * Filter `cms_admin_menu_preferred_parents` (Menü-Slug => [Profil => Gruppen-ID]) bleiben bestehen,
+ * damit Plugins, die sie aufrufen, weiter laufen. Siehe DOC/admin/ADMIN-MENU.md.
  *
  *     cms_admin_menu_set_preferred_parent('my-plugin', ['classic' => 'tools', 'structured' => 'reports']);
- *
- * Alternativ über den Filter `cms_admin_menu_preferred_parents` (Menü-Slug => [Profil => Gruppen-ID]).
- * Unbekannte Profile und ungültige Gruppen-IDs werden beim Aufbau des Menüs verworfen; fehlt die
- * Gruppe im aktiven Layout, erscheint das Menü in der Auffanggruppe. Siehe DOC/admin/ADMIN-MENU.md.
  */
 global $cms_admin_menu_preferred_parents;
 if (!isset($cms_admin_menu_preferred_parents) || !is_array($cms_admin_menu_preferred_parents)) {

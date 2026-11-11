@@ -12,7 +12,6 @@ namespace CMS\Routing;
 use CMS\Api;
 use CMS\Services\CmsAuthPageService;
 use CMS\Database;
-use CMS\Json;
 use CMS\PageManager;
 use CMS\PluginManager;
 use CMS\Router;
@@ -32,7 +31,6 @@ final class ThemeRouter
 {
     private const SEARCH_RATE_LIMIT = 30;
     private const SEARCH_RATE_WINDOW = 60;
-    private const FEED_CACHE_TTL = 300;
 
     /**
      * Rückwärtskompatible Aliase für den Such-Scope (`?type=`).
@@ -1264,99 +1262,7 @@ final class ThemeRouter
 
     public function serveRssFeed(): void
     {
-        $db = Database::instance();
-        $prefix = $db->getPrefix();
-        $locale = $this->router->getRequestLocale();
-        $localeFilter = $this->buildPostLocaleAvailabilityExpression('p', $locale);
-        $siteTitle = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
-        $siteDescription = 'Aktuelle Beiträge von ' . $siteTitle;
-        $feedUrl = SITE_URL . '/feed';
-        $language = $locale === 'en' ? 'en' : 'de';
-
-        if (!headers_sent()) {
-            header('Content-Type: application/rss+xml; charset=utf-8');
-            header('X-Robots-Tag: noindex, follow', true);
-        }
-
-        // Kurzzeit-Cache (5 Minuten): Feed-Reader und Bots fragen oft im Minutentakt ab. Schreibzugriffe auf
-        // Beiträge/Kategorien löschen den Cache sofort (Database::invalidateFeedCache()).
-        $cacheDir = rtrim((string) ABSPATH, '/\\') . '/cache/feed';
-        $cacheFile = $cacheDir . '/rss-' . (preg_replace('/[^a-z_-]/', '', strtolower((string) $locale)) ?: $language) . '-' . substr(hash('sha256', (string) SITE_URL), 0, 16) . '.xml';
-        $cachedMtime = @filemtime($cacheFile);
-        if ($cachedMtime !== false && $cachedMtime > time() - self::FEED_CACHE_TTL) {
-            $cached = @file_get_contents($cacheFile);
-            if (is_string($cached) && $cached !== '') {
-                echo $cached;
-                exit;
-            }
-        }
-
-        ob_start();
-
-        $posts = $db->get_results(
-            "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name, c.name AS category_name
-             FROM {$prefix}posts p
-             LEFT JOIN {$prefix}users u ON u.id = p.author_id
-             LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
-                             WHERE " . \cms_post_publication_where('p') . " AND {$localeFilter}
-             ORDER BY COALESCE(p.published_at, p.created_at) DESC
-             LIMIT 25"
-        ) ?: [];
-
-        echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-        echo "<rss version=\"2.0\">\n";
-        echo "<channel>\n";
-        echo '  <title>' . $this->escapeXml($siteTitle) . "</title>\n";
-        echo '  <link>' . $this->escapeXml(SITE_URL . '/') . "</link>\n";
-        echo '  <description>' . $this->escapeXml($siteDescription) . "</description>\n";
-        echo '  <language>' . $this->escapeXml($language) . "</language>\n";
-        echo '  <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="' . $this->escapeXml($feedUrl) . '" rel="self" type="application/rss+xml" />' . "\n";
-        echo '  <lastBuildDate>' . gmdate(DATE_RSS) . "</lastBuildDate>\n";
-
-        foreach ($posts as $postRow) {
-            $postData = Services\ContentLocalizationService::getInstance()->localizePost((array) $postRow, $locale);
-            $title = trim((string) ($postData['title'] ?? 'Beitrag'));
-            $link = SITE_URL . Services\PermalinkService::getInstance()->buildPostPath($postData, $locale);
-            $guid = $link;
-            $pubDate = (string) ($postData['published_at'] ?? $postData['created_at'] ?? '');
-            $excerpt = trim((string) ($postData['excerpt'] ?? ''));
-            $content = trim((string) ($postData['content'] ?? ''));
-            $description = $this->buildFeedDescription($excerpt, $content);
-            $categoryName = trim((string) ($postData['category_name'] ?? ''));
-            $author = trim((string) ($postData['author_name'] ?? ''));
-
-            echo "  <item>\n";
-            echo '    <title>' . $this->escapeXml($title) . "</title>\n";
-            echo '    <link>' . $this->escapeXml($link) . "</link>\n";
-            echo '    <guid isPermaLink="true">' . $this->escapeXml($guid) . "</guid>\n";
-            if ($pubDate !== '') {
-                echo '    <pubDate>' . $this->escapeXml(gmdate(DATE_RSS, strtotime($pubDate))) . "</pubDate>\n";
-            }
-            if ($author !== '') {
-                echo '    <author>' . $this->escapeXml($author) . "</author>\n";
-            }
-            if ($categoryName !== '') {
-                echo '    <category>' . $this->escapeXml($categoryName) . "</category>\n";
-            }
-            if ($description !== '') {
-                echo '    <description>' . $this->wrapCdata($description) . "</description>\n";
-            }
-            echo "  </item>\n";
-        }
-
-        echo "</channel>\n";
-        echo "</rss>";
-
-        $xml = (string) ob_get_clean();
-        if ((is_dir($cacheDir) || @mkdir($cacheDir, 0755, true)) && is_writable($cacheDir)) {
-            $tmp = $cacheFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
-            if (@file_put_contents($tmp, $xml, LOCK_EX) !== false && !@rename($tmp, $cacheFile)) {
-                @unlink($tmp);
-            }
-        }
-
-        echo $xml;
-        exit;
+        Services\FeedService::getInstance()->serveRssFeed($this->router->getRequestLocale());
     }
 
     public function serveRobotsTxt(): void
@@ -1807,120 +1713,6 @@ final class ThemeRouter
         $haystack = mb_strtolower($this->buildLocalizedPostSearchHaystack($post, $locale), 'UTF-8');
 
         return str_contains($haystack, mb_strtolower($query, 'UTF-8'));
-    }
-
-    private function escapeXml(string $value): string
-    {
-        return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
-    }
-
-    private function wrapCdata(string $value): string
-    {
-        return '<![CDATA[' . str_replace(']]>', ']]]]><![CDATA[>', $value) . ']]>';
-    }
-
-    private function buildFeedDescription(string $excerpt, string $content): string
-    {
-        $sources = array_values(array_filter([$excerpt, $content], static fn(string $value): bool => trim($value) !== ''));
-        if ($sources === []) {
-            return '';
-        }
-
-        foreach ($sources as $source) {
-            $plainText = $this->extractFeedPlainText($source);
-            if ($plainText !== '') {
-                return mb_substr($plainText, 0, 320);
-            }
-        }
-
-        return '';
-    }
-
-    private function extractFeedPlainText(string $source): string
-    {
-        $source = trim($source);
-        if ($source === '') {
-            return '';
-        }
-
-        $rendered = Services\EditorService::getInstance()->renderContent($source);
-        $plainText = $this->normalizeFeedPlainText($rendered);
-
-        if ($plainText !== '' && !$this->looksLikeEditorJsPayload($plainText)) {
-            return $plainText;
-        }
-
-        $editorJsText = $this->extractEditorJsSnippet($source);
-        if ($editorJsText !== '') {
-            return $editorJsText;
-        }
-
-        if ($source !== $rendered) {
-            $plainText = $this->normalizeFeedPlainText($source);
-        }
-
-        return $this->looksLikeEditorJsPayload($plainText) ? '' : $plainText;
-    }
-
-    private function normalizeFeedPlainText(string $value): string
-    {
-        $plainText = trim(html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        $plainText = preg_replace('/\s+/u', ' ', $plainText) ?? '';
-
-        return trim($plainText);
-    }
-
-    private function looksLikeEditorJsPayload(string $value): bool
-    {
-        $normalized = ltrim($value);
-
-        return str_starts_with($normalized, '{"time":')
-            || str_starts_with($normalized, '{"blocks":')
-            || str_starts_with($normalized, '{"id":')
-            || str_contains($normalized, '"blocks":[{');
-    }
-
-    private function extractEditorJsSnippet(string $source): string
-    {
-        $decoded = Json::decodeArray($source, []);
-        if ($decoded !== [] && isset($decoded['blocks']) && is_array($decoded['blocks'])) {
-            $collected = [];
-            foreach ($decoded['blocks'] as $block) {
-                if (!is_array($block)) {
-                    continue;
-                }
-
-                $text = trim((string) ($block['data']['text'] ?? $block['data']['html'] ?? ''));
-                if ($text !== '') {
-                    $collected[] = $this->normalizeFeedPlainText($text);
-                }
-
-                if (count($collected) >= 3) {
-                    break;
-                }
-            }
-
-            return trim(implode(' ', array_filter($collected, static fn(string $value): bool => $value !== '')));
-        }
-
-        if (preg_match_all('/"(?:text|html)"\s*:\s*"((?:\\.|[^"\\\\])*)"/u', $source, $matches) === 1 || (isset($matches[1]) && $matches[1] !== [])) {
-            $parts = [];
-            foreach ($matches[1] as $rawMatch) {
-                $decodedMatch = json_decode('"' . $rawMatch . '"', true);
-                $text = is_string($decodedMatch) ? $decodedMatch : stripcslashes($rawMatch);
-                $text = $this->normalizeFeedPlainText($text);
-                if ($text !== '') {
-                    $parts[] = $text;
-                }
-                if (count($parts) >= 3) {
-                    break;
-                }
-            }
-
-            return trim(implode(' ', $parts));
-        }
-
-        return '';
     }
 
     private function resolveSecurityContactEmail(): string

@@ -5,7 +5,7 @@
 
 ## English (summary)
 
-`/admin/updates` (`CMS/admin/updates.php` → `CMS/admin/modules/system/UpdatesModule.php` → `CMS\Services\UpdateService`, view `CMS/admin/views/system/updates.php`) checks and installs updates for the core, plugins and the active theme, and runs pending database migrations (`DatabaseUpdateRunner`). Packages must come from allow-listed hosts and carry a SHA-256 checksum; core updates preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/` and `uploads/`. Actions: `check_updates`, `run_database_update`, `install_core`, `install_plugin`, `install_theme`. Since 4.0.0, a core manifest with `"critical": true` is shown as a red "critical update" alert.
+`/admin/updates` (`CMS/admin/updates.php` → `CMS/admin/modules/system/UpdatesModule.php` → `CMS\Services\UpdateService`, view `CMS/admin/views/system/updates.php`) checks and installs updates for the core, plugins and the active theme, and runs pending database migrations (`DatabaseUpdateRunner`). Packages must come from allow-listed hosts and carry a SHA-256 checksum; core updates preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/` and `uploads/`; in `plugins/` and `themes/` only the bundled folders (`cms-importer`, `cms-default`) are replaced, so plugins and themes installed later stay in place (since 4.0.0 – an update from 3.x still runs the old updater, which replaces both folders completely). Actions: `check_updates`, `run_database_update`, `install_core`, `install_plugin`, `install_theme`. Since 4.0.0, a core manifest with `"critical": true` is shown as a red "critical update" alert.
 
 ## Deutsch
 
@@ -62,7 +62,7 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
 2. **Download** nur von erlaubten Hosts.
 3. **Integrität:** Ohne gültige SHA-256-Prüfsumme (64 Hex-Zeichen) wird abgebrochen (`updates.install.integrity_hash_missing`); abweichender Hash bricht ebenfalls ab.
 4. **Entpacken** mit Grenzen: 5000 Einträge, 256 MB je Datei, 512 MB entpackt.
-5. **Austausch:** Beim Core bleiben `backups/`, `cache/`, `config/`, `config.php`, `logs/` und `uploads/` unangetastet.
+5. **Austausch:** Beim Core bleiben `backups/`, `cache/`, `config/`, `config.php`, `logs/` und `uploads/` unangetastet. In `plugins/` und `themes/` ersetzt das Update nur die mitgelieferten Ordner (`cms-importer`, `cms-default`); nachinstallierte Plugins und eigene Themes bleiben erhalten und werden bei einem Fehler mit zurückgerollt. Das gilt ab 4.0.0. Beim Update von 3.x auf 4.0.0 arbeitet noch der Updater der alten Version und ersetzt beide Ordner vollständig: Plugins und Themes, die nicht im Paket enthalten sind, vorher sichern und danach wieder einspielen. Die Plugins `cms-feed`, `cms-downloads` und `cms-contact` sind ab 4.0.0 Teil des Cores; ihre Daten werden aus der Datenbank und `uploads/` übernommen und brauchen keine Plugin-Dateien mehr.
 6. Protokoll in der Update-Historie und im Audit-Log. Der Bootstrap erkennt beim nächsten Aufruf geänderte Dateien und wärmt den OPcache für die 30 wichtigsten Dateien vor (`OpcacheWarmupService::maybeWarmAfterDeploy()`).
 
 ### Datenbank-Update (`run_database_update`)

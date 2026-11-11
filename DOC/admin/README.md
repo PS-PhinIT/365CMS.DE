@@ -63,8 +63,9 @@ Von oben nach unten folgen Site-Umschalter, Menübaum und Benutzerbereich.
 | [legal/](legal/README.md) | *Einstellungen* › Recht & Datenschutz | *Konfiguration* › Recht & Datenschutz |
 | [security/](security/README.md) | *Einstellungen* › Sicherheit; Sicherheits-Audit unter *Website-Zustand* | *Konfiguration* › Sicherheit; Sicherheits-Audit unter *Berichte* |
 | [performance/](performance/README.md) | *Einstellungen* › Performance | *Konfiguration* › Performance |
+| [RSS-Feeds](system-settings/FEEDS.md) | *Einstellungen* | *Konfiguration* |
 | [diagnose/](diagnose/README.md), [info/](info/README.md) | *Website-Zustand* (Kachelseite: Protokolle, Monitore, System, Hilfe) | *Berichte* (Kachelseite) |
-| Plugin-Menüs ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-adminseiten), [ADMIN-MENU.md](ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil)) | Auffanggruppe *Plugins*, eigene Gruppe direkt danach oder Wunschplatz | Auffanggruppe *Erweitern*, eigene Gruppe oder Wunschplatz |
+| Plugin-Menüs ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-adminseiten), [ADMIN-MENU.md](ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)) | Abschnitt „Aktive Plugins“ (eingeklappt, am Ende) | Abschnitt „Aktive Plugins“ (eingeklappt, am Ende) |
 
 *Optional* bedeutet: Die Gruppe erscheint nur bei aktivem Core-Modul.
 
@@ -73,7 +74,7 @@ Badges zeigen Updates, Kommentare, neue Fehler in den Protokollen und offene DSG
 Weitere Sichtbarkeitsregeln:
 
 - Der Plugin-Marktplatz erscheint nur bei `marketplace_enabled = 1`.
-- Plugins, die der aktuellen Site nicht zugewiesen sind, fehlen in der Sidebar. Bleibt dadurch kein Plugin-Eintrag übrig, zeigt die Auffanggruppe einen Hinweis mit Link zur Plugin-Zuweisung.
+- Plugins, die der aktuellen Site nicht zugewiesen sind, fehlen in der Sidebar. Bleibt dadurch kein Plugin-Eintrag übrig, zeigt der Abschnitt „Aktive Plugins“ einen Hinweis mit Link zur Plugin-Zuweisung.
 
 ### Admin-Shell (seit 4.0.0)
 

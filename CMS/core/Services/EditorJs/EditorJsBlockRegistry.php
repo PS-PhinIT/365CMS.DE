@@ -8,6 +8,13 @@
  * - Sanitizer (Speichern): `sanitize`-Callback bereinigt die Blockdaten serverseitig.
  * - Öffentlicher Renderer: `render`-Callback erzeugt das Frontend-HTML.
  *
+ * Server-Vorschau im Editor: `window.CMSBlockPreview.render(type, data, tunes)` (Skript
+ * `js/editor-blocks/block-preview.js`, wird vor den Block-Skripten geladen) liefert ein Promise mit dem HTML. Es
+ * sendet `POST action=block_preview` an `/admin/post-editor-api` (Beitrags- und Seiteneditor, CSRF-Token wird
+ * selbst geholt und bei Ablauf erneuert). Der Server bereinigt die Daten mit `sanitize` und ruft `render` mit dem
+ * Kontext `['mode' => 'preview']` auf; im Frontend ist der Kontext `['mode' => 'frontend']`. So kann ein Block im
+ * Editor z. B. einen fehlenden Verweis anzeigen, den er im Frontend ausblendet.
+ *
  * Registrierung über `CMS\Services\FeatureHooks\<Feature>Hooks::register()`.
  *
  * @package CMSv2\Core\Services\EditorJs
@@ -33,7 +40,8 @@ final class EditorJsBlockRegistry
      * @param string $label Lesbarer Name (Revisionen, Diff)
      * @param string $script Pfad relativ zu `CMS/assets/`, z. B. "js/editor-blocks/download-block.js"
      * @param callable(array<string, mixed>): array<string, mixed> $sanitize
-     * @param callable(array<string, mixed>, array<string, mixed>): string $render
+     * @param callable(array<string, mixed>, array<string, mixed>, array{mode: string}): string $render
+     *        Daten, Tunes, Kontext (`mode` = `frontend` oder `preview`); der dritte Parameter ist optional.
      */
     public static function register(string $type, string $label, string $script, callable $sanitize, callable $render): void
     {
@@ -100,15 +108,18 @@ final class EditorJsBlockRegistry
     /**
      * @param array<string, mixed> $data
      * @param array<string, mixed> $tunes
+     * @param array{mode?: string} $context `mode` = `frontend` (Standard) oder `preview` (Editor-Vorschau)
      */
-    public static function render(string $type, array $data, array $tunes = []): string
+    public static function render(string $type, array $data, array $tunes = [], array $context = []): string
     {
         if (!isset(self::$blocks[$type])) {
             return '';
         }
 
+        $context = ['mode' => ($context['mode'] ?? '') === 'preview' ? 'preview' : 'frontend'];
+
         try {
-            return (string) (self::$blocks[$type]['render'])($data, $tunes);
+            return (string) (self::$blocks[$type]['render'])($data, $tunes, $context);
         } catch (\Throwable $e) {
             \CMS\Logger::instance()->withChannel('editorjs.blocks')->error('Editor.js-Block konnte nicht gerendert werden.', [
                 'type' => $type,

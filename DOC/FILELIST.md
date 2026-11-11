@@ -65,7 +65,10 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `DOC/` | documentation |
 | `RELEASE/` | release zips and checksums |
 | `SCREENSHOTS/` | screenshots |
+| `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
+| `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
+| `TESTS/content-types/` | content type provider registry test / Test der Inhaltstyp-Provider (`php TESTS/content-types/run.php [-v]`) |
 | `CODE_OF_CONDUCT.md` | code of conduct |
 | `README.md` | public README |
 | `Changelog.md` | changelog |
@@ -190,7 +193,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | Editor | `EditorJsService`, `EditorJsRenderer`, `EditorService`, `PostPublishChecklistService`, `PostRevisionService` |
 | Admin UI (4.0.0) | `AdminNavigationService`, `AdminUiPreferenceService`, `AdminSiteContextService`, `PluginSiteAssignmentService`, `AdminNoticeService` |
 | Admin menu (4.0.0) | `Services/AdminMenu/`: `CoreCatalog`, `ProfileLayouts`, `MenuRegistry`, `MenuBuilder`, `LayoutValidator`, `LayoutRepository`, `BadgeProvider`, `AdminMenuService` ([admin/ADMIN-MENU.md](admin/ADMIN-MENU.md)) |
-| Extension points (4.0.0) | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry` |
+| Extension points (4.0.0) | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
 | Landing | `LandingPageService` + `Services/Landing/` |
 | AI | `Services/AI/` (admin-only in 3.5.0) |
 | Member | `MemberService`, `MessageService` |
@@ -202,27 +205,27 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-304 files. Layout:
+306 files. Layout:
 
 - `CMS/admin/*.php` — HTTP entry points
 - `CMS/admin/modules/<domain>/` — domain modules (`comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`)
 - `CMS/admin/views/` — templates
 - `CMS/admin/partials/` — shared chrome (including sidebar)
 - `CMS/admin/logs/` — log UI helpers
-- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (since 4.0.0: `admin-menu.php`)
+- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`)
 
 Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), since 4.0.0 the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`, `multisites.php` (MultiSites) and `configuration.php` (tile pages `/admin/configuration[?group=…]`).
 
 **Deutsch**
 
-304 Dateien. Aufbau:
+306 Dateien. Aufbau:
 
 - `CMS/admin/*.php` — HTTP-Einstiege
 - `CMS/admin/modules/<domain>/` — Fachmodule
 - `CMS/admin/views/` — Templates
 - `CMS/admin/partials/` — gemeinsame Oberfläche (inkl. Sidebar)
 - `CMS/admin/logs/` — Log-UI
-- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (seit 4.0.0: `admin-menu.php`)
+- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`)
 
 Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), seit 4.0.0 die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`, `multisites.php` (MultiSites) und `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`).
 

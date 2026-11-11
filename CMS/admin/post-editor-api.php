@@ -13,14 +13,18 @@ if (!defined('ABSPATH')) {
  * GET  ?action=token                               frisches CSRF-Token (nach Ablauf)
  * POST action=autosave (Formulardaten des Editors) Autosave
  * POST action=restore, post_id, revision_id        Version wiederherstellen
+ * POST action=block_preview, type, data, tunes      Server-Vorschau eines registrierten Core-Blocks
+ *                                                  (EditorJsBlockRegistry, Kontext „preview“); data/tunes als JSON
  *
  * Alle Aktionen: angemeldete Admin-Rolle + Beitrags-Capability + Besitzprüfung im PostsModule;
- * schreibende Aktionen zusätzlich mit CSRF-Token (Aktion admin_post_editor).
+ * schreibende Aktionen zusätzlich mit CSRF-Token (Aktion admin_post_editor). `token` und `block_preview`
+ * stehen auch dem Seiteneditor offen (`manage_pages`) und brauchen keine Beitrags-ID.
  */
 
 use CMS\Auth;
 use CMS\Logger;
 use CMS\Security;
+use CMS\Services\EditorJs\EditorJsBlockRegistry;
 
 \CMS\CacheManager::instance()->sendResponseHeaders('private');
 header('Content-Type: application/json; charset=UTF-8');
@@ -46,22 +50,25 @@ $canWrite = $auth->hasCapability('edit_all_posts')
     || $auth->hasCapability('edit_own_posts')
     || $auth->hasCapability('posts.edit');
 $canRead = $canWrite || $auth->hasCapability('posts.view');
+// Seiteneditor: nur Token-Erneuerung und Block-Vorschau.
+$canEditPages = $auth->hasCapability('manage_pages');
 
 $readActions = ['revisions', 'compare', 'token'];
-$writeActions = ['autosave', 'restore'];
+$writeActions = ['autosave', 'restore', 'block_preview'];
+$pageEditorActions = ['token', 'block_preview'];
 
 if (in_array($action, $readActions, true)) {
     if ($method !== 'GET') {
         $cmsPostEditorApiRespond(405, ['success' => false, 'error' => 'Diese Aktion erlaubt nur GET.']);
     }
-    if (!$canRead) {
+    if (!$canRead && !($canEditPages && in_array($action, $pageEditorActions, true))) {
         $cmsPostEditorApiRespond(403, ['success' => false, 'error' => 'Keine Berechtigung für Beitragsrevisionen.']);
     }
 } elseif (in_array($action, $writeActions, true)) {
     if ($method !== 'POST') {
         $cmsPostEditorApiRespond(405, ['success' => false, 'error' => 'Diese Aktion erlaubt nur POST.']);
     }
-    if (!$canWrite) {
+    if (!$canWrite && !($canEditPages && in_array($action, $pageEditorActions, true))) {
         $cmsPostEditorApiRespond(403, ['success' => false, 'error' => 'Keine Berechtigung zum Bearbeiten von Beiträgen.']);
     }
     if (!$security->verifyPersistentToken((string) ($_POST['csrf_token'] ?? ''), $csrfAction)) {
@@ -78,6 +85,33 @@ if ($action === 'token') {
     }
 
     $cmsPostEditorApiRespond(200, ['success' => true, 'token' => $security->generateToken($csrfAction)]);
+}
+
+if ($action === 'block_preview') {
+    $blockType = trim((string) ($_POST['type'] ?? ''));
+    if (!EditorJsBlockRegistry::has($blockType)) {
+        $cmsPostEditorApiRespond(404, ['success' => false, 'error' => 'Unbekannter Blocktyp.']);
+    }
+
+    $rawData = (string) ($_POST['data'] ?? '');
+    $rawTunes = (string) ($_POST['tunes'] ?? '');
+    if (strlen($rawData) > 65536 || strlen($rawTunes) > 8192) {
+        $cmsPostEditorApiRespond(413, ['success' => false, 'error' => 'Blockdaten sind zu groß.']);
+    }
+
+    $blockData = json_decode($rawData !== '' ? $rawData : '{}', true, 16);
+    $blockTunes = json_decode($rawTunes !== '' ? $rawTunes : '{}', true, 8);
+    if (!is_array($blockData) || !is_array($blockTunes)) {
+        $cmsPostEditorApiRespond(422, ['success' => false, 'error' => 'Blockdaten sind kein gültiges JSON.']);
+    }
+
+    $html = EditorJsBlockRegistry::render(
+        $blockType,
+        EditorJsBlockRegistry::sanitize($blockType, $blockData),
+        $blockTunes,
+        ['mode' => 'preview']
+    );
+    $cmsPostEditorApiRespond(200, ['success' => true, 'html' => $html]);
 }
 
 $postId = (int) ($method === 'POST' ? ($_POST['post_id'] ?? ($_POST['id'] ?? 0)) : ($_GET['post_id'] ?? 0));

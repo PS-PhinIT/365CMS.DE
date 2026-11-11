@@ -52,84 +52,7 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
-final class T
-{
-    public static bool $verbose = false;
-    private static int $passed = 0;
-    /** @var list<string> */
-    private static array $failures = [];
-    /** @var list<string> */
-    private static array $infos = [];
-    private static string $section = '';
-
-    public static function run(string $title, callable $test): void
-    {
-        self::$section = $title;
-        echo PHP_EOL . '== ' . $title . PHP_EOL;
-        try {
-            $test();
-        } catch (\Throwable $e) {
-            self::check(false, 'Ausnahme ' . $e::class . ': ' . $e->getMessage(), $e->getFile() . ':' . $e->getLine());
-        }
-    }
-
-    public static function check(bool $condition, string $message, string $detail = ''): bool
-    {
-        if ($condition) {
-            self::$passed++;
-            if (self::$verbose) {
-                echo '  ok    ' . $message . PHP_EOL;
-            }
-
-            return true;
-        }
-
-        self::$failures[] = '[' . self::$section . '] ' . $message . ($detail !== '' ? ' – ' . $detail : '');
-        echo '  FAIL  ' . $message . ($detail !== '' ? PHP_EOL . '        ' . $detail : '') . PHP_EOL;
-
-        return false;
-    }
-
-    public static function same(mixed $expected, mixed $actual, string $message): bool
-    {
-        $equal = $expected === $actual;
-
-        return self::check($equal, $message, $equal ? '' : 'erwartet ' . self::export($expected) . ' | ist ' . self::export($actual));
-    }
-
-    public static function info(string $message): void
-    {
-        self::$infos[] = $message;
-        if (self::$verbose) {
-            echo '  info  ' . $message . PHP_EOL;
-        }
-    }
-
-    public static function export(mixed $value): string
-    {
-        $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (!is_string($json)) {
-            return var_export($value, true);
-        }
-
-        return strlen($json) > 700 ? substr($json, 0, 700) . '…' : $json;
-    }
-
-    public static function finish(): never
-    {
-        echo PHP_EOL . str_repeat('─', 72) . PHP_EOL;
-        echo 'Bestanden: ' . self::$passed . ' | Fehlgeschlagen: ' . count(self::$failures) . ' | Hinweise: ' . count(self::$infos)
-            . (self::$verbose || self::$infos === [] ? '' : ' (mit -v anzeigen)') . PHP_EOL;
-        if (self::$failures !== []) {
-            echo PHP_EOL . 'Fehler:' . PHP_EOL;
-            foreach (self::$failures as $failure) {
-                echo '  - ' . $failure . PHP_EOL;
-            }
-            exit(1);
-        }
-        exit(0);
-    }
-}
+require_once dirname(__DIR__) . '/lib/TestRunner.php';
 
 T::$verbose = in_array('-v', $argv ?? [], true);
 
@@ -159,7 +82,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/settings-tabs/feeds.php' => 'Phase B: Feeds (cms-feed)',
     'admin/downloads.php' => 'Phase B: Downloads (cms-downloads)',
     'admin/forms.php' => 'Phase B: Formulare (cms-contact)',
     'admin/form-submissions.php' => 'Phase B: Eingänge (cms-contact)',
@@ -535,6 +457,21 @@ function am_top_ids(array $menu): array
     }
 
     return $ids;
+}
+
+/**
+ * @param array<string, mixed> $menu
+ * @return list<string>|null IDs im Abschnitt „Aktive Plugins“ (null = Abschnitt fehlt)
+ */
+function am_active_plugins(array $menu): ?array
+{
+    foreach ($menu['sections'] as $section) {
+        if ($section['id'] === MenuBuilder::ACTIVE_PLUGINS_SECTION_ID) {
+            return array_column($section['nodes'], 'id');
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -1202,7 +1139,7 @@ T::run('Teil 5a: LayoutValidator', static function (): void {
     ]);
     T::same(['', ''], [$wrongGroups['layout']['fallback_group'], $wrongGroups['layout']['root_group']], 'Auffanggruppe und Start-Kachelseite müssen existieren');
     T::same([
-        'Die Auffanggruppe „nope“ fehlt; nicht platzierte Plugin-Einträge erscheinen in eigenen Gruppen.',
+        'Die Auffanggruppe „nope“ fehlt; nicht platzierte Core-Einträge erscheinen in der Gruppe „Weitere“.',
         'Die Start-Kachelseite „m“ ist keine Kachelgruppe dieses Layouts.',
     ], $wrongGroups['warnings'], 'Auffanggruppe und Start-Kachelseite: Warnungen');
     $rightGroups = $validate(['fallback_group' => 'm', 'root_group' => 't'] + ['nodes' => $wrongGroups['layout']['nodes']]);
@@ -1469,7 +1406,7 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
             ['type' => 'group', 'id' => 'g2', 'label' => 'Gruppe 2', 'icon' => 'folder', 'items' => ['f.tile', 'plugin:shop:shop-orders']],
             ['type' => 'separator', 'id' => 's2', 'label' => 'Verwaltung'],
             ['type' => 'group', 'id' => 'cfg', 'label' => 'Konfiguration', 'icon' => 'settings', 'display' => LayoutValidator::DISPLAY_TILES, 'items' => ['f.locked']],
-            ['type' => 'group', 'id' => 'rep', 'label' => 'Berichte', 'icon' => 'report', 'display' => LayoutValidator::DISPLAY_TILES, 'items' => []],
+            ['type' => 'group', 'id' => 'rep', 'label' => 'Berichte', 'icon' => 'report', 'display' => LayoutValidator::DISPLAY_TILES, 'items' => ['plugin:wiki']],
             ['type' => 'separator', 'id' => 's3', 'label' => ''],
             ['type' => 'group', 'id' => 'g3', 'label' => 'Gruppe 3', 'icon' => 'folder', 'items' => ['f.gamma']],
         ],
@@ -1484,14 +1421,16 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
 
     $menu = $main->build($registry, $layout, ProfileLayouts::CUSTOM);
     T::same(['custom', 'classic', 'cfg', 'plugins'], [$menu['profile'], $menu['base'], $menu['root_group'], $menu['fallback_group']], 'Kopfdaten der Builder-Ausgabe');
-    T::same([['main', '', true], ['s2', 'Verwaltung', false]], array_map(static fn (array $s): array => [$s['id'], $s['label'], $s['plain']], $menu['sections']), 'Abschnitte; leerer Abschnitt s3 entfällt');
-    T::same(['dashboard', 'g1', 'plugins', 'plugin.crm', 'g2', 'cfg', 'rep'], am_top_ids($menu), 'Hauptpunkte: Auto-Gruppe direkt nach der Auffanggruppe, leere Gruppe entfällt');
-    T::same(['f.beta', 'f.link', 'plugin:news', 'plugin:blog:blog', 'plugin:blog:blog-posts'], am_group_items($menu, 'g1'), 'g1: unsichtbare Einträge entfallen; Wunschplatz custom ungültig → classic; mehrseitiges Plugin geschlossen');
-    T::same(['f.orphan', 'plugin:alpha-tool', 'plugin:zeta-tool'], am_group_items($menu, 'plugins'), 'Auffanggruppe: nicht platzierter Core-Eintrag, dann Plugin-Einzelseiten nach Beschriftung');
+    $activePlugins = ['plugin:alpha-tool', 'plugin.blog', 'plugin.crm', 'plugin:news', 'plugin:zeta-tool'];
+    T::same([['main', '', true], ['s2', 'Verwaltung', false], [MenuBuilder::ACTIVE_PLUGINS_SECTION_ID, 'Aktive Plugins', false]], array_map(static fn (array $s): array => [$s['id'], $s['label'], $s['plain']], $menu['sections']), 'Abschnitte; leerer Abschnitt s3 entfällt; „Aktive Plugins“ am Ende');
+    T::same(['dashboard', 'g1', 'plugins', 'g2', 'cfg', 'rep', ...$activePlugins], am_top_ids($menu), 'Hauptpunkte: leere Gruppe entfällt, Plugins nur im letzten Abschnitt');
+    T::same($activePlugins, am_active_plugins($menu), '„Aktive Plugins“: Einzelseite als Link, mehrseitiges Plugin als Gruppe, gemeinsam alphabetisch');
+    T::same(['f.beta', 'f.link'], am_group_items($menu, 'g1'), 'g1: unsichtbare Einträge entfallen; Wunschplätze (news, blog → g1) ohne Wirkung');
+    T::same(['f.orphan'], am_group_items($menu, 'plugins'), 'Auffanggruppe: nur nicht platzierte Core-Einträge');
     T::same(['plugin:crm:crm', 'plugin:crm:crm-deals'], am_group_items($menu, 'plugin.crm'), 'Mehrseitiges Plugin ohne Platz → eigene Gruppe');
     T::same(['f.tile', 'plugin:shop:shop-orders', 'plugin:shop:shop'], am_group_items($menu, 'g2'), 'Plugin-Seiten folgen einer platzierten Seite desselben Plugins; Rechte gelten weiter');
     T::same(['f.locked'], am_group_items($menu, 'cfg'), 'Gesperrter Eintrag bleibt trotz „hidden“ sichtbar');
-    T::same(['plugin:wiki'], am_group_items($menu, 'rep'), 'Wunschplatz des Profils custom');
+    T::same(['plugin:wiki'], am_group_items($menu, 'rep'), 'Im Layout platzierte Plugin-Seite bleibt an ihrem Platz');
     T::same(null, $menu['plugin_hint'], 'Kein Plugin-Hinweis, solange Plugin-Einträge sichtbar sind');
 
     $node = static fn (array $tree, string $id, string $key): mixed => am_node($tree, $id)[$key] ?? null;
@@ -1509,22 +1448,22 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
     T::same([true, true], [$node($menu, 'dashboard', 'locked'), $node($menu, 'f.locked', 'locked')], 'Gesperrte Einträge sind markiert');
 
     $withoutLockedCap = $builder(['cap_b', 'manage_shop'])->build($registry, $layout, ProfileLayouts::CUSTOM);
-    T::same(['dashboard', 'g1', 'plugins', 'plugin.crm', 'g2', 'rep'], am_top_ids($withoutLockedCap), 'Gesperrte Einträge brauchen ihre Capability; leere Kachelgruppe entfällt');
+    T::same(['dashboard', 'g1', 'plugins', 'g2', 'rep', ...$activePlugins], am_top_ids($withoutLockedCap), 'Gesperrte Einträge brauchen ihre Capability; leere Kachelgruppe entfällt');
 
     $hiddenLayout = $layout;
     $hiddenLayout['hidden'] = ['f.beta', 'f.orphan', 'plugin:alpha-tool', 'plugin:crm:crm-deals'];
     $hiddenMenu = $main->build($registry, $hiddenLayout, ProfileLayouts::CUSTOM);
-    T::same(['f.link', 'plugin:news', 'plugin:blog:blog', 'plugin:blog:blog-posts'], am_group_items($hiddenMenu, 'g1'), 'Ausgeblendeter Eintrag entfällt in seiner Gruppe');
-    T::same(['plugin:zeta-tool'], am_group_items($hiddenMenu, 'plugins'), 'Ausgeblendete, nicht platzierte Einträge werden nicht einsortiert');
+    T::same(['f.link'], am_group_items($hiddenMenu, 'g1'), 'Ausgeblendeter Eintrag entfällt in seiner Gruppe');
+    T::same([['plugin.blog', 'plugin.crm', 'plugin:news', 'plugin:zeta-tool'], false], [am_active_plugins($hiddenMenu), in_array('plugins', am_top_ids($hiddenMenu), true)], 'Ausgeblendete, nicht platzierte Einträge werden nicht einsortiert; leere Auffanggruppe entfällt');
     T::same(['plugin:crm:crm'], am_group_items($hiddenMenu, 'plugin.crm'), 'Ausgeblendete Plugin-Unterseite entfällt');
 
     $noFallback = $rawLayout;
     $noFallback['fallback_group'] = '';
     $noFallback['nodes'] = array_values(array_filter($rawLayout['nodes'], static fn (array $n): bool => ($n['id'] ?? '') !== 'plugins'));
     $noFallbackMenu = $main->build($registry, $validate($noFallback)['layout'], ProfileLayouts::CUSTOM);
-    T::same(['dashboard', 'g1', 'g2', 'cfg', 'rep', 'plugin.crm', 'plugins.more', 'more'], am_top_ids($noFallbackMenu), 'Ohne Auffanggruppe: Auto-Gruppen, „Plugins“, „Weitere“ am Ende');
-    T::same(['main', 's2', 's3'], array_column($noFallbackMenu['sections'], 'id'), 'Ohne Auffanggruppe: Auto-Gruppen im letzten Abschnitt');
-    T::same([['plugin:alpha-tool', 'plugin:zeta-tool'], ['f.orphan'], 'Plugins', 'Weitere'], [am_group_items($noFallbackMenu, 'plugins.more'), am_group_items($noFallbackMenu, 'more'), $node($noFallbackMenu, 'plugins.more', 'label'), $node($noFallbackMenu, 'more', 'label')], 'Ohne Auffanggruppe: Inhalt der Sammelgruppen');
+    T::same(['dashboard', 'g1', 'g2', 'cfg', 'rep', 'more', ...$activePlugins], am_top_ids($noFallbackMenu), 'Ohne Auffanggruppe: „Weitere“ am Ende des Layouts, danach „Aktive Plugins“');
+    T::same(['main', 's2', 's3', MenuBuilder::ACTIVE_PLUGINS_SECTION_ID], array_column($noFallbackMenu['sections'], 'id'), 'Ohne Auffanggruppe: „Weitere“ im letzten Layout-Abschnitt');
+    T::same([['f.orphan'], 'Weitere'], [am_group_items($noFallbackMenu, 'more'), $node($noFallbackMenu, 'more', 'label')], 'Ohne Auffanggruppe: Inhalt von „Weitere“');
 
     $withAuto = $rawLayout;
     $withAuto['nodes'][] = ['type' => 'group', 'id' => 'plugin.crm', 'label' => 'Kunden', 'icon' => 'users', 'items' => []];
@@ -1535,13 +1474,13 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
     $hintLayout['nodes'][3]['items'] = ['f.tile', 'f.orphan'];
     $hintMenuFor = static fn (MenuRegistry $for, ?MenuBuilder $with = null): array => ($with ?? $main)->build($for, $validate($hintLayout, $for)['layout'], ProfileLayouts::CUSTOM);
     $unassigned = $hintMenuFor(MenuRegistry::create($plugins, $preferred, static fn (array $menu): bool => false, '', $core));
-    T::same([['group' => 'plugins', 'hidden' => 7], true, []], [$unassigned['plugin_hint'], in_array('plugins', am_top_ids($unassigned), true), am_group_items($unassigned, 'plugins')], 'Plugin-Hinweis: kein Plugin der Site zugewiesen → leere Auffanggruppe bleibt mit Hinweis');
+    T::same([['section' => MenuBuilder::ACTIVE_PLUGINS_SECTION_ID, 'hidden' => 7], [], false], [$unassigned['plugin_hint'], am_active_plugins($unassigned), in_array('plugins', am_top_ids($unassigned), true)], 'Plugin-Hinweis: kein Plugin der Site zugewiesen → leerer Abschnitt „Aktive Plugins“ bleibt mit Hinweis, leere Auffanggruppe entfällt');
     $noPlugins = $hintMenuFor(MenuRegistry::create([], [], null, '', $core));
-    T::same([null, false], [$noPlugins['plugin_hint'], in_array('plugins', am_top_ids($noPlugins), true)], 'Ohne Plugins: kein Hinweis, leere Auffanggruppe entfällt');
+    T::same([null, null], [$noPlugins['plugin_hint'], am_active_plugins($noPlugins)], 'Ohne Plugins: kein Hinweis, kein Abschnitt „Aktive Plugins“');
     $partly = $hintMenuFor(MenuRegistry::create($plugins, $preferred, static fn (array $menu): bool => $menu['menu_slug'] !== 'zeta-tool', '', $core));
     T::same(null, $partly['plugin_hint'], 'Kein Hinweis, solange ein Plugin-Eintrag sichtbar ist');
     $capOnly = $hintMenuFor(MenuRegistry::create([$plugins[4]], [], null, '', $core), $builder([]));
-    T::same([null, false], [$capOnly['plugin_hint'], in_array('plugins', am_top_ids($capOnly), true)], 'Kein Hinweis, wenn Plugin-Einträge nur an Rechten scheitern');
+    T::same([null, null], [$capOnly['plugin_hint'], am_active_plugins($capOnly)], 'Kein Hinweis, wenn Plugin-Einträge nur an Rechten scheitern');
 
     $asked = [];
     $translations = [
@@ -1555,6 +1494,7 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
         'admin_menu.category.general' => 'General',
         'admin_menu.category.other' => 'Other',
         'admin_menu.item.plugin:news' => 'Nachrichten',
+        'admin_menu.section.active_plugins' => 'Active plugins',
     ];
     $translate = static function (string $key, string $fallback) use (&$asked, $translations): string {
         $asked[] = $key;
@@ -1563,7 +1503,7 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
     };
     $translated = $builder(['cap_b', 'cap_locked', 'manage_shop'], false, $translate);
     $classicMenu = $translated->build($registry, $layout, ProfileLayouts::CLASSIC);
-    T::same(['main' => '', 's2' => 'Administration'], array_column($classicMenu['sections'], 'label', 'id'), 'Mitgeliefertes Profil: Trenner übersetzt');
+    T::same(['main' => '', 's2' => 'Administration', MenuBuilder::ACTIVE_PLUGINS_SECTION_ID => 'Active plugins'], array_column($classicMenu['sections'], 'label', 'id'), 'Mitgeliefertes Profil: Trenner und „Aktive Plugins“ übersetzt');
     T::same(
         ['Erste Gruppe', 'Plugins', 'CRM', 'Beta (übersetzt)', 'Beta (übersetzt)', 'Other', 'My profile', 'Waise', 'Dashboard', 'News'],
         [
@@ -1574,7 +1514,7 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
         'Mitgeliefertes Profil: Gruppen und Überschreibungen übersetzt; leere Übersetzung oder Schlüssel → Fallback; Plugin-Texte nie'
     );
     T::same(['Kachel-Eintrag', 'Tile', 'Description', 'General'], [$node($classicMenu, 'f.tile', 'label'), $node($classicMenu, 'f.tile', 'tile_label'), $node($classicMenu, 'f.tile', 'description'), $node($classicMenu, 'f.tile', 'category_label')], 'Kachel-Texte übersetzt');
-    T::same(['f.orphan', 'plugin:alpha-tool', 'plugin:wiki', 'plugin:zeta-tool'], am_group_items($classicMenu, 'plugins'), 'classic: Wunschplatz nur für custom → Auffanggruppe');
+    T::same([['f.orphan'], $activePlugins], [am_group_items($classicMenu, 'plugins'), am_active_plugins($classicMenu)], 'classic: Plugin-Seiten ebenfalls unter „Aktive Plugins“, nicht in der Auffanggruppe');
     T::same([], array_values(array_filter($asked, static fn (string $key): bool => str_contains($key, 'plugin:'))), 'Für Plugin-Einträge wird keine Übersetzung abgefragt');
     $asked = [];
     $customMenu = $translated->build($registry, $layout, ProfileLayouts::CUSTOM);
@@ -1623,8 +1563,8 @@ T::run('Teil 5c: MenuBuilder', static function (): void {
             ['type' => 'group', 'id' => 'after', 'label' => 'Danach', 'icon' => 'folder', 'items' => ['f.orphan']],
         ],
     ], $sortRegistry)['layout'], ProfileLayouts::CUSTOM);
-    T::same([['top' => 'Start'], ['dashboard', 'plugins', 'plugin.ant', 'plugin.zoo', 'after']], [array_column($sortMenu['sections'], 'label', 'id'), am_top_ids($sortMenu)], 'Leerer Hauptabschnitt vor erstem Trenner entfällt; Auto-Gruppen nach Beschriftung');
-    T::same(['plugin:alpha', 'plugin:beta-a', 'plugin:beta-b', 'plugin:t2', 'plugin:t10'], am_group_items($sortMenu, 'plugins'), 'Plugin-Einzelseiten natürlich sortiert, bei Gleichstand nach ID');
+    T::same([['top' => 'Start', MenuBuilder::ACTIVE_PLUGINS_SECTION_ID => 'Aktive Plugins'], ['dashboard', 'after']], [array_column($sortMenu['sections'], 'label', 'id'), array_column($sortMenu['sections'][0]['nodes'], 'id')], 'Leerer Hauptabschnitt vor erstem Trenner entfällt; leere Auffanggruppe entfällt');
+    T::same(['plugin:alpha', 'plugin.ant', 'plugin:beta-a', 'plugin:beta-b', 'plugin:t2', 'plugin:t10', 'plugin.zoo'], am_active_plugins($sortMenu), '„Aktive Plugins“: Einzelseiten und Gruppen gemeinsam natürlich sortiert, bei Gleichstand nach ID');
 });
 
 T::run('Teil 5d: Plugin-API für Wunschplätze', static function (): void {
@@ -1785,11 +1725,12 @@ T::run('Teil 5e: Sidebar-Modell – Aufbau und Badges', static function (): void
     T::same(['groups', 'breadcrumb', 'recent_label', 'plugins_total', 'plugins_hidden'], array_keys($model), 'Schlüssel des Modells');
     T::same(
         [
-            'g:main' => ['e:dashboard', 'p:news', 'e:p.shop:shop-settings', 'e:media', 'e:plugins', 'p:shop'],
+            'g:main' => ['e:dashboard', 'p:news', 'e:p.shop:shop-settings', 'e:media'],
             'g:admin' => ['e:cfg', 'e:health'],
+            'g:_active-plugins' => ['p:shop', 'p:wiki'],
         ],
         array_combine(array_column($model['groups'], 'id'), array_map(static fn (array $group): array => array_column($group['entries'], 'id'), $model['groups'])),
-        'Abschnitte und Eintrags-IDs: Core e:<id>, Plugin p:<menü>, Plugin-Unterseite e:p.<menü>:<seite>, Auto-Gruppe p:<menü>'
+        'Abschnitte und Eintrags-IDs: Core e:<id>, Plugin p:<menü>, Plugin-Unterseite e:p.<menü>:<seite>, Auto-Gruppe p:<menü>; nicht platzierte Plugins unter „Aktive Plugins“, leere Auffanggruppe entfällt'
     );
     T::same([4, 0], [$model['plugins_total'], $model['plugins_hidden']], 'Plugin-Zahlen aus der Registry');
     T::same([['section' => 'Dashboard', 'page' => 'Übersicht'], ''], [$model['breadcrumb'], $model['recent_label']], 'Ohne aktuelle Seite: Brotkrumen „Dashboard › Übersicht“');
@@ -1801,9 +1742,10 @@ T::run('Teil 5e: Sidebar-Modell – Aufbau und Badges', static function (): void
         return $group;
     }, $model['groups']);
     T::same([
-        ['id' => 'g:main', 'label' => '', 'plain' => true, 'hint' => null, 'dom_id' => 'cms-nav-g-main', 'active' => false, 'expanded' => true],
-        ['id' => 'g:admin', 'label' => 'Verwaltung', 'plain' => false, 'hint' => null, 'dom_id' => 'cms-nav-g-admin', 'active' => false, 'expanded' => true],
-    ], $sections, 'Abschnitte: Hauptabschnitt ohne Überschrift; ohne gespeicherten Zustand aufgeklappt');
+        ['id' => 'g:main', 'label' => '', 'plain' => true, 'plugins' => false, 'count' => 0, 'hint' => null, 'dom_id' => 'cms-nav-g-main', 'active' => false, 'expanded' => true],
+        ['id' => 'g:admin', 'label' => 'Verwaltung', 'plain' => false, 'plugins' => false, 'count' => 0, 'hint' => null, 'dom_id' => 'cms-nav-g-admin', 'active' => false, 'expanded' => true],
+        ['id' => 'g:_active-plugins', 'label' => 'Aktive Plugins', 'plain' => false, 'plugins' => true, 'count' => 2, 'hint' => null, 'dom_id' => 'cms-nav-g-_active-plugins', 'active' => false, 'expanded' => false],
+    ], $sections, 'Abschnitte: Hauptabschnitt ohne Überschrift; ohne gespeicherten Zustand aufgeklappt; „Aktive Plugins“ eingeklappt, mit Anzahl');
 
     T::same([
         'id' => 'p:news', 'label' => 'Acme | News', 'prefix' => 'Acme', 'name' => 'News', 'slug' => 'news',
@@ -1835,12 +1777,24 @@ T::run('Teil 5e: Sidebar-Modell – Aufbau und Badges', static function (): void
         ['id' => 'p.profile', 'label' => 'Mein Profil', 'slug' => '', 'url' => 'https://cms.test/member/profile', 'path' => '/member/profile', 'current' => false, 'badge' => null, 'plugin' => false, 'external' => true],
     ], $children, 'Kinder: Katalog-IDs, URL mit Query, Pfad ohne Query, Badge je Eintrag, externer Link markiert');
 
-    $fallback = am_nav_entry($model, 'e:plugins') ?? [];
+    $wiki = am_nav_entry($model, 'p:wiki') ?? [];
     $auto = am_nav_entry($model, 'p:shop') ?? [];
     T::same(
-        [['plugin:wiki'], false, 'Plugins', ['plugin:shop:shop'], ['Bestellungen'], true, 'Acme', 'Shop', 'cms-nav-p-shop'],
-        [array_column($fallback['children'] ?? [], 'id'), $fallback['plugin'] ?? null, $fallback['name'] ?? null, array_column($auto['children'] ?? [], 'id'), array_column($auto['children'] ?? [], 'label'), $auto['plugin'] ?? null, $auto['prefix'] ?? null, $auto['name'] ?? null, $auto['dom_id'] ?? null],
-        'Auffanggruppe ist keine Plugin-Gruppe; Auto-Gruppe p:<menü> mit getrenntem Titel nimmt die nicht platzierte Geschwisterseite auf (Kind mit Menü-Slug, keine zusätzliche „Übersicht“)'
+        [true, 'https://cms.test/admin/plugins/wiki/wiki', 'cms-nav-p-wiki', ['plugin:shop:shop'], ['Bestellungen'], true, 'Acme', 'Shop', 'cms-nav-p-shop'],
+        [$wiki['plugin'] ?? null, $wiki['url'] ?? null, $wiki['dom_id'] ?? null, array_column($auto['children'] ?? [], 'id'), array_column($auto['children'] ?? [], 'label'), $auto['plugin'] ?? null, $auto['prefix'] ?? null, $auto['name'] ?? null, $auto['dom_id'] ?? null],
+        '„Aktive Plugins“: Einzelseite als Link p:<menü>; Auto-Gruppe p:<menü> mit getrenntem Titel nimmt die nicht platzierte Geschwisterseite auf (Kind mit Menü-Slug, keine zusätzliche „Übersicht“)'
+    );
+    $orphanFixture = am_nav_fixture(null, static function (array $layout): array {
+        $layout['nodes'][7]['items'] = ['h.logs', 'h.forms', 'plugin:backup-pro', 'h.docs'];
+
+        return $layout;
+    });
+    $orphanModel = $nav->present($orphanFixture['tree'], $orphanFixture['registry'], '', ['site_url' => 'https://cms.test/', 'badges' => false]);
+    $fallback = am_nav_entry($orphanModel, 'e:plugins') ?? [];
+    T::same(
+        [['h.info'], false, 'Plugins', ['p:shop', 'p:wiki']],
+        [array_column($fallback['children'] ?? [], 'id'), $fallback['plugin'] ?? null, $fallback['name'] ?? null, array_column(end($orphanModel['groups'])['entries'], 'id')],
+        'Auffanggruppe ist keine Plugin-Gruppe und nimmt nur nicht platzierte Core-Einträge auf'
     );
 
     T::same([
@@ -1883,7 +1837,7 @@ T::run('Teil 5e: Sidebar-Modell – aktiver Eintrag und Brotkrumen', static func
         ['/admin/plugins/shop/shop-settings', 'shop-settings', ['e:p.shop:shop-settings', 'Einstellungen', 'Einstellungen'], 'Plugin-Unterseite als Hauptpunkt per Pfad'],
         ['/admin/plugins/news/news', 'dashboard', ['p:news', 'Acme | News', 'Acme | News'], 'Plugin-Pfad schlägt $activePage einer Core-Seite'],
         ['/admin/plugins/shop/shop/', '', ['p:shop > plugin:shop:shop', 'Acme | Shop › Bestellungen', 'Acme | Shop · Bestellungen'], 'Abschließender Schrägstrich wird ignoriert'],
-        ['', 'wiki', ['e:plugins > plugin:wiki', 'Plugins › Wiki', 'Plugins · Wiki'], 'Plugin-Seite per $activePage (ohne Anfragepfad)'],
+        ['', 'wiki', ['p:wiki', 'Aktive Plugins › Wiki', 'Wiki'], 'Plugin-Seite per $activePage (ohne Anfragepfad); Brotkrume nennt „Aktive Plugins“'],
         ['/admin/configuration', 'configuration', ['e:cfg#page', 'Einstellungen', 'Einstellungen'], 'Start-Kachelseite'],
         ['/admin/configuration?group=health', 'configuration', ['e:health#page', 'Website-Zustand', 'Website-Zustand'], 'Kachelseite per ?group='],
         ['/admin/logs', 'logs', ['e:health#true', 'Website-Zustand › Protokolle', 'Website-Zustand · Protokolle'], 'Seite einer Kachelgruppe: Kachel-Link aktiv (aria-current=true)'],
@@ -1931,15 +1885,19 @@ T::run('Teil 5e: Sidebar-Modell – Aufklappzustand, DOM-IDs, Badges, Plugin-Hin
 
         return $result;
     };
-    $expect = static fn (bool $media, bool $plugins, bool $shop, bool $admin): array => ['g:main' => true, 'e:media' => $media, 'e:plugins' => $plugins, 'p:shop' => $shop, 'g:admin' => $admin];
+    $expect = static fn (bool $media, bool $admin, bool $plugins, bool $shop): array => ['g:main' => true, 'e:media' => $media, 'g:admin' => $admin, 'g:_active-plugins' => $plugins, 'p:shop' => $shop];
     $stateCases = [
-        [[], '', $expect(false, false, false, true), 'Ohne gespeicherten Zustand: Gruppen zu, Abschnitte auf'],
-        [['group_states' => ['e:media' => true, 'p:shop' => true, 'g:admin' => false, 'g:main' => false]], '', $expect(true, false, true, false), 'Gespeicherter Zustand je ID; Hauptabschnitt immer offen'],
-        [['group_states' => ['g:admin' => 'nein', 'e:media' => 1]], '', $expect(false, false, false, true), 'Nur echte Booleans zählen'],
-        [['group_states' => 'kaputt'], '', $expect(false, false, false, true), 'Ungültige group_states werden ignoriert'],
+        [[], '', $expect(false, true, false, false), 'Ohne gespeicherten Zustand: Gruppen zu, Abschnitte auf, „Aktive Plugins“ zu'],
+        [['group_states' => ['e:media' => true, 'p:shop' => true, 'g:admin' => false, 'g:main' => false]], '', $expect(true, false, false, true), 'Gespeicherter Zustand je ID; Hauptabschnitt immer offen'],
+        [['group_states' => ['g:admin' => 'nein', 'e:media' => 1, 'g:_active-plugins' => 1]], '', $expect(false, true, false, false), 'Nur echte Booleans zählen'],
+        [['group_states' => 'kaputt'], '', $expect(false, true, false, false), 'Ungültige group_states werden ignoriert'],
         [['group_states' => ['e:media' => false, 'g:admin' => false], 'request_path' => '/admin/media'], 'media', $expect(true, false, false, false), 'Gruppe mit aktueller Seite ist immer aufgeklappt'],
-        [['group_states' => ['g:admin' => false], 'request_path' => '/admin/logs'], 'logs', $expect(false, false, false, true), 'Abschnitt mit aktueller Seite ist immer aufgeklappt'],
-        [['group_states' => ['e:media' => false, 'g:admin' => false], 'expand_all' => true], '', $expect(true, true, true, true), 'expand_all: alles aufgeklappt, gespeicherte Zustände ignoriert'],
+        [['group_states' => ['g:admin' => false], 'request_path' => '/admin/logs'], 'logs', $expect(false, true, false, false), 'Abschnitt mit aktueller Seite ist immer aufgeklappt'],
+        [['group_states' => ['e:media' => false, 'g:admin' => false, 'g:_active-plugins' => false], 'expand_all' => true], '', $expect(true, true, true, true), 'expand_all: alles aufgeklappt, gespeicherte Zustände ignoriert'],
+        [['group_states' => ['g:_active-plugins' => true]], '', $expect(false, true, true, false), '„Aktive Plugins“: gespeichertes „offen“ gilt'],
+        [['group_states' => ['g:_active-plugins' => false], 'request_path' => '/admin/plugins/wiki/wiki'], 'wiki', $expect(false, true, true, false), '„Aktive Plugins“ mit aktueller Plugin-Seite ist aufgeklappt'],
+        [['group_states' => ['g:_active-plugins' => false, 'p:shop' => false], 'request_path' => '/admin/plugins/shop/shop'], 'shop', $expect(false, true, true, true), '„Aktive Plugins“ und Plugin-Gruppe mit aktueller Seite sind aufgeklappt'],
+        [['group_states' => ['g:_active-plugins' => true], 'request_path' => '/admin/plugins/news/news'], 'news', $expect(false, true, true, false), 'Im Layout platzierte Plugin-Seite öffnet „Aktive Plugins“ nicht; gespeicherter Zustand bleibt'],
     ];
     foreach ($stateCases as [$context, $activePage, $expected, $message]) {
         T::same($expected, $states($present($context, $activePage)), $message);
@@ -1954,12 +1912,12 @@ T::run('Teil 5e: Sidebar-Modell – Aufklappzustand, DOM-IDs, Badges, Plugin-Hin
         return $ids;
     };
     T::same(
-        ['cms-nav-g-main', 'cms-nav-g-admin', 'cms-nav-e-dashboard', 'cms-nav-p-news', 'cms-nav-e-p-shop-shop-settings', 'cms-nav-e-media', 'cms-nav-e-plugins', 'cms-nav-p-shop', 'cms-nav-e-cfg', 'cms-nav-e-health'],
+        ['cms-nav-g-main', 'cms-nav-g-admin', 'cms-nav-g-_active-plugins', 'cms-nav-e-dashboard', 'cms-nav-p-news', 'cms-nav-e-p-shop-shop-settings', 'cms-nav-e-media', 'cms-nav-e-cfg', 'cms-nav-e-health', 'cms-nav-p-shop', 'cms-nav-p-wiki'],
         $domIds($present([])),
         'DOM-IDs: Präfix cms-nav-, Sonderzeichen der Eintrags-ID → Bindestrich'
     );
     $longest = 'a' . str_repeat('b', 40);
-    T::same(['am-preview-e-p-shop-shop-settings', $longest . 'g-main'], [$domIds($present(['dom_prefix' => 'am-preview-']))[4], $domIds($present(['dom_prefix' => $longest]))[0]], 'Eigenes DOM-Präfix (Vorschau im Einstellungs-Tab), bis 41 Zeichen');
+    T::same(['am-preview-e-p-shop-shop-settings', $longest . 'g-main'], [$domIds($present(['dom_prefix' => 'am-preview-']))[5], $domIds($present(['dom_prefix' => $longest]))[0]], 'Eigenes DOM-Präfix (Vorschau im Einstellungs-Tab), bis 41 Zeichen');
     foreach (['Am-preview-', '1am-', 'am_preview-', 'am preview', '', $longest . 'c', 5, null] as $invalid) {
         T::same('cms-nav-g-main', $domIds($present(['dom_prefix' => $invalid]))[0], 'Ungültiges DOM-Präfix ' . T::export($invalid) . ' → cms-nav-');
     }
@@ -1999,18 +1957,27 @@ T::run('Teil 5e: Sidebar-Modell – Aufklappzustand, DOM-IDs, Badges, Plugin-Hin
 
     $unassigned = am_nav_fixture(static fn (array $menu): bool => false);
     $hintModel = static fn (array $for, array $context = []): array => $nav->present($for['tree'], $for['registry'], '', $context + ['site_url' => 'https://cms.test/', 'badges' => false]);
+    $pluginSection = static function (array $model): ?array {
+        foreach ($model['groups'] as $group) {
+            if ($group['id'] === 'g:' . MenuBuilder::ACTIVE_PLUGINS_SECTION_ID) {
+                return $group;
+            }
+        }
+
+        return null;
+    };
     $model = $hintModel($unassigned, ['site_label' => 'PhinIT', 'site_key' => 'phinit']);
     T::same(
         ['text' => 'Für PhinIT sind keine Plugins mit Menüeinträgen zugewiesen.', 'url' => 'https://cms.test/admin/plugin-assignment', 'link' => 'Plugin-Zuweisung öffnen'],
-        $model['groups'][0]['hint'],
-        'Plugin-Hinweis im Abschnitt der Auffanggruppe mit Link zur Plugin-Zuweisung'
+        $pluginSection($model)['hint'] ?? null,
+        'Plugin-Hinweis im Abschnitt „Aktive Plugins“ mit Link zur Plugin-Zuweisung'
     );
     T::same(
-        [['e:dashboard', 'e:media'], ['e:cfg', 'e:health'], 4, 4],
-        [array_column($model['groups'][0]['entries'], 'id'), array_column($model['groups'][1]['entries'], 'id'), $model['plugins_total'], $model['plugins_hidden']],
-        'Ohne zugewiesene Plugins: keine Plugin-Einträge; die leere Auffanggruppe erscheint nicht als Eintrag'
+        [['g:main', 'g:admin', 'g:_active-plugins'], ['e:dashboard', 'e:media'], ['e:cfg', 'e:health'], [], 0, false, 4, 4],
+        [array_column($model['groups'], 'id'), array_column($model['groups'][0]['entries'], 'id'), array_column($model['groups'][1]['entries'], 'id'), $model['groups'][2]['entries'], $model['groups'][2]['count'], $model['groups'][2]['expanded'], $model['plugins_total'], $model['plugins_hidden']],
+        'Ohne zugewiesene Plugins: keine Plugin-Einträge; „Aktive Plugins“ trägt nur den Hinweis, eingeklappt und ohne Zähler'
     );
-    $hintText = static fn (array $context): ?string => $hintModel($unassigned, $context)['groups'][0]['hint']['text'] ?? null;
+    $hintText = static fn (array $context): ?string => $pluginSection($hintModel($unassigned, $context))['hint']['text'] ?? null;
     T::same(
         ['Für phinit sind keine Plugins mit Menüeinträgen zugewiesen.', 'Für diese Site sind keine Plugins mit Menüeinträgen zugewiesen.', 'Für diese Site sind keine Plugins mit Menüeinträgen zugewiesen.'],
         [$hintText(['site_key' => 'phinit']), $hintText([]), $hintText(['site_label' => '  ', 'site_key' => 'phinit'])],
@@ -2021,13 +1988,12 @@ T::run('Teil 5e: Sidebar-Modell – Aufklappzustand, DOM-IDs, Badges, Plugin-Hin
 
         return $layout;
     });
-    $model = $hintModel($separated);
     T::same(
-        [['g:main', 'g:ext', 'g:admin'], [], 'Für diese Site sind keine Plugins mit Menüeinträgen zugewiesen.', 'Erweiterungen', false, true],
-        [array_column($model['groups'], 'id'), $model['groups'][1]['entries'] ?? null, $model['groups'][1]['hint']['text'] ?? null, $model['groups'][1]['label'] ?? null, $model['groups'][1]['plain'] ?? null, $model['groups'][1]['expanded'] ?? null],
-        'Abschnitt, der nur den Plugin-Hinweis trägt, bleibt erhalten'
+        ['g:main', 'g:admin', 'g:_active-plugins'],
+        array_column($hintModel($separated)['groups'], 'id'),
+        'Layout-Abschnitt mit nur der leeren Auffanggruppe entfällt; der Hinweis steht immer unter „Aktive Plugins“'
     );
-    T::same([null, null], array_column($hintModel($fixture)['groups'], 'hint'), 'Mit zugewiesenen Plugins kein Hinweis');
+    T::same([null, null, null], array_column($hintModel($fixture)['groups'], 'hint'), 'Mit zugewiesenen Plugins kein Hinweis');
 });
 
 T::run('Teil 5e: Kachelseiten (tilesPage)', static function (): void {
