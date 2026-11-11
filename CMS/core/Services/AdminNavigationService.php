@@ -93,7 +93,7 @@ final class AdminNavigationService
         $counts = ($context['badges'] ?? true) !== false ? $this->badgeCounts($sections, $context) : [];
         $badge = static fn (array $keys): ?array => self::badgeFor($keys, $counts);
 
-        $hintGroup = is_array($tree['plugin_hint'] ?? null) ? (string) ($tree['plugin_hint']['group'] ?? '') : '';
+        $hintSection = is_array($tree['plugin_hint'] ?? null) ? (string) ($tree['plugin_hint']['section'] ?? '') : '';
         $breadcrumb = ['section' => 'Dashboard', 'page' => trim((string) ($context['page_title'] ?? '')) ?: 'Übersicht'];
         $recentLabel = '';
         $groups = [];
@@ -101,15 +101,24 @@ final class AdminNavigationService
         foreach ($sections as $section) {
             $sectionId = 'g:' . $this->idFragment((string) ($section['id'] ?? 'section'));
             $plain = !empty($section['plain']);
+            // „Aktive Plugins“ ist standardmäßig eingeklappt; nur ein gespeichertes „offen“ oder die aktuelle Seite öffnen ihn.
+            $isActivePlugins = ($section['id'] ?? '') === MenuBuilder::ACTIVE_PLUGINS_SECTION_ID;
             $entries = [];
             $hint = null;
+            if ($hintSection !== '' && ($section['id'] ?? '') === $hintSection) {
+                $hint = [
+                    'text' => sprintf('Für %s sind keine Plugins mit Menüeinträgen zugewiesen.', $siteLabel !== '' ? $siteLabel : 'diese Site'),
+                    'url' => $siteUrl . PluginSiteAssignmentService::ADMIN_PATH,
+                    'link' => 'Plugin-Zuweisung öffnen',
+                ];
+            }
 
             foreach ((array) ($section['nodes'] ?? []) as $node) {
                 if (($node['kind'] ?? '') === 'item') {
                     $isCurrent = $current['item'] !== '' && $node['id'] === $current['item'];
                     $entries[] = $this->itemEntry($node, $siteUrl, $domPrefix, $isCurrent, $badge([(string) $node['badge']]));
                     if ($isCurrent) {
-                        $breadcrumb = ['section' => '', 'page' => (string) $node['label']];
+                        $breadcrumb = ['section' => $isActivePlugins ? (string) ($section['label'] ?? '') : '', 'page' => (string) $node['label']];
                         $recentLabel = (string) $node['label'];
                     }
                     continue;
@@ -117,13 +126,6 @@ final class AdminNavigationService
 
                 $items = (array) ($node['items'] ?? []);
                 if ($items === []) {
-                    if ($hintGroup !== '' && $node['id'] === $hintGroup) {
-                        $hint = [
-                            'text' => sprintf('Für %s sind keine Plugins mit Menüeinträgen zugewiesen.', $siteLabel !== '' ? $siteLabel : 'diese Site'),
-                            'url' => $siteUrl . PluginSiteAssignmentService::ADMIN_PATH,
-                            'link' => 'Plugin-Zuweisung öffnen',
-                        ];
-                    }
                     continue;
                 }
 
@@ -150,7 +152,7 @@ final class AdminNavigationService
                 }
 
                 $entryId = $this->groupEntryId((string) $node['id']);
-                $isPlugin = str_starts_with((string) $node['id'], MenuBuilder::PLUGIN_AUTO_GROUP_PREFIX) || $node['id'] === MenuBuilder::PLUGIN_AUTO_FALLBACK_ID;
+                $isPlugin = str_starts_with((string) $node['id'], MenuBuilder::PLUGIN_AUTO_GROUP_PREFIX);
                 $children = [];
                 $active = false;
                 foreach ($items as $child) {
@@ -210,11 +212,15 @@ final class AdminNavigationService
                 'id' => $sectionId,
                 'label' => (string) ($section['label'] ?? ''),
                 'plain' => $plain,
+                'plugins' => $isActivePlugins,
+                'count' => $isActivePlugins ? count($entries) : 0,
                 'entries' => $entries,
                 'hint' => $hint,
                 'dom_id' => $this->domId($domPrefix, $sectionId),
                 'active' => $sectionActive,
-                'expanded' => $plain || $sectionActive || $expandAll || !is_bool($stored) || $stored,
+                'expanded' => $isActivePlugins
+                    ? $sectionActive || $expandAll || $stored === true
+                    : $plain || $sectionActive || $expandAll || !is_bool($stored) || $stored,
             ];
         }
 

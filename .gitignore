@@ -135,6 +135,8 @@ AUDIT
 !/TESTS/content-types/run.php
 !/TESTS/editorjs-blocks/
 !/TESTS/editorjs-blocks/run.php
+!/TESTS/update-swap/
+!/TESTS/update-swap/run.php
 /STAGING/tests/
 */Test/*
 CMS/assets/translation/Test/

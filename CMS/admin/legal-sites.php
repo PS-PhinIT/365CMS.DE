@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 
 use CMS\Auth;
 use CMS\Services\CoreModuleService;
+use CMS\Services\Legal\AccessibilityStatementService;
 
 const CMS_ADMIN_LEGAL_SITES_READ_CAPABILITY = 'manage_settings';
 const CMS_ADMIN_LEGAL_SITES_WRITE_CAPABILITY = 'manage_settings';
@@ -20,12 +21,14 @@ const CMS_ADMIN_LEGAL_SITES_LEGAL_KEYS = [
     'legal_privacy',
     'legal_terms',
     'legal_revocation',
+    'legal_accessibility',
 ];
 const CMS_ADMIN_LEGAL_SITES_ASSIGNMENT_KEYS = [
     'imprint_page_id',
     'privacy_page_id',
     'terms_page_id',
     'revocation_page_id',
+    'accessibility_page_id',
 ];
 const CMS_ADMIN_LEGAL_SITES_PROFILE_KEYS = [
     'legal_profile_entity_type',
@@ -86,6 +89,7 @@ const CMS_ADMIN_LEGAL_SITES_MAX_PROFILE_VALUE_LENGTH = 500;
 const CMS_ADMIN_LEGAL_SITES_MAX_PROFILE_TEXTAREA_LENGTH = 4000;
 const CMS_ADMIN_LEGAL_SITES_SESSION_OLD_SAVE_KEY = 'legal_sites_save_old';
 const CMS_ADMIN_LEGAL_SITES_SESSION_OLD_PROFILE_KEY = 'legal_sites_profile_old';
+const CMS_ADMIN_LEGAL_SITES_SESSION_OLD_ACCESSIBILITY_KEY = 'legal_sites_accessibility_old';
 const CMS_ADMIN_LEGAL_SITES_ROUTE_PATH = '/admin/legal-sites';
 const CMS_ADMIN_LEGAL_SITES_PROFILE_TEXTAREA_KEYS = [
     'legal_profile_external_media_providers',
@@ -129,6 +133,8 @@ function cms_admin_legal_sites_allowed_actions(): array
         'generate' => true,
         'create_page' => true,
         'create_all_pages' => true,
+        'save_accessibility' => true,
+        'review_accessibility' => true,
     ];
 }
 
@@ -143,7 +149,7 @@ function cms_admin_legal_sites_normalize_template_type(array $post): string
 {
     $type = strtolower(trim((string) ($post['template_type'] ?? '')));
 
-    return in_array($type, ['imprint', 'privacy', 'terms', 'revocation'], true) ? $type : '';
+    return in_array($type, ['imprint', 'privacy', 'terms', 'revocation', 'accessibility'], true) ? $type : '';
 }
 
 function cms_admin_legal_sites_normalize_positive_id(mixed $value): int
@@ -218,12 +224,35 @@ function cms_admin_legal_sites_normalize_profile_payload(array $post): array
     return $normalized;
 }
 
+/**
+ * Formularfelder `a11y_<feld>` der Barrierefreiheitserklärung; Checkboxen werden explizit auf 1/0 gesetzt.
+ *
+ * @return array<string, string>
+ */
+function cms_admin_legal_sites_normalize_accessibility_payload(array $post): array
+{
+    $normalized = [];
+    foreach (array_keys(AccessibilityStatementService::DEFAULTS) as $key) {
+        if ($key === 'footer_link') {
+            continue;
+        }
+
+        $normalized[$key] = cms_admin_legal_sites_normalize_text($post['a11y_' . $key] ?? '', CMS_ADMIN_LEGAL_SITES_MAX_PROFILE_TEXTAREA_LENGTH);
+    }
+
+    $normalized['footer_link'] = !empty($post['a11y_footer_link']) ? '1' : '0';
+    $normalized['update_page'] = !empty($post['a11y_update_page']) ? '1' : '0';
+
+    return $normalized;
+}
+
 /** @return array<string, mixed> */
 function cms_admin_legal_sites_normalize_action_payload(string $action, array $post): array
 {
     return match ($action) {
         'save' => cms_admin_legal_sites_normalize_save_payload($post),
         'save_profile' => cms_admin_legal_sites_normalize_profile_payload($post),
+        'save_accessibility' => cms_admin_legal_sites_normalize_accessibility_payload($post),
         'generate', 'create_page' => [
             'template_type' => cms_admin_legal_sites_normalize_template_type($post),
         ],
@@ -264,6 +293,8 @@ function cms_admin_legal_sites_handle_action(
         'generate' => $module->generateTemplate($templateType),
         'create_page' => $module->createOrUpdatePage($templateType, $userId),
         'create_all_pages' => $module->createOrUpdateAllPages($userId),
+        'save_accessibility' => $module->saveAccessibility($post, $userId),
+        'review_accessibility' => $module->markAccessibilityReviewed($userId),
         default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
     };
 }
@@ -298,6 +329,32 @@ function cms_admin_legal_sites_sync_save_state(string $action, array $payload, a
     if ($payload !== []) {
         $_SESSION[CMS_ADMIN_LEGAL_SITES_SESSION_OLD_SAVE_KEY] = $payload;
     }
+}
+
+function cms_admin_legal_sites_sync_accessibility_state(string $action, array $result): void
+{
+    if ($action !== 'save_accessibility') {
+        return;
+    }
+
+    if (($result['success'] ?? false) || !is_array($result['accessibility'] ?? null)) {
+        unset($_SESSION[CMS_ADMIN_LEGAL_SITES_SESSION_OLD_ACCESSIBILITY_KEY]);
+        return;
+    }
+
+    $_SESSION[CMS_ADMIN_LEGAL_SITES_SESSION_OLD_ACCESSIBILITY_KEY] = $result['accessibility'];
+}
+
+function cms_admin_legal_sites_apply_old_accessibility(array $data): array
+{
+    $old = $_SESSION[CMS_ADMIN_LEGAL_SITES_SESSION_OLD_ACCESSIBILITY_KEY] ?? null;
+    if (is_array($old) && is_array($old['fields'] ?? null) && is_array($data['accessibility'] ?? null)) {
+        $data['accessibility']['fields'] = array_merge($data['accessibility']['fields'] ?? [], $old['fields']);
+        $data['accessibility']['errors'] = array_values(array_map('strval', is_array($old['errors'] ?? null) ? $old['errors'] : []));
+    }
+    unset($_SESSION[CMS_ADMIN_LEGAL_SITES_SESSION_OLD_ACCESSIBILITY_KEY]);
+
+    return $data;
 }
 
 function cms_admin_legal_sites_apply_old_profile(array $data): array
@@ -343,6 +400,7 @@ function cms_admin_legal_sites_templates(LegalSitesModule $module): array
         'privacy'    => $module->getTemplateContent('privacy'),
         'terms'      => $module->getTemplateContent('terms'),
         'revocation' => $module->getTemplateContent('revocation'),
+        'accessibility' => $module->getTemplateContent('accessibility'),
     ];
 }
 
@@ -389,6 +447,7 @@ $sectionPageConfig = [
     'data_loader' => static function (LegalSitesModule $module): array {
         $data = cms_admin_legal_sites_apply_old_profile($module->getData());
         $data = cms_admin_legal_sites_apply_old_save($data);
+        $data = cms_admin_legal_sites_apply_old_accessibility($data);
         $data['templates'] = cms_admin_legal_sites_templates($module);
 
         return $data;
@@ -431,6 +490,7 @@ $sectionPageConfig = [
         $result = cms_admin_legal_sites_handle_action($module, $action, $normalizedPost, $userId, $templateType);
         cms_admin_legal_sites_sync_profile_state($action, $result);
         cms_admin_legal_sites_sync_save_state($action, $normalizedPost, $result);
+        cms_admin_legal_sites_sync_accessibility_state($action, $result);
 
         return $result;
     },

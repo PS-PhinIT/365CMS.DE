@@ -112,11 +112,14 @@ $navRenderEntry = static function (array $navEntry) use ($navEsc, $navIcon, $nav
             </li>
             <?php continue; ?>
         <?php endif; ?>
-        <li class="cms-nav__group<?= !empty($navGroup['active']) ? ' is-active' : '' ?>" data-cms-group="<?= $navEsc($navGroup['id']) ?>">
+        <li class="cms-nav__group<?= !empty($navGroup['plugins']) ? ' cms-nav__group--plugins' : '' ?><?= !empty($navGroup['active']) ? ' is-active' : '' ?>" data-cms-group="<?= $navEsc($navGroup['id']) ?>">
             <button type="button" class="cms-nav__group-toggle" id="<?= $navEsc($navGroup['dom_id']) ?>-toggle"
                     aria-expanded="<?= !empty($navGroup['expanded']) ? 'true' : 'false' ?>"
                     aria-controls="<?= $navEsc($navGroup['dom_id']) ?>"<?= $navToggleAttr((string) $navGroup['id']) ?>>
                 <span class="cms-nav__group-label"><?= $navEsc($navGroup['label']) ?></span>
+                <?php if ((int) ($navGroup['count'] ?? 0) > 0): ?>
+                    <span class="cms-nav__group-count"><?= (int) $navGroup['count'] ?></span>
+                <?php endif; ?>
                 <i class="ti ti-chevron-down cms-nav__chevron" aria-hidden="true"></i>
             </button>
             <div class="cms-collapse<?= !empty($navGroup['expanded']) ? '' : ' is-collapsed' ?>" id="<?= $navEsc($navGroup['dom_id']) ?>" data-cms-collapse="group">

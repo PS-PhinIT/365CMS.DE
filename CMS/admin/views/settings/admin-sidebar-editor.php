@@ -199,9 +199,9 @@ $editorJson = json_encode(
                             <div class="form-hint" id="cms-am-base-hint">Nicht platzierte Core-Einträge landen in der gleichnamigen Gruppe dieses Profils, sofern das Layout sie enthält.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="cms-am-fallback">Auffanggruppe für Plugins</label>
+                            <label class="form-label" for="cms-am-fallback">Auffanggruppe für Core-Einträge</label>
                             <select class="form-select" id="cms-am-fallback" data-am-fallback aria-describedby="cms-am-fallback-hint"></select>
-                            <div class="form-hint" id="cms-am-fallback-hint">Hier erscheinen Plugin-Seiten ohne Wunschplatz und übrige Core-Einträge. Ohne Auffanggruppe entstehen eigene Gruppen.</div>
+                            <div class="form-hint" id="cms-am-fallback-hint">Hier erscheinen Core-Einträge, deren Gruppe im Layout fehlt; ohne Auffanggruppe die Gruppe „Weitere“. Plugin-Seiten stehen im Abschnitt „Aktive Plugins“, sofern du sie nicht selbst platzierst.</div>
                         </div>
                         <div class="mb-0">
                             <label class="form-label" for="cms-am-root">Start-Kachelseite</label>

@@ -343,7 +343,7 @@ $scopeOptionLabel = static fn (array $row): string => $row['key'] === '' ? 'Glob
         <div class="card-body">
             <ul class="cms-am-help__list">
                 <li><strong>Kachelseiten:</strong> Gruppen im Anzeigemodus „Kacheln“ (etwa Einstellungen oder Website-Zustand) sind in der Seitenleiste ein einzelner Link; ihre Seiten erscheinen dort als Kacheln.</li>
-                <li><strong>Plugins:</strong> Plugin-Menüs erscheinen automatisch – an ihrem Wunschplatz, sonst in der Auffanggruppe des Layouts (Klassisch: Plugins, Strukturiert: Erweitern).</li>
+                <li><strong>Plugins:</strong> Seiten aktiver Plugins stehen gesammelt im Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (standardmäßig eingeklappt, alphabetisch). Nur in einem eigenen Layout lassen sie sich an andere Stellen verschieben.</li>
                 <li><strong>Neue Seiten:</strong> Einträge, die ein eigenes Layout noch nicht kennt, ordnet das CMS selbst ein. Nur ausdrücklich ausgeblendete Einträge bleiben verborgen.</li>
                 <?php if ($adminMenuLockedLabels !== []): ?>
                     <li><strong>Immer erreichbar:</strong> <?= $esc(implode(', ', $adminMenuLockedLabels)) ?> – diese Einträge lassen sich nicht ausblenden oder entfernen.</li>

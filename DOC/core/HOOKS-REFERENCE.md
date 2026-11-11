@@ -97,7 +97,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | Hook | Typ | Argumente |
 |---|---|---|
 | `cms_admin_menu` | Action | – (Menüs mit `add_menu_page()`/`add_submenu_page()` registrieren) |
-| `cms_admin_menu_preferred_parents` | Filter | `$parents` (Menü-Slug ⇒ [Profil ⇒ Gruppen-ID]); Wunschplätze von Plugin-Menüs je Sidebar-Profil, ergänzt `cms_admin_menu_set_preferred_parent()` (seit 4.0.0, [ADMIN-MENU.md](../admin/ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil)) |
+| `cms_admin_menu_preferred_parents` | Filter | `$parents` (Menü-Slug ⇒ [Profil ⇒ Gruppen-ID]); **ohne Wirkung** seit „Aktive Plugins“ (nur Kompatibilität), ergänzt `cms_admin_menu_set_preferred_parent()` (seit 4.0.0, [ADMIN-MENU.md](../admin/ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)) |
 | `admin_head` / `admin_body_end` | Action | – (Admin-Layout) |
 | `plugin_activated`, `plugin_deactivated`, `plugin_before_delete`, `plugin_deleted` | Action | `$slug` |
 | `plugin_installed` | Action | – |

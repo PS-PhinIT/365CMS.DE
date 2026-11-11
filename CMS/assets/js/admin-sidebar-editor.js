@@ -722,7 +722,7 @@
                 chips.push(chip('Kacheln', 'info', 'Ein Link in der Seitenleiste; die Einträge erscheinen als Kacheln auf /admin/configuration?group=' + group.id + '.'));
             }
             if (state.fallback_group === group.id) {
-                chips.push(chip('Auffanggruppe', 'accent', 'Nicht platzierte Plugin- und Core-Einträge erscheinen hier.'));
+                chips.push(chip('Auffanggruppe', 'accent', 'Core-Einträge, deren Gruppe im Layout fehlt, erscheinen hier.'));
             }
             if (state.root_group === group.id) {
                 chips.push(chip('Start-Kachelseite', 'accent', 'Wird unter /admin/configuration ohne Gruppenangabe gezeigt.'));
@@ -957,7 +957,7 @@
             if (el.base) {
                 el.base.value = state.base;
             }
-            fillSelect(el.fallback, [['', 'Keine – eigene Gruppen je Plugin']].concat(groupOptions), state.fallback_group);
+            fillSelect(el.fallback, [['', 'Keine – Gruppe „Weitere“']].concat(groupOptions), state.fallback_group);
             fillSelect(el.root, [['', 'Keine – erste Kachelgruppe']].concat(groups().filter(function (group) {
                 return group.display === 'tiles';
             }).map(function (group) { return [group.id, group.label || group.id]; })), state.root_group);

@@ -40,7 +40,7 @@ Checklist for reviewing a change to the administration (core page, module, view 
 ### B. Smoke-Test nach Deployment / Update
 
 - [ ] `/admin` lädt, Sidebar vollständig, keine PHP-Warnungen im `/admin/logs/php-errors`.
-- [ ] Seitenleiste: Gruppen auf-/zuklappen und einklappen (Icon-Leiste) bleiben nach dem Neuladen erhalten; Auffanggruppe (*Plugins* bzw. *Erweitern*) und Plugin-Gruppen zeigen alle aktiven, der Site zugewiesenen Plugins mit Menüeinträgen; das gewählte Sidebar-Profil und Kachelseiten (`/admin/configuration?group=<id>`, unbekannte Gruppe = 404) stimmen mit [ADMIN-MENU.md](ADMIN-MENU.md) überein; unter 992 px öffnet sich die Seitenleiste als Drawer (Escape schließt).
+- [ ] Seitenleiste: Gruppen auf-/zuklappen und einklappen (Icon-Leiste) bleiben nach dem Neuladen erhalten; der eingeklappte Abschnitt „Aktive Plugins“ (mit Zähler) zeigt alle aktiven, der Site zugewiesenen Plugins mit Menüeinträgen; das gewählte Sidebar-Profil und Kachelseiten (`/admin/configuration?group=<id>`, unbekannte Gruppe = 404) stimmen mit [ADMIN-MENU.md](ADMIN-MENU.md) überein; unter 992 px öffnet sich die Seitenleiste als Drawer (Escape schließt).
 - [ ] *Einstellungen › Plugins › Plugin-Zuweisung*: nach einem Update sind alle Plugins allen Sites zugewiesen.
 - [ ] `/admin/updates`: installierte = erwartete Core- und Schema-Version (`4.0.0`, `v25`); ggf. `run_database_update`.
 - [ ] `/admin/monitor-health-check` ohne kritische Befunde.

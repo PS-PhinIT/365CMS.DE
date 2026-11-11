@@ -15,7 +15,7 @@ Since 4.0.0 the sidebar is data-driven ([ADMIN-MENU.md](ADMIN-MENU.md)):
 
 - Core pages are rows in `CMS\Services\AdminMenu\CoreCatalog`.
 - The profiles *Classic* and *Structured* (`ProfileLayouts`), or a custom layout, place them; `AdminMenuService` and `MenuBuilder` build the tree.
-- Plugin menus are read unchanged from `get_registered_admin_menus()`. They are placed in the profile's fallback group (*Plugins* / *Erweitern*), in a group of their own or in a preferred group, and filtered by the per-site plugin assignment.
+- Plugin menus are read unchanged from `get_registered_admin_menus()`. Pages that the layout does not place appear in the collapsed sidebar section "Aktive Plugins" (active plugins) at the end of the sidebar, filtered by the per-site plugin assignment.
 - `CMS\Services\AdminNavigationService` adds the active entry and badges for rendering.
 
 The plugin API (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) is unchanged. Pages can load ES modules via `page_assets['modules']`.
@@ -111,9 +111,9 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 
 **Darstellung in der Seitenleiste (seit 4.0.0):** Die Registrierung oben bleibt unverändert – Hook-Name, Signaturen und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `AdminMenuService` liest das Ergebnis von `get_registered_admin_menus()` nur aus:
 
-- Ein Plugin-Menü ohne Unterseiten wird ein einfacher Link in der Auffanggruppe des Profils (*Plugins* bzw. *Erweitern*, alphabetisch nach Menütitel).
-- Ein Menü mit Unterseiten wird eine eigene Gruppe direkt nach der Auffanggruppe. Ist der Hauptpunkt nicht selbst als Unterseite registriert, wird „Übersicht“ als erster Eintrag ergänzt.
-- Mit `cms_admin_menu_set_preferred_parent()` kann ein Plugin je Profil eine andere Gruppe wünschen ([ADMIN-MENU.md](ADMIN-MENU.md#4-plugin-menüs-und-wunschplätze-je-profil)).
+- Ein Plugin-Menü ohne Unterseiten wird ein einfacher Link im eingeklappten Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (alphabetisch nach Menütitel).
+- Ein Menü mit Unterseiten wird dort eine eigene Gruppe. Ist der Hauptpunkt nicht selbst als Unterseite registriert, wird „Übersicht“ als erster Eintrag ergänzt.
+- Andere Plätze legt nur der Administrator in einem eigenen Layout fest; `cms_admin_menu_set_preferred_parent()` wirkt nicht mehr ([ADMIN-MENU.md](ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)).
 - Menüs mit gesetztem `hidden` entfallen.
 - Aktiv ist der Eintrag, dessen Pfad der aufgerufenen URL entspricht (`aria-current="page"`); seine Gruppe klappt dann automatisch auf.
 - **Icon** (6. Parameter von `add_menu_page()`): Tabler-Klasse (`ti-chart-bar` bzw. `ti ti-chart-bar`), Inline-`<svg>` bis 20.000 Zeichen (wird als Bild ausgegeben), `data:image/…;base64`-URI, Pfad oder URL derselben Herkunft, oder Text/Emoji mit höchstens 4 Zeichen. Alles andere sowie ein leerer Wert ergibt das neutrale Standard-Icon (Tabler `puzzle`).

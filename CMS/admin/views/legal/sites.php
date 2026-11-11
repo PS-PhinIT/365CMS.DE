@@ -8,15 +8,16 @@ $legalSitesAdminBaseUrl = '/admin/legal-sites';
 $pages     = $d['pages'] ?? [];
 $assigned  = $d['assigned_pages'] ?? [];
 $allPages  = $d['all_pages'] ?? [];
-$tabKeys   = ['legal_imprint', 'legal_privacy', 'legal_terms', 'legal_revocation'];
+$tabKeys   = ['legal_imprint', 'legal_privacy', 'legal_terms', 'legal_revocation', 'legal_accessibility'];
 $tabIcons  = [
     'legal_imprint'    => '<svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 9l1 0"/><path d="M9 13l6 0"/><path d="M9 17l6 0"/></svg>',
     'legal_privacy'    => '<svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/></svg>',
     'legal_terms'      => '<svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 8v-3a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2h-5"/><path d="M6 14m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M4.5 17l-1.5 5l3 -1.5l3 1.5l-1.5 -5"/></svg>',
     'legal_revocation' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14l-4 -4l4 -4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>',
+    'legal_accessibility' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 16.5l2 -3l2 3m-2 -3v-2l3 -1m-6 0l3 1"/><circle cx="12" cy="7.5" r=".5" fill="currentColor"/></svg>',
 ];
-$pageIdKeys = ['legal_imprint' => 'imprint_page_id', 'legal_privacy' => 'privacy_page_id', 'legal_terms' => 'terms_page_id', 'legal_revocation' => 'revocation_page_id'];
-$templateTypes = ['legal_imprint' => 'imprint', 'legal_privacy' => 'privacy', 'legal_terms' => 'terms', 'legal_revocation' => 'revocation'];
+$pageIdKeys = ['legal_imprint' => 'imprint_page_id', 'legal_privacy' => 'privacy_page_id', 'legal_terms' => 'terms_page_id', 'legal_revocation' => 'revocation_page_id', 'legal_accessibility' => 'accessibility_page_id'];
+$templateTypes = ['legal_imprint' => 'imprint', 'legal_privacy' => 'privacy', 'legal_terms' => 'terms', 'legal_revocation' => 'revocation', 'legal_accessibility' => 'accessibility'];
 $templateDefaults = $d['templates'] ?? [];
 $templateProfiles = is_array($d['template_profiles'] ?? null) ? $d['template_profiles'] : [];
 $templateMeta = is_array($d['template_meta'] ?? null) ? $d['template_meta'] : [];
@@ -701,6 +702,9 @@ $legalSitesConfig = [
         </div>
         <?php endforeach; ?>
         </div>
+
+        <?php $a11y = is_array($d['accessibility'] ?? null) ? $d['accessibility'] : []; ?>
+        <?php if ($a11y !== []) { require __DIR__ . '/accessibility-card.php'; } ?>
 
     </div>
 </div>

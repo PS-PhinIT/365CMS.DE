@@ -201,6 +201,7 @@ Registry- und Manifestfelder bleiben innerhalb der aktuellen Allowlists, SHA-256
 |---|---|
 | `plugin_marketplace_invalid_slug` | Slug nach Normalisierung leer/ungültig |
 | `plugin_marketplace_missing_catalog_entry` | Slug nicht im aktuellen Katalog |
+| `plugin_marketplace_integrated_in_core` | Plugin ist seit `integrated_in_core` Teil des Cores (z. B. `cms-feed`, `cms-downloads`, `cms-contact` seit 4.0.0) |
 | `plugin_marketplace_already_installed` / `plugin_marketplace_target_exists` | Plugin-Ordner existiert bereits |
 | `plugin_marketplace_manual_install_required` | Prüfsumme, Kompatibilität, Preis oder Download-URL verhindern Auto-Install |
 | `plugin_marketplace_package_too_large` | `package_size` > 100 MiB |
@@ -213,7 +214,7 @@ Bei Erfolg lautet die Meldung „Plugin "<slug>" installiert. Aktiviere es unter
 
 ### Hinweise
 
-- Der mitgelieferte Katalog `CMS/marketplace/plugins/index.json` listet derzeit nur `cms-importer` mit veralteten Anforderungen (`requires_cms` 0.26.0, `requires_php` 8.1) und `install_supported: false` – siehe [core/STATUS.md](../core/STATUS.md).
+- Der mitgelieferte Katalog `CMS/marketplace/plugins/index.json` listet `cms-importer` (`install_supported: false`) sowie `cms-feed`, `cms-downloads` und `cms-contact` mit `"integrated_in_core": "4.0.0"`: Ab 4.0.0 sind sie Teil des Cores und werden nicht mehr zur Installation angeboten (siehe [admin/plugins/MARKETPLACE.md](../admin/plugins/MARKETPLACE.md#im-core-enthaltene-plugins)).
 - Plugin-Updates bereits installierter Plugins laufen über `/admin/updates` (`UpdateService`, ebenfalls über `plugin_registry_url`), nicht über den Marketplace.
 
 ## Verwandte Dokumente

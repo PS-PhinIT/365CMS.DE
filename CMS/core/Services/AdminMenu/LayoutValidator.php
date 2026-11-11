@@ -257,7 +257,7 @@ final class LayoutValidator
 
         $fallback = (string) ($input['fallback_group'] ?? '');
         if ($fallback !== '' && !isset($groupIds[$fallback])) {
-            $warnings[] = 'Die Auffanggruppe „' . self::short($fallback) . '“ fehlt; nicht platzierte Plugin-Einträge erscheinen in eigenen Gruppen.';
+            $warnings[] = 'Die Auffanggruppe „' . self::short($fallback) . '“ fehlt; nicht platzierte Core-Einträge erscheinen in der Gruppe „Weitere“.';
             $fallback = '';
         }
 

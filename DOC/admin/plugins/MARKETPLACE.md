@@ -17,6 +17,16 @@ The plugin marketplace (`CMS/admin/plugin-marketplace.php` → `CMS/admin/module
 - Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.de`, `github.com`, `api.github.com`, `codeload.github.com`, `objects.githubusercontent.com`, `raw.githubusercontent.com`.
 - Anzeige je Plugin: Name, Beschreibung, Version, Autor, Kompatibilität (`requires_cms`/`min_cms_version`, `requires_php`/`min_php`, `tested_up_to`), Status (installiert/aktualisierbar), Preis bzw. Kauf-Link bei kostenpflichtigen Plugins.
 
+### Im Core enthaltene Plugins
+
+Ein Katalogeintrag mit `"integrated_in_core": "4.0.0"` (Mindest-Core-Version) gilt ab dieser Core-Version als Teil des Cores. Unabhängig vom Katalog gilt das auch für jedes Plugin, das `IntegratedPluginService::isIntegrated()` meldet (seit 4.0.0: `cms-feed`, `cms-downloads`, `cms-contact`).
+
+- Die Karte zeigt „Im Core enthalten“, die Begründung und einen Link zur Core-Seite statt „Installieren“. Ist das (deaktivierte) Plugin-Verzeichnis noch vorhanden, weist sie darauf hin, dass es entfernt werden kann.
+- Statusfilter „Im Core enthalten“. Die Kennzahlen *Verfügbar*, *Installierbar* und *Nur manuell* zählen diese Einträge nicht mit.
+- `install` lehnt solche Slugs mit dem Fehlercode `plugin_marketplace_integrated_in_core` ab, auch bei direktem POST.
+- Unter `/admin/updates` werden für sie keine Plugin-Updates mehr angeboten.
+- Auf älteren Core-Versionen (kleiner als `integrated_in_core`) bleibt der Eintrag normal installierbar.
+
 ### Installation (`action=install`, Feld `slug`)
 
 1. Plugin muss im Katalog stehen und darf noch nicht installiert sein.

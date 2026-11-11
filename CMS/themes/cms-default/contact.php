@@ -1,11 +1,15 @@
 <?php
 /**
- * Meridian CMS Default – Kontakt Template
+ * Meridian CMS Default – Kontaktseite
  *
- * Unterstützt:
- *   - Kontaktformular mit CSRF-Schutz
- *   - Konfigurierbare Empfänger-E-Mail aus CMS-Settings
- *   - Honeypot-Anti-Spam
+ * Das Formular stellt der Core bereit (Inhalte → Formulare, FormService): Prüfung, Antispam, Einwilligung,
+ * Speicherung und Mails laufen dort. Diese Vorlage ordnet nur Überschrift, Formular und Kontaktdaten an.
+ *
+ * Vom Router bereitgestellte Variablen:
+ *   $contactForm     – array|null: Formular-Definition
+ *   $contactFormHtml – string: fertig gerendertes Formular inkl. Fehler- bzw. Erfolgsmeldung
+ *   $isContactPage   – bool: allgemeine Kontaktseite (/kontakt, /contact) statt /contact/<schlüssel>
+ *   $title           – string: Seitentitel
  *
  * @package CMSv2\Themes\CmsDefault
  */
@@ -16,266 +20,113 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$contactSuccess = '';
-$contactError   = '';
-$formData       = ['name' => '', 'email' => '', 'subject' => '', 'message' => ''];
-$formViewData   = ['name' => '', 'email' => '', 'subject' => '', 'message' => ''];
+$contactForm = isset($contactForm) && is_array($contactForm) ? $contactForm : null;
+$contactFormHtml = isset($contactFormHtml) ? (string) $contactFormHtml : '';
+$isContactPage = !isset($isContactPage) || (bool) $isContactPage;
+$isEnglish = (string) ($contentLocale ?? 'de') === 'en';
 
-// Empfänger-E-Mail aus Settings
-$recipientEmail = '';
+$contactHeading = $isContactPage
+    ? ($isEnglish ? 'Get in touch' : 'Kontakt aufnehmen')
+    : trim((string) ($title ?? ($contactForm['title'] ?? '')));
+$contactIntro = $isContactPage
+    ? ($isEnglish ? 'Questions, feedback or a cooperation request? Write to us!' : 'Hast du Fragen, Feedback oder einen Kooperationswunsch? Schreib uns gerne!')
+    : '';
+$contactCrumb = $isContactPage ? ($isEnglish ? 'Contact' : 'Kontakt') : $contactHeading;
+
+// Kontaktdaten aus den Theme-Einstellungen; E-Mail-Fallback wie bisher (Empfängeradresse, sonst ADMIN_EMAIL).
+$contactInfo = [];
 try {
-    $contactEmailOption = (string) meridian_option('contact_email', '');
-    if ($contactEmailOption !== '') {
-        $recipientCandidate = filter_var(trim($contactEmailOption), FILTER_VALIDATE_EMAIL);
-        if (is_string($recipientCandidate) && $recipientCandidate !== '') {
-            $recipientEmail = $recipientCandidate;
+    foreach (meridian_options(['contact_address', 'contact_phone', 'contact_email_display', 'contact_hours']) as $key => $value) {
+        if ($value) {
+            $contactInfo[$key] = (string) $value;
         }
     }
 } catch (\Throwable $e) {
-    // Fallback: Admin-Mail aus Config
 }
-if (empty($recipientEmail) && defined('ADMIN_EMAIL')) {
-    $recipientCandidate = filter_var(trim((string) ADMIN_EMAIL), FILTER_VALIDATE_EMAIL);
-    if (is_string($recipientCandidate) && $recipientCandidate !== '') {
-        $recipientEmail = $recipientCandidate;
-    }
+$contactEmail = (string) ($contactInfo['contact_email_display'] ?? '');
+if ($contactEmail === '') {
+    $contactEmail = (string) (filter_var(trim((string) meridian_option('contact_email', '')), FILTER_VALIDATE_EMAIL) ?: '');
 }
-
-// CSRF-Token
-$csrfToken = '';
-if (class_exists('\CMS\Security')) {
-    $csrfToken = \CMS\Security::instance()->generateToken('contact_form');
+if ($contactEmail === '' && defined('ADMIN_EMAIL')) {
+    $contactEmail = (string) (filter_var(trim((string) ADMIN_EMAIL), FILTER_VALIDATE_EMAIL) ?: '');
 }
-
-// Formular verarbeiten
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_submit'])) {
-
-    // CSRF prüfen
-    $csrfOk = true;
-    if (class_exists('\CMS\Security')) {
-        $csrfOk = \CMS\Security::instance()->verifyToken($_POST['csrf_token'] ?? '', 'contact_form');
-    }
-
-    // Honeypot prüfen (sollte leer sein)
-    $honeypot = $_POST['website'] ?? '';
-
-    if (!$csrfOk) {
-        $contactError = 'Sicherheitscheck fehlgeschlagen. Bitte Seite neu laden.';
-    } elseif (!empty($honeypot)) {
-        // Stiller Spam-Abbruch (Honeypot gefüllt → Bot)
-        $contactSuccess = 'Deine Nachricht wurde gesendet. Wir melden uns bald!';
-    } else {
-        $formData['name'] = trim(strip_tags((string) ($_POST['contact_name'] ?? '')));
-        $formData['email'] = filter_var(trim((string) ($_POST['contact_email'] ?? '')), FILTER_VALIDATE_EMAIL) ?: '';
-        $formData['subject'] = trim(strip_tags((string) ($_POST['contact_subject'] ?? '')));
-        $formData['message'] = trim(strip_tags((string) ($_POST['contact_message'] ?? '')));
-        $formData['message'] = preg_replace("/\r\n?|\r/", "\n", $formData['message']) ?? $formData['message'];
-
-        if (empty($formData['name'])) {
-            $contactError = 'Bitte gib deinen Namen an.';
-        } elseif (empty($formData['email'])) {
-            $contactError = 'Bitte gib eine gültige E-Mail-Adresse an.';
-        } elseif (strlen($formData['message']) < 20) {
-            $contactError = 'Bitte gib eine ausführlichere Nachricht ein (min. 20 Zeichen).';
-        } elseif (class_exists('\\CMS\\Security')
-            && !\CMS\Security::checkDbRateLimit(\CMS\Security::getClientIp(), 'contact_form', 5, 3600)) {
-            // Mailversand begrenzen: max. 5 Nachrichten je IP und Stunde.
-            $contactError = 'Du hast in kurzer Zeit zu viele Nachrichten gesendet. Bitte versuche es später erneut.';
-        } elseif (!empty($recipientEmail)) {
-            if (class_exists('\\CMS\\Security')) {
-                \CMS\Security::recordDbRateLimitAttempt(\CMS\Security::getClientIp(), 'contact_form');
-            }
-
-            $subject  = '[Kontaktformular] Neue Nachricht';
-            $body     = "Name: {$formData['name']}\n"
-                      . 'Betreff: ' . ($formData['subject'] !== '' ? $formData['subject'] : '—') . "\n"
-                      . "E-Mail: {$formData['email']}\n\n"
-                      . "Nachricht:\n{$formData['message']}";
-
-            $sent = false;
-            if (class_exists('\\CMS\\Services\\MailService')) {
-                $sent = \CMS\Services\MailService::getInstance()->sendPlain(
-                    $recipientEmail,
-                    $subject,
-                    $body,
-                    [
-                        'X-365CMS-Contact-Form' => '1',
-                    ]
-                );
-            } else {
-                $contactError = 'Kontaktformular ist momentan nicht verfügbar. Bitte kontaktiere uns direkt per E-Mail.';
-            }
-
-            if ($contactError === '' && $sent) {
-                $contactSuccess = 'Deine Nachricht wurde gesendet. Wir melden uns in Kürze!';
-                $formData = ['name' => '', 'email' => '', 'subject' => '', 'message' => ''];
-            } elseif ($contactError === '') {
-                $contactError = 'Beim Senden ist ein Fehler aufgetreten. Bitte versuche es erneut oder kontaktiere uns direkt per E-Mail.';
-            }
-        } else {
-            $contactError = 'Kontaktformular ist momentan nicht konfiguriert. Bitte wende dich direkt an uns.';
-        }
-    }
-    // CSRF-Token nach Verarbeitung neu erzeugen
-    if (class_exists('\CMS\Security')) {
-        $csrfToken = \CMS\Security::instance()->generateToken('contact_form');
-    }
-}
-
-if ($contactSuccess === '') {
-    $formViewData = [
-        'name' => htmlspecialchars($formData['name'], ENT_QUOTES, 'UTF-8'),
-        'email' => htmlspecialchars($formData['email'], ENT_QUOTES, 'UTF-8'),
-        'subject' => htmlspecialchars($formData['subject'], ENT_QUOTES, 'UTF-8'),
-        'message' => htmlspecialchars($formData['message'], ENT_QUOTES, 'UTF-8'),
-    ];
-}
+$esc = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 ?>
+<style <?php echo \CMS\Security::instance()->nonceAttr(); ?>>
+.contact-page{max-width:var(--max);margin:0 auto;padding:2rem 1.5rem}
+.contact-page .breadcrumb{font-size:.8rem;color:var(--ink-muted);margin-bottom:2rem}
+.contact-page .breadcrumb a{color:var(--ink-muted);text-decoration:none}
+.contact-page .breadcrumb .sep{margin:0 .4rem}
+.contact-page .breadcrumb [aria-current]{color:var(--ink)}
+.contact-grid{display:grid;grid-template-columns:1fr min(420px,40%);gap:3rem;align-items:start}
+.contact-page__title{font-family:var(--font-serif);font-size:clamp(1.6rem,4vw,2.2rem);margin:0 0 .5rem}
+.contact-page__intro{color:var(--ink-muted);margin:0 0 2rem}
+.contact-aside{background:var(--surface-tint);border-radius:var(--r);border:1px solid var(--rule);padding:1.75rem}
+.contact-aside h2{font-family:var(--font-serif);font-size:1.1rem;margin:0 0 1.25rem;color:var(--ink)}
+.contact-aside dl{margin:0;font-size:.88rem;line-height:1.7}
+.contact-aside dt{font-weight:600;color:var(--ink-soft);margin-top:.75rem}
+.contact-aside dd{margin:0;color:var(--ink-muted)}
+.contact-aside dd a{color:var(--accent)}
+.contact-aside__empty{color:var(--ink-ghost);font-style:italic}
+.contact-aside__legal{border-top:1px solid var(--rule);margin:1.5rem 0 0;padding-top:1rem;font-size:.78rem;color:var(--ink-ghost)}
+.contact-aside__legal a{color:var(--ink-muted);text-decoration:none}
+@media (max-width:860px){.contact-grid{grid-template-columns:1fr;gap:2rem}}
+</style>
 
-<div class="container" style="max-width:var(--max);margin:0 auto;padding:2rem 1.5rem;">
-
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb" aria-label="Breadcrumb" style="font-size:.8rem;color:var(--ink-muted);margin-bottom:2rem;">
-        <a href="<?php echo SITE_URL; ?>/" style="color:var(--ink-muted);text-decoration:none;">Startseite</a>
-        <span style="margin:0 .4rem;">›</span>
-        <span aria-current="page" style="color:var(--ink);">Kontakt</span>
+<div class="container contact-page">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="<?php echo SITE_URL; ?>/"><?php echo $isEnglish ? 'Home' : 'Startseite'; ?></a>
+        <span class="sep" aria-hidden="true">›</span>
+        <span aria-current="page"><?php echo $esc($contactCrumb); ?></span>
     </nav>
 
-    <div style="display:grid;grid-template-columns:1fr min(420px,40%);gap:3rem;align-items:start;" class="contact-grid">
-
-        <!-- Formular -->
-        <div>
-            <h1 style="font-family:var(--font-serif);font-size:clamp(1.6rem,4vw,2.2rem);margin:0 0 .5rem;">Kontakt aufnehmen</h1>
-            <p style="color:var(--ink-muted);margin:0 0 2rem;">Hast du Fragen, Feedback oder einen Kooperationswunsch? Schreib uns gerne!</p>
-
-            <?php if ($contactSuccess): ?>
-            <div class="alert alert-success" style="padding:.85rem 1.2rem;background:#d1fae5;color:#065f46;border-radius:var(--r);margin-bottom:1.5rem;font-size:.9rem;">
-                ✅ <?php echo htmlspecialchars($contactSuccess, ENT_QUOTES, 'UTF-8'); ?>
-            </div>
+    <div class="contact-grid">
+        <div class="contact-page__main">
+            <h1 class="contact-page__title"><?php echo $esc($contactHeading); ?></h1>
+            <?php if ($contactIntro !== ''): ?>
+            <p class="contact-page__intro"><?php echo $esc($contactIntro); ?></p>
             <?php endif; ?>
 
-            <?php if ($contactError): ?>
-            <div class="alert alert-error" style="padding:.85rem 1.2rem;background:#fee2e2;color:#991b1b;border-radius:var(--r);margin-bottom:1.5rem;font-size:.9rem;">
-                ❌ <?php echo htmlspecialchars($contactError, ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!$contactSuccess): ?>
-            <form class="auth-form" method="POST" novalidate>
-                <input type="hidden" name="contact_submit" value="1">
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
-                <!-- Honeypot (verstecktes Anti-Spam-Feld) -->
-                <div hidden style="display:none;" aria-hidden="true">
-                    <input type="text" name="website" tabindex="-1" autocomplete="off">
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;" class="form-2col">
-                    <div class="form-group">
-                        <label class="form-label" for="contactName">
-                            Name <span style="color:#ef4444;">*</span>
-                        </label>
-                        <input type="text" id="contactName" name="contact_name" class="form-control"
-                               value="<?php echo $formViewData['name']; ?>"
-                               required maxlength="100" autocomplete="name"
-                               placeholder="Dein Name">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="contactEmail">
-                            E-Mail <span style="color:#ef4444;">*</span>
-                        </label>
-                        <input type="email" id="contactEmail" name="contact_email" class="form-control"
-                               value="<?php echo $formViewData['email']; ?>"
-                               required maxlength="200" autocomplete="email"
-                               placeholder="deine@email.de">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="contactSubject">Betreff</label>
-                    <input type="text" id="contactSubject" name="contact_subject" class="form-control"
-                           value="<?php echo $formViewData['subject']; ?>"
-                           maxlength="200"
-                           placeholder="Worum geht es?">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="contactMessage">
-                        Nachricht <span style="color:#ef4444;">*</span>
-                    </label>
-                    <textarea id="contactMessage" name="contact_message" class="form-control"
-                              required minlength="20" maxlength="5000"
-                              rows="6"
-                              style="resize:vertical;min-height:140px;"
-                              placeholder="Deine Nachricht …"><?php echo $formViewData['message']; ?></textarea>
-                </div>
-
-                <div class="form-group" style="font-size:.78rem;color:var(--ink-muted);margin-top:-.5rem;">
-                    <span>Mit dem Absenden stimmst du unserer <a href="<?php echo SITE_URL; ?>/datenschutz" style="color:var(--accent);">Datenschutzerklärung</a> zu.</span>
-                </div>
-
-                <button type="submit" class="btn-solid btn-solid--full" style="margin-top:.5rem;">
-                    Nachricht senden →
-                </button>
-            </form>
+            <?php if ($contactFormHtml !== ''): ?>
+                <?php echo $contactFormHtml; // FormRenderer: vollständig escaped ?>
+            <?php else: ?>
+            <p class="contact-aside__empty"><?php echo $isEnglish ? 'The contact form is currently unavailable.' : 'Das Kontaktformular ist derzeit nicht verfügbar.'; ?></p>
             <?php endif; ?>
         </div>
 
-        <!-- Kontaktinfos -->
-        <aside style="background:var(--surface-tint);border-radius:var(--r);border:1px solid var(--rule);padding:1.75rem;">
-            <h3 style="font-family:var(--font-serif);font-size:1.1rem;margin:0 0 1.25rem;color:var(--ink);">So erreichst du uns</h3>
-
-            <?php
-            // Kontaktdaten aus Settings laden
-            $contactInfo = [];
-            $contactKeys = ['contact_address', 'contact_phone', 'contact_email_display', 'contact_hours'];
-            try {
-                foreach (meridian_options($contactKeys) as $key => $value) {
-                    if ($value) {
-                        $contactInfo[$key] = $value;
-                    }
-                }
-            } catch (\Throwable $e) {}
-            ?>
-
-            <dl style="margin:0;font-size:.88rem;line-height:1.7;">
-                <?php if (!empty($contactInfo['contact_email_display']) || !empty($recipientEmail)): ?>
-                <dt style="font-weight:600;color:var(--ink-soft);margin-top:.75rem;">E-Mail</dt>
-                <dd style="margin:0;color:var(--ink-muted);">
-                    <a href="mailto:<?php echo htmlspecialchars($contactInfo['contact_email_display'] ?? $recipientEmail, ENT_QUOTES, 'UTF-8'); ?>"
-                       style="color:var(--accent);">
-                        <?php echo htmlspecialchars($contactInfo['contact_email_display'] ?? $recipientEmail, ENT_QUOTES, 'UTF-8'); ?>
-                    </a>
-                </dd>
+        <aside class="contact-aside">
+            <h2><?php echo $isEnglish ? 'How to reach us' : 'So erreichst du uns'; ?></h2>
+            <dl>
+                <?php if ($contactEmail !== ''): ?>
+                <dt><?php echo $isEnglish ? 'Email' : 'E-Mail'; ?></dt>
+                <dd><a href="mailto:<?php echo $esc($contactEmail); ?>"><?php echo $esc($contactEmail); ?></a></dd>
                 <?php endif; ?>
 
                 <?php if (!empty($contactInfo['contact_phone'])): ?>
-                <dt style="font-weight:600;color:var(--ink-soft);margin-top:.75rem;">Telefon</dt>
-                <dd style="margin:0;color:var(--ink-muted);"><?php echo htmlspecialchars($contactInfo['contact_phone'], ENT_QUOTES, 'UTF-8'); ?></dd>
+                <dt><?php echo $isEnglish ? 'Phone' : 'Telefon'; ?></dt>
+                <dd><?php echo $esc($contactInfo['contact_phone']); ?></dd>
                 <?php endif; ?>
 
                 <?php if (!empty($contactInfo['contact_address'])): ?>
-                <dt style="font-weight:600;color:var(--ink-soft);margin-top:.75rem;">Adresse</dt>
-                <dd style="margin:0;color:var(--ink-muted);"><?php echo nl2br(htmlspecialchars($contactInfo['contact_address'], ENT_QUOTES, 'UTF-8')); ?></dd>
+                <dt><?php echo $isEnglish ? 'Address' : 'Adresse'; ?></dt>
+                <dd><?php echo nl2br($esc($contactInfo['contact_address'])); ?></dd>
                 <?php endif; ?>
 
                 <?php if (!empty($contactInfo['contact_hours'])): ?>
-                <dt style="font-weight:600;color:var(--ink-soft);margin-top:.75rem;">Erreichbarkeit</dt>
-                <dd style="margin:0;color:var(--ink-muted);"><?php echo nl2br(htmlspecialchars($contactInfo['contact_hours'], ENT_QUOTES, 'UTF-8')); ?></dd>
+                <dt><?php echo $isEnglish ? 'Availability' : 'Erreichbarkeit'; ?></dt>
+                <dd><?php echo nl2br($esc($contactInfo['contact_hours'])); ?></dd>
                 <?php endif; ?>
 
-                <?php if (empty($contactInfo)): ?>
-                <dd style="margin:0;color:var(--ink-ghost);font-style:italic;">Kontaktdaten werden in den CMS-Einstellungen hinterlegt.</dd>
+                <?php if ($contactInfo === [] && $contactEmail === ''): ?>
+                <dd class="contact-aside__empty"><?php echo $isEnglish ? 'Contact details are maintained in the CMS settings.' : 'Kontaktdaten werden in den CMS-Einstellungen hinterlegt.'; ?></dd>
                 <?php endif; ?>
             </dl>
 
-            <!-- Rechtliche Links -->
-            <hr style="border:none;border-top:1px solid var(--rule);margin:1.5rem 0 1rem;">
-            <p style="font-size:.78rem;color:var(--ink-ghost);margin:0;">
-                <a href="<?php echo SITE_URL; ?>/impressum" style="color:var(--ink-muted);text-decoration:none;">Impressum</a>
+            <p class="contact-aside__legal">
+                <a href="<?php echo SITE_URL; ?>/impressum"><?php echo $isEnglish ? 'Imprint' : 'Impressum'; ?></a>
                 &nbsp;·&nbsp;
-                <a href="<?php echo SITE_URL; ?>/datenschutz" style="color:var(--ink-muted);text-decoration:none;">Datenschutz</a>
+                <a href="<?php echo SITE_URL; ?>/datenschutz"><?php echo $isEnglish ? 'Privacy' : 'Datenschutz'; ?></a>
             </p>
         </aside>
-
     </div>
 </div>
