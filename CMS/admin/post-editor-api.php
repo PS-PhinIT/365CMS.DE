@@ -15,10 +15,12 @@ if (!defined('ABSPATH')) {
  * POST action=restore, post_id, revision_id        Version wiederherstellen
  * POST action=block_preview, type, data, tunes      Server-Vorschau eines registrierten Core-Blocks
  *                                                  (EditorJsBlockRegistry, Kontext „preview“); data/tunes als JSON
+ * GET  ?action=form_choices                        aktive Formulare für den Block „Formular“ (Schlüssel, Titel)
  *
  * Alle Aktionen: angemeldete Admin-Rolle + Beitrags-Capability + Besitzprüfung im PostsModule;
  * schreibende Aktionen zusätzlich mit CSRF-Token (Aktion admin_post_editor). `token` und `block_preview`
- * stehen auch dem Seiteneditor offen (`manage_pages`) und brauchen keine Beitrags-ID.
+ * sowie die Block-Aktionen (`form_choices`) stehen auch dem Seiteneditor offen (`manage_pages`) und brauchen
+ * keine Beitrags-ID.
  */
 
 use CMS\Auth;
@@ -53,9 +55,9 @@ $canRead = $canWrite || $auth->hasCapability('posts.view');
 // Seiteneditor: nur Token-Erneuerung und Block-Vorschau.
 $canEditPages = $auth->hasCapability('manage_pages');
 
-$readActions = ['revisions', 'compare', 'token'];
+$readActions = ['revisions', 'compare', 'token', 'form_choices'];
 $writeActions = ['autosave', 'restore', 'block_preview'];
-$pageEditorActions = ['token', 'block_preview'];
+$pageEditorActions = ['token', 'block_preview', 'form_choices'];
 
 if (in_array($action, $readActions, true)) {
     if ($method !== 'GET') {
@@ -85,6 +87,27 @@ if ($action === 'token') {
     }
 
     $cmsPostEditorApiRespond(200, ['success' => true, 'token' => $security->generateToken($csrfAction)]);
+}
+
+if ($action === 'form_choices') {
+    $formChoices = [];
+    try {
+        $formService = \CMS\Services\Forms\FormService::getInstance();
+        if ($formService->isAvailable()) {
+            $formService->ensureContactForm();
+            foreach ($formService->choices(true) as $formKey => $formTitle) {
+                $formChoices[] = ['key' => (string) $formKey, 'title' => (string) $formTitle];
+            }
+        }
+    } catch (\Throwable $e) {
+        Logger::instance()->withChannel('forms')->warning('Formularliste für den Editor-Block konnte nicht geladen werden.', ['exception' => $e->getMessage()]);
+    }
+
+    $cmsPostEditorApiRespond(200, [
+        'success' => true,
+        'forms' => $formChoices,
+        'manage_url' => $auth->hasCapability('manage_forms') && is_file(ABSPATH . 'admin/forms.php') ? '/admin/forms' : '',
+    ]);
 }
 
 if ($action === 'block_preview') {

@@ -167,6 +167,21 @@ final class FormService
     }
 
     /**
+     * Auswahlliste für Filter im Adminbereich: ID → Titel (ohne Papierkorb).
+     *
+     * @return array<int, string>
+     */
+    public function choicesById(): array
+    {
+        $choices = [];
+        foreach ($this->list([], 0, 500) as $form) {
+            $choices[(int) $form['id']] = (string) $form['title'];
+        }
+
+        return $choices;
+    }
+
+    /**
      * Legt ein Formular an.
      *
      * @param array<string, mixed> $data title, form_key, status, fields, settings, is_builtin, legacy_id, created_at
