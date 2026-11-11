@@ -263,6 +263,7 @@
 
         saveAllButton.addEventListener('click', function () {
             var profileForm = document.querySelector('form[data-legal-bulk-save-part="profile"]');
+            var accessibilityForm = document.querySelector('form[data-legal-bulk-save-part="accessibility"][data-legal-dirty="1"]');
             var documentForms = Array.prototype.slice.call(document.querySelectorAll('form[data-legal-bulk-save-part="document"]'));
             var createAllForm = document.querySelector('form input[name="action"][value="create_all_pages"]')
                 ? document.querySelector('form input[name="action"][value="create_all_pages"]').form
@@ -271,6 +272,9 @@
 
             if (profileForm) {
                 forms.push(profileForm);
+            }
+            if (accessibilityForm) {
+                forms.push(accessibilityForm);
             }
             Array.prototype.push.apply(forms, documentForms);
             if (createAllForm) {
@@ -312,6 +316,20 @@
         });
     }
 
+    // Die Barrierefreiheitserklärung ist optional: „Alle speichern“ nimmt ihr Formular nur bei Änderungen mit.
+    function initAccessibilityDirtyTracking() {
+        var form = document.querySelector('form[data-legal-bulk-save-part="accessibility"]');
+        if (!form) {
+            return;
+        }
+
+        var markDirty = function () {
+            form.setAttribute('data-legal-dirty', '1');
+        };
+        form.addEventListener('input', markDirty);
+        form.addEventListener('change', markDirty);
+    }
+
     function initSubmitGuards() {
         document.querySelectorAll('form[method="post"]').forEach(function (form) {
             form.addEventListener('submit', function (event) {
@@ -334,6 +352,7 @@
         initTemplateInsertButtons(config);
         initHtmlPreviewToggles();
         initGlobalSaveAction();
+        initAccessibilityDirtyTracking();
         initSubmitGuards();
     });
 })();
