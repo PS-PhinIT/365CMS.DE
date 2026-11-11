@@ -700,7 +700,7 @@ final class MediaDeliveryService
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo !== false) {
                 $detected = finfo_file($finfo, $absolutePath);
-                finfo_close($finfo);
+                unset($finfo);
                 $mimeType = is_string($detected) ? $detected : '';
             }
         }

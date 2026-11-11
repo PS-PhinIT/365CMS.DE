@@ -317,7 +317,7 @@ class CMS_Importer_Admin
         $finfo    = finfo_open(FILEINFO_MIME_TYPE);
         $detected = $finfo !== false ? finfo_file($finfo, $file['tmp_name']) : false;
         if ($finfo !== false) {
-            finfo_close($finfo);
+            unset($finfo);
         }
 
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -455,7 +455,7 @@ class CMS_Importer_Admin
         $finfo    = finfo_open(FILEINFO_MIME_TYPE);
         $detected = $finfo !== false ? finfo_file($finfo, $file['tmp_name']) : false;
         if ($finfo !== false) {
-            finfo_close($finfo);
+            unset($finfo);
         }
 
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -831,7 +831,7 @@ class CMS_Importer_Admin
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $detectedMime = $finfo !== false ? finfo_file($finfo, $filePath) : false;
         if ($finfo !== false) {
-            finfo_close($finfo);
+            unset($finfo);
         }
 
         if (!is_string($detectedMime) || !in_array($detectedMime, self::ALLOWED_MIMES, true)) {

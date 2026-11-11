@@ -46,6 +46,7 @@ class SchemaManager
         'downloads_rate_limits',
         'feeds_categories', 'feeds_sources', 'feeds_items', 'feeds_digests', 'feeds_subscriptions',
         'feeds_fetch_queue',
+        'search_queries', 'search_term_daily', 'trash_media',
     ];
 
     private Database $db;
@@ -1187,6 +1188,44 @@ class SchemaManager
                 INDEX idx_feeds_fetch_queue_claim (claim_token),
                 CONSTRAINT fk_feeds_fetch_queue_source FOREIGN KEY (source_id) REFERENCES {$p}feeds_sources(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Abruf-Queue und Protokoll'",
+
+            // v25: Suchbegriff-Statistik (SearchTermStatsService) – Rohdaten ohne IP und Benutzer, täglich zu
+            // Tageswerten verdichtet; die Frist regelt die Aufbewahrungsregel `search_terms`.
+            'search_queries' => "CREATE TABLE IF NOT EXISTS {$p}search_queries (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                term VARCHAR(190) NOT NULL,
+                locale VARCHAR(10) NOT NULL DEFAULT 'de',
+                result_count INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                INDEX idx_search_queries_created (created_at),
+                INDEX idx_search_queries_locale (locale, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Suchanfragen (Rohdaten, anonym)'",
+
+            'search_term_daily' => "CREATE TABLE IF NOT EXISTS {$p}search_term_daily (
+                day DATE NOT NULL,
+                locale VARCHAR(10) NOT NULL DEFAULT 'de',
+                term VARCHAR(190) NOT NULL,
+                searches INT UNSIGNED NOT NULL DEFAULT 0,
+                zero_hits INT UNSIGNED NOT NULL DEFAULT 0,
+                result_sum BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                PRIMARY KEY (day, locale, term),
+                INDEX idx_search_term_daily_term (term)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Suchbegriffe je Tag'",
+
+            // v25: Papierkorb für Mediendateien (MediaTrashProvider): Dateien liegen bis zum Löschen im privaten
+            // Speicher, payload_json hält Dateiliste, Metadaten und Medien-Zeilen für die Wiederherstellung.
+            'trash_media' => "CREATE TABLE IF NOT EXISTS {$p}trash_media (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                original_path VARCHAR(500) NOT NULL,
+                storage_name VARCHAR(190) NOT NULL,
+                title VARCHAR(255) NOT NULL DEFAULT '',
+                filetype VARCHAR(100) NOT NULL DEFAULT '',
+                filesize BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                payload_json LONGTEXT NULL,
+                trashed_at DATETIME NOT NULL,
+                trashed_by INT UNSIGNED NULL,
+                INDEX idx_trash_media_trashed (trashed_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Papierkorb der Mediendateien'",
         ];
     }
 

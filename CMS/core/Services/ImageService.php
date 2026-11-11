@@ -127,7 +127,7 @@ final class ImageService
             if ($destPath !== $sourcePath) {
                 copy($sourcePath, $destPath);
             }
-            imagedestroy($image);
+            unset($image);
             return $destPath;
         }
 
@@ -140,8 +140,8 @@ final class ImageService
         imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
 
         $saved = $this->saveImage($resized, $destPath, $quality);
-        imagedestroy($image);
-        imagedestroy($resized);
+        unset($image);
+        unset($resized);
 
         return $saved ? $destPath : null;
     }
@@ -223,8 +223,8 @@ final class ImageService
         imagecopyresampled($thumb, $image, 0, 0, $srcX, $srcY, $width, $height, $cropWidth, $cropHeight);
 
         $saved = $this->saveImage($thumb, $destPath, $quality);
-        imagedestroy($image);
-        imagedestroy($thumb);
+        unset($image);
+        unset($thumb);
 
         return $saved ? $destPath : null;
     }
@@ -268,13 +268,13 @@ final class ImageService
         ]);
 
         if ($cropped === false) {
-            imagedestroy($image);
+            unset($image);
             return null;
         }
 
         $saved = $this->saveImage($cropped, $destPath, $this->defaultQuality);
-        imagedestroy($image);
-        imagedestroy($cropped);
+        unset($image);
+        unset($cropped);
 
         return $saved ? $destPath : null;
     }
@@ -311,12 +311,12 @@ final class ImageService
 
         $webpPath = preg_replace('/\.[a-z]+$/i', '.webp', $sourcePath);
         if ($webpPath === null || $webpPath === $sourcePath) {
-            imagedestroy($image);
+            unset($image);
             return null;
         }
 
         $success = imagewebp($image, $webpPath, $quality);
-        imagedestroy($image);
+        unset($image);
 
         if ($success && $deleteOriginal && $webpPath !== $sourcePath) {
             $this->deleteFile($sourcePath);
@@ -352,12 +352,12 @@ final class ImageService
 
         $avifPath = preg_replace('/\.[a-z]+$/i', '.avif', $sourcePath);
         if ($avifPath === null || $avifPath === $sourcePath) {
-            imagedestroy($image);
+            unset($image);
             return null;
         }
 
         $success = imageavif($image, $avifPath, $quality, $speed);
-        imagedestroy($image);
+        unset($image);
 
         return $success ? $avifPath : null;
     }
@@ -390,13 +390,13 @@ final class ImageService
         // GD dreht im Uhrzeigersinn, daher negieren
         $rotated = imagerotate($image, -$angle, 0);
         if ($rotated === false) {
-            imagedestroy($image);
+            unset($image);
             return null;
         }
 
         $saved = $this->saveImage($rotated, $destPath, $this->defaultQuality);
-        imagedestroy($image);
-        imagedestroy($rotated);
+        unset($image);
+        unset($rotated);
 
         return $saved ? $destPath : null;
     }
@@ -552,7 +552,7 @@ final class ImageService
                     $newWmHeight = (int)round($wmHeight * $ratio);
                     $resizedWm = $this->createCanvas($newWmWidth, $newWmHeight);
                     imagecopyresampled($resizedWm, $wm, 0, 0, 0, 0, $newWmWidth, $newWmHeight, $wmWidth, $wmHeight);
-                    imagedestroy($wm);
+                    unset($wm);
                     $wm = $resizedWm;
                     $wmWidth  = $newWmWidth;
                     $wmHeight = $newWmHeight;
@@ -560,12 +560,12 @@ final class ImageService
 
                 [$x, $y] = $this->calculatePosition($imgWidth, $imgHeight, $wmWidth, $wmHeight, $position, 10);
                 imagecopymerge($image, $wm, $x, $y, 0, 0, $wmWidth, $wmHeight, $opacity);
-                imagedestroy($wm);
+                unset($wm);
             }
         }
 
         $saved = $this->saveImage($image, $sourcePath, $this->defaultQuality);
-        imagedestroy($image);
+        unset($image);
 
         return $saved ? $sourcePath : null;
     }

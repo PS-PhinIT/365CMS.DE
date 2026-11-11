@@ -428,7 +428,7 @@ class MediaService {
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo !== false) {
                 $realMime = finfo_file($finfo, $tmpName);
-                finfo_close($finfo);
+                unset($finfo);
 
                 if (is_string($realMime) && trim($realMime) !== '') {
                     return strtolower(trim($realMime));
@@ -779,7 +779,7 @@ class MediaService {
         try {
             return $this->saveReplacementGdImage($image, $targetAbsolutePath, $targetExtension, $quality);
         } finally {
-            imagedestroy($image);
+            unset($image);
         }
     }
 
@@ -968,7 +968,7 @@ class MediaService {
             default => false,
         };
 
-        imagedestroy($image);
+        unset($image);
         return $saved;
     }
 
