@@ -22,12 +22,18 @@ use CMS\Services\ContentMediaPlacementService;
 use CMS\Services\ContentLocalizationService;
 use CMS\Services\SEOService;
 use CMS\Services\PageTemplateService;
+use CMS\Services\Trash\PageTrashProvider;
+use CMS\Services\Trash\TrashConfirmationStore;
+use CMS\Services\Trash\TrashListActions;
+use CMS\Services\Trash\TrashService;
+use CMS\Services\Trash\TrashSupport;
 
 class PagesModule
 {
     private Database $db;
     private PageManager $pageManager;
     private string $prefix;
+    private ?PageTrashProvider $trashProvider = null;
 
     private const DEFAULT_MS365_ROOT = [
         'slug' => 'microsoft-365',
@@ -59,10 +65,13 @@ class PagesModule
     ];
 
     /** @var string[] */
-    private const ALLOWED_LIST_STATUSES = ['published', 'draft', 'private'];
+    private const ALLOWED_LIST_STATUSES = ['published', 'draft', 'private', 'trash'];
+
+    /** @var string[] Papierkorb-Aktionen; „delete“ verschiebt (wie „trash“) in den Papierkorb. */
+    private const TRASH_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently'];
 
     /** @var string[] */
-    private const ALLOWED_BULK_ACTIONS = ['delete', 'publish', 'draft', 'set_category', 'clear_category'];
+    private const ALLOWED_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently', 'publish', 'draft', 'set_category', 'clear_category'];
 
     public function __construct()
     {
@@ -233,7 +242,8 @@ class PagesModule
     public function getListData(): array
     {
         // KPI-Counts
-        $total     = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages");
+        $total     = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status <> 'trash'");
+        $trash     = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'trash'");
         $published = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'published'");
         $drafts    = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'draft'");
         $private   = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'private'");
@@ -244,10 +254,12 @@ class PagesModule
         $search       = $this->sanitizeSearchTerm((string)($_GET['q'] ?? ''));
 
         // Query bauen
-        $where  = [];
+        $isTrashView = $statusFilter === 'trash';
+        $slugParking = $this->trashProvider()->supportsSlugParking();
+        $where  = [$isTrashView ? "p.status = 'trash'" : "p.status <> 'trash'"];
         $params = [];
 
-        if ($statusFilter !== '') {
+        if ($statusFilter !== '' && !$isTrashView) {
             $where[]  = 'p.status = ?';
             $params[] = $statusFilter;
         }
@@ -256,24 +268,35 @@ class PagesModule
             $params[] = $categoryFilter;
         }
         if ($search !== '') {
-            $where[]  = '(p.title LIKE ? OR p.title_en LIKE ? OR p.slug LIKE ? OR p.slug_en LIKE ?)';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+            $searchColumns = ['p.title', 'p.title_en', 'p.slug', 'p.slug_en'];
+            if ($isTrashView && $slugParking) {
+                $searchColumns[] = 'p.trash_slug';
+                $searchColumns[] = 'p.trash_slug_en';
+            }
+            $where[] = '(' . implode(' OR ', array_map(static fn (string $column): string => $column . ' LIKE ?', $searchColumns)) . ')';
+            foreach ($searchColumns as $ignored) {
+                $params[] = "%{$search}%";
+            }
         }
 
-        $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+        // Im Papierkorb ist der Slug geparkt (`__trashed-<id>`); angezeigt wird der ursprüngliche.
+        $slugSelect = $isTrashView && $slugParking
+            ? "COALESCE(NULLIF(p.trash_slug, ''), p.slug) AS slug, COALESCE(NULLIF(p.trash_slug_en, ''), p.slug_en) AS slug_en"
+            : 'p.slug, p.slug_en';
 
         $pages = $this->db->get_results(
-                "SELECT p.id, p.title, p.title_en, p.slug, p.slug_en, p.content_en, p.status, p.category_id, p.created_at, p.updated_at,
+                "SELECT p.id, p.title, p.title_en, {$slugSelect}, p.content_en, p.status, p.category_id, p.created_at, p.updated_at,
+                    p.previous_status, p.trashed_at,
                     u.display_name AS author,
-                    c.name AS category_name
+                    c.name AS category_name,
+                    tu.display_name AS trashed_by_name
              FROM {$this->prefix}pages p
              LEFT JOIN {$this->prefix}users u ON p.author_id = u.id
              LEFT JOIN {$this->prefix}post_categories c ON c.id = p.category_id
+             LEFT JOIN {$this->prefix}users tu ON p.trashed_by = tu.id
              {$whereClause}
-             ORDER BY p.created_at DESC
+             ORDER BY " . ($isTrashView ? 'p.trashed_at DESC, p.id DESC' : 'p.created_at DESC') . "
              LIMIT 200",
             $params
         ) ?: [];
@@ -304,10 +327,15 @@ class PagesModule
                 return $page;
             }, $pages),
             'categories' => $this->buildOrderedCategoryOptions(array_map(fn($category) => (array) $category, $categories)),
-            'counts'    => compact('total', 'published', 'drafts', 'private'),
+            'counts'    => compact('total', 'published', 'drafts', 'private', 'trash'),
             'filter'    => $statusFilter,
             'catFilter' => $categoryFilter,
             'search'    => $search,
+            'trash'     => [
+                'is_view' => $isTrashView,
+                'retention_days' => TrashService::getInstance()->retentionDays(),
+                'confirmation' => $isTrashView ? TrashConfirmationStore::pull('pages') : null,
+            ],
         ];
     }
 
@@ -361,6 +389,9 @@ class PagesModule
         $existingPage = $id > 0
             ? (array) ($this->db->get_row("SELECT * FROM {$this->prefix}pages WHERE id = ? LIMIT 1", [$id]) ?: [])
             : [];
+        if ((string) ($existingPage['status'] ?? '') === 'trash') {
+            return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
+        }
         $title  = $this->sanitizePlainText((string)($post['title'] ?? ''), 255);
         $slug   = trim($post['slug'] ?? '');
         $slugEn = trim((string)($post['slug_en'] ?? ''));
@@ -557,6 +588,10 @@ class PagesModule
                 return ['success' => false, 'error' => 'Die Seite wurde nicht gefunden.'];
             }
 
+            if ((string) ($page['status'] ?? '') === 'trash') {
+                return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
+            }
+
             $title = $this->sanitizePlainText((string) ($page['title'] ?? ''), 255);
             $content = (string) ($page['content'] ?? '');
 
@@ -592,9 +627,69 @@ class PagesModule
     }
 
     /**
-     * Seite löschen
+     * „Löschen“ verschiebt Seiten in den Papierkorb (endgültig löschen: `deletePermanently()`).
      */
     public function delete(int $id): array
+    {
+        return $this->trash($id);
+    }
+
+    public function trash(int $id): array
+    {
+        $guard = $this->guardTrashTarget($id);
+
+        return $guard ?? $this->trashActions()->trash([$id], $this->currentUserId());
+    }
+
+    public function restore(int $id): array
+    {
+        $guard = $this->guardTrashTarget($id);
+
+        return $guard ?? $this->trashActions()->restore([$id], $this->currentUserId());
+    }
+
+    public function deletePermanently(int $id, bool $confirmed = false): array
+    {
+        $guard = $this->guardTrashTarget($id);
+
+        return $guard ?? $this->trashActions()->delete([$id], $this->currentUserId(), $confirmed);
+    }
+
+    /**
+     * Leert den Seiten-Papierkorb (höchstens `TrashService::EMPTY_BATCH_LIMIT` Einträge je Aufruf).
+     */
+    public function emptyTrash(bool $confirmed = false): array
+    {
+        try {
+            return $this->trashActions()->emptyTrash(
+                $this->getTrashedPageIds(TrashService::EMPTY_BATCH_LIMIT),
+                $this->currentUserId(),
+                $confirmed,
+                fn (): int => count($this->getTrashedPageIds(TrashService::EMPTY_BATCH_LIMIT + 1))
+            );
+        } catch (\Throwable $e) {
+            return $this->failResult('pages.trash.empty_failed', TrashSupport::t('trash.error.failed'), $e);
+        }
+    }
+
+    private function trashProvider(): PageTrashProvider
+    {
+        return $this->trashProvider ??= new PageTrashProvider($this->db);
+    }
+
+    private function trashActions(): TrashListActions
+    {
+        return new TrashListActions($this->trashProvider(), 'pages');
+    }
+
+    private function currentUserId(): int
+    {
+        $user = \CMS\Auth::getCurrentUser();
+
+        return (int) ($user->id ?? 0);
+    }
+
+    private function guardTrashTarget(int $id): ?array
     {
         if ($id <= 0) {
             return ['success' => false, 'error' => 'Ungültige Seiten-ID.'];
@@ -604,28 +699,36 @@ class PagesModule
             return ['success' => false, 'error' => 'Seite wurde nicht gefunden oder bereits gelöscht.'];
         }
 
-        try {
-            $statement = $this->db->execute(
-                "DELETE FROM {$this->prefix}pages WHERE id = ? LIMIT 1",
-                [$id]
-            );
+        return null;
+    }
 
-            if (!$statement || $statement->rowCount() < 1) {
-                return $this->failResult(
-                    'pages.delete.failed',
-                    'Seite konnte nicht gelöscht werden.',
-                    null,
-                    ['page_id' => $id, 'db_last_error' => trim((string)$this->db->last_error)]
-                );
-            }
+    /**
+     * @return list<int>
+     */
+    private function getTrashedPageIds(int $limit): array
+    {
+        return array_values(array_map('intval', $this->db->get_col(
+            "SELECT id FROM {$this->prefix}pages WHERE status = 'trash' ORDER BY trashed_at ASC, id ASC LIMIT ?",
+            [max(1, $limit)]
+        ) ?: []));
+    }
 
-            Hooks::doAction('page_deleted', $id);
-            $this->clearContentCacheIfEnabled('page_delete', $id);
-
-            return ['success' => true, 'message' => 'Seite gelöscht.'];
-        } catch (\Throwable $e) {
-            return $this->failResult('pages.delete.failed', 'Seite konnte nicht gelöscht werden.', $e, ['page_id' => $id]);
+    /**
+     * @param list<int> $ids
+     * @return list<int>
+     */
+    private function withoutTrashedPages(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
         }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        return array_values(array_map('intval', $this->db->get_col(
+            "SELECT id FROM {$this->prefix}pages WHERE id IN ({$placeholders}) AND status <> 'trash'",
+            $ids
+        ) ?: []));
     }
 
     /**
@@ -655,24 +758,26 @@ class PagesModule
 
         $ids = $existingIds;
 
+        if (in_array($action, self::TRASH_BULK_ACTIONS, true)) {
+            $userId = $this->currentUserId();
+
+            return match ($action) {
+                'restore' => $this->trashActions()->restore($ids, $userId),
+                'delete_permanently' => $this->trashActions()->delete($ids, $userId, !empty($payload['confirmed'])),
+                default => $this->trashActions()->trash($ids, $userId),
+            };
+        }
+
+        // Seiten im Papierkorb bleiben von Status- und Kategorieaktionen unberührt.
+        $ids = $this->withoutTrashedPages($ids);
+        if ($ids === []) {
+            return ['success' => false, 'error' => TrashSupport::t('trash.list.error.only_trashed')];
+        }
+
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         try {
             switch ($action) {
-                case 'delete':
-                    $this->db->execute(
-                        "DELETE FROM {$this->prefix}pages WHERE id IN ({$placeholders})",
-                        $ids
-                    );
-
-                    foreach ($ids as $pageId) {
-                        Hooks::doAction('page_deleted', (int) $pageId);
-                    }
-
-                    $this->clearContentCacheIfEnabled('page_bulk_delete', (int) $ids[0]);
-
-                    return ['success' => true, 'message' => count($ids) . ' Seite(n) gelöscht.'];
-
                 case 'publish':
                     $this->db->execute(
                         "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published' WHERE id IN ({$placeholders})",

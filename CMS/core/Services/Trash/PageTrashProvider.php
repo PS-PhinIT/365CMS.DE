@@ -120,6 +120,21 @@ final class PageTrashProvider extends AbstractContentTrashProvider
             'page_revisions' => $this->deleteFrom('page_revisions', 'page_id = ?', [$id]),
             'seo_meta' => $this->deleteFrom('seo_meta', 'content_type = ? AND content_id = ?', ['page', $id]),
             'page_views' => $this->deleteFrom('page_views', 'page_id = ?', [$id]),
+            'page_assignments' => $this->clearPageAssignments($id),
         ];
+    }
+
+    /**
+     * Setzt Rechtsseiten-Zuweisungen, die auf die gelöschte Seite zeigen, auf „keine Seite“ (`0`) zurück.
+     */
+    private function clearPageAssignments(int $id): int
+    {
+        $options = array_keys(self::PAGE_ASSIGNMENT_OPTIONS);
+        $placeholders = implode(',', array_fill(0, count($options), '?'));
+
+        return $this->db->execute(
+            "UPDATE {$this->prefix}settings SET option_value = '0' WHERE option_name IN ({$placeholders}) AND option_value = ?",
+            array_merge($options, [(string) $id])
+        )->rowCount();
     }
 }

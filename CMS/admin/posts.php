@@ -17,10 +17,14 @@ use CMS\Services\AI\AiSettingsService;
 use CMS\Services\CoreModuleService;
 use CMS\Services\EditorJsService;
 
-const CMS_ADMIN_POSTS_ALLOWED_ACTIONS = ['save', 'delete', 'bulk', 'save_category', 'delete_category', 'switch_locale', 'copy_de_to_en'];
+const CMS_ADMIN_POSTS_ALLOWED_ACTIONS = ['save', 'delete', 'trash', 'restore', 'delete_permanently', 'empty_trash', 'bulk', 'save_category', 'delete_category', 'switch_locale', 'copy_de_to_en'];
+const CMS_ADMIN_POSTS_LIST_STATUSES = ['published', 'scheduled', 'draft', 'private', 'trash'];
 const CMS_ADMIN_POSTS_ALLOWED_VIEWS = ['list', 'edit'];
 const CMS_ADMIN_POSTS_ALLOWED_BULK_ACTIONS = [
     'delete',
+    'trash',
+    'restore',
+    'delete_permanently',
     'publish',
     'draft',
     'set_category',
@@ -174,10 +178,22 @@ function cms_admin_posts_target_url(?int $id = null, string $editorLocale = 'de'
     return '/admin/posts';
 }
 
+/**
+ * Listen-URL mit erhaltenem Statusfilter (z. B. `?status=trash` nach Papierkorb-Aktionen).
+ */
+function cms_admin_posts_list_url(mixed $listStatus = ''): string
+{
+    $listStatus = trim(cms_admin_posts_scalar_string($listStatus));
+
+    return in_array($listStatus, CMS_ADMIN_POSTS_LIST_STATUSES, true)
+        ? '/admin/posts?status=' . rawurlencode($listStatus)
+        : '/admin/posts';
+}
+
 function cms_admin_posts_flash(string $type, string $message): void
 {
     $_SESSION['admin_alert'] = [
-        'type' => $type === 'success' ? 'success' : 'danger',
+        'type' => in_array($type, ['success', 'warning', 'info'], true) ? $type : 'danger',
         'message' => trim($message),
     ];
 }
@@ -279,6 +295,10 @@ function cms_admin_posts_module_contract_methods(): array
         'save',
         'copyGermanToEnglish',
         'delete',
+        'trash',
+        'restore',
+        'deletePermanently',
+        'emptyTrash',
         'bulkAction',
         'saveCategory',
         'deleteCategory',
@@ -440,6 +460,12 @@ function cms_admin_posts_view_config(object $module, string $view, ?array $overr
         if ($id > 0 && !empty($editData['isNew'])) {
             cms_admin_posts_flash('danger', 'Der angeforderte Beitrag existiert nicht mehr. Bitte Liste neu laden.');
             cms_admin_posts_redirect();
+        }
+
+        if ($id > 0 && (string) ($editData['post']['status'] ?? '') === 'trash') {
+            cms_admin_posts_flash('warning', (string) __('trash.edit.blocked'));
+            header('Location: ' . cms_admin_posts_list_url('trash'));
+            exit;
         }
 
         // Page/Post edit routes use the local EditorJS runtime by default; fallback is handled client-side only after init failure.
@@ -682,15 +708,26 @@ $sectionPageConfig = [
                 return $result;
 
             case 'delete':
+            case 'trash':
+            case 'restore':
+            case 'delete_permanently':
                 $id = cms_admin_posts_normalize_positive_id($post['id'] ?? 0);
                 if ($id < 1) {
                     return ['success' => false, 'error' => 'Ungültige Beitrags-ID.'];
                 }
 
-                $result = $module->delete($id);
-                if (!empty($result['success'])) {
-                    $result['redirect_path'] = cms_admin_posts_target_url();
-                }
+                $result = match ($postAction) {
+                    'restore' => $module->restore($id),
+                    'delete_permanently' => $module->deletePermanently($id, cms_admin_posts_scalar_string($post['confirmed'] ?? '') === '1'),
+                    default => $module->trash($id),
+                };
+                $result['redirect_path'] = cms_admin_posts_list_url($post['list_status'] ?? '');
+
+                return $result;
+
+            case 'empty_trash':
+                $result = $module->emptyTrash(cms_admin_posts_scalar_string($post['confirmed'] ?? '') === '1');
+                $result['redirect_path'] = cms_admin_posts_list_url('trash');
 
                 return $result;
 
@@ -705,9 +742,10 @@ $sectionPageConfig = [
                     return ['success' => false, 'error' => 'Bitte mindestens einen gültigen Beitrag auswählen.'];
                 }
 
+                $post['confirmed'] = cms_admin_posts_scalar_string($post['confirmed'] ?? '') === '1';
                 $result = $module->bulkAction($bulkAction, $ids, $post);
-                if (!empty($result['success'])) {
-                    $result['redirect_path'] = cms_admin_posts_target_url();
+                if (!empty($result['success']) || in_array($bulkAction, ['delete', 'trash', 'restore', 'delete_permanently'], true)) {
+                    $result['redirect_path'] = cms_admin_posts_list_url($post['list_status'] ?? '');
                 }
 
                 return $result;

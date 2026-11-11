@@ -12,6 +12,7 @@ namespace CMS\Services\Trash;
 use CMS\CacheManager;
 use CMS\Database;
 use CMS\Logger;
+use CMS\Services\ContentTypes\TrashResult;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -20,13 +21,29 @@ if (!defined('ABSPATH')) {
 final class TrashSupport
 {
     /**
+     * URL der zentralen Papierkorb-Seite – leer, solange `admin/trash.php` nicht ausgeliefert ist.
+     */
+    public static function centralPageUrl(): string
+    {
+        return is_file(ABSPATH . 'admin/trash.php') ? '/admin/trash' : '';
+    }
+
+    /**
      * Übersetzter Text; mit Argumenten per `sprintf()` (Platzhalter `%s`/`%d`).
      */
     public static function t(string $key, string|int ...$args): string
     {
         $text = function_exists('__') ? (string) __($key) : $key;
+        if ($args === []) {
+            return $text;
+        }
 
-        return $args === [] ? $text : vsprintf($text, $args);
+        try {
+            return vsprintf($text, $args);
+        } catch (\ValueError) {
+            // Übersetzung mit abweichenden Platzhaltern – lieber Rohtext als Fatal Error.
+            return $text;
+        }
     }
 
     /**
@@ -52,6 +69,20 @@ final class TrashSupport
                 'exception' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * „Bestätigung erforderlich“ mit Warnungen und Titel (`data['title']`) für Rückmeldungen und Listen.
+     *
+     * @param list<string> $warnings
+     */
+    public static function confirmationRequired(array $warnings, string $title): TrashResult
+    {
+        return TrashResult::failure(
+            TrashResult::CODE_CONFIRMATION_REQUIRED,
+            self::t('trash.confirm.required', $title),
+            ['warnings' => array_values($warnings), 'title' => $title]
+        );
     }
 
     /**

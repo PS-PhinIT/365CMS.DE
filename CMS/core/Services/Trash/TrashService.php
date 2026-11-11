@@ -47,6 +47,8 @@ final class TrashService
     /** Höchstzahl Einträge je Sammelaktion. */
     public const BULK_LIMIT = 200;
 
+    public const ACTION_TRASH = 'trash';
+
     public const ACTION_RESTORE = 'restore';
 
     public const ACTION_DELETE = 'delete_permanently';
@@ -133,7 +135,8 @@ final class TrashService
     }
 
     /**
-     * Wiederherstellen oder endgültig löschen für mehrere Einträge eines Typs.
+     * In den Papierkorb verschieben (nur `TrashableProvider`), wiederherstellen oder endgültig löschen für
+     * mehrere Einträge eines Typs (höchstens BULK_LIMIT je Aufruf).
      *
      * @param list<int> $ids
      * @return array{done:int,failed:int,messages:list<string>,confirmations:array<int,array{title:string,warnings:list<string>}>}
@@ -144,9 +147,14 @@ final class TrashService
         $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0))), 0, self::BULK_LIMIT);
 
         foreach ($ids as $id) {
-            $result = $action === self::ACTION_RESTORE
-                ? $this->safely(static fn (): TrashResult => $provider->restore($id, $userId))
-                : $this->safely(static fn (): TrashResult => $provider->deletePermanently($id, $userId, $confirmed));
+            $result = match ($action) {
+                self::ACTION_RESTORE => $this->safely(static fn (): TrashResult => $provider->restore($id, $userId)),
+                self::ACTION_DELETE => $this->safely(static fn (): TrashResult => $provider->deletePermanently($id, $userId, $confirmed)),
+                self::ACTION_TRASH => $provider instanceof TrashableProvider
+                    ? $this->safely(static fn (): TrashResult => $provider->trash($id, $userId))
+                    : TrashResult::failure(TrashResult::CODE_INVALID_STATE, TrashSupport::t('trash.error.failed')),
+                default => TrashResult::failure(TrashResult::CODE_INVALID_STATE, TrashSupport::t('trash.error.failed')),
+            };
 
             $this->collect($summary, $result, $id, $provider);
         }
@@ -183,26 +191,42 @@ final class TrashService
         }
 
         $summary['remaining'] = $provider->countTrashed();
+        $this->auditEmpty($provider, $summary, $summary['remaining'], $confirmed, $userId);
 
+        return $summary;
+    }
+
+    /**
+     * Audit-Eintrag für „Papierkorb leeren“ (zentrale Seite und Inhaltslisten).
+     *
+     * @param array{done:int,failed:int,confirmations:array<int,mixed>} $summary
+     */
+    public function auditEmpty(TrashProvider $provider, array $summary, int $remaining, bool $confirmed, int $userId, string $scope = 'all'): void
+    {
         AuditLogger::instance()->log(
             AuditLogger::CAT_CONTENT,
             'trash.empty',
-            sprintf('Papierkorb „%s“ geleert: %d endgültig gelöscht, %d übersprungen.', $provider->type(), $summary['done'], $summary['failed'] + count($summary['confirmations'])),
+            sprintf(
+                'Papierkorb „%s“ geleert: %d endgültig gelöscht, %d übersprungen, %d verbleibend.',
+                $provider->label(),
+                (int) $summary['done'],
+                (int) $summary['failed'] + count($summary['confirmations']),
+                $remaining
+            ),
             'trash',
             null,
             [
                 'type' => $provider->type(),
-                'deleted' => $summary['done'],
-                'failed' => $summary['failed'],
+                'scope' => $scope,
+                'deleted' => (int) $summary['done'],
+                'failed' => (int) $summary['failed'],
                 'needs_confirmation' => array_keys($summary['confirmations']),
-                'remaining' => $summary['remaining'],
+                'remaining' => $remaining,
                 'confirmed' => $confirmed,
                 'user_id' => $userId,
             ],
             'warning'
         );
-
-        return $summary;
     }
 
     /**
@@ -319,6 +343,10 @@ final class TrashService
             return;
         }
 
+        if ($title === '' && is_string($result->data['title'] ?? null)) {
+            $title = $result->data['title'];
+        }
+
         if ($result->code === TrashResult::CODE_CONFIRMATION_REQUIRED) {
             $warnings = is_array($result->data['warnings'] ?? null) ? array_values(array_map('strval', $result->data['warnings'])) : [];
             $summary['confirmations'][$id] = [
@@ -331,7 +359,7 @@ final class TrashService
 
         $summary['failed']++;
         if (count($summary['messages']) < 10) {
-            $summary['messages'][] = ($title !== '' ? $title . ': ' : '#' . $id . ': ') . $result->message;
+            $summary['messages'][] = ($title !== '' ? $title : '#' . $id) . ': ' . $result->message;
         }
     }
 

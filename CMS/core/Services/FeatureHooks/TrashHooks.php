@@ -24,6 +24,7 @@ use CMS\Services\Trash\MediaTrashProvider;
 use CMS\Services\Trash\PageTrashProvider;
 use CMS\Services\Trash\PostTrashProvider;
 use CMS\Services\Trash\TrashService;
+use CMS\Services\Trash\TrashSupport;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -55,7 +56,7 @@ final class TrashHooks
             static fn (): int => $service->retentionDays(),
             static fn (): int => $service->countExpired(),
             static fn (): int => $service->purgeExpired()['deleted'],
-            '/admin/trash',
+            TrashSupport::centralPageUrl(),
         ));
     }
 }

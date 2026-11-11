@@ -442,7 +442,7 @@ final class MediaTrashProvider implements TrashProvider
         $title = $row['title'] !== '' ? $row['title'] : basename($row['original_path']);
         $warnings = $this->deletionWarnings($id);
         if ($warnings !== [] && !$confirmed) {
-            return TrashResult::confirmationRequired($warnings, TrashSupport::t('trash.confirm.required', $title));
+            return TrashSupport::confirmationRequired($warnings, $title);
         }
 
         $storageDir = $this->storageDirectory($row['storage_name']);

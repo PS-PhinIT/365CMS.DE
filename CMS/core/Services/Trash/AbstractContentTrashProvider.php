@@ -21,14 +21,13 @@ use CMS\Database;
 use CMS\Hooks;
 use CMS\Logger;
 use CMS\Services\ContentTypes\TrashItem;
-use CMS\Services\ContentTypes\TrashProvider;
 use CMS\Services\ContentTypes\TrashResult;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-abstract class AbstractContentTrashProvider implements TrashProvider
+abstract class AbstractContentTrashProvider implements TrashableProvider
 {
     protected readonly Database $db;
     protected readonly string $prefix;
@@ -280,7 +279,7 @@ abstract class AbstractContentTrashProvider implements TrashProvider
 
         $warnings = $this->deletionWarnings($id);
         if ($warnings !== [] && !$confirmed) {
-            return TrashResult::confirmationRequired($warnings, TrashSupport::t('trash.confirm.required', $row['title']));
+            return TrashSupport::confirmationRequired($warnings, $row['title']);
         }
 
         $pdo = $this->db->getPdo();
@@ -425,7 +424,7 @@ abstract class AbstractContentTrashProvider implements TrashProvider
     }
 
     /** Spalten `trash_slug`/`trash_slug_en` vorhanden? Ohne sie bleibt der Slug im Papierkorb belegt. */
-    protected function supportsSlugParking(): bool
+    public function supportsSlugParking(): bool
     {
         if ($this->slugParking === null) {
             try {

@@ -21,14 +21,13 @@ use CMS\Hooks;
 use CMS\Json;
 use CMS\Logger;
 use CMS\Services\ContentTypes\TrashItem;
-use CMS\Services\ContentTypes\TrashProvider;
 use CMS\Services\ContentTypes\TrashResult;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-final class HubSiteTrashProvider implements TrashProvider
+final class HubSiteTrashProvider implements TrashableProvider
 {
     public const TYPE = 'hub_site';
 
@@ -251,7 +250,7 @@ final class HubSiteTrashProvider implements TrashProvider
 
         $warnings = $this->deletionWarnings($id);
         if ($warnings !== [] && !$confirmed) {
-            return TrashResult::confirmationRequired($warnings, TrashSupport::t('trash.confirm.required', $hub['title']));
+            return TrashSupport::confirmationRequired($warnings, $hub['title']);
         }
 
         try {
