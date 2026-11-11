@@ -197,6 +197,7 @@ if ($contentUpdatedAtValue !== '') {
     }
 }
 $treatUpdateAsNewChecked = !empty($post['treat_update_as_new']);
+$plannedAtField = \CMS\Services\EditorialCalendarService::getInstance()->getPlannedAtFieldValues($post);
 $metaTitle  = htmlspecialchars($post['meta_title'] ?? '');
 $metaDesc   = htmlspecialchars($post['meta_description'] ?? '');
 $authorDisplayName = htmlspecialchars($post['author_display_name'] ?? '', ENT_QUOTES);
@@ -813,6 +814,18 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                                 </div>
                             </div>
                             <div class="form-hint mb-3">Für „Planen“ muss der Zeitpunkt in der Zukunft liegen.</div>
+                            <fieldset class="cms-editor-panel__group mb-3">
+                                <legend class="form-label"><?php echo htmlspecialchars(__('calendar.planned_at.label')); ?></legend>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="plannedDate" name="planned_date" aria-label="<?php echo htmlspecialchars(__('calendar.planned_at.date_label')); ?>" aria-describedby="plannedAtHint" value="<?php echo htmlspecialchars($plannedAtField['date']); ?>">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="time" class="form-control" id="plannedTime" name="planned_time" aria-label="<?php echo htmlspecialchars(__('calendar.planned_at.time_label')); ?>" aria-describedby="plannedAtHint" value="<?php echo htmlspecialchars($plannedAtField['time']); ?>" step="60">
+                                    </div>
+                                </div>
+                                <div class="form-hint" id="plannedAtHint"><?php echo htmlspecialchars(trim(__('calendar.planned_at.hint') . ' ' . $plannedAtField['timezone_hint'])); ?></div>
+                            </fieldset>
                             <fieldset class="cms-editor-panel__group">
                                 <legend class="form-label">Aktualisierungsdatum (öffentlich sichtbar)</legend>
                                 <div class="row g-2">

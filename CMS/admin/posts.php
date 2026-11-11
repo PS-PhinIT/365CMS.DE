@@ -376,6 +376,12 @@ function cms_admin_posts_build_inline_edit_data(object $module, array $post): ar
         $draftPost['excerpt_en'] = (string) ($existingPost['excerpt_en'] ?? $draftPost['excerpt_en'] ?? '');
     }
 
+    // Redaktionskalender: eingegebenes „Geplantes Datum“ nach einem abgelehnten Speichervorgang erhalten.
+    if (array_key_exists('planned_date', $post)) {
+        $draftPost['planned_date'] = trim((string) $post['planned_date']);
+        $draftPost['planned_time'] = trim((string) ($post['planned_time'] ?? ''));
+    }
+
     $tagNames = array_values(array_filter(array_map(
         static fn (string $value): string => trim($value),
         preg_split('/[\r\n,]+/', (string) ($post['tags'] ?? '')) ?: []
