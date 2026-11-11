@@ -53,7 +53,7 @@ Hooks::addAction(ContentTypeRegistry::REGISTER_ACTION, static function (ContentT
 | `deletePermanently($id, $userId, $confirmed)` | löscht samt abhängiger Daten (Revisionen, Verwendungen, Dateien). Gibt es Warnungen und ist `$confirmed` nicht gesetzt, liefert der Provider `TrashResult::CODE_CONFIRMATION_REQUIRED` mit den Hinweisen in `$data['warnings']` |
 | `expiredIds($trashedBefore, $limit)` | Einträge, deren Frist abgelaufen ist. Das automatische Leeren löscht ohne Bestätigung; Einträge mit Warnungen bleiben deshalb liegen |
 
-- In den Papierkorb verschiebt der Inhaltstyp selbst (Liste, Editor, Bulk-Aktion). Dabei merkt er sich vorherigen Status, Zeitpunkt und Benutzer (`previous_status`, `trashed_at`, `trashed_by`); der Eintrag verschwindet aus Frontend, Sitemap, Feeds und Suche.
+- In den Papierkorb verschiebt der Inhaltstyp selbst (Liste, Editor, Bulk-Aktion). Dabei merkt er sich vorherigen Status, Zeitpunkt und Benutzer (`previous_status`, `trashed_at`, `trashed_by`); der Eintrag verschwindet aus Frontend, Sitemap, Feeds und Suche. Für Beiträge, Seiten und Hub-Sites gibt es diese Spalten seit Schema v25 ([DATABASE-SCHEMA.md](DATABASE-SCHEMA.md#schema-v25-400)); Hub-Sites haben keinen Status und gelten mit gesetztem `trashed_at` als gelöscht.
 - IDs sind die IDs des Typs. Typen ohne eigene numerische ID (Medien sind dateibasiert) führen eine eigene Papierkorb-Tabelle und verwenden deren ID.
 - Ergebnisse: `TrashResult::success()`, `failure($code, $message, $data)` mit `CODE_NOT_FOUND`, `CODE_INVALID_STATE`, `CODE_ERROR`, sowie `confirmationRequired($warnings)`. Meldungen sind für die Oberfläche gedacht und enthalten keine Ausnahmetexte.
 - Audit-Log, CSRF und Rechteprüfung übernimmt der Aufrufer (Papierkorb-Seite, Cron).

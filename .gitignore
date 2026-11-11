@@ -133,6 +133,8 @@ AUDIT
 !/TESTS/lib/TestRunner.php
 !/TESTS/content-types/
 !/TESTS/content-types/run.php
+!/TESTS/editorjs-blocks/
+!/TESTS/editorjs-blocks/run.php
 /STAGING/tests/
 */Test/*
 CMS/assets/translation/Test/

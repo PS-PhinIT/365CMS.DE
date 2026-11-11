@@ -204,6 +204,20 @@ class MigrationManager
             // und Laufzeitprüfung dieselben Tabellen anlegen.
             SchemaManager::getSchemaQueries($p, $charset)['admin_menu_layouts'],
             SchemaManager::getSchemaQueries($p, $charset)['batch_jobs'],
+            // v25: Papierkorb (TrashProvider) für Seiten, Beiträge und Hub-Sites. Seiten und Beiträge
+            // merken sich den vorherigen Status; Hub-Sites (site_tables) haben keinen, dort markiert
+            // trashed_at den Papierkorb.
+            "ALTER TABLE `{$p}posts` ADD COLUMN `previous_status` VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE `{$p}posts` ADD COLUMN `trashed_at` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}posts` ADD COLUMN `trashed_by` INT UNSIGNED DEFAULT NULL",
+            "ALTER TABLE `{$p}posts` ADD INDEX `idx_trashed_at` (`trashed_at`)",
+            "ALTER TABLE `{$p}pages` ADD COLUMN `previous_status` VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE `{$p}pages` ADD COLUMN `trashed_at` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}pages` ADD COLUMN `trashed_by` INT UNSIGNED DEFAULT NULL",
+            "ALTER TABLE `{$p}pages` ADD INDEX `idx_trashed_at` (`trashed_at`)",
+            "ALTER TABLE `{$p}site_tables` ADD COLUMN `trashed_at` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}site_tables` ADD COLUMN `trashed_by` INT UNSIGNED DEFAULT NULL",
+            "ALTER TABLE `{$p}site_tables` ADD INDEX `idx_trashed_at` (`trashed_at`)",
         ];
 
         foreach ($migrations as $sql) {

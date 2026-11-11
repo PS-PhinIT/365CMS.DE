@@ -18,6 +18,7 @@ Der Ordner `CMS/assets/js/` enthält interne 365CMS-Skripte für Admin, Frontend
 - `admin-sidebar-editor.js` – Editor der Admin-Seitenleiste (Profil „Eigenes Layout“ unter *Einstellungen › Admin-Menü*, siehe [../../admin/ADMIN-MENU.md](../../admin/ADMIN-MENU.md)); nicht verwechseln mit `admin-menu-editor.js` (Menüs des Themes)
 - `admin-batch-runner.js` – Browser-Gegenstück zu `BatchJobService`: `window.cmsBatchRunner.create({ container, endpoint, token, stepAction, cancelAction, extra, onDone, onProgress })`, danach `runner.start(jobId)`. Ruft die Schritte nacheinander auf, zeigt den Fortschritt und kann pausieren, fortsetzen und abbrechen (Bestätigung über `cmsConfirm`)
 - `cmsToast(type, message, { timeout })` – kurze Rückmeldung unten rechts (`success`, `info`, `warning`, `danger`; `aria-live`), definiert in `admin/partials/footer.php`
+- `editor-blocks/block-preview.js` – Server-Vorschau für Core-Blöcke aus der `EditorJsBlockRegistry`: `window.CMSBlockPreview.render(type, data, tunes)` liefert ein Promise mit dem HTML (Kontext `preview`). Holt das CSRF-Token selbst und erneuert es nach Ablauf einmal. Wird in Beitrags- und Seiteneditor nur geladen, wenn Blöcke registriert sind, und zwar vor deren Tool-Skripten (`editor-blocks/<block>.js`)
 
 ## CSP-Infrastruktur
 

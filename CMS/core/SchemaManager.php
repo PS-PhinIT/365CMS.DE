@@ -155,10 +155,14 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
+                previous_status VARCHAR(20) DEFAULT NULL,
+                trashed_at DATETIME DEFAULT NULL,
+                trashed_by INT UNSIGNED DEFAULT NULL,
                 INDEX idx_slug_en (slug_en),
                 INDEX idx_status (status),
                 INDEX idx_author (author_id),
-                INDEX idx_category (category_id)
+                INDEX idx_category (category_id),
+                INDEX idx_trashed_at (trashed_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'page_revisions' => "CREATE TABLE IF NOT EXISTS {$p}page_revisions (
@@ -397,11 +401,15 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
+                previous_status VARCHAR(20) DEFAULT NULL,
+                trashed_at DATETIME DEFAULT NULL,
+                trashed_by INT UNSIGNED DEFAULT NULL,
                 INDEX idx_slug_en (slug_en),
                 INDEX idx_author (author_id),
                 INDEX idx_category (category_id),
                 INDEX idx_published (published_at),
-                INDEX idx_status_published (status, published_at)
+                INDEX idx_status_published (status, published_at),
+                INDEX idx_trashed_at (trashed_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'post_revisions' => "CREATE TABLE IF NOT EXISTS {$p}post_revisions (
@@ -693,9 +701,12 @@ class SchemaManager
                 settings_json LONGTEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                trashed_at DATETIME DEFAULT NULL,
+                trashed_by INT UNSIGNED DEFAULT NULL,
                 UNIQUE KEY uniq_table_slug (table_slug),
                 INDEX idx_table_name (table_name),
-                INDEX idx_updated_at (updated_at)
+                INDEX idx_updated_at (updated_at),
+                INDEX idx_trashed_at (trashed_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Site-Tabellen und Hub-Inhalte'",
 
             'favorites' => "CREATE TABLE IF NOT EXISTS {$p}favorites (
@@ -1134,6 +1145,7 @@ class SchemaManager
         $this->ensureUserMetaUniqueKey();
         $this->ensureSiteTableSlugs();
         $this->ensurePostLocaleColumns();
+        $this->ensureTrashColumns();
         $this->repairViewCounterUpdatedAt();
         $this->dropRedundantIndexes();
     }
@@ -1595,6 +1607,41 @@ class SchemaManager
     /**
      * Führt ein ALTER TABLE nur aus, wenn die Spalte fehlt.
      */
+    /**
+     * v25: Papierkorb (TrashProvider) – vorheriger Status, Zeitpunkt und Benutzer. Hub-Sites (site_tables)
+     * haben keinen Status, dort markiert trashed_at den Papierkorb. Ergänzt Spalten und Index auch bei
+     * Installationen, die v25 vor dieser Änderung erreicht haben.
+     */
+    private function ensureTrashColumns(): void
+    {
+        foreach (['posts', 'pages', 'site_tables'] as $table) {
+            if ($table !== 'site_tables') {
+                $this->ensureColumnExists(
+                    $this->prefix . $table,
+                    'previous_status',
+                    "ALTER TABLE {$this->prefix}{$table} ADD COLUMN previous_status VARCHAR(20) DEFAULT NULL"
+                );
+            }
+            $this->ensureColumnExists(
+                $this->prefix . $table,
+                'trashed_at',
+                "ALTER TABLE {$this->prefix}{$table} ADD COLUMN trashed_at DATETIME DEFAULT NULL"
+            );
+            $this->ensureColumnExists(
+                $this->prefix . $table,
+                'trashed_by',
+                "ALTER TABLE {$this->prefix}{$table} ADD COLUMN trashed_by INT UNSIGNED DEFAULT NULL"
+            );
+            if (!isset($this->loadIndexes($this->prefix . $table)['idx_trashed_at'])) {
+                try {
+                    $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX idx_trashed_at (trashed_at)");
+                } catch (\Throwable $e) {
+                    error_log(sprintf('SchemaManager::ensureTrashColumns(%s) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
+                }
+            }
+        }
+    }
+
     private function ensureColumnExists(string $table, string $column, string $alterSql): void
     {
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
