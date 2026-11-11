@@ -325,7 +325,7 @@ final class SearchService
         try {
             $pdo = $this->db->getPdo();
             if ($pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
-                $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+                $pdo->setAttribute(\CMS\Database::mysqlAttribute('ATTR_USE_BUFFERED_QUERY'), true);
             }
         } catch (\Throwable $e) {
             $this->logger->warning('Search could not restore buffered MySQL queries.', [

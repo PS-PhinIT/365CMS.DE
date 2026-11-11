@@ -85,7 +85,8 @@ class Database implements DatabaseInterface
                 // bindParams() stellt sicher, dass LIMIT/OFFSET als PARAM_INT gebunden werden,
                 // sodass MariaDB diese korrekt akzeptiert (keine String-Quotierung wie bei Emulation).
                 PDO::ATTR_EMULATE_PREPARES   => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET
+                // Seit PHP 8.5 ist PDO::MYSQL_ATTR_INIT_COMMAND veraltet; Pdo\Mysql gibt es ab PHP 8.4.
+                self::mysqlAttribute('ATTR_INIT_COMMAND') => "SET NAMES " . DB_CHARSET
             ];
             
             $this->pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
@@ -610,5 +611,16 @@ class Database implements DatabaseInterface
         }
         $stmt = $db->execute($query, $params);
         return $stmt->rowCount() >= 0;
+    }
+
+    /**
+     * Treiberspezifische MySQL-Attribute: `Pdo\Mysql::<NAME>` (ab PHP 8.4), sonst die bis PHP 8.4 gültige
+     * Konstante `PDO::MYSQL_<NAME>` – ohne Deprecation-Meldung unter PHP 8.5.
+     */
+    public static function mysqlAttribute(string $name): int
+    {
+        $modern = 'Pdo\\Mysql::' . $name;
+
+        return (int) (defined($modern) ? constant($modern) : constant('PDO::MYSQL_' . $name));
     }
 }
