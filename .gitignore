@@ -67,6 +67,8 @@ config.local.php
 CMS/config/app.php
 CMS/config/app.php.backup.*
 CMS/config/media-settings.json
+# Sperrdatei der Medien-Metadaten (MediaRepository::updateMeta)
+CMS/config/media-meta.json.lock
 
 # ----------------------------------------------------------------------
 # SECURITY & SENSITIVE FILES

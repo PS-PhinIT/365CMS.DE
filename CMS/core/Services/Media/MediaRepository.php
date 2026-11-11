@@ -22,6 +22,19 @@ final class MediaRepository
     private const MAX_UPLOADED_BY_LENGTH = 120;
     private const MAX_ORIGINAL_NAME_LENGTH = 180;
     private const ATOMIC_FILE_MODE = 0640;
+    private const META_LOCK_TIMEOUT_MS = 5000;
+    private const META_LOCK_RETRY_MS = 25;
+
+    /** System-Kategorien, die immer vorhanden sind (Slug => Name). */
+    private const SYSTEM_CATEGORIES = [
+        'themes' => 'Themes',
+        'plugins' => 'Plugins',
+        'assets' => 'Assets',
+        'fonts' => 'Fonts',
+        'dl-manager' => 'Downloads',
+        'form-uploads' => 'Form Uploads',
+        'member' => 'Member',
+    ];
 
     private LoggerInterface $logger;
 
@@ -38,36 +51,28 @@ final class MediaRepository
 
     public function ensureSystemCategories(): void
     {
-        $meta = $this->loadMeta();
-        $changed = false;
-        $systemCategories = [
-            'themes' => 'Themes',
-            'plugins' => 'Plugins',
-            'assets' => 'Assets',
-            'fonts' => 'Fonts',
-            'dl-manager' => 'Downloads',
-            'form-uploads' => 'Form Uploads',
-            'member' => 'Member',
-        ];
+        // Ohne Sperre prüfen: Der Normalfall (alles vorhanden) schreibt nicht und blockiert keine Requests.
+        if ($this->missingSystemCategories($this->loadMeta()) === []) {
+            return;
+        }
 
-        $existingSlugs = array_column($meta['categories'] ?? [], 'slug');
-        foreach ($systemCategories as $slug => $name) {
-            if (in_array($slug, $existingSlugs, true)) {
-                continue;
+        $this->updateMeta(function (array $meta): ?array {
+            $missing = $this->missingSystemCategories($meta);
+            if ($missing === []) {
+                return null;
             }
 
-            $meta['categories'][] = [
-                'name' => $name,
-                'slug' => $slug,
-                'count' => 0,
-                'is_system' => true,
-            ];
-            $changed = true;
-        }
+            foreach ($missing as $slug => $name) {
+                $meta['categories'][] = [
+                    'name' => $name,
+                    'slug' => $slug,
+                    'count' => 0,
+                    'is_system' => true,
+                ];
+            }
 
-        if ($changed) {
-            $this->saveMeta($meta);
-        }
+            return $meta;
+        });
     }
 
     public function getCategories(): array
@@ -91,7 +96,6 @@ final class MediaRepository
 
     public function addCategory(string $name, string $slug = ''): bool|WP_Error
     {
-        $meta = $this->loadMeta();
         $name = $this->normalizeCategoryName($name);
         $slug = $this->normalizeCategorySlug($slug !== '' ? $slug : $name);
 
@@ -103,65 +107,67 @@ final class MediaRepository
             return new WP_Error('system_category', 'System-Kategorien können nicht überschrieben werden');
         }
 
-        foreach (($meta['categories'] ?? []) as $cat) {
-            if (($cat['slug'] ?? '') === $slug) {
-                return new WP_Error('exists', 'Category already exists');
+        return $this->updateMeta(static function (array $meta) use ($name, $slug): array|WP_Error {
+            foreach (($meta['categories'] ?? []) as $cat) {
+                if (($cat['slug'] ?? '') === $slug) {
+                    return new WP_Error('exists', 'Category already exists');
+                }
             }
-        }
 
-        $meta['categories'][] = [
-            'name' => $name,
-            'slug' => $slug,
-            'count' => 0,
-        ];
+            $meta['categories'][] = [
+                'name' => $name,
+                'slug' => $slug,
+                'count' => 0,
+            ];
 
-        return $this->saveMeta($meta);
+            return $meta;
+        });
     }
 
     public function deleteCategory(string $slug): bool|WP_Error
     {
-        $meta = $this->loadMeta();
         $slug = $this->normalizeCategorySlug($slug);
 
         if ($slug === '') {
             return new WP_Error('missing_slug', 'Kategorie-Slug fehlt');
         }
 
-        $categoryFound = false;
+        return $this->updateMeta(static function (array $meta) use ($slug): array|WP_Error {
+            $categoryFound = false;
 
-        foreach (($meta['categories'] ?? []) as $category) {
-            if (($category['slug'] ?? '') !== $slug) {
-                continue;
+            foreach (($meta['categories'] ?? []) as $category) {
+                if (($category['slug'] ?? '') !== $slug) {
+                    continue;
+                }
+
+                $categoryFound = true;
+                if (!empty($category['is_system'])) {
+                    return new WP_Error('system_category', 'System-Kategorien können nicht gelöscht werden');
+                }
             }
 
-            $categoryFound = true;
-            if (!empty($category['is_system'])) {
-                return new WP_Error('system_category', 'System-Kategorien können nicht gelöscht werden');
+            if (!$categoryFound) {
+                return new WP_Error('missing_category', 'Kategorie nicht gefunden');
             }
-        }
 
-        if (!$categoryFound) {
-            return new WP_Error('missing_category', 'Kategorie nicht gefunden');
-        }
+            $meta['categories'] = array_values(array_filter(
+                $meta['categories'] ?? [],
+                static fn(array $category): bool => ($category['slug'] ?? '') !== $slug
+            ));
 
-        $meta['categories'] = array_values(array_filter(
-            $meta['categories'] ?? [],
-            static fn(array $category): bool => ($category['slug'] ?? '') !== $slug
-        ));
-
-        foreach ($meta['files'] as &$fileMeta) {
-            if (($fileMeta['category'] ?? null) === $slug) {
-                unset($fileMeta['category']);
+            foreach ($meta['files'] as &$fileMeta) {
+                if (($fileMeta['category'] ?? null) === $slug) {
+                    unset($fileMeta['category']);
+                }
             }
-        }
-        unset($fileMeta);
+            unset($fileMeta);
 
-        return $this->saveMeta($meta);
+            return $meta;
+        });
     }
 
     public function assignCategory(string $filePath, string $categorySlug): bool|WP_Error
     {
-        $meta = $this->loadMeta();
         $filePath = $this->normalizeRelativePath($filePath);
 
         if ($filePath === '') {
@@ -179,24 +185,26 @@ final class MediaRepository
 
         $categorySlug = $this->normalizeCategorySlug($categorySlug);
 
-        if ($categorySlug !== '') {
-            $validSlugs = array_column($meta['categories'] ?? [], 'slug');
-            if (!in_array($categorySlug, $validSlugs, true)) {
-                return new WP_Error('invalid_category', 'Kategorie existiert nicht');
+        return $this->updateMeta(static function (array $meta) use ($filePath, $categorySlug): array|WP_Error {
+            if ($categorySlug !== '') {
+                $validSlugs = array_column($meta['categories'] ?? [], 'slug');
+                if (!in_array($categorySlug, $validSlugs, true)) {
+                    return new WP_Error('invalid_category', 'Kategorie existiert nicht');
+                }
             }
-        }
 
-        if (!isset($meta['files'][$filePath])) {
-            $meta['files'][$filePath] = [];
-        }
+            if (!isset($meta['files'][$filePath])) {
+                $meta['files'][$filePath] = [];
+            }
 
-        if ($categorySlug === '') {
-            unset($meta['files'][$filePath]['category']);
-        } else {
-            $meta['files'][$filePath]['category'] = $categorySlug;
-        }
+            if ($categorySlug === '') {
+                unset($meta['files'][$filePath]['category']);
+            } else {
+                $meta['files'][$filePath]['category'] = $categorySlug;
+            }
 
-        return $this->saveMeta($meta);
+            return $meta;
+        });
     }
 
     /**
@@ -204,7 +212,6 @@ final class MediaRepository
      */
     public function assignTags(string $filePath, array $tags, string $mode = 'replace'): bool|WP_Error
     {
-        $meta = $this->loadMeta();
         $filePath = $this->normalizeRelativePath($filePath);
 
         if ($filePath === '') {
@@ -230,37 +237,39 @@ final class MediaRepository
             return new WP_Error('missing_tags', 'Bitte mindestens einen gültigen Tag angeben');
         }
 
-        if (!isset($meta['files'][$filePath])) {
-            $meta['files'][$filePath] = [];
-        }
-
-        $currentTags = $this->normalizeTags((array) ($meta['files'][$filePath]['tags'] ?? []));
-        $tagLookup = array_fill_keys($currentTags, true);
-
-        if ($mode === 'clear') {
-            $nextTags = [];
-        } elseif ($mode === 'replace') {
-            $nextTags = $normalizedTags;
-        } elseif ($mode === 'remove') {
-            $removeLookup = array_fill_keys($normalizedTags, true);
-            $nextTags = array_values(array_filter(
-                $currentTags,
-                static fn (string $tag): bool => !isset($removeLookup[$tag])
-            ));
-        } else {
-            foreach ($normalizedTags as $tag) {
-                $tagLookup[$tag] = true;
+        return $this->updateMeta(function (array $meta) use ($filePath, $mode, $normalizedTags): array {
+            if (!isset($meta['files'][$filePath])) {
+                $meta['files'][$filePath] = [];
             }
-            $nextTags = array_slice(array_keys($tagLookup), 0, self::MAX_TAGS_PER_FILE);
-        }
 
-        if ($nextTags === []) {
-            unset($meta['files'][$filePath]['tags']);
-        } else {
-            $meta['files'][$filePath]['tags'] = $nextTags;
-        }
+            $currentTags = $this->normalizeTags((array) ($meta['files'][$filePath]['tags'] ?? []));
+            $tagLookup = array_fill_keys($currentTags, true);
 
-        return $this->saveMeta($meta);
+            if ($mode === 'clear') {
+                $nextTags = [];
+            } elseif ($mode === 'replace') {
+                $nextTags = $normalizedTags;
+            } elseif ($mode === 'remove') {
+                $removeLookup = array_fill_keys($normalizedTags, true);
+                $nextTags = array_values(array_filter(
+                    $currentTags,
+                    static fn (string $tag): bool => !isset($removeLookup[$tag])
+                ));
+            } else {
+                foreach ($normalizedTags as $tag) {
+                    $tagLookup[$tag] = true;
+                }
+                $nextTags = array_slice(array_keys($tagLookup), 0, self::MAX_TAGS_PER_FILE);
+            }
+
+            if ($nextTags === []) {
+                unset($meta['files'][$filePath]['tags']);
+            } else {
+                $meta['files'][$filePath]['tags'] = $nextTags;
+            }
+
+            return $meta;
+        });
     }
 
     public function loadMeta(): array
@@ -293,6 +302,111 @@ final class MediaRepository
         }
 
         return $this->writeFileAtomically($this->metaFile, $json . "\n");
+    }
+
+    /**
+     * Liest, ändert und schreibt die Metadaten unter einer exklusiven Sperre (`<Metadatei>.lock`).
+     *
+     * Der Callback erhält den aktuellen, normalisierten Stand und gibt zurück:
+     * - den neuen Stand (wird normalisiert und atomar geschrieben),
+     * - `null`, wenn nichts zu ändern ist (Ergebnis `true`), oder
+     * - einen `WP_Error`, der ohne Schreiben durchgereicht wird.
+     *
+     * So überschreiben sich parallele Schreiber (Upload, Papierkorb, Import, Lizenzfelder) nicht
+     * gegenseitig. Leser brauchen keine Sperre, weil die Datei per Umbenennen ersetzt wird.
+     *
+     * @param callable(array{categories: list<array<string, mixed>>, files: array<string, array<string, mixed>>}): (array<string, mixed>|WP_Error|null) $mutator
+     * @return bool|WP_Error `false`, wenn die Sperre nicht erlangt oder die Datei nicht geschrieben werden konnte
+     */
+    public function updateMeta(callable $mutator): bool|WP_Error
+    {
+        $lock = $this->acquireMetaLock();
+        if ($lock === null) {
+            return false;
+        }
+
+        try {
+            $next = $mutator($this->loadMeta());
+            if ($next === null) {
+                return true;
+            }
+            if ($next instanceof WP_Error) {
+                return $next;
+            }
+
+            return $this->saveMeta($next);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
+    /**
+     * Metadaten einer Datei (Pfad relativ zum Upload-Verzeichnis), leer, wenn keine vorhanden sind.
+     *
+     * @return array<string, mixed>
+     */
+    public function getFileMeta(string $relativePath): array
+    {
+        $path = $this->normalizeRelativePath($relativePath);
+        if ($path === '') {
+            return [];
+        }
+
+        $entry = $this->loadMeta()['files'][$path] ?? null;
+
+        return is_array($entry) ? $entry : [];
+    }
+
+    /**
+     * Ersetzt die Metadaten einer Datei vollständig; `null` entfernt den Eintrag. Für Papierkorb
+     * (Sichern und Wiederherstellen) und Import. Unbekannte Felder verwirft die Normalisierung.
+     *
+     * @param array<string, mixed>|null $fileMeta
+     */
+    public function setFileMeta(string $relativePath, ?array $fileMeta): bool
+    {
+        $path = $this->normalizeRelativePath($relativePath);
+        if ($path === '') {
+            return false;
+        }
+
+        return $this->updateMeta(static function (array $meta) use ($path, $fileMeta): array {
+            if ($fileMeta === null) {
+                unset($meta['files'][$path]);
+            } else {
+                $meta['files'][$path] = $fileMeta;
+            }
+
+            return $meta;
+        }) === true;
+    }
+
+    /**
+     * Ergänzt einzelne Felder der Metadaten einer Datei; ein Wert `null` entfernt das Feld.
+     *
+     * @param array<string, mixed> $fields
+     */
+    public function mergeFileMeta(string $relativePath, array $fields): bool
+    {
+        $path = $this->normalizeRelativePath($relativePath);
+        if ($path === '') {
+            return false;
+        }
+
+        return $this->updateMeta(static function (array $meta) use ($path, $fields): array {
+            $entry = is_array($meta['files'][$path] ?? null) ? $meta['files'][$path] : [];
+            foreach ($fields as $key => $value) {
+                if ($value === null) {
+                    unset($entry[$key]);
+                } else {
+                    $entry[$key] = $value;
+                }
+            }
+            $meta['files'][$path] = $entry;
+
+            return $meta;
+        }) === true;
     }
 
     public function buildPublicUrl(string $relativePath): string
@@ -445,7 +559,6 @@ final class MediaRepository
 
     public function ensureCategory(string $name, string $slug): string
     {
-        $meta = $this->loadMeta();
         $name = $this->normalizeCategoryName($name);
         $slug = $this->normalizeCategorySlug($slug);
 
@@ -453,52 +566,70 @@ final class MediaRepository
             return '';
         }
 
-        $existingSlugs = array_column($meta['categories'] ?? [], 'slug');
-        if (!in_array($slug, $existingSlugs, true)) {
+        if (in_array($slug, array_column($this->loadMeta()['categories'] ?? [], 'slug'), true)) {
+            return $slug;
+        }
+
+        $this->updateMeta(static function (array $meta) use ($name, $slug): ?array {
+            if (in_array($slug, array_column($meta['categories'] ?? [], 'slug'), true)) {
+                return null;
+            }
+
             $meta['categories'][] = [
                 'name' => $name,
                 'slug' => $slug,
                 'count' => 0,
                 'is_system' => false,
             ];
-            $this->saveMeta($meta);
-        }
+
+            return $meta;
+        });
 
         return $slug;
     }
 
     public function purgeMetaForPath(string $relativePath): void
     {
-        $meta = $this->loadMeta();
         $relativePath = trim(str_replace('\\', '/', $relativePath), '/');
 
-        foreach (array_keys($meta['files']) as $path) {
-            if ($path === $relativePath || str_starts_with($path, $relativePath . '/')) {
-                unset($meta['files'][$path]);
+        $this->updateMeta(static function (array $meta) use ($relativePath): ?array {
+            $changed = false;
+            foreach (array_keys($meta['files']) as $path) {
+                if ($path === $relativePath || str_starts_with($path, $relativePath . '/')) {
+                    unset($meta['files'][$path]);
+                    $changed = true;
+                }
             }
-        }
 
-        $this->saveMeta($meta);
+            return $changed ? $meta : null;
+        });
     }
 
     public function renameMetaPath(string $oldRelativePath, string $newRelativePath): void
     {
-        $meta = $this->loadMeta();
         $oldRelativePath = trim(str_replace('\\', '/', $oldRelativePath), '/');
         $newRelativePath = trim(str_replace('\\', '/', $newRelativePath), '/');
-        $updated = [];
 
-        foreach ($meta['files'] as $path => $data) {
-            if ($path === $oldRelativePath || str_starts_with($path, $oldRelativePath . '/')) {
-                $suffix = ltrim(substr($path, strlen($oldRelativePath)), '/');
-                $newPath = $newRelativePath . ($suffix !== '' ? '/' . $suffix : '');
-                $updated[$newPath] = $data;
-                unset($meta['files'][$path]);
+        $this->updateMeta(static function (array $meta) use ($oldRelativePath, $newRelativePath): ?array {
+            $updated = [];
+
+            foreach ($meta['files'] as $path => $data) {
+                if ($path === $oldRelativePath || str_starts_with($path, $oldRelativePath . '/')) {
+                    $suffix = ltrim(substr($path, strlen($oldRelativePath)), '/');
+                    $newPath = $newRelativePath . ($suffix !== '' ? '/' . $suffix : '');
+                    $updated[$newPath] = $data;
+                    unset($meta['files'][$path]);
+                }
             }
-        }
 
-        $meta['files'] = array_merge($meta['files'], $updated);
-        $this->saveMeta($meta);
+            if ($updated === []) {
+                return null;
+            }
+
+            $meta['files'] = array_merge($meta['files'], $updated);
+
+            return $meta;
+        });
     }
 
     public function getDiskUsage(): array
@@ -570,6 +701,58 @@ final class MediaRepository
         }
 
         return $fullPath;
+    }
+
+    /**
+     * @param array{categories?: list<array<string, mixed>>} $meta
+     * @return array<string, string> fehlende System-Kategorien (Slug => Name)
+     */
+    private function missingSystemCategories(array $meta): array
+    {
+        $existingSlugs = array_column($meta['categories'] ?? [], 'slug');
+
+        return array_filter(
+            self::SYSTEM_CATEGORIES,
+            static fn (string $slug): bool => !in_array($slug, $existingSlugs, true),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+    /**
+     * Exklusive Sperre für Schreibzugriffe auf die Metadatei; wartet höchstens META_LOCK_TIMEOUT_MS.
+     *
+     * @return resource|null
+     */
+    private function acquireMetaLock()
+    {
+        $directory = dirname($this->metaFile);
+        if (!is_dir($directory) && !@mkdir($directory, 0755, true) && !is_dir($directory)) {
+            $this->logger->warning('Media-Metadaten: Verzeichnis für die Sperrdatei fehlt.', ['path' => $directory]);
+            return null;
+        }
+
+        $lockFile = $this->metaFile . '.lock';
+        $handle = @fopen($lockFile, 'c');
+        if ($handle === false) {
+            $this->logger->warning('Media-Metadaten: Sperrdatei konnte nicht geöffnet werden.', ['path' => $lockFile]);
+            return null;
+        }
+
+        $waited = 0;
+        while (!flock($handle, LOCK_EX | LOCK_NB)) {
+            if ($waited >= self::META_LOCK_TIMEOUT_MS) {
+                fclose($handle);
+                $this->logger->warning('Media-Metadaten: Sperre nicht erhalten, Änderung verworfen.', [
+                    'path' => $lockFile,
+                    'waited_ms' => $waited,
+                ]);
+                return null;
+            }
+            usleep(self::META_LOCK_RETRY_MS * 1000);
+            $waited += self::META_LOCK_RETRY_MS;
+        }
+
+        return $handle;
     }
 
     private function emptyMetaState(): array

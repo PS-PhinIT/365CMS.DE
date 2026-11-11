@@ -60,7 +60,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 | Service | Aufgabe |
 |---|---|
-| `MediaService` (+ `Media\MediaRepository`, `Media\UploadHandler`, `Media\ImageProcessor`) | Dateisystem-Bibliothek, Metadaten, Kategorien/Tags, Upload-Regeln, `.htaccess`-Schutz |
+| `MediaService` (+ `Media\MediaRepository`, `Media\UploadHandler`, `Media\ImageProcessor`) | Dateisystem-Bibliothek, Metadaten, Kategorien/Tags, Upload-Regeln, `.htaccess`-Schutz. Metadaten-Schreibzugriffe nur über `MediaRepository::updateMeta()` (Dateisperre) bzw. `setFileMeta()`/`mergeFileMeta()` je Datei |
 | `MediaUsageService` | Verwendungsnachweis (Beitragsbilder, Inhalte) |
 | `MediaDeliveryService` | geschützte Auslieferung `/media-file` |
 | `FileUploadService` | allgemeiner Upload-Endpunkt `/api/upload` |

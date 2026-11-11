@@ -124,16 +124,14 @@ final class UploadHandler
         @chmod($targetPath, $this->resolveUploadFileMode($relativePath));
 
         $category = $this->repository->detectSystemCategory($relativePath);
-        $meta = $this->repository->loadMeta();
         $currentUser = Auth::getCurrentUser();
-        $meta['files'][str_replace('\\', '/', $relativePath)] = [
+        $this->repository->setFileMeta(str_replace('\\', '/', $relativePath), [
             'uploaded_at' => date('c'),
             'uploaded_by' => (string)($currentUser->username ?? $currentUser->email ?? 'system'),
             'uploader_id' => isset($currentUser->id) ? (int)$currentUser->id : null,
             'original_name' => $originalName,
             'category' => $category,
-        ];
-        $this->repository->saveMeta($meta);
+        ]);
 
         if ($convertImagesToWebP && $this->isConvertibleImage($targetPath)) {
             $this->imageProcessor->convertToWebP($targetPath);
