@@ -77,10 +77,10 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 | # | Punkt | Status | Ergebnis |
 |---|---|---|---|
 | 4 | Redaktionskalender + Dashboard-Widget (ohne Site-Filter, ohne Hub-Sites) | ✅ | `/admin/editorial-calendar` (Monat/Woche, Filter, Verschieben per Drag & Drop oder Datumsauswahl mit Rückfrage „jetzt veröffentlichen“), Feld „Geplantes Datum“ in Beitrags- und Seiteneditor (`planned_at`, Schema v25), Dashboard-Widgets „Meine Entwürfe“ und „Demnächst geplant“, Texte in DE/EN. Laufzeitprobe: Termine laden, Entwurf umplanen, geplanter Beitrag in die Vergangenheit → Rückfrage. **Offen:** DOC-Seite. |
-| 5 | Zentrale Revisionsübersicht (ohne Site-Filter, ohne Hub-Sites) | ⬜ | |
-| 6 | Übersetzungsstatus (ohne Site-Filter, ohne Hub-Sites) | ⬜ | |
-| 7 | Suchindex verwalten (Status je Sprache, Neuaufbau, Suchbegriff-Statistik; Hub-Sites nicht indexiert) | ⬜ | |
-| 8 | Inhalts-Export/-Import (Seiten, Beiträge, Taxonomien, Medien **und Hub-Sites**; keine Ziel-Site) | ⬜ | |
+| 5 | Zentrale Revisionsübersicht (ohne Site-Filter, ohne Hub-Sites) | ✅ | `/admin/content-changes`, Seitenrevisionen mit `created_by`; [CHANGES.md](../../admin/pages-posts/CHANGES.md) |
+| 6 | Übersetzungsstatus (ohne Site-Filter, ohne Hub-Sites) | ✅ | `/admin/translations`, Tabelle `translation_sync`; [TRANSLATIONS.md](../../admin/pages-posts/TRANSLATIONS.md) |
+| 7 | Suchindex verwalten (Status je Sprache, Neuaufbau, Suchbegriff-Statistik; Hub-Sites nicht indexiert) | ✅ | `/admin/search-index` geprüft; [SEARCH-INDEX.md](../../admin/system-settings/SEARCH-INDEX.md) |
+| 8 | Inhalts-Export/-Import (Seiten, Beiträge, Taxonomien, Medien **und Hub-Sites**; keine Ziel-Site) | ✅ | `/admin/content-exchange`, zusätzlich Formulare; [CONTENT-EXCHANGE.md](../../admin/system-settings/CONTENT-EXCHANGE.md) |
 
 ### Arbeitspaket 3 – „Danach“
 

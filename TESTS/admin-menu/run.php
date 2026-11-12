@@ -82,9 +82,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/content-changes.php' => 'WP2: Letzte Änderungen',
-    'admin/translations.php' => 'WP2: Übersetzungen',
-    'admin/content-exchange.php' => 'WP2: Import/Export',
     'admin/media-tools.php' => 'WP4: Medien-Werkzeuge',
 ];
 
@@ -173,6 +170,7 @@ const NOT_IN_MENU = [
     'admin/ai-generate-seo-metadata.php' => ['endpoint', 'KI: SEO-Metadaten erzeugen (JSON)'],
     'admin/ai-translate-editorjs.php' => ['endpoint', 'KI: Editor.js-Inhalte übersetzen (JSON)'],
     'admin/editorial-calendar-api.php' => ['endpoint', 'Redaktionskalender: Termine und Verschieben (JSON)'],
+    'admin/content-exchange-api.php' => ['endpoint', 'Import/Export: Fortschritt von Export und Import (JSON)'],
     'admin/error-report.php' => ['endpoint', 'Fehlerbericht senden (POST)'],
     'admin/media-license-api.php' => ['endpoint', 'Medien: Urheber- und Lizenzangaben (JSON)'],
     'admin/monitor-cron-runner.php' => ['endpoint', 'Cron-Runner der Monitore'],

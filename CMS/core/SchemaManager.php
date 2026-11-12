@@ -47,6 +47,7 @@ class SchemaManager
         'feeds_categories', 'feeds_sources', 'feeds_items', 'feeds_digests', 'feeds_subscriptions',
         'feeds_fetch_queue',
         'search_queries', 'search_term_daily', 'trash_media',
+        'translation_sync',
     ];
 
     private Database $db;
@@ -198,6 +199,7 @@ class SchemaManager
                     content_updated_at DATETIME DEFAULT NULL,
                 page_template VARCHAR(80) DEFAULT NULL,
                 page_meta_json TEXT DEFAULT NULL,
+                created_by INT UNSIGNED DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_page_id (page_id),
                 INDEX idx_author (author_id),
@@ -1189,6 +1191,21 @@ class SchemaManager
                 CONSTRAINT fk_feeds_fetch_queue_source FOREIGN KEY (source_id) REFERENCES {$p}feeds_sources(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Feed-Aggregator: Abruf-Queue und Protokoll'",
 
+            // v25: Übersetzungsstatus (TranslationStatusService) – Fingerabdruck der deutschen Quelle und der Übersetzung
+            // beim letzten Abgleich. Weicht die Quelle ab, gilt die Übersetzung als veraltet.
+            'translation_sync' => "CREATE TABLE IF NOT EXISTS {$p}translation_sync (
+                content_type VARCHAR(20) NOT NULL,
+                content_id INT UNSIGNED NOT NULL,
+                locale VARCHAR(10) NOT NULL,
+                source_hash CHAR(40) NOT NULL,
+                target_hash CHAR(40) NOT NULL,
+                method VARCHAR(20) NOT NULL DEFAULT 'edit',
+                synced_by INT UNSIGNED NULL,
+                synced_at DATETIME NOT NULL,
+                PRIMARY KEY (content_type, content_id, locale),
+                INDEX idx_translation_sync_synced (synced_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Übersetzungsstatus: Abgleich Quelle/Übersetzung'",
+
             // v25: Suchbegriff-Statistik (SearchTermStatsService) – Rohdaten ohne IP und Benutzer, täglich zu
             // Tageswerten verdichtet; die Frist regelt die Aufbewahrungsregel `search_terms`.
             'search_queries' => "CREATE TABLE IF NOT EXISTS {$p}search_queries (
@@ -2033,6 +2050,13 @@ class SchemaManager
                 error_log(sprintf('SchemaManager::ensureFeatureSchema(%s) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
             }
         }
+
+        // v25: Wer hat eine Seitenrevision ausgelöst? (Übersicht „Letzte Änderungen“)
+        $this->ensureColumnExists(
+            $this->prefix . 'page_revisions',
+            'created_by',
+            "ALTER TABLE {$this->prefix}page_revisions ADD COLUMN created_by INT UNSIGNED DEFAULT NULL AFTER page_meta_json"
+        );
 
         foreach (['posts', 'pages'] as $table) {
             $this->ensureColumnExists(
