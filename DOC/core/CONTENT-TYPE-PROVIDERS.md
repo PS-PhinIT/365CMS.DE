@@ -62,7 +62,7 @@ Hooks::addAction(ContentTypeRegistry::REGISTER_ACTION, static function (ContentT
 
 | Methode | Vertrag |
 |---|---|
-| `importPriority()` | Importreihenfolge, kleiner zuerst: Taxonomien 10, Medien 20, Seiten/Beiträge 50 |
+| `importPriority()` | Importreihenfolge, kleiner zuerst: Kategorien 10, Schlagwörter 11, Medien 20, Formulare 40, Seiten 50, Beiträge 51, Hub-Sites 60 |
 | `countExport($filter)`, `exportBatch($filter, $cursor, $limit)` | Export in Stapeln über einen providerspezifischen Cursor (letzte ID oder Position, 0 = Anfang). `ExportBatch` enthält JSON-serialisierbare Datensätze mit mindestens `id` (bei Medien der relative Pfad), die zugehörigen Dateien (Archivpfad unter `files/` ⇒ absoluter Quellpfad), den nächsten Cursor und `done` |
 | `preview($record, $context)` | schreibt nie; liefert `ImportPreview` mit `ACTION_CREATE`, `ACTION_CONFLICT` oder `ACTION_INVALID`, Bezeichnung, Konfliktschlüssel und Hinweis |
 | `import($record, $context)` | legt an oder löst Konflikte nach `ImportContext::$conflictStrategy` (`skip`, `overwrite`, `rename`) und beachtet `$importAsDraft`; Ergebnis `ImportResult` (`created`, `updated`, `renamed`, `skipped`, `failed`) mit neuer ID |
@@ -87,9 +87,11 @@ Geliefert werden nur öffentlich sichtbare Inhalte: veröffentlicht, nicht im Pa
 | Medien | ✓ | ✓ | – |
 | Hub-Sites | ✓ | ✓ | – |
 | Kategorien, Tags | – | ✓ | – |
-| Downloads | ✓ | ✓ | – |
+| Downloads | ✓ | – | – |
 | Formulare | ✓ | ✓ | – |
 | Formulareingänge | ✓ | – (Personendaten) | – |
+
+Die Export/Import-Provider des Cores liegen unter `CMS/core/Services/Exchange/` (Formulare: `CMS/core/Services/Forms/FormContentProvider.php`); die Oberfläche beschreibt [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md).
 
 ### Tests
 

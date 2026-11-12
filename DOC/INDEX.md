@@ -103,6 +103,10 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
 | Toolbar: cache & maintenance mode | [admin/system-settings/TOOLBAR.md](admin/system-settings/TOOLBAR.md) |
 | Trash (pages, posts, media, hub sites, downloads, forms) | [admin/pages-posts/TRASH.md](admin/pages-posts/TRASH.md) |
+| Recent changes (revision timeline of posts and pages) | [admin/pages-posts/CHANGES.md](admin/pages-posts/CHANGES.md) |
+| Translation status | [admin/pages-posts/TRANSLATIONS.md](admin/pages-posts/TRANSLATIONS.md) |
+| Content import/export (ZIP) | [admin/system-settings/CONTENT-EXCHANGE.md](admin/system-settings/CONTENT-EXCHANGE.md) |
+| Search index & search terms | [admin/system-settings/SEARCH-INDEX.md](admin/system-settings/SEARCH-INDEX.md) |
 | MultiSites (admin context per domain: accent, site switcher, plugin assignment, menu layout) | [admin/system-settings/MULTISITES.md](admin/system-settings/MULTISITES.md) |
 | AI services (admin) | [admin/system-settings/AI-SERVICES.md](admin/system-settings/AI-SERVICES.md) |
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
