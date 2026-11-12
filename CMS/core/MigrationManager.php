@@ -223,6 +223,8 @@ class MigrationManager
             "ALTER TABLE `{$p}posts` ADD INDEX `idx_planned_at` (`planned_at`)",
             "ALTER TABLE `{$p}pages` ADD COLUMN `planned_at` DATETIME DEFAULT NULL",
             "ALTER TABLE `{$p}pages` ADD INDEX `idx_planned_at` (`planned_at`)",
+            // v25: Auslöser einer Seitenrevision (Übersicht „Letzte Änderungen“).
+            "ALTER TABLE `{$p}page_revisions` ADD COLUMN `created_by` INT UNSIGNED DEFAULT NULL",
         ];
 
         // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –

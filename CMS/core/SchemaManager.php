@@ -198,6 +198,7 @@ class SchemaManager
                     content_updated_at DATETIME DEFAULT NULL,
                 page_template VARCHAR(80) DEFAULT NULL,
                 page_meta_json TEXT DEFAULT NULL,
+                created_by INT UNSIGNED DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_page_id (page_id),
                 INDEX idx_author (author_id),
@@ -2033,6 +2034,13 @@ class SchemaManager
                 error_log(sprintf('SchemaManager::ensureFeatureSchema(%s) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
             }
         }
+
+        // v25: Wer hat eine Seitenrevision ausgelöst? (Übersicht „Letzte Änderungen“)
+        $this->ensureColumnExists(
+            $this->prefix . 'page_revisions',
+            'created_by',
+            "ALTER TABLE {$this->prefix}page_revisions ADD COLUMN created_by INT UNSIGNED DEFAULT NULL AFTER page_meta_json"
+        );
 
         foreach (['posts', 'pages'] as $table) {
             $this->ensureColumnExists(

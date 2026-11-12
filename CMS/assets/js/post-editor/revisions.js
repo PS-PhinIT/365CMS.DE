@@ -427,5 +427,17 @@ export function initRevisions(form, { client, announce = null }) {
         restoreButton?.focus();
     });
 
+    // Sprung aus „Letzte Änderungen“: ?revision=<id> öffnet das Panel und den Vergleich dieser Revision.
+    const requestedRevision = Number.parseInt(new URLSearchParams(window.location.search).get('revision') || '0', 10) || 0;
+    if (requestedRevision > 0) {
+        const panel = document.getElementById('postRevisionPanel');
+        if (panel instanceof HTMLDetailsElement) {
+            panel.open = true;
+        }
+        window.setTimeout(() => {
+            openCompare(requestedRevision, findCompareButton(requestedRevision));
+        }, 0);
+    }
+
     return { render };
 }

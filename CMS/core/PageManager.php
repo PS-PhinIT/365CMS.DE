@@ -326,10 +326,12 @@ class PageManager
             return false;
         }
 
-        $sql = "INSERT INTO {$this->prefix}page_revisions (page_id, title, title_en, slug, slug_en, content, content_en, excerpt, status, author_id, content_updated_at, page_template, page_meta_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $hasCreatedBy = $this->db->columnExists($this->prefix . 'page_revisions', 'created_by');
+        $sql = "INSERT INTO {$this->prefix}page_revisions (page_id, title, title_en, slug, slug_en, content, content_en, excerpt, status, author_id, content_updated_at, page_template, page_meta_json"
+            . ($hasCreatedBy ? ', created_by' : '') . ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?" . ($hasCreatedBy ? ', ?' : '') . ")";
         $stmt = $this->db->prepare($sql);
 
-        return $stmt->execute([
+        $params = [
             $pageId,
             (string)($page['title'] ?? ''),
             (string)($page['title_en'] ?? ''),
@@ -343,7 +345,13 @@ class PageManager
                 trim((string)($page['content_updated_at'] ?? '')) ?: null,
             trim((string)($page['page_template'] ?? '')) ?: null,
             trim((string)($page['page_meta_json'] ?? '')) ?: null,
-        ]);
+        ];
+        if ($hasCreatedBy) {
+            $currentUserId = (int) (\CMS\Auth::instance()->currentUser()->id ?? 0);
+            $params[] = $currentUserId > 0 ? $currentUserId : null;
+        }
+
+        return $stmt->execute($params);
     }
 
     /**
