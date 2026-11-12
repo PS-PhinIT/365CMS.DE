@@ -28,7 +28,7 @@ Inhalte im Papierkorb werden nie exportiert.
 ```
 manifest.json            Format 365cms-content-exchange v1, CMS- und Schema-Version, Quell-Adresse,
                          Upload-Adresse, Typen mit Anzahl, Autoren, SHA-256 aller Dateien
-data/<typ>.json          Datensätze je Typ
+data/<typ>.jsonl         Datensätze je Typ, ein JSON-Objekt je Zeile (JSON Lines)
 files/media/<pfad>       Mediendateien (ohne Vorschaubilder; sie werden beim Import neu erzeugt)
 ```
 

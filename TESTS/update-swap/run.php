@@ -88,6 +88,7 @@ $installed = [
     'config.php' => 'stub',
     'config/app.php' => 'zugangsdaten',
     'uploads/downloads/handbuch.pdf' => 'pdf',
+    'private/forms/uploads/anhang.png' => 'anhang',
     'plugins/cms-importer/cms-importer.php' => 'importer-alt',
     'plugins/cms-importer/alt-datei.php' => 'nur alt',
     'plugins/eigenes-plugin/eigenes-plugin.php' => 'drittanbieter',
@@ -118,6 +119,7 @@ T::run('Core-Update führt plugins/ und themes/ zusammen', static function () us
     T::same('zugangsdaten', $after['config/app.php'] ?? null, 'config/ bleibt unangetastet');
     T::same('stub', $after['config.php'] ?? null, 'config.php bleibt unangetastet');
     T::same('pdf', $after['uploads/downloads/handbuch.pdf'] ?? null, 'uploads/ bleibt unangetastet');
+    T::same('anhang', $after['private/forms/uploads/anhang.png'] ?? null, 'private/ (privater Speicher ohne CMS_PRIVATE_PATH) bleibt unangetastet');
     T::same('importer-neu', $after['plugins/cms-importer/cms-importer.php'] ?? null, 'mitgeliefertes Plugin wird ersetzt');
     T::check(!isset($after['plugins/cms-importer/alt-datei.php']), 'mitgeliefertes Plugin wird vollständig ersetzt (keine Altdateien)');
     T::same('drittanbieter', $after['plugins/eigenes-plugin/eigenes-plugin.php'] ?? null, 'nachinstalliertes Plugin bleibt erhalten');

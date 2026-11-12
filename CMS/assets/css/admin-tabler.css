@@ -414,13 +414,33 @@ body.admin-body .users-table td:has(.form-check-input) {
     text-align: center;
 }
 
+/* Schalter: Die Checkbox-Regel oben (18 px, eckig) gilt hier nicht – Kippschalter mit weißem Knopf. */
 body.admin-body .form-switch .form-check-input {
+    width: 2.1rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    border-color: transparent;
     background-color: var(--cms-border-strong);
-    background-image: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: contain;
+    transition: background-position 0.15s ease-in-out, background-color 0.15s ease-in-out;
 }
 
 body.admin-body .form-switch .form-check-input:checked {
     background-color: rgba(var(--tblr-primary-rgb), 0.92);
+    background-position: right center;
+}
+
+body.admin-body .form-switch .form-check-input:disabled {
+    opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.admin-body .form-switch .form-check-input {
+        transition: none;
+    }
 }
 
 /* Hinweistexte mit ≥ 4,5:1 Kontrast – Tabler-Statusfarben liegen auf den hellen Alert-Flächen darunter */

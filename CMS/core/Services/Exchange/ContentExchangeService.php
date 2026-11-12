@@ -282,7 +282,7 @@ final class ContentExchangeService
         $result = [];
         foreach ($this->importProviders($manifest) as $type => $provider) {
             $row = ['label' => $provider->label(), 'total' => 0, 'create' => 0, 'conflict' => 0, 'invalid' => 0, 'samples' => []];
-            foreach ($this->readRecords($dir, $type, 0, PHP_INT_MAX) as $record) {
+            foreach ($this->iterateRecords($dir, $type) as $record) {
                 $row['total']++;
                 try {
                     $preview = $provider->preview($record, $context);
@@ -448,17 +448,34 @@ final class ContentExchangeService
     /** @return list<array<string, mixed>> */
     private function readRecords(string $dir, string $type, int $offset, int $limit): array
     {
+        $records = [];
+        foreach ($this->iterateRecords($dir, $type, $offset) as $record) {
+            $records[] = $record;
+            if (count($records) >= $limit) {
+                break;
+            }
+        }
+
+        return $records;
+    }
+
+    /**
+     * Datensätze eines Typs zeilenweise (JSON Lines) – hält nie die ganze Datei im Speicher.
+     *
+     * @return \Generator<int, array<string, mixed>>
+     */
+    private function iterateRecords(string $dir, string $type, int $offset = 0): \Generator
+    {
         if (preg_match('/^[a-z][a-z0-9_]{0,39}$/', $type) !== 1) {
-            return [];
+            return;
         }
         $file = $dir . 'data' . DIRECTORY_SEPARATOR . $type . '.jsonl';
         if (!is_file($file)) {
-            return [];
+            return;
         }
-        $records = [];
         $handle = new \SplFileObject($file, 'rb');
         $handle->seek($offset);
-        while (!$handle->eof() && count($records) < $limit) {
+        while (!$handle->eof()) {
             $line = trim((string) $handle->current());
             $handle->next();
             if ($line === '') {
@@ -466,11 +483,9 @@ final class ContentExchangeService
             }
             $record = json_decode($line, true);
             if (is_array($record)) {
-                $records[] = $record;
+                yield $record;
             }
         }
-
-        return $records;
     }
 
     /**
@@ -572,14 +587,15 @@ final class ContentExchangeService
             if ($total > self::MAX_EXTRACT_BYTES) {
                 return (string) __('exchange.error.too_large_extracted');
             }
-            $entries[$i] = $clean;
+            $entries[$i] = ['path' => $clean, 'size' => (int) $stat['size']];
         }
 
         $root = realpath($dir);
         if ($root === false) {
             return (string) __('exchange.error.staging_missing');
         }
-        foreach ($entries as $index => $relative) {
+        $written = 0;
+        foreach ($entries as $index => ['path' => $relative, 'size' => $declared]) {
             $target = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
             $parent = dirname($target);
             if (!is_dir($parent) && !mkdir($parent, 0700, true) && !is_dir($parent)) {
@@ -594,12 +610,14 @@ final class ContentExchangeService
             if ($in === false || $out === false) {
                 return (string) __('exchange.error.not_zip');
             }
-            $written = stream_copy_to_stream($in, $out, self::MAX_EXTRACT_BYTES);
+            // Nie mehr schreiben als angegeben und insgesamt erlaubt: Die Größen im Archiv können gefälscht sein.
+            $copied = stream_copy_to_stream($in, $out, min($declared, self::MAX_EXTRACT_BYTES - $written) + 1);
             fclose($in);
             fclose($out);
-            if ($written === false) {
-                return (string) __('exchange.error.not_zip');
+            if ($copied === false || $copied > $declared) {
+                return $copied === false ? (string) __('exchange.error.not_zip') : (string) __('exchange.error.too_large_extracted');
             }
+            $written += $copied;
         }
 
         return null;

@@ -2,9 +2,11 @@
 
 ## English
 
-This release directory documents the distributable `4.0.0` packages (release date 2026-11-08, database schema `v24`). Both packages contain deployable code only. Installation-specific configuration, uploads, caches, logs and backups are intentionally excluded; the full package ships only the protective `.htaccess`/index files of those directories.
+This release directory documents the distributable `4.0.0` packages (release date 2026-11-12, database schema `v25`). Both packages contain deployable code only. Installation-specific configuration, uploads, caches, logs and backups are intentionally excluded; the full package ships only the protective `.htaccess`/index files of those directories.
 
 Security and bug-fix release on top of 3.5.6, based on the follow-up audit of 2026-11-08 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 findings, all fixed). A second pass on 2026-11-09 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) implemented the recommendations OFFEN-20 … OFFEN-26 and fixed six further defects that had existed since 3.5.x. The update is marked as critical; install it promptly. The release also ships the redesigned administration described below.
+
+> **Before updating from 3.5.x:** the updater of 3.5.x replaces the folders `CMS/plugins/` and `CMS/themes/` completely. Back up plugins you installed yourself and custom themes before the update and upload them again afterwards. From 4.0.0 on, updates keep them (only the bundled `cms-importer` and `cms-default` are replaced).
 
 Fixed, among others:
 
@@ -48,11 +50,23 @@ Plugin menu registration (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page
 
 Database schema `v24` adds six columns to `cms_post_revisions` (`revision_type`, `created_by`, `featured_image`, `meta_title`, `meta_description`, `fingerprint`) for revision compare, restore and duplicate detection. Existing revisions are kept and marked `legacy`; no data is rewritten. User preferences (`cms_user_meta`, key `admin_ui_prefs`) and plugin assignments (`cms_settings`, options `admin_plugin_site_assignments` and `admin_sites`) use existing tables.
 
+Core functions formerly provided by plugins, and new content tools (schema `v25`):
+
+- **Forms** (formerly the plugin cms-contact): builder with 15 field types, per-form mails, spam levels and retention, Editor.js block, `/contact/<key>`, submissions with CSV export, file uploads in private storage, GDPR export/deletion and a member page.
+- **Downloads** (formerly cms-downloads): versions, categories, access levels, statistics without personal data, Editor.js block, archive and detail pages, controlled delivery from private storage.
+- **Feed aggregator** (formerly cms-feed): sources, articles, categories, e-mail digests, member subscriptions, OPML import/export, public pages `/feeds`, fetching by cron with SSRF checks; RSS output settings.
+- **Editorial calendar**, **trash** for pages, posts, media, hub sites, downloads, forms and submissions (with automatic emptying), **recent changes**, **translation status**, **search index** management with anonymous search-term statistics, **content import/export** as ZIP, **retention periods** overview with dry run, **media tools** (regenerate thumbnails, credit output), **image credits** (author, licence, source, AI-generated; caption credit line and Schema.org), **accessibility statement**, adjustable **login thresholds**, **cache & maintenance** menu in the top bar and an **environment overview** under System → Info.
+- The plugins cms-contact, cms-downloads and cms-feed are deactivated automatically; their data is migrated in blocks on admin requests and by the daily cron (without IP addresses and user agents).
+
+Schema `v25` adds the tables `admin_menu_layouts`, `batch_jobs`, `form_*`, `downloads_*`, `feeds_*`, `translation_sync`, `search_queries`, `search_term_daily` and `trash_media`, trash columns in `posts`, `pages` and `site_tables`, `planned_at` in `posts`/`pages` and `created_by` in `page_revisions`. New installation and update from `v24` produce the same structure (checked); no data is rewritten.
+
 ## Deutsch
 
-Dieses Release-Verzeichnis dokumentiert die auslieferbaren Pakete `4.0.0` (Release 08.11.2026, Datenbankschema `v24`). Update- und Vollpaket enthalten ausschließlich auslieferbaren Code; installationsspezifische Konfiguration, Uploads, Cache, Logs und Backups sind bewusst ausgeschlossen. Das Vollpaket enthält aus diesen Verzeichnissen nur die schützenden `.htaccess`-/Index-Dateien.
+Dieses Release-Verzeichnis dokumentiert die auslieferbaren Pakete `4.0.0` (Release 12.11.2026, Datenbankschema `v25`). Update- und Vollpaket enthalten ausschließlich auslieferbaren Code; installationsspezifische Konfiguration, Uploads, Cache, Logs und Backups sind bewusst ausgeschlossen. Das Vollpaket enthält aus diesen Verzeichnissen nur die schützenden `.htaccess`-/Index-Dateien.
 
 Sicherheits- und Korrekturrelease auf Basis von 3.5.6 nach dem Folgeaudit vom 08.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 Befunde, alle behoben). Ein zweiter Durchgang am 09.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) setzt die Empfehlungen OFFEN-20 bis OFFEN-26 um und behebt sechs weitere Fehler, die seit 3.5.x bestanden. Das Update ist als kritisch markiert und sollte zeitnah installiert werden. Installationen mit 3.5.6 zeigen es noch als normales Update an, weil die rote Kennzeichnung kritischer Updates erst mit 4.0.0 kommt. Außerdem enthält das Release die unten beschriebene neue Administration.
+
+> **Vor dem Update von 3.5.x:** Der Updater von 3.5.x ersetzt die Ordner `CMS/plugins/` und `CMS/themes/` vollständig. Nachinstallierte Plugins und eigene Themes vor dem Update sichern und danach wieder hochladen. Ab 4.0.0 bleiben sie bei Updates erhalten (ersetzt werden nur das mitgelieferte `cms-importer` und `cms-default`).
 
 Behoben wurden unter anderem:
 
@@ -96,6 +110,18 @@ Die Registrierung von Plugin-Menüs (`cms_admin_menu`, `add_menu_page()`, `add_s
 
 Datenbankschema `v24`: Die Migration ergänzt in `cms_post_revisions` die Spalten `revision_type`, `created_by`, `featured_image`, `meta_title`, `meta_description` und `fingerprint` für Vergleich, Wiederherstellung und Duplikaterkennung von Revisionen. Vorhandene Revisionen bleiben erhalten und werden als `legacy` gekennzeichnet; Daten werden nicht umgeschrieben. Benutzer-Präferenzen (`cms_user_meta`, Schlüssel `admin_ui_prefs`) und Plugin-Zuweisungen (`cms_settings`, Optionen `admin_plugin_site_assignments` und `admin_sites`) nutzen vorhandene Tabellen.
 
+Bisher als Plugin gelieferte Funktionen im Core und neue Inhaltswerkzeuge (Schema `v25`):
+
+- **Formulare** (bisher Plugin cms-contact): Baukasten mit 15 Feldtypen, Mails je Formular, Spam-Stufen und Löschfrist, Editor.js-Block, `/contact/<schlüssel>`, Eingänge mit CSV-Export, Datei-Uploads im privaten Speicher, DSGVO-Auskunft und -Löschung sowie Seite im Mitgliederbereich.
+- **Downloads** (bisher cms-downloads): Versionen, Kategorien, Zugriffsstufen, Statistik ohne Personendaten, Editor.js-Block, Archiv- und Detailseiten, kontrollierte Auslieferung aus dem privaten Speicher.
+- **Feed-Aggregator** (bisher cms-feed): Quellen, Artikel, Bereiche, E-Mail-Digests, Mitglieder-Abos, OPML-Import/-Export, öffentliche Seiten `/feeds`, Abruf per Cron mit SSRF-Prüfung; Einstellungen der RSS-Ausgabe.
+- **Redaktionskalender**, **Papierkorb** für Seiten, Beiträge, Medien, Hub-Sites, Downloads, Formulare und Eingänge (mit automatischem Leeren), **Letzte Änderungen**, **Übersetzungsstatus**, **Suchindex**-Verwaltung mit anonymer Suchbegriff-Statistik, **Import/Export** von Inhalten als ZIP, **Löschfristen**-Übersicht mit Probelauf, **Medien-Werkzeuge** (Vorschaubilder neu erzeugen, Ausgabe der Urheberangaben), **Urheberangaben** (Urheber, Lizenz, Quelle, KI-generiert; Credit-Zeile und Schema.org), **Erklärung zur Barrierefreiheit**, einstellbare **Login-Grenzwerte**, Menü **Cache & Wartung** in der oberen Leiste und **Umgebungsinfo** unter System → Info.
+- Die Plugins cms-contact, cms-downloads und cms-feed werden automatisch deaktiviert; ihre Daten übernimmt der Core in Blöcken bei Admin-Aufrufen und im täglichen Cron (ohne IP-Adressen und User-Agents).
+
+Schema `v25` ergänzt die Tabellen `admin_menu_layouts`, `batch_jobs`, `form_*`, `downloads_*`, `feeds_*`, `translation_sync`, `search_queries`, `search_term_daily` und `trash_media`, Papierkorb-Spalten in `posts`, `pages` und `site_tables`, `planned_at` in `posts`/`pages` und `created_by` in `page_revisions`. Neuinstallation und Update von `v24` ergeben dieselbe Struktur (geprüft); Daten werden nicht umgeschrieben.
+
+### Dateien
+
 - `365CMS-4.0.0-update.zip`: vollständiges Core-Updatepaket für den automatischen Core-Updater (Wurzelordner `CMS/`).
 - `365CMS-4.0.0-full.zip`: sauberes Gesamtpaket für eine Neuinstallation. Nach dem Entpacken `CMS/install.php` aufrufen.
 - `365CMS-4.0.0-update.json`: Update-Manifest inklusive SHA-256 für das Updatepaket.
@@ -107,9 +133,22 @@ Das Updatepaket muss unter folgendem Pfad erreichbar sein:
 
 `https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip`
 
-Die Datei `CMS/marketplace/core/365cms/update.json` muss am selben Marketplace-Pfad liegen. Nach dem Core-Update den Adminbereich neu laden und unter **Admin → Updates** das idempotente Datenbank-Update ausführen (Schema `v23` → `v24`, neue Spalten in `cms_post_revisions`; die installierte Version wird auf `4.0.0` gesetzt). Der Revisionsdienst legt fehlende Spalten beim ersten Aufruf auch selbst an.
+Die Datei `CMS/marketplace/core/365cms/update.json` muss am selben Marketplace-Pfad liegen. Nach dem Core-Update den Adminbereich neu laden und unter **Admin → Updates** das idempotente Datenbank-Update ausführen (Schema bis `v25`: neue Spalten in `cms_post_revisions`, `posts`, `pages`, `site_tables`, `page_revisions` und die neuen Tabellen; die installierte Version wird auf `4.0.0` gesetzt). Fehlende Tabellen und Spalten legen die Dienste beim ersten Aufruf auch selbst an.
 
-Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest voraus. Der Core-Swap bewahrt `config/`, `config.php`, `uploads/`, `cache/`, `logs/` und `backups/`.
+Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest voraus. Der Core-Swap bewahrt `config/`, `config.php`, `uploads/`, `cache/`, `logs/`, `backups/` und den privaten Speicher `private/`.
+
+### Prüfung der Pakete (12.11.2026)
+
+| Test | Ergebnis |
+|---|---|
+| Reproduzierbarkeit | Zweiter Bau aus demselben Commit ergibt identische Prüfsummen |
+| Updater-Grenzen | 4207 Einträge (Grenze 5000), entpackt 38,9 MB (Grenze 512 MB), keine Laufzeitpfade im Updatepaket |
+| Update von 3.5.6 | Verzeichnistausch mit dem Code des installierten 3.5.6-Updaters: alle 4207 Dateien inhaltsgleich, keine Altdateien, `config/`, `config.php` und `uploads/` bleiben; nachinstallierte Plugins gehen verloren (siehe Warnung oben) |
+| Neuinstallation | Vollpaket entpackt, Startseite leitet zum Installer, alle Installer-Schritte durchlaufen: 68 Tabellen, Schema `v25`, Administrator angelegt, Installer danach gesperrt (403); 103 Admin-Seiten ohne Serverfehler |
+| MultiSite mit zwei Sites | Zweite Site angelegt (doppelter Host wird abgelehnt), Plugin nur einer Site zugewiesen: Menü erscheint nur dort, Site-Umschalter wechselt den Kontext |
+| Datenbank-Update | Update von `v24` auf `v25` ergibt dieselben Tabellen und Spalten wie die Neuinstallation |
+
+Laufzeit der Tests: PHP 8.3 mit abgesenkter Versionsprüfung in der Testkopie und MariaDB 10.11. Ein Lauf unter PHP 8.4/8.5 steht aus; die geänderten Dateien wurden auf unter PHP 8.4/8.5 veraltete Aufrufe geprüft.
 
 ### Nach dem Update prüfen
 
@@ -136,5 +175,9 @@ Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest
 - **Veröffentlichungs-Checkliste:** Veröffentlichen und Planen verlangen jetzt Beitragsbild, SEO-Beschreibung mit 120–160 Zeichen und Kategorie – im Editor, bei der Bulk-Aktion „Veröffentlichen“ (unvollständige Beiträge werden übersprungen) und beim Wiederherstellen einer Revision eines geplanten Beitrags. Veröffentlichte Beiträge lassen sich ohne Checkliste weiter bearbeiten. Bereits geplante Beiträge erscheinen unverändert zum geplanten Zeitpunkt, verlangen beim nächsten Speichern aber die vollständige Checkliste.
 - **Revisionen:** Je Beitrag bleiben die letzten 30 Revisionen. Bis 4.0.0 war der Verlauf unbegrenzt; die erste neue Revision eines Beitrags nach dem Update kürzt seinen Verlauf auf 30 Einträge. Wer ältere Stände braucht, sichert vorher die Datenbank.
 - **Systemhinweise:** Administratoren (`manage_system`) sehen am Avatar einen Punkt, wenn der letzte Cron-Lauf fehlschlug, kein Backup vorhanden oder das letzte älter als 24 Stunden ist, oder Core- bzw. Plugin-Updates bereitstehen. Der Cron-Status wird erst ab 4.0.0 erfasst, ein Cron-Hinweis erscheint also frühestens nach dem ersten fehlgeschlagenen Lauf. Die Hinweise werden fünf Minuten zwischengespeichert.
+- **Cron:** Feed-Abruf, Digests, Löschfristen, Papierkorb und das Fortsetzen von „Vorschaubilder neu erzeugen“ laufen über `cron.php`. Den Cron mindestens stündlich ausführen.
+- **Privater Speicher:** Formular-Anhänge, geschützte Downloads, Medien im Papierkorb und Exporte liegen in `CMS/private/` oder unter `CMS_PRIVATE_PATH`. Empfohlen ist ein Ort außerhalb des Webroots; unter nginx `private/` per Server-Regel sperren.
+- **Plugins cms-contact, cms-downloads, cms-feed:** Werden beim Laden automatisch deaktiviert (nicht gelöscht). Ihre Daten übernimmt der Core bei Admin-Aufrufen in Blöcken von je 5 Sekunden und im täglichen Cron, bis alles übernommen ist; der Stand erscheint als Systemhinweis. Downloads mit Anmeldepflicht wandern dabei in den privaten Speicher. Danach können die Plugin-Ordner entfernt werden.
+- **Thumbnails:** Wurden die Bildgrößen geändert, unter *Medien → Medien-Werkzeuge* die Vorschaubilder neu erzeugen.
 - **OPcache:** Falls weiterhin der alte Stand ausgeführt wird, OPcache bzw. PHP-FPM neu starten (Hoster-Panel).
 - **Upgrade von 3.4.x:** Zusätzlich die Hinweise aus `RELEASE/README-3.5.0.md` beachten (Proxy/CDN, Lazy Sessions, JWT-Bindung, nginx-Regel).

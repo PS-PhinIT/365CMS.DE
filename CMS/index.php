@@ -256,7 +256,18 @@ if ($requiresImmediateSession()) {
     });
 }
 
-// Load configuration
+// Load configuration – frisch entpacktes Vollpaket ohne config.php: zum Installer statt Fatal Error (500).
+if (!is_file(__DIR__ . '/config.php')) {
+    if (is_file(__DIR__ . '/install.php')) {
+        $installBase = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'))), '/');
+        header('Location: ' . $installBase . '/install.php', true, 302);
+    } else {
+        http_response_code(503);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo 'CMS ist nicht konfiguriert.';
+    }
+    exit;
+}
 require_once __DIR__ . '/config.php';
 
 // Autoloader
