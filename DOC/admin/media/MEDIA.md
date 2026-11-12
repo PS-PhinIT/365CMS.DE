@@ -66,7 +66,7 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 
 ### Nachträgliche Bildverarbeitung
 
-Über die Jobs `start_media_processing_job` / `process_media_processing_job` / `cancel_media_processing_job` können bestehende Bilder nachträglich verarbeitet werden. Modi: `all`, `webp`, `thumbnails`. Der Job arbeitet in Schritten zu 5 Dateien, höchstens 1000 Kandidaten und überspringt Dateien über 1 MB. Fortschritt wird per AJAX abgefragt; ein Abbruch ist jederzeit möglich.
+Über die Jobs `start_media_processing_job` / `process_media_processing_job` / `cancel_media_processing_job` können bestehende Bilder nachträglich verarbeitet werden. Modi: `all`, `webp`, `thumbnails`. Der Job arbeitet in Schritten zu 5 Dateien, höchstens 1000 Kandidaten und überspringt Dateien über 1 MB. Fortschritt wird per AJAX abgefragt; ein Abbruch ist jederzeit möglich. Alle Vorschaubilder nach geänderten Größen neu erzeugen – mit Fortschritt und Fortsetzung im Cron – geht unter *Medien → Medien-Werkzeuge* ([MEDIA-TOOLS.md](MEDIA-TOOLS.md)); dort stehen auch die Schalter für Urheberangaben.
 
 ### Upload-Prüfung
 

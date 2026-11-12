@@ -1,11 +1,12 @@
 <?php
 /**
- * Hooks des Funktionsbereichs „Medien“: Urheber- und Lizenzangaben im Frontend (#11).
+ * Hooks des Funktionsbereichs „Medien“: Urheber- und Lizenzangaben im Frontend (#11) und Fortsetzung des
+ * Auftrags „Vorschaubilder neu erzeugen“ im stündlichen Cron (#13).
  *
  * - Credit-Zeile: Der Editor.js-Renderer fragt je Bild den Filter `cms_image_figcaption_credit` ab
  *   (Einzelbild, Galerie, Karussell). Gibt es zur Bild-URL Angaben in der Mediathek (auch für erzeugte
  *   Größen und WebP-Derivate), wird `<small class="cms-media-credit">…</small>` in der `figcaption`
- *   ergänzt. Abschaltbar global (Medien → Werkzeuge → Ausgabe) und durch das Theme über den Filter
+ *   ergänzt. Abschaltbar global (Medien → Medien-Werkzeuge → Urheberangaben) und durch das Theme über den Filter
  *   `cms_media_credit_line_enabled` (bool, Bild-URL, Kontext).
  * - Schema.org: Alle so ausgegebenen Bilder mit Angaben werden als `ImageObject` (creator, license,
  *   copyrightNotice, creditText) gesammelt und einmal pro Seite als JSON-LD vor `</body>` ausgegeben –
@@ -36,6 +37,15 @@ final class MediaFeatureHooks
     public static function register(): void
     {
         Hooks::addFilter('cms_image_figcaption_credit', [self::class, 'filterFigcaptionCredit'], 10);
+
+        // #13: Vorschaubilder neu erzeugen – ein im Browser verlassener Auftrag läuft im Cron weiter.
+        Hooks::addAction('cms_cron_hourly', static function (): void {
+            try {
+                \CMS\Services\Media\ThumbnailRegenerationService::getInstance()->continueInCron();
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('media')->warning('Vorschaubilder konnten im Cron nicht weiter erzeugt werden.', ['exception' => $e->getMessage()]);
+            }
+        }, 60);
 
         if (defined('CMS_MODE') && CMS_MODE === 'web') {
             Hooks::addAction('body_end', [self::class, 'printSchema'], 20);

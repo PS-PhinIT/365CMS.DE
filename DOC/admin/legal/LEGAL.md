@@ -20,6 +20,8 @@
 
 Texte sind HTML (max. 60 000 Zeichen) und werden beim Speichern bereinigt.
 
+Seit 4.0.0 kommt die **Erklärung zur Barrierefreiheit** hinzu (`accessibility`, `/barrierefreiheit`, Option `accessibility_page_id`); sie wird aus Feldern erzeugt statt frei geschrieben: [ACCESSIBILITY.md](ACCESSIBILITY.md).
+
 ### Rechtsprofil (`save_profile`)
 
 Das Profil (`legal_profile_*`) füllt die Vorlagen automatisch:
