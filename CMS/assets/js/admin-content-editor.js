@@ -4862,6 +4862,20 @@
                 return;
             }
 
+            // Sprung aus Inhalte → Übersetzungen (?ai_translate=1): Übersetzung starten; das Ergebnis erscheint als
+            // Vorschau und wird erst nach „Übernehmen“ und Speichern wirksam (keine automatische Veröffentlichung).
+            try {
+                if (new URLSearchParams(window.location.search).get('ai_translate') === '1') {
+                    window.setTimeout(function () {
+                        if (!button.disabled) {
+                            button.click();
+                        }
+                    }, 800);
+                }
+            } catch (error) {
+                // URLSearchParams nicht verfügbar – kein Autostart.
+            }
+
             button.addEventListener('click', function () {
                 var state = null;
                 var cancelButton = null;

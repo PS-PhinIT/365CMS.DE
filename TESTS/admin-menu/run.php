@@ -82,7 +82,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/translations.php' => 'WP2: Übersetzungen',
     'admin/content-exchange.php' => 'WP2: Import/Export',
     'admin/media-tools.php' => 'WP4: Medien-Werkzeuge',
 ];
