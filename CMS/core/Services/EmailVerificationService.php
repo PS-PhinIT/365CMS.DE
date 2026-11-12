@@ -35,6 +35,10 @@ final class EmailVerificationService
     private const META_TOKEN = 'email_verification_token';
     private const META_EXPIRES = 'email_verification_expires';
     private const META_VERIFIED_AT = 'email_verified_at';
+    /** Hashes der Links, mit denen das Konto bestätigt wurde (erneuter Klick → „bereits bestätigt“). */
+    private const META_USED = 'email_verification_used';
+    /** Gleichzeitig gültige Links je Konto: ein neuer Link macht ältere, noch gültige nicht ungültig. */
+    private const MAX_ACTIVE_TOKENS = 5;
 
     private const RESEND_LIMIT = 3;
     private const RESEND_WINDOW = 3600;
@@ -74,9 +78,7 @@ final class EmailVerificationService
             return false;
         }
 
-        $token = bin2hex(random_bytes(32));
-        $this->setMeta($userId, self::META_TOKEN, hash('sha256', $token));
-        $this->setMeta($userId, self::META_EXPIRES, (string) (time() + self::TOKEN_TTL_SECONDS));
+        $token = $this->issueToken($userId);
 
         $siteName = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
         $name = trim((string) ($user->display_name ?? ''));
@@ -147,21 +149,36 @@ final class EmailVerificationService
         }
         Security::recordDbRateLimitAttempt($clientIp, 'email_verify');
 
+        $tokenHash = hash('sha256', $token);
         try {
-            $storedHash = $this->findUnverifiedUser($userId) !== null
-                ? (string) ($this->getMeta($userId, self::META_TOKEN) ?? '')
-                : '';
-            if ($storedHash === '' || !hash_equals($storedHash, hash('sha256', $token))) {
-                return $invalid;
+            if ($this->findUnverifiedUser($userId) === null) {
+                // Mit genau diesem Link schon bestätigt (z. B. nach Vorabprüfung durch einen Mailfilter oder Doppelklick).
+                return in_array($tokenHash, $this->usedHashes($userId), true)
+                    ? ['success' => true, 'message' => 'Ihre E-Mail-Adresse ist bereits bestätigt. Sie können sich anmelden.']
+                    : $invalid;
             }
 
-            if ((int) ($this->getMeta($userId, self::META_EXPIRES) ?? 0) < time()) {
+            $match = null;
+            $entries = $this->tokenEntries($userId);
+            foreach ($entries as $entry) {
+                if (hash_equals($entry['h'], $tokenHash)) {
+                    $match = $entry;
+                    break;
+                }
+            }
+            if ($match === null) {
+                return $invalid;
+            }
+            if ($match['e'] < time()) {
                 return ['success' => false, 'message' => 'Dieser Bestätigungslink ist abgelaufen. Melden Sie sich an, um einen neuen Link zu erhalten.'];
             }
 
             if (!$this->activate($userId, 'link')) {
                 return $invalid;
             }
+            // Alle zu diesem Zeitpunkt verschickten Links gelten als benutzt – ein späterer Klick auf einen davon
+            // meldet „bereits bestätigt“ statt „ungültig“.
+            $this->setMeta($userId, self::META_USED, (string) json_encode(array_values(array_unique(array_column($entries, 'h')))));
         } catch (\Throwable $e) {
             $this->logger->error('E-Mail-Bestätigung fehlgeschlagen.', [
                 'user_id' => $userId,
@@ -247,6 +264,57 @@ final class EmailVerificationService
         }
 
         return $locale !== '' ? $locale : 'de';
+    }
+
+    /**
+     * Neuen Bestätigungs-Token anlegen; noch gültige ältere bleiben gültig (höchstens MAX_ACTIVE_TOKENS).
+     * Gespeichert werden nur SHA-256-Hashes mit Ablaufzeit.
+     */
+    private function issueToken(int $userId): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $now = time();
+        $entries = array_values(array_filter($this->tokenEntries($userId), static fn (array $e): bool => $e['e'] >= $now));
+        $entries[] = ['h' => hash('sha256', $token), 'e' => $now + self::TOKEN_TTL_SECONDS];
+        $entries = array_slice($entries, -self::MAX_ACTIVE_TOKENS);
+        $this->setMeta($userId, self::META_TOKEN, (string) json_encode($entries));
+        $this->setMeta($userId, self::META_EXPIRES, (string) max(array_column($entries, 'e')));
+
+        return $token;
+    }
+
+    /**
+     * Gespeicherte Tokens: JSON-Liste `[{h, e}]` oder – aus Versionen vor dieser Änderung – ein einzelner Hash
+     * mit Ablaufzeit in META_EXPIRES.
+     *
+     * @return list<array{h:string,e:int}>
+     */
+    private function tokenEntries(int $userId): array
+    {
+        $raw = trim((string) ($this->getMeta($userId, self::META_TOKEN) ?? ''));
+        if ($raw === '') {
+            return [];
+        }
+        if (preg_match('/^[a-f0-9]{64}$/', $raw) === 1) {
+            return [['h' => $raw, 'e' => (int) ($this->getMeta($userId, self::META_EXPIRES) ?? 0)]];
+        }
+        $decoded = json_decode($raw, true);
+        $entries = [];
+        foreach (is_array($decoded) ? $decoded : [] as $entry) {
+            if (is_array($entry) && is_string($entry['h'] ?? null) && preg_match('/^[a-f0-9]{64}$/', $entry['h']) === 1) {
+                $entries[] = ['h' => $entry['h'], 'e' => (int) ($entry['e'] ?? 0)];
+            }
+        }
+
+        return $entries;
+    }
+
+    /** @return list<string> */
+    private function usedHashes(int $userId): array
+    {
+        $decoded = json_decode((string) ($this->getMeta($userId, self::META_USED) ?? ''), true);
+
+        return is_array($decoded) ? array_values(array_filter($decoded, 'is_string')) : [];
     }
 
     private function findUnverifiedUser(int $userId): ?object
