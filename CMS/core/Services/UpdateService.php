@@ -26,6 +26,13 @@ if (!defined('ABSPATH')) {
 
 class UpdateService
 {
+    /**
+     * Installationsspezifische Laufzeitpfade im CMS-Verzeichnis: bleiben beim Core-Update unangetastet und dürfen
+     * nicht im Paket stehen. `private` ist der private Speicher (Formular-Anhänge, geschützte Downloads,
+     * Medien-Papierkorb, Exporte), solange `CMS_PRIVATE_PATH` nicht auf einen Ort außerhalb zeigt.
+     */
+    private const RUNTIME_CORE_ENTRIES = ['backups', 'cache', 'config', 'config.php', 'logs', 'private', 'uploads'];
+
     private const UPDATE_MIN_FREE_DISK_BYTES = 1073741824;
     private const UPDATE_WARN_FREE_DISK_BYTES = 2147483648;
     private const UPDATE_MAX_ARCHIVE_ENTRIES = 5000;
@@ -1794,7 +1801,7 @@ class UpdateService
             return;
         }
 
-        $runtimeEntries = ['backups', 'cache', 'config', 'config.php', 'logs', 'uploads'];
+        $runtimeEntries = self::RUNTIME_CORE_ENTRIES;
         foreach ($this->listDirectoryEntries($sourceDir) as $entry) {
             if (in_array($entry, $runtimeEntries, true)) {
                 throw new \RuntimeException('Core-Update-Paket enthält einen installationsspezifischen Laufzeitpfad: ' . $entry);
@@ -2030,7 +2037,7 @@ class UpdateService
         $backedUpEntries = [];
         $movedEntries = [];
         $preservedCoreEntries = $type === 'core'
-            ? ['backups', 'cache', 'config', 'config.php', 'logs', 'uploads']
+            ? self::RUNTIME_CORE_ENTRIES
             : [];
         // In plugins/ und themes/ ersetzt ein Core-Update nur die mitgelieferten Unterordner;
         // nachinstallierte Plugins und eigene Themes bleiben erhalten.
