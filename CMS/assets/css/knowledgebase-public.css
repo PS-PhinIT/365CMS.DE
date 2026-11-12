@@ -1,0 +1,388 @@
+/* ══════════════════════════════════════════════════════════════════
+   CMS Knowledgebase – Public Layout & Design-Varianten
+   Wird nur auf /kb, /kb/{slug} und /glossar geladen.
+
+   Die Varianten werden über Modifier-Klassen am <main class="cms-kb-content">
+   gesteuert (Admin → Knowledgebase → Einstellungen → Design). Alle Selektoren
+   starten mit `.cms-kb-content.cms-kb-content--…`, damit sie die Theme-Regeln
+   (`body.is-knowledgebase …`) unabhängig von der Ladereihenfolge übersteuern.
+══════════════════════════════════════════════════════════════════ */
+
+/* Admin-Tokens (--kb-card-bg, --kb-section-bg, --kb-sidebar-bg, --kb-excerpt-lines …)
+   kommen aus dem <style id="cms-knowledgebase-style-tokens">-Block und werden
+   hier nur per var()-Fallback genutzt, nie in :root überschrieben. */
+:root {
+    --kb-sec-details: #2563eb;
+    --kb-sec-benefits: #15803d;
+    --kb-sec-notes: #b45309;
+    --kb-sec-neutral: #64748b;
+}
+
+/* ── Übersicht: Hero ─────────────────────────────────────────────── */
+
+.cms-kb-content.cms-kb-content--hero-surface .cms-kb-hero,
+.cms-kb-content.cms-kb-content--archive.cms-kb-content--hero-surface .cms-kb-hero {
+    background: var(--kb-surface, #ffffff);
+}
+
+.cms-kb-content.cms-kb-content--hero-tinted .cms-kb-hero,
+.cms-kb-content.cms-kb-content--archive.cms-kb-content--hero-tinted .cms-kb-hero {
+    background: color-mix(in srgb, var(--kb-accent, #0d9488) 7%, var(--kb-surface, #ffffff));
+    border-color: color-mix(in srgb, var(--kb-accent, #0d9488) 20%, var(--kb-border, #dbe1ea));
+}
+
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero,
+.cms-kb-content.cms-kb-content--archive.cms-kb-content--hero-accent .cms-kb-hero {
+    background: var(--kb-accent-hover, #0f766e);
+    border-color: var(--kb-accent-hover, #0f766e);
+    color: #ffffff;
+}
+
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero::before {
+    content: none;
+}
+
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero h1,
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero .cms-kb-hero__intro,
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero .cms-kb-hero__eyebrow,
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero .cms-kb-entry__meta {
+    color: #ffffff;
+}
+
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero .cms-kb-hero__intro,
+.cms-kb-content.cms-kb-content--hero-accent .cms-kb-hero .cms-kb-entry__meta {
+    opacity: 0.88;
+}
+
+/* ── Übersicht: Spalten ──────────────────────────────────────────── */
+
+.cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-2 .cms-kb-entry-grid--cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-3 .cms-kb-entry-grid--cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-4 .cms-kb-entry-grid--cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* ── Übersicht: Karten ───────────────────────────────────────────── */
+
+.cms-kb-content.cms-kb-content--overview.cms-kb-content--cards-elevated .cms-kb-entry--card {
+    background: var(--kb-card-bg, #ffffff);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.cms-kb-content.cms-kb-content--overview.cms-kb-content--cards-outline .cms-kb-entry--card {
+    background: var(--kb-card-bg, #ffffff);
+    box-shadow: none;
+}
+
+.cms-kb-content.cms-kb-content--overview.cms-kb-content--cards-tinted .cms-kb-entry--card {
+    background: color-mix(in srgb, var(--kb-accent, #0d9488) 6%, var(--kb-card-bg, #ffffff));
+    border-color: color-mix(in srgb, var(--kb-accent, #0d9488) 18%, var(--kb-border, #dbe1ea));
+    box-shadow: none;
+}
+
+.cms-kb-content.cms-kb-content--archive:not(.has-card-accent) .cms-kb-entry::before {
+    content: none;
+}
+
+.cms-kb-content.cms-kb-content--archive.has-excerpt-clamp .cms-kb-entry__excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--kb-excerpt-lines, 3);
+    line-clamp: var(--kb-excerpt-lines, 3);
+    overflow: hidden;
+}
+
+/* ── Detailseite: Breadcrumb ohne eigene Box ─────────────────────── */
+
+.cms-kb-content.cms-kb-content--single .cms-kb-breadcrumbs {
+    padding: 0 0.25rem;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* ── Detailseite: Inhaltsbereiche ────────────────────────────────── */
+
+.cms-kb-content.cms-kb-content--single .cms-kb-section {
+    --kb-sec-color: var(--kb-accent, #0d9488);
+    --kb-sec-tint: 0%;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--details {
+    --kb-sec-color: var(--kb-sec-details);
+    --kb-sec-tint: 5%;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--benefits {
+    --kb-sec-color: var(--kb-sec-benefits);
+    --kb-sec-tint: 6%;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--practice {
+    --kb-sec-color: var(--kb-accent, #0d9488);
+    --kb-sec-tint: 6%;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--notes {
+    --kb-sec-color: var(--kb-sec-notes);
+    --kb-sec-tint: 7%;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--license,
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--links {
+    --kb-sec-color: var(--kb-sec-neutral);
+    --kb-sec-tint: 4%;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-tints .cms-kb-section--conclusion {
+    --kb-sec-color: var(--kb-accent, #0d9488);
+    --kb-sec-tint: 10%;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-section__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+    color: var(--text-primary, #0f172a);
+    font-size: 1.15rem;
+    line-height: 1.3;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-section__body > :last-child {
+    margin-bottom: 0;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section__title::before {
+    flex: 0 0 auto;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--overview .cms-kb-section__title::before { content: '📘'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--details .cms-kb-section__title::before { content: '⚙️'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--benefits .cms-kb-section__title::before { content: '✅'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--practice .cms-kb-section__title::before { content: '💡'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--notes .cms-kb-section__title::before { content: '⚠️'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--license .cms-kb-section__title::before { content: '🔑'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--conclusion .cms-kb-section__title::before { content: '🎯'; }
+.cms-kb-content.cms-kb-content--single.has-section-icons .cms-kb-section--links .cms-kb-section__title::before { content: '🔗'; }
+
+/* Variante „cards“: jeder Bereich als eigene Fläche */
+.cms-kb-content.cms-kb-content--sections-cards .cms-kb-body,
+.cms-kb-content.cms-kb-content--sections-minimal .cms-kb-body {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+}
+
+.cms-kb-content.cms-kb-content--sections-cards .cms-kb-body::before,
+.cms-kb-content.cms-kb-content--sections-minimal .cms-kb-body::before {
+    content: none;
+}
+
+.cms-kb-content.cms-kb-content--sections-cards .cms-kb-sections {
+    gap: 1rem;
+}
+
+.cms-kb-content.cms-kb-content--sections-cards .cms-kb-section {
+    padding: 20px 22px;
+    background: color-mix(in srgb, var(--kb-sec-color) var(--kb-sec-tint), var(--kb-section-bg, #ffffff));
+    border: 1px solid color-mix(in srgb, var(--kb-sec-color) 16%, var(--kb-border, #dbe1ea));
+    border-left: 3px solid var(--kb-sec-color);
+    border-radius: var(--kb-radius, 14px);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cms-kb-content.cms-kb-content--sections-cards .cms-kb-related-block {
+    margin-top: 1.5rem;
+}
+
+/* Variante „panel“: ein gemeinsames Panel, Bereiche mit Trennlinie */
+.cms-kb-content.cms-kb-content--sections-panel .cms-kb-body {
+    padding: 0;
+    background: var(--kb-section-bg, #ffffff);
+}
+
+.cms-kb-content.cms-kb-content--sections-panel .cms-kb-sections {
+    gap: 0;
+}
+
+.cms-kb-content.cms-kb-content--sections-panel .cms-kb-section {
+    padding: 22px 24px;
+    background: color-mix(in srgb, var(--kb-sec-color) var(--kb-sec-tint), var(--kb-section-bg, #ffffff));
+}
+
+.cms-kb-content.cms-kb-content--sections-panel .cms-kb-related-block {
+    margin-top: 0;
+    padding: 22px 24px;
+    border-top: 1px solid var(--kb-border, #dbe1ea);
+}
+
+.cms-kb-content.cms-kb-content--sections-panel .cms-kb-section + .cms-kb-section {
+    border-top: 1px solid var(--kb-border, #dbe1ea);
+}
+
+.cms-kb-content.cms-kb-content--sections-panel .cms-kb-section__title {
+    padding-left: 0.65rem;
+    border-left: 3px solid var(--kb-sec-color);
+}
+
+/* Variante „minimal“: kein Rahmen, nur Überschrift mit Akzentlinie */
+.cms-kb-content.cms-kb-content--sections-minimal .cms-kb-sections {
+    gap: 2rem;
+}
+
+.cms-kb-content.cms-kb-content--sections-minimal .cms-kb-section__title {
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--kb-sec-color);
+}
+
+/* ── Detailseite: Sidebar ────────────────────────────────────────── */
+
+.cms-kb-content.cms-kb-content--single .cms-kb-sidebar__section h2 {
+    margin: 0 0 0.6rem;
+    color: var(--kb-accent, #0d9488);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    text-transform: uppercase;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-sidebar__section p {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-sidebar__facts li {
+    display: grid;
+    gap: 0.1rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-sidebar__facts li + li {
+    margin-top: 0.6rem;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-sidebar__facts strong {
+    color: var(--text-muted, #64748b);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.cms-kb-content.cms-kb-content--single .cms-kb-sidebar__facts span {
+    color: var(--text-primary, #0f172a);
+}
+
+/* Sidebar-Wrapper: in „plain“ und „sections“ ohne eigenen Rahmen */
+.cms-kb-content.cms-kb-content--sidebar-plain .cms-kb-sidebar,
+.cms-kb-content.cms-kb-content--sidebar-sections .cms-kb-sidebar {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* „card“: genau ein Rahmen um die ganze Sidebar */
+.cms-kb-content.cms-kb-content--sidebar-card .cms-kb-sidebar {
+    padding: 18px 20px;
+    background: var(--kb-sidebar-bg, #f8fafc);
+    border: 1px solid var(--kb-border, #dbe1ea);
+    border-radius: var(--kb-radius, 14px);
+    box-shadow: none;
+}
+
+/* Blöcke in „plain“ und „card“: keine eigene Box, nur Trennlinie */
+.cms-kb-content.cms-kb-content--sidebar-plain .cms-kb-sidebar__section,
+.cms-kb-content.cms-kb-content--sidebar-card .cms-kb-sidebar__section {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+}
+
+.cms-kb-content.cms-kb-content--sidebar-plain .cms-kb-sidebar__section::before,
+.cms-kb-content.cms-kb-content--sidebar-card .cms-kb-sidebar__section::before {
+    content: none;
+}
+
+.cms-kb-content.cms-kb-content--sidebar-plain .cms-kb-sidebar__section + .cms-kb-sidebar__section,
+.cms-kb-content.cms-kb-content--sidebar-card .cms-kb-sidebar__section + .cms-kb-sidebar__section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--kb-border, #dbe1ea);
+}
+
+/* „sections“: jeder Block eine kompakte Karte */
+.cms-kb-content.cms-kb-content--sidebar-sections .cms-kb-sidebar__section {
+    padding: 16px 18px;
+    background: var(--kb-sidebar-bg, #f8fafc);
+}
+
+.cms-kb-content.cms-kb-content--sidebar-sections .cms-kb-sidebar__section + .cms-kb-sidebar__section {
+    margin-top: 12px;
+}
+
+.cms-kb-content.cms-kb-content--single:not(.has-sticky-sidebar) .cms-kb-sidebar {
+    position: static;
+}
+
+@media (min-width: 1025px) {
+    .cms-kb-content.cms-kb-content--sidebar-left .cms-kb-single-layout.has-sidebar {
+        grid-template-columns: minmax(260px, var(--kb-sidebar-width, 300px)) minmax(0, 1fr);
+    }
+
+    .cms-kb-content.cms-kb-content--sidebar-left .cms-kb-single-layout.has-sidebar .cms-kb-sidebar {
+        order: -1;
+    }
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+    .cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-3 .cms-kb-entry-grid--cards,
+    .cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-4 .cms-kb-entry-grid--cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .cms-kb-content.cms-kb-content--sections-cards .cms-kb-section {
+        padding: 16px;
+    }
+
+    .cms-kb-content.cms-kb-content--sections-panel .cms-kb-section,
+    .cms-kb-content.cms-kb-content--sections-panel .cms-kb-related-block {
+        padding: 18px;
+    }
+
+    .cms-kb-content.cms-kb-content--sidebar-card .cms-kb-sidebar {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-2 .cms-kb-entry-grid--cards,
+    .cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-3 .cms-kb-entry-grid--cards,
+    .cms-kb-content.cms-kb-content--overview.cms-kb-content--cols-4 .cms-kb-entry-grid--cards {
+        grid-template-columns: 1fr;
+    }
+}

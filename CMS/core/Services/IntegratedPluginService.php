@@ -1,6 +1,6 @@
 <?php
 /**
- * In den Core integrierte Plugins (cms-feed, cms-downloads, cms-contact).
+ * In den Core integrierte Plugins (cms-feed, cms-downloads, cms-contact, cms-knowledgebase).
  *
  * - Aktive Exemplare werden beim Laden der Plugins deaktiviert (nicht gelöscht) und nie mehr geladen,
  *   damit keine Klassen, Funktionen oder Routen doppelt registriert werden.
@@ -47,6 +47,22 @@ final class IntegratedPluginService
             'url' => '/admin/downloads',
             'admin_redirects' => ['*' => '/admin/downloads'],
         ],
+        'cms-knowledgebase' => [
+            'label' => 'CMS Knowledgebase',
+            'migrator' => PluginMigration\KnowledgebasePluginMigrator::class,
+            'url' => '/admin/knowledgebase',
+            'admin_redirects' => [
+                'knowledgebase-entries' => '/admin/knowledgebase?section=entries',
+                'knowledgebase-entry-editor' => '/admin/knowledgebase?section=edit',
+                'knowledgebase-categories' => '/admin/knowledgebase?section=categories',
+                'knowledgebase-settings' => '/admin/knowledgebase?section=settings',
+                'knowledgebase-settings-general' => '/admin/knowledgebase?section=settings',
+                'knowledgebase-settings-design' => '/admin/knowledgebase?section=settings&tab=design',
+                'knowledgebase-settings-import' => '/admin/knowledgebase?section=settings&tab=import',
+                'knowledgebase-settings-system' => '/admin/knowledgebase?section=settings&tab=system',
+                '*' => '/admin/knowledgebase',
+            ],
+        ],
         'cms-contact' => [
             'label' => 'CMS Contact',
             'migrator' => PluginMigration\ContactPluginMigrator::class,
@@ -64,6 +80,8 @@ final class IntegratedPluginService
     public static function adminRedirectFor(string $plugin, string $page): ?string
     {
         $plugin = strtolower(trim($plugin));
+        // Plugins mit eigener Admin-Wurzel: /admin/plugins/<wurzel>/<seite>
+        $plugin = self::ADMIN_ROOT_ALIASES[$plugin] ?? $plugin;
         if (!self::isIntegrated($plugin)) {
             return null;
         }
@@ -73,8 +91,20 @@ final class IntegratedPluginService
             return null;
         }
 
-        return $redirects[$page] ?? $redirects['*'] ?? self::PLUGINS[$plugin]['url'];
+        $target = $redirects[$page] ?? $redirects['*'] ?? self::PLUGINS[$plugin]['url'];
+        // Editor-Aufrufe mit ?edit=<id> landen beim selben Eintrag.
+        $editId = (int) ($_GET['edit'] ?? 0);
+        if ($editId > 0 && str_contains($target, 'section=edit')) {
+            $target .= '&id=' . $editId;
+        }
+
+        return $target;
     }
+
+    /** Admin-Wurzeln alter Plugin-Seiten, die nicht dem Plugin-Slug entsprechen. */
+    private const ADMIN_ROOT_ALIASES = [
+        'knowledgebase-dashboard' => 'cms-knowledgebase',
+    ];
 
     private const RETIRED_OPTION = 'integrated_plugins_retired';
     private const MIGRATION_OPTION = 'integrated_plugins_migration';

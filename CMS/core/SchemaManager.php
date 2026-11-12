@@ -48,6 +48,7 @@ class SchemaManager
         'feeds_fetch_queue',
         'search_queries', 'search_term_daily', 'trash_media',
         'translation_sync',
+        'kb_entries', 'kb_categories', 'kb_settings',
     ];
 
     private Database $db;
@@ -1205,6 +1206,62 @@ class SchemaManager
                 PRIMARY KEY (content_type, content_id, locale),
                 INDEX idx_translation_sync_synced (synced_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Übersetzungsstatus: Abgleich Quelle/Übersetzung'",
+
+            // v25: Knowledgebase (ehemals Plugin cms-knowledgebase) – gleiche Tabellennamen wie im Plugin, damit
+            // vorhandene Daten an Ort und Stelle bleiben. Acht Inhaltsbereiche als Editor.js-JSON; Papierkorb über
+            // trashed_at. Fehlende Spalten älterer Plugin-Stände ergänzt Knowledgebase\Database\Installer.
+            'kb_entries' => "CREATE TABLE IF NOT EXISTS {$p}kb_entries (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                keyword VARCHAR(190) NOT NULL,
+                slug VARCHAR(190) NOT NULL,
+                excerpt TEXT DEFAULT NULL,
+                content LONGTEXT DEFAULT NULL,
+                content_details LONGTEXT DEFAULT NULL,
+                content_benefits LONGTEXT DEFAULT NULL,
+                content_practice LONGTEXT DEFAULT NULL,
+                content_notes LONGTEXT DEFAULT NULL,
+                content_license LONGTEXT DEFAULT NULL,
+                content_conclusion LONGTEXT DEFAULT NULL,
+                content_links LONGTEXT DEFAULT NULL,
+                tooltip_text TEXT DEFAULT NULL,
+                synonyms TEXT DEFAULT NULL,
+                category VARCHAR(120) DEFAULT NULL,
+                priority INT NOT NULL DEFAULT 100,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                is_case_sensitive TINYINT(1) NOT NULL DEFAULT 0,
+                is_whole_word TINYINT(1) NOT NULL DEFAULT 1,
+                max_links_per_page INT NOT NULL DEFAULT 1,
+                trashed_at DATETIME NULL DEFAULT NULL,
+                trashed_by INT UNSIGNED NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_slug (slug),
+                KEY idx_keyword (keyword),
+                KEY idx_active_priority (is_active, priority),
+                KEY idx_category (category),
+                KEY idx_kb_trashed (trashed_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Knowledgebase: Einträge'",
+
+            'kb_categories' => "CREATE TABLE IF NOT EXISTS {$p}kb_categories (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(120) NOT NULL,
+                slug VARCHAR(140) NOT NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_kb_category_name (name),
+                UNIQUE KEY uniq_kb_category_slug (slug),
+                KEY idx_kb_category_sort (sort_order, name)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Knowledgebase: Kategorien'",
+
+            'kb_settings' => "CREATE TABLE IF NOT EXISTS {$p}kb_settings (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(100) NOT NULL,
+                setting_value LONGTEXT DEFAULT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_setting_key (setting_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Knowledgebase: Einstellungen'",
 
             // v25: Suchbegriff-Statistik (SearchTermStatsService) – Rohdaten ohne IP und Benutzer, täglich zu
             // Tageswerten verdichtet; die Frist regelt die Aufbewahrungsregel `search_terms`.

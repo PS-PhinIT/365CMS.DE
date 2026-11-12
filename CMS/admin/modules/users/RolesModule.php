@@ -35,6 +35,7 @@ class RolesModule
         'content'  => ['manage_trash', 'view_editorial_calendar', 'manage_translations', 'import_export'],
         'forms'    => ['manage_forms', 'view_form_submissions'],
         'downloads'=> ['manage_downloads', 'upload_downloads', 'view_download_stats'],
+        'knowledgebase' => ['manage_knowledgebase'],
         'system'   => ['manage_search_index', 'manage_feeds', 'manage_admin_menu'],
     ];
 
