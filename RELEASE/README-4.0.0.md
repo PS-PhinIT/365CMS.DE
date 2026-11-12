@@ -137,6 +137,19 @@ Die Datei `CMS/marketplace/core/365cms/update.json` muss am selben Marketplace-P
 
 Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest voraus. Der Core-Swap bewahrt `config/`, `config.php`, `uploads/`, `cache/`, `logs/`, `backups/` und den privaten Speicher `private/`.
 
+### Prüfung der Pakete (12.11.2026)
+
+| Test | Ergebnis |
+|---|---|
+| Reproduzierbarkeit | Zweiter Bau aus demselben Commit ergibt identische Prüfsummen |
+| Updater-Grenzen | 4207 Einträge (Grenze 5000), entpackt 38,9 MB (Grenze 512 MB), keine Laufzeitpfade im Updatepaket |
+| Update von 3.5.6 | Verzeichnistausch mit dem Code des installierten 3.5.6-Updaters: alle 4207 Dateien inhaltsgleich, keine Altdateien, `config/`, `config.php` und `uploads/` bleiben; nachinstallierte Plugins gehen verloren (siehe Warnung oben) |
+| Neuinstallation | Vollpaket entpackt, Startseite leitet zum Installer, alle Installer-Schritte durchlaufen: 68 Tabellen, Schema `v25`, Administrator angelegt, Installer danach gesperrt (403); 103 Admin-Seiten ohne Serverfehler |
+| MultiSite mit zwei Sites | Zweite Site angelegt (doppelter Host wird abgelehnt), Plugin nur einer Site zugewiesen: Menü erscheint nur dort, Site-Umschalter wechselt den Kontext |
+| Datenbank-Update | Update von `v24` auf `v25` ergibt dieselben Tabellen und Spalten wie die Neuinstallation |
+
+Laufzeit der Tests: PHP 8.3 mit abgesenkter Versionsprüfung in der Testkopie und MariaDB 10.11. Ein Lauf unter PHP 8.4/8.5 steht aus; die geänderten Dateien wurden auf unter PHP 8.4/8.5 veraltete Aufrufe geprüft.
+
 ### Nach dem Update prüfen
 
 - **Hostname / Proxy:** Script- und Asset-URLs verwenden nur noch den Host aus `SITE_URL`, dessen `www`-Variante oder eine Hub-Domain. `SITE_URL` muss die öffentliche Adresse enthalten. Hinter Reverse-Proxy oder CDN gelten `X-Forwarded-Host` und `X-Forwarded-Proto` nur, wenn der Proxy als vertrauenswürdig eingetragen ist (*Sicherheit → Firewall → Proxy / CDN & Client-IP* oder `CMS_TRUSTED_PROXIES`).
