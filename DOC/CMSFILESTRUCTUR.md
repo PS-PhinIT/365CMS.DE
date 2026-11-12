@@ -49,9 +49,9 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 
 | Area / Bereich | Files / Dateien |
 |---|---:|
-| `CMS/admin/` | 304 |
-| `CMS/assets/` | 3075 (mostly bundled libraries) |
-| `CMS/core/` | 191 |
+| `CMS/admin/` | 372 |
+| `CMS/assets/` | 3099 (mostly bundled libraries) |
+| `CMS/core/` | 291 |
 | `CMS/themes/` | 41 |
 | `CMS/member/` | 17 |
 | `CMS/plugins/` | 15 |
@@ -59,8 +59,8 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/install/` | 10 |
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
-| `CMS/assets/css/` | 20 stylesheets |
-| `CMS/assets/js/` | 42 scripts + 14 ES modules (`admin-shell/`, `post-editor/`) |
+| `CMS/assets/css/` | 27 stylesheets |
+| `CMS/assets/js/` | 55 scripts + 15 ES modules (`admin-shell/`, `post-editor/`) |
 
 ---
 
@@ -342,20 +342,29 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `admin-batch-runner.js`
 - `admin-comments.js`
 - `admin-content-editor.js`
+- `admin-content-exchange.js`
 - `admin-cookie-manager.js`
 - `admin-dashboard.js`
 - `admin-data-requests.js`
+- `admin-downloads.js`
+- `admin-editorial-calendar.js`
+- `admin-feeds.js`
 - `admin-font-manager.js`
+- `admin-form-builder.js`
+- `admin-form-submissions.js`
 - `admin-hub-site-edit.js`
 - `admin-hub-sites.js`
 - `admin-hub-template-editor.js`
 - `admin-legal-sites.js`
 - `admin-media-integrations.js`
+- `admin-media-license.js`
+- `admin-media-tools.js`
 - `admin-member-dashboard.js`
 - `admin-menu-editor.js`
 - `admin-plugin-assignment.js`
 - `admin-plugin-marketplace.js`
 - `admin-plugins.js`
+- `admin-search-index.js`
 - `admin-seo-editor.js`
 - `admin-seo-meta.js`
 - `admin-seo-redirects.js`
@@ -367,13 +376,18 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `admin-theme-explorer.js`
 - `admin-theme-marketplace.js`
 - `admin-themes.js`
+- `admin-trash.js`
 - `admin-user-groups.js`
 - `admin-users.js`
 - `admin.js`
+- `cms-analytics.js`
 - `cms-csp-runtime.js`
 - `cms-inline-actions.js`
 - `cookieconsent-init.js`
+- `downloads.js`
 - `editor-init.js`
+- `feeds.js`
+- `forms-public.js`
 - `member-dashboard.js`
 - `photoswipe-init.js`
 - `site-tables.js`
@@ -382,7 +396,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 
 ES modules without build step / ES-Module ohne Build-Schritt (since/seit 4.0.0):
 
-- `admin-shell/`: `api.js`, `dom.js`, `drawer.js`, `recent-links.js`, `shell.js`, `sidebar.js`, `site-switcher.js`, `user-menu.js`
+- `admin-shell/`: `api.js`, `dom.js`, `drawer.js`, `recent-links.js`, `shell.js`, `sidebar.js`, `site-switcher.js`, `toolbar.js`, `user-menu.js`
 - `post-editor/`: `autosave.js`, `checklist.js`, `dialog.js`, `editor.js`, `focus-mode.js`, `revisions.js`
 
 ### Bundled library folders | Gebündelte Bibliotheksordner
@@ -399,19 +413,22 @@ These folders were **not** found under `CMS/assets/` (older docs mentioned them)
 
 **English**
 
-`CMS/admin/` contains 306 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
+`CMS/admin/` contains 372 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
 
-Module directories: `comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`.
+Module directories: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
 Entry examples that match public admin routes include `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, plus the other `CMS/admin/*.php` files in that folder. New in 4.0.0: `admin-ui.php` (JSON endpoint of the admin shell), `post-editor-api.php` (JSON endpoint of the post editor) and `plugin-assignment.php` (plugin assignment per site, view `views/settings/plugin-assignment.php`). Also new: `multisites.php` (MultiSites settings area, view `views/settings/multisites.php`), `configuration.php` (tile pages `/admin/configuration[?group=…]`, views `views/configuration/`), `settings-tabs/admin-menu.php` (settings tab "Admin menu" with the sidebar editor, views `views/settings/admin-menu.php` and `views/settings/admin-sidebar-editor.php`), `settings-tabs/feeds.php` (RSS settings controller and view `views/settings/feeds.php`), `partials/sidebar-nav.php` (sidebar list, also used by the preview) and `views/settings/partials-tabs.php` (shared tab bar of the settings areas).
 
 **Deutsch**
 
-`CMS/admin/` enthält 306 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
+`CMS/admin/` enthält 372 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
 
-Modulverzeichnisse: `comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`.
+Modulverzeichnisse: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
 Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php` sowie die übrigen `CMS/admin/*.php`-Dateien. Neu in 4.0.0: `admin-ui.php` (JSON-Endpunkt der Admin-Shell), `post-editor-api.php` (JSON-Endpunkt des Beitragseditors) und `plugin-assignment.php` (Plugin-Zuweisung je Site, View `views/settings/plugin-assignment.php`). Ebenfalls neu: `multisites.php` (Einstellungsbereich MultiSites, View `views/settings/multisites.php`), `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`, Views `views/configuration/`), `settings-tabs/admin-menu.php` (Einstellungs-Tab „Admin-Menü“ mit dem Sidebar-Editor, Views `views/settings/admin-menu.php` und `views/settings/admin-sidebar-editor.php`), `settings-tabs/feeds.php` (RSS-Einstellungs-Controller und View `views/settings/feeds.php`), `partials/sidebar-nav.php` (Sidebar-Liste, auch für die Vorschau) und `views/settings/partials-tabs.php` (gemeinsame Tab-Leiste der Einstellungsbereiche).
+
+
+New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`.
 
 ---
 
