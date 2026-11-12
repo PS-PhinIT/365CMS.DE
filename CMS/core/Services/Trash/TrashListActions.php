@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 final class TrashListActions
 {
     public function __construct(
-        private readonly TrashableProvider $provider,
+        private readonly \CMS\Services\ContentTypes\TrashProvider $provider,
         private readonly string $confirmationContext
     ) {
     }

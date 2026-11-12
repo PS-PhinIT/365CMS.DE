@@ -12,6 +12,7 @@ import { initSidebar } from 'cms-admin/sidebar.js';
 import { initSiteSwitcher } from 'cms-admin/site-switcher.js';
 import { initUserMenu } from 'cms-admin/user-menu.js';
 import { recordRecentLink } from 'cms-admin/recent-links.js';
+import { initToolbar } from 'cms-admin/toolbar.js';
 
 function run(name, callback) {
     try {
@@ -33,6 +34,7 @@ if (sidebar) {
     run('Seitenleiste', () => initSidebar(sidebar, client));
     run('Site-Wechsler', () => initSiteSwitcher(sidebar, client));
     run('Benutzermenü', () => initUserMenu(sidebar, client));
+    run('Toolbar', () => initToolbar(document.querySelector('[data-cms-toolbar]'), client));
 }
 
 run('Zuletzt genutzt', recordRecentLink);

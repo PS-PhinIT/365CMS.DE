@@ -130,7 +130,7 @@ $buildHubPublicPath = static fn (string $slug): string => '/' . ltrim($slug, '/'
                                             <button type="button" class="dropdown-item text-danger js-delete-hub-site"
                                                     data-hub-site-id="<?php echo (int)$site['id']; ?>"
                                                     data-hub-site-name="<?php echo htmlspecialchars((string)$site['table_name'], ENT_QUOTES); ?>">
-                                                Löschen
+                                                In den Papierkorb
                                             </button>
                                         </div>
                                     </div>

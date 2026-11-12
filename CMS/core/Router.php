@@ -1128,6 +1128,19 @@ class Router
             return false;
         }
 
+        // Eigenständige Fehlerseiten (z. B. Wartungsmodus) ohne Theme-Kopf: Fragment in ein minimales Dokument
+        // mit dem Theme-Stylesheet einbetten, damit Besucher keine ungestaltete Seite sehen.
+        if (!empty($data['error_standalone']) && stripos($rendered, '<html') === false) {
+            $stylesheet = '';
+            if (is_file($themePath . 'style.css')) {
+                $stylesheet = '<link rel="stylesheet" href="' . htmlspecialchars(rtrim($themeManager->getThemeUrl(), '/') . '/style.css', ENT_QUOTES, 'UTF-8') . '">';
+            }
+            $rendered = '<!DOCTYPE html><html lang="' . htmlspecialchars($this->getRequestLocale(), ENT_QUOTES, 'UTF-8') . '"><head><meta charset="UTF-8">'
+                . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
+                . '<title>' . htmlspecialchars($status . ($title !== '' ? ' – ' . $title : ''), ENT_QUOTES, 'UTF-8') . '</title>' . $stylesheet
+                . '</head><body class="error-standalone">' . $rendered . '</body></html>';
+        }
+
         echo $rendered;
         return true;
     }
