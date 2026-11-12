@@ -86,8 +86,8 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 
 | # | Punkt | Status | Ergebnis |
 |---|---|---|---|
-| 9 | Formular-Builder + Eingänge (baut auf B3 auf) | 🟡 | Baukasten unter Inhalte → Formulare (15 Feldtypen, DE/EN, Breite, Prüfregeln, Sortieren per Ziehen, Pfeilen oder Alt + Pfeiltaste), je Formular Empfänger, Betreff, Bestätigungsmail, Erfolgsmeldung/Weiterleitung, Spam-Stufe, Speicherung und Löschfrist; Editor.js-Block „Formular“ mit Server-Vorschau; Eingänge mit Formularfilter und CSV-Export. **Offen:** Datei-Upload-Felder im Browser durchtesten, DOC-Seite. |
-| 10 | Löschfristen erweitern (Formulareingänge, Kommentar-IPs, Übersicht mit Probelauf) | ⬜ | |
+| 9 | Formular-Builder + Eingänge (baut auf B3 auf) | ✅ | Baukasten unter Inhalte → Formulare (15 Feldtypen, DE/EN, Breite, Prüfregeln, Sortieren per Ziehen, Pfeilen oder Alt + Pfeiltaste), je Formular Empfänger, Betreff, Bestätigungsmail, Erfolgsmeldung/Weiterleitung, Spam-Stufe, Speicherung und Löschfrist; Editor.js-Block „Formular“ mit Server-Vorschau; Eingänge mit Formularfilter und CSV-Export. Datei-Uploads im Browser und ohne JavaScript geprüft (Typ, Inhalt, Größe, Anzahl, privater Abruf). Doku: [FORMS.md](../../admin/pages-posts/FORMS.md). |
+| 10 | Löschfristen erweitern (Formulareingänge, Kommentar-IPs, Übersicht mit Probelauf) | ✅ | `/admin/data-retention` mit allen Regeln, Probelauf, Einzel- und Gesamtlauf; Kommentar-IP-Frist (kürzen/entfernen) auf der Seite; Formulareingänge samt Dateien. Laufzeitprobe Kommentar-IP; Zähltexte ohne „1 Einträge“. Doku: [DATA-RETENTION.md](../../admin/legal/DATA-RETENTION.md). |
 
 ### Arbeitspaket 4 – „Sollte zeitnah“
 
