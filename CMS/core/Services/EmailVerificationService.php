@@ -93,8 +93,14 @@ final class EmailVerificationService
 
         $sent = false;
         try {
+            // Direkt senden statt über die Mail-Warteschlange: Bis der Cron die Mail verschickt, meldet sich der
+            // Nutzer oft an und erhält weitere Links. Scheitert der direkte Versand, übernimmt die Warteschlange.
+            $headers = ['Content-Type' => 'text/plain; charset=UTF-8'];
             $sent = function_exists('cms_mail')
-                && \cms_mail((string) $user->email, $subject, $body, ['Content-Type' => 'text/plain; charset=UTF-8']);
+                && \cms_mail((string) $user->email, $subject, $body, $headers + ['X-365CMS-Force-Direct' => '1']);
+            if (!$sent && function_exists('cms_mail') && MailQueueService::getInstance()->isEnabled()) {
+                $sent = \cms_mail((string) $user->email, $subject, $body, $headers);
+            }
         } catch (\Throwable $e) {
             $this->logger->error('Bestätigungs-E-Mail konnte nicht versendet werden.', [
                 'user_id' => $userId,
