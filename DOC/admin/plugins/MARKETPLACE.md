@@ -19,7 +19,7 @@ The plugin marketplace (`CMS/admin/plugin-marketplace.php` → `CMS/admin/module
 
 ### Im Core enthaltene Plugins
 
-Ein Katalogeintrag mit `"integrated_in_core": "4.0.0"` (Mindest-Core-Version) gilt ab dieser Core-Version als Teil des Cores. Unabhängig vom Katalog gilt das auch für jedes Plugin, das `IntegratedPluginService::isIntegrated()` meldet (seit 4.0.0: `cms-feed`, `cms-downloads`, `cms-contact`).
+Ein Katalogeintrag mit `"integrated_in_core": "4.0.0"` (Mindest-Core-Version) gilt ab dieser Core-Version als Teil des Cores. Unabhängig vom Katalog gilt das auch für jedes Plugin, das `IntegratedPluginService::isIntegrated()` meldet (seit 4.0.0: `cms-feed`, `cms-downloads`, `cms-contact`, `cms-knowledgebase`).
 
 - Die Karte zeigt „Im Core enthalten“, die Begründung und einen Link zur Core-Seite statt „Installieren“. Ist das (deaktivierte) Plugin-Verzeichnis noch vorhanden, weist sie darauf hin, dass es entfernt werden kann.
 - Statusfilter „Im Core enthalten“. Die Kennzahlen *Verfügbar*, *Installierbar* und *Nur manuell* zählen diese Einträge nicht mit.

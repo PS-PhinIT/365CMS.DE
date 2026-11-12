@@ -32,7 +32,7 @@ Fehlt eine Prüfsumme oder liegt die Download-URL nicht auf einem erlaubten Host
 
 - Updates überschreiben das Plugin-Verzeichnis. Eigene Anpassungen gehören in ein separates Plugin oder in Hooks.
 - Plugins mit `Requires CMS` höher als die installierte Core-Version lassen sich nach dem Update nicht aktivieren.
-- In den Core integrierte Plugins (`cms-feed`, `cms-downloads`, `cms-contact` seit 4.0.0, siehe `IntegratedPluginService`) erscheinen hier nicht mehr: Ihr deaktiviertes Verzeichnis kann entfernt werden.
+- In den Core integrierte Plugins (`cms-feed`, `cms-downloads`, `cms-contact`, `cms-knowledgebase` seit 4.0.0, siehe `IntegratedPluginService`) erscheinen hier nicht mehr: Ihr deaktiviertes Verzeichnis kann entfernt werden.
 
 ### Verwandte Dokumente
 

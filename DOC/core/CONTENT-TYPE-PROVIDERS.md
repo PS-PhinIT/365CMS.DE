@@ -90,8 +90,9 @@ Geliefert werden nur öffentlich sichtbare Inhalte: veröffentlicht, nicht im Pa
 | Downloads | ✓ | – | – |
 | Formulare | ✓ | ✓ | – |
 | Formulareingänge | ✓ | – (Personendaten) | – |
+| Knowledgebase-Einträge (`kb_entry`) | ✓ | ✓ | ✓ |
 
-Die Export/Import-Provider des Cores liegen unter `CMS/core/Services/Exchange/` (Formulare: `CMS/core/Services/Forms/FormContentProvider.php`); die Oberfläche beschreibt [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md).
+Die Export/Import-Provider des Cores liegen unter `CMS/core/Services/Exchange/` (Formulare: `CMS/core/Services/Forms/FormContentProvider.php`, Knowledgebase: `CMS/core/Services/Knowledgebase/KnowledgebaseContentProvider.php`); die Oberfläche beschreibt [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md).
 
 ### Tests
 
