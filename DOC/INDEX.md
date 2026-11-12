@@ -103,6 +103,8 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
 | Toolbar: cache & maintenance mode | [admin/system-settings/TOOLBAR.md](admin/system-settings/TOOLBAR.md) |
 | Trash (pages, posts, media, hub sites, downloads, forms) | [admin/pages-posts/TRASH.md](admin/pages-posts/TRASH.md) |
+| Media tools (regenerate thumbnails, image credits) | [admin/media/MEDIA-TOOLS.md](admin/media/MEDIA-TOOLS.md) |
+| Accessibility statement | [admin/legal/ACCESSIBILITY.md](admin/legal/ACCESSIBILITY.md) |
 | Forms & submissions (builder, file uploads) | [admin/pages-posts/FORMS.md](admin/pages-posts/FORMS.md) |
 | Retention periods (all deletion rules, dry run) | [admin/legal/DATA-RETENTION.md](admin/legal/DATA-RETENTION.md) |
 | Recent changes (revision timeline of posts and pages) | [admin/pages-posts/CHANGES.md](admin/pages-posts/CHANGES.md) |

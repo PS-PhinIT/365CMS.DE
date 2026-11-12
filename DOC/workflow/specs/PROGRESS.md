@@ -93,11 +93,11 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 
 | # | Punkt | Status | Ergebnis |
 |---|---|---|---|
-| 11 | Copyright/Lizenz bei Medien | ⬜ | |
-| 12 | Barrierefreiheitserklärung | ⬜ | |
-| 13 | Thumbnails neu erzeugen | ⬜ | |
+| 11 | Copyright/Lizenz bei Medien | ✅ | Urheber, Lizenz, Quelle, Copyright, KI-generiert je Bild (Mediathek, Sammelaktion); Credit-Zeile in Bildunterschriften und Schema.org `ImageObject`; Ausgabe-Schalter jetzt unter Medien → Medien-Werkzeuge. Laufzeitprobe Frontend inkl. Schalter. Doku: [MEDIA-TOOLS.md](../../admin/media/MEDIA-TOOLS.md). |
+| 12 | Barrierefreiheitserklärung | ✅ | Karte unter Rechtstexte: Felder → DE/EN-Seite, Footer-Link, jährliche Prüf-Erinnerung; Laufzeitprobe Speichern → öffentliche Seite. Doku: [ACCESSIBILITY.md](../../admin/legal/ACCESSIBILITY.md). |
+| 13 | Thumbnails neu erzeugen | ✅ | `/admin/media-tools`: Hintergrundauftrag mit Fortschritt, Abbrechen, optional WebP; offener Lauf läuft im stündlichen Cron weiter. Doku: [MEDIA-TOOLS.md](../../admin/media/MEDIA-TOOLS.md). |
 | 14 | RSS-Einstellungen (Prüfung nach B1) | ✅ | Feeds-Tab mit Anzahl, Volltext/Auszug, Bildern, Kategorien, Tags, Sprachen und Aktivierung umgesetzt; Details: [FEEDS.md](../../admin/system-settings/FEEDS.md). |
-| 15 | Umgebungsinfo | ⬜ | |
+| 15 | Umgebungsinfo | ✅ | Systeminfo: PHP-Erweiterungen (vorhanden/fehlt, Bedarf, Funktion), OPcache (Version, Speicher, Trefferquote, JIT), Datenbankprodukt und -version. Doku: [INFO.md](../../admin/info/INFO.md). |
 
 ### Querschnitt und Abschluss
 

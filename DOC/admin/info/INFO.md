@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Diagnose-Übersicht (Info)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Status:** Stable
 > **Route:** `/admin/info` (Alt-Routen `/admin/system`, `/admin/system-info` leiten um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)
@@ -18,6 +18,9 @@
 | Datenbank | Verbindung, MySQL/MariaDB-Version, Datenbankname, Größe, Anzahl CMS-Tabellen |
 | Berechtigungen | Schreibrechte für `config/`, `uploads/`, `cache/`, `logs/`, `backups/`, `themes/`, `plugins/` |
 | Verzeichnisgrößen | Belegung der wichtigsten Verzeichnisse |
+| PHP-Erweiterungen (seit 4.0.0) | Vom Core genutzte Erweiterungen mit Status (vorhanden/fehlt), Bedarf (Pflicht, empfohlen, optional) und der Funktion, die sie braucht – z. B. `zip` für Updates, Backups und Import/Export, `pdo_sqlite` für die Volltextsuche, `gd`/`imagick` für Vorschaubilder (`CMS\Services\EnvironmentInfoService`) |
+| Datenbank (seit 4.0.0) | Produkt (MySQL oder MariaDB), Version, Server-Kennung und Client-Bibliothek |
+| OPcache (seit 4.0.0) | Status, Version, belegter Speicher, Trefferquote, JIT |
 | Statistik | Anzahl Benutzer, Seiten, Beiträge, Kategorien, Medien, Plugins, Sessions, Revisionen, Login-Versuche, gesperrte IPs u. a. |
 | Sicherheit | Kurzstatus (HTTPS, Debug, Installer, Firewall, Anti-Spam) |
 
