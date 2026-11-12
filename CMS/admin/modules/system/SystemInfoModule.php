@@ -92,6 +92,7 @@ class SystemInfoModule
             'directories' => $this->getDirectorySizesSafe(),
             'statistics' => $this->getStatisticsSafe(),
             'security' => $this->getSecurityStatusSafe(),
+            'environment' => $this->getEnvironmentInfoSafe(),
         ];
     }
 
@@ -599,6 +600,24 @@ class SystemInfoModule
                 $e,
                 'database'
             );
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function getEnvironmentInfoSafe(): array
+    {
+        try {
+            $service = new \CMS\Services\EnvironmentInfoService();
+
+            return [
+                'extensions' => $service->extensions(),
+                'opcache' => $service->opcache(),
+                'database' => $service->database(),
+            ];
+        } catch (\Throwable $e) {
+            $this->logModuleFailure('system.info.environment_failed', $e, 'system');
+
+            return [];
         }
     }
 

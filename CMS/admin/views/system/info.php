@@ -20,6 +20,7 @@ $permissions = $data['permissions'] ?? [];
 $directories = $data['directories'] ?? [];
 $statistics  = $data['statistics'] ?? [];
 $security    = $data['security'] ?? [];
+$environment = is_array($data['environment'] ?? null) ? $data['environment'] : [];
 
 $formatBytes = static function (int $bytes): string {
     if ($bytes >= 1073741824) {
@@ -157,7 +158,7 @@ $normalizeSecurityValue = static function (string $value): string {
                         <div class="datagrid">
                             <div class="datagrid-item"><div class="datagrid-title">Status</div><div class="datagrid-content"><span class="badge bg-<?php echo !empty($database['connected']) ? 'success' : 'danger'; ?>-lt"><?php echo !empty($database['connected']) ? 'Verbunden' : 'Offline'; ?></span></div></div>
                             <div class="datagrid-item"><div class="datagrid-title">Datenbank</div><div class="datagrid-content"><?php echo htmlspecialchars((string)($database['database_name'] ?? '')); ?></div></div>
-                            <div class="datagrid-item"><div class="datagrid-title">MySQL-Version</div><div class="datagrid-content text-break"><?php echo htmlspecialchars((string)($system['mysql_version'] ?? 'Unbekannt')); ?></div></div>
+                            <div class="datagrid-item"><div class="datagrid-title">Datenbank-Version</div><div class="datagrid-content text-break"><?php echo htmlspecialchars((string)($system['mysql_version'] ?? 'Unbekannt')); ?></div></div>
                             <div class="datagrid-item"><div class="datagrid-title">Größe</div><div class="datagrid-content"><?php echo htmlspecialchars($formatBytes($databaseSize)); ?></div></div>
                             <div class="datagrid-item"><div class="datagrid-title">CMS-Tabellen</div><div class="datagrid-content"><?php echo htmlspecialchars((string)($database['cms_tables'] ?? '-')); ?></div></div>
                             <div class="datagrid-item"><div class="datagrid-title">Tabellen gesamt</div><div class="datagrid-content"><?php echo htmlspecialchars((string)($database['total_tables'] ?? '-')); ?></div></div>
@@ -261,5 +262,109 @@ $normalizeSecurityValue = static function (string $value): string {
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($environment !== []): ?>
+            <?php
+            $envExtensions = is_array($environment['extensions'] ?? null) ? $environment['extensions'] : [];
+            $envOpcache = is_array($environment['opcache'] ?? null) ? $environment['opcache'] : [];
+            $envDb = is_array($environment['database'] ?? null) ? $environment['database'] : [];
+            $envMissing = \CMS\Services\EnvironmentInfoService::missingCounts($envExtensions);
+            $envE = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+            $envLevelBadge = [
+                'required' => ['bg-red-lt', __('environment.level.required')],
+                'recommended' => ['bg-yellow-lt', __('environment.level.recommended')],
+                'optional' => ['bg-secondary-lt', __('environment.level.optional')],
+            ];
+            ?>
+            <div class="row row-deck row-cards" id="environment">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title"><?php echo $envE(__('environment.extensions_title')); ?></h3>
+                            <div class="card-actions text-secondary small">
+                                <?php if ($envMissing['required'] > 0): ?>
+                                    <span class="badge bg-red-lt"><?php echo $envE(sprintf(__('environment.missing_required'), $envMissing['required'])); ?></span>
+                                <?php elseif ($envMissing['recommended'] > 0): ?>
+                                    <span class="badge bg-yellow-lt"><?php echo $envE(sprintf(__('environment.missing_recommended'), $envMissing['recommended'])); ?></span>
+                                <?php else: ?>
+                                    <span class="badge bg-green-lt"><?php echo $envE(__('environment.all_present')); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-vcenter card-table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th><?php echo $envE(__('environment.col_extension')); ?></th>
+                                        <th><?php echo $envE(__('environment.col_status')); ?></th>
+                                        <th><?php echo $envE(__('environment.col_level')); ?></th>
+                                        <th><?php echo $envE(__('environment.col_feature')); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($envExtensions as $envRow): ?>
+                                        <?php [$envBadgeClass, $envBadgeLabel] = $envLevelBadge[(string) ($envRow['level'] ?? 'optional')] ?? $envLevelBadge['optional']; ?>
+                                        <tr>
+                                            <td><code><?php echo $envE($envRow['name'] ?? ''); ?></code></td>
+                                            <td>
+                                                <?php if (!empty($envRow['loaded'])): ?>
+                                                    <span class="text-success"><i class="ti ti-check" aria-hidden="true"></i> <?php echo $envE(__('environment.loaded')); ?></span>
+                                                    <?php if (($envRow['version'] ?? '') !== ''): ?><span class="text-secondary small"><?php echo $envE($envRow['version']); ?></span><?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="<?php echo ($envRow['level'] ?? '') === 'required' ? 'text-danger' : 'text-warning'; ?>"><i class="ti ti-x" aria-hidden="true"></i> <?php echo $envE(__('environment.missing')); ?></span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><span class="badge <?php echo $envE($envBadgeClass); ?>"><?php echo $envE($envBadgeLabel); ?></span></td>
+                                            <td class="text-secondary"><?php echo $envE($envRow['feature'] ?? ''); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="row row-cards">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header"><h3 class="card-title"><?php echo $envE(__('environment.database_title')); ?></h3></div>
+                                <div class="card-body">
+                                    <div class="datagrid">
+                                        <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.db_product')); ?></div><div class="datagrid-content"><?php echo $envE(($envDb['product'] ?? '') !== '' ? $envDb['product'] : '–'); ?></div></div>
+                                        <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.db_version')); ?></div><div class="datagrid-content"><?php echo $envE(($envDb['version'] ?? '') !== '' ? $envDb['version'] : '–'); ?></div></div>
+                                        <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.db_raw')); ?></div><div class="datagrid-content text-break small"><?php echo $envE(($envDb['raw'] ?? '') !== '' ? $envDb['raw'] : '–'); ?></div></div>
+                                        <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.db_client')); ?></div><div class="datagrid-content text-break small"><?php echo $envE(($envDb['driver'] ?? '') !== '' ? $envDb['driver'] : '–'); ?></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header"><h3 class="card-title">OPcache</h3></div>
+                                <div class="card-body">
+                                    <div class="datagrid">
+                                        <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.col_status')); ?></div><div class="datagrid-content">
+                                            <?php if (empty($envOpcache['loaded'])): ?>
+                                                <span class="badge bg-yellow-lt"><?php echo $envE(__('environment.missing')); ?></span>
+                                            <?php elseif (empty($envOpcache['enabled'])): ?>
+                                                <span class="badge bg-yellow-lt"><?php echo $envE(__('environment.opcache_disabled')); ?></span>
+                                            <?php else: ?>
+                                                <span class="badge bg-green-lt"><?php echo $envE(__('environment.opcache_enabled')); ?></span>
+                                            <?php endif; ?>
+                                        </div></div>
+                                        <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.version')); ?></div><div class="datagrid-content"><?php echo $envE(($envOpcache['version'] ?? '') !== '' ? $envOpcache['version'] : '–'); ?></div></div>
+                                        <?php if (!empty($envOpcache['enabled'])): ?>
+                                            <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.opcache_memory')); ?></div><div class="datagrid-content"><?php echo $envE($formatBytes((int) ($envOpcache['memory_used'] ?? 0)) . ' / ' . $formatBytes((int) ($envOpcache['memory_total'] ?? 0))); ?></div></div>
+                                            <div class="datagrid-item"><div class="datagrid-title"><?php echo $envE(__('environment.opcache_hit_rate')); ?></div><div class="datagrid-content"><?php echo $envE(isset($envOpcache['hit_rate']) ? number_format((float) $envOpcache['hit_rate'], 1, ',', '.') . ' %' : '–'); ?></div></div>
+                                            <div class="datagrid-item"><div class="datagrid-title">JIT</div><div class="datagrid-content"><?php echo $envE(!empty($envOpcache['jit']) ? __('environment.on') : __('environment.off')); ?></div></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
