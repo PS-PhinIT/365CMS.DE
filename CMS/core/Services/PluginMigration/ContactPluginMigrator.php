@@ -133,7 +133,16 @@ final class ContactPluginMigrator implements PluginMigrator
             }
         };
 
-        $take('default_recipient', filter_var($plugin['global_recipient'] ?? '', FILTER_VALIDATE_EMAIL) !== false ? (string) $plugin['global_recipient'] : '');
+        // Das Plugin nutzte zuerst `admin_email` (Einstellungsseite ab 3.x), dann das ältere `global_recipient`.
+        $recipient = '';
+        foreach (['admin_email', 'global_recipient'] as $recipientKey) {
+            $candidate = trim((string) ($plugin[$recipientKey] ?? ''));
+            if (filter_var($candidate, FILTER_VALIDATE_EMAIL) !== false) {
+                $recipient = $candidate;
+                break;
+            }
+        }
+        $take('default_recipient', $recipient);
         $take('from_name', trim((string) ($plugin['from_name'] ?? '')));
         $take('privacy_url', FormFieldTypes::isSafeUrl(trim((string) ($plugin['privacy_policy_url'] ?? ''))) ? trim((string) $plugin['privacy_policy_url']) : '');
         $color = trim((string) ($plugin['primary_color'] ?? ''));
@@ -185,7 +194,7 @@ final class ContactPluginMigrator implements PluginMigrator
                 $fields[] = ['type' => 'consent', 'name' => 'privacy_consent', 'required' => true, 'label' => ['de' => '', 'en' => '']];
             }
 
-            $settings = $this->mapSettings($row, $store, $notify);
+            $settings = $this->mapSettings($row, $store, $notify, ($pluginSettings['send_confirmation'] ?? '0') === '1', (string) ($pluginSettings['from_name'] ?? ''));
             $key = FormService::normalizeKey((string) ($row->slug ?? ''));
             $status = (string) ($row->status ?? 'active') === 'active' ? FormService::STATUS_ACTIVE : FormService::STATUS_INACTIVE;
 
@@ -251,7 +260,7 @@ final class ContactPluginMigrator implements PluginMigrator
     /**
      * @return array<string, mixed>
      */
-    private function mapSettings(object $row, bool $store, bool $notify): array
+    private function mapSettings(object $row, bool $store, bool $notify, bool $confirmation = false, string $fromName = ''): array
     {
         $template = strtolower(trim((string) ($row->template ?? 'classic')));
         $layout = self::LAYOUT_MAP[$template] ?? 'standard';
@@ -268,6 +277,12 @@ final class ContactPluginMigrator implements PluginMigrator
             'mail_subject' => $prefix !== '' ? $prefix . ' {subject}' : '',
             'notify' => $notify,
             'reply_to_sender' => true,
+            // Das Plugin schickte – global geschaltet – eine feste Eingangsbestätigung an den Absender.
+            'confirmation' => [
+                'enabled' => $confirmation,
+                'subject' => ['de' => 'Ihre Kontaktanfrage wurde empfangen', 'en' => ''],
+                'body' => ['de' => "Hallo {name},\n\nvielen Dank für Ihre Nachricht! Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.\n\nMit freundlichen Grüßen\n" . (trim($fromName) !== '' ? trim($fromName) : '{site_name}'), 'en' => ''],
+            ],
             'antispam_level' => !empty($row->enable_captcha) ? 'high' : (!empty($row->enable_honeypot) ? 'standard' : 'low'),
             'rate_limit' => (int) ($row->rate_limit ?? 3),
             'store_submissions' => $store,
