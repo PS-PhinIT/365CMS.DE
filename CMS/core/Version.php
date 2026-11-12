@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 final class Version
 {
     public const CURRENT = '4.0.0';
-    public const RELEASE_DATE = '2026-11-08';
+    public const RELEASE_DATE = '2026-11-12';
     public const STATUS = 'stable';
 
     /**
