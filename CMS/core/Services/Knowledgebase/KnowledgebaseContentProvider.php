@@ -29,6 +29,7 @@ use CMS\Services\ContentTypes\TrashItem;
 use CMS\Services\ContentTypes\TrashProvider;
 use CMS\Services\ContentTypes\TrashResult;
 use CMS\Services\Exchange\ExchangeSupport;
+use CMS\Services\Search\ReportsChangedDocuments;
 use CMS\Services\Knowledgebase\Repository\EntryRepository;
 use CMS\Services\Knowledgebase\Service\SectionContent;
 use CMS\Services\Knowledgebase\Support\ContentSections;
@@ -37,7 +38,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-final class KnowledgebaseContentProvider implements TrashProvider, SearchDocumentProvider, ExchangeProvider
+final class KnowledgebaseContentProvider implements TrashProvider, SearchDocumentProvider, ReportsChangedDocuments, ExchangeProvider
 {
     public const TYPE = 'kb_entry';
     public const CAPABILITY = 'manage_knowledgebase';
@@ -162,6 +163,19 @@ final class KnowledgebaseContentProvider implements TrashProvider, SearchDocumen
         )->fetchAll(\PDO::FETCH_ASSOC);
 
         return array_values(array_filter(array_map(fn (array $row): ?SearchDocument => $this->toDocument($row, $locale), $rows)));
+    }
+
+    /**
+     * Für den stündlichen Abgleich: erfasst auch Änderungen ohne Hook (CSV-Pakete, Kategorie-Umbenennung).
+     */
+    public function changedDocumentIds(string $since, string $until, int $limit): array
+    {
+        $rows = $this->db->execute(
+            "SELECT id FROM {$this->table} WHERE updated_at > ? ORDER BY updated_at ASC LIMIT ?",
+            [$since, max(1, $limit)]
+        )->fetchAll(\PDO::FETCH_COLUMN);
+
+        return array_values(array_map('intval', $rows ?: []));
     }
 
     public function document(int $id, string $locale): ?SearchDocument

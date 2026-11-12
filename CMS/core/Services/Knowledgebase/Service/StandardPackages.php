@@ -178,10 +178,7 @@ final class StandardPackages
                 continue;
             }
 
-            $warnings[] = sprintf(
-                'Dateiname „%s“ wird ignoriert. Erwartet wird das Format „Kategorie_Glossar.csv“, z. B. „Cloud_Security_Glossar.csv“.',
-                $fileName
-            );
+            $warnings[] = sprintf((string) __('knowledgebase.admin.csv_name_warning'), $fileName);
         }
 
         return $warnings;
@@ -194,14 +191,14 @@ final class StandardPackages
     {
         $definitions = $this->packageDefinitions();
         if (!isset($definitions[$packageKey])) {
-            return ['success' => false, 'error' => 'Unbekanntes Standardpaket.'];
+            return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_package_unknown')];
         }
 
         $package = $definitions[$packageKey];
         if ($package['entries'] === []) {
             return [
                 'success' => false,
-                'error' => sprintf('Die CSV-Datei „%s“ enthält aktuell keine importierbaren Einträge.', (string) $package['file_name']),
+                'error' => sprintf((string) __('knowledgebase.admin.error_package_empty'), (string) $package['file_name']),
             ];
         }
 
@@ -227,13 +224,12 @@ final class StandardPackages
         return [
             'success' => ((int) ($result['created'] ?? 0) + (int) ($result['updated'] ?? 0) + (int) ($result['skipped'] ?? 0)) > 0,
             'message' => sprintf(
-                'CSV-Paket „%s“ verarbeitet: %d neu angelegt, %d aktualisiert, %d übersprungen%s.',
+                (string) __('knowledgebase.admin.package_imported'),
                 (string) $package['label'],
                 (int) ($result['created'] ?? 0),
                 (int) ($result['updated'] ?? 0),
-                (int) ($result['skipped'] ?? 0),
-                (int) ($result['errors'] ?? 0) > 0 ? sprintf(', %d mit Fehlern', (int) ($result['errors'] ?? 0)) : ''
-            ),
+                (int) ($result['skipped'] ?? 0)
+            ) . ((int) ($result['errors'] ?? 0) > 0 ? ' ' . sprintf((string) __('knowledgebase.admin.import_errors'), (int) ($result['errors'] ?? 0)) : ''),
         ];
     }
 
@@ -259,17 +255,12 @@ final class StandardPackages
             $errors += (int) ($result['errors'] ?? 0);
         }
 
-        $this->repository->saveCsvImportStatus($created + $updated, $created, $updated, $skipped, 'Alle CSV-Pakete');
+        $this->repository->saveCsvImportStatus($created + $updated, $created, $updated, $skipped, 'all');
 
         return [
             'success' => ($created + $updated + $skipped) > 0,
-            'message' => sprintf(
-                'Alle CSV-Pakete verarbeitet: %d neu angelegt, %d aktualisiert, %d übersprungen%s.',
-                $created,
-                $updated,
-                $skipped,
-                $errors > 0 ? sprintf(', %d mit Fehlern', $errors) : ''
-            ),
+            'message' => sprintf((string) __('knowledgebase.admin.packages_imported'), $created, $updated, $skipped)
+                . ($errors > 0 ? ' ' . sprintf((string) __('knowledgebase.admin.import_errors'), $errors) : ''),
         ];
     }
 
@@ -285,7 +276,7 @@ final class StandardPackages
 
             $definitions[$packageKey] = [
                 'label' => (string) $csvPackage['label'],
-                'description' => sprintf('Glossar-Import aus %s.', (string) $csvPackage['file_name']),
+                'description' => sprintf((string) __('knowledgebase.admin.package_description'), (string) $csvPackage['file_name']),
                 'accent' => $this->defaultAccentForPackageKey($packageKey),
                 'file_name' => (string) $csvPackage['file_name'],
                 'entries' => $entries,

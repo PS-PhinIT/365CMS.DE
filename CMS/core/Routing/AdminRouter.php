@@ -270,30 +270,8 @@ final class AdminRouter
      */
     private function resolvePluginAdminFallback(string $plugin, string $page): ?array
     {
-        if (in_array($plugin, ['knowledgebase-dashboard', 'cms-knowledgebase'], true) && class_exists(\CmsKnowledgebase\Admin\Pages::class)) {
-            $pages = [
-                'knowledgebase-dashboard' => ['Knowledgebase', [\CmsKnowledgebase\Admin\Pages::class, 'renderDashboard']],
-                'dashboard' => ['Knowledgebase', [\CmsKnowledgebase\Admin\Pages::class, 'renderDashboard']],
-                'knowledgebase-entries' => ['Knowledgebase-Einträge', [\CmsKnowledgebase\Admin\Pages::class, 'renderEntries']],
-                'entries' => ['Knowledgebase-Einträge', [\CmsKnowledgebase\Admin\Pages::class, 'renderEntries']],
-                'knowledgebase-categories' => ['Knowledgebase-Kategorien', [\CmsKnowledgebase\Admin\Pages::class, 'renderCategories']],
-                'categories' => ['Knowledgebase-Kategorien', [\CmsKnowledgebase\Admin\Pages::class, 'renderCategories']],
-                'knowledgebase-entry-editor' => ['Knowledgebase-Eintrag bearbeiten', [\CmsKnowledgebase\Admin\Pages::class, 'renderEntryEditor']],
-                'entry-editor' => ['Knowledgebase-Eintrag bearbeiten', [\CmsKnowledgebase\Admin\Pages::class, 'renderEntryEditor']],
-                'knowledgebase-settings' => ['Knowledgebase-Einstellungen', [\CmsKnowledgebase\Admin\Pages::class, 'renderSettings']],
-                'settings' => ['Knowledgebase-Einstellungen', [\CmsKnowledgebase\Admin\Pages::class, 'renderSettings']],
-            ];
-
-            if (!isset($pages[$page]) || !is_callable($pages[$page][1])) {
-                return null;
-            }
-
-            return [
-                'title' => $pages[$page][0],
-                'callback' => $pages[$page][1],
-            ];
-        }
-
+        // Die Knowledgebase ist seit 4.0.0 im Core (/admin/knowledgebase); alte Plugin-Adressen leitet
+        // IntegratedPluginService um.
         $m365Fallbacks = [
             'm365azure' => [
                 'class' => \CMS_M365Azure_Admin_Pages::class,

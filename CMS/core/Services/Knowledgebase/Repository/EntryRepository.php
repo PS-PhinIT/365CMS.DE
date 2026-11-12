@@ -212,6 +212,8 @@ final class EntryRepository
         $conditions[] = 'trashed_at IS NULL';
         if (($filters['status'] ?? '') === 'active') {
             $conditions[] = 'is_active = 1';
+        } elseif (($filters['status'] ?? '') === 'inactive') {
+            $conditions[] = 'is_active = 0';
         }
 
         $search = trim((string) ($filters['search'] ?? ''));
@@ -568,7 +570,7 @@ final class EntryRepository
 
         $this->resetCaches();
 
-        return ['success' => true, 'message' => 'Knowledgebase-Einstellungen gespeichert.'];
+        return ['success' => true, 'message' => (string) __('knowledgebase.admin.settings_saved')];
     }
 
     private function resolveSubmittedColorValue(array $input, string $key, string $currentValue, string $fallback): string
@@ -647,14 +649,14 @@ final class EntryRepository
         $maxLinksPerPage = max(1, min(20, (int) ($input['max_links_per_page'] ?? 1)));
 
         if ($title === '' || $keyword === '') {
-            return ['success' => false, 'error' => 'Titel und Fokusbegriff sind erforderlich.'];
+            return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_title_keyword')];
         }
 
         if ($category !== '') {
             if ($createMissingCategory) {
                 $this->ensureCategoryExists($category);
             } elseif (!$this->categoryExists($category)) {
-                return ['success' => false, 'error' => 'Bitte eine vorhandene Kategorie auswählen.'];
+                return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_category_unknown')];
             }
         }
 
@@ -684,7 +686,7 @@ final class EntryRepository
             $this->logger->info('Knowledgebase-Eintrag aktualisiert.', ['entry_id' => $id, 'slug' => $slug]);
             \CMS\Hooks::doAction('cms_knowledgebase_entry_saved', $id);
 
-            return ['success' => true, 'message' => 'Knowledgebase-Eintrag aktualisiert.', 'id' => $id];
+            return ['success' => true, 'message' => (string) __('knowledgebase.admin.entry_updated'), 'id' => $id];
         }
 
         $stmt = $db->prepare("INSERT INTO {$table} (" . implode(', ', $columns) . ')
@@ -696,7 +698,7 @@ final class EntryRepository
         $this->logger->info('Knowledgebase-Eintrag erstellt.', ['entry_id' => $newId, 'slug' => $slug]);
         \CMS\Hooks::doAction('cms_knowledgebase_entry_saved', $newId);
 
-        return ['success' => true, 'message' => 'Knowledgebase-Eintrag angelegt.', 'id' => $newId];
+        return ['success' => true, 'message' => (string) __('knowledgebase.admin.entry_created'), 'id' => $newId];
     }
 
     public function sanitizePublicRichText(string $value): string
@@ -714,7 +716,7 @@ final class EntryRepository
         $current = $id > 0 ? $this->getCategory($id) : null;
 
         if ($name === '') {
-            return ['success' => false, 'error' => 'Bitte einen Kategorienamen angeben.'];
+            return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_category_name')];
         }
 
         $duplicateQuery = 'SELECT id FROM ' . $table . ' WHERE name = ?';
@@ -727,7 +729,7 @@ final class EntryRepository
         $duplicateStmt = $db->prepare($duplicateQuery);
         $duplicateStmt->execute($duplicateParams);
         if (is_array($duplicateStmt->fetch(PDO::FETCH_ASSOC))) {
-            return ['success' => false, 'error' => 'Eine Kategorie mit diesem Namen existiert bereits.'];
+            return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_category_duplicate')];
         }
 
         $slug = $this->generateUniqueCategorySlug($name, $id);
@@ -747,7 +749,7 @@ final class EntryRepository
             }
             $this->resetCaches();
 
-            return ['success' => true, 'message' => 'Kategorie aktualisiert.', 'id' => $id];
+            return ['success' => true, 'message' => (string) __('knowledgebase.admin.category_updated'), 'id' => $id];
         }
 
         $stmt = $db->prepare("INSERT INTO {$table} (name, slug, sort_order) VALUES (:name, :slug, :sort_order)");
@@ -758,14 +760,14 @@ final class EntryRepository
         ]);
         $this->resetCaches();
 
-        return ['success' => true, 'message' => 'Kategorie angelegt.', 'id' => (int) $db->lastInsertId()];
+        return ['success' => true, 'message' => (string) __('knowledgebase.admin.category_created'), 'id' => (int) $db->lastInsertId()];
     }
 
     public function deleteCategory(int $id): array
     {
         $category = $this->getCategory($id);
         if ($category === null) {
-            return ['success' => false, 'error' => 'Kategorie nicht gefunden.'];
+            return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_category_not_found')];
         }
 
         $db = Database::instance();
@@ -776,7 +778,7 @@ final class EntryRepository
         $deleteStmt->execute([$id]);
         $this->resetCaches();
 
-        return ['success' => true, 'message' => 'Kategorie gelöscht.'];
+        return ['success' => true, 'message' => (string) __('knowledgebase.admin.category_deleted')];
     }
 
     /**
@@ -818,7 +820,7 @@ final class EntryRepository
     public function deleteEntry(int $id): array
     {
         if ($id <= 0) {
-            return ['success' => false, 'error' => 'Ungültige Eintrags-ID.'];
+            return ['success' => false, 'error' => (string) __('knowledgebase.admin.error_not_found')];
         }
 
         $db = Database::instance();
@@ -829,7 +831,7 @@ final class EntryRepository
         $this->logger->info('Knowledgebase-Eintrag gelöscht.', ['entry_id' => $id]);
         \CMS\Hooks::doAction('cms_knowledgebase_entry_deleted', $id);
 
-        return ['success' => true, 'message' => 'Knowledgebase-Eintrag gelöscht.'];
+        return ['success' => true, 'message' => (string) __('knowledgebase.admin.entry_deleted')];
     }
 
     public function hardResetEntries(): array
@@ -852,7 +854,7 @@ final class EntryRepository
 
         return [
             'success' => true,
-            'message' => sprintf('Hardreset abgeschlossen. %d Knowledgebase-Einträge wurden entfernt.', (int) $deleted),
+            'message' => sprintf((string) __('knowledgebase.admin.hard_reset_done'), (int) $deleted),
         ];
     }
 
@@ -1027,6 +1029,8 @@ final class EntryRepository
         $conditions[] = 'trashed_at IS NULL';
         if (($filters['status'] ?? '') === 'active') {
             $conditions[] = 'is_active = 1';
+        } elseif (($filters['status'] ?? '') === 'inactive') {
+            $conditions[] = 'is_active = 0';
         }
 
         $search = trim((string) ($filters['search'] ?? ''));
@@ -1109,12 +1113,15 @@ final class EntryRepository
             ), static fn(string $token): bool => mb_strlen($token, 'UTF-8') >= 3)));
 
             foreach ($tokens as $index => $token) {
-                $paramToken = ":{$paramPrefix}_token_{$index}";
+                // Native Prepared Statements erlauben jeden benannten Parameter nur einmal.
+                $paramKeyword = ":{$paramPrefix}_token_{$index}_kw";
+                $paramTitle = ":{$paramPrefix}_token_{$index}_ti";
                 $paramTokenNeedle = ":{$paramPrefix}_token_{$index}_needle";
-                $sqlParts[] = "SOUNDEX(keyword) = SOUNDEX({$paramToken})";
-                $sqlParts[] = "SOUNDEX(title) = SOUNDEX({$paramToken})";
+                $sqlParts[] = "SOUNDEX(keyword) = SOUNDEX({$paramKeyword})";
+                $sqlParts[] = "SOUNDEX(title) = SOUNDEX({$paramTitle})";
                 $sqlParts[] = "synonyms LIKE {$paramTokenNeedle}";
-                $params[$paramToken] = [$token, PDO::PARAM_STR];
+                $params[$paramKeyword] = [$token, PDO::PARAM_STR];
+                $params[$paramTitle] = [$token, PDO::PARAM_STR];
                 $params[$paramTokenNeedle] = ['%' . $token . '%', PDO::PARAM_STR];
             }
         }

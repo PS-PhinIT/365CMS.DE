@@ -111,7 +111,7 @@ final class ProfileLayouts
                     'media.downloads', 'media.tools', 'media.settings',
                 ]),
                 self::group('pages', 'Seiten', 'file', [
-                    'content.pages', 'content.hub-sites', 'content.site-tables', 'content.toc',
+                    'content.pages', 'content.hub-sites', 'content.site-tables', 'content.toc', 'content.knowledgebase',
                 ]),
                 self::item('content.comments'),
                 self::group('forms', 'Formulare', 'forms', ['content.forms', 'content.form-submissions']),
@@ -178,7 +178,7 @@ final class ProfileLayouts
                 self::item('dashboard'),
                 self::item('system.updates'),
                 self::group('content', 'Inhalt', 'file-text', [
-                    'content.pages', 'content.posts', 'content.comments',
+                    'content.pages', 'content.posts', 'content.comments', 'content.knowledgebase',
                     'content.forms', 'content.form-submissions', 'content.trash',
                 ]),
                 self::group('media', 'Medien', 'photo', [
