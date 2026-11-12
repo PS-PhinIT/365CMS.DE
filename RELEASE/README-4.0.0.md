@@ -6,6 +6,8 @@ This release directory documents the distributable `4.0.0` packages (release dat
 
 Security and bug-fix release on top of 3.5.6, based on the follow-up audit of 2026-11-08 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 findings, all fixed). A second pass on 2026-11-09 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) implemented the recommendations OFFEN-20 … OFFEN-26 and fixed six further defects that had existed since 3.5.x. The update is marked as critical; install it promptly. The release also ships the redesigned administration described below.
 
+> **Before updating from 3.5.x:** the updater of 3.5.x replaces the folders `CMS/plugins/` and `CMS/themes/` completely. Back up plugins you installed yourself and custom themes before the update and upload them again afterwards. From 4.0.0 on, updates keep them (only the bundled `cms-importer` and `cms-default` are replaced).
+
 Fixed, among others:
 
 - host header manipulation of script and asset URLs (cache poisoning);
@@ -63,6 +65,8 @@ Schema `v25` adds the tables `admin_menu_layouts`, `batch_jobs`, `form_*`, `down
 Dieses Release-Verzeichnis dokumentiert die auslieferbaren Pakete `4.0.0` (Release 12.11.2026, Datenbankschema `v25`). Update- und Vollpaket enthalten ausschließlich auslieferbaren Code; installationsspezifische Konfiguration, Uploads, Cache, Logs und Backups sind bewusst ausgeschlossen. Das Vollpaket enthält aus diesen Verzeichnissen nur die schützenden `.htaccess`-/Index-Dateien.
 
 Sicherheits- und Korrekturrelease auf Basis von 3.5.6 nach dem Folgeaudit vom 08.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 Befunde, alle behoben). Ein zweiter Durchgang am 09.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) setzt die Empfehlungen OFFEN-20 bis OFFEN-26 um und behebt sechs weitere Fehler, die seit 3.5.x bestanden. Das Update ist als kritisch markiert und sollte zeitnah installiert werden. Installationen mit 3.5.6 zeigen es noch als normales Update an, weil die rote Kennzeichnung kritischer Updates erst mit 4.0.0 kommt. Außerdem enthält das Release die unten beschriebene neue Administration.
+
+> **Vor dem Update von 3.5.x:** Der Updater von 3.5.x ersetzt die Ordner `CMS/plugins/` und `CMS/themes/` vollständig. Nachinstallierte Plugins und eigene Themes vor dem Update sichern und danach wieder hochladen. Ab 4.0.0 bleiben sie bei Updates erhalten (ersetzt werden nur das mitgelieferte `cms-importer` und `cms-default`).
 
 Behoben wurden unter anderem:
 
