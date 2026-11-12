@@ -657,8 +657,9 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                                 <?php endif; ?>
                                 <?php if (!empty($system['mysql_version'])): ?>
                                     <tr>
-                                        <td class="text-secondary">MySQL</td>
-                                        <td><?= htmlspecialchars((string) $system['mysql_version']) ?></td>
+                                        <?php $dashDb = \CMS\Services\EnvironmentInfoService::parseDatabaseVersion((string) $system['mysql_version']); ?>
+                                        <td class="text-secondary">Datenbank</td>
+                                        <td class="text-break" title="<?= htmlspecialchars((string) $system['mysql_version']) ?>"><?= htmlspecialchars(trim($dashDb['product'] . ' ' . $dashDb['version'])) ?></td>
                                     </tr>
                                 <?php endif; ?>
                                 <?php if (!empty($performance['disk_free_formatted'])): ?>
@@ -741,7 +742,7 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                 <h3 class="card-title">Letzte Aktivitäten</h3>
             </div>
             <?php if ($activityEntries !== []): ?>
-                <div class="card-body p-0">
+                <div class="card-body p-0 table-responsive">
                     <table class="table table-vcenter card-table">
                         <thead>
                             <tr>

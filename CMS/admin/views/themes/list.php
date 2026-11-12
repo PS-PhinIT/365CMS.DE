@@ -115,8 +115,12 @@ $resolvePreviewColor = static function (array $theme): string {
             if ($configuredScreenshot !== '') {
                 $previewCandidates[] = $configuredScreenshot;
             }
-            $previewCandidates[] = '/themes/' . rawurlencode($themeFolder) . '/screenshot.png';
-            $previewCandidates[] = '/themes/' . rawurlencode($themeFolder) . '/preview.png';
+            // Lokale Vorschaubilder nur anbieten, wenn die Datei existiert (sonst 404 in der Browser-Konsole).
+            foreach (['screenshot.png', 'preview.png'] as $previewFile) {
+                if (is_file(ABSPATH . 'themes/' . $themeFolder . '/' . $previewFile)) {
+                    $previewCandidates[] = '/themes/' . rawurlencode($themeFolder) . '/' . $previewFile;
+                }
+            }
             $previewCandidates = array_values(array_unique(array_filter(array_map('strval', $previewCandidates))));
             $previewPrimaryColor = $resolvePreviewColor(is_array($theme) ? $theme : []);
             $previewGradientEnd = 'rgba(15, 23, 42, 0.82)';

@@ -251,9 +251,12 @@ $resolvePreviewColor = static function (array $theme): string {
                 $localFolder = trim((string) ($theme['local_folder'] ?? ''));
                 $localSlug = trim((string) $slug);
                 $themeFolder = $localFolder !== '' ? $localFolder : $localSlug;
-                if ($themeFolder !== '') {
-                    $previewCandidates[] = '/themes/' . rawurlencode($themeFolder) . '/screenshot.png';
-                    $previewCandidates[] = '/themes/' . rawurlencode($themeFolder) . '/preview.png';
+                if ($themeFolder !== '' && preg_match('/^[A-Za-z0-9._-]+$/', $themeFolder) === 1 && !str_contains($themeFolder, '..')) {
+                    foreach (['screenshot.png', 'preview.png'] as $previewFile) {
+                        if (is_file(ABSPATH . 'themes/' . $themeFolder . '/' . $previewFile)) {
+                            $previewCandidates[] = '/themes/' . rawurlencode($themeFolder) . '/' . $previewFile;
+                        }
+                    }
                 }
                 $previewCandidates = array_values(array_unique(array_filter(array_map('strval', $previewCandidates))));
                 $previewPrimaryColor = $resolvePreviewColor($theme);
