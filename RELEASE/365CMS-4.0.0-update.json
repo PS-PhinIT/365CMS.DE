@@ -5,7 +5,7 @@
   "version": "4.0.0",
   "released": "2026-11-12",
   "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
-  "checksum_sha256": "521cb16eafc21a5687e97d5b6684a83c5b3c3808ee0308511943e63b0a90aca8",
+  "checksum_sha256": "14ed0938fc463fe43415115fbb685aa1411d32d0144c2864b6a95c8efeb03ef4",
   "requires_php": "8.4.1",
   "schema_version": "v25",
   "critical": true,
