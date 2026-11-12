@@ -128,7 +128,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `member_dashboard_init` | Action | `PluginDashboardRegistry $registry` |
 | `member_plugin_section_head` | Action | `$section, $user, $params` |
 
-### Formulare, Downloads, Knowledgebase, Medien (seit 4.0.0)
+### Formulare, Downloads, Knowledgebase, Newsletter, Medien (seit 4.0.0)
 
 | Hook | Typ | Argumente | Hinweis |
 |---|---|---|---|
@@ -141,6 +141,12 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_knowledgebase_entry_saved` | Action | `int $id` | Knowledgebase-Eintrag angelegt, gespeichert oder aus dem Papierkorb geholt |
 | `cms_knowledgebase_entry_trashed` | Action | `int $id` | Knowledgebase-Eintrag in den Papierkorb gelegt |
 | `cms_knowledgebase_entry_deleted` | Action | `int $id` | Knowledgebase-Eintrag endgültig gelöscht |
+| `cms_newsletter_subscribed` | Action | `int $subscriberId` | Newsletter-Abonnent aktiv (bestätigt, angelegt oder reaktiviert) |
+| `cms_newsletter_unsubscribed` | Action | `int $subscriberId` | Abonnent abgemeldet |
+| `cms_newsletter_subscriber_deleted` | Action | `int $subscriberId` | Abonnent endgültig gelöscht |
+| `cms_newsletter_campaign_started` | Action | `int $campaignId` | Kampagnenversand gestartet |
+| `cms_newsletter_campaign_sent` | Action | `int $campaignId` | alle Mails einer Kampagne verarbeitet |
+| `cms_member_export_data` | Filter | `array $export`, `int $userId`, `string $email` | Selbstauskunft im Mitgliederbereich ergänzen (Formulare: `form_submissions`, Newsletter: `newsletter`) |
 | `cms_image_figcaption_credit` | Filter | `string $html`, `string $imageUrl`, `array $context` (`context` = image/gallery/carousel, `original_url`) | Credit-Zeile in Bildunterschriften; der Core hängt hier die Urheberangaben der Mediathek an |
 | `cms_media_credit_line_enabled` | Filter | `bool $enabled`, `string $imageUrl`, `array $context` | Credit-Zeile je Bild ab- oder einschalten (z. B. im Theme) |
 | `cms_after_site_search` | Action | `array $parsed`, `int $resultCount`, `string $locale`, `string $type` | nach einer Suche auf der Suchseite; speist die anonyme Suchbegriff-Statistik |

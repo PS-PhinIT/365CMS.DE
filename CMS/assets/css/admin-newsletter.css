@@ -1,0 +1,16 @@
+/**
+ * Newsletter – Admin (/admin/newsletter).
+ */
+
+.admin-newsletter-preview {
+    display: block;
+    width: 100%;
+    height: 640px;
+    border: 0;
+    border-radius: 0 0 var(--tblr-border-radius) var(--tblr-border-radius);
+    background: #f3f4f6;
+}
+
+.admin-newsletter-progress {
+    max-width: 240px;
+}

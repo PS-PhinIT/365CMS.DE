@@ -114,7 +114,7 @@ final class ProfileLayouts
                     'content.pages', 'content.hub-sites', 'content.site-tables', 'content.toc', 'content.knowledgebase',
                 ]),
                 self::item('content.comments'),
-                self::group('forms', 'Formulare', 'forms', ['content.forms', 'content.form-submissions']),
+                self::group('forms', 'Formulare', 'forms', ['content.forms', 'content.form-submissions', 'content.newsletter']),
                 self::group('ai', 'KI-Dienste', 'sparkles', [
                     'ai.dashboard', 'ai.translation', 'ai.content-creator', 'ai.seo-creator',
                 ]),
@@ -179,7 +179,7 @@ final class ProfileLayouts
                 self::item('system.updates'),
                 self::group('content', 'Inhalt', 'file-text', [
                     'content.pages', 'content.posts', 'content.comments', 'content.knowledgebase',
-                    'content.forms', 'content.form-submissions', 'content.trash',
+                    'content.forms', 'content.form-submissions', 'content.newsletter', 'content.trash',
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check', 'media.downloads', 'media.tools',

@@ -116,6 +116,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
 | Feeds (aggregator, RSS output) | [admin/system-settings/FEEDS.md](admin/system-settings/FEEDS.md) |
 | Downloads | [admin/media/DOWNLOADS.md](admin/media/DOWNLOADS.md) |
+| Newsletter (double opt-in, campaigns, RFC 8058 unsubscribe) | [admin/pages-posts/NEWSLETTER.md](admin/pages-posts/NEWSLETTER.md) |
 | Knowledge base (glossary, automatic term linking) | [admin/pages-posts/KNOWLEDGEBASE.md](admin/pages-posts/KNOWLEDGEBASE.md) |
 | Core modules | [admin/system-settings/MODULES.md](admin/system-settings/MODULES.md) |
 | Backups / updates / monitoring | [admin/system-settings/BACKUP.md](admin/system-settings/BACKUP.md) · [UPDATES.md](admin/system-settings/UPDATES.md) · [MONITORING.md](admin/system-settings/MONITORING.md) |

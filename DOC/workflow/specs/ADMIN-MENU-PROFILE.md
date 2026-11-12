@@ -64,7 +64,8 @@ Seiten
 Kommentare             (Badge: offene Kommentare) /admin/comments
 Formulare *B
   ├─ Formulare                                   /admin/forms
-  └─ Eingänge                                    /admin/form-submissions
+  ├─ Eingänge                                    /admin/form-submissions
+  └─ Newsletter *B                               /admin/newsletter
 KI-Dienste             (opt. KI)
   ├─ KI-Dashboard                                /admin/ai-services
   ├─ Übersetzung                                 /admin/ai-translation
@@ -160,6 +161,8 @@ Inhalt                 (Badge: Summe offener Kommentare)
   │                                              /admin/knowledgebase
   ├─ Formulare *B                                /admin/forms
   ├─ Eingänge *B                                 /admin/form-submissions
+  ├─ Newsletter *B (Bereiche: Übersicht · Abonnenten · Kampagnen · Vorlagen · Einstellungen)
+  │                                              /admin/newsletter
   └─ Papierkorb *WP1                             /admin/trash
 Medien
   ├─ Mediathek                                   /admin/media

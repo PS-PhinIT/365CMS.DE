@@ -47,6 +47,21 @@ final class IntegratedPluginService
             'url' => '/admin/downloads',
             'admin_redirects' => ['*' => '/admin/downloads'],
         ],
+        'cms-newsletter' => [
+            'label' => 'CMS Newsletter',
+            'migrator' => PluginMigration\NewsletterPluginMigrator::class,
+            'url' => '/admin/newsletter',
+            'admin_redirects' => [
+                'newsletter-subscribers' => '/admin/newsletter?section=subscribers',
+                'newsletter-templates' => '/admin/newsletter?section=templates',
+                'newsletter-campaigns' => '/admin/newsletter?section=campaigns',
+                'newsletter-settings' => '/admin/newsletter?section=settings',
+                'newsletter-settings-general' => '/admin/newsletter?section=settings',
+                'newsletter-settings-content' => '/admin/newsletter?section=settings&tab=content',
+                'newsletter-settings-compliance' => '/admin/newsletter?section=settings&tab=delivery',
+                '*' => '/admin/newsletter',
+            ],
+        ],
         'cms-knowledgebase' => [
             'label' => 'CMS Knowledgebase',
             'migrator' => PluginMigration\KnowledgebasePluginMigrator::class,
@@ -104,6 +119,7 @@ final class IntegratedPluginService
     /** Admin-Wurzeln alter Plugin-Seiten, die nicht dem Plugin-Slug entsprechen. */
     private const ADMIN_ROOT_ALIASES = [
         'knowledgebase-dashboard' => 'cms-knowledgebase',
+        'newsletter-dashboard' => 'cms-newsletter',
     ];
 
     private const RETIRED_OPTION = 'integrated_plugins_retired';

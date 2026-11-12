@@ -487,13 +487,18 @@ class MemberService
             return null;
         }
 
-        return [
+        $export = [
             'account'           => (array)$user,
             'meta'              => $this->filterExportableUserMeta($this->getUserMeta($userId)),
             'privacy_settings'  => $this->getPrivacySettings($userId),
             'notifications'     => $this->getNotificationPreferences($userId),
             'exported_at'       => date('c'),
         ];
+
+        // Funktionsbereiche ergänzen ihre Daten der Person (z. B. Formulareingänge, Newsletter-Abonnement).
+        $filtered = \CMS\Hooks::applyFilters('cms_member_export_data', $export, $userId, (string) ($user->email ?? ''));
+
+        return is_array($filtered) ? $filtered : $export;
     }
 
     /**
