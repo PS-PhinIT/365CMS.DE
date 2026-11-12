@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Umsetzungsfortschritt Release 4.0.0
 > **Stand:** 2026-11-11 | **Version:** 4.0.0 | **Status:** In Umsetzung | **Update:** 2026-11-11
-> **Specs:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-INTEGRATION.md](PLUGIN-INTEGRATION.md) · [PLUGIN-PARITY.md](PLUGIN-PARITY.md) · [ROADMAP-15-FEATURES.md](ROADMAP-15-FEATURES.md) · **Vorrang:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
+> **Specs:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-INTEGRATION.md](PLUGIN-INTEGRATION.md) · [PLUGIN-PARITY.md](PLUGIN-PARITY.md) · [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md) · [ROADMAP-15-FEATURES.md](ROADMAP-15-FEATURES.md) · **Vorrang:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)
 
@@ -100,6 +100,27 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 | 13 | Thumbnails neu erzeugen | ✅ | `/admin/media-tools`: Hintergrundauftrag mit Fortschritt, Abbrechen, optional WebP; offener Lauf läuft im stündlichen Cron weiter. Doku: [MEDIA-TOOLS.md](../../admin/media/MEDIA-TOOLS.md). |
 | 14 | RSS-Einstellungen (Prüfung nach B1) | ✅ | Feeds-Tab mit Anzahl, Volltext/Auszug, Bildern, Kategorien, Tags, Sprachen und Aktivierung umgesetzt; Details: [FEEDS.md](../../admin/system-settings/FEEDS.md). |
 | 15 | Umgebungsinfo | ✅ | Systeminfo: PHP-Erweiterungen (vorhanden/fehlt, Bedarf, Funktion), OPcache (Version, Speicher, Trefferquote, JIT), Datenbankprodukt und -version. Doku: [INFO.md](../../admin/info/INFO.md). |
+
+### Arbeitspaket 5 – Inhaltsplattform (vorbereitet) – [Spec](ROADMAP-CONTENT-PLATFORM.md)
+
+Freigabe-Ablauf, eigene Felder und Inhaltstypen sowie beliebig viele Sprachen – die größten Lücken im Vergleich zu WordPress, Drupal und TYPO3. Stand 12.11.: Bestandsaufnahme im Code und Spezifikation fertig, Umsetzung offen.
+
+| # | Punkt | Status | Ergebnis |
+|---|---|---|---|
+| 5.0 | Bestandsaufnahme und Spezifikation (Datenmodell, Migration, Rechte, Oberfläche, Phasen, Aufwand) | ✅ | [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md). Befunde: `posts.publish`/`pages.publish` existieren, werden aber nirgends geprüft und keiner Standardrolle zugewiesen; Inhaltssprachen stecken in festen `*_en`-Spalten (8 Tabellen, ~70 Dateien), obwohl `ContentLocalizationService` schon einen Sprachfilter und einen `*_{locale}`-Rückfall hat; `ContentTypeRegistry` trägt neue Inhaltstypen ohne Sonderfälle (Papierkorb, Suche, Import/Export). |
+| A1 | Status „Zur Prüfung“, zentrale Statusdefinition, Veröffentlichungsrecht durchsetzen (Update vergibt es an Redakteur/Autor) | ⬜ | |
+| A2 | Freigeben/Zurückgeben mit Verlauf und Kommentaren, Mails, Badge, Dashboard-Widget | ⬜ | |
+| A3 | Vorschau-Links zum Teilen (signiert, ablaufend, widerrufbar) | ⬜ | |
+| A4 | Mehrstufige Freigaben je Inhaltstyp (optional) | ⬜ | |
+| B1 | Feldgruppen und Feldwerte für Beiträge/Seiten, Ausgabe-API, Revisionen | ⬜ | |
+| B2 | Eigene Inhaltstypen (Baukasten, Editor, Routing, Vorlagen, Papierkorb/Suche/Export) | ⬜ | |
+| B3 | Block „Inhaltsliste“, Filter und Sortierung nach Feldern, Sitemap, Feeds | ⬜ | |
+| B4 | Wiederholgruppen, Verknüpfungen, CSV-Import | ⬜ | |
+| C0 | Sprachenverwaltung, Präfixe, `hreflang` und Umschalter aus der Sprachliste | ⬜ | |
+| C1–C2 | Übersetzungstabelle, Lese-/Schreibpfad, Editor mit Sprachauswahl | ⬜ | |
+| C3 | Umzug der `*_en`-Daten, Umstellung von Code und Themes | ⬜ | |
+| C4 | Sitemaps, Suche, Übersetzungsstatus und KI-Übersetzung für alle Sprachen | ⬜ | |
+| C5 | Funktionsbereiche (Formulare, Downloads, KB, Newsletter, Feeds) mehrsprachig | ⬜ | |
 
 ### Querschnitt und Abschluss
 
