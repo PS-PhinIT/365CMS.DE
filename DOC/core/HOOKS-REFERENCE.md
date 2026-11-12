@@ -128,7 +128,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `member_dashboard_init` | Action | `PluginDashboardRegistry $registry` |
 | `member_plugin_section_head` | Action | `$section, $user, $params` |
 
-### Formulare, Downloads, Medien (seit 4.0.0)
+### Formulare, Downloads, Knowledgebase, Medien (seit 4.0.0)
 
 | Hook | Typ | Argumente | Hinweis |
 |---|---|---|---|
@@ -138,6 +138,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_download_trashed` | Action | `int $id` | Download in den Papierkorb verschoben |
 | `download_deleted` | Action | `int $id` | Download endgültig gelöscht (Name wie im früheren Plugin) |
 | `cms_download_access` | Filter | `string $state`, `array $item`, `?object $user` | Zugriffsentscheidung; erlaubt sind nur `granted`, `login`, `role`, `membership` (sonst gilt der ursprüngliche Wert) |
+| `cms_knowledgebase_entry_saved` | Action | `int $id` | Knowledgebase-Eintrag angelegt, gespeichert oder aus dem Papierkorb geholt |
+| `cms_knowledgebase_entry_trashed` | Action | `int $id` | Knowledgebase-Eintrag in den Papierkorb gelegt |
+| `cms_knowledgebase_entry_deleted` | Action | `int $id` | Knowledgebase-Eintrag endgültig gelöscht |
 | `cms_image_figcaption_credit` | Filter | `string $html`, `string $imageUrl`, `array $context` (`context` = image/gallery/carousel, `original_url`) | Credit-Zeile in Bildunterschriften; der Core hängt hier die Urheberangaben der Mediathek an |
 | `cms_media_credit_line_enabled` | Filter | `bool $enabled`, `string $imageUrl`, `array $context` | Credit-Zeile je Bild ab- oder einschalten (z. B. im Theme) |
 | `cms_after_site_search` | Action | `array $parsed`, `int $resultCount`, `string $locale`, `string $type` | nach einer Suche auf der Suchseite; speist die anonyme Suchbegriff-Statistik |

@@ -59,7 +59,8 @@ Seiten
   ├─ Alle Seiten                                 /admin/pages
   ├─ Hub-Sites                                   /admin/hub-sites
   ├─ Tabellen                                    /admin/site-tables
-  └─ Inhaltsverzeichnis                          /admin/table-of-contents
+  ├─ Inhaltsverzeichnis                          /admin/table-of-contents
+  └─ Knowledgebase *B                            /admin/knowledgebase
 Kommentare             (Badge: offene Kommentare) /admin/comments
 Formulare *B
   ├─ Formulare                                   /admin/forms
@@ -155,6 +156,8 @@ Inhalt                 (Badge: Summe offener Kommentare)
   ├─ Seiten                                      /admin/pages
   ├─ Beiträge                                    /admin/posts
   ├─ Kommentare        (Badge: offene Kommentare) /admin/comments
+  ├─ Knowledgebase *B  (Bereiche: Übersicht · Einträge · Kategorien · Einstellungen)
+  │                                              /admin/knowledgebase
   ├─ Formulare *B                                /admin/forms
   ├─ Eingänge *B                                 /admin/form-submissions
   └─ Papierkorb *WP1                             /admin/trash

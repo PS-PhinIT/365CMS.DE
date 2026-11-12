@@ -956,7 +956,7 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     T::same(['dashboard', 'system.updates', 'content', 'media', 'editorial', 'ai', 'structure', 'design', 'seo', 'extend', 'people', 'members', 'subscriptions', 'configuration', 'reports'],
         $structuredTop, 'structured: Hauptpunkte mit allen Modulen');
     T::same(['main'], array_column($structured['sections'], 'id'), 'structured: ein Abschnitt ohne Trenner');
-    T::same(['content.pages', 'content.posts', 'content.comments', 'content.forms', 'content.form-submissions', 'content.trash'],
+    T::same(['content.pages', 'content.posts', 'content.comments', 'content.knowledgebase', 'content.forms', 'content.form-submissions', 'content.trash'],
         am_group_items($structured, 'content'), 'structured: Inhalt');
     T::same('comments', am_node($structured, 'content.comments')['badge'] ?? null, 'structured: Kommentare mit Badge');
     T::same([], array_values(array_diff(['media.library', 'media.categories', 'media.check', 'media.downloads', 'media.tools'], am_group_items($structured, 'media'))),

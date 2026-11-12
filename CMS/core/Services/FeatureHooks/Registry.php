@@ -27,6 +27,7 @@ final class Registry
         AdminMenuHooks::class,
         FeedHooks::class,
         DownloadHooks::class,
+        KnowledgebaseHooks::class,
         FormHooks::class,
         TrashHooks::class,
         ToolbarHooks::class,

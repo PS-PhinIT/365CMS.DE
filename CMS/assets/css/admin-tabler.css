@@ -297,6 +297,9 @@ body.admin-body .form-text {
 }
 
 body.admin-body .table-responsive {
+    /* Bezugspunkt für absolut positionierte Inhalte (z. B. .visually-hidden im Tabellenkopf),
+       sonst ragen sie aus dem Scrollcontainer und verbreitern auf schmalen Bildschirmen die Seite. */
+    position: relative;
     border-radius: var(--cms-radius-card);
 }
 

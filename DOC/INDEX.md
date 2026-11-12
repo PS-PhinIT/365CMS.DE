@@ -102,7 +102,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
 | Toolbar: cache & maintenance mode | [admin/system-settings/TOOLBAR.md](admin/system-settings/TOOLBAR.md) |
-| Trash (pages, posts, media, hub sites, downloads, forms) | [admin/pages-posts/TRASH.md](admin/pages-posts/TRASH.md) |
+| Trash (pages, posts, media, hub sites, downloads, forms, knowledge base) | [admin/pages-posts/TRASH.md](admin/pages-posts/TRASH.md) |
 | Media tools (regenerate thumbnails, image credits) | [admin/media/MEDIA-TOOLS.md](admin/media/MEDIA-TOOLS.md) |
 | Accessibility statement | [admin/legal/ACCESSIBILITY.md](admin/legal/ACCESSIBILITY.md) |
 | Forms & submissions (builder, file uploads) | [admin/pages-posts/FORMS.md](admin/pages-posts/FORMS.md) |
@@ -116,6 +116,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Mail & mail queue | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
 | Feeds (aggregator, RSS output) | [admin/system-settings/FEEDS.md](admin/system-settings/FEEDS.md) |
 | Downloads | [admin/media/DOWNLOADS.md](admin/media/DOWNLOADS.md) |
+| Knowledge base (glossary, automatic term linking) | [admin/pages-posts/KNOWLEDGEBASE.md](admin/pages-posts/KNOWLEDGEBASE.md) |
 | Core modules | [admin/system-settings/MODULES.md](admin/system-settings/MODULES.md) |
 | Backups / updates / monitoring | [admin/system-settings/BACKUP.md](admin/system-settings/BACKUP.md) · [UPDATES.md](admin/system-settings/UPDATES.md) · [MONITORING.md](admin/system-settings/MONITORING.md) |
 | Diagnostics | [admin/diagnose/DIAGNOSE.md](admin/diagnose/DIAGNOSE.md) |

@@ -155,6 +155,7 @@ final class CoreCatalog
             ['id' => 'content.site-tables', 'label' => 'Tabellen', 'route' => '/admin/site-tables', 'icon' => 'table', 'caps' => self::SETTINGS, 'file' => 'admin/site-tables.php', 'page' => 'site-tables'],
             ['id' => 'content.toc', 'label' => 'Inhaltsverzeichnis', 'route' => '/admin/table-of-contents', 'icon' => 'list-numbers', 'caps' => self::SETTINGS, 'file' => 'admin/table-of-contents.php', 'page' => 'table-of-contents'],
             ['id' => 'content.comments', 'label' => 'Kommentare', 'route' => '/admin/comments', 'icon' => 'messages', 'caps' => ['comments.view'], 'file' => 'admin/comments.php', 'page' => 'comments', 'badge' => 'comments'],
+            ['id' => 'content.knowledgebase', 'label' => 'Knowledgebase', 'route' => '/admin/knowledgebase', 'icon' => 'book-2', 'caps' => ['manage_knowledgebase'], 'file' => 'admin/knowledgebase.php', 'page' => 'knowledgebase'],
             ['id' => 'content.forms', 'label' => 'Formulare', 'route' => '/admin/forms', 'icon' => 'forms', 'caps' => ['manage_forms'], 'file' => 'admin/forms.php', 'page' => 'forms'],
             ['id' => 'content.form-submissions', 'label' => 'Eingänge', 'route' => '/admin/form-submissions', 'icon' => 'inbox', 'caps' => ['view_form_submissions'], 'file' => 'admin/form-submissions.php', 'page' => 'form-submissions', 'badge' => 'form_submissions'],
             ['id' => 'content.trash', 'label' => 'Papierkorb', 'route' => '/admin/trash', 'icon' => 'trash', 'caps' => ['manage_trash'], 'file' => 'admin/trash.php', 'page' => 'trash'],
