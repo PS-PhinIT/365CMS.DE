@@ -1,0 +1,159 @@
+/**
+ * Newsletter – öffentliche Seiten (/newsletter, Bestätigen, Abmelden, Webversion) und Anmelde-Block.
+ * Farben über Theme-Variablen mit Rückfallwerten.
+ */
+
+.cms-newsletter {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1rem 3rem;
+}
+
+.cms-newsletter__title {
+    margin: 0 0 .75rem;
+}
+
+.cms-newsletter__lead {
+    margin: 0 0 1rem;
+    color: var(--color-text-muted, #4b5563);
+    font-size: 1.0625rem;
+}
+
+.cms-newsletter__notice {
+    margin: 1.25rem 0;
+    padding: .875rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #a7f3d0;
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.cms-newsletter__notice--error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.cms-newsletter__signup,
+.cms-newsletter__archive,
+.cms-newsletter__issue {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--color-surface, #fff);
+}
+
+.cms-newsletter__signup h2,
+.cms-newsletter__archive h2 {
+    margin-top: 0;
+    font-size: 1.25rem;
+}
+
+.cms-newsletter-form__hp {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.cms-newsletter-form__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0 1rem;
+}
+
+.cms-newsletter-form__field {
+    margin: 0 0 1rem;
+}
+
+.cms-newsletter-form__field label {
+    display: block;
+    margin-bottom: .25rem;
+    font-weight: 600;
+}
+
+.cms-newsletter-form__optional {
+    font-weight: 400;
+    color: var(--color-text-muted, #6b7280);
+    font-size: .875em;
+}
+
+.cms-newsletter-form__field input,
+.cms-newsletter-form__field select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: .625rem .75rem;
+    border: 1px solid var(--color-border, #d1d5db);
+    border-radius: 8px;
+    font: inherit;
+}
+
+.cms-newsletter-form__consent {
+    margin: 0 0 1rem;
+    font-size: .9375rem;
+}
+
+.cms-newsletter-form__consent input {
+    margin-right: .375rem;
+}
+
+.cms-newsletter-form__submit {
+    display: inline-block;
+    padding: .7rem 1.25rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cms-newsletter-form__submit:hover,
+.cms-newsletter-form__submit:focus-visible {
+    filter: brightness(.92);
+}
+
+.cms-newsletter-form__note {
+    margin: .5rem 0 0;
+    color: var(--color-text-muted, #6b7280);
+    font-size: .875rem;
+}
+
+.cms-newsletter__issues {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cms-newsletter__issues li {
+    padding: .75rem 0;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.cms-newsletter__issues li:first-child {
+    border-top: 0;
+}
+
+.cms-newsletter__issues time,
+.cms-newsletter__meta {
+    display: block;
+    color: var(--color-text-muted, #6b7280);
+    font-size: .875rem;
+}
+
+.cms-newsletter__issues p {
+    margin: .25rem 0 0;
+}
+
+.cms-newsletter__content img {
+    max-width: 100%;
+    height: auto;
+}
+
+.cms-newsletter__content {
+    overflow-wrap: anywhere;
+}

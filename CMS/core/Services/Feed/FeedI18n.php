@@ -118,7 +118,8 @@ final class FeedI18n
         $file = ABSPATH . 'lang/' . $locale . '.yaml';
         $lines = is_file($file) ? (@file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []) : [];
         foreach ($lines as $line) {
-            if (preg_match('/^\s*"(feeds\.[^"]+)"\s*:\s*"(.*)"\s*$/', $line, $match) === 1) {
+            // Auch vom Newsletter genutzt (NewsletterI18n): Mails gehen in der Sprache des Empfängers hinaus.
+            if (preg_match('/^\s*"((?:feeds|newsletter)\.[^"]+)"\s*:\s*"(.*)"\s*$/', $line, $match) === 1) {
                 $catalog[$match[1]] = stripcslashes($match[2]);
             }
         }

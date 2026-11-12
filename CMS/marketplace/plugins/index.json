@@ -51,6 +51,16 @@
       "is_paid": false,
       "install_supported": false,
       "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-newsletter",
+      "name": "CMS Newsletter",
+      "description": "Newsletter mit Double-Opt-In, Abonnenten, Vorlagen und Kampagnenversand. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Newsletter).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
     }
   ]
 }

@@ -49,6 +49,7 @@ class SchemaManager
         'search_queries', 'search_term_daily', 'trash_media',
         'translation_sync',
         'kb_entries', 'kb_categories', 'kb_settings',
+        'newsletter_subscribers', 'newsletter_templates', 'newsletter_campaigns', 'newsletter_sends', 'newsletter_settings',
     ];
 
     private Database $db;
@@ -1262,6 +1263,96 @@ class SchemaManager
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY uniq_setting_key (setting_key)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Knowledgebase: Einstellungen'",
+
+            // Newsletter (ehemals Plugin cms-newsletter): gleiche Tabellennamen wie das Plugin, ergänzt um Sprache,
+            // Konto, Einwilligung, Abmeldezeitpunkt, Kampagnen-Inhalt und Versandzähler. Ältere Plugin-Tabellen hebt
+            // `Newsletter\NewsletterInstaller` an.
+            'newsletter_subscribers' => "CREATE TABLE IF NOT EXISTS {$p}newsletter_subscribers (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(190) NOT NULL,
+                first_name VARCHAR(120) DEFAULT '',
+                last_name VARCHAR(120) DEFAULT '',
+                status VARCHAR(30) NOT NULL DEFAULT 'pending',
+                source VARCHAR(50) NOT NULL DEFAULT 'admin',
+                segment_slug VARCHAR(120) DEFAULT '',
+                locale VARCHAR(5) NOT NULL DEFAULT 'de',
+                user_id INT UNSIGNED DEFAULT NULL,
+                optin_token VARCHAR(120) DEFAULT '',
+                optin_sent_at DATETIME NULL,
+                consent_at DATETIME NULL,
+                consent_text VARCHAR(500) DEFAULT NULL,
+                confirmed_at DATETIME NULL,
+                unsubscribed_at DATETIME NULL,
+                last_sent_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_email (email),
+                KEY idx_status (status),
+                KEY idx_segment (segment_slug),
+                KEY idx_token (optin_token),
+                KEY idx_user (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Newsletter: Abonnenten'",
+
+            'newsletter_templates' => "CREATE TABLE IF NOT EXISTS {$p}newsletter_templates (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(180) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                content_html LONGTEXT NULL,
+                content_text LONGTEXT NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'draft',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                KEY idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Newsletter: Vorlagen'",
+
+            'newsletter_campaigns' => "CREATE TABLE IF NOT EXISTS {$p}newsletter_campaigns (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                template_id INT UNSIGNED DEFAULT NULL,
+                name VARCHAR(180) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                preview_text VARCHAR(255) DEFAULT '',
+                content_html LONGTEXT NULL,
+                content_text LONGTEXT NULL,
+                segment_slug VARCHAR(120) DEFAULT '',
+                locale VARCHAR(5) NOT NULL DEFAULT '',
+                status VARCHAR(30) NOT NULL DEFAULT 'draft',
+                is_public TINYINT(1) NOT NULL DEFAULT 0,
+                scheduled_at DATETIME NULL,
+                started_at DATETIME NULL,
+                sent_at DATETIME NULL,
+                recipient_count INT UNSIGNED NOT NULL DEFAULT 0,
+                sent_count INT UNSIGNED NOT NULL DEFAULT 0,
+                failed_count INT UNSIGNED NOT NULL DEFAULT 0,
+                created_by INT UNSIGNED DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                KEY idx_status (status),
+                KEY idx_template (template_id),
+                KEY idx_scheduled (status, scheduled_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Newsletter: Kampagnen'",
+
+            'newsletter_sends' => "CREATE TABLE IF NOT EXISTS {$p}newsletter_sends (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                campaign_id INT UNSIGNED NOT NULL,
+                subscriber_id INT UNSIGNED NOT NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'queued',
+                sent_at DATETIME NULL,
+                opened_at DATETIME NULL,
+                clicked_at DATETIME NULL,
+                last_error TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_campaign_subscriber (campaign_id, subscriber_id),
+                KEY idx_campaign (campaign_id, status),
+                KEY idx_subscriber (subscriber_id),
+                KEY idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Newsletter: Versand je Empfänger'",
+
+            'newsletter_settings' => "CREATE TABLE IF NOT EXISTS {$p}newsletter_settings (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(120) NOT NULL,
+                setting_value LONGTEXT NULL,
+                UNIQUE KEY uniq_setting_key (setting_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Newsletter: Einstellungen'",
 
             // v25: Suchbegriff-Statistik (SearchTermStatsService) – Rohdaten ohne IP und Benutzer, täglich zu
             // Tageswerten verdichtet; die Frist regelt die Aufbewahrungsregel `search_terms`.

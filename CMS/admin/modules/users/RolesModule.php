@@ -36,6 +36,7 @@ class RolesModule
         'forms'    => ['manage_forms', 'view_form_submissions'],
         'downloads'=> ['manage_downloads', 'upload_downloads', 'view_download_stats'],
         'knowledgebase' => ['manage_knowledgebase'],
+        'newsletter' => ['manage_newsletter'],
         'system'   => ['manage_search_index', 'manage_feeds', 'manage_admin_menu'],
     ];
 

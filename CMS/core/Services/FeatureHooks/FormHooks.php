@@ -80,6 +80,23 @@ final class FormHooks
             self::guard('DSGVO-Löschung', static fn () => FormPrivacyService::handleDelete($userId, $email));
         }, 10);
 
+        // Selbstauskunft im Mitgliederbereich: eigene Formulareingänge mitliefern.
+        Hooks::addFilter('cms_member_export_data', static function (mixed $export = [], mixed $userId = 0, mixed $email = ''): mixed {
+            if (!is_array($export)) {
+                return $export;
+            }
+            try {
+                $entries = FormPrivacyService::collect((int) $userId, is_string($email) ? $email : '');
+                if ($entries !== []) {
+                    $export['form_submissions'] = $entries;
+                }
+            } catch (\Throwable $e) {
+                \CMS\Logger::instance()->withChannel('forms')->warning('Selbstauskunft: Formulareingänge nicht ergänzt.', ['error' => $e->getMessage()]);
+            }
+
+            return $export;
+        }, 20);
+
         Hooks::addAction('cms_cron_daily', static function (): void {
             self::guard('Aufräumen der DSGVO-Exporte', static fn () => FormPrivacyService::pruneExports());
         }, 45);

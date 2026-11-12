@@ -201,7 +201,9 @@ class Router
             return;
         }
 
-        $csrfBypassPrefixes = ['/contact/'];
+        // `/newsletter/`: Anmeldung prüft ihr eigenes Token; Bestätigen/Abmelden sind über das geheime Empfänger-Token
+        // geschützt, und die One-Click-Abmeldung (RFC 8058) senden Postfachanbieter grundsätzlich ohne Token.
+        $csrfBypassPrefixes = ['/contact/', '/newsletter/'];
         $csrfBypassExact = ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/logout', '/contact', '/kontakt', '/comments/post', '/mfa-challenge', '/mfa-setup', '/mfa-disable'];
             $isThemeFavoriteToggle = $method === 'POST'
                 && (string) ($_POST['phinit_toggle_favorite'] ?? '') === '1'
