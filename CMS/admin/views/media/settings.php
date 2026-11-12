@@ -252,6 +252,10 @@ $s = is_array($settings) ? $settings : [];
                             $jobTotal = max(0, (int)($processingJob['total'] ?? 0));
                             $jobProcessed = max(0, (int)($processingJob['processed'] ?? 0));
                             ?>
+                            <div class="alert alert-info py-2 small mb-3" role="note">
+                                <?php echo htmlspecialchars((string) __('media_tools.settings_hint')); ?>
+                                <a href="/admin/media-tools#thumbnails"><?php echo htmlspecialchars((string) __('media_tools.title')); ?></a>
+                            </div>
                             <p class="text-secondary small mb-3">
                                 Bestehende Bilder werden in kleinen Server-Schritten verarbeitet (max.
                                 <?php echo (int)($constraints['processing_batch_size'] ?? 5); ?> pro Klick), damit keine langen Requests oder 500er entstehen.

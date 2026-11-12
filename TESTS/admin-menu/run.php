@@ -82,7 +82,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/media-tools.php' => 'WP4: Medien-Werkzeuge',
 ];
 
 /**
@@ -171,6 +170,7 @@ const NOT_IN_MENU = [
     'admin/ai-translate-editorjs.php' => ['endpoint', 'KI: Editor.js-Inhalte übersetzen (JSON)'],
     'admin/editorial-calendar-api.php' => ['endpoint', 'Redaktionskalender: Termine und Verschieben (JSON)'],
     'admin/content-exchange-api.php' => ['endpoint', 'Import/Export: Fortschritt von Export und Import (JSON)'],
+    'admin/media-tools-api.php' => ['endpoint', 'Medien-Werkzeuge: Vorschaubilder neu erzeugen (JSON)'],
     'admin/error-report.php' => ['endpoint', 'Fehlerbericht senden (POST)'],
     'admin/media-license-api.php' => ['endpoint', 'Medien: Urheber- und Lizenzangaben (JSON)'],
     'admin/monitor-cron-runner.php' => ['endpoint', 'Cron-Runner der Monitore'],
