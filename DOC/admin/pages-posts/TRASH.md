@@ -20,7 +20,7 @@ resolved and reported).
 | Seiten, Beiträge | Listen unter Seiten bzw. Beiträge (Filter „Papierkorb“) | Vorheriger Status wird gemerkt; Wiederherstellen löst Adress-Konflikte (neue Adresse wird gemeldet) |
 | Medien | Mediathek (Einzel- und Sammelaktion) | Datei samt Vorschaubildern wandert in den privaten Speicher `trash/media/`; Ordner werden dateiweise verschoben |
 | Hub-Sites | Hub-Sites → Aktionen | Sofort weder per Adresse noch per Domain erreichbar; beim Wiederherstellen inzwischen vergebene Domains werden entfernt und gemeldet |
-| Downloads, Formulare, Formulareingänge, Knowledgebase-Einträge | jeweilige Verwaltung | über die Inhaltstyp-Provider der Bereiche |
+| Downloads, Formulare, Formulareingänge, Knowledgebase-Einträge (Newsletter-Abonnenten werden bewusst endgültig gelöscht oder abgemeldet) | jeweilige Verwaltung | über die Inhaltstyp-Provider der Bereiche |
 
 Weitere Bereiche erscheinen automatisch, sobald sie einen Papierkorb-Provider registrieren (siehe
 [CONTENT-TYPE-PROVIDERS.md](../../core/CONTENT-TYPE-PROVIDERS.md)).
