@@ -742,7 +742,14 @@ final class PublicRouter
     private function renderEmailConfirmationPage(string $kind, string $path, int $userId, string $token): void
     {
         $locale = Services\Feed\FeedI18n::requestLocale();
-        $text = static fn (string $key): string => Services\Feed\FeedI18n::text('auth.confirm_email.' . $key, $locale);
+        // FeedI18n kennt nur die Kataloge feeds.* und newsletter.*; weicht die Sprache der Anfrage von der
+        // Systemsprache ab, kommt der Schlüssel zurück – dann gilt wie auf den übrigen Anmeldeseiten __().
+        $text = static function (string $key) use ($locale): string {
+            $fullKey = 'auth.confirm_email.' . $key;
+            $translated = Services\Feed\FeedI18n::text($fullKey, $locale);
+
+            return $translated !== $fullKey ? $translated : (string) __($fullKey);
+        };
 
         Services\CmsAuthPageService::getInstance()->render('confirm-email', [
             'confirm_email' => [
