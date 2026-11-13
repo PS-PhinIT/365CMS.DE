@@ -209,8 +209,10 @@ final class NewsletterModule
     /** CSV-Export der Abonnenten (aktuelle Filter). */
     public function streamCsv(array $query): void
     {
-        $data = $this->getSubscribersData($query);
-        $rows = $this->repo->listSubscribers($data['filters'], 0, 5000);
+        $filters = $this->getSubscribersData($query)['filters'];
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
@@ -220,12 +222,19 @@ final class NewsletterModule
         $out = fopen('php://output', 'wb');
         fwrite($out, "\xEF\xBB\xBF");
         fputcsv($out, ['email', 'first_name', 'last_name', 'status', 'segment', 'language', 'source', 'subscribed_at', 'consent_at', 'confirmed_at', 'unsubscribed_at'], ';');
-        foreach ($rows as $row) {
-            $cells = [$row['email'], $row['first_name'], $row['last_name'], $row['status'], $row['segment_slug'], $row['locale'] ?? 'de', $row['source'], $row['created_at'], $row['consent_at'] ?? '', $row['confirmed_at'] ?? '', $row['unsubscribed_at'] ?? ''];
-            // Formel-Injection in Tabellenprogrammen verhindern.
-            $cells = array_map(static fn (mixed $v): string => preg_match('/^[=+\-@\t\r]/', (string) $v) === 1 ? "'" . $v : (string) $v, $cells);
-            fputcsv($out, $cells, ';');
-        }
+        // Seitenweise lesen: listSubscribers() liefert höchstens 5.000 Zeilen je Aufruf.
+        $offset = 0;
+        do {
+            $rows = $this->repo->listSubscribers($filters, $offset, 5000);
+            foreach ($rows as $row) {
+                $cells = [$row['email'], $row['first_name'], $row['last_name'], $row['status'], $row['segment_slug'], $row['locale'] ?? 'de', $row['source'], $row['created_at'], $row['consent_at'] ?? '', $row['confirmed_at'] ?? '', $row['unsubscribed_at'] ?? ''];
+                // Formel-Injection in Tabellenprogrammen verhindern.
+                $cells = array_map(static fn (mixed $v): string => preg_match('/^[=+\-@\t\r]/', (string) $v) === 1 ? "'" . $v : (string) $v, $cells);
+                fputcsv($out, $cells, ';');
+            }
+            $offset += 5000;
+            flush();
+        } while (count($rows) === 5000);
         fclose($out);
         exit;
     }
@@ -348,6 +357,7 @@ final class NewsletterModule
         }
         $mode = ($post['import_status'] ?? '') === 'pending' ? 'pending' : 'active';
         $segmentDefault = NewsletterSettings::slug((string) ($post['segment'] ?? '')) ?: NewsletterSettings::get('default_segment');
+        $segments = NewsletterSettings::segments();
         $created = $skipped = $invalid = 0;
         $lines = preg_split('/\R/', $raw) ?: [];
         foreach (array_slice($lines, 0, 20000) as $line) {
@@ -367,11 +377,13 @@ final class NewsletterModule
                 $skipped++;
                 continue;
             }
+            // Nur definierte Themen übernehmen (wie bei der öffentlichen Anmeldung), sonst das gewählte Standardthema.
+            $segment = NewsletterSettings::slug($cols[3] ?? '');
             $result = $this->repo->saveSubscriber([
                 'email' => $email,
                 'first_name' => $cols[1] ?? '',
                 'last_name' => $cols[2] ?? '',
-                'segment_slug' => ($cols[3] ?? '') !== '' ? $cols[3] : $segmentDefault,
+                'segment_slug' => $segment !== '' && isset($segments[$segment]) ? $segment : $segmentDefault,
                 'status' => $mode,
                 'source' => 'import',
                 'consent_text' => (string) __('newsletter.admin.import_consent_note'),
@@ -405,8 +417,11 @@ final class NewsletterModule
         }
         $campaign['name'] = sprintf((string) __('newsletter.admin.copy_of'), (string) $campaign['name']);
         $result = $this->repo->saveCampaign($campaign, 0, $userId);
+        if (empty($result['success'])) {
+            return ['success' => false, 'error' => (string) ($result['error'] ?? __('newsletter.admin.error_action_failed')), '__redirect' => self::url(['section' => 'campaign', 'id' => $id])];
+        }
 
-        return ['success' => !empty($result['success']), 'message' => (string) __('newsletter.admin.campaign_duplicated'), '__redirect' => self::url(['section' => 'campaign', 'id' => (int) ($result['id'] ?? 0)])];
+        return ['success' => true, 'message' => (string) __('newsletter.admin.campaign_duplicated'), '__redirect' => self::url(['section' => 'campaign', 'id' => (int) ($result['id'] ?? 0)])];
     }
 
     /** @param array<string, mixed> $post */
@@ -453,7 +468,10 @@ final class NewsletterModule
             NewsletterDispatcher::run();
         }
 
-        return ['success' => $count > 0, 'message' => sprintf((string) __('newsletter.admin.retry_done'), $count), 'error' => $count > 0 ? null : (string) __('newsletter.admin.retry_none'), '__redirect' => self::url(['section' => 'campaign', 'id' => $id])];
+        return ($count > 0
+            ? ['success' => true, 'message' => sprintf((string) __('newsletter.admin.retry_done'), $count)]
+            : ['success' => false, 'error' => (string) __('newsletter.admin.retry_none')])
+            + ['__redirect' => self::url(['section' => 'campaign', 'id' => $id])];
     }
 
     /** @param array<string, mixed> $post */
@@ -470,12 +488,20 @@ final class NewsletterModule
     private function saveSettings(array $post): array
     {
         $tab = in_array($post['settings_tab'] ?? '', self::SETTINGS_TABS, true) ? (string) $post['settings_tab'] : 'general';
+        $redirect = ['__redirect' => self::url(['section' => 'settings', 'tab' => $tab !== 'general' ? $tab : null])];
+        // Ungültige Adressen würde save() kommentarlos leeren – dann lieber nichts speichern und es sagen.
+        $invalid = NewsletterSettings::invalidEmailKeys($post, self::TAB_KEYS[$tab]);
+        if ($invalid !== []) {
+            $labels = array_map(static fn (string $key): string => (string) __($key === 'reply_to_email' ? 'newsletter.admin.set_reply_to' : 'newsletter.admin.set_sender_email'), $invalid);
+
+            return ['success' => false, 'error' => implode(', ', $labels) . ': ' . __('newsletter.error.email_invalid')] + $redirect;
+        }
         NewsletterSettings::save($post, self::TAB_KEYS[$tab]);
         if ($tab === 'general') {
             CacheManager::instance()->delete('newsletter_dns_' . md5(NewsletterSettings::senderEmail()));
         }
 
-        return ['success' => true, 'message' => (string) __('newsletter.admin.settings_saved'), '__redirect' => self::url(['section' => 'settings', 'tab' => $tab !== 'general' ? $tab : null])];
+        return ['success' => true, 'message' => (string) __('newsletter.admin.settings_saved')] + $redirect;
     }
 
     /**

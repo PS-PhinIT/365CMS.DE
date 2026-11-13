@@ -1391,6 +1391,47 @@ class PostsModule
     }
 
     /**
+     * @param list<int> $ids
+     * @return list<int> IDs, deren Status vom Zielstatus abweicht
+     */
+    private function postIdsWithOtherStatus(array $ids, string $status): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        return array_values(array_map('intval', $this->db->get_col(
+            "SELECT id FROM {$this->prefix}posts WHERE id IN ({$placeholders}) AND NOT (status <=> ?)",
+            array_merge($ids, [$status])
+        ) ?: []));
+    }
+
+    /**
+     * Folgeaktionen eines Statuswechsels per Sammelaktion wie beim Einzelspeichern: Suchindex, Sitemaps, Feed und
+     * IndexNow hängen an cms_after_post_save, die Übersicht „Letzte Änderungen“ an der Revision.
+     *
+     * @param list<int> $ids Nur Beiträge, deren Status sich tatsächlich geändert hat
+     */
+    private function afterBulkStatusChange(array $ids, string $status, string $bulkAction): void
+    {
+        $userId = $this->currentUserId();
+        foreach ($ids as $id) {
+            try {
+                Hooks::doAction('cms_after_post_save', (int) $id, ['status' => $status, 'bulk_action' => $bulkAction], []);
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('admin.posts')->warning('Folgeaktionen nach Sammelaktion fehlgeschlagen.', [
+                    'post_id' => (int) $id,
+                    'bulk_action' => $bulkAction,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+            $this->recordPostRevision((int) $id, PostRevisionService::TYPE_MANUAL, $userId);
+        }
+    }
+
+    /**
      * Bulk-Aktion
      */
     public function bulkAction(string $action, array $ids, array $payload = []): array
@@ -1457,7 +1498,9 @@ class PostsModule
                     }
 
                     $publishPlaceholders = implode(',', array_fill(0, count($publishIds), '?'));
+                    $changedIds = $this->postIdsWithOtherStatus($publishIds, 'published');
                     $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published', published_at = COALESCE(published_at, NOW()) WHERE id IN ({$publishPlaceholders})", $publishIds);
+                    $this->afterBulkStatusChange($changedIds, 'published', 'publish');
                     $this->clearContentCacheIfEnabled('post_bulk_publish', (int) $publishIds[0]);
                     $message = count($publishIds) . ' Beitrag/Beiträge veröffentlicht.';
                     if ($skippedTitles !== []) {
@@ -1467,7 +1510,9 @@ class PostsModule
                     return ['success' => true, 'message' => $message];
 
                 case 'draft':
+                    $changedIds = $this->postIdsWithOtherStatus($ids, 'draft');
                     $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})", $ids);
+                    $this->afterBulkStatusChange($changedIds, 'draft', 'draft');
                     $this->clearContentCacheIfEnabled('post_bulk_draft', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge als Entwurf gesetzt.'];
 

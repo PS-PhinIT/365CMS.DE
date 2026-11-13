@@ -8,7 +8,7 @@
 The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/modules/media/MediaModule.php`) is a file-system based library under `CMS/uploads/` with metadata (categories, tags, alt texts) in `CMS/config/media-meta.json` and settings in `CMS/config/media-settings.json`.
 
 - Tabs: `library` (default), `featured`, `check`, `categories`, `settings`.
-- Actions: `upload`, `replace_item`, `replace_items`, `create_folder`, `rename_item`, `move_item`, `delete_item`, `bulk_items`, `assign_category`, `add_category`, `delete_category`, `save_filter_preset`, `delete_filter_preset`, `save_settings`, `start/process/cancel_media_processing_job`.
+- Actions: `upload`, `replace_item`, `replace_items`, `create_folder`, `rename_item`, `move_item`, `delete_item`, `bulk_items`, `assign_category`, `add_category`, `delete_category`, `save_settings`, `start/process/cancel_media_processing_job`.
 - Upload batch: max. 20 files and 100 MB per request, file names max. 180 characters.
 - Delivery of protected files goes through `GET /media-file?path=…` (`MediaDeliveryService`).
 
@@ -25,14 +25,13 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 | Nutzung | `CMS/core/Services/MediaUsageService.php` | Wo wird eine Datei verwendet (Beitragsbilder, Inhalte) |
 | Auslieferung | `CMS/core/Services/MediaDeliveryService.php` → `GET /media-file` | Geschützte Dateien, Member-Uploads |
 | Upload-API | `ApiRouter`: `POST /api/upload`, `GET\|POST /api/media` | Editor- und Plugin-Uploads |
-| Metadaten | `CMS/config/media-meta.json` | Kategorien, Tags, Alt-Texte, Filter-Presets. Schreibzugriffe laufen über `MediaRepository::updateMeta()` unter einer Dateisperre (`media-meta.json.lock`), damit sich parallele Uploads, Papierkorb und Import nicht gegenseitig überschreiben. Je Datei: `getFileMeta()`, `setFileMeta()` (ersetzen/entfernen), `mergeFileMeta()` (einzelne Felder). |
+| Metadaten | `CMS/config/media-meta.json` | Kategorien, Tags, Alt-Texte. Schreibzugriffe laufen über `MediaRepository::updateMeta()` unter einer Dateisperre (`media-meta.json.lock`), damit sich parallele Uploads, Papierkorb und Import nicht gegenseitig überschreiben. Je Datei: `getFileMeta()`, `setFileMeta()` (ersetzen/entfernen), `mergeFileMeta()` (einzelne Felder). |
 | Einstellungen | `CMS/config/media-settings.json` | siehe Tab „Einstellungen“ |
 
 ### Tab „Bibliothek“ (`library`)
 
 - **Navigation:** Ordnerbaum über `?path=`; Ansicht `?view=list|grid`.
 - **Filter:** Suche `q` (max. 120 Zeichen), `file_type` (`image`, `document`, `video`, `audio`, `archive`, `other`), `extension`, `size_filter` (`tiny` … `huge`), `modified_filter` (`today`, `7d`, `30d`, `year`), `usage_filter` (`used`, `unused`), `category`, `orphan_days` (0/30/90/180/365 Tage ungenutzt).
-- **Filter-Presets:** Bis zu 8 benannte Filterkombinationen speichern (`save_filter_preset`, Name max. 60 Zeichen).
 - **Ordner `member/`:** enthält Uploads von Mitgliedern. Das Öffnen verlangt eine Bestätigung (`confirm_member=1`).
 - **Einzelaktionen:** Upload, Ersetzen (gleicher Dateiname, Verweise bleiben gültig), Umbenennen, Verschieben, Löschen, Kategorie zuweisen.
 - **Sammelaktionen (`bulk_items`):** `delete`, `move`, `assign_category`, `tag_add`, `tag_replace`, `tag_remove`, `tag_clear` (max. 20 Tags à 40 Zeichen), `alt_text_update` (max. 255 Zeichen je Datei).

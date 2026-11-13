@@ -41,6 +41,9 @@ final class TrashService
     /** Höchstzahl endgültiger Löschungen je Provider und Cron-Lauf (der nächste Lauf setzt fort). */
     public const PURGE_BATCH_LIMIT = 200;
 
+    /** Höchstzahl Lesedurchgänge je Provider und Lauf – begrenzt die Laufzeit, wenn viele Einträge mit Warnungen vorn stehen. */
+    private const PURGE_MAX_PASSES = 10;
+
     /** Höchstzahl endgültiger Löschungen je Anfrage beim Leeren eines Typs. */
     public const EMPTY_BATCH_LIMIT = 500;
 
@@ -265,6 +268,57 @@ final class TrashService
     }
 
     /**
+     * Löscht die abgelaufenen Einträge eines Typs. expiredIds() liefert immer die ältesten zuerst und kennt
+     * keinen Versatz: Übersprungene (Warnung) und fehlgeschlagene Einträge bleiben vorn stehen. Damit sie die
+     * dahinterliegenden nicht dauerhaft blockieren, liest jeder Durchgang um deren Anzahl weiter.
+     *
+     * @return array{deleted:int,skipped:int,failed:int}
+     */
+    private function purgeProvider(string $type, TrashProvider $provider, \DateTimeImmutable $threshold): array
+    {
+        $typeReport = ['deleted' => 0, 'skipped' => 0, 'failed' => 0];
+        $kept = [];
+
+        for ($pass = 0; $pass < self::PURGE_MAX_PASSES && $typeReport['deleted'] < self::PURGE_BATCH_LIMIT; $pass++) {
+            $limit = self::PURGE_BATCH_LIMIT + count($kept);
+
+            try {
+                $ids = array_map('intval', $provider->expiredIds($threshold, $limit));
+            } catch (\Throwable $e) {
+                $this->logFailure('expired_ids', $type, $e);
+                $typeReport['failed']++;
+                break;
+            }
+
+            $fresh = array_values(array_filter(array_unique($ids), static fn (int $id): bool => !isset($kept[$id])));
+            if ($fresh === []) {
+                break;
+            }
+
+            foreach ($fresh as $id) {
+                if ($typeReport['deleted'] >= self::PURGE_BATCH_LIMIT) {
+                    break;
+                }
+
+                $result = $this->safely(static fn (): TrashResult => $provider->deletePermanently($id, 0, false));
+                if ($result->ok) {
+                    $typeReport['deleted']++;
+                    continue;
+                }
+
+                $kept[$id] = true;
+                $typeReport[$result->code === TrashResult::CODE_CONFIRMATION_REQUIRED ? 'skipped' : 'failed']++;
+            }
+
+            if (count($ids) < $limit) {
+                break;
+            }
+        }
+
+        return $typeReport;
+    }
+
+    /**
      * Automatisches Leeren (täglicher Cron über die Aufbewahrungsregel `trash`). Einträge mit Warnungen
      * (z. B. noch verwendete Medien, zugeordnete Rechtstexte) bleiben stehen.
      *
@@ -279,26 +333,7 @@ final class TrashService
         }
 
         foreach ($this->providers() as $type => $provider) {
-            $typeReport = ['deleted' => 0, 'skipped' => 0, 'failed' => 0];
-
-            try {
-                $ids = $provider->expiredIds($threshold, self::PURGE_BATCH_LIMIT);
-            } catch (\Throwable $e) {
-                $this->logFailure('expired_ids', $type, $e);
-                $typeReport['failed']++;
-                $ids = [];
-            }
-
-            foreach ($ids as $id) {
-                $result = $this->safely(static fn (): TrashResult => $provider->deletePermanently((int) $id, 0, false));
-                if ($result->ok) {
-                    $typeReport['deleted']++;
-                } elseif ($result->code === TrashResult::CODE_CONFIRMATION_REQUIRED) {
-                    $typeReport['skipped']++;
-                } else {
-                    $typeReport['failed']++;
-                }
-            }
+            $typeReport = $this->purgeProvider((string) $type, $provider, $threshold);
 
             if (array_sum($typeReport) > 0) {
                 $report['types'][$type] = $typeReport;

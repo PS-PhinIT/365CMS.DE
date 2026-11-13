@@ -42,6 +42,20 @@ final class Registry
 
     private static bool $registered = false;
 
+    /**
+     * Markup eines Eintrags für den Hook `main_nav` – wie die Menüeinträge des Themes cms-default
+     * (Desktop: reines `<a>`, Mobil: `mobile-nav-link`; aktiv mit `active` und `aria-current`).
+     */
+    public static function navItem(string $href, string $label, bool $active = false, string $context = 'desktop'): string
+    {
+        $classes = trim(($context === 'mobile' ? 'mobile-nav-link ' : '') . ($active ? 'active' : ''));
+
+        return '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '"'
+            . ($classes !== '' ? ' class="' . $classes . '"' : '')
+            . ($active ? ' aria-current="page"' : '') . '>'
+            . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+    }
+
     public static function register(): void
     {
         if (self::$registered) {

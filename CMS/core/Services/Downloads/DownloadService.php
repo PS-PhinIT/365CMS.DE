@@ -300,7 +300,7 @@ final class DownloadService
      * Legt aus einer hochgeladenen Datei einen vollständigen Download (inkl. Version 1) an.
      *
      * @param array<string,mixed> $file   Eintrag aus $_FILES
-     * @param array<string,mixed> $input  optionale Felder (title, summary, category_id, access_level, version, status)
+     * @param array<string,mixed> $input  optionale Felder (title, summary, category_id, access_level, version, status, properties)
      * @return array{success:bool,id?:int,error?:string}
      */
     public function createFromUpload(array $file, array $input, int $userId): array
@@ -329,6 +329,9 @@ final class DownloadService
             'access_plans' => $input['access_plans'] ?? [],
             'status' => in_array($status, DownloadSettings::UPLOAD_STATUSES, true) ? $status : $this->settings()->string('upload_status'),
         ];
+        if (is_array($input['properties'] ?? null)) {
+            $itemInput['properties'] = $input['properties'];
+        }
 
         $result = $this->save($itemInput, 0, $userId);
         if (!$result['success']) {

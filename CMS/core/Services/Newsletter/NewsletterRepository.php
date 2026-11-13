@@ -196,8 +196,10 @@ final class NewsletterRepository
         if (array_key_exists('user_id', $input)) {
             $values['user_id'] = (int) $input['user_id'] > 0 ? (int) $input['user_id'] : null;
         }
-        if (is_string($input['consent_text'] ?? null) && $input['consent_text'] !== '') {
-            $values['consent_text'] = self::text($input['consent_text'], 500);
+        // Nur ein geänderter Text ist eine neue Einwilligung – Aufrufer reichen oft die ganze gespeicherte Zeile durch.
+        $consent = is_string($input['consent_text'] ?? null) ? self::text($input['consent_text'], 500) : '';
+        if ($consent !== '' && ($existing === null || $consent !== (string) ($existing['consent_text'] ?? ''))) {
+            $values['consent_text'] = $consent;
             $values['consent_at'] = $now;
         }
 
@@ -247,11 +249,12 @@ final class NewsletterRepository
             return ['success' => true, 'id' => (int) $existing['id'], 'send_confirmation' => false];
         }
 
-        if ($existing !== null && $existing['status'] === 'pending') {
+        // Ohne Double-Opt-In wird ein unbestätigter Eintrag unten wie eine Neuanmeldung aktiviert.
+        if ($doubleOptIn && $existing !== null && $existing['status'] === 'pending') {
             // Bestätigungsmail höchstens alle 10 Minuten erneut senden (Schutz vor Mail-Bombing).
             $last = strtotime((string) ($existing['optin_sent_at'] ?? '')) ?: 0;
 
-            return ['success' => true, 'id' => (int) $existing['id'], 'send_confirmation' => $doubleOptIn && time() - $last > 600];
+            return ['success' => true, 'id' => (int) $existing['id'], 'send_confirmation' => time() - $last > 600];
         }
 
         $status = $doubleOptIn ? 'pending' : 'active';
@@ -273,7 +276,7 @@ final class NewsletterRepository
         }
 
         if ($existing !== null) {
-            // Früher abgemeldet/unzustellbar: neue Einwilligung, neues Token.
+            // Früher abgemeldet/unzustellbar oder unbestätigt: neue Einwilligung, neues Token.
             $values['optin_token'] = self::newToken();
             $sets = implode(', ', array_map(static fn (string $c): string => "{$c} = ?", array_keys($values)));
             $this->db->execute("UPDATE {$this->p}newsletter_subscribers SET {$sets} WHERE id = ?", [...array_values($values), (int) $existing['id']]);
@@ -487,6 +490,13 @@ final class NewsletterRepository
 
     public function deleteTemplate(int $id): bool
     {
+        // Kampagnen ohne eigenen Inhalt beziehen ihn aus der Vorlage – vor dem Löschen in die Kampagne übernehmen.
+        $this->db->execute(
+            "UPDATE {$this->p}newsletter_campaigns c JOIN {$this->p}newsletter_templates t ON t.id = c.template_id
+             SET c.content_html = t.content_html, c.content_text = t.content_text
+             WHERE c.template_id = ? AND TRIM(COALESCE(c.content_html, '')) = '' AND TRIM(COALESCE(c.content_text, '')) = ''",
+            [$id]
+        );
         $this->db->execute("UPDATE {$this->p}newsletter_campaigns SET template_id = NULL WHERE template_id = ?", [$id]);
 
         return $this->db->execute("DELETE FROM {$this->p}newsletter_templates WHERE id = ?", [$id])->rowCount() > 0;
@@ -547,8 +557,8 @@ final class NewsletterRepository
         if ($id > 0 && $existing === null) {
             return ['success' => false, 'error' => (string) __('newsletter.error.campaign_not_found')];
         }
-        if ($existing !== null && in_array($existing['status'], ['sending', 'sent'], true)) {
-            // Versendete Ausgaben bleiben unverändert; nur die Sichtbarkeit im Archiv lässt sich ändern.
+        if ($existing !== null && in_array($existing['status'], ['sending', 'sent', 'cancelled'], true)) {
+            // Versendete und gestoppte Ausgaben bleiben unverändert; nur die Sichtbarkeit im Archiv lässt sich ändern.
             $this->db->execute("UPDATE {$this->p}newsletter_campaigns SET is_public = ? WHERE id = ?", [!empty($input['is_public']) ? 1 : 0, $id]);
 
             return ['success' => true, 'id' => $id];

@@ -104,9 +104,8 @@ final class ContentExchangeService
             $total += $counts[$type];
         }
         $token = bin2hex(random_bytes(12));
-        $this->workDir($token);
 
-        return BatchJobService::getInstance()->start(self::JOB_EXPORT, '', max(1, $total), [
+        $started = BatchJobService::getInstance()->start(self::JOB_EXPORT, '', max(1, $total), [
             'token' => $token,
             'types' => array_keys($providers),
             'index' => 0,
@@ -116,11 +115,29 @@ final class ContentExchangeService
             'filter' => $filter->toArray(),
             'file' => '',
         ], $userId > 0 ? $userId : null);
+        // Läuft bereits ein Export, wird dieser fortgesetzt – dann kein leeres Arbeitsverzeichnis hinterlassen.
+        if (!$started['resumed']) {
+            $this->workDir($token);
+        }
+
+        return $started;
     }
 
     /** @return array<string, mixed> */
     public function stepExport(int $jobId): array
     {
+        // Wurde das Arbeitsverzeichnis eines begonnenen Exports entfernt, fehlen die bisherigen Datensätze:
+        // Auftrag beenden statt ein unvollständiges Archiv mit vollem Manifest zu bauen.
+        $job = BatchJobService::getInstance()->find($jobId);
+        if ($job !== null && in_array($job['status'], [BatchJobService::STATUS_PENDING, BatchJobService::STATUS_RUNNING], true)) {
+            $state = (array) $job['state'];
+            if (self::exportHasProgress($state) && !is_dir($this->workDir((string) ($state['token'] ?? ''), false) . 'data')) {
+                BatchJobService::getInstance()->cancel($jobId);
+
+                throw new \InvalidArgumentException((string) __('exchange.error.workdir_missing'));
+            }
+        }
+
         return BatchJobService::getInstance()->step($jobId, function (array $job): array {
             $state = $job['state'];
             $types = (array) $state['types'];
@@ -408,8 +425,16 @@ final class ContentExchangeService
         $removed = 0;
         $limit = time() - self::KEEP_HOURS * 3600;
         $base = PrivateStorageService::getInstance()->path(self::AREA);
+        // Verzeichnisse aktiver Aufträge bleiben: Ein später fortgesetzter Auftrag braucht seine bisherigen Daten.
+        $jobs = BatchJobService::getInstance();
+        $activeExport = $jobs->findActive(self::JOB_EXPORT);
+        $activeExportToken = (string) ($activeExport['state']['token'] ?? '');
         foreach (['work', 'import'] as $folder) {
             foreach (glob($base . $folder . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR) ?: [] as $dir) {
+                $token = basename($dir);
+                if ($folder === 'work' ? ($activeExportToken !== '' && $token === $activeExportToken) : $jobs->findActive(self::JOB_IMPORT, $token) !== null) {
+                    continue;
+                }
                 if (filemtime($dir) < $limit) {
                     $this->removeDir($dir . DIRECTORY_SEPARATOR);
                     $removed++;
@@ -493,7 +518,12 @@ final class ContentExchangeService
      */
     private function buildArchive(string $token, array $state, int $userId): string
     {
-        $dir = $this->workDir($token);
+        $dir = $this->workDir($token, false);
+        foreach ((array) $state['counts'] as $type => $count) {
+            if ((int) $count > 0 && !is_file($dir . 'data' . DIRECTORY_SEPARATOR . $type . '.jsonl')) {
+                throw new \RuntimeException('Exportdaten unvollständig: ' . $type);
+            }
+        }
         $files = [];
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
         foreach ($iterator as $item) {
@@ -693,8 +723,24 @@ final class ContentExchangeService
         return ['done' => true, 'state' => $state, 'message' => mb_substr(implode(' · ', $summary), 0, 250)];
     }
 
-    private function workDir(string $token): string
+    /**
+     * true, sobald ein Export bereits Datensätze geschrieben hat (oder nur noch der Abschluss fehlt).
+     *
+     * @param array<string, mixed> $state
+     */
+    public static function exportHasProgress(array $state): bool
     {
+        return (int) ($state['index'] ?? 0) > 0 || (int) ($state['cursor'] ?? 0) > 0;
+    }
+
+    private function workDir(string $token, bool $create = true): string
+    {
+        if (!$create) {
+            $token = preg_replace('/[^a-f0-9]/', '', $token) ?? '';
+
+            return PrivateStorageService::getInstance()->root() . self::AREA . DIRECTORY_SEPARATOR . 'work' . DIRECTORY_SEPARATOR . $token . DIRECTORY_SEPARATOR;
+        }
+
         $dir = PrivateStorageService::getInstance()->path(self::AREA . '/work/' . $token);
         if (!is_dir($dir . 'data')) {
             mkdir($dir . 'data', 0700, true);

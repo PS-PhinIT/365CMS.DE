@@ -103,9 +103,18 @@ final class ThemeRouter
         $this->registerArchiveRoutes('tag', [$this, 'renderTagArchive'], [$this, 'renderTagArchiveIndex']);
         $this->router->addRoute('GET', '/site-table/export/:id/:format', [$this, 'streamSiteTableExport']);
         $this->router->addRoute('GET', '/blog', [$this, 'renderBlogIndex']);
-        $this->router->addRoute('GET', $currentPostRoutePattern, [$this, 'renderBlogSingle']);
-        if ($currentPostRoutePattern !== Services\PermalinkService::LEGACY_POST_ROUTE_PATTERN) {
-            $this->router->addRoute('GET', Services\PermalinkService::LEGACY_POST_ROUTE_PATTERN, [$this, 'renderLegacyBlogSingle']);
+        // Beitragsmuster erst nach den Routen der Funktionsbereiche und Plugins (`register_routes`) eintragen:
+        // Muster wie /:year/:slug fingen sonst /download/<slug>, /kb/<slug> oder /feed/<bereich> ab (erster Treffer gewinnt).
+        $registerPostRoutes = function () use ($currentPostRoutePattern): void {
+            $this->router->addRoute('GET', $currentPostRoutePattern, [$this, 'renderBlogSingle']);
+            if ($currentPostRoutePattern !== Services\PermalinkService::LEGACY_POST_ROUTE_PATTERN) {
+                $this->router->addRoute('GET', Services\PermalinkService::LEGACY_POST_ROUTE_PATTERN, [$this, 'renderLegacyBlogSingle']);
+            }
+        };
+        if (\CMS\Hooks::didAction('register_routes') > 0) {
+            $registerPostRoutes();
+        } else {
+            \CMS\Hooks::addAction('register_routes', $registerPostRoutes, PHP_INT_MAX);
         }
         $this->router->addRoute('GET', '/feed', [$this, 'serveRssFeed']);
         $this->router->addRoute('GET', '/sitemap.xml', [$this, 'serveSitemap']);

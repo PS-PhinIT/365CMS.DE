@@ -181,6 +181,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
                 <?php echo htmlspecialchars($label); ?>
             </a>
         <?php endif; endforeach; ?>
+        <?php if (class_exists('\CMS\Hooks')) { \CMS\Hooks::doAction('main_nav', 'desktop'); } ?>
 
         <div class="nav-spacer"></div>
     </nav>
@@ -312,6 +313,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
     </a>
     <?php endforeach; ?>
     <?php endforeach; ?>
+    <?php if (class_exists('\CMS\Hooks')) { \CMS\Hooks::doAction('main_nav', 'mobile'); } ?>
 
     <div style="height:1px;background:var(--rule);margin:.5rem 1.25rem;"></div>
 

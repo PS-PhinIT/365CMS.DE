@@ -258,8 +258,16 @@ class FormsModule
                     return ['success' => false, 'error' => __('forms.admin.error_save'), '__redirect' => $listUrl];
                 }
                 $this->audit('forms.trash', 'Formular in den Papierkorb verschoben', $id, ['title' => $title], 'warning');
+                // Zuordnung bleibt stehen, damit Wiederherstellen sie von selbst zurückbringt.
+                $wasContact = FormSettings::string('contact_form_key', FormService::CONTACT_FORM_KEY) === (string) $form['form_key'];
 
-                return ['success' => true, 'message' => sprintf(__('forms.admin.trashed'), $title), '__redirect' => $listUrl];
+                return [
+                    'success' => true,
+                    'type' => $wasContact ? 'warning' : 'success',
+                    'message' => sprintf(__('forms.admin.trashed'), $title),
+                    'details' => $wasContact ? [__('forms.admin.trashed_was_contact')] : [],
+                    '__redirect' => $listUrl,
+                ];
 
             case 'restore':
                 if (!$this->forms->restore($id)) {
@@ -362,6 +370,18 @@ class FormsModule
 
         $warnings = $this->saveWarnings($saved ?? $form);
 
+        $oldKey = (string) $form['form_key'];
+        $newKey = (string) ($saved['form_key'] ?? $oldKey);
+        if ($newKey !== $oldKey) {
+            // Die Kontaktformular-Zuordnung speichert den Schlüssel und würde sonst still auf das eingebaute Formular zurückfallen.
+            if (FormSettings::string('contact_form_key', FormService::CONTACT_FORM_KEY) === $oldKey) {
+                \CMS\Services\SettingsService::getInstance()->setMany(FormSettings::GROUP, ['contact_form_key' => $newKey]);
+                FormSettings::flush();
+            }
+            $this->audit('forms.key_changed', 'Formularschlüssel geändert', $id, ['old' => $oldKey, 'new' => $newKey], 'warning');
+            $warnings[] = sprintf(__('forms.admin.warning_key_changed'), $oldKey);
+        }
+
         return [
             'success' => true,
             'type' => $warnings !== [] ? 'warning' : 'success',
@@ -390,6 +410,9 @@ class FormsModule
         }
         if (empty($settings['notify']) && empty($settings['store_submissions'])) {
             $warnings[] = __('forms.admin.warning_no_delivery');
+        }
+        if (empty($settings['store_submissions']) && array_filter($form['fields'], static fn (array $field): bool => ($field['type'] ?? '') === 'file') !== []) {
+            $warnings[] = __('forms.admin.warning_files_not_stored');
         }
         if (!empty($settings['confirmation']['enabled']) && FormFieldTypes::fieldByRole($form['fields'], 'email') === null) {
             $warnings[] = __('forms.admin.warning_confirmation_email');

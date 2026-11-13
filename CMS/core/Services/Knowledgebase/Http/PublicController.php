@@ -54,16 +54,10 @@ final class PublicController
 
         $publicLang = $this->resolvePublicLanguage();
         $currentPath = $this->resolvePublicPathWithoutLanguage();
-        $active = (str_starts_with($currentPath, '/kb') || $currentPath === '/glossar') ? 'active' : '';
-        $label = htmlspecialchars($this->resolvePublicI18nText($settings, 'nav_label', $publicLang, 'Knowledgebase', 'Knowledgebase'), ENT_QUOTES, 'UTF-8');
-        $href = htmlspecialchars($this->publicUrl('kb', $publicLang), ENT_QUOTES, 'UTF-8');
+        $active = preg_match('#^/kb(?:/|$)#', $currentPath) === 1 || $currentPath === '/glossar';
+        $label = $this->resolvePublicI18nText($settings, 'nav_label', $publicLang, 'Knowledgebase', 'Knowledgebase');
 
-        if ($context === 'mobile') {
-            echo '<a href="' . $href . '" class="mobile-menu__kb-link">' . $label . '</a>';
-            return;
-        }
-
-        echo '<a href="' . $href . '" class="main-nav__link ' . htmlspecialchars($active, ENT_QUOTES, 'UTF-8') . '">' . $label . '</a>';
+        echo \CMS\Services\FeatureHooks\Registry::navItem($this->publicUrl('kb', $publicLang), $label, $active, $context);
     }
 
     public function archivePage(): void

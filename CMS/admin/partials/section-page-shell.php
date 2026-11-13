@@ -33,6 +33,20 @@ function cms_admin_section_shell_flash(string $sessionKey, array $payload): void
     ];
 }
 
+/**
+ * Meldungstext eines Aktionsergebnisses. Bei einem Fehlschlag hat `error` Vorrang – sonst erschiene ein
+ * mitgelieferter Erfolgstext (`message`) als rote Fehlermeldung.
+ */
+function cms_admin_section_shell_result_message(mixed $result, string $fallback): string
+{
+    $result = is_array($result) ? $result : [];
+    if (empty($result['success']) && is_scalar($result['error'] ?? null) && trim((string) $result['error']) !== '') {
+        return (string) $result['error'];
+    }
+
+    return (string) ($result['message'] ?? $result['error'] ?? $fallback);
+}
+
 function cms_admin_section_shell_pull_flash(string $sessionKey): ?array
 {
     $alert = $_SESSION[$sessionKey] ?? null;
@@ -401,7 +415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result['type'] ?? (!empty($result['success']) ? 'success' : 'danger'),
                 !empty($result['success']) ? 'success' : 'danger'
             ),
-            'message' => (string) ($result['message'] ?? $result['error'] ?? $unknownActionMessage),
+            'message' => cms_admin_section_shell_result_message($result, $unknownActionMessage),
             'details' => is_array($result['details'] ?? null) ? $result['details'] : [],
             'error_details' => is_array($result['error_details'] ?? null) ? $result['error_details'] : [],
             'report_payload' => is_array($result['report_payload'] ?? null) ? $result['report_payload'] : [],
@@ -417,7 +431,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result['type'] ?? (!empty($result['success']) ? 'success' : 'danger'),
                 !empty($result['success']) ? 'success' : 'danger'
             ),
-            'message' => $result['message'] ?? $result['error'] ?? $unknownActionMessage,
+            'message' => cms_admin_section_shell_result_message($result, $unknownActionMessage),
             'details' => $result['details'] ?? [],
             'error_details' => $result['error_details'] ?? [],
             'report_payload' => $result['report_payload'] ?? [],

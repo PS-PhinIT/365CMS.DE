@@ -151,6 +151,25 @@ final class FormUploadService
     }
 
     /**
+     * Anzahl der geprüften Dateien über alle Datei-Felder (Soll für `storeAll()`).
+     *
+     * @param list<array<string, mixed>> $fields
+     * @param array<string, mixed> $values
+     */
+    public static function countFiles(array $fields, array $values): int
+    {
+        $count = 0;
+        foreach ($fields as $field) {
+            if (($field['type'] ?? '') !== 'file') {
+                continue;
+            }
+            $count += count(is_array($values[$field['name'] ?? ''] ?? null) ? $values[$field['name']] : []);
+        }
+
+        return $count;
+    }
+
+    /**
      * Legt alle Dateien eines Eingangs ab und speichert die Zuordnung.
      *
      * @param list<array<string, mixed>> $fields

@@ -74,7 +74,12 @@ final class ContactPluginMigrator implements PluginMigrator
         }
 
         $state = $this->state();
-        $this->report = ['forms' => (int) ($state['forms'] ?? 0), 'submissions' => (int) ($state['submissions'] ?? 0)];
+        $this->report = [
+            'forms' => (int) ($state['forms'] ?? 0),
+            'submissions' => (int) ($state['submissions'] ?? 0),
+            'forms_failed' => (int) ($state['forms_failed'] ?? 0),
+            'submissions_skipped' => (int) ($state['submissions_skipped'] ?? 0),
+        ];
         $pluginSettings = $this->pluginSettings();
 
         if (empty($state['settings_done'])) {
@@ -87,6 +92,7 @@ final class ContactPluginMigrator implements PluginMigrator
             $this->migrateForms($pluginSettings);
             $state['forms_done'] = true;
             $state['forms'] = $this->report['forms'];
+            $state['forms_failed'] = $this->report['forms_failed'];
             $this->saveState($state);
         }
 
@@ -94,6 +100,7 @@ final class ContactPluginMigrator implements PluginMigrator
             $cursor = (int) ($state['submission_cursor'] ?? 0);
             $next = $this->migrateSubmissions($cursor);
             $state['submissions'] = $this->report['submissions'];
+            $state['submissions_skipped'] = $this->report['submissions_skipped'];
             if ($next === null) {
                 $state['submissions_done'] = true;
             } else {
@@ -225,6 +232,7 @@ final class ContactPluginMigrator implements PluginMigrator
             if (!empty($result['success'])) {
                 $this->report['forms']++;
             } else {
+                $this->report['forms_failed']++;
                 Logger::instance()->withChannel('plugins.integration')->warning('cms-contact: Formular konnte nicht übernommen werden.', ['legacy_id' => $legacyId]);
             }
         }
@@ -335,6 +343,8 @@ final class ContactPluginMigrator implements PluginMigrator
             $formLegacyId = (int) $row->form_id;
             $form = $formCache[$formLegacyId] ??= $forms->findByLegacyId($formLegacyId);
             if ($form === null) {
+                // Formular wurde nicht übernommen: Eingang zählen, damit die Lücke im Bericht sichtbar ist.
+                $this->report['submissions_skipped']++;
                 continue;
             }
 

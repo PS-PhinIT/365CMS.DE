@@ -1,9 +1,9 @@
 <?php
 /**
- * Darstellung der Downloads: Editor.js-Block „download“, drei Templates als Partials, URL-Helfer,
+ * Darstellung der Downloads: Editor.js-Block „download“, vier Templates als Partials, URL-Helfer,
  * Frontend-Assets und signierter Quellseiten-Parameter.
  *
- * Partials: `CMS/views/partials/download/{compact,card,featured}.php`, im Theme überschreibbar unter
+ * Partials: `CMS/views/partials/download/{compact,card,featured,button}.php`, im Theme überschreibbar unter
  * `themes/<slug>/partials/download/<template>.php`. Jedes Partial erhält `$downloads` (Liste von
  * View-Modellen, siehe viewModel()), `$download` (erstes Element), `$options` (Blockoptionen),
  * `$template` und `$mode` (`frontend`, `preview` oder `page`).
@@ -486,6 +486,7 @@ final class DownloadRenderer
             'archive' => '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M10 5h1M10 8h1M10 11h1M10 14h1v2h-1z"/>',
             'link' => '<path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/>',
             'image' => '<path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/>',
+            'download' => '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/>',
             'audio' => '<path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M9 17v-13h10v13"/><path d="M9 8h10"/>',
             'video' => '<path d="M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4z"/><path d="M3 6m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"/>',
             default => '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 13h6M9 17h6"/>',

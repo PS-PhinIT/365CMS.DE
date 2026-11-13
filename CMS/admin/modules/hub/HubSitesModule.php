@@ -162,6 +162,7 @@ class HubSitesModule
         return [
             'site' => $site,
             'isNew' => $site === null,
+            'trashed' => trim((string) ($site['trashed_at'] ?? '')) !== '',
             'defaults' => self::DEFAULT_SETTINGS,
             'templateOptions' => $this->templateProfileManager->getChoices(),
             'templateProfiles' => $this->templateProfileManager->getProfiles(),
@@ -182,6 +183,10 @@ class HubSitesModule
     public function save(array $post): array
     {
         $id = (int)($post['id'] ?? 0);
+        if ($this->isHubTrashed($id)) {
+            return ['success' => false, 'error' => \CMS\Services\Trash\TrashSupport::t('trash.edit.blocked')];
+        }
+
         $name = $this->sanitizePlainText((string)($post['site_name'] ?? ''), 160);
         $description = $this->sanitizeRichText((string)($post['description'] ?? ''), 4000);
         $cards = \CMS\Json::decodeArray($post['cards_json'] ?? null, []);
@@ -390,6 +395,20 @@ class HubSitesModule
         }
     }
 
+    /**
+     * Einträge im Papierkorb sind nicht bearbeitbar (wie bei Beiträgen und Seiten).
+     */
+    private function isHubTrashed(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $trash = \CMS\Services\ContentTypes\ContentTypeRegistry::getInstance()->trashProvider(\CMS\Services\Trash\HubSiteTrashProvider::TYPE);
+
+        return $trash instanceof \CMS\Services\Trash\HubSiteTrashProvider && $trash->isTrashed($id);
+    }
+
     public function delete(int $id): array
     {
         if ($id <= 0) {
@@ -420,6 +439,10 @@ class HubSitesModule
     {
         if ($id <= 0) {
             return ['success' => false, 'error' => 'Ungültige Hub-Site-ID.'];
+        }
+
+        if ($this->isHubTrashed($id)) {
+            return ['success' => false, 'error' => \CMS\Services\Trash\TrashSupport::t('trash.edit.blocked')];
         }
 
         $source = $this->db->get_row(

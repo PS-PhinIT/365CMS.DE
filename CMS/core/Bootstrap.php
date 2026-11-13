@@ -940,14 +940,27 @@ class Bootstrap
                 }
             }, 95);
         }
+        // Tagesaufgaben einzeln absichern: Hooks::doAction() fängt nichts ab, ein Fehler (z. B. Webroot nicht
+        // beschreibbar) würde sonst alle späteren Aufgaben – Löschfristen, Papierkorb, Statistik – dauerhaft blockieren.
         Hooks::addAction('cms_cron_daily', static function (): void {
-            if (!Services\SEOService::getInstance()->saveSitemapBundle()) {
-                throw new \RuntimeException('SEO-Sitemap-Bundle konnte nicht aktualisiert werden.');
+            try {
+                $seo = Services\SEOService::getInstance();
+                if (!$seo->saveSitemapBundle()) {
+                    Logger::instance()->withChannel('cron')->warning('SEO-Sitemap-Bundle konnte nicht aktualisiert werden.', [
+                        'error' => (string) ($seo->getLastSitemapError() ?? ''),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('cron')->warning('SEO-Sitemap-Bundle konnte nicht aktualisiert werden.', ['exception' => $e->getMessage()]);
             }
         }, 20);
         // Aufbewahrungsfristen für Besucher-/Telemetriedaten, 404-Monitor und Tages-Logdateien.
         Hooks::addAction('cms_cron_daily', static function (): void {
-            Services\DataRetentionService::getInstance()->run();
+            try {
+                Services\DataRetentionService::getInstance()->run();
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('cron')->warning('Datenaufbewahrung im Tageslauf fehlgeschlagen.', ['exception' => $e->getMessage()]);
+            }
         }, 40);
 
         // Warmup erst nach der Antwort: opcache_compile_file() darf weder bereits geladene noch im

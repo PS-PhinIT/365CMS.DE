@@ -4,7 +4,7 @@
  *
  * - Routen: kontrollierte Auslieferung `/download/<slug>[/<version>]`, Archiv und Einzelseiten unter `/downloads`,
  *   frühere Plugin-URL `/downloads/file/<slug>` (301),
- * - Editor.js-Block „Download“ (Tool-Skript, Sanitizer, Renderer mit drei Templates),
+ * - Editor.js-Block „Download“ (Tool-Skript, Sanitizer, Renderer mit vier Templates),
  * - „Verwendet in“-Index über die Inhalts-Hooks und Prüfpunkt der Veröffentlichungs-Checkliste,
  * - signierter Quellseiten-Parameter an Download-Links aus Blöcken (Filter `content_render`),
  * - Frontend-Assets nur auf Seiten mit Download-Markup,
@@ -52,7 +52,7 @@ final class DownloadHooks
         EditorJsBlockRegistry::register(
             DownloadRenderer::BLOCK_TYPE,
             'Download',
-            // Das Tool-Skript folgt mit der Downloads-Verwaltung; bis dahin rendert der Block nur vorhandene Inhalte.
+            // Fehlt das Tool-Skript (unvollständiges Deployment), rendert der Block weiter vorhandene Inhalte.
             is_file(ABSPATH . 'assets/' . self::BLOCK_SCRIPT) ? self::BLOCK_SCRIPT : '',
             [DownloadRenderer::class, 'sanitizeBlock'],
             static fn (array $data, array $tunes = [], array $context = []): string => DownloadRenderer::getInstance()->renderBlock($data, $tunes, $context)
@@ -129,7 +129,7 @@ final class DownloadHooks
     }
 
     /** Optionaler Menüpunkt „Downloads“ in der Hauptnavigation (Einstellung `show_nav_link`). */
-    public static function renderNavItem(): void
+    public static function renderNavItem(mixed $context = 'desktop'): void
     {
         try {
             $settings = DownloadSettings::getInstance();
@@ -140,9 +140,7 @@ final class DownloadHooks
             $label = $lang === 'en' && $settings->string('nav_label_en') !== '' ? $settings->string('nav_label_en') : $settings->string('nav_label');
             $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
             $active = preg_match('#^(?:/en)?/downloads(?:/|$)#', $path) === 1;
-            echo '<li class="menu-item' . ($active ? ' current-menu-item' : '') . '"><a href="'
-                . htmlspecialchars(DownloadRenderer::archiveUrl($lang), ENT_QUOTES, 'UTF-8') . '"' . ($active ? ' aria-current="page"' : '') . '>'
-                . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a></li>';
+            echo Registry::navItem(DownloadRenderer::archiveUrl($lang), $label, $active, $context === 'mobile' ? 'mobile' : 'desktop');
         } catch (\Throwable) {
         }
     }

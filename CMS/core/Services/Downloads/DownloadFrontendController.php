@@ -93,7 +93,8 @@ final class DownloadFrontendController
             return;
         }
 
-        $retryAfter = DownloadStatsService::getInstance()->rateLimitRetryAfter(Security::getClientIp());
+        $followUp = self::isFollowUpRequest((string) ($_SERVER['HTTP_RANGE'] ?? ''), (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+        $retryAfter = DownloadStatsService::getInstance()->rateLimitRetryAfter(Security::getClientIp(), $followUp);
         if ($retryAfter > 0) {
             if (!headers_sent()) {
                 header('Retry-After: ' . $retryAfter);
@@ -182,17 +183,25 @@ final class DownloadFrontendController
     }
 
     /**
+     * Folgeanfragen eines Download-Managers (Range ab Byte > 0) und HEAD sind kein neuer Abruf.
+     */
+    public static function isFollowUpRequest(string $range, string $method): bool
+    {
+        $range = trim($range);
+        if ($range !== '' && preg_match('/^bytes=0+-/i', $range) !== 1) {
+            return true;
+        }
+
+        return strtoupper($method) === 'HEAD';
+    }
+
+    /**
      * @param array<string, mixed> $item
      * @param array<string, mixed> $version
      */
     private function count(array $item, array $version): void
     {
-        // Folgeanfragen eines Download-Managers (Range ab Byte > 0) sind kein neuer Abruf.
-        $range = (string) ($_SERVER['HTTP_RANGE'] ?? '');
-        if ($range !== '' && preg_match('/^bytes=0+-/i', trim($range)) !== 1) {
-            return;
-        }
-        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'HEAD') {
+        if (self::isFollowUpRequest((string) ($_SERVER['HTTP_RANGE'] ?? ''), (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'))) {
             return;
         }
 

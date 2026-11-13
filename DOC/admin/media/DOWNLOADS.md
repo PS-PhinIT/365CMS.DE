@@ -35,7 +35,7 @@ Jeder Download hat genau eine aktuelle Version (eindeutiger Index). SHA-256 und 
 
 ### Editor.js-Block „Download“
 
-Im Beitrags- und Seiteneditor: Tab **Aus Downloads wählen** (Suche, Kategorie, Dateityp, Zugriff; Mehrfachauswahl nur im Template Kompakt) oder **Hochladen** (legt einen vollständigen Download an; Recht `upload_downloads`). Version „immer aktuell“ oder fest, Button-Text, Template und Sichtbarkeit (Block-Menü). Gespeichert werden nur Referenzen und Anzeigeoptionen. Die Vorschau rendert der Server mit denselben Templates wie das Frontend. Nicht verfügbare Downloads (Entwurf, archiviert, Papierkorb, ohne Version) blendet das Frontend aus; der Editor zeigt einen Hinweis, die Veröffentlichungs-Checkliste meldet sie.
+Im Beitrags- und Seiteneditor einfügen über **+ Block hinzufügen**, die Schnellleiste (Gruppe *Medien*), das „+“ zwischen zwei Blöcken oder das „+“-Menü von Editor.js (dort am Ende der Liste; Filter „Download“). Tab **Aus Downloads wählen** (Suche, Kategorie, Dateityp, Zugriff; Mehrfachauswahl nur im Template Kompakt) oder **Hochladen** (Recht `upload_downloads`): legt aus Datei, Titel, Kurzbeschreibung, Kategorie und Version einen vollständigen Download an und füllt die Eigenschaftsfelder aus *Downloads → Einstellungen*. Mit `manage_downloads` lassen sich dabei über **+ Neue Eigenschaft** weitere Eigenschaftsfelder anlegen (Bezeichnung, Typ, Wert; Auswahlfelder nur in den Einstellungen) – sie stehen danach allen Downloads zur Verfügung. Version „immer aktuell“ oder fest, Button-Text, Template (vier Layouts), Sichtbarkeit der Angaben und der Eigenschaften (Block-Menü). Gespeichert werden nur Referenzen und Anzeigeoptionen. Die Vorschau rendert der Server mit denselben Templates wie das Frontend. Nicht verfügbare Downloads (Entwurf, archiviert, Papierkorb, ohne Version) blendet das Frontend aus; der Editor zeigt einen Hinweis, die Veröffentlichungs-Checkliste meldet sie.
 
 ### Templates und Theme-Overrides
 
@@ -44,6 +44,7 @@ Im Beitrags- und Seiteneditor: Tab **Aus Downloads wählen** (Suche, Kategorie, 
 | Kompakt | `CMS/views/partials/download/compact.php` | `themes/<slug>/partials/download/compact.php` |
 | Karte | `CMS/views/partials/download/card.php` | `themes/<slug>/partials/download/card.php` |
 | Hervorgehoben | `CMS/views/partials/download/featured.php` | `themes/<slug>/partials/download/featured.php` |
+| Schaltfläche (nur Button mit Dateiname und Größe, für Fließtext) | `CMS/views/partials/download/button.php` | `themes/<slug>/partials/download/button.php` |
 | Archiv, Einzelseite, Hinweisseite | `CMS/views/downloads/{archive,single,external}.php` | `themes/<slug>/downloads/<name>.php` |
 
 Partials erhalten `$downloads`, `$download` (View-Modell aus `DownloadRenderer::viewModel()`), `$options`, `$template` und `$mode`. Stile: `assets/css/downloads.css` (Design-Tokens des Themes).

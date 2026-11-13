@@ -740,6 +740,45 @@ class PagesModule
     }
 
     /**
+     * @param list<int> $ids
+     * @return list<int> IDs, deren Status vom Zielstatus abweicht
+     */
+    private function pageIdsWithOtherStatus(array $ids, string $status): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        return array_values(array_map('intval', $this->db->get_col(
+            "SELECT id FROM {$this->prefix}pages WHERE id IN ({$placeholders}) AND NOT (status <=> ?)",
+            array_merge($ids, [$status])
+        ) ?: []));
+    }
+
+    /**
+     * Folgeaktionen eines Statuswechsels per Sammelaktion wie beim Einzelspeichern: Suchindex, Sitemaps und
+     * IndexNow hängen an cms_after_page_save.
+     *
+     * @param list<int> $ids Nur Seiten, deren Status sich tatsächlich geändert hat
+     */
+    private function afterBulkStatusChange(array $ids, string $status, string $bulkAction): void
+    {
+        foreach ($ids as $id) {
+            try {
+                Hooks::doAction('cms_after_page_save', (int) $id, ['status' => $status, 'bulk_action' => $bulkAction], []);
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('admin.pages')->warning('Folgeaktionen nach Sammelaktion fehlgeschlagen.', [
+                    'page_id' => (int) $id,
+                    'bulk_action' => $bulkAction,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
      * Bulk-Aktion ausführen
      */
     public function bulkAction(string $action, array $ids, array $payload = []): array
@@ -787,18 +826,22 @@ class PagesModule
         try {
             switch ($action) {
                 case 'publish':
+                    $changedIds = $this->pageIdsWithOtherStatus($ids, 'published');
                     $this->db->execute(
                         "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published' WHERE id IN ({$placeholders})",
                         $ids
                     );
+                    $this->afterBulkStatusChange($changedIds, 'published', 'publish');
                     $this->clearContentCacheIfEnabled('page_bulk_publish', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Seite(n) veröffentlicht.'];
 
                 case 'draft':
+                    $changedIds = $this->pageIdsWithOtherStatus($ids, 'draft');
                     $this->db->execute(
                         "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})",
                         $ids
                     );
+                    $this->afterBulkStatusChange($changedIds, 'draft', 'draft');
                     $this->clearContentCacheIfEnabled('page_bulk_draft', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Seite(n) als Entwurf gespeichert.'];
 

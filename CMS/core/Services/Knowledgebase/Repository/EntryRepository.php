@@ -905,6 +905,12 @@ final class EntryRepository
             $slug = (string) ($entry['slug'] ?? '');
             $existingEntry = $slug !== '' ? ($existingEntries[$slug] ?? null) : null;
             if (is_array($existingEntry)) {
+                // Bewusst gelöschte Einträge nicht still „aktualisieren“: saveEntry() holt sie nicht aus dem Papierkorb.
+                if (!empty($existingEntry['trashed_at'])) {
+                    ++$skipped;
+                    continue;
+                }
+
                 $result = $this->saveEntry($this->mergeImportedEntry($existingEntry, $entry));
 
                 if ((bool) ($result['success'] ?? false)) {
@@ -1194,7 +1200,7 @@ final class EntryRepository
 
     /**
      * @param array<int, string> $slugs
-     * @return array<string, bool>
+     * @return array<string, array<string, mixed>>
      */
     private function getExistingEntriesBySlug(array $slugs): array
     {

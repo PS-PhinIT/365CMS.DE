@@ -2,12 +2,13 @@
  * Editor.js-Block „Download“ (`download`): bindet Downloads aus Medien → Downloads ein.
  *
  * Blockdaten enthalten nur Referenzen und Anzeigeoptionen, nie Dateipfade oder URLs:
- *   { downloadIds: [..], version: "latest" | "<version>", template: "compact" | "card" | "featured",
+ *   { downloadIds: [..], version: "latest" | "<version>", template: "compact" | "card" | "featured" | "button",
  *     options: { showDescription, showSize, showVersion, showDate, showHash, showChangelog, showCount,
  *                showProperties: [], buttonLabel, titleOverride } }
  *
  * Auswahl: Tab „Aus Downloads wählen“ (Suche, Kategorie, Dateityp) oder „Hochladen“ (legt einen vollständigen
- * Download an). Mehrfachauswahl nur mit dem Template „Kompakt“. Template und Sichtbarkeit stehen zusätzlich im
+ * Download an: Datei, Titel, Kurzbeschreibung, Kategorie, Version und die Eigenschaftsfelder aus den
+ * Download-Einstellungen; mit „Downloads verwalten“ auch neue Eigenschaftsfelder). Mehrfachauswahl nur mit dem Template „Kompakt“. Template und Sichtbarkeit stehen zusätzlich im
  * Block-Menü (Tunes). Die Vorschau rendert der Server (window.CMSBlockPreview) mit denselben Partials wie das
  * Frontend.
  */
@@ -15,7 +16,9 @@
     'use strict';
 
     var API = '/admin/post-editor-api';
-    var TEMPLATES = { compact: 'Kompakt', card: 'Karte', featured: 'Hervorgehoben' };
+    var TEMPLATES = { compact: 'Kompakt', card: 'Karte', featured: 'Hervorgehoben', button: 'Schaltfläche' };
+    // Typen für im Block neu angelegte Eigenschaftsfelder („Auswahl“ braucht Optionen: nur in den Einstellungen).
+    var NEW_PROPERTY_TYPES = { text: 'Text', textarea: 'Mehrzeilig', number: 'Zahl', url: 'Link', boolean: 'Ja/Nein', date: 'Datum' };
     var TOGGLES = {
         showDescription: 'Beschreibung',
         showVersion: 'Version',
@@ -31,6 +34,8 @@
     };
     var token = '';
     var uid = 0;
+    // Eigenschaftsfelder der Download-Einstellungen (aus der Suchantwort), für Upload-Formular und Block-Menü.
+    var propertyFields = [];
 
     function el(tag, className, text) {
         var node = document.createElement(tag);
@@ -83,22 +88,33 @@
             });
     }
 
-    function upload(file, title, version, retried) {
+    function upload(file, fields, retried) {
         return getToken().then(function (csrf) {
             var body = new FormData();
             body.append('action', 'download_upload');
             body.append('csrf_token', csrf);
             body.append('file', file);
-            body.append('title', title || '');
-            body.append('version', version || '');
+            body.append('title', fields.title || '');
+            body.append('summary', fields.summary || '');
+            body.append('category_id', fields.category || '0');
+            body.append('version', fields.version || '');
+            Object.keys(fields.properties || {}).forEach(function (key) {
+                body.append('properties[' + key + ']', fields.properties[key]);
+            });
+            if (fields.newProperties && fields.newProperties.length > 0) {
+                body.append('new_properties', JSON.stringify(fields.newProperties));
+            }
             return fetch(API, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' }, body: body });
         }).then(readJson).then(function (json) {
             if (!json.success && json.code === 'csrf' && !retried) {
                 token = '';
-                return upload(file, title, version, true);
+                return upload(file, fields, true);
             }
             if (!json.success) {
                 throw new Error(json.error || 'Upload fehlgeschlagen.');
+            }
+            if (Array.isArray(json.property_fields)) {
+                propertyFields = json.property_fields;
             }
             return json.item;
         });
@@ -117,6 +133,44 @@
             template: template,
             options: options
         };
+    }
+
+    // Eingabefeld passend zum Typ eines Eigenschaftsfelds (wie im Abschnitt „Eigenschaften“ der Verwaltung).
+    function propertyInput(type, options) {
+        var input;
+        if (type === 'boolean') {
+            input = el('select', 'form-select form-select-sm');
+            [['', '–'], ['1', 'Ja'], ['0', 'Nein']].forEach(function (pair) { input.appendChild(new Option(pair[1], pair[0])); });
+        } else if (type === 'select') {
+            input = el('select', 'form-select form-select-sm');
+            input.appendChild(new Option('–', ''));
+            (options || []).forEach(function (option) { input.appendChild(new Option(option, option)); });
+        } else if (type === 'textarea') {
+            input = el('textarea', 'form-control form-control-sm');
+            input.rows = 2;
+            input.maxLength = 5000;
+        } else {
+            input = el('input', 'form-control form-control-sm');
+            input.type = type === 'number' ? 'number' : (type === 'url' ? 'url' : (type === 'date' ? 'date' : 'text'));
+            if (type === 'number') {
+                input.step = 'any';
+            }
+            if (type === 'url') {
+                input.placeholder = 'https://';
+            }
+            input.maxLength = 500;
+        }
+        return input;
+    }
+
+    function labelled(text, input, id) {
+        var group = el('div', 'cms-dl-block__field');
+        var label = el('label', 'form-label mb-1', text);
+        input.id = id;
+        label.htmlFor = id;
+        group.appendChild(label);
+        group.appendChild(input);
+        return group;
     }
 
     // Die Vorschau nutzt die Frontend-Templates; deren Stylesheet einmalig im Editor laden.
@@ -249,12 +303,16 @@
             pickPane.appendChild(status);
 
             var timer = 0;
+            var metaLoaded = false;
+            var applyUploadMeta = function () {};
             var runSearch = function () {
                 status.textContent = 'Suche …';
                 search({ q: q.value, category: category.value, type: type.value, access: access.value }).then(function (json) {
-                    if (category.options.length === 1) {
+                    if (!metaLoaded) {
+                        metaLoaded = true;
                         (json.categories || []).forEach(function (c) { category.appendChild(new Option(c.name, String(c.id))); });
                         (json.file_types || []).forEach(function (t) { type.appendChild(new Option(String(t).toUpperCase(), t)); });
+                        applyUploadMeta(json);
                     }
                     self.renderResults(results, json.items || []);
                     status.textContent = (json.items || []).length === 0 ? 'Keine Downloads gefunden.' : (json.total + ' Downloads');
@@ -271,20 +329,98 @@
             });
             this.runSearch = runSearch;
 
-            // Upload
-            var uploadId = 'cmsDlUpload' + (++uid);
-            var fileLabel = el('label', 'form-label', 'Datei');
-            fileLabel.htmlFor = uploadId;
-            var file = el('input', 'form-control form-control-sm mb-2');
+            // Upload: Datei, Titel, Kurzbeschreibung, Kategorie, Version, Eigenschaften
+            var prefix = 'cmsDlUpload' + (++uid);
+            var file = el('input', 'form-control form-control-sm');
             file.type = 'file';
-            file.id = uploadId;
-            var title = el('input', 'form-control form-control-sm mb-2');
-            title.placeholder = 'Titel (optional, sonst aus dem Dateinamen)';
-            title.setAttribute('aria-label', 'Titel');
-            var version = el('input', 'form-control form-control-sm mb-2');
-            version.placeholder = 'Version (optional, z. B. 1.0)';
-            version.setAttribute('aria-label', 'Version');
-            var send = el('button', 'btn btn-sm btn-primary', 'Hochladen und einfügen');
+            var fileHint = el('div', 'form-hint');
+            var title = el('input', 'form-control form-control-sm');
+            title.placeholder = 'optional, sonst aus dem Dateinamen';
+            title.maxLength = 255;
+            var summary = el('textarea', 'form-control form-control-sm');
+            summary.rows = 2;
+            summary.maxLength = 1000;
+            var uploadCategory = el('select', 'form-select form-select-sm');
+            uploadCategory.appendChild(new Option('Ohne Kategorie', '0'));
+            var version = el('input', 'form-control form-control-sm');
+            version.placeholder = 'optional, z. B. 1.0';
+            version.maxLength = 50;
+            var grid = el('div', 'cms-dl-block__grid');
+            var fileGroup = labelled('Datei', file, prefix + 'File');
+            fileGroup.appendChild(fileHint);
+            grid.appendChild(fileGroup);
+            grid.appendChild(labelled('Titel', title, prefix + 'Title'));
+            grid.appendChild(labelled('Kategorie', uploadCategory, prefix + 'Category'));
+            grid.appendChild(labelled('Version', version, prefix + 'Version'));
+            var summaryGroup = labelled('Kurzbeschreibung', summary, prefix + 'Summary');
+            summaryGroup.classList.add('cms-dl-block__field--wide');
+            grid.appendChild(summaryGroup);
+
+            var propsBox = el('fieldset', 'cms-dl-block__props');
+            propsBox.appendChild(el('legend', 'form-label mb-1', 'Eigenschaften'));
+            var propsGrid = el('div', 'cms-dl-block__grid');
+            var propsEmpty = el('div', 'form-hint', 'Es sind noch keine Eigenschaftsfelder angelegt (Downloads → Einstellungen).');
+            var newRows = el('div', 'cms-dl-block__new-props');
+            var addProperty = el('button', 'btn btn-sm btn-outline-secondary mt-2', '+ Neue Eigenschaft');
+            addProperty.type = 'button';
+            addProperty.hidden = true;
+            propsBox.appendChild(propsGrid);
+            propsBox.appendChild(propsEmpty);
+            propsBox.appendChild(newRows);
+            propsBox.appendChild(addProperty);
+            var propertyInputs = {};
+            var newPropertyRows = [];
+            var renderPropertyInputs = function () {
+                propsGrid.textContent = '';
+                propertyInputs = {};
+                propertyFields.forEach(function (field) {
+                    var input = propertyInput(field.type, field.options);
+                    propertyInputs[field.key] = input;
+                    propsGrid.appendChild(labelled(field.label, input, prefix + 'Prop_' + field.key));
+                });
+                propsEmpty.hidden = propertyFields.length > 0;
+            };
+            addProperty.addEventListener('click', function () {
+                var index = newPropertyRows.length + 1;
+                var row = el('div', 'cms-dl-block__grid cms-dl-block__grid--new mt-2');
+                var label = el('input', 'form-control form-control-sm');
+                label.maxLength = 120;
+                var kind = el('select', 'form-select form-select-sm');
+                Object.keys(NEW_PROPERTY_TYPES).forEach(function (key) { kind.appendChild(new Option(NEW_PROPERTY_TYPES[key], key)); });
+                var valueGroup = el('div', 'cms-dl-block__field');
+                var entry = { label: label, kind: kind, value: null };
+                var renderValue = function () {
+                    valueGroup.textContent = '';
+                    entry.value = propertyInput(kind.value, []);
+                    var built = labelled('Wert', entry.value, prefix + 'NewValue' + index);
+                    while (built.firstChild) {
+                        valueGroup.appendChild(built.firstChild);
+                    }
+                };
+                kind.addEventListener('change', renderValue);
+                row.appendChild(labelled('Bezeichnung', label, prefix + 'NewLabel' + index));
+                row.appendChild(labelled('Typ', kind, prefix + 'NewType' + index));
+                row.appendChild(valueGroup);
+                renderValue();
+                newRows.appendChild(row);
+                newPropertyRows.push(entry);
+                label.focus();
+            });
+            applyUploadMeta = function (json) {
+                (json.categories || []).forEach(function (c) { uploadCategory.appendChild(new Option(c.name, String(c.id))); });
+                if (Array.isArray(json.property_fields)) {
+                    propertyFields = json.property_fields;
+                }
+                renderPropertyInputs();
+                // Neue Eigenschaftsfelder gehören zu den Einstellungen: nur mit „Downloads verwalten“.
+                addProperty.hidden = !json.can_manage;
+                if (Array.isArray(json.allowed_types) && json.allowed_types.length > 0) {
+                    fileHint.textContent = 'Erlaubt: ' + json.allowed_types.join(', ') + (json.max_size ? ' · höchstens ' + json.max_size : '');
+                }
+            };
+            renderPropertyInputs();
+
+            var send = el('button', 'btn btn-sm btn-primary mt-2', 'Hochladen und einfügen');
             send.type = 'button';
             var uploadStatus = el('div', 'form-hint');
             uploadStatus.setAttribute('role', 'status');
@@ -293,19 +429,39 @@
                     uploadStatus.textContent = 'Bitte eine Datei wählen.';
                     return;
                 }
+                var values = {};
+                Object.keys(propertyInputs).forEach(function (key) {
+                    if (propertyInputs[key].value !== '') {
+                        values[key] = propertyInputs[key].value;
+                    }
+                });
+                var created = newPropertyRows.filter(function (entry) {
+                    return entry.label.value.trim() !== '';
+                }).map(function (entry) {
+                    return { label: entry.label.value.trim(), type: entry.kind.value, value: entry.value ? entry.value.value : '' };
+                });
                 send.disabled = true;
                 uploadStatus.textContent = 'Wird hochgeladen …';
-                upload(file.files[0], title.value, version.value).then(function (item) {
+                upload(file.files[0], {
+                    title: title.value, summary: summary.value, category: uploadCategory.value, version: version.value,
+                    properties: values, newProperties: created
+                }).then(function (item) {
                     send.disabled = false;
                     file.value = '';
                     title.value = '';
+                    summary.value = '';
                     version.value = '';
+                    newRows.textContent = '';
+                    newPropertyRows = [];
+                    renderPropertyInputs();
                     uploadStatus.textContent = '„' + item.title + '“ wurde angelegt' + (item.status === 'draft' ? ' (Entwurf).' : '.') + ' ';
                     var link = el('a', '', 'In Downloads bearbeiten');
                     link.href = item.edit_url;
                     link.target = '_blank';
                     link.rel = 'noopener';
                     uploadStatus.appendChild(link);
+                    // Ausgefüllte Eigenschaften im Block anzeigen.
+                    self.data.options.showProperties = (Array.isArray(item.property_keys) ? item.property_keys : []).slice(0, 20);
                     self.known[item.id] = item;
                     self.select(item.id, false);
                 }).catch(function (error) {
@@ -313,10 +469,8 @@
                     uploadStatus.textContent = error.message;
                 });
             });
-            uploadPane.appendChild(fileLabel);
-            uploadPane.appendChild(file);
-            uploadPane.appendChild(title);
-            uploadPane.appendChild(version);
+            uploadPane.appendChild(grid);
+            uploadPane.appendChild(propsBox);
             uploadPane.appendChild(send);
             uploadPane.appendChild(uploadStatus);
 
@@ -527,6 +681,27 @@
                     toggle: true,
                     onActivate: function () {
                         self.data.options[key] = !self.data.options[key];
+                        self.refreshPreview();
+                    }
+                });
+            });
+            var shown = Array.isArray(self.data.options.showProperties) ? self.data.options.showProperties : [];
+            propertyFields.forEach(function (field) {
+                items.push({
+                    icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5l10 -10"/></svg>',
+                    // Editor.js setzt den Menütitel per innerHTML: Bezeichnung maskieren.
+                    label: 'Eigenschaft „' + String(field.label).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '“ anzeigen',
+                    isActive: shown.indexOf(field.key) !== -1,
+                    toggle: true,
+                    onActivate: function () {
+                        var current = Array.isArray(self.data.options.showProperties) ? self.data.options.showProperties.slice() : [];
+                        var position = current.indexOf(field.key);
+                        if (position === -1) {
+                            current.push(field.key);
+                        } else {
+                            current.splice(position, 1);
+                        }
+                        self.data.options.showProperties = current;
                         self.refreshPreview();
                     }
                 });
