@@ -39,7 +39,7 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN, BP | PR 5 | offen |
 | 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | offen |
 | 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | offen |
-| 8 | PhinIT-Plugins `cms-m365adminsites`, `cms-365network`, `cms-m365messagecenter` (Kompatibilität mit 4.0.0) | PHI | je Plugin ein PR im Repository `365CMS.DE-PhinIT_PLUGINS` und hier | `cms-m365adminsites` erledigt (PhinIT_PLUGINS #25), `cms-365network` und `cms-m365messagecenter` offen |
+| 8 | PhinIT-Plugins `cms-m365adminsites`, `cms-365network`, `cms-m365messagecenter` (Kompatibilität mit 4.0.0) | PHI | je Plugin ein PR im Repository `365CMS.DE-PhinIT_PLUGINS` und hier | `cms-m365adminsites` erledigt (PhinIT_PLUGINS #25), `cms-365network` erledigt (PhinIT_PLUGINS #26), `cms-m365messagecenter` offen |
 
 ### 1. Changelog 4.0.0
 
@@ -649,9 +649,30 @@ Die drei Plugins liegen im Repository `PS-PhinIT/365CMS.DE-PhinIT_PLUGINS`. Je P
 
 **Grenzen:** PHP 8.4/8.5 stand in der Testumgebung nicht zur Verfügung (Prüfung unter 8.3, Deprecations von 8.5 per Code-Suche: keine). Das Sidebar-Widget wurde nur isoliert geprüft, weil das Theme `cms-phinit` nicht Teil der Testinstallation war.
 
-#### 8.2 `cms-365network`
+#### 8.2 `cms-365network` (1.0.55 → 1.0.56)
 
-Prüfung steht aus (eigener PR).
+| ID | Fundstelle | Schwere | Beschreibung | Status |
+|---|---|---|---|---|
+| PHI-13 | `includes/class-database.php:451`, `:677` | 🔴 | `get_hub_setting_rows()` rief bei jedem Lesen der Hub-Einstellungen `seed_default_hub_settings()` auf: Schema-Prüfung über `INFORMATION_SCHEMA`, Deduplizierung, ein `UPDATE` der Metadaten je Standardwert und die Migrationen alter Standardwerte. Gemessen auf `/365network`: 320 Abfragen je Aufruf, davon 208 UPDATEs. Korrektur: Abgleich einmal je Plugin-Version über den Marker `schema_version` (`maybe_upgrade()` bei `cms_init`, Aktivierung unverändert); danach 108 Abfragen, keine UPDATEs. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-14 | `includes/class-admin.php:43`, `:114` | 🟠 | Die 17 Bereiche (Domain, Hero, Toolbox, Analytics …) erschienen als Unterpunkte nur über den Filter `admin_menu_items`, den der 4.0.0-Core nicht mehr auswertet. Aus einem Unterbereich führte kein Weg in einen anderen, nur zurück über die Übersicht. Korrektur: Reiterleiste (Tabler `nav nav-tabs`) auf jeder Admin-Seite. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-15 | `includes/class-admin.php:888`, `includes/class-public.php:87`, `:1882` | 🟠 | `route_slug` ließ jeden Pfad zu. Mit `admin`, `search` oder `member` hätte `Router::addRoute()` die Core-Route ersetzt. Korrektur: `CMS_365NETWORK_Database::is_reserved_route_slug()` mit den ersten Pfadsegmenten aller Core-Routen; das Admin-Formular meldet den Grund und speichert nicht, die Public-Seite fällt auf `365network` zurück. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-16 | `includes/class-public.php:210` | 🟠 | Die öffentliche Netzwerksuche (`/<route>/search`) fragt je Anfrage bis zu vier Tabellen mit LIKE-Scans ab und hatte kein Kontingent; die Seitensuche des Cores begrenzt seit 4.0.0 auf 30 Suchen je Minute und IP. Korrektur: gleiche Grenze über `Security::checkDbRateLimit()` und `recordDbRateLimitAttempt()` (Aktion `cms_365network_search`), danach HTTP 429. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-17 | `templates/landing.php:424`, `:594` | 🟡 | Die im Admin einstellbaren Farben des Beitragsbereichs standen als `style`-Attribut am Abschnitt; die 4.0.0-CSP (`style-src` ohne `'unsafe-inline'`) blockiert es, die Farben griffen nicht. Korrektur: ID-Regel `#n365-latest-posts` in der vorhandenen `<style>`-Ausgabe mit Nonce. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-18 | `cms-365network.php:113` | 🟡 | Kein Lifecycle-Callback zum Löschen (4.0.0: `<slug>_uninstall()`); `hub_uninstall()` löste beim Deaktivieren nur eine Aktion aus, die Tabellen `network365_settings` und `network_hub_settings` blieben nach dem Löschen zurück. Korrektur: `cms_365network_uninstall()` entfernt beide Tabellen. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-19 | `cms-365network.php:21` | 🟡 | `define()` ohne Schutz: Bindet `PluginManager::deletePlugin()` die Plugin-Datei erneut ein (anderer Pfad), entstehen Warnungen „Constant already defined“. Korrektur: `defined() \|\| define()`; die nicht vorhandenen Helfer `cms_plugin_path()`/`cms_plugin_url()` werden nicht mehr abgefragt. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-20 | `cms-365network.php:62`, `includes/class-admin.php:72`, `:93` | ⚪ | Aufrufe aus 3.x ohne Gegenstück in 4.0.0: `cms_register_hook()`, `cms_register_admin_menu()`, Filter `admin_menu_items`; Menü-Icon als Emoji. Korrektur: entfernt, Icon `ti ti-world`. | [x] Behoben in PhinIT_PLUGINS #26 |
+| PHI-21 | `includes/class-admin.php:179`, `:225` | ⚪ | `(string)` auf `$_GET['tab']`, `['page']`, `['saved']`, `['error']`: Array-Parameter lösten die PHP-Warnung „Array to string conversion“ aus. Korrektur: nur skalare Werte. | [x] Behoben in PhinIT_PLUGINS #26 |
+
+**Kein Befund nach Prüfung (`cms-365network`)**
+
+- Root-Route `/`: Ohne konfigurierte Zusatzdomain rendert das Plugin wie `ThemeRouter::renderHome()` (`ThemeManager::render('home')`); nur für eingetragene Zusatzdomains erscheint die Landingpage. Die zusätzlich registrierten `/en`-Routen sind wirkungslos, weil der Router das Sprachpräfix vor dem Routing entfernt.
+- SQL über die Tabellen der Partner-Plugins (Events, Speaker, Experts, Companies, Toolbox): Tabellen- und Spaltennamen werden gegen `INFORMATION_SCHEMA` geprüft und quotiert, Werte gebunden, LIKE mit maskierten Platzhaltern; Status- und Sortierklauseln nur aus geprüften Spalten.
+- Admin: eigene Route `/admin/365network`, Zugriff nur mit `Auth::hasCapability('manage_plugins')` (praktisch nur `admin`), `Router::redirect()` beendet die Ausführung; Speichern mit CSRF-Token (`cms_365network_settings`). Eingaben werden je Typ bereinigt (Text, Farbe, Zahl mit Grenzen, Auswahl, URL nur `http(s)`/relativ, Icon nur `ti-*`).
+- Analytics-Code (vom Administrator hinterlegt): Ausgabe nur auf der Landingpage, `<script>` mit Nonce, Hosts über `cms_csp_prepare` und `Security::allowCspSources()` freigegeben.
+- Ausgaben in `landing.php`, `search.php` und `partials/previews.php` durchgehend mit `htmlspecialchars(…, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')`; Icons nur aus fester SVG-Liste. Öffentliche Suche verwirft Array-Parameter.
+- Tabellen `utf8mb4_unicode_ci`, Unique-Index auf `setting_key` (Migration für Altinstallationen vorhanden). Aktivierungs-Sicherheitsscan ohne Treffer.
+
+**Hinweis:** Je Aufruf der Landingpage bleiben 19 Abfragen an `INFORMATION_SCHEMA` für die Erkennung der Partner-Tabellen und -Spalten (Ergebnis nur im Request zwischengespeichert). Das ist kein Fehler; ein Cache über Requests hinweg wäre eine weitere Optimierung.
 
 #### 8.3 `cms-m365messagecenter`
 
