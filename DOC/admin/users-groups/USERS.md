@@ -9,7 +9,7 @@ User accounts are managed at `/admin/users` (`CMS/admin/users.php` → `CMS/admi
 
 - Views: `list` (filters `role`, `status`, `q`, pagination `page`) and `edit`.
 - Actions: `save`, `delete`, `revoke_sessions`, `cancel_email_change`, `bulk` (`activate`, `deactivate`, `delete`, `hard_delete`).
-- Since 4.0.0, a changed e-mail address takes effect only after the user opens the confirmation link sent to the new address (`/cms-confirm-email-change`, valid 48 hours). The old address is notified and stays active until then. The checkbox *Neue Adresse ohne Bestätigung übernehmen* (`email_skip_confirmation`) applies the address immediately; `cancel_email_change` discards a pending change.
+- Since 4.0.0, a changed e-mail address takes effect only after the user opens the confirmation link sent to the new address and presses the button on that page (`/cms-confirm-email-change`, valid 48 hours; opening the link alone changes nothing). The old address is notified and stays active until then. The checkbox *Neue Adresse ohne Bestätigung übernehmen* (`email_skip_confirmation`) applies the address immediately; `cancel_email_change` discards a pending change.
 - *Überall abmelden* (`revoke_sessions`, since 4.0.0) signs the user out on all devices and invalidates all issued API tokens without changing the password.
 - Statuses: `active`, `inactive`, `banned`, `unverified` (e-mail address not confirmed yet, since 4.0.0; see [AUTH-SETTINGS.md](AUTH-SETTINGS.md#e-mail-verifizierung-seit-400)).
 - Deleting is **permanent** (single delete and both bulk delete variants call `UserService::deleteUser($id, true)`). Use `deactivate` to keep the account.
@@ -61,7 +61,7 @@ Die Bearbeitungsansicht zeigt zusätzlich Gruppen, Abo, MFA-/Passkey-Status und 
 
 Umgesetzt in `CMS/core/Services/EmailChangeService.php`.
 
-- **Mit Bestätigung (Standard):** Eine geänderte Adresse wird nicht sofort übernommen. Der Benutzer erhält an die **neue** Adresse einen Link (`/cms-confirm-email-change?uid=…&token=…`, 48 Stunden gültig, einmal verwendbar), die bisherige Adresse einen Hinweis. Bis zur Bestätigung bleibt die alte Adresse aktiv. Die Bearbeitungsansicht zeigt „Ausstehend: …“ mit Ablaufzeit und den Button **Änderung verwerfen** (`action=cancel_email_change`).
+- **Mit Bestätigung (Standard):** Eine geänderte Adresse wird nicht sofort übernommen. Der Benutzer erhält an die **neue** Adresse einen Link (`/cms-confirm-email-change?uid=…&token=…`, 48 Stunden gültig, einmal verwendbar) und bestätigt dort mit der Schaltfläche **E-Mail-Adresse bestätigen** – das bloße Öffnen des Links ändert nichts. Die bisherige Adresse erhält einen Hinweis. Bis zur Bestätigung bleibt die alte Adresse aktiv. Die Bearbeitungsansicht zeigt „Ausstehend: …“ mit Ablaufzeit und den Button **Änderung verwerfen** (`action=cancel_email_change`).
 - **Neue Adresse ohne Bestätigung übernehmen** (`email_skip_confirmation`): Die Adresse gilt sofort, die bisherige Adresse wird benachrichtigt. Der Bestätigungsstatus (`email_verified_at`) wird zurückgesetzt, Gastbestellungen werden nicht zugeordnet.
 - Nach der Bestätigung per Link werden Gastbestellungen mit der neuen Adresse dem Konto zugeordnet.
 - Gehört die Adresse bereits einem anderen Konto, meldet der Adminbereich einen Fehler. Ändert sich nur die Groß-/Kleinschreibung, wird die Adresse sofort übernommen.

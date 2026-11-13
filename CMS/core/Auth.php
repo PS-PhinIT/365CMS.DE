@@ -32,12 +32,6 @@ class Auth
     /** bcrypt-Hash (Kosten wie Security::hashPassword) eines festen Werts – nur für Timing-Angleichung. */
     private const LOGIN_TIMING_DUMMY_HASH = '$2y$12$Ka0ROJ/q3DghtbJ2sUBc9eIT4fFu2DpKB2mzGWtsGrJL/X7ZZmwDe';
     private const DEVICE_COOKIE_TTL = 7200;
-    /**
-     * Merkt ein Gerät nach vollständiger Anmeldung (Cookie übersteht die Abmeldung). Bekannte Geräte führen
-     * bei Konto-Bremse und 2FA-Limit einen eigenen Zähler – Fehlversuche Dritter sperren den Inhaber dort nicht aus.
-     */
-    private const KNOWN_DEVICE_COOKIE_NAME = 'cms_known_device';
-    private const KNOWN_DEVICE_COOKIE_TTL = 7_776_000;
     private const SESSION_LIFETIME_OPTION_ADMIN = 'perf_session_timeout_admin';
     private const SESSION_LIFETIME_OPTION_MEMBER = 'perf_session_timeout_member';
     private const DEFAULT_SESSION_LIFETIME_ADMIN = 28_800;
@@ -57,9 +51,6 @@ class Auth
     private const REGISTRATION_RESERVED_WINDOW = 86400;
     /** Höchstens so viele Namensreservierungen je E-Mail-Adresse im Reservierungszeitraum (Missbrauchsgrenze). */
     private const REGISTRATION_RESERVED_LIMIT_PER_EMAIL = 3;
-    /** Sekunden, die eine Anmeldung höchstens auf eine gleichzeitig laufende Prüfung desselben Kontos wartet. */
-    private const ACCOUNT_LOGIN_LOCK_WAIT = 1;
-    private const LOGIN_BUSY_MESSAGE = 'Die Anmeldung konnte gerade nicht geprüft werden. Bitte versuchen Sie es erneut.';
     private const EMAIL_UNVERIFIED_MESSAGE = 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Bitte nutzen Sie den neuesten Link aus unserer Bestätigungs-E-Mail (auch im Spam-Ordner nachsehen).';
     private const REGISTRATION_NOTICE_LIMIT = 3;
     private const REGISTRATION_NOTICE_WINDOW = 3600;
@@ -75,8 +66,6 @@ class Auth
     private bool $bearerAuthenticated = false;
     /** @var array{admin:int,member:int}|null */
     private ?array $sessionLifetimes = null;
-    /** Wartezeit in Sekunden, wenn der letzte login()-Aufruf wegen der Konto-Bremse abgewiesen wurde. */
-    private int $loginRetryAfter = 0;
     
     /**
      * Singleton instance
@@ -217,8 +206,6 @@ class Auth
         }
 
         $_SESSION['auth_password_fingerprint'] = $this->loadPasswordFingerprint($userId);
-        // Das Gerät-Cookie hängt am Passwort-Fingerprint – für dieses Gerät neu ausstellen.
-        $this->rememberKnownDevice($userId, (string) $_SESSION['auth_password_fingerprint']);
         $this->removeSessionRegistryEntry();
         if (!headers_sent()) {
             session_regenerate_id(true);
@@ -368,15 +355,22 @@ class Auth
         $security = Security::instance();
         $db = Database::instance();
         
-        $this->loginRetryAfter = 0;
-
         // H-05: DB-basiertes Rate-Limiting (schützt auch gegen verteilte Brute-Force)
         // Grenzwerte: Einstellung unter Einstellungen → Login & Sperren, sonst MAX_LOGIN_ATTEMPTS/LOGIN_TIMEOUT.
-        $clientIp = $security->getClientIp();
         $maxLoginAttempts = Services\LoginThrottleSettings::maxAttempts();
         $loginLockout = Services\LoginThrottleSettings::lockoutSeconds();
-        if (!$security->checkDbRateLimit($clientIp, 'login', $maxLoginAttempts, $loginLockout)) {
-            return $this->rejectBlockedLoginIp($clientIp, $loginLockout);
+        if (!$security->checkDbRateLimit($security->getClientIp(), 'login', $maxLoginAttempts, $loginLockout)) {
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                'login_blocked',
+                'Brute-Force-Sperre für IP: ' . $security->getClientIp(),
+                'ip',
+                null,
+                ['ip' => $security->getClientIp()],
+                'warning'
+            );
+            $lockoutMinutes = max(1, (int) ceil($loginLockout / 60));
+            return 'Zu viele Login-Versuche. Bitte warten Sie ' . $lockoutMinutes . ($lockoutMinutes === 1 ? ' Minute.' : ' Minuten.');
         }
         
         $username = $this->normalizeLoginIdentifier($username);
@@ -388,84 +382,49 @@ class Auth
         $stmt->execute([$username, $username]);
         $user = $stmt->fetchObject();
 
-        // Folgeaudit OFFEN-25: zusätzlich zum IP-Limit wachsende Wartezeit je Konto; unbekannte Namen
-        // verhalten sich gleich. Die Wartezeit wird nicht im Request abgesessen (sleep band bis zu 30 s
-        // einen PHP-Worker je Anfrage – anonym auslösbar), sondern ein zu früher Versuch sofort und ohne
-        // Passwortprüfung abgewiesen. Abgewiesene Versuche zählen nicht; geprüfte Fehlversuche setzen die
-        // Wartezeit dagegen neu. Ein bekanntes Gerät (Cookie aus einer früheren vollständigen Anmeldung
-        // oder einem Passwort-Reset) zählt für sich: Fehlversuche von fremden Geräten bremsen es nicht.
-        // Restrisiko: Alle Geräte ohne dieses Cookie teilen sich den Zähler des Kontos. Wer dort laufend
-        // Fehlversuche erzeugt, kann den Inhaber auf einem unbekannten Gerät so lange abweisen lassen –
-        // der Ausweg ist der Passwort-Reset (danach ist das Gerät bekannt); die Meldung nennt ihn.
-        $accountKey = $user
-            ? 'uid:' . (int) $user->id . $this->knownDeviceKeySuffix((int) $user->id)
-            : 'login:' . mb_strtolower($username, 'UTF-8');
-        // Je Konto läuft nur eine Passwortprüfung zugleich, sonst läsen parallele Anfragen denselben Zählerstand.
-        $accountLock = $this->acquireAccountLoginLock($accountKey);
-        if ($accountLock === false) {
-            // Überschneidung zweier Anfragen, kein Fehlversuch des Kontos: neutrale Meldung. Am IP-Limit
-            // zählt die Anfrage mit, damit sich die Sperre nicht kostenlos dauerhaft belegen lässt.
-            $this->logLoginAttempt($username, 'login');
-            $this->loginRetryAfter = 1;
-
-            return self::LOGIN_BUSY_MESSAGE;
-        }
-
-        try {
-            $retryAfter = self::accountRetryAfterSeconds(
-                Security::countDbIdentifierAttempts($accountKey, self::ACCOUNT_FAILURE_ACTION, self::ACCOUNT_FAILURE_WINDOW),
-                Security::secondsSinceLastDbIdentifierAttempt($accountKey, self::ACCOUNT_FAILURE_ACTION)
-            );
-            if ($retryAfter > 0) {
-                return $this->rejectEarlyAccountLogin($retryAfter, $username);
-            }
-
-            // Den Versuch vor der Passwortprüfung zählen und nur bei Erfolg zurücknehmen: Parallele
-            // Anfragen einer IP sehen einander so und kommen nicht gemeinsam am IP-Limit vorbei.
-            $this->logLoginAttempt($username);
-            if (!$security->checkDbRateLimit($clientIp, 'login', $maxLoginAttempts + 1, $loginLockout)) {
-                Security::releaseDbRateLimitAttempt($clientIp, 'login', $username);
-                return $this->rejectBlockedLoginIp($clientIp, $loginLockout);
-            }
-
-            // Unbekannter Name: gleiche Laufzeit wie bei falschem Passwort, damit Benutzernamen nicht per Timing erkennbar sind.
-            $passwordValid = $security->verifyPassword($password, $user ? (string) $user->password : self::LOGIN_TIMING_DUMMY_HASH) && $user;
-
+        // Folgeaudit OFFEN-25: zusätzlich zum IP-Limit wachsende Verzögerung je Konto. Keine harte
+        // Sperre, damit Dritte ein Konto nicht aussperren können; unbekannte Namen verhalten sich gleich.
+        $accountKey = $user ? 'uid:' . (int) $user->id : 'login:' . mb_strtolower($username, 'UTF-8');
+        $this->delayRepeatedAccountFailures($accountKey, $username);
+        
+        if (!$user) {
+            // Gleiche Laufzeit wie bei falschem Passwort, damit Benutzernamen nicht per Timing erkennbar sind.
+            $security->verifyPassword($password, self::LOGIN_TIMING_DUMMY_HASH);
             // Zugangsdaten einer Registrierung, für die wegen bereits vergebener Adresse kein Konto entstand:
             // gleiche Antwort wie für das unbestätigte Konto, das bei freier Adresse entstanden wäre.
-            $reservedRegistration = !$passwordValid && $this->isReservedRegistrationLogin($username, $password);
+            if ($this->isReservedRegistrationLogin($username, $password)) {
+                $this->clearAccountLoginFailures($accountKey);
 
-            if ($passwordValid || $reservedRegistration) {
-                Security::releaseDbRateLimitAttempt($clientIp, 'login', $username);
-                // Der Zähler eines bestehenden Kontos bleibt bei der reservierten Registrierung unberührt –
-                // sonst ließe sich die Konto-Bremse mit selbst gewählten Zugangsdaten zurücksetzen.
-                if ($passwordValid || !$user) {
-                    $this->clearAccountLoginFailures($accountKey);
-                }
-            } else {
-                $this->recordAccountLoginFailure($accountKey);
+                return self::EMAIL_UNVERIFIED_MESSAGE;
             }
-        } finally {
-            $this->releaseAccountLoginLock($accountLock);
-        }
-
-        if ($reservedRegistration) {
-            return self::EMAIL_UNVERIFIED_MESSAGE;
-        }
-
-        if (!$passwordValid) {
+            $this->logLoginAttempt($username);
+            $this->recordAccountLoginFailure($accountKey);
             // H-01: Fehlgeschlagenen Login protokollieren
             AuditLogger::instance()->loginFailed($username);
             if (function_exists('cms_log')) {
-                cms_log(
-                    'notice',
-                    $user ? "Login fehlgeschlagen: Falsches Passwort für '{$username}'" : "Login fehlgeschlagen: Benutzer '{$username}' nicht gefunden",
-                    ['category' => 'auth', 'username' => $username]
-                );
+                cms_log('notice', "Login fehlgeschlagen: Benutzer '{$username}' nicht gefunden", ['category' => 'auth', 'username' => $username]);
+            }
+            return 'Ungültige Anmeldedaten.';
+        }
+        
+        if (!$security->verifyPassword($password, $user->password)) {
+            // Reservierte Registrierung (siehe oben). Der Zähler des bestehenden Kontos bleibt unberührt –
+            // sonst ließe sich die Anmeldeverzögerung mit selbst gewählten Zugangsdaten zurücksetzen.
+            if ($this->isReservedRegistrationLogin($username, $password)) {
+                return self::EMAIL_UNVERIFIED_MESSAGE;
+            }
+            $this->logLoginAttempt($username);
+            $this->recordAccountLoginFailure($accountKey);
+            // H-01: Fehlgeschlagenen Login protokollieren
+            AuditLogger::instance()->loginFailed($username);
+            if (function_exists('cms_log')) {
+                cms_log('notice', "Login fehlgeschlagen: Falsches Passwort für '{$username}'", ['category' => 'auth', 'username' => $username]);
             }
             return 'Ungültige Anmeldedaten.';
         }
 
+        $this->clearAccountLoginFailures($accountKey);
+        
         if ($user->status === EmailVerificationService::STATUS_UNVERIFIED) {
             // Erst nach korrektem Passwort erreichbar. Ein neuer Link geht höchstens begrenzt oft hinaus;
             // die Meldung ist immer dieselbe (siehe reservierte Registrierung oben).
@@ -1105,7 +1064,7 @@ class Auth
     }
 
     /**
-     * Wartezeit bis zum nächsten zulässigen Versuch nach wiederholten Fehlversuchen für ein Konto:
+     * Wartezeit vor der Passwortprüfung nach wiederholten Fehlversuchen für ein Konto:
      * die ersten fünf Versuche ohne Verzögerung, danach 1, 2, 4, 8, 16 und höchstens 30 Sekunden.
      */
     public static function accountFailureDelaySeconds(int $failures): int
@@ -1117,92 +1076,22 @@ class Auth
         return min(self::ACCOUNT_FAILURE_MAX_DELAY, 2 ** min(5, $failures - self::ACCOUNT_FAILURE_FREE_ATTEMPTS));
     }
 
-    /**
-     * Restwartezeit je Konto: Wartezeit nach `$failures` Fehlversuchen abzüglich der seit dem letzten
-     * Fehlversuch vergangenen Sekunden. 0 = Versuch erlaubt.
-     */
-    public static function accountRetryAfterSeconds(int $failures, ?int $secondsSinceLastFailure): int
+    private function delayRepeatedAccountFailures(string $accountKey, string $loginIdentifier): void
     {
+        $failures = Security::countDbIdentifierAttempts($accountKey, self::ACCOUNT_FAILURE_ACTION, self::ACCOUNT_FAILURE_WINDOW);
         $delay = self::accountFailureDelaySeconds($failures);
-        if ($delay <= 0 || $secondsSinceLastFailure === null) {
-            return 0;
+        if ($delay <= 0) {
+            return;
         }
 
-        return max(0, $delay - max(0, $secondsSinceLastFailure));
-    }
-
-    /**
-     * Wartezeit des zuletzt wegen der Konto-Bremse abgewiesenen login()-Aufrufs (für `Retry-After`), sonst 0.
-     */
-    public function lastLoginRetryAfter(): int
-    {
-        return $this->loginRetryAfter;
-    }
-
-    /** Gleiche Meldung für bekannte und unbekannte Namen. */
-    private function rejectEarlyAccountLogin(int $retryAfter, string $loginIdentifier): string
-    {
-        $this->loginRetryAfter = max(1, $retryAfter);
         if (function_exists('cms_log')) {
-            cms_log('notice', "Login abgewiesen: Wartezeit von {$this->loginRetryAfter} s nach wiederholten Fehlversuchen für '{$loginIdentifier}'", [
+            cms_log('notice', "Login um {$delay} s verzögert: {$failures} Fehlversuche für '{$loginIdentifier}' in 15 Minuten", [
                 'category' => 'auth',
                 'username' => $loginIdentifier,
             ]);
         }
 
-        return 'Zu viele Fehlversuche für diese Zugangsdaten. Bitte in ' . $this->loginRetryAfter
-            . ($this->loginRetryAfter === 1 ? ' Sekunde' : ' Sekunden') . ' erneut versuchen.'
-            . ' Bleibt die Anmeldung gesperrt, setzen Sie Ihr Passwort über „Passwort vergessen“ zurück.';
-    }
-
-    private function rejectBlockedLoginIp(string $clientIp, int $loginLockout): string
-    {
-        AuditLogger::instance()->log(
-            AuditLogger::CAT_SECURITY,
-            'login_blocked',
-            'Brute-Force-Sperre für IP: ' . $clientIp,
-            'ip',
-            null,
-            ['ip' => $clientIp],
-            'warning'
-        );
-        $lockoutMinutes = max(1, (int) ceil($loginLockout / 60));
-
-        return 'Zu viele Login-Versuche. Bitte warten Sie ' . $lockoutMinutes . ($lockoutMinutes === 1 ? ' Minute.' : ' Minuten.');
-    }
-
-    /**
-     * Datenbank-Sperre je Konto für die Dauer einer Passwortprüfung. Wartet höchstens
-     * ACCOUNT_LOGIN_LOCK_WAIT Sekunden auf eine laufende Prüfung (Doppelklick, zweiter Tab).
-     *
-     * @return string|false|null Sperrname, false wenn weiterhin eine Prüfung läuft, null wenn die Sperre nicht verfügbar ist
-     */
-    private function acquireAccountLoginLock(string $accountKey): string|false|null
-    {
-        $lockName = 'cms_login_' . sha1($accountKey);
-        try {
-            $result = Database::instance()->get_var('SELECT GET_LOCK(?, ' . self::ACCOUNT_LOGIN_LOCK_WAIT . ')', [$lockName]);
-        } catch (\Throwable) {
-            return null;
-        }
-
-        if ($result === null) {
-            return null;
-        }
-
-        return (int) $result === 1 ? $lockName : false;
-    }
-
-    private function releaseAccountLoginLock(string|false|null $lockName): void
-    {
-        if (!is_string($lockName)) {
-            return;
-        }
-
-        try {
-            Database::instance()->get_var('SELECT RELEASE_LOCK(?)', [$lockName]);
-        } catch (\Throwable) {
-        }
+        sleep($delay);
     }
 
     private function recordAccountLoginFailure(string $accountKey): void
@@ -1478,85 +1367,6 @@ class Auth
         return hash_equals($sessionHash, hash('sha256', $sessionId));
     }
 
-    /**
-     * Zusatz für Zähler-Kennungen (Konto-Bremse, 2FA-Limit), wenn die Anfrage von einem bekannten Gerät
-     * des Kontos kommt, sonst ''. Das Cookie ist kein Anmeldefaktor – es wählt nur den Zähler.
-     */
-    public function knownDeviceKeySuffix(int $userId): string
-    {
-        $rawCookie = trim((string) ($_COOKIE[self::KNOWN_DEVICE_COOKIE_NAME] ?? ''));
-        if ($userId <= 0 || $rawCookie === '' || strlen($rawCookie) > 512) {
-            return '';
-        }
-
-        $fingerprint = $this->loadPasswordFingerprint($userId);
-        if ($fingerprint === '') {
-            return '';
-        }
-
-        $nonce = self::parseKnownDeviceToken($rawCookie, $userId, $this->getDeviceCookieSigningKey() . '|' . $fingerprint, time());
-
-        return $nonce !== null ? ':dev:' . $nonce : '';
-    }
-
-    /**
-     * Markiert das aktuelle Gerät als bekannt. Nur aufrufen, wenn der Inhaber nachgewiesen ist
-     * (vollständige Anmeldung, abgeschlossener Passwort-Reset).
-     */
-    public function trustCurrentDevice(int $userId): void
-    {
-        if ($userId > 0) {
-            $this->rememberKnownDevice($userId, $this->loadPasswordFingerprint($userId));
-        }
-    }
-
-    private function rememberKnownDevice(int $userId, string $fingerprint): void
-    {
-        if ($userId <= 0 || $fingerprint === '' || headers_sent()) {
-            return;
-        }
-
-        $key = $this->getDeviceCookieSigningKey() . '|' . $fingerprint;
-        $now = time();
-        // Ein gültiges Cookie behält seine Kennung (und damit seinen Zähler), nur die Laufzeit wird erneuert.
-        $nonce = self::parseKnownDeviceToken((string) ($_COOKIE[self::KNOWN_DEVICE_COOKIE_NAME] ?? ''), $userId, $key, $now)
-            ?? bin2hex(random_bytes(8));
-        $expiresAt = $now + self::KNOWN_DEVICE_COOKIE_TTL;
-
-        $this->sendCookie(self::KNOWN_DEVICE_COOKIE_NAME, self::buildKnownDeviceToken($userId, $nonce, $expiresAt, $key), $expiresAt);
-    }
-
-    /**
-     * Cookie-Wert `userId|nonce|expiresAt|HMAC`. `$key` enthält den Passwort-Fingerprint: Mit
-     * Passwortwechsel oder „alle Sitzungen beenden“ verlieren alle bisher ausgestellten Cookies ihre Gültigkeit.
-     */
-    public static function buildKnownDeviceToken(int $userId, string $nonce, int $expiresAt, string $key): string
-    {
-        $payload = $userId . '|' . $nonce . '|' . $expiresAt;
-
-        return rtrim(strtr(base64_encode($payload . '|' . hash_hmac('sha256', $payload, $key)), '+/', '-_'), '=');
-    }
-
-    /** Geräte-Kennung (16 Hex-Zeichen) eines gültigen, zum Konto gehörenden Cookies, sonst null. */
-    public static function parseKnownDeviceToken(string $token, int $userId, string $key, int $now): ?string
-    {
-        $decoded = base64_decode(strtr(trim($token), '-_', '+/'), true);
-        $parts = is_string($decoded) ? explode('|', $decoded) : [];
-        if (count($parts) !== 4) {
-            return null;
-        }
-
-        [$cookieUserId, $nonce, $expiresAt, $signature] = $parts;
-        if (!hash_equals(hash_hmac('sha256', $cookieUserId . '|' . $nonce . '|' . $expiresAt, $key), $signature)) {
-            return null;
-        }
-        if ($cookieUserId !== (string) $userId || (int) $expiresAt < $now || preg_match('/^[a-f0-9]{16}$/', $nonce) !== 1) {
-            return null;
-        }
-
-        return $nonce;
-    }
-
     private function getDeviceCookieSigningKey(): string
     {
         foreach (['JWT_SECRET', 'SECURE_AUTH_KEY', 'AUTH_KEY'] as $constant) {
@@ -1585,14 +1395,9 @@ class Auth
 
     private function setDeviceCookie(string $value, int $expiresAt): void
     {
-        $this->sendCookie(self::DEVICE_COOKIE_NAME, $value, $expiresAt);
-    }
-
-    private function sendCookie(string $name, string $value, int $expiresAt): void
-    {
         $params = session_get_cookie_params();
         $cookieDomain = $this->resolveCookieDomain((string)($params['domain'] ?? ''));
-        setcookie($name, $value, [
+        setcookie(self::DEVICE_COOKIE_NAME, $value, [
             'expires' => $expiresAt,
             'path' => $params['path'] ?? '/',
             'domain' => $cookieDomain,
@@ -1600,7 +1405,7 @@ class Auth
             'httponly' => true,
             'samesite' => (string)($params['samesite'] ?? 'Strict'),
         ]);
-        $_COOKIE[$name] = $value;
+        $_COOKIE[self::DEVICE_COOKIE_NAME] = $value;
     }
 
     private function clearDeviceCookie(): void
@@ -1666,7 +1471,6 @@ class Auth
 
         $this->refreshSessionCookie((string) ($user->role ?? 'member'), $remember);
         $this->bindCurrentSessionToDeviceCookie((int)$user->id);
-        $this->rememberKnownDevice((int) $user->id, $fingerprint);
 
         Database::instance()->update('users', ['last_login' => date('Y-m-d H:i:s')], ['id' => $user->id]);
         $this->currentUser = $user;

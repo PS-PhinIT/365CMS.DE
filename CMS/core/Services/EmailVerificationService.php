@@ -14,8 +14,10 @@
  * Konten ohne diese Meta – Registrierung ohne Verifizierungspflicht, vom Admin angelegt oder geändert,
  * Import/LDAP, Bestand aus Versionen vor der Verifizierung – gelten als unbestätigt und werden nur über die
  * user_id zugeordnet, bis ein Passwort-Reset oder eine bestätigte E-Mail-Änderung den Postfachzugriff belegt.
- * Einen eigenen Bestätigungslink für aktive Konten gibt es bewusst nicht: Ein per GET einlösbarer Link würde
- * schon durch den Vorabruf eines Mail-Filters „bestätigt“; der Passwort-Reset verlangt dagegen eine Eingabe.
+ * Der Bestätigungslink wird in zwei Schritten eingelöst: Der Abruf per GET prüft nur (peek()) und zeigt eine
+ * Seite mit Schaltfläche, erst deren POST bestätigt (verify()). Ein Mail-Filter, der Links vorab abruft, kann
+ * eine Adresse damit nicht „bestätigen“. Einen eigenen Bestätigungslink für aktive Konten gibt es nicht; dort
+ * belegt der Passwort-Reset (mit Eingabe) den Postfachzugriff.
  *
  * @package 365CMS
  */
@@ -206,7 +208,56 @@ final class EmailVerificationService
     }
 
     /**
-     * Prüft einen Bestätigungslink und aktiviert das Konto.
+     * Prüft einen Bestätigungslink nur lesend (Aufruf des Links per GET): ändert nichts am Konto und verbraucht
+     * den Token nicht. Mailfilter rufen Links vorab ab – eingelöst wird deshalb erst mit verify() per POST.
+     * Nur Abrufe mit ungültigem Token zählen als Versuch für das IP-Limit.
+     *
+     * @return array{success:bool,message:string,pending:bool} `pending`: Link ist gültig und wartet auf die Bestätigung
+     */
+    public function peek(int $userId, string $token): array
+    {
+        $invalid = ['success' => false, 'message' => 'Ungültiger oder bereits verwendeter Bestätigungslink.', 'pending' => false];
+        $token = strtolower(trim($token));
+        if ($userId <= 0 || preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+            return $invalid;
+        }
+
+        $clientIp = Security::getClientIp();
+        if (!Security::checkDbRateLimit($clientIp, 'email_verify', self::VERIFY_IP_LIMIT, self::VERIFY_IP_WINDOW)) {
+            return ['success' => false, 'message' => 'Zu viele Bestätigungsversuche. Bitte versuchen Sie es in einigen Minuten erneut.', 'pending' => false];
+        }
+
+        $tokenHash = hash('sha256', $token);
+        try {
+            if ($this->findUnverifiedUser($userId) === null) {
+                if (in_array($tokenHash, $this->usedHashes($userId), true)) {
+                    return ['success' => true, 'message' => 'Ihre E-Mail-Adresse ist bereits bestätigt. Sie können sich anmelden.', 'pending' => false];
+                }
+            } else {
+                foreach ($this->tokenEntries($userId) as $entry) {
+                    if (hash_equals($entry['h'], $tokenHash)) {
+                        return $entry['e'] < time()
+                            ? ['success' => false, 'message' => 'Dieser Bestätigungslink ist abgelaufen. Melden Sie sich an, um einen neuen Link zu erhalten.', 'pending' => false]
+                            : ['success' => true, 'message' => '', 'pending' => true];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('E-Mail-Bestätigungslink konnte nicht geprüft werden.', [
+                'user_id' => $userId,
+                'exception' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'Die Bestätigung konnte gerade nicht verarbeitet werden.', 'pending' => false];
+        }
+
+        Security::recordDbRateLimitAttempt($clientIp, 'email_verify');
+
+        return $invalid;
+    }
+
+    /**
+     * Löst einen Bestätigungslink ein und aktiviert das Konto. Nur per POST der Bestätigungsseite aufrufen,
+     * nie beim bloßen Abruf des Links (siehe peek()).
      *
      * @return array{success:bool,message:string}
      */
@@ -228,7 +279,7 @@ final class EmailVerificationService
         $tokenHash = hash('sha256', $token);
         try {
             if ($this->findUnverifiedUser($userId) === null) {
-                // Mit genau diesem Link schon bestätigt (z. B. nach Vorabprüfung durch einen Mailfilter oder Doppelklick).
+                // Mit genau diesem Link schon bestätigt (z. B. Doppelklick oder zweiter Aufruf eines der verschickten Links).
                 return in_array($tokenHash, $this->usedHashes($userId), true)
                     ? ['success' => true, 'message' => 'Ihre E-Mail-Adresse ist bereits bestätigt. Sie können sich anmelden.']
                     : $invalid;

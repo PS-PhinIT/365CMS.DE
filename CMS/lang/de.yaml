@@ -2702,3 +2702,8 @@ default:
   "newsletter.send_status.skipped": "übersprungen"
   "newsletter.template_status.active": "Aktiv"
   "newsletter.template_status.draft": "Entwurf"
+  "auth.confirm_email.title": "E-Mail-Adresse bestätigen"
+  "auth.confirm_email.text_verify": "Bitte bestätigen Sie mit der Schaltfläche, dass diese E-Mail-Adresse Ihnen gehört. Danach können Sie sich anmelden."
+  "auth.confirm_email.text_change": "Bitte bestätigen Sie mit der Schaltfläche, dass diese E-Mail-Adresse künftig für Ihr Konto gelten soll."
+  "auth.confirm_email.button": "E-Mail-Adresse bestätigen"
+  "auth.confirm_email.hint": "Sie haben kein Konto angelegt und keine Änderung angefordert? Dann bestätigen Sie nicht und schließen Sie diese Seite – ohne Bestätigung passiert nichts."

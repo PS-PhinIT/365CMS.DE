@@ -24,7 +24,7 @@ Verhalten der Modi:
 - **`cms`:** `GET /login`, `/register`, `/forgot-password` leiten auf die `/cms-*`-Pfade um; ausgeliefert wird die CMS-eigene Auth-Seite (`CmsAuthPageService::render()`), unabhängig vom Frontend-Theme.
 - **`legacy`:** `GET /login` usw. rendern die Templates des aktiven Themes (`login.php`, `register.php`, `forgot-password.php` in `CMS/themes/<theme>/`). Die `/cms-*`-Pfade bleiben zusätzlich erreichbar.
 
-POST-Anfragen werden unter beiden Pfaden verarbeitet. Für englische Aufrufe werden die Pfade über `ContentLocalizationService` lokalisiert (z. B. `/en/cms-login`). Weitere Endpunkte: `/logout` (nur mit CSRF-Token `logout`), `/mfa-challenge`, `/mfa-setup`, `/mfa-disable`, seit 4.0.0 `/cms-verify-email` (Bestätigungslink der E-Mail-Verifizierung, leitet mit Meldung auf die Anmeldeseite; [../users-groups/AUTH-SETTINGS.md](../users-groups/AUTH-SETTINGS.md#e-mail-verifizierung-seit-400)).
+POST-Anfragen werden unter beiden Pfaden verarbeitet. Für englische Aufrufe werden die Pfade über `ContentLocalizationService` lokalisiert (z. B. `/en/cms-login`). Weitere Endpunkte: `/logout` (nur mit CSRF-Token `logout`), `/mfa-challenge`, `/mfa-setup`, `/mfa-disable`, seit 4.0.0 `/cms-verify-email` (Bestätigungslink der E-Mail-Verifizierung: zeigt im Layout der Anmeldeseite die Schaltfläche **E-Mail-Adresse bestätigen** und leitet nach dem Absenden mit Meldung auf die Anmeldeseite; Texte unter `auth.confirm_email.*` in `CMS/lang/*.yaml`; [../users-groups/AUTH-SETTINGS.md](../users-groups/AUTH-SETTINGS.md#e-mail-verifizierung-seit-400)).
 
 ### Einstellungen
 

@@ -2702,3 +2702,8 @@ default:
   "newsletter.send_status.skipped": "skipped"
   "newsletter.template_status.active": "Active"
   "newsletter.template_status.draft": "Draft"
+  "auth.confirm_email.title": "Confirm email address"
+  "auth.confirm_email.text_verify": "Please use the button to confirm that this email address belongs to you. You can sign in afterwards."
+  "auth.confirm_email.text_change": "Please use the button to confirm that this email address should be used for your account from now on."
+  "auth.confirm_email.button": "Confirm email address"
+  "auth.confirm_email.hint": "You did not create an account or request a change? Then do not confirm and close this page – nothing happens without confirmation."
