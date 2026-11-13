@@ -2,7 +2,7 @@
 
 > **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
 
-![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard - 1.png)
+![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard_1.png)
 
 ## English
 
