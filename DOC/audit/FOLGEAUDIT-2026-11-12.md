@@ -13,6 +13,7 @@ Code, security and architecture audit of the 4.0.0 code base. The work is split 
 5. Wrong functions and outdated PHP/SQL constructs.
 6. Performance (PHP, MySQL/MariaDB, front end).
 7. Best practices, code quality, configuration and final check.
+8. PhinIT plugins `cms-m365adminsites`, `cms-365network` and `cms-m365messagecenter`: compatibility with 4.0.0, functions and security (one pull request per plugin in `365CMS.DE-PhinIT_PLUGINS`, documented here).
 
 All changes are documented under the existing `4.0.0` heading in `Changelog.md`; no new version number is assigned.
 
@@ -22,7 +23,7 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 
 - **Ein Thema, ein Pull Request.** Jeder Prüfbereich wird in einem eigenen Branch bearbeitet. Die Branches bauen aufeinander auf, weil jeder PR diese Datei und `Changelog.md` fortschreibt.
 - **Version.** Alle Änderungen stehen unter `4.0.0` in `Changelog.md`. Eine neue Versionsnummer wird nicht vergeben.
-- **IDs.** Die Nummerierung setzt die bisherigen Audits fort: `SEC` (Sicherheit) ab 49, `DEP` (Bibliotheken) ab 05, `FUN` (Funktionen, Logik) ab 63, `REF` (Verweise) ab 16, `BP` (Best Practice, Code-Qualität) ab 11, `PERF` (Geschwindigkeit) ab 23. Neu ist `CL` für Befunde am Changelog.
+- **IDs.** Die Nummerierung setzt die bisherigen Audits fort: `SEC` (Sicherheit) ab 49, `DEP` (Bibliotheken) ab 05, `FUN` (Funktionen, Logik) ab 63, `REF` (Verweise) ab 16, `BP` (Best Practice, Code-Qualität) ab 11, `PERF` (Geschwindigkeit) ab 23. Neu ist `CL` für Befunde am Changelog. Neu ist außerdem `PHI` für die PhinIT-Plugins (Abschnitt 8).
 - **Schwere:** 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis.
 - **Status:** `[ ] Offen` → `[x] Behoben in PR #…`. Befunde, die nach Prüfung nicht zutreffen, stehen je Bereich unter *Kein Befund nach Prüfung*.
 - **Fundstellen** nennen Dateipfad und Zeile auf dem Stand vor der Korrektur.
@@ -38,6 +39,7 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN, BP | PR 5 | offen |
 | 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | offen |
 | 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | offen |
+| 8 | PhinIT-Plugins `cms-m365adminsites`, `cms-365network`, `cms-m365messagecenter` (Kompatibilität mit 4.0.0) | PHI | je Plugin ein PR im Repository `365CMS.DE-PhinIT_PLUGINS` und hier | `cms-m365adminsites` erledigt (PhinIT_PLUGINS #25), `cms-365network` und `cms-m365messagecenter` offen |
 
 ### 1. Changelog 4.0.0
 
@@ -603,3 +605,54 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 | ID | Fundstelle | Schwere | Beschreibung | Status |
 |---|---|---|---|---|
 | – | – | – | Prüfung steht aus (PR 7) | – |
+
+
+### 8. PhinIT-Plugins: Kompatibilität mit 365CMS 4.0.0
+
+Die drei Plugins liegen im Repository `PS-PhinIT/365CMS.DE-PhinIT_PLUGINS`. Je Plugin gibt es dort einen Pull Request mit den Korrekturen und hier einen mit der Dokumentation. Fundstellen sind relativ zum Plugin-Verzeichnis und nennen den Stand vor der Korrektur. Der Core blieb unverändert: Die Plugins nutzen nur vorhandene Schnittstellen.
+
+**Prüfkatalog je Plugin**
+
+1. Core-Kompatibilität: Klassen, Pfade und Groß-/Kleinschreibung, Hooks und Filter (Name und Signatur gegen `CMS/core/`), Menü und Router, Lifecycle (`<slug>_activate()`, `_deactivate()`, `_uninstall()`, `plugin_activated`), Aktivierungs-Sicherheitsscan von `PluginManager`.
+2. Datenbank: Tabellen, Spalten, Zeichensatz, Indizes, Migrationen; Abfragen über `Database::prepare()` mit Prepared Statements (native Prepares, `ATTR_EMULATE_PREPARES => false`).
+3. Fach- und Oberflächenfunktionen im Admin und im Frontend, Assets sowie AJAX- und REST-Endpunkte.
+4. Sicherheit: Rechte und CSRF bei jeder Aktion, Escaping aller Ausgaben (auch externer Daten), PHP-8.x-Warnungen und -Deprecations, Fehlerbehandlung bei Zeitüberschreitungen und leeren Antworten, CSP von 4.0.0 (`style-src` ohne `'unsafe-inline'`).
+
+**Vorgehen:** Vollständige Durchsicht des Plugin-Codes, Abgleich jeder genutzten Core-Schnittstelle mit 4.0.0, danach Prüfung in einer 365CMS-4.0.0-Testinstallation (MariaDB 10.11, PHP 8.3 mit lokal umgangener Versionsprüfung) im Browser: Public-Seiten, alle Admin-Reiter, Speichern, Anlegen und Löschen, Lifecycle über `/admin/plugins`, MySQL-General-Log für die Abfragen je Aufruf.
+
+#### 8.1 `cms-m365adminsites` (1.0.7 → 1.0.8)
+
+| ID | Fundstelle | Schwere | Beschreibung | Status |
+|---|---|---|---|---|
+| PHI-01 | `admin/class-admin-pages.php:540`, `:672` | 🟠 | „Inhalte & Texte“ und „Anzeige & Design“ lasen die Einstellungen vor dem Speichern. Das Formular zeigte danach die alten Werte, ein erneutes Absenden überschrieb die gerade gespeicherte Änderung. Korrektur: Einstellungen erst nach der POST-Verarbeitung laden. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-02 | `admin/class-admin-pages.php:1066`, `includes/class-settings.php:247` | 🟠 | Die Public Route ließ jeden Pfad zu, auch `/admin`, `/search` oder `/member`. `Router::addRoute()` überschreibt gleichnamige Routen, das Plugin hätte die Core-Seite ersetzt. Korrektur: `Settings::is_allowed_route()` lehnt die ersten Pfadsegmente aller Core-Routen und `cms-*` ab; das Admin-Formular meldet den Grund und speichert nicht. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-03 | `includes/class-installer.php:23` | 🟠 | `maybe_install()` lief bei jedem Seitenaufruf vollständig: drei `CREATE TABLE IF NOT EXISTS` und drei weitere Abfragen. Korrektur: Schema-Marker `schema_version` in der Einstellungstabelle, Abgleich nur bei fehlendem oder veraltetem Marker. Gemessen auf der Portal-Seite: 10 → 4 Plugin-Abfragen, kein DDL. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-04 | `cms-m365adminsites.php` | 🟠 | Kein Lifecycle-Callback für das Löschen (4.0.0: `PluginManager::deletePlugin()` ruft `<slug>_uninstall()`); die drei Tabellen blieben zurück. Korrektur: `cms_m365adminsites_uninstall()` entfernt `m365adminsites_sites`, `_categories` und `_settings`. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-05 | `includes/class-installer.php:165` | 🟡 | Jede Aktivierung schrieb die Startdaten erneut (`force`) und stellte gelöschte Standardportale wieder her. Korrektur: Startdaten nur in eine leere Portal-Tabelle. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-06 | `includes/class-settings.php:206`, `includes/class-repository.php:209`, `admin/class-admin-pages.php:368`, `:373` | 🟡 | Speichern der Einstellungen und Löschen eines Portals fingen Datenbankfehler ab und meldeten trotzdem Erfolg. Korrektur: `Settings::save()` und `Repository::delete()` liefern `bool`, die Oberfläche meldet Fehler. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-07 | `includes/class-frontend.php:205`, `:209`, `templates/page-adminsites.php:117`, `:118`, `admin/class-admin-pages.php:87`, `:112`, `:144` | 🟡 | `(string)` auf GET-Parameter: `?q[]=x`, `?category[]=`, `?mc_severity[]=`, `?mc_workload[]=` und `?page[]=` lösten die PHP-Warnung „Array to string conversion“ aus. Korrektur: nur skalare Werte (`Frontend::query_param()`). | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-08 | `includes/class-repository.php:88` | 🟡 | `%` und `_` aus der Suche wirkten als LIKE-Platzhalter (`?q=_` traf alle Portale). Korrektur: `LIKE ? ESCAPE '!'` mit maskierter Eingabe, unabhängig von `NO_BACKSLASH_ESCAPES`. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-09 | `admin/class-admin-pages.php:493`, `:494` | 🟡 | Inline-Styles des Löschdialogs (`style="display:none"`, `max-width`) werden von der 4.0.0-CSP blockiert (Konsolenmeldung, Breite ignoriert). Korrektur: Attribut `hidden` und Klasse `mas-delete-modal` in `m365adminsites-admin.css`. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-10 | `includes/class-widget.php:78`, `:133` | 🟡 | Das Sidebar-Widget übernahm die Sortierung des Themes als `style`-Attribut; die CSP blockiert es, die Reihenfolge in der Sidebar ging verloren. Korrektur: geprüfte Deklarationen als Regel für die Widget-ID in `<style>` mit Nonce. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-11 | `cms-m365adminsites.php:93`, `admin/class-admin-menu.php:89` | ⚪ | Filter `admin_menu_items` aus 3.x: Der 4.0.0-Core wertet ihn nicht mehr aus (`MenuRegistry` liest nur `get_registered_admin_menus()`). Korrektur: Filter und `add_menu_items()` entfernt, Menü-Icon als Tabler-Icon. | [x] Behoben in PhinIT_PLUGINS #25 |
+| PHI-12 | `update.json:8`, `README.md:57` | ⚪ | `update.json` ohne `tested`, README mit Stand 1.0.5 und veralteter Menübeschreibung. Korrektur: `tested: 4.0.0`, README mit Reitern, Routenregel und Lifecycle. | [x] Behoben in PhinIT_PLUGINS #25 |
+
+**Kein Befund nach Prüfung (`cms-m365adminsites`)**
+
+- Klassen, Pfade, Groß-/Kleinschreibung; geladen werden nur Dateien innerhalb des Plugins (`realpath`-Prüfung).
+- Genutzte Core-Schnittstellen vorhanden und mit passender Signatur: `Database::prepare()`, `getPdo()`, `getPrefix()`, `Router::addRoute()`, `Security::generateToken()`, `verifyToken()`, `nonceAttr()`, `ThemeManager::getHeader()`, `getFooter()`, `SEOService::setRequestMeta()`, `SeoAnalysisService::resolveMetaTitle()`, `resolveMetaDescription()`, `Auth::isAdmin()`, `current_user_can()`; Hooks `cms_init`, `plugin_activated`, `cms_admin_menu`, `register_routes`, `head`, `body_end`, Filter `cms_sitemap_entries` und `search_results` (vier Argumente inkl. Kontext). Der Filter `body_class` wird nur von Themes ausgelöst, die ihn anbieten (z. B. `cms-phinit`); ohne ihn fehlt lediglich die Body-Klasse.
+- Tabellen `utf8mb4`/`utf8mb4_unicode_ci` mit Primär-, Unique- und Sortierindizes; alle Abfragen als Prepared Statements, Tabellennamen über `quote_identifier()`. `LIMIT ?`/`OFFSET ?` mit nativen Prepares unter MariaDB geprüft.
+- Admin: Zugriff nur für Administratoren mit `manage_options`, jede Aktion mit Capability- und CSRF-Prüfung (eigene Token je Formular), URL-Eingaben nur `http(s)`.
+- Ausgaben im Admin, im Template und im Widget durchgehend mit `htmlspecialchars(…, ENT_QUOTES, 'UTF-8')`; externe Links mit `rel="noopener noreferrer"`.
+- Seitensuche und Sitemap liefern Treffer bzw. den Eintrag in `plugins.xml`; Aktivierungs-Sicherheitsscan von `PluginManager` ohne Treffer.
+- Externe APIs und AJAX-Endpunkte: keine im Plugin (die Message-Center-Highlights sind redaktionell gepflegt).
+
+**Grenzen:** PHP 8.4/8.5 stand in der Testumgebung nicht zur Verfügung (Prüfung unter 8.3, Deprecations von 8.5 per Code-Suche: keine). Das Sidebar-Widget wurde nur isoliert geprüft, weil das Theme `cms-phinit` nicht Teil der Testinstallation war.
+
+#### 8.2 `cms-365network`
+
+Prüfung steht aus (eigener PR).
+
+#### 8.3 `cms-m365messagecenter`
+
+Prüfung steht aus (eigener PR).
