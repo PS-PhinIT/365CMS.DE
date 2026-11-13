@@ -203,8 +203,10 @@ class Router
 
         // `/newsletter/`: Anmeldung prüft ihr eigenes Token; Bestätigen/Abmelden sind über das geheime Empfänger-Token
         // geschützt, und die One-Click-Abmeldung (RFC 8058) senden Postfachanbieter grundsätzlich ohne Token.
+        // `/cms-verify-email`, `/cms-confirm-email-change`: Die Bestätigungsseite wird aus dem Mailprogramm ohne Sitzung
+        // geöffnet (Sitzungs-Cookie ist SameSite=Strict); geschützt ist der POST über den geheimen Bestätigungs-Token.
         $csrfBypassPrefixes = ['/contact/', '/newsletter/'];
-        $csrfBypassExact = ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/logout', '/contact', '/kontakt', '/comments/post', '/mfa-challenge', '/mfa-setup', '/mfa-disable'];
+        $csrfBypassExact = ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/cms-verify-email', '/cms-confirm-email-change', '/logout', '/contact', '/kontakt', '/comments/post', '/mfa-challenge', '/mfa-setup', '/mfa-disable'];
             $isThemeFavoriteToggle = $method === 'POST'
                 && (string) ($_POST['phinit_toggle_favorite'] ?? '') === '1'
                 && in_array((string) ($_POST['favorite_content_type'] ?? ''), ['post', 'page'], true)

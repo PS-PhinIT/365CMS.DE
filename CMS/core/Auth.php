@@ -43,6 +43,15 @@ class Auth
     private const ACCOUNT_FAILURE_WINDOW = 900;
     private const ACCOUNT_FAILURE_FREE_ATTEMPTS = 5;
     private const ACCOUNT_FAILURE_MAX_DELAY = 30;
+    /**
+     * login_attempts.action für befristet reservierte Benutzernamen (Registrierung mit bereits vergebener
+     * Adresse). 24 Stunden: Ältere Einträge entfernt die Bereinigung in Security::checkDbRateLimit().
+     */
+    private const REGISTRATION_RESERVED_ACTION = 'register_reserved';
+    private const REGISTRATION_RESERVED_WINDOW = 86400;
+    /** Höchstens so viele Namensreservierungen je E-Mail-Adresse im Reservierungszeitraum (Missbrauchsgrenze). */
+    private const REGISTRATION_RESERVED_LIMIT_PER_EMAIL = 3;
+    private const EMAIL_UNVERIFIED_MESSAGE = 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Bitte nutzen Sie den neuesten Link aus unserer Bestätigungs-E-Mail (auch im Spam-Ordner nachsehen).';
     private const REGISTRATION_NOTICE_LIMIT = 3;
     private const REGISTRATION_NOTICE_WINDOW = 3600;
     private const USERNAME_MIN_LENGTH = 3;
@@ -381,6 +390,13 @@ class Auth
         if (!$user) {
             // Gleiche Laufzeit wie bei falschem Passwort, damit Benutzernamen nicht per Timing erkennbar sind.
             $security->verifyPassword($password, self::LOGIN_TIMING_DUMMY_HASH);
+            // Zugangsdaten einer Registrierung, für die wegen bereits vergebener Adresse kein Konto entstand:
+            // gleiche Antwort wie für das unbestätigte Konto, das bei freier Adresse entstanden wäre.
+            if ($this->isReservedRegistrationLogin($username, $password)) {
+                $this->clearAccountLoginFailures($accountKey);
+
+                return self::EMAIL_UNVERIFIED_MESSAGE;
+            }
             $this->logLoginAttempt($username);
             $this->recordAccountLoginFailure($accountKey);
             // H-01: Fehlgeschlagenen Login protokollieren
@@ -392,6 +408,11 @@ class Auth
         }
         
         if (!$security->verifyPassword($password, $user->password)) {
+            // Reservierte Registrierung (siehe oben). Der Zähler des bestehenden Kontos bleibt unberührt –
+            // sonst ließe sich die Anmeldeverzögerung mit selbst gewählten Zugangsdaten zurücksetzen.
+            if ($this->isReservedRegistrationLogin($username, $password)) {
+                return self::EMAIL_UNVERIFIED_MESSAGE;
+            }
             $this->logLoginAttempt($username);
             $this->recordAccountLoginFailure($accountKey);
             // H-01: Fehlgeschlagenen Login protokollieren
@@ -405,16 +426,14 @@ class Auth
         $this->clearAccountLoginFailures($accountKey);
         
         if ($user->status === EmailVerificationService::STATUS_UNVERIFIED) {
-            // Erst nach korrektem Passwort erreichbar – verrät also nichts über fremde Konten.
-            $resent = false;
+            // Erst nach korrektem Passwort erreichbar. Ein neuer Link geht höchstens begrenzt oft hinaus;
+            // die Meldung ist immer dieselbe (siehe reservierte Registrierung oben).
             try {
-                $resent = EmailVerificationService::getInstance()->resend((int) $user->id);
+                EmailVerificationService::getInstance()->resend((int) $user->id);
             } catch (\Throwable) {
             }
 
-            return $resent
-                ? 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Wir haben Ihnen soeben einen neuen Bestätigungslink gesendet.'
-                : 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Bitte nutzen Sie den Link aus unserer Bestätigungs-E-Mail (auch im Spam-Ordner nachsehen).';
+            return self::EMAIL_UNVERIFIED_MESSAGE;
         }
 
         if ($user->status !== 'active') {
@@ -548,7 +567,9 @@ class Auth
         // Check if username exists
         $stmt = $db->prepare("SELECT COUNT(*) as count FROM {$db->getPrefix()}users WHERE username = ?");
         $stmt->execute([$username]);
-        if ($stmt->fetch()->count > 0) {
+        // Auch befristet reservierte Namen gelten als vergeben (siehe unten) – die Antwort hängt damit
+        // nicht davon ab, ob eine frühere Registrierung mit diesem Namen ein Konto erzeugt hat.
+        if ($stmt->fetch()->count > 0 || $this->isRegistrationUsernameReserved($username)) {
             return 'Benutzername bereits vergeben.';
         }
         
@@ -561,6 +582,12 @@ class Auth
         if ($existingUserId > 0) {
             // Gleicher Aufwand wie bei einer echten Registrierung (Passwort-Hash).
             $security->hashPassword($password);
+            // Den gewählten Namen reservieren: Sonst verriete eine zweite Registrierung mit demselben Namen
+            // („bereits vergeben“ oder nicht), ob hier ein Konto entstanden ist – und damit die Adresse.
+            // Je Adresse begrenzt, damit sich mit einer bekannten Adresse nicht beliebig viele Namen sperren lassen.
+            if ($this->claimRegistrationSlot($email)) {
+                $this->reserveRegistration($username, $email, $password);
+            }
             $this->notifyExistingAccountOfRegistration($existingUserId, $email);
 
             return true;
@@ -605,6 +632,9 @@ class Auth
                 }
             }
 
+            // Zählt wie eine Reservierung: So verhält sich eine frisch registrierte Adresse bei weiteren
+            // Registrierungen genauso wie eine schon länger vergebene (gleiche Grenze, gleiche Antworten).
+            $this->claimRegistrationSlot($email);
             Hooks::doAction('user_registered', (int) $userId);
             return true;
         }
@@ -1079,6 +1109,77 @@ class Auth
             );
         } catch (\Throwable) {
         }
+    }
+
+    private function registrationReservationKey(string $username): string
+    {
+        return 'regname:' . mb_strtolower($username, 'UTF-8');
+    }
+
+    /**
+     * Kennung für „diese Zugangsdaten wurden bei einer reservierten Registrierung gewählt“. Kein
+     * Passwort-Hash zum Anmelden: ein mit dem Server-Schlüssel gebildeter, gekürzter HMAC, der nur die
+     * Antwort des Logins angleicht und mit der Reservierung verfällt.
+     */
+    private function registrationCredentialKey(string $loginIdentifier, string $password): string
+    {
+        $material = mb_strtolower($loginIdentifier, 'UTF-8') . "\n" . $password;
+
+        return 'regpw:' . substr(hash_hmac('sha256', $material, $this->getDeviceCookieSigningKey()), 0, 54);
+    }
+
+    /**
+     * Belegt einen der REGISTRATION_RESERVED_LIMIT_PER_EMAIL Plätze der Adresse; false, wenn alle belegt sind.
+     */
+    private function claimRegistrationSlot(string $email): bool
+    {
+        $identifier = 'regmail:' . mb_strtolower($email, 'UTF-8');
+        if (!Security::checkDbIdentifierRateLimit(
+            $identifier,
+            self::REGISTRATION_RESERVED_ACTION,
+            self::REGISTRATION_RESERVED_LIMIT_PER_EMAIL,
+            self::REGISTRATION_RESERVED_WINDOW
+        )) {
+            return false;
+        }
+        Security::recordDbRateLimitAttempt(Security::getClientIp(), self::REGISTRATION_RESERVED_ACTION, $identifier);
+
+        return true;
+    }
+
+    private function reserveRegistration(string $username, string $email, string $password): void
+    {
+        $clientIp = Security::getClientIp();
+        Security::recordDbRateLimitAttempt($clientIp, self::REGISTRATION_RESERVED_ACTION, $this->registrationReservationKey($username));
+        // Anmelden ist mit Benutzername oder E-Mail-Adresse möglich – beide Kombinationen merken.
+        Security::recordDbRateLimitAttempt($clientIp, self::REGISTRATION_RESERVED_ACTION, $this->registrationCredentialKey($username, $password));
+        Security::recordDbRateLimitAttempt($clientIp, self::REGISTRATION_RESERVED_ACTION, $this->registrationCredentialKey($email, $password));
+    }
+
+    private function isRegistrationUsernameReserved(string $username): bool
+    {
+        return Security::countDbIdentifierAttempts(
+            $this->registrationReservationKey($username),
+            self::REGISTRATION_RESERVED_ACTION,
+            self::REGISTRATION_RESERVED_WINDOW
+        ) > 0;
+    }
+
+    /**
+     * Nur mit Verifizierungspflicht: Ohne sie meldete sich ein echtes neues Konto sofort an, eine
+     * gleichlautende Antwort für die Reservierung gibt es dann nicht (dokumentiertes Restrisiko).
+     */
+    private function isReservedRegistrationLogin(string $loginIdentifier, string $password): bool
+    {
+        if (!$this->isEmailVerificationRequired()) {
+            return false;
+        }
+
+        return Security::countDbIdentifierAttempts(
+            $this->registrationCredentialKey($loginIdentifier, $password),
+            self::REGISTRATION_RESERVED_ACTION,
+            self::REGISTRATION_RESERVED_WINDOW
+        ) > 0;
     }
 
     /**

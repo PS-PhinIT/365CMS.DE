@@ -133,4 +133,4 @@ Damit entsteht ein WordPress-ähnliches Blockgefühl, während Sanitizer, Render
 | `undo.umd.js` | [`editorjs-undo`](https://www.npmjs.com/package/editorjs-undo) | https://github.com/kommitters/editorjs-undo |
 | `drag-drop.umd.js` | [`editorjs-drag-drop`](https://www.npmjs.com/package/editorjs-drag-drop) | https://github.com/kommitters/editorjs-drag-drop |
 
-Hinweis: `delimiter.umd.js` wurde lokal aus `@coolbytes/editorjs-delimiter` 1.0.2 gebaut (Varianten `line`/`dash`/`star`), nicht aus `@editorjs/delimiter`.
+Hinweis: `delimiter.umd.js` stammt aus `@coolbytes/editorjs-delimiter` (Varianten `line`/`dash`/`star`), nicht aus `@editorjs/delimiter`; die Datei entspricht dem npm-Build 1.0.4 (`dist/bundle.js` ohne `sourceMappingURL`-Kommentar, Abgleich 2026-11-13).

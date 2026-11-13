@@ -265,6 +265,13 @@ final class ContactPluginMigrator implements PluginMigrator
         $template = strtolower(trim((string) ($row->template ?? 'classic')));
         $layout = self::LAYOUT_MAP[$template] ?? 'standard';
         $prefix = trim((string) ($row->subject_prefix ?? ''));
+        $level = !empty($row->enable_captcha) ? 'high' : (!empty($row->enable_honeypot) ? 'standard' : 'low');
+        $rateLimit = (int) ($row->rate_limit ?? 3);
+        if ($confirmation) {
+            // Eine Bestätigung an frei eingegebene Adressen nie ohne Mindestzeit und Rate-Limit übernehmen.
+            $level = $level === 'low' ? 'standard' : $level;
+            $rateLimit = $rateLimit > 0 ? $rateLimit : 3;
+        }
 
         return [
             'heading' => ['de' => (string) ($row->title ?? ''), 'en' => ''],
@@ -283,8 +290,8 @@ final class ContactPluginMigrator implements PluginMigrator
                 'subject' => ['de' => 'Ihre Kontaktanfrage wurde empfangen', 'en' => ''],
                 'body' => ['de' => "Hallo {name},\n\nvielen Dank für Ihre Nachricht! Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.\n\nMit freundlichen Grüßen\n" . (trim($fromName) !== '' ? trim($fromName) : '{site_name}'), 'en' => ''],
             ],
-            'antispam_level' => !empty($row->enable_captcha) ? 'high' : (!empty($row->enable_honeypot) ? 'standard' : 'low'),
-            'rate_limit' => (int) ($row->rate_limit ?? 3),
+            'antispam_level' => $level,
+            'rate_limit' => $rateLimit,
             'store_submissions' => $store,
             'layout' => $layout,
             'show_company_info' => $layout === 'split',

@@ -243,8 +243,11 @@ final class CmsAuthPageService
     {
         $settings = $this->getSettings();
         $siteName = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
-        $pageType = in_array($page, ['login', 'register', 'forgot-password'], true) ? $page : 'login';
+        $pageType = in_array($page, ['login', 'register', 'forgot-password', 'confirm-email'], true) ? $page : 'login';
+        // Zwischenseite der Bestätigungslinks (PublicRouter::renderEmailConfirmationPage()): Formularziel, uid, Token und Texte.
+        $confirmEmail = array_map('strval', is_array($context['confirm_email'] ?? null) ? $context['confirm_email'] : []);
         $pageTitle = match ($pageType) {
+            'confirm-email' => (string) ($confirmEmail['title'] ?? 'E-Mail-Adresse bestätigen'),
             'register' => 'Registrieren',
             'forgot-password' => 'Passwort zurücksetzen',
             default => 'Anmelden',

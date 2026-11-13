@@ -40,8 +40,11 @@ final class PublicRouter
         $this->router->addRoute('POST', '/cms-register', [$this, 'handleRegister']);
         $this->router->addRoute('GET', '/cms-password-forgot', [$this, 'renderForgotPassword']);
         $this->router->addRoute('POST', '/cms-password-forgot', [$this, 'handleForgotPassword']);
-        $this->router->addRoute('GET', Services\EmailVerificationService::PATH, [$this, 'handleVerifyEmail']);
-        $this->router->addRoute('GET', Services\EmailChangeService::PATH, [$this, 'handleConfirmEmailChange']);
+        // Bestätigungslinks: GET prüft nur und zeigt die Schaltfläche, erst der POST löst ein (Mailfilter rufen Links vorab ab).
+        $this->router->addRoute('GET', Services\EmailVerificationService::PATH, [$this, 'renderVerifyEmail']);
+        $this->router->addRoute('POST', Services\EmailVerificationService::PATH, [$this, 'handleVerifyEmail']);
+        $this->router->addRoute('GET', Services\EmailChangeService::PATH, [$this, 'renderConfirmEmailChange']);
+        $this->router->addRoute('POST', Services\EmailChangeService::PATH, [$this, 'handleConfirmEmailChange']);
 
         $this->router->addRoute('GET', '/login', [$this, 'redirectLegacyLogin']);
         $this->router->addRoute('POST', '/login', [$this, 'handleLogin']);
@@ -623,7 +626,13 @@ final class PublicRouter
             return;
         }
 
-        $result = Auth::instance()->register($_POST);
+        // Nur die Felder des Formulars übergeben: Ein mitgeschickter `display_name` landete sonst als frei
+        // wählbarer Text im Konto; der Anzeigename entspricht zunächst dem streng gefilterten Benutzernamen.
+        $result = Auth::instance()->register([
+            'username' => $this->requestString($_POST['username'] ?? '', 80),
+            'email' => $this->requestString($_POST['email'] ?? '', 254),
+            'password' => $registerPassword,
+        ]);
 
         if ($result === true) {
             $_SESSION['success'] = Auth::instance()->isEmailVerificationRequired()
@@ -642,39 +651,62 @@ final class PublicRouter
     }
 
     /**
-     * Bestätigungslink aus der Registrierungs-Mail (`/cms-verify-email?uid=…&token=…`).
+     * Bestätigungslink aus der Registrierungs-Mail (`GET /cms-verify-email?uid=…&token=…`): prüft den Link nur
+     * lesend und zeigt die Seite mit der Schaltfläche. Eingelöst wird erst per POST (handleVerifyEmail()).
      */
-    public function handleVerifyEmail(): void
+    public function renderVerifyEmail(): void
     {
-        if (!headers_sent()) {
-            header('Referrer-Policy: no-referrer', true);
+        [$userId, $token] = $this->emailConfirmationInput($_GET);
+        $result = Services\EmailVerificationService::getInstance()->peek($userId, $token);
+        if ($result['pending']) {
+            $this->renderEmailConfirmationPage('verify', Services\EmailVerificationService::PATH, $userId, $token);
+            return;
         }
-
-        $uid = $this->requestString($_GET['uid'] ?? '', 20);
-        $result = Services\EmailVerificationService::getInstance()->verify(
-            ctype_digit($uid) ? (int) $uid : 0,
-            $this->requestString($_GET['token'] ?? '', 128)
-        );
 
         $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
         $this->router->redirect($this->getPublicAuthPath('login'), 303);
     }
 
     /**
-     * Bestätigungslink für eine geänderte E-Mail-Adresse (`/cms-confirm-email-change?uid=…&token=…`).
+     * Schaltfläche der Bestätigungsseite (`POST /cms-verify-email`, `uid` und `token` als Formularfelder).
+     */
+    public function handleVerifyEmail(): void
+    {
+        [$userId, $token] = $this->emailConfirmationInput($_POST);
+        $result = Services\EmailVerificationService::getInstance()->verify($userId, $token);
+
+        $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
+        $this->router->redirect($this->getPublicAuthPath('login'), 303);
+    }
+
+    /**
+     * Bestätigungslink für eine geänderte E-Mail-Adresse (`GET /cms-confirm-email-change?uid=…&token=…`): prüft nur
+     * lesend und zeigt die Seite mit der Schaltfläche. Eingelöst wird erst per POST (handleConfirmEmailChange()).
+     */
+    public function renderConfirmEmailChange(): void
+    {
+        [$userId, $token] = $this->emailConfirmationInput($_GET);
+        $result = Services\EmailChangeService::getInstance()->peek($userId, $token);
+        if ($result['pending']) {
+            $this->renderEmailConfirmationPage('change', Services\EmailChangeService::PATH, $userId, $token);
+            return;
+        }
+
+        $this->finishEmailChangeConfirmation($result);
+    }
+
+    /**
+     * Schaltfläche der Bestätigungsseite (`POST /cms-confirm-email-change`, `uid` und `token` als Formularfelder).
      */
     public function handleConfirmEmailChange(): void
     {
-        if (!headers_sent()) {
-            header('Referrer-Policy: no-referrer', true);
-        }
+        [$userId, $token] = $this->emailConfirmationInput($_POST);
+        $this->finishEmailChangeConfirmation(Services\EmailChangeService::getInstance()->confirm($userId, $token));
+    }
 
-        $uid = $this->requestString($_GET['uid'] ?? '', 20);
-        $result = Services\EmailChangeService::getInstance()->confirm(
-            ctype_digit($uid) ? (int) $uid : 0,
-            $this->requestString($_GET['token'] ?? '', 128)
-        );
-
+    /** @param array{success:bool,message:string} $result */
+    private function finishEmailChangeConfirmation(array $result): void
+    {
         if (Auth::instance()->isLoggedIn()) {
             $this->setMemberAlert($result['success'] ? 'success' : 'danger', $result['message']);
             $this->router->redirect('/member/profile', 303);
@@ -683,6 +715,53 @@ final class PublicRouter
 
         $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
         $this->router->redirect($this->getPublicAuthPath('login'), 303);
+    }
+
+    /**
+     * `uid` und `token` eines Bestätigungslinks; der Token steht in der Adresse bzw. im Formular, deshalb
+     * gibt die Antwort keinen Referrer weiter.
+     *
+     * @param array<array-key, mixed> $source `$_GET` (Link) oder `$_POST` (Schaltfläche)
+     * @return array{0:int,1:string}
+     */
+    private function emailConfirmationInput(array $source): array
+    {
+        if (!headers_sent()) {
+            header('Referrer-Policy: no-referrer', true);
+        }
+        $uid = $this->requestString($source['uid'] ?? '', 20);
+
+        return [ctype_digit($uid) ? (int) $uid : 0, $this->requestString($source['token'] ?? '', 128)];
+    }
+
+    /**
+     * Zwischenseite mit der Schaltfläche „E-Mail-Adresse bestätigen“ im Layout der Anmeldeseiten. Das Formular
+     * sendet `uid` und `token` als Felder an dieselbe Adresse ohne Query – der Token steht damit nicht in der
+     * Adresse des POST.
+     */
+    private function renderEmailConfirmationPage(string $kind, string $path, int $userId, string $token): void
+    {
+        $locale = Services\Feed\FeedI18n::requestLocale();
+        // FeedI18n kennt nur die Kataloge feeds.* und newsletter.*; weicht die Sprache der Anfrage von der
+        // Systemsprache ab, kommt der Schlüssel zurück – dann gilt wie auf den übrigen Anmeldeseiten __().
+        $text = static function (string $key) use ($locale): string {
+            $fullKey = 'auth.confirm_email.' . $key;
+            $translated = Services\Feed\FeedI18n::text($fullKey, $locale);
+
+            return $translated !== $fullKey ? $translated : (string) __($fullKey);
+        };
+
+        Services\CmsAuthPageService::getInstance()->render('confirm-email', [
+            'confirm_email' => [
+                'action' => Services\Feed\FeedI18n::path($path, $locale),
+                'uid' => (string) $userId,
+                'token' => $token,
+                'title' => $text('title'),
+                'text' => $text($kind === 'change' ? 'text_change' : 'text_verify'),
+                'hint' => $text('hint'),
+                'button' => $text('button'),
+            ],
+        ]);
     }
 
     public function redirectLegacyLogin(): void

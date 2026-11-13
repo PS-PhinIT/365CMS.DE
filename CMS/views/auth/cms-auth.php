@@ -14,16 +14,19 @@ $layoutVariant = in_array((string) ($settings['layout_variant'] ?? 'centered'), 
     ? (string) ($settings['layout_variant'] ?? 'centered')
     : 'centered';
 $headline = match ($pageType) {
+    'confirm-email' => (string) ($confirmEmail['title'] ?? ''),
     'register' => (string) ($settings['headline_register'] ?? 'Neues Konto erstellen'),
     'forgot-password' => (string) ($settings['headline_forgot'] ?? 'Passwort zurücksetzen'),
     default => (string) ($settings['headline_login'] ?? 'Willkommen zurück'),
 };
 $subheadline = match ($pageType) {
+    'confirm-email' => (string) ($confirmEmail['text'] ?? ''),
     'register' => (string) ($settings['subheadline_register'] ?? ''),
     'forgot-password' => (string) ($settings['subheadline_forgot'] ?? ''),
     default => (string) ($settings['subheadline_login'] ?? ''),
 };
 $formAction = match ($pageType) {
+    'confirm-email' => (string) ($confirmEmail['action'] ?? ''),
     'register' => $registerUrl,
     'forgot-password' => $forgotUrl,
     default => $loginUrl,
@@ -585,6 +588,14 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                         <button class="cms-auth-button" type="submit"><?php echo htmlspecialchars($registerButtonText, ENT_QUOTES, 'UTF-8'); ?></button>
                     </form>
                 <?php endif; ?>
+            <?php elseif ($pageType === 'confirm-email'): ?>
+                <?php // Eingelöst wird erst mit dieser Schaltfläche (POST); uid und Token stehen im Formular, nicht in der Zieladresse. ?>
+                <form class="cms-auth-form" method="POST" action="<?php echo htmlspecialchars($formAction, ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="uid" value="<?php echo htmlspecialchars((string) ($confirmEmail['uid'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="token" value="<?php echo htmlspecialchars((string) ($confirmEmail['token'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                    <button class="cms-auth-button" type="submit"><?php echo htmlspecialchars((string) ($confirmEmail['button'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></button>
+                    <div class="cms-auth-help"><?php echo htmlspecialchars((string) ($confirmEmail['hint'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                </form>
             <?php else: ?>
                 <?php if ($forgotStep === 'done'): ?>
                     <div class="cms-auth-alert cms-auth-alert--success" role="status">

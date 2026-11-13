@@ -7,6 +7,18 @@
  * Zugriff auf das Postfach belegt) setzt das Konto auf `active`. Bis dahin scheitern Login, Passkey,
  * Remember-me und Sitzungen an der bestehenden Statusprüfung (`status = 'active'`).
  *
+ * Bestätigte Adresse: Als nachgewiesen gilt die Konto-Adresse nur mit der User-Meta `email_verified_at`
+ * (Bestätigungslink der Registrierung oder der E-Mail-Änderung, abgeschlossener Passwort-Reset). Die zentrale
+ * Prüfung ist matchableEmail()/isEmailVerified(): Nur damit dürfen Daten ohne Kontobezug (anonyme
+ * Formulareingänge, Newsletter-Abonnements, DSGVO-Auskunft/-Löschung) über die Adresse zugeordnet werden.
+ * Konten ohne diese Meta – Registrierung ohne Verifizierungspflicht, vom Admin angelegt oder geändert,
+ * Import/LDAP, Bestand aus Versionen vor der Verifizierung – gelten als unbestätigt und werden nur über die
+ * user_id zugeordnet, bis ein Passwort-Reset oder eine bestätigte E-Mail-Änderung den Postfachzugriff belegt.
+ * Der Bestätigungslink wird in zwei Schritten eingelöst: Der Abruf per GET prüft nur (peek()) und zeigt eine
+ * Seite mit Schaltfläche, erst deren POST bestätigt (verify()). Ein Mail-Filter, der Links vorab abruft, kann
+ * eine Adresse damit nicht „bestätigen“. Einen eigenen Bestätigungslink für aktive Konten gibt es nicht; dort
+ * belegt der Passwort-Reset (mit Eingabe) den Postfachzugriff.
+ *
  * @package 365CMS
  */
 
@@ -69,6 +81,52 @@ final class EmailVerificationService
     }
 
     /**
+     * Zentrale Prüfung für jede Zuordnung von Daten über die E-Mail-Adresse eines Kontos.
+     *
+     * Liefert die aktuelle Konto-Adresse, wenn sie nachweislich bestätigt ist (`email_verified_at` gesetzt),
+     * sonst ''. Mit `$expectedEmail` zusätzlich nur, wenn diese der aktuellen Konto-Adresse entspricht
+     * (z. B. die in einem Löschantrag gespeicherte Adresse). Im Fehlerfall '' – dann wird nur über die
+     * user_id zugeordnet.
+     */
+    public function matchableEmail(int $userId, ?string $expectedEmail = null): string
+    {
+        if ($userId <= 0) {
+            return '';
+        }
+
+        try {
+            $row = $this->db->get_row(
+                "SELECT u.email, m.meta_value AS verified_at
+                 FROM {$this->prefix}users u
+                 LEFT JOIN {$this->prefix}user_meta m ON m.user_id = u.id AND m.meta_key = ?
+                 WHERE u.id = ? LIMIT 1",
+                [self::META_VERIFIED_AT, $userId]
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning('Bestätigungsstatus der E-Mail-Adresse konnte nicht gelesen werden.', [
+                'user_id' => $userId,
+                'exception' => $e->getMessage(),
+            ]);
+            return '';
+        }
+
+        $email = trim((string) ($row->email ?? ''));
+        if ($email === '' || trim((string) ($row->verified_at ?? '')) === '') {
+            return '';
+        }
+        if ($expectedEmail !== null && strcasecmp(trim($expectedEmail), $email) !== 0) {
+            return '';
+        }
+
+        return $email;
+    }
+
+    public function isEmailVerified(int $userId): bool
+    {
+        return $this->matchableEmail($userId) !== '';
+    }
+
+    /**
      * Erzeugt einen neuen Bestätigungslink (ein älterer wird ungültig) und verschickt ihn.
      */
     public function sendVerificationMail(int $userId, ?string $locale = null): bool
@@ -81,10 +139,10 @@ final class EmailVerificationService
         $token = $this->issueToken($userId);
 
         $siteName = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
-        $name = trim((string) ($user->display_name ?? ''));
-        $name = $name !== '' ? $name : (string) ($user->username ?? '');
         $subject = '[' . $siteName . '] E-Mail-Adresse bestätigen';
-        $body = "Hallo {$name},\n\n"
+        // Neutrale Anrede: Die Mail geht an eine noch unbestätigte, frei angegebene Adresse – ein frei
+        // wählbarer Anzeigename wäre dort ein Köder-Text mit dem Absender der Website.
+        $body = "Hallo,\n\n"
             . "bitte bestätige deine E-Mail-Adresse, um dein Konto bei {$siteName} zu aktivieren.\n\n"
             . 'Klicke auf den folgenden Link (gültig für ' . intdiv(self::TOKEN_TTL_SECONDS, 3600) . " Stunden):\n"
             . $this->buildVerificationUrl($userId, $token, $locale) . "\n\n"
@@ -135,8 +193,71 @@ final class EmailVerificationService
         return $this->sendVerificationMail($userId, $locale);
     }
 
+    private function confirmActiveAddress(int $userId, string $via): void
+    {
+        $this->setMeta($userId, self::META_VERIFIED_AT, date('Y-m-d H:i:s'));
+        AuditLogger::instance()->log(
+            AuditLogger::CAT_AUTH,
+            'auth.email_verified',
+            'E-Mail-Adresse eines aktiven Kontos bestätigt',
+            'user',
+            $userId,
+            ['via' => $via],
+            'info'
+        );
+    }
+
     /**
-     * Prüft einen Bestätigungslink und aktiviert das Konto.
+     * Prüft einen Bestätigungslink nur lesend (Aufruf des Links per GET): ändert nichts am Konto und verbraucht
+     * den Token nicht. Mailfilter rufen Links vorab ab – eingelöst wird deshalb erst mit verify() per POST.
+     * Nur Abrufe mit ungültigem Token zählen als Versuch für das IP-Limit.
+     *
+     * @return array{success:bool,message:string,pending:bool} `pending`: Link ist gültig und wartet auf die Bestätigung
+     */
+    public function peek(int $userId, string $token): array
+    {
+        $invalid = ['success' => false, 'message' => 'Ungültiger oder bereits verwendeter Bestätigungslink.', 'pending' => false];
+        $token = strtolower(trim($token));
+        if ($userId <= 0 || preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+            return $invalid;
+        }
+
+        $clientIp = Security::getClientIp();
+        if (!Security::checkDbRateLimit($clientIp, 'email_verify', self::VERIFY_IP_LIMIT, self::VERIFY_IP_WINDOW)) {
+            return ['success' => false, 'message' => 'Zu viele Bestätigungsversuche. Bitte versuchen Sie es in einigen Minuten erneut.', 'pending' => false];
+        }
+
+        $tokenHash = hash('sha256', $token);
+        try {
+            if ($this->findUnverifiedUser($userId) === null) {
+                if (in_array($tokenHash, $this->usedHashes($userId), true)) {
+                    return ['success' => true, 'message' => 'Ihre E-Mail-Adresse ist bereits bestätigt. Sie können sich anmelden.', 'pending' => false];
+                }
+            } else {
+                foreach ($this->tokenEntries($userId) as $entry) {
+                    if (hash_equals($entry['h'], $tokenHash)) {
+                        return $entry['e'] < time()
+                            ? ['success' => false, 'message' => 'Dieser Bestätigungslink ist abgelaufen. Melden Sie sich an, um einen neuen Link zu erhalten.', 'pending' => false]
+                            : ['success' => true, 'message' => '', 'pending' => true];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('E-Mail-Bestätigungslink konnte nicht geprüft werden.', [
+                'user_id' => $userId,
+                'exception' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'Die Bestätigung konnte gerade nicht verarbeitet werden.', 'pending' => false];
+        }
+
+        Security::recordDbRateLimitAttempt($clientIp, 'email_verify');
+
+        return $invalid;
+    }
+
+    /**
+     * Löst einen Bestätigungslink ein und aktiviert das Konto. Nur per POST der Bestätigungsseite aufrufen,
+     * nie beim bloßen Abruf des Links (siehe peek()).
      *
      * @return array{success:bool,message:string}
      */
@@ -158,7 +279,7 @@ final class EmailVerificationService
         $tokenHash = hash('sha256', $token);
         try {
             if ($this->findUnverifiedUser($userId) === null) {
-                // Mit genau diesem Link schon bestätigt (z. B. nach Vorabprüfung durch einen Mailfilter oder Doppelklick).
+                // Mit genau diesem Link schon bestätigt (z. B. Doppelklick oder zweiter Aufruf eines der verschickten Links).
                 return in_array($tokenHash, $this->usedHashes($userId), true)
                     ? ['success' => true, 'message' => 'Ihre E-Mail-Adresse ist bereits bestätigt. Sie können sich anmelden.']
                     : $invalid;
@@ -198,7 +319,10 @@ final class EmailVerificationService
 
     /**
      * Ein abgeschlossener Passwort-Reset belegt den Zugriff auf das Postfach und bestätigt damit
-     * auch ein noch unbestätigtes Konto.
+     * auch ein noch unbestätigtes Konto. Bei bereits aktiven Konten ohne Nachweis (Bestand, Registrierung
+     * ohne Verifizierungspflicht, Admin-Anlage) wird nur der Nachweis `email_verified_at` nachgetragen.
+     *
+     * @return bool true, wenn ein unbestätigtes Konto aktiviert wurde
      */
     public function markVerifiedByEmail(string $email): bool
     {
@@ -206,8 +330,26 @@ final class EmailVerificationService
             "SELECT id FROM {$this->prefix}users WHERE email = ? AND status = ? LIMIT 1",
             [$email, self::STATUS_UNVERIFIED]
         );
+        if ($userId > 0) {
+            return $this->activate($userId, 'password_reset');
+        }
 
-        return $userId > 0 && $this->activate($userId, 'password_reset');
+        try {
+            $activeId = (int) $this->db->get_var(
+                "SELECT id FROM {$this->prefix}users WHERE email = ? AND status = 'active' LIMIT 1",
+                [$email]
+            );
+            if ($activeId > 0 && trim((string) ($this->getMeta($activeId, self::META_VERIFIED_AT) ?? '')) === '') {
+                $this->confirmActiveAddress($activeId, 'password_reset');
+            }
+        } catch (\Throwable $e) {
+            // Der Passwort-Reset selbst darf am fehlenden Nachweis nicht scheitern.
+            $this->logger->warning('Bestätigungsnachweis konnte nicht nachgetragen werden.', [
+                'exception' => $e->getMessage(),
+            ]);
+        }
+
+        return false;
     }
 
     private function activate(int $userId, string $via): bool

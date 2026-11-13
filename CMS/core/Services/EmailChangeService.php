@@ -165,7 +165,48 @@ final class EmailChangeService
     }
 
     /**
-     * Prüft den Link aus der Bestätigungs-Mail und übernimmt die neue Adresse.
+     * Prüft den Link aus der Bestätigungs-Mail nur lesend (Aufruf per GET): übernimmt nichts, verwirft nichts und
+     * verbraucht den Token nicht. Mailfilter rufen Links vorab ab – eingelöst wird deshalb erst mit confirm() per POST.
+     * Nur Abrufe mit ungültigem Token zählen als Versuch für das IP-Limit.
+     *
+     * @return array{success:bool,message:string,pending:bool} `pending`: Link ist gültig und wartet auf die Bestätigung
+     */
+    public function peek(int $userId, string $token): array
+    {
+        $invalid = ['success' => false, 'message' => 'Ungültiger oder bereits verwendeter Bestätigungslink.', 'pending' => false];
+        $token = strtolower(trim($token));
+        if ($userId <= 0 || preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+            return $invalid;
+        }
+
+        $clientIp = Security::getClientIp();
+        if (!Security::checkDbRateLimit($clientIp, 'email_change_confirm', self::CONFIRM_IP_LIMIT, self::CONFIRM_IP_WINDOW)) {
+            return ['success' => false, 'message' => 'Zu viele Bestätigungsversuche. Bitte versuche es in einigen Minuten erneut.', 'pending' => false];
+        }
+
+        try {
+            $storedHash = (string) ($this->getMeta($userId, self::META_TOKEN) ?? '');
+            if ($storedHash !== '' && hash_equals($storedHash, hash('sha256', $token))) {
+                return (int) ($this->getMeta($userId, self::META_EXPIRES) ?? 0) < time()
+                    ? ['success' => false, 'message' => 'Dieser Bestätigungslink ist abgelaufen. Bitte fordere die Änderung erneut an.', 'pending' => false]
+                    : ['success' => true, 'message' => '', 'pending' => true];
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('Bestätigungslink der E-Mail-Änderung konnte nicht geprüft werden.', [
+                'user_id' => $userId,
+                'exception' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'Die Bestätigung konnte gerade nicht verarbeitet werden.', 'pending' => false];
+        }
+
+        Security::recordDbRateLimitAttempt($clientIp, 'email_change_confirm');
+
+        return $invalid;
+    }
+
+    /**
+     * Löst den Link aus der Bestätigungs-Mail ein und übernimmt die neue Adresse. Nur per POST der
+     * Bestätigungsseite aufrufen, nie beim bloßen Abruf des Links (siehe peek()).
      *
      * @return array{success:bool,message:string}
      */
@@ -365,10 +406,10 @@ final class EmailChangeService
     private function sendConfirmationMail(object $user, string $newEmail, string $token, ?string $locale): bool
     {
         $siteName = $this->siteName();
-        $name = trim((string) ($user->display_name ?? ''));
-        $name = $name !== '' ? $name : (string) ($user->username ?? '');
 
-        $body = "Hallo {$name},\n\n"
+        // Neutrale Anrede: Die Mail geht an eine noch unbestätigte, fremde Adresse – der frei wählbare
+        // Anzeigename wäre dort ein Köder-Text mit dem Absender der Website.
+        $body = "Hallo,\n\n"
             . "diese Adresse wurde als neue E-Mail-Adresse für dein Konto bei {$siteName} angegeben. "
             . 'Bitte bestätige die Änderung über den folgenden Link (gültig für ' . intdiv(self::TOKEN_TTL_SECONDS, 3600) . " Stunden):\n"
             . $this->buildConfirmationUrl((int) $user->id, $token, $locale) . "\n\n"

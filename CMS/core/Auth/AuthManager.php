@@ -38,6 +38,16 @@ final class AuthManager
     /** Fehlversuche je IP im Zeitfenster MFA_IP_WINDOW. */
     private const MFA_MAX_ATTEMPTS_PER_IP = 20;
     private const MFA_IP_WINDOW = 900;
+    /**
+     * Fehlversuche je Konto, unabhängig von Sitzung und IP: Wer das Passwort kennt, setzt den Sitzungszähler
+     * durch erneutes Anmelden zurück und umgeht das IP-Limit mit wechselnden Adressen. Das Tageslimit
+     * begrenzt das Raten zusätzlich (10 je 15 Minuten wären sonst rund 960 Versuche am Tag).
+     */
+    private const MFA_MAX_ATTEMPTS_PER_ACCOUNT = 10;
+    private const MFA_ACCOUNT_WINDOW = 900;
+    private const MFA_MAX_ATTEMPTS_PER_ACCOUNT_DAY = 30;
+    private const MFA_ACCOUNT_DAY_WINDOW = 86400;
+    private const MFA_ACCOUNT_THROTTLED_MESSAGE = 'Zu viele ungültige Codes für dieses Konto. Bitte später erneut versuchen.';
 
     private static ?self $instance = null;
 
@@ -271,8 +281,29 @@ final class AuthManager
             return 'Zu viele Versuche. Bitte in einigen Minuten erneut versuchen.';
         }
 
+        // Limit je Konto – vor TOTP- und Backup-Code-Prüfung, damit es beide bremst.
+        $accountKey = 'user:' . $userId;
+        if ($this->isMfaAccountThrottled($accountKey)) {
+            return $this->rejectThrottledMfa($userId);
+        }
+
+        // Den Versuch vor der Prüfung zählen und nur bei Erfolg zurücknehmen: Parallele Anfragen aus
+        // mehreren Sitzungen sehen einander so und können die Limits nicht gemeinsam überschreiten.
+        Security::recordDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
+        if (!Security::checkDbRateLimit($clientIp, 'mfa_verify', self::MFA_MAX_ATTEMPTS_PER_IP + 1, self::MFA_IP_WINDOW)) {
+            Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
+            return 'Zu viele Versuche. Bitte in einigen Minuten erneut versuchen.';
+        }
+        if ($this->isMfaAccountThrottled($accountKey, 1)) {
+            Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
+            return $this->rejectThrottledMfa($userId);
+        }
+
         // Zuerst TOTP prüfen (ein bereits verwendeter Code wird nicht erneut akzeptiert)
         if (preg_match('/^\d{6}$/', $code) === 1 && $this->totp()->verifyCode($userId, $code) && $this->claimTotpCode($userId, $code)) {
+            // Nur der eigene Eintrag wird zurückgenommen – frühere Fehlversuche bleiben gezählt, sonst
+            // setzte eine Anmeldung des Inhabers das Budget eines Angreifers zurück.
+            Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
             $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
             if ($this->sessionAuth->completeLoginForUserId($userId, $remember)) {
                 return true;
@@ -284,6 +315,7 @@ final class AuthManager
 
         // Dann Backup-Code prüfen
         if ($this->backupCodes()->verify($userId, $code)) {
+            Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
             $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
             if (!$this->sessionAuth->completeLoginForUserId($userId, $remember)) {
                 $this->clearMfaPending();
@@ -313,17 +345,92 @@ final class AuthManager
             'warning'
         );
 
-        Security::recordDbRateLimitAttempt($clientIp, 'mfa_verify', 'user:' . $userId);
+        // Der Fehlversuch ist bereits gezählt (siehe oben). Mit Erreichen der Kontogrenze endet die Prüfung
+        // und der Inhaber wird informiert.
+        if ($this->isMfaAccountThrottled($accountKey)) {
+            return $this->rejectThrottledMfa($userId);
+        }
+
         $failedAttempts = (int)($_SESSION['mfa_failed_attempts'] ?? 0) + 1;
         $_SESSION['mfa_failed_attempts'] = $failedAttempts;
         if ($failedAttempts >= self::MFA_MAX_ATTEMPTS_PER_LOGIN) {
-            // Nach mehreren Fehlversuchen muss das Passwort erneut eingegeben werden
-            // (dort greift das Login-Rate-Limit).
+            // Nach mehreren Fehlversuchen muss das Passwort erneut eingegeben werden. Wer das Passwort
+            // kennt, kommt so zwar zurück – dann greift das Limit je Konto (MFA_MAX_ATTEMPTS_PER_ACCOUNT).
             $this->clearMfaPending();
             return 'Zu viele ungültige Codes. Bitte erneut anmelden.';
         }
 
         return 'Ungültiger Code.';
+    }
+
+    /**
+     * true, wenn für das Konto zu viele ungültige Codes gezählt sind (15 Minuten oder 24 Stunden).
+     * `$ownAttempts`: bereits mitgezählte Einträge der laufenden Anfrage.
+     */
+    private function isMfaAccountThrottled(string $accountKey, int $ownAttempts = 0): bool
+    {
+        return self::mfaAccountLimitReached(
+            Security::countDbIdentifierAttempts($accountKey, 'mfa_verify', self::MFA_ACCOUNT_WINDOW) - $ownAttempts,
+            Security::countDbIdentifierAttempts($accountKey, 'mfa_verify', self::MFA_ACCOUNT_DAY_WINDOW) - $ownAttempts
+        );
+    }
+
+    public static function mfaAccountLimitReached(int $failuresInWindow, int $failuresInDay): bool
+    {
+        return $failuresInWindow >= self::MFA_MAX_ATTEMPTS_PER_ACCOUNT
+            || $failuresInDay >= self::MFA_MAX_ATTEMPTS_PER_ACCOUNT_DAY;
+    }
+
+    private function rejectThrottledMfa(int $userId): string
+    {
+        $this->clearMfaPending();
+
+        AuditLogger::instance()->log(
+            AuditLogger::CAT_SECURITY,
+            'mfa_account_throttled',
+            'Zwei-Faktor-Prüfung für das Konto wegen zu vieler ungültiger Codes vorübergehend gesperrt.',
+            'user',
+            $userId,
+            [],
+            'warning'
+        );
+        $this->notifyMfaAccountThrottled($userId);
+
+        return self::MFA_ACCOUNT_THROTTLED_MESSAGE;
+    }
+
+    /**
+     * Hinweis an den Inhaber, höchstens einmal in 24 Stunden: Wer bis zur Code-Abfrage kommt, kennt
+     * das Passwort. Der Text enthält bewusst keine Angaben aus der Anfrage.
+     */
+    private function notifyMfaAccountThrottled(int $userId): void
+    {
+        $accountKey = 'user:' . $userId;
+        if (!Security::checkDbIdentifierRateLimit($accountKey, 'mfa_lock_notice', 1, 86400)) {
+            return;
+        }
+        Security::recordDbRateLimitAttempt(Security::getClientIp(), 'mfa_lock_notice', $accountKey);
+
+        try {
+            $db = Database::instance();
+            $email = trim((string) ($db->get_var("SELECT email FROM {$db->getPrefix()}users WHERE id = ? LIMIT 1", [$userId]) ?? ''));
+            if ($email === '' || !function_exists('cms_mail')) {
+                return;
+            }
+
+            $siteName = defined('SITE_NAME') ? (string) SITE_NAME : '365CMS';
+            $body = "Hallo,\n\n"
+                . "bei der Anmeldung an deinem Konto bei {$siteName} wurde mehrfach ein ungültiger Code für die "
+                . "Zwei-Faktor-Authentifizierung eingegeben. Die Code-Eingabe ist deshalb vorübergehend gesperrt.\n\n"
+                . "Bis zur Code-Abfrage kommt nur, wer dein Passwort kennt. Warst du das nicht, ändere bitte "
+                . "umgehend dein Passwort. Dein Konto ist weiterhin durch den zweiten Faktor geschützt.\n\n"
+                . "Hast du dich nur vertippt, kannst du es später erneut versuchen.\n\n"
+                . "Viele Grüße\n{$siteName}";
+
+            \cms_mail($email, '[' . $siteName . '] Mehrere ungültige Codes bei der Anmeldung', $body, ['Content-Type' => 'text/plain; charset=UTF-8']);
+        } catch (\Throwable $e) {
+            error_log('AuthManager::notifyMfaAccountThrottled() Fehler: ' . $e::class);
+        }
     }
 
     private function clearMfaPending(): void

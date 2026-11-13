@@ -37,7 +37,35 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Trivy File Scan
+      # Die Bibliotheken unter CMS/assets/ sind Kopien ohne Lockfile; Trivy erkennt sie nur über die
+      # Spiegel-Manifeste in .github/deps/ (composer.lock, package-lock.json). Der Abgleich Manifest ↔ Bundle
+      # läuft in TESTS/security/dependencies.php.
+      - name: Trivy – gebündelte Bibliotheken (blockierend ab HIGH)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .github/deps
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+      # Mittlere/niedrige Funde nur berichten, damit sie im Log sichtbar sind, ohne den Lauf zu brechen.
+      - name: Trivy – gebündelte Bibliotheken (Bericht MEDIUM/LOW)
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .github/deps
+          scanners: vuln
+          severity: LOW,MEDIUM
+          exit-code: '0'
+          format: table
+
+      # Unverändert nur berichtend: Secret-Scan und übrige Lockfiles im gesamten Repository.
+      - name: Trivy – Repository (Bericht)
+        if: always()
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs

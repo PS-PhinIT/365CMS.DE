@@ -437,6 +437,11 @@ class CMS_Importer_Admin
      */
     private function process_upload_request(): array
     {
+        // Auch der synchrone Formular-POST braucht das Token – vor dem Speichern der Datei.
+        if (!$this->is_valid_request_token((string) ($_POST['_nonce'] ?? ''), 'cms-importer-upload')) {
+            return ['Sicherheitscheck fehlgeschlagen. Bitte Seite neu laden.', 'error', null];
+        }
+
         if (empty($_FILES['wxr_file'])) {
             return ['Keine Datei hochgeladen.', 'error', null];
         }

@@ -554,6 +554,12 @@ final class PublicController
             '@graph' => $graph,
         ];
 
-        return (string) json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        // HEX-Flags: der Abschnittstext ist entity-dekodiert, `</script>` oder `<!--` dürfen den Datenblock nicht verlassen.
+        $json = json_encode(
+            $payload,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE
+        );
+
+        return is_string($json) ? $json : '';
     }
 }

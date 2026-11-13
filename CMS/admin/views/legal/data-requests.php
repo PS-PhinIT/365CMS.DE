@@ -142,6 +142,9 @@ $dataRequestsConfig = [
                                             <td>
                                                 <div><?php echo htmlspecialchars((string)($row['name'] ?? '-')); ?></div>
                                                 <div class="text-secondary small"><?php echo htmlspecialchars((string)($row['email'] ?? '')); ?></div>
+                                                <?php if (!empty($row['email_unverified'])): ?>
+                                                    <div class="text-warning small">Adresse des Kontos nicht bestätigt – Daten ohne Kontobezug (Newsletter, anonyme Formulareingänge) nur mit der Aktion „… inkl. Daten zur Adresse“ nach eigener Prüfung.</div>
+                                                <?php endif; ?>
                                                 <?php if (!empty($row['execute_after'])): ?>
                                                     <div class="text-warning small">Früheste Löschung: <?php echo htmlspecialchars((string)$row['execute_after']); ?></div>
                                                 <?php endif; ?>
@@ -163,6 +166,9 @@ $dataRequestsConfig = [
                                                         <?php endif; ?>
                                                         <?php if (($row['status'] ?? '') === 'processing'): ?>
                                                             <form method="post"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>"><input type="hidden" name="scope" value="privacy"><input type="hidden" name="action" value="complete"><input type="hidden" name="id" value="<?php echo (int)($row['id'] ?? 0); ?>"><button class="dropdown-item text-success">Abschließen &amp; exportieren</button></form>
+                                                            <?php if (!empty($row['email_unverified'])): ?>
+                                                                <form method="post" data-confirm-message="Die Adresse dieses Kontos ist nicht bestätigt. Nur fortfahren, wenn geprüft ist, dass sie der antragstellenden Person gehört – es werden auch Daten ohne Kontobezug zu dieser Adresse exportiert." data-confirm-title="Adresse geprüft?" data-confirm-text="Adresse geprüft, einbeziehen"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>"><input type="hidden" name="scope" value="privacy"><input type="hidden" name="action" value="complete"><input type="hidden" name="include_email" value="1"><input type="hidden" name="id" value="<?php echo (int)($row['id'] ?? 0); ?>"><button class="dropdown-item text-success">Abschließen &amp; exportieren inkl. Daten zur Adresse</button></form>
+                                                            <?php endif; ?>
                                                         <?php endif; ?>
                                                         <?php if (in_array(($row['status'] ?? ''), ['pending', 'processing'], true)): ?>
                                                             <button type="button" class="dropdown-item text-warning js-open-data-request-reject-modal" data-request-scope="privacy" data-request-id="<?php echo (int)($row['id'] ?? 0); ?>" data-request-title="Auskunftsanfrage ablehnen">Ablehnen</button>
@@ -239,6 +245,9 @@ $dataRequestsConfig = [
                                             <td>
                                                 <div><?php echo htmlspecialchars((string)($row['name'] ?? '-')); ?></div>
                                                 <div class="text-secondary small"><?php echo htmlspecialchars((string)($row['email'] ?? '')); ?></div>
+                                                <?php if (!empty($row['email_unverified'])): ?>
+                                                    <div class="text-warning small">Adresse des Kontos nicht bestätigt – Daten ohne Kontobezug (Newsletter, anonyme Formulareingänge) nur mit der Aktion „… inkl. Daten zur Adresse“ nach eigener Prüfung.</div>
+                                                <?php endif; ?>
                                             </td>
                                             <td><span class="badge <?php echo htmlspecialchars($statusBadges[$row['status'] ?? ''] ?? 'bg-secondary'); ?>"><?php echo htmlspecialchars($statusLabels[$row['status'] ?? ''] ?? (string)($row['status'] ?? '')); ?></span></td>
                                             <td>
@@ -257,6 +266,9 @@ $dataRequestsConfig = [
                                                         <?php endif; ?>
                                                         <?php if (($row['status'] ?? '') === 'processing'): ?>
                                                             <form method="post" data-confirm-message="Das Benutzerkonto wird endgültig gelöscht, sobald die Frist abgelaufen ist. Fortfahren?" data-confirm-title="Löschung durchführen" data-confirm-text="Endgültig löschen" data-confirm-class="btn-danger" data-confirm-status-class="bg-danger"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>"><input type="hidden" name="scope" value="deletion"><input type="hidden" name="action" value="execute"><input type="hidden" name="id" value="<?php echo (int)($row['id'] ?? 0); ?>"><button class="dropdown-item text-danger">Löschung durchführen</button></form>
+                                                            <?php if (!empty($row['email_unverified'])): ?>
+                                                                <form method="post" data-confirm-message="Die Adresse dieses Kontos ist nicht bestätigt. Nur fortfahren, wenn geprüft ist, dass sie der antragstellenden Person gehört – neben dem Benutzerkonto werden auch Daten ohne Kontobezug zu dieser Adresse (Newsletter-Abonnement, anonyme Formulareingänge) endgültig gelöscht." data-confirm-title="Löschung inkl. Daten zur Adresse" data-confirm-text="Adresse geprüft, endgültig löschen" data-confirm-class="btn-danger" data-confirm-status-class="bg-danger"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>"><input type="hidden" name="scope" value="deletion"><input type="hidden" name="action" value="execute"><input type="hidden" name="include_email" value="1"><input type="hidden" name="id" value="<?php echo (int)($row['id'] ?? 0); ?>"><button class="dropdown-item text-danger">Löschung durchführen inkl. Daten zur Adresse</button></form>
+                                                            <?php endif; ?>
                                                         <?php endif; ?>
                                                         <?php if (in_array(($row['status'] ?? ''), ['pending', 'processing'], true)): ?>
                                                             <button type="button" class="dropdown-item text-warning js-open-data-request-reject-modal" data-request-scope="deletion" data-request-id="<?php echo (int)($row['id'] ?? 0); ?>" data-request-title="Löschantrag ablehnen">Ablehnen</button>

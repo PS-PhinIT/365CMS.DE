@@ -195,6 +195,7 @@ $fmPanes = [
                         <input class="form-check-input" type="checkbox" name="settings[confirmation][enabled]" value="1"<?= $fmChecked(!empty($fmConfirmation['enabled'])) ?>>
                         <span class="form-check-label"><?= $fmT('forms.admin.confirmation_enabled') ?></span>
                     </label>
+                    <div class="form-hint mb-3"><?= $fmT('forms.admin.confirmation_hint') ?></div>
                     <div class="row g-3">
                         <?php foreach ($fmLocales as $fmLocale => $fmLocaleLabel): ?>
                             <div class="col-md-6">

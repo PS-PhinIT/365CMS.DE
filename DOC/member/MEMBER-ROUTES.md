@@ -66,7 +66,7 @@ Jede normale Seite wird als `member.{page}` mit Kategorie `member`, Route, verf�
 | `/member/<seite>` | `profile`, `security`, `notifications`, `messages`, `media`, `favorites`, `privacy`, `subscription` (Theme-Datei vor Core-Datei) |
 | `/member/plugin/<slug>[/<aktion>[/<id>]]` | Plugin-Bereich aus der `PluginDashboardRegistry` |
 | nicht angemeldet | Weiterleitung auf die Loginseite (`/cms-login?redirect=…`, Pfad je nach CMS-Loginseite) |
-| `/cms-verify-email?uid=…&token=…` | öffentlich (`PublicRouter`, seit 4.0.0): bestätigt die Adresse einer neuen Registrierung, danach Weiterleitung auf die Loginseite |
-| `/cms-confirm-email-change?uid=…&token=…` | öffentlich (`PublicRouter`, seit 4.0.0): übernimmt eine geänderte E-Mail-Adresse; angemeldet Weiterleitung auf `/member/profile`, sonst auf die Loginseite, jeweils mit Hinweis |
+| `/cms-verify-email?uid=…&token=…` | öffentlich (`PublicRouter`, seit 4.0.0): Bestätigungslink einer neuen Registrierung. `GET` prüft den Link nur und zeigt eine Seite mit der Schaltfläche **E-Mail-Adresse bestätigen**; erst deren `POST` (Felder `uid`, `token`) bestätigt die Adresse, danach Weiterleitung auf die Loginseite |
+| `/cms-confirm-email-change?uid=…&token=…` | öffentlich (`PublicRouter`, seit 4.0.0): Bestätigungslink einer geänderten E-Mail-Adresse. `GET` zeigt die Seite mit Schaltfläche, erst der `POST` übernimmt die Adresse; angemeldet Weiterleitung auf `/member/profile`, sonst auf die Loginseite, jeweils mit Hinweis |
 
 Alle Antworten sind privat (`Cache-Control: private`), POST-Anfragen unter `/member` sind vom globalen `form_guard`-CSRF-Schutz ausgenommen, weil jede Seite eigene Tokens prüft. Alte Pfade wie `/media-proxy.php` leiten auf `/member/media` um.

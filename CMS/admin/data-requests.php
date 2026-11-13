@@ -92,7 +92,7 @@ function cms_admin_data_requests_handle_privacy_action(PrivacyRequestsModule $pr
 
     return match ($action) {
         'process'  => $privacyModule->processRequest($id),
-        'complete' => $privacyModule->completeRequest($id),
+        'complete' => $privacyModule->completeRequest($id, !empty($post['include_email'])),
         'reject'   => $privacyModule->rejectRequest($id, $reason),
         'escalate' => $privacyModule->escalateRequest($id),
         'delete'   => $privacyModule->deleteRequest($id),
@@ -107,7 +107,7 @@ function cms_admin_data_requests_handle_deletion_action(DeletionRequestsModule $
 
     return match ($action) {
         'process' => $deletionModule->processRequest($id),
-        'execute' => $deletionModule->executeDeletion($id),
+        'execute' => $deletionModule->executeDeletion($id, !empty($post['include_email'])),
         'reject'  => $deletionModule->rejectRequest($id, $reason),
         'escalate' => $deletionModule->escalateRequest($id),
         'delete'  => $deletionModule->deleteRequest($id),

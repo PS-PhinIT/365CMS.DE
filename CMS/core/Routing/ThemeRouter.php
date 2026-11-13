@@ -1278,11 +1278,7 @@ final class ThemeRouter
                 return;
             }
         } elseif (!\cms_post_is_publicly_visible($postRow)) {
-            if (!\CMS\Auth::instance()->isLoggedIn()) {
-                $this->router->redirect($this->buildLocalizedLoginRedirectPath(), 302);
-                return;
-            }
-
+            // Auch Anonyme erhalten 404 (kein Login-Redirect): sonst verrät die Antwort, dass der Slug existiert.
             if (!$this->canCurrentViewerAccessUnpublishedContent($postRow, 'edit_all_posts')) {
                 $this->router->render404();
                 return;
@@ -1425,11 +1421,7 @@ final class ThemeRouter
                     return true;
                 }
             } elseif ($pageStatus !== 'published') {
-                if (!\CMS\Auth::instance()->isLoggedIn()) {
-                    $this->router->redirect($this->buildLocalizedLoginRedirectPath(), 302);
-                    return true;
-                }
-
+                // Anonyme wie Unberechtigte: 404 über den Aufrufer statt Login-Redirect (kein Existenz-Orakel).
                 if (!$this->canCurrentViewerAccessUnpublishedContent($page, 'manage_pages')) {
                     return false;
                 }
