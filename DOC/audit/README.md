@@ -36,6 +36,8 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | [GUI-BARRIEREFREIHEIT.md](GUI-BARRIEREFREIHEIT.md) | Fehler in der Oberfläche und Barrierefreiheit (GUI-01 bis GUI-07) |
 | [FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md) | Folgeaudit zu 3.5.0: SEC-28 bis SEC-31, FUN-26 bis FUN-34, REF-12 bis REF-15, BP-01 bis BP-05, PERF-12 bis PERF-22, GUI-08 bis GUI-16, Empfehlungen OFFEN-14 bis OFFEN-19 (umgesetzt in 3.5.0) |
 | [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) | Folgeaudit zu 3.5.6 vom 2026-11-08: SEC-32 bis SEC-47, Bibliotheken DEP-01 bis DEP-04, FUN-35 bis FUN-54 (u. a. E-Mail-Verifizierung, Benutzer anlegen, Kennzeichnung kritischer Updates, Backup-Prüfung im Audit, Wiederherstellung, falsche Statusanzeigen, Firewall-Rate-Limit), BP-06 bis BP-09 (behoben in 4.0.0), Empfehlungen OFFEN-20 bis OFFEN-27 (offen) |
+| [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md) | Folgeaudit vom 2026-11-09: Umsetzung OFFEN-20 bis OFFEN-26, Regressionsprüfung (SEC-48, FUN-55 bis FUN-62, BP-10) |
+| [FOLGEAUDIT-2026-11-12.md](FOLGEAUDIT-2026-11-12.md) | Prüfprotokoll der Code-, Sicherheits- und Architekturprüfung des Stands 4.0.0: Changelog (CL-001 bis CL-233), weitere Prüfbereiche je Pull Request |
 
 Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Offene Empfehlungen tragen `OFFEN-xx`.
 
