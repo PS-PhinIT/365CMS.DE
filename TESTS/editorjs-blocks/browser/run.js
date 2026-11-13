@@ -93,7 +93,9 @@ async function savedBlocks(page) {
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const base = 'http://127.0.0.1:' + server.address().port;
     const browser = await chromium.launch();
-    const upload = path.join(os.tmpdir(), 'cms-dl-block-test.pdf');
+    // Eigenes Verzeichnis mit zufälligem Namen (0700) statt einer vorhersagbaren Datei im gemeinsamen Temp-Verzeichnis.
+    const uploadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-dl-block-'));
+    const upload = path.join(uploadDir, 'cms-dl-block-test.pdf');
     fs.writeFileSync(upload, '%PDF-1.4 test');
 
     try {
@@ -241,6 +243,7 @@ async function savedBlocks(page) {
     } finally {
         await browser.close();
         server.close();
+        fs.rmSync(uploadDir, { recursive: true, force: true });
     }
 
     console.log('\n' + passed + ' bestanden, ' + failed + ' fehlgeschlagen');

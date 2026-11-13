@@ -98,7 +98,10 @@ function readBody(request) {
 }
 
 function multipartFields(buffer, contentType) {
-    const boundary = (contentType.match(/boundary=(.+)$/) || [])[1];
+    // Ohne regulären Ausdruck: der Header kommt aus der Anfrage.
+    const marker = 'boundary=';
+    const markerAt = String(contentType || '').indexOf(marker);
+    const boundary = markerAt === -1 ? '' : String(contentType).slice(markerAt + marker.length).split(';')[0].trim().replace(/^"|"$/g, '');
     const fields = {};
     if (!boundary) {
         return fields;
