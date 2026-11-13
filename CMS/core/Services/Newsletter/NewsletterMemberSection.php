@@ -3,8 +3,8 @@
  * Mitgliederbereich „Newsletter“ (`/member/plugin/newsletter`): Abonnement mit der Konto-Adresse an- und abmelden,
  * Thema (Segment) und Sprache wählen. Mit aktiviertem Double-Opt-In kommt auch hier eine Bestätigungsmail.
  * Ein Abonnement ohne Kontobezug wird nur über eine bestätigte Konto-Adresse zugeordnet
- * (EmailVerificationService::matchableEmail()). Konten ohne bestätigte Adresse fordern hier zuerst einen
- * Bestätigungslink an (EmailVerificationService::requestAddressConfirmation()); danach steht alles zur Verfügung.
+ * (EmailVerificationService::matchableEmail()). Konten ohne bestätigte Adresse erhalten hier nur den Hinweis,
+ * die Adresse über einen Passwort-Reset zu bestätigen; danach steht alles zur Verfügung.
  *
  * @package CMSv2\Core\Services\Newsletter
  */
@@ -65,13 +65,7 @@ final class NewsletterMemberSection
         $notice = null;
         $email = NewsletterRepository::normalizeEmail((string) ($user->email ?? ''));
 
-        if ($action === 'confirm_email') {
-            $sent = !self::hasVerifiedEmail($user)
-                && EmailVerificationService::getInstance()->requestAddressConfirmation((int) ($user->id ?? 0), NewsletterI18n::requestLocale());
-            $notice = $sent
-                ? ['success', (string) __('newsletter.member.confirm_sent')]
-                : ['danger', (string) __('newsletter.member.confirm_failed')];
-        } elseif ($action === 'subscribe' && $email !== '') {
+        if ($action === 'subscribe' && $email !== '') {
             $locale = ($_POST['locale'] ?? '') === 'en' ? 'en' : 'de';
             $verified = self::hasVerifiedEmail($user);
             if ($current !== null && $current['status'] === 'active') {
@@ -169,8 +163,6 @@ final class NewsletterMemberSection
             // Anmelden und Verwalten erst mit bestätigter Adresse: Ein hier per Double-Opt-In angelegtes
             // Abonnement bliebe ohne Kontobezug und wäre im Mitgliederbereich nicht sichtbar.
             echo '<p>' . $e(sprintf((string) __('newsletter.member.state_unverified'), (string) ($user->email ?? ''))) . '</p>';
-            echo '<form method="post" action="' . $e($action) . '">' . $csrf . '<input type="hidden" name="newsletter_action" value="confirm_email">'
-                . '<button type="submit" class="btn btn-primary">' . $e(__('newsletter.member.confirm_email')) . '</button></form>';
 
             return;
         } else {

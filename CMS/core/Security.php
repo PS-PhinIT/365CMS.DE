@@ -718,6 +718,36 @@ class Security
     }
 
     /**
+     * Wie countDbIdentifierAttempts(), zählt aber zusätzlich alle Kennungen mit Zusatz (`<kennung>:…`),
+     * etwa die Zähler je bekanntem Gerät (`user:5:dev:…`) gemeinsam mit dem Zähler des Kontos (`user:5`).
+     */
+    public static function countDbIdentifierFamilyAttempts(string $identifier, string $action, int $timeWindow): int
+    {
+        $identifier = trim($identifier);
+        if ($identifier === '' || strlen($identifier) > self::RATE_LIMIT_IDENTIFIER_MAX_LENGTH - 1) {
+            return 0;
+        }
+
+        try {
+            $db = Database::instance();
+
+            return (int) $db->get_var(
+                "SELECT COUNT(*) FROM {$db->getPrefix()}login_attempts WHERE (username = ? OR username LIKE ?) AND action = ? AND attempted_at >= ?",
+                [
+                    $identifier,
+                    addcslashes($identifier, '\\%_') . ':%',
+                    self::normalizeRateLimitAction($action),
+                    date('Y-m-d H:i:s', time() - $timeWindow),
+                ]
+            );
+        } catch (\Throwable $e) {
+            error_log('Security::countDbIdentifierFamilyAttempts() Fehler: ' . self::sanitizeDiagnosticText($e->getMessage()));
+
+            return 0;
+        }
+    }
+
+    /**
      * Sekunden seit dem jüngsten Eintrag je Kennung und Aktion; null ohne Eintrag oder bei DB-Fehlern.
      * Die Differenz bildet die Datenbank selbst – unabhängig von abweichenden Zeitzonen in PHP und MySQL.
      */

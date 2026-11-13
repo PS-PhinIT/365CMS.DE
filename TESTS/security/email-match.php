@@ -124,20 +124,16 @@ T::run('E-Mail-Zuordnung: Passwort-Reset trägt den Nachweis nur über den Mail-
     T::check(str_contains($change, '$this->deleteMeta($userId, [self::META_VERIFIED_AT]);'), 'Änderung ohne Bestätigung (Admin) entzieht den Nachweis');
 });
 
-T::run('E-Mail-Zuordnung: aktive Konten können ihre Adresse per Link bestätigen', static function (): void {
-    $token = str_repeat('ab', 32);
-    $now = 1_800_000_000;
-    $entry = ['h' => hash('sha256', $token), 'e' => $now + 60, 'm' => hash('sha256', 'opfer@example.org')];
-
-    T::check(EmailVerificationService::addressTokenMatches($entry, $token, ' Opfer@Example.org ', $now), 'passender Link für die aktuelle Adresse');
-    T::check(!EmailVerificationService::addressTokenMatches($entry, str_repeat('cd', 32), 'opfer@example.org', $now), 'falscher Token');
-    T::check(!EmailVerificationService::addressTokenMatches($entry, $token, 'neu@example.org', $now), 'nach Adressänderung bestätigt der alte Link nichts');
-    T::check(!EmailVerificationService::addressTokenMatches($entry, $token, 'opfer@example.org', $now + 61), 'abgelaufener Link');
-    T::check(!EmailVerificationService::addressTokenMatches(null, $token, 'opfer@example.org', $now), 'ohne gespeicherten Link');
-    T::check(!EmailVerificationService::addressTokenMatches(['h' => $entry['h'], 'e' => $now + 60], $token, 'opfer@example.org', $now), 'Eintrag ohne Adressbindung');
+T::run('E-Mail-Zuordnung: kein per GET einlösbarer Bestätigungslink für aktive Konten', static function (): void {
+    $service = (string) file_get_contents(ABSPATH . 'core/Services/EmailVerificationService.php');
+    T::check(!str_contains($service, 'requestAddressConfirmation') && !str_contains($service, 'email_address_confirm_token'), 'kein eigener Bestätigungslink für aktive Konten');
+    T::check(substr_count($service, '$this->confirmActiveAddress(') === 1, 'Nachweis für aktive Konten entsteht nur im Passwort-Reset');
+    $start = (int) strpos($service, 'public function verify(');
+    $verify = substr($service, $start, (int) strpos($service, 'public function markVerifiedByEmail(') - $start);
+    T::check(!str_contains($verify, 'confirmActiveAddress') && !str_contains($verify, 'META_VERIFIED_AT'), 'der Link-Abruf setzt bei aktiven Konten keinen Nachweis');
 
     $section = (string) file_get_contents(ABSPATH . 'core/Services/Newsletter/NewsletterMemberSection.php');
-    T::check(str_contains($section, '->requestAddressConfirmation('), 'Mitgliederbereich bietet den Bestätigungslink an');
+    T::check(!str_contains($section, 'confirm_email') && str_contains($section, 'newsletter.member.state_unverified'), 'Mitgliederbereich verweist auf den Passwort-Reset statt einen Link zu senden');
 });
 
 T::run('E-Mail-Zuordnung: Admin sieht den übersprungenen Abgleich und entscheidet ausdrücklich', static function (): void {

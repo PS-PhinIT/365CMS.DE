@@ -39,6 +39,13 @@ T::run('Anmeldung: Konto-Bremse weist ab, statt den Worker schlafen zu lassen', 
     T::check($reject !== false && $reserve !== false && $reject < $reserve, 'abgewiesene Versuche schreiben keinen Eintrag (Wartezeit nicht verlängerbar)');
     T::check(substr_count($login, 'recordAccountLoginFailure(') === 1, 'Konto-Fehlversuch entsteht nur nach einer echten Passwortprüfung');
     T::check(str_contains($login, "releaseDbRateLimitAttempt(\$clientIp, 'login', \$username)"), 'erfolgreiche Anmeldung nimmt den eigenen Eintrag zurück');
+    $busy = strpos($login, 'return self::LOGIN_BUSY_MESSAGE;');
+    T::check(
+        $busy !== false && $busy < $reject && str_contains(substr($login, 0, $busy), "\$this->logLoginAttempt(\$username, 'login')"),
+        'belegte Kontosperre: neutrale Meldung, Anfrage zählt am IP-Limit'
+    );
+    T::check(str_contains($auth, "'SELECT GET_LOCK(?, ' . self::ACCOUNT_LOGIN_LOCK_WAIT . ')'"), 'Kontosperre wartet kurz auf eine laufende Prüfung');
+    T::check(str_contains($auth, 'Passwort vergessen“ zurück'), 'Meldung der Konto-Bremse nennt den Passwort-Reset als Ausweg');
     T::check(
         str_contains((string) file_get_contents(ABSPATH . 'core/Routing/PublicRouter.php'), "header('Retry-After: ' . \$retryAfter)"),
         'Login-Antwort trägt Retry-After'
@@ -50,11 +57,17 @@ T::run('Zweiter Faktor: Fehlversuche zählen je Konto', static function (): void
     T::check(AuthManager::mfaAccountLimitReached(10, 10), '10 Fehlversuche in 15 Minuten sperren das Konto für Codes');
     T::check(!AuthManager::mfaAccountLimitReached(0, 29), '29 Fehlversuche am Tag sind noch erlaubt');
     T::check(AuthManager::mfaAccountLimitReached(0, 30), '30 Fehlversuche in 24 Stunden sperren unabhängig vom 15-Minuten-Fenster');
+    T::check(!AuthManager::mfaAccountLimitReached(0, 0, 59), '59 Fehlversuche über alle Geräte-Zähler sind noch erlaubt');
+    T::check(AuthManager::mfaAccountLimitReached(0, 0, 60), 'frischer Geräte-Zähler (nach Passwort-Reset) hilft nicht über die Obergrenze je Konto');
+    T::check(
+        str_contains((string) file_get_contents(ABSPATH . 'core/Auth/AuthManager.php'), "countDbIdentifierFamilyAttempts('user:' . \$userId, 'mfa_verify'"),
+        'Obergrenze zählt alle Kennungen des Kontos'
+    );
 
     $manager = (string) file_get_contents(ABSPATH . 'core/Auth/AuthManager.php');
     $start = (int) strpos($manager, 'public function verifyMfa(');
     $verifyMfa = substr($manager, $start, (int) strpos($manager, 'private function isMfaAccountThrottled(') - $start);
-    $accountCheck = strpos($verifyMfa, '$this->isMfaAccountThrottled($accountKey)');
+    $accountCheck = strpos($verifyMfa, '$this->isMfaAccountThrottled($accountKey, $userId)');
     $record = strpos($verifyMfa, "recordDbRateLimitAttempt(\$clientIp, 'mfa_verify', \$accountKey)");
     $totp = strpos($verifyMfa, '$this->totp()->verifyCode(');
     $backup = strpos($verifyMfa, '$this->backupCodes()->verify(');
@@ -91,6 +104,11 @@ T::run('Registrierung: Benutzernamen-Prüfung verrät keine registrierte Adresse
     $nameCheck = strpos($register, '$this->isRegistrationUsernameReserved($username)');
     $existing = strpos($register, 'if ($existingUserId > 0)');
     $reserve = strpos($register, '$this->reserveRegistration($username, $email, $password)');
+    T::check(
+        substr_count($register, '$this->claimRegistrationSlot($email)') === 2
+            && strpos($register, 'if ($this->claimRegistrationSlot($email))') < $reserve,
+        'Reservierungen sind je Adresse begrenzt; die echte Registrierung zählt gleich mit'
+    );
     T::check($nameCheck !== false && $existing !== false && $nameCheck < $existing, 'reservierte Namen gelten als vergeben');
     T::check(
         $reserve !== false && $reserve > $existing && $reserve < (int) strpos($register, 'return true;', (int) $existing),

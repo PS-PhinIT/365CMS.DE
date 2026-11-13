@@ -165,6 +165,18 @@ T::run('Downloads: übernommene Dateien werden geprüft in den privaten Speicher
     T::check(is_file($source), 'Original bleibt auch dann erhalten');
     T::check(!DownloadService::moveFileVerified($faWork . '/legacy/fehlt.pdf', $faWork . '/private/a3.pdf'), 'fehlende Quelle: Fehler');
 
+    file_put_contents($faWork . '/legacy/kopie.pdf', 'Inhalt');
+    T::check(DownloadService::copyFileVerified($faWork . '/legacy/kopie.pdf', $faWork . '/private/k1.pdf') && is_file($faWork . '/legacy/kopie.pdf'), 'geprüftes Kopieren lässt das Original liegen');
+    $privatize = $faSlice('core/Services/Downloads/DownloadService.php', 'public function privatizeLegacyFiles(', 'public function moveToPrivateStorage(');
+    $copyAt = strpos($privatize, '$this->copyToPrivateStorage(');
+    $updateAt = strpos($privatize, '$this->repo->updateVersion(');
+    $unlinkAt = strpos($privatize, '@unlink($source)');
+    T::check(
+        $copyAt !== false && $updateAt !== false && $unlinkAt !== false && $copyAt < $updateAt && $updateAt < $unlinkAt
+            && !str_contains($privatize, 'moveToPrivateStorage('),
+        'Altdatei: erst kopieren, dann Datensatz umstellen, zuletzt das Original löschen'
+    );
+
     $afterSave = $faSlice('core/Services/Downloads/DownloadService.php', 'private function afterSave(', 'private function validateItem(');
     T::check(str_contains($afterSave, '$this->privatizeLegacyFiles($id)'), 'jedes Speichern eines nicht öffentlichen Downloads verschiebt Altdateien');
     T::check(str_contains($afterSave, "!== 'public'") && str_contains($afterSave, "!== 'published'"), 'Auslöser sind Zugriffsstufe und Status');
@@ -178,8 +190,12 @@ T::run('Downloads: übernommene Dateien werden geprüft in den privaten Speicher
         'Nachlauf erfasst Bestände, die schon beschränkt oder unveröffentlicht sind'
     );
     T::check(
-        str_contains((string) file_get_contents(ABSPATH . 'admin/modules/downloads/DownloadsModule.php'), '->privatizeRestrictedLegacyFiles()'),
-        'Nachlauf wird im Admin-Bereich Downloads ausgelöst'
+        str_contains($sweep, '$timeBudget') && str_contains($sweep, 'v.download_id > ?') && str_contains($sweep, "'complete' => false"),
+        'Nachlauf hat ein Zeitbudget und blättert über alle Treffer'
+    );
+    T::check(
+        str_contains((string) file_get_contents(ABSPATH . 'admin/modules/downloads/DownloadsModule.php'), "->privatizeRestrictedLegacyFiles()['complete']"),
+        'Nachlauf wird im Admin-Bereich Downloads ausgelöst; die Sitzung gilt erst nach vollständigem Lauf als geprüft'
     );
     foreach (['setAccess' => 'public function trash(', 'setStatus' => 'public function setCategory('] as $method => $next) {
         T::check(str_contains($faSlice('core/Services/Downloads/DownloadService.php', 'public function ' . $method . '(', $next), '$this->afterSave($id'), $method . '() läuft über afterSave()');

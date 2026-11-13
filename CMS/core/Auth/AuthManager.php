@@ -47,6 +47,12 @@ final class AuthManager
     private const MFA_ACCOUNT_WINDOW = 900;
     private const MFA_MAX_ATTEMPTS_PER_ACCOUNT_DAY = 30;
     private const MFA_ACCOUNT_DAY_WINDOW = 86400;
+    /**
+     * Obergrenze je Konto über alle Zähler zusammen (unbekannte Geräte und jedes bekannte Gerät). Ein
+     * Passwort-Reset stellt eine neue Geräte-Kennung mit leerem Zähler aus – ohne diese Grenze verschaffte
+     * sich, wer das Postfach kontrolliert, mit jedem Reset ein neues Kontingent zum Raten der Codes.
+     */
+    private const MFA_MAX_ATTEMPTS_PER_ACCOUNT_ALL_DEVICES_DAY = 60;
     private const MFA_ACCOUNT_THROTTLED_MESSAGE = 'Zu viele ungültige Codes für dieses Konto. Bitte später erneut versuchen oder das Passwort über „Passwort vergessen“ zurücksetzen – danach ist die Anmeldung von diesem Gerät wieder möglich.';
 
     private static ?self $instance = null;
@@ -285,7 +291,7 @@ final class AuthManager
         // des Kontos zählt für sich (Auth::knownDeviceKeySuffix()): Wer nur das Passwort kennt, kann dem
         // Inhaber die Code-Eingabe dort nicht sperren. Für andere Geräte hebt ein Passwort-Reset die Sperre auf.
         $accountKey = 'user:' . $userId . $this->sessionAuth->knownDeviceKeySuffix($userId);
-        if ($this->isMfaAccountThrottled($accountKey)) {
+        if ($this->isMfaAccountThrottled($accountKey, $userId)) {
             return $this->rejectThrottledMfa($userId);
         }
 
@@ -296,7 +302,7 @@ final class AuthManager
             Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
             return 'Zu viele Versuche. Bitte in einigen Minuten erneut versuchen.';
         }
-        if ($this->isMfaAccountThrottled($accountKey, 1)) {
+        if ($this->isMfaAccountThrottled($accountKey, $userId, 1)) {
             Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
             return $this->rejectThrottledMfa($userId);
         }
@@ -349,7 +355,7 @@ final class AuthManager
 
         // Der Fehlversuch ist bereits gezählt (siehe oben). Mit Erreichen der Kontogrenze endet die Prüfung
         // und der Inhaber wird informiert.
-        if ($this->isMfaAccountThrottled($accountKey)) {
+        if ($this->isMfaAccountThrottled($accountKey, $userId)) {
             return $this->rejectThrottledMfa($userId);
         }
 
@@ -369,18 +375,23 @@ final class AuthManager
      * true, wenn für das Konto zu viele ungültige Codes gezählt sind (15 Minuten oder 24 Stunden).
      * `$ownAttempts`: bereits mitgezählte Einträge der laufenden Anfrage.
      */
-    private function isMfaAccountThrottled(string $accountKey, int $ownAttempts = 0): bool
+    private function isMfaAccountThrottled(string $accountKey, int $userId, int $ownAttempts = 0): bool
     {
         return self::mfaAccountLimitReached(
             Security::countDbIdentifierAttempts($accountKey, 'mfa_verify', self::MFA_ACCOUNT_WINDOW) - $ownAttempts,
-            Security::countDbIdentifierAttempts($accountKey, 'mfa_verify', self::MFA_ACCOUNT_DAY_WINDOW) - $ownAttempts
+            Security::countDbIdentifierAttempts($accountKey, 'mfa_verify', self::MFA_ACCOUNT_DAY_WINDOW) - $ownAttempts,
+            Security::countDbIdentifierFamilyAttempts('user:' . $userId, 'mfa_verify', self::MFA_ACCOUNT_DAY_WINDOW) - $ownAttempts
         );
     }
 
-    public static function mfaAccountLimitReached(int $failuresInWindow, int $failuresInDay): bool
+    /**
+     * `$failuresAllDevicesInDay`: Fehlversuche des Kontos in 24 Stunden über alle Geräte-Zähler zusammen.
+     */
+    public static function mfaAccountLimitReached(int $failuresInWindow, int $failuresInDay, int $failuresAllDevicesInDay = 0): bool
     {
         return $failuresInWindow >= self::MFA_MAX_ATTEMPTS_PER_ACCOUNT
-            || $failuresInDay >= self::MFA_MAX_ATTEMPTS_PER_ACCOUNT_DAY;
+            || $failuresInDay >= self::MFA_MAX_ATTEMPTS_PER_ACCOUNT_DAY
+            || $failuresAllDevicesInDay >= self::MFA_MAX_ATTEMPTS_PER_ACCOUNT_ALL_DEVICES_DAY;
     }
 
     private function rejectThrottledMfa(int $userId): string

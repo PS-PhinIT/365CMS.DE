@@ -35,6 +35,8 @@ class MediaService {
     private string $uploadUrl;
     private string $metaFile;
     private string $settingsFile;
+    /** Aufgelöste Einstellungen für isAllowedFileName()/validateLocalFile() ohne eigene Vorgabe (je Instanz gemerkt). */
+    private ?array $localValidationSettings = null;
     private LoggerInterface $logger;
     private MediaRepository $repository;
     private UploadHandler $uploadHandler;
@@ -628,9 +630,17 @@ class MediaService {
      */
     private function resolveLocalValidationSettings(?array $settings): array
     {
+        if ($settings === null && $this->localValidationSettings !== null) {
+            return $this->localValidationSettings;
+        }
+
         $resolved = $settings !== null ? $this->normalizeSettings($settings) : $this->getSettings();
         $resolved['block_dangerous_types'] = true;
         $resolved['validate_image_content'] = true;
+        if ($settings === null) {
+            // Sonst läse jede Dateiprüfung einer Schleife (Content-Exchange) die Einstellungsdatei erneut.
+            $this->localValidationSettings = $resolved;
+        }
 
         return $resolved;
     }
@@ -1266,6 +1276,7 @@ class MediaService {
         if (!$this->writeFileAtomically($this->settingsFile, $json . "\n")) {
             return new WP_Error('write_error', 'Could not write settings file');
         }
+        $this->localValidationSettings = null;
 
         return true;
     }

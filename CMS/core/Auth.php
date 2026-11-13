@@ -55,6 +55,11 @@ class Auth
      */
     private const REGISTRATION_RESERVED_ACTION = 'register_reserved';
     private const REGISTRATION_RESERVED_WINDOW = 86400;
+    /** Höchstens so viele Namensreservierungen je E-Mail-Adresse im Reservierungszeitraum (Missbrauchsgrenze). */
+    private const REGISTRATION_RESERVED_LIMIT_PER_EMAIL = 3;
+    /** Sekunden, die eine Anmeldung höchstens auf eine gleichzeitig laufende Prüfung desselben Kontos wartet. */
+    private const ACCOUNT_LOGIN_LOCK_WAIT = 1;
+    private const LOGIN_BUSY_MESSAGE = 'Die Anmeldung konnte gerade nicht geprüft werden. Bitte versuchen Sie es erneut.';
     private const EMAIL_UNVERIFIED_MESSAGE = 'Ihre E-Mail-Adresse ist noch nicht bestätigt. Bitte nutzen Sie den neuesten Link aus unserer Bestätigungs-E-Mail (auch im Spam-Ordner nachsehen).';
     private const REGISTRATION_NOTICE_LIMIT = 3;
     private const REGISTRATION_NOTICE_WINDOW = 3600;
@@ -387,16 +392,23 @@ class Auth
         // verhalten sich gleich. Die Wartezeit wird nicht im Request abgesessen (sleep band bis zu 30 s
         // einen PHP-Worker je Anfrage – anonym auslösbar), sondern ein zu früher Versuch sofort und ohne
         // Passwortprüfung abgewiesen. Abgewiesene Versuche zählen nicht; geprüfte Fehlversuche setzen die
-        // Wartezeit dagegen neu. Damit Dritte den Inhaber so nicht aussperren, zählt ein bekanntes Gerät
-        // (Cookie aus einer früheren vollständigen Anmeldung oder einem Passwort-Reset) für sich:
-        // Fehlversuche von fremden Geräten bremsen es nicht, und es hat eine eigene Prüfsperre.
+        // Wartezeit dagegen neu. Ein bekanntes Gerät (Cookie aus einer früheren vollständigen Anmeldung
+        // oder einem Passwort-Reset) zählt für sich: Fehlversuche von fremden Geräten bremsen es nicht.
+        // Restrisiko: Alle Geräte ohne dieses Cookie teilen sich den Zähler des Kontos. Wer dort laufend
+        // Fehlversuche erzeugt, kann den Inhaber auf einem unbekannten Gerät so lange abweisen lassen –
+        // der Ausweg ist der Passwort-Reset (danach ist das Gerät bekannt); die Meldung nennt ihn.
         $accountKey = $user
             ? 'uid:' . (int) $user->id . $this->knownDeviceKeySuffix((int) $user->id)
             : 'login:' . mb_strtolower($username, 'UTF-8');
         // Je Konto läuft nur eine Passwortprüfung zugleich, sonst läsen parallele Anfragen denselben Zählerstand.
         $accountLock = $this->acquireAccountLoginLock($accountKey);
         if ($accountLock === false) {
-            return $this->rejectEarlyAccountLogin(1, $username);
+            // Überschneidung zweier Anfragen, kein Fehlversuch des Kontos: neutrale Meldung. Am IP-Limit
+            // zählt die Anfrage mit, damit sich die Sperre nicht kostenlos dauerhaft belegen lässt.
+            $this->logLoginAttempt($username, 'login');
+            $this->loginRetryAfter = 1;
+
+            return self::LOGIN_BUSY_MESSAGE;
         }
 
         try {
@@ -613,7 +625,10 @@ class Auth
             $security->hashPassword($password);
             // Den gewählten Namen reservieren: Sonst verriete eine zweite Registrierung mit demselben Namen
             // („bereits vergeben“ oder nicht), ob hier ein Konto entstanden ist – und damit die Adresse.
-            $this->reserveRegistration($username, $email, $password);
+            // Je Adresse begrenzt, damit sich mit einer bekannten Adresse nicht beliebig viele Namen sperren lassen.
+            if ($this->claimRegistrationSlot($email)) {
+                $this->reserveRegistration($username, $email, $password);
+            }
             $this->notifyExistingAccountOfRegistration($existingUserId, $email);
 
             return true;
@@ -658,6 +673,9 @@ class Auth
                 }
             }
 
+            // Zählt wie eine Reservierung: So verhält sich eine frisch registrierte Adresse bei weiteren
+            // Registrierungen genauso wie eine schon länger vergebene (gleiche Grenze, gleiche Antworten).
+            $this->claimRegistrationSlot($email);
             Hooks::doAction('user_registered', (int) $userId);
             return true;
         }
@@ -1133,7 +1151,8 @@ class Auth
         }
 
         return 'Zu viele Fehlversuche für diese Zugangsdaten. Bitte in ' . $this->loginRetryAfter
-            . ($this->loginRetryAfter === 1 ? ' Sekunde' : ' Sekunden') . ' erneut versuchen.';
+            . ($this->loginRetryAfter === 1 ? ' Sekunde' : ' Sekunden') . ' erneut versuchen.'
+            . ' Bleibt die Anmeldung gesperrt, setzen Sie Ihr Passwort über „Passwort vergessen“ zurück.';
     }
 
     private function rejectBlockedLoginIp(string $clientIp, int $loginLockout): string
@@ -1153,15 +1172,16 @@ class Auth
     }
 
     /**
-     * Nicht blockierende Datenbank-Sperre je Konto für die Dauer einer Passwortprüfung.
+     * Datenbank-Sperre je Konto für die Dauer einer Passwortprüfung. Wartet höchstens
+     * ACCOUNT_LOGIN_LOCK_WAIT Sekunden auf eine laufende Prüfung (Doppelklick, zweiter Tab).
      *
-     * @return string|false|null Sperrname, false wenn bereits eine Prüfung läuft, null wenn die Sperre nicht verfügbar ist
+     * @return string|false|null Sperrname, false wenn weiterhin eine Prüfung läuft, null wenn die Sperre nicht verfügbar ist
      */
     private function acquireAccountLoginLock(string $accountKey): string|false|null
     {
         $lockName = 'cms_login_' . sha1($accountKey);
         try {
-            $result = Database::instance()->get_var('SELECT GET_LOCK(?, 0)', [$lockName]);
+            $result = Database::instance()->get_var('SELECT GET_LOCK(?, ' . self::ACCOUNT_LOGIN_LOCK_WAIT . ')', [$lockName]);
         } catch (\Throwable) {
             return null;
         }
@@ -1217,6 +1237,25 @@ class Auth
         $material = mb_strtolower($loginIdentifier, 'UTF-8') . "\n" . $password;
 
         return 'regpw:' . substr(hash_hmac('sha256', $material, $this->getDeviceCookieSigningKey()), 0, 54);
+    }
+
+    /**
+     * Belegt einen der REGISTRATION_RESERVED_LIMIT_PER_EMAIL Plätze der Adresse; false, wenn alle belegt sind.
+     */
+    private function claimRegistrationSlot(string $email): bool
+    {
+        $identifier = 'regmail:' . mb_strtolower($email, 'UTF-8');
+        if (!Security::checkDbIdentifierRateLimit(
+            $identifier,
+            self::REGISTRATION_RESERVED_ACTION,
+            self::REGISTRATION_RESERVED_LIMIT_PER_EMAIL,
+            self::REGISTRATION_RESERVED_WINDOW
+        )) {
+            return false;
+        }
+        Security::recordDbRateLimitAttempt(Security::getClientIp(), self::REGISTRATION_RESERVED_ACTION, $identifier);
+
+        return true;
     }
 
     private function reserveRegistration(string $username, string $email, string $password): void
