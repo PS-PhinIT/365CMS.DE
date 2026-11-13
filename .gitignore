@@ -43,6 +43,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 package-lock.json
+# Spiegel-Manifest der gebündelten JS-Bibliotheken (Dependabot/Trivy), muss versioniert sein
+!.github/deps/package-lock.json
 # yarn.lock # Einkommentieren, wenn Yarn verwendet wird
 
 # Dev/Local Folders (Komplette Ordner ignorieren)

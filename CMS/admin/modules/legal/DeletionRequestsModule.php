@@ -100,6 +100,7 @@ class DeletionRequestsModule
 
             $row = (array)$r;
             $row['deadline'] = $this->buildDeadlineState($r);
+            $row['email_unverified'] = in_array((string) $r->status, ['pending', 'processing'], true) && $this->hasUnverifiedAccountEmail($r);
             if (($row['deadline']['state'] ?? '') === 'due_soon') {
                 $dueSoon++;
             }
@@ -153,7 +154,7 @@ class DeletionRequestsModule
         return ['success' => true, 'message' => 'Löschantrag wird geprüft.'];
     }
 
-    public function executeDeletion(int $id): array
+    public function executeDeletion(int $id, bool $includeUnverifiedEmail = false): array
     {
         if ($id <= 0) return ['success' => false, 'error' => 'Ungültige ID.'];
 
@@ -174,8 +175,22 @@ class DeletionRequestsModule
         }
 
         // Trigger DSGVO delete hook
+        $matchEmail = '';
+        $emailSkipped = false;
         if (class_exists('\CMS\Hooks')) {
-            \CMS\Hooks::doAction('dsgvo_delete_data', $request->user_id, $request->email);
+            // Antrag aus einem Konto: Daten ohne Kontobezug nur über eine nachweislich bestätigte Adresse
+            // mitlöschen, sonst träfe die Löschung fremde Eingänge/Abonnements. Reine E-Mail-Anträge
+            // (ohne user_id) hat der Admin selbst geprüft; bei unbestätigter Konto-Adresse entscheidet er
+            // ausdrücklich ($includeUnverifiedEmail).
+            $matchEmail = (int) ($request->user_id ?? 0) > 0
+                ? \CMS\Services\EmailVerificationService::getInstance()->matchableEmail((int) $request->user_id, (string) ($request->email ?? ''))
+                : (string) ($request->email ?? '');
+            $emailSkipped = $this->hasUnverifiedAccountEmail($request);
+            if ($emailSkipped && $includeUnverifiedEmail) {
+                $matchEmail = trim((string) $request->email);
+                $emailSkipped = false;
+            }
+            \CMS\Hooks::doAction('dsgvo_delete_data', $request->user_id, $matchEmail);
         }
 
         // Benutzerkonto vollständig löschen wenn vorhanden
@@ -208,11 +223,12 @@ class DeletionRequestsModule
             'Löschantrag ausgeführt',
             'privacy_request',
             $id,
-            $this->buildAuditContext($request, ['status' => 'completed']),
+            $this->buildAuditContext($request, ['status' => 'completed', 'email_match' => $matchEmail !== '']),
             'warning'
         );
 
-        return ['success' => true, 'message' => 'Löschung durchgeführt. Das Benutzerkonto wurde entfernt.'];
+        return ['success' => true, 'message' => 'Löschung durchgeführt. Das Benutzerkonto wurde entfernt.'
+            . ($emailSkipped ? ' Hinweis: Die Adresse des Kontos war nicht bestätigt – Daten ohne Kontobezug (z. B. Newsletter-Abonnement, anonyme Formulareingänge) wurden nicht gelöscht.' : '')];
     }
 
     public function rejectRequest(int $id, string $reason): array
@@ -316,6 +332,18 @@ class DeletionRequestsModule
         );
 
         return ['success' => true, 'message' => 'Antrag gelöscht.'];
+    }
+
+    /**
+     * true, wenn der Antrag aus einem Konto stammt, dessen Adresse nicht nachweislich bestätigt ist. Daten ohne
+     * Kontobezug (Newsletter-Abonnement, anonyme Formulareingänge) werden dann nur einbezogen, wenn der Admin
+     * die Adresse geprüft hat und das ausdrücklich auswählt.
+     */
+    private function hasUnverifiedAccountEmail(object $request): bool
+    {
+        return (int) ($request->user_id ?? 0) > 0
+            && trim((string) ($request->email ?? '')) !== ''
+            && \CMS\Services\EmailVerificationService::getInstance()->matchableEmail((int) $request->user_id, (string) $request->email) === '';
     }
 
     private function getRequestById(int $id): ?object

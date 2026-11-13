@@ -7,6 +7,9 @@
  * {page_url} {admin_url} {from_name} {field:<feldname>}. IP-Adresse und User-Agent enthalten die Mails
  * bewusst nicht (Datenminimierung).
  *
+ * Die Bestätigung geht an eine frei eingegebene, unbestätigte Adresse: Eingabewerte werden dort nur
+ * entschärft (ohne Links, gekürzt) eingesetzt und der Versand ist je Empfängeradresse begrenzt.
+ *
  * @package CMSv2\Core\Services\Forms
  */
 
@@ -24,6 +27,14 @@ if (!defined('ABSPATH')) {
 
 final class FormMailer
 {
+    private const CONFIRMATION_LINE_LENGTH = 60;
+    private const CONFIRMATION_TEXT_LENGTH = 500;
+    private const CONFIRMATION_FIELDS_LENGTH = 1000;
+    /** Adressen mit Schema (auch `hxxp`, `//host`) oder `www.`. */
+    private const URL_PATTERN = '~(?:\b[a-z][a-z0-9+.-]{1,15}:/{1,}|(?<![\w/])//(?=\w)|\bwww\.)[^\s<>"\']*~iu';
+    /** Bloße Domains (`beispiel.de/pfad`); E-Mail-Adressen bleiben unberührt. */
+    private const DOMAIN_PATTERN = '~(?<![@\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}(?![\w-])(?:/[^\s<>"\']*)?~iu';
+
     /**
      * Empfänger: Formular → Theme-Option `contact_email` → `forms.default_recipient` → ADMIN_EMAIL.
      *
@@ -124,8 +135,20 @@ final class FormMailer
             return false;
         }
 
+        if (!FormSpamGuard::claimConfirmation($summary['sender_email'])) {
+            FormSpamGuard::logRejection('confirm_limit', $form);
+
+            // Die Absendung bleibt gültig, nur die Bestätigung entfällt.
+            return true;
+        }
+
         $locale = FormI18n::normalizeLocale($context['locale'] ?? FormI18n::siteLocale());
         $vars = self::placeholders($form, $values, $locale, $context);
+        // Nur wer angemeldet an die eigene Kontoadresse schreibt, bekommt seine Angaben unverändert zurück.
+        $userEmail = trim((string) ($context['user_email'] ?? ''));
+        if ($userEmail === '' || strcasecmp($userEmail, $summary['sender_email']) !== 0) {
+            $vars = self::confirmationVars($vars);
+        }
         $subject = FormI18n::pick($confirmation['subject'] ?? [], $locale);
         $body = FormI18n::pick($confirmation['body'] ?? [], $locale);
         $subject = self::headerSafe(self::replace($subject !== '' ? $subject : FormSettings::mailTemplate('confirmation_subject', $locale), $vars));
@@ -191,6 +214,60 @@ final class FormMailer
         }
 
         return $vars;
+    }
+
+    /**
+     * Entschärft die vom Absender stammenden Platzhalter für die Bestätigung: `{name}`/`{subject}` einzeilig,
+     * kurz und leer bei Link-Mustern; `{message}`, `{fields}`, `{field:*}` ohne Links und gekürzt. Sonst ließe
+     * sich über die Bestätigung beliebiger Text samt Links im Namen der Website an fremde Adressen schicken.
+     *
+     * @param array<string, string> $vars
+     * @return array<string, string>
+     */
+    public static function confirmationVars(array $vars): array
+    {
+        foreach ($vars as $key => $value) {
+            if ($key === '{name}' || $key === '{subject}') {
+                $line = self::headerSafe((string) $value);
+                $vars[$key] = self::containsLink($line) ? '' : self::truncate($line, self::CONFIRMATION_LINE_LENGTH);
+            } elseif ($key === '{message}' || $key === '{fields}' || str_starts_with((string) $key, '{field:')) {
+                $vars[$key] = self::truncate(
+                    self::stripLinks((string) $value),
+                    $key === '{fields}' ? self::CONFIRMATION_FIELDS_LENGTH : self::CONFIRMATION_TEXT_LENGTH
+                );
+            }
+        }
+        if (($vars['{subject}'] ?? '') === '') {
+            $vars['{subject}'] = (string) ($vars['{form_title}'] ?? '');
+        }
+
+        return $vars;
+    }
+
+    private static function containsLink(string $text): bool
+    {
+        return preg_match(self::URL_PATTERN, $text) === 1 || preg_match(self::DOMAIN_PATTERN, $text) === 1;
+    }
+
+    /** Entfernt Adressen mit Schema/`www.` und macht bloße Domains für Mailprogramme unverlinkbar. */
+    private static function stripLinks(string $text): string
+    {
+        $text = (string) preg_replace(self::URL_PATTERN, '[…]', $text);
+
+        return (string) preg_replace_callback(
+            self::DOMAIN_PATTERN,
+            static fn (array $match): string => str_replace('.', '[.]', $match[0]),
+            $text
+        );
+    }
+
+    private static function truncate(string $text, int $length): string
+    {
+        if (function_exists('mb_strlen')) {
+            return mb_strlen($text, 'UTF-8') > $length ? rtrim(mb_substr($text, 0, $length, 'UTF-8')) . ' …' : $text;
+        }
+
+        return strlen($text) > $length ? rtrim(substr($text, 0, $length)) . ' …' : $text;
     }
 
     /**

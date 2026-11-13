@@ -9,6 +9,9 @@
  * - `standard`: Honeypot, Mindestzeit, Rate-Limit je IP und Stunde, globale AntiSpam-Regeln
  * - `high`: zusätzlich eine Rechenaufgabe
  *
+ * Unabhängig von der Stufe gelten ein Limit für Eingangsbestätigungen je Empfängeradresse und eine
+ * Obergrenze für protokollierte Abweisungen je IP und Formular.
+ *
  * @package CMSv2\Core\Services\Forms
  */
 
@@ -31,29 +34,41 @@ final class FormSpamGuard
     public const CAPTCHA_FIELD = 'cms_captcha';
     public const MIN_SECONDS = 3;
     public const RATE_WINDOW = 3600;
+    /** Höchstalter der signierten Startzeit (wie die Rechenaufgabe). */
+    public const MAX_AGE = 86400;
+    /** Eingangsbestätigungen je Empfängeradresse und Stunde – über alle Formulare und IPs. */
+    public const CONFIRMATION_LIMIT = 2;
+    /** Protokollierte Abweisungen je IP, Formular und Stunde. */
+    public const REJECTION_LOG_LIMIT = 30;
+
+    private const CONFIRMATION_ACTION = 'form_confirm';
 
     private const CAPTCHA_SESSION = 'cms_forms_captcha';
 
-    /** Signierte Startzeit (verhindert gefälschte Zeitstempel). */
-    public static function timestampToken(?int $time = null): string
+    /** Signierte Startzeit (verhindert gefälschte Zeitstempel), gebunden an den Formularschlüssel. */
+    public static function timestampToken(string $formKey, ?int $time = null): string
     {
         $time ??= time();
 
-        return $time . '.' . self::sign((string) $time);
+        return $time . '.' . self::sign($formKey . '|' . $time);
     }
 
-    /** Startzeit aus dem Token oder null bei fehlender/ungültiger Signatur. */
-    public static function verifyTimestamp(string $token): ?int
+    /**
+     * Startzeit aus dem Token oder null bei fehlender/ungültiger Signatur, fremdem Formular oder
+     * abgelaufenem Token (älter als MAX_AGE) – ein einmal abgerufenes Token gilt also nicht dauerhaft.
+     */
+    public static function verifyTimestamp(string $token, string $formKey, ?int $now = null): ?int
     {
         if (preg_match('/^(\d{9,11})\.([a-f0-9]{32})$/', trim($token), $match) !== 1) {
             return null;
         }
-        if (!hash_equals(self::sign($match[1]), $match[2])) {
+        if (!hash_equals(self::sign($formKey . '|' . $match[1]), $match[2])) {
             return null;
         }
         $time = (int) $match[1];
+        $now ??= time();
 
-        return $time <= time() + 60 ? $time : null;
+        return $time <= $now + 60 && $time >= $now - self::MAX_AGE ? $time : null;
     }
 
     /**
@@ -108,7 +123,10 @@ final class FormSpamGuard
             return self::ok();
         }
 
-        $startedAt = self::verifyTimestamp(is_scalar($post[self::TIME_FIELD] ?? null) ? (string) $post[self::TIME_FIELD] : '');
+        $startedAt = self::verifyTimestamp(
+            is_scalar($post[self::TIME_FIELD] ?? null) ? (string) $post[self::TIME_FIELD] : '',
+            (string) ($form['form_key'] ?? '')
+        );
         if ($startedAt === null) {
             self::logRejection('invalid_timestamp', $form);
 
@@ -121,7 +139,8 @@ final class FormSpamGuard
         }
 
         $limit = (int) ($form['settings']['rate_limit'] ?? 5);
-        if ($limit > 0 && !Security::checkDbRateLimit($ip, self::rateLimitAction($form), $limit, self::RATE_WINDOW)) {
+        $action = self::rateLimitAction($form);
+        if ($limit > 0 && !Security::checkDbRateLimit($ip, $action, $limit, self::RATE_WINDOW)) {
             self::logRejection('rate_limited', $form);
 
             return self::error('rate_limited', FormI18n::t('forms.error.rate_limit', $locale));
@@ -131,6 +150,18 @@ final class FormSpamGuard
             self::logRejection('captcha', $form);
 
             return self::error('captcha', FormI18n::t('forms.error.captcha', $locale));
+        }
+
+        // Erst zählen, dann erneut prüfen (der eigene Eintrag zählt mit): Parallele Anfragen sehen sich so
+        // gegenseitig, statt alle denselben Stand unter dem Limit zu lesen. Gezählt wird vor Speichern und
+        // Mailversand – auch Versuche, die danach an AntiSpam oder Dateiprüfung scheitern, verbrauchen Kontingent.
+        if ($limit > 0) {
+            Security::recordDbRateLimitAttempt($ip, $action);
+            if (!Security::checkDbRateLimit($ip, $action, $limit + 1, self::RATE_WINDOW)) {
+                self::logRejection('rate_limited', $form);
+
+                return self::error('rate_limited', FormI18n::t('forms.error.rate_limit', $locale));
+            }
         }
 
         $summary = FormSubmissionService::summary($form['fields'] ?? [], $values);
@@ -165,12 +196,23 @@ final class FormSpamGuard
         return self::ok();
     }
 
-    /** Zählt eine erfolgreiche Absendung für das Rate-Limit (Tabelle `login_attempts`, kurzlebig). */
-    public static function recordSubmission(array $form): void
+    /**
+     * Reserviert eine Eingangsbestätigung für die Adresse: höchstens CONFIRMATION_LIMIT je Stunde, über alle
+     * Formulare, IPs und Schutzstufen. Die Adresse ist frei eingegeben und unbestätigt – ohne dieses Limit
+     * ließen sich fremde Postfächer über die Website mit Mails fluten. Zählt vor dem Versand (wie check()).
+     */
+    public static function claimConfirmation(string $email): bool
     {
-        if ((int) ($form['settings']['rate_limit'] ?? 0) > 0 && ($form['settings']['antispam_level'] ?? 'standard') !== 'low') {
-            Security::recordDbRateLimitAttempt(Security::getClientIp(), self::rateLimitAction($form));
+        $identifier = strtolower(trim($email));
+        if ($identifier === '') {
+            return false;
         }
+        if (!Security::checkDbIdentifierRateLimit($identifier, self::CONFIRMATION_ACTION, self::CONFIRMATION_LIMIT, self::RATE_WINDOW)) {
+            return false;
+        }
+        Security::recordDbRateLimitAttempt(Security::getClientIp(), self::CONFIRMATION_ACTION, $identifier);
+
+        return Security::checkDbIdentifierRateLimit($identifier, self::CONFIRMATION_ACTION, self::CONFIRMATION_LIMIT + 1, self::RATE_WINDOW);
     }
 
     /**
@@ -182,6 +224,12 @@ final class FormSpamGuard
     {
         $reason = substr((string) preg_replace('/[^a-z0-9_]/', '', strtolower($reason)), 0, 40);
         $ip = Security::getClientIp();
+        // Abweisungen kosten je Anfrage eine Protokollzeile – je IP und Formular begrenzen.
+        $logAction = 'form_rej_' . (int) ($form['id'] ?? 0);
+        if (!Security::checkDbRateLimit($ip, $logAction, self::REJECTION_LOG_LIMIT, self::RATE_WINDOW)) {
+            return;
+        }
+        Security::recordDbRateLimitAttempt($ip, $logAction);
         $uri = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
         try {
             Database::instance()->insert('security_log', [

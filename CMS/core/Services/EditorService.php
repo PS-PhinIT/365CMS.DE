@@ -199,9 +199,12 @@ class EditorService
                             '*': 'style|class|id|data-[^\\s]+',
                             table: 'cellpadding|cellspacing|border',
                             a: 'href|target|rel|title',
-                            img: 'src|alt|title|width|height',
-                            iframe: 'src|width|height|frameborder|allowfullscreen'
+                            img: 'src|alt|title|width|height'
                         },
+                        // Die Toolbar hat kein Embed-/Video-Plugin: iframes nicht in den Editor lassen, auch nicht
+                        // über die Zwischenablage-Platzhalter (data-se-iframe-holder), aus denen SunEditor sie neu baut.
+                        elementBlacklist: 'iframe',
+                        attributeBlacklist: { '*': 'data-se-iframe-holder|data-se-iframe-holder-attrs' },
                         blockStyle: { items: ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre'] },
                         image: { createFileInput: false },
                         video: { createFileInput: false },

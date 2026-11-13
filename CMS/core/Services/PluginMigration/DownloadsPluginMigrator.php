@@ -26,7 +26,6 @@ use CMS\Services\Downloads\DownloadRepository;
 use CMS\Services\Downloads\DownloadSecurity;
 use CMS\Services\Downloads\DownloadService;
 use CMS\Services\Downloads\DownloadSettings;
-use CMS\Services\PrivateStorageService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -262,7 +261,9 @@ final class DownloadsPluginMigrator implements PluginMigrator
             'changelog' => '',
         ];
 
-        $fileInfo = $this->legacyFile((string) ($row->file_path ?? ''), (string) ($row->file_name ?? ''), $restricted);
+        // Auch unveröffentlichte Downloads gehören in den privaten Speicher: Unter uploads/downloads wären sie
+        // ohne Zugriffsprüfung direkt abrufbar.
+        $fileInfo = $this->legacyFile((string) ($row->file_path ?? ''), (string) ($row->file_name ?? ''), $restricted || !$published);
         $externalUrl = trim((string) ($row->external_url ?? ''));
         if ($fileInfo === null && $externalUrl === '') {
             if (trim((string) ($row->file_path ?? '')) !== '') {
@@ -328,26 +329,16 @@ final class DownloadsPluginMigrator implements PluginMigrator
             return $info;
         }
 
-        try {
-            $storage = PrivateStorageService::getInstance();
-            $area = DownloadSettings::getInstance()->string('storage_area');
-            $target = $storage->randomFilename($ext);
-            $destination = $storage->path($area) . $target;
-            if (!@copy($path, $destination) || hash_file('sha256', $destination) !== $info['sha256']) {
-                @unlink($destination);
-
-                return $info;
-            }
-            @chmod($destination, 0640);
-            @unlink($path);
-            $this->report['moved_files']++;
-
-            return ['area' => $area, 'path' => $target] + $info;
-        } catch (\Throwable $e) {
-            Logger::instance()->withChannel('plugins.integration')->warning('cms-downloads: Datei konnte nicht in den privaten Speicher verschoben werden.', ['exception' => $e->getMessage()]);
+        $target = DownloadService::getInstance()->moveToPrivateStorage($path, $ext);
+        if ($target === null) {
+            // Bleibt vorerst unter uploads/downloads; DownloadService verschiebt beim nächsten Speichern erneut.
+            Logger::instance()->withChannel('plugins.integration')->warning('cms-downloads: Datei konnte nicht in den privaten Speicher verschoben werden.', ['file' => $name]);
 
             return $info;
         }
+        $this->report['moved_files']++;
+
+        return $target + $info;
     }
 
     /**

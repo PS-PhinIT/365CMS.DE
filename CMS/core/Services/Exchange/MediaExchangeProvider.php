@@ -39,6 +39,7 @@ final class MediaExchangeProvider implements ExchangeProvider
 
     /** @var list<array<string, mixed>>|null */
     private ?array $inventory = null;
+    private ?MediaService $mediaService = null;
 
     public function type(): string
     {
@@ -103,11 +104,18 @@ final class MediaExchangeProvider implements ExchangeProvider
     public function preview(array $record, ImportContext $context): ImportPreview
     {
         $path = self::cleanPath((string) ($record['path'] ?? ''));
-        if ($path === '' || !self::allowedExtension($path)) {
+        if ($path === '' || !self::allowedExtension($path) || !$this->allowedTarget($path)) {
             return new ImportPreview(ImportPreview::ACTION_INVALID, $path !== '' ? $path : '?', '', (string) __('exchange.error.media_type'));
         }
-        if (!empty($record['has_file']) && $context->stagedFile('files/media/' . $path) === null) {
-            return new ImportPreview(ImportPreview::ACTION_INVALID, $path, '', (string) __('exchange.error.media_file_missing'));
+        if (!empty($record['has_file'])) {
+            $staged = $context->stagedFile('files/media/' . $path);
+            if ($staged === null) {
+                return new ImportPreview(ImportPreview::ACTION_INVALID, $path, '', (string) __('exchange.error.media_file_missing'));
+            }
+            // Inhalt wie beim Upload prüfen (MIME, Bilddaten) – Manifest und Prüfsumme stammen aus dem Archiv selbst.
+            if ($this->mediaService()->validateLocalFile($staged, basename($path)) instanceof \CMS\WP_Error) {
+                return new ImportPreview(ImportPreview::ACTION_INVALID, $path, '', (string) __('exchange.error.media_type'));
+            }
         }
 
         return is_file(rtrim((string) UPLOAD_PATH, '/\\') . DIRECTORY_SEPARATOR . $path)
@@ -179,9 +187,9 @@ final class MediaExchangeProvider implements ExchangeProvider
         }
         $items = [];
         try {
-            foreach ((new MediaService())->collectManagedFileInventory(10000) as $item) {
+            foreach ($this->mediaService()->collectManagedFileInventory(10000) as $item) {
                 $path = (string) ($item['path'] ?? '');
-                if ($path === '' || !empty($item['is_system']) || preg_match(self::DERIVATIVE_PATTERN, $path) === 1 || !self::allowedExtension($path)) {
+                if ($path === '' || !empty($item['is_system']) || preg_match(self::DERIVATIVE_PATTERN, $path) === 1 || !self::allowedExtension($path) || !$this->allowedTarget($path)) {
                     continue;
                 }
                 // WebP-Begleitdatei eines Rasterbilds (`bild.webp` neben `bild.jpg`) wird neu erzeugt.
@@ -279,7 +287,7 @@ final class MediaExchangeProvider implements ExchangeProvider
         }
 
         try {
-            $service = new MediaService();
+            $service = $this->mediaService();
             if ((string) ($record['category'] ?? '') !== '') {
                 $service->assignCategory($path, (string) $record['category']);
             }
@@ -323,5 +331,24 @@ final class MediaExchangeProvider implements ExchangeProvider
         $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
 
         return $extension !== '' && !in_array($extension, self::BLOCKED_EXTENSIONS, true) && !str_starts_with(basename($path), '.');
+    }
+
+    /**
+     * Zweite Hürde nach der Sperrliste: Endungs-Whitelist des Uploads, keine versteckten Segmente und
+     * keine Systemordner (`fonts/`, `member/` …), die die Medienverwaltung sonst schützt.
+     */
+    private function allowedTarget(string $path): bool
+    {
+        if (preg_match('#(^|/)\.#', $path) === 1) {
+            return false;
+        }
+        $service = $this->mediaService();
+
+        return !$service->isInSystemFolder($path) && $service->isAllowedFileName(basename($path));
+    }
+
+    private function mediaService(): MediaService
+    {
+        return $this->mediaService ??= new MediaService();
     }
 }

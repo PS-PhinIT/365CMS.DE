@@ -38,7 +38,7 @@ final class SiteTableRepository
         $row = $this->db->fetchOne(
             "SELECT id, table_name, description, columns_json, rows_json, settings_json, updated_at, table_slug
              FROM {$this->prefix}site_tables
-             WHERE id = ? LIMIT 1",
+             WHERE id = ? AND trashed_at IS NULL LIMIT 1",
             [$tableId]
         );
 

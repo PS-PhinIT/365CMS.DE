@@ -179,13 +179,11 @@ class MemberService
             return $policyResult;
         }
 
-        $hash = $this->db->get_var(
-            "SELECT password FROM {$this->prefix}users WHERE id = ?",
-            [$userId]
-        );
-
-        if (!$hash || !Security::verifyPassword($current, $hash)) {
-            return 'Das aktuelle Passwort ist nicht korrekt.';
+        // Über die gemeinsame Re-Auth-Prüfung (Limit `reauth` je IP, Audit-Eintrag `reauth_failed`), damit
+        // eine übernommene Sitzung das aktuelle Passwort hier nicht unbegrenzt durchprobieren kann.
+        $reauth = \CMS\Auth::instance()->verifyCurrentPassword($userId, $current);
+        if ($reauth !== true) {
+            return (string) $reauth;
         }
 
         $this->db->execute(
@@ -496,7 +494,10 @@ class MemberService
         ];
 
         // Funktionsbereiche ergänzen ihre Daten der Person (z. B. Formulareingänge, Newsletter-Abonnement).
-        $filtered = \CMS\Hooks::applyFilters('cms_member_export_data', $export, $userId, (string) ($user->email ?? ''));
+        // Die Adresse geht nur mit, wenn sie nachweislich bestätigt ist – sonst ließen sich mit einem Konto auf
+        // eine fremde Adresse deren anonym erfasste Daten abrufen. Ohne Nachweis ('') zählt nur die user_id.
+        $matchEmail = EmailVerificationService::getInstance()->matchableEmail($userId, (string) ($user->email ?? ''));
+        $filtered = \CMS\Hooks::applyFilters('cms_member_export_data', $export, $userId, $matchEmail);
 
         return is_array($filtered) ? $filtered : $export;
     }

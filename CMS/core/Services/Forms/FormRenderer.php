@@ -265,7 +265,7 @@ final class FormRenderer
             $return = (string) ($options['return'] ?? self::currentPath());
             $html .= '<input type="hidden" name="cms_form" value="' . self::esc($key) . '">'
                 . '<input type="hidden" name="_token" value="' . self::esc($token) . '">'
-                . '<input type="hidden" name="' . FormSpamGuard::TIME_FIELD . '" value="' . self::esc(FormSpamGuard::timestampToken()) . '">'
+                . '<input type="hidden" name="' . FormSpamGuard::TIME_FIELD . '" value="' . self::esc(FormSpamGuard::timestampToken($key)) . '">'
                 . '<input type="hidden" name="_locale" value="' . self::esc($locale) . '">'
                 . '<input type="hidden" name="_return" value="' . self::esc($return) . '">'
                 . '<div class="cms-form__hp" aria-hidden="true"><label>' . self::esc(FormI18n::t('forms.field.honeypot', $locale))

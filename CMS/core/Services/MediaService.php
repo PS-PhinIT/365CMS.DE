@@ -488,6 +488,42 @@ class MediaService {
             return new WP_Error('size_limit', 'Datei ist zu groß. Maximum: ' . ($settings['max_upload_size'] ?? '64M'));
         }
 
+        return $this->validateFileTypeAndContent($fileName, $tmpName, $settings);
+    }
+
+    /**
+     * Endungs-Whitelist, Sperrlisten, MIME-Abgleich und Bildprüfung – gemeinsam für HTTP-Uploads und
+     * bereits auf dem Server liegende Dateien (Content-Exchange-Import).
+     *
+     * @return array{ext: string}|WP_Error
+     */
+    private function validateFileTypeAndContent(string $fileName, string $tmpName, array $settings): array|WP_Error {
+        $extensionCheck = $this->validateFileExtension($fileName, $settings);
+        if ($extensionCheck instanceof WP_Error) {
+            return $extensionCheck;
+        }
+        $ext = $extensionCheck;
+
+        $allowedMimeMap = $this->getAllowedMimeMap();
+        if (isset($allowedMimeMap[$ext])) {
+            $realMime = $this->detectUploadedMimeType($tmpName, $this->isImageExtension($ext));
+
+            if ($realMime !== '' && !in_array($realMime, $allowedMimeMap[$ext], true)) {
+                return new WP_Error('mime_mismatch', sprintf('MIME-Typ "%s" passt nicht zur Dateiendung ".%s". Upload abgebrochen.', $realMime, $ext));
+            }
+        }
+
+        if (($settings['validate_image_content'] ?? false) && $this->isImageExtension($ext) && $this->readImageSize($tmpName, 'upload_validation') === null) {
+            return new WP_Error('invalid_image', 'Die Datei enthält keine gültigen Bilddaten.');
+        }
+
+        return ['ext' => $ext];
+    }
+
+    /**
+     * @return string|WP_Error geprüfte Endung (kleingeschrieben) oder Ablehnungsgrund
+     */
+    private function validateFileExtension(string $fileName, array $settings): string|WP_Error {
         $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
         if ($ext === '') {
             return new WP_Error('missing_extension', 'Die Datei hat keine erlaubte Dateiendung.');
@@ -529,20 +565,7 @@ class MediaService {
             return new WP_Error('type_not_allowed', 'Dateityp nicht erlaubt: ' . $ext);
         }
 
-        $allowedMimeMap = $this->getAllowedMimeMap();
-        if (isset($allowedMimeMap[$ext])) {
-            $realMime = $this->detectUploadedMimeType($tmpName, $this->isImageExtension($ext));
-
-            if ($realMime !== '' && !in_array($realMime, $allowedMimeMap[$ext], true)) {
-                return new WP_Error('mime_mismatch', sprintf('MIME-Typ "%s" passt nicht zur Dateiendung ".%s". Upload abgebrochen.', $realMime, $ext));
-            }
-        }
-
-        if (($settings['validate_image_content'] ?? false) && $this->isImageExtension($ext) && $this->readImageSize($tmpName, 'upload_validation') === null) {
-            return new WP_Error('invalid_image', 'Die Datei enthält keine gültigen Bilddaten.');
-        }
-
-        return ['ext' => $ext];
+        return $ext;
     }
 
     /**
@@ -559,6 +582,57 @@ class MediaService {
             : $this->getSettings();
 
         return $this->validateFile($file, $resolvedSettings);
+    }
+
+    /**
+     * Prüft eine bereits auf dem Server liegende Datei (z. B. aus einem entpackten Import-Archiv) wie einen Upload:
+     * Endungs-Whitelist, MIME-Abgleich, Bildprüfung. Die Größengrenze des Uploads gilt hier nicht.
+     * Sperrlisten und Bildprüfung sind unabhängig von den Einstellungen aktiv, weil die Quelle fremd sein kann.
+     *
+     * @param array<string,mixed>|null $settings
+     * @return array{ext:string}|WP_Error
+     */
+    public function validateLocalFile(string $absolutePath, string $fileName, ?array $settings = null): array|WP_Error
+    {
+        if ($absolutePath === '' || trim($fileName) === '' || !is_file($absolutePath)) {
+            return new WP_Error('invalid_upload', 'Ungültige Datei.');
+        }
+
+        return $this->validateFileTypeAndContent(trim($fileName), $absolutePath, $this->resolveLocalValidationSettings($settings));
+    }
+
+    /**
+     * Endungsprüfung ohne Dateiinhalt (Whitelist `allowed_types`, Sperrlisten, Doppelendungen).
+     *
+     * @param array<string,mixed>|null $settings
+     */
+    public function isAllowedFileName(string $fileName, ?array $settings = null): bool
+    {
+        return !($this->validateFileExtension(trim($fileName), $this->resolveLocalValidationSettings($settings)) instanceof WP_Error);
+    }
+
+    /**
+     * Liegt der Pfad in einem Systemordner? Anders als isProtectedPath() entscheidet allein das erste Segment.
+     */
+    public function isInSystemFolder(string $relativePath): bool
+    {
+        $first = strtolower((string) strtok(trim(str_replace('\\', '/', $relativePath), '/'), '/'));
+
+        // `import` ist das Arbeitsverzeichnis des Importers und kein Medienordner.
+        return $first !== '' && in_array($first, array_merge($this->systemFolders, ['import']), true);
+    }
+
+    /**
+     * @param array<string,mixed>|null $settings
+     * @return array<string,mixed>
+     */
+    private function resolveLocalValidationSettings(?array $settings): array
+    {
+        $resolved = $settings !== null ? $this->normalizeSettings($settings) : $this->getSettings();
+        $resolved['block_dangerous_types'] = true;
+        $resolved['validate_image_content'] = true;
+
+        return $resolved;
     }
 
     private function isImageExtension(string $ext): bool {

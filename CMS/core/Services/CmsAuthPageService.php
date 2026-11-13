@@ -513,6 +513,13 @@ final class CmsAuthPageService
             $this->db->execute("UPDATE {$this->prefix}users SET password = ? WHERE email = ?", [$passwordHash, (string) $row->email]);
             $this->db->execute("DELETE FROM {$this->prefix}password_resets WHERE email = ?", [(string) $row->email]);
             EmailVerificationService::getInstance()->markVerifiedByEmail((string) $row->email);
+            // Der Reset belegt den Zugriff auf das Postfach: Dieses Gerät gilt danach als bekannt und führt
+            // bei Konto-Bremse und 2FA-Limit einen eigenen Zähler. So bleibt der Reset der Ausweg, wenn
+            // Dritte das Konto mit Fehlversuchen ausbremsen.
+            Auth::instance()->trustCurrentDevice((int) $this->db->get_var(
+                "SELECT id FROM {$this->prefix}users WHERE email = ? LIMIT 1",
+                [(string) $row->email]
+            ));
             // Bestehende Sitzungen werden über den Passwort-Fingerprint ungültig (Auth::checkSession());
             // die Einträge der Sitzungsübersicht gleich mit entfernen.
             $this->db->execute(

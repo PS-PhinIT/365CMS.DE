@@ -248,6 +248,10 @@ final class PublicRouter
                 'username' => (string)$loginInput,
                 'remember' => !empty($_POST['remember']) ? '1' : '0',
             ]);
+            $retryAfter = Auth::instance()->lastLoginRetryAfter();
+            if ($retryAfter > 0 && !headers_sent()) {
+                header('Retry-After: ' . $retryAfter);
+            }
             $this->router->redirect($this->appendLoginErrorCode($loginPagePath, 'invalid'));
         }
     }
@@ -623,7 +627,13 @@ final class PublicRouter
             return;
         }
 
-        $result = Auth::instance()->register($_POST);
+        // Nur die Felder des Formulars übergeben: Ein mitgeschickter `display_name` landete sonst als frei
+        // wählbarer Text im Konto; der Anzeigename entspricht zunächst dem streng gefilterten Benutzernamen.
+        $result = Auth::instance()->register([
+            'username' => $this->requestString($_POST['username'] ?? '', 80),
+            'email' => $this->requestString($_POST['email'] ?? '', 254),
+            'password' => $registerPassword,
+        ]);
 
         if ($result === true) {
             $_SESSION['success'] = Auth::instance()->isEmailVerificationRequired()

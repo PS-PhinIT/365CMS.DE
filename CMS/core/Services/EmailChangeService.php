@@ -365,10 +365,10 @@ final class EmailChangeService
     private function sendConfirmationMail(object $user, string $newEmail, string $token, ?string $locale): bool
     {
         $siteName = $this->siteName();
-        $name = trim((string) ($user->display_name ?? ''));
-        $name = $name !== '' ? $name : (string) ($user->username ?? '');
 
-        $body = "Hallo {$name},\n\n"
+        // Neutrale Anrede: Die Mail geht an eine noch unbestätigte, fremde Adresse – der frei wählbare
+        // Anzeigename wäre dort ein Köder-Text mit dem Absender der Website.
+        $body = "Hallo,\n\n"
             . "diese Adresse wurde als neue E-Mail-Adresse für dein Konto bei {$siteName} angegeben. "
             . 'Bitte bestätige die Änderung über den folgenden Link (gültig für ' . intdiv(self::TOKEN_TTL_SECONDS, 3600) . " Stunden):\n"
             . $this->buildConfirmationUrl((int) $user->id, $token, $locale) . "\n\n"

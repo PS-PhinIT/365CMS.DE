@@ -546,6 +546,24 @@ class Security
     }
     
     /**
+     * Sicheres lokales Weiterleitungsziel: nur ein Pfad dieser Website (optional mit Query/Fragment), sonst $fallback.
+     *
+     * Abgelehnt werden Schema und Host, `//` im Pfad, Backslashes sowie alle Steuer- und Leerzeichen –
+     * Browser entfernen Tab/Zeilenumbruch vor dem Parsen, aus `/<TAB>/host` würde sonst `//host`.
+     */
+    public static function safeLocalPath(mixed $value, string $fallback = ''): string
+    {
+        if (!is_string($value) || $value === '' || strlen($value) > 1000 || $value[0] !== '/'
+            || str_contains($value, '\\') || preg_match('/[\x00-\x20\x7F]/', $value) === 1) {
+            return $fallback;
+        }
+
+        $path = substr($value, 0, strcspn($value, '?#'));
+
+        return str_contains($path, '//') ? $fallback : $value;
+    }
+
+    /**
      * Escape output for HTML (static wrapper)
      */
     public static function escape(string|int $output): string
@@ -700,6 +718,32 @@ class Security
     }
 
     /**
+     * Sekunden seit dem jüngsten Eintrag je Kennung und Aktion; null ohne Eintrag oder bei DB-Fehlern.
+     * Die Differenz bildet die Datenbank selbst – unabhängig von abweichenden Zeitzonen in PHP und MySQL.
+     */
+    public static function secondsSinceLastDbIdentifierAttempt(string $identifier, string $action): ?int
+    {
+        $identifier = self::normalizeRateLimitIdentifier($identifier);
+        if ($identifier === '') {
+            return null;
+        }
+
+        try {
+            $db = Database::instance();
+            $seconds = $db->get_var(
+                "SELECT TIMESTAMPDIFF(SECOND, MAX(attempted_at), NOW()) FROM {$db->getPrefix()}login_attempts WHERE username = ? AND action = ?",
+                [$identifier, self::normalizeRateLimitAction($action)]
+            );
+
+            return $seconds === null || $seconds === false ? null : max(0, (int) $seconds);
+        } catch (\Throwable $e) {
+            error_log('Security::secondsSinceLastDbIdentifierAttempt() Fehler: ' . self::sanitizeDiagnosticText($e->getMessage()));
+
+            return null;
+        }
+    }
+
+    /**
      * Rate-Limit je Kennung (siehe countDbIdentifierAttempts()); true = erlaubt.
      */
     public static function checkDbIdentifierRateLimit(string $identifier, string $action, int $maxAttempts, int $timeWindow): bool
@@ -757,6 +801,23 @@ class Security
             $stmt->execute([$username, $ip, $action]);
         } catch (\Throwable $e) {
             error_log('Security::recordDbRateLimitAttempt() Fehler: ' . self::sanitizeDiagnosticText($e->getMessage()));
+        }
+    }
+
+    /**
+     * Nimmt den jüngsten eigenen Eintrag wieder zurück. Für Limits, die den Versuch vor der teuren Prüfung
+     * zählen (damit parallele Anfragen einander sehen) und ihn bei Erfolg nicht als Fehlversuch behalten.
+     */
+    public static function releaseDbRateLimitAttempt(string $ip, string $action, string $username = ''): void
+    {
+        try {
+            $db = Database::instance();
+            $db->execute(
+                "DELETE FROM {$db->getPrefix()}login_attempts WHERE ip_address = ? AND action = ? AND username = ? ORDER BY id DESC LIMIT 1",
+                [$ip, self::normalizeRateLimitAction($action), self::normalizeRateLimitIdentifier($username)]
+            );
+        } catch (\Throwable $e) {
+            error_log('Security::releaseDbRateLimitAttempt() Fehler: ' . self::sanitizeDiagnosticText($e->getMessage()));
         }
     }
 

@@ -123,6 +123,8 @@ final class FormFrontendController
             'error' => $result['message'],
             'errors' => (object) $result['errors'],
             'token' => Security::instance()->generateToken('form_' . $form['form_key']),
+            // Die signierte Startzeit läuft ab – für den erneuten Versuch eine frische mitgeben.
+            'ts' => FormSpamGuard::timestampToken((string) $form['form_key']),
         ]);
     }
 
@@ -220,8 +222,8 @@ final class FormFrontendController
                 'submission_id' => $submissionId,
             ]);
         }
-        FormMailer::sendConfirmation($form, $values, $mailContext);
-        FormSpamGuard::recordSubmission($form);
+        // Das Rate-Limit zählt bereits FormSpamGuard::check() – vor Speichern und Versand.
+        FormMailer::sendConfirmation($form, $values, $mailContext + ['user_email' => self::currentUserEmail()]);
 
         $data = FormSubmissionService::buildData($fields, $values, FormI18n::siteLocale());
         try {
@@ -239,10 +241,8 @@ final class FormFrontendController
      */
     public static function safeReturnPath(mixed $value, string $fallback): string
     {
-        $value = is_string($value) ? trim($value) : '';
-        if ($value === '' || strlen($value) > 1000 || !str_starts_with($value, '/') || str_starts_with($value, '//')
-            || str_contains($value, '\\') || preg_match('/[\x00-\x20\x7F]/', $value) === 1
-            || preg_match('#^/(?:admin|api)(?:/|$)#', $value) === 1) {
+        $value = Security::safeLocalPath(is_string($value) ? trim($value) : '');
+        if ($value === '' || preg_match('#^/(?:admin|api)(?:[/?\#]|$)#i', $value) === 1) {
             return $fallback;
         }
         $value = (string) preg_replace('/#.*$/', '', $value);
@@ -436,5 +436,20 @@ final class FormFrontendController
         }
 
         return 0;
+    }
+
+    /** E-Mail-Adresse des angemeldeten Kontos oder ''. */
+    private static function currentUserEmail(): string
+    {
+        try {
+            if (Auth::isLoggedIn()) {
+                $user = Auth::instance()->currentUser();
+
+                return $user !== null ? trim((string) ($user->email ?? '')) : '';
+            }
+        } catch (\Throwable) {
+        }
+
+        return '';
     }
 }

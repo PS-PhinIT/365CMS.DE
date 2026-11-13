@@ -105,13 +105,14 @@ final class NewsletterFrontendController
     public static function subscribe(): void
     {
         $locale = NewsletterI18n::requestLocale();
-        $returnTo = self::safeReturn((string) ($_POST['return_to'] ?? ''));
+        // Ohne gültiges Token (fremde Seite) wird return_to nicht ausgewertet – immer zurück auf /newsletter.
+        if (!Security::instance()->verifyToken((string) ($_POST['csrf_token'] ?? ''), self::CSRF_ACTION)) {
+            self::redirect($locale, 'error');
+        }
+        $returnTo = self::safeReturn($_POST['return_to'] ?? '');
         // Honeypot: so tun, als hätte es geklappt.
         if (trim((string) ($_POST['website'] ?? '')) !== '') {
             self::redirect($locale, 'check-inbox', $returnTo);
-        }
-        if (!Security::instance()->verifyToken((string) ($_POST['csrf_token'] ?? ''), self::CSRF_ACTION)) {
-            self::redirect($locale, 'error', $returnTo);
         }
         if (self::rateLimited()) {
             self::redirect($locale, 'rate-limit', $returnTo);
@@ -270,21 +271,20 @@ final class NewsletterFrontendController
 
     private static function redirect(string $locale, string $notice, string $returnTo = ''): never
     {
+        // Auch intern übergebene Ziele laufen durch die Prüfung, bevor sie im Location-Header landen.
+        $returnTo = self::safeReturn($returnTo);
         $base = $returnTo !== '' ? $returnTo : NewsletterI18n::path('/newsletter', $locale);
         $url = $base . (str_contains($base, '?') ? '&' : '?') . 'notice=' . rawurlencode($notice) . ($returnTo !== '' ? '#newsletter' : '');
         header('Location: ' . $url, true, 303);
         exit;
     }
 
-    /** Nur Pfade dieser Website (für den Editor-Block). */
-    private static function safeReturn(string $path): string
+    /** Nur Pfade dieser Website (für den Editor-Block), ohne Query und Fragment. */
+    private static function safeReturn(mixed $path): string
     {
-        $path = trim($path);
-        if ($path === '' || !str_starts_with($path, '/') || str_starts_with($path, '//') || str_contains($path, '\\') || preg_match('/[\r\n]/', $path) === 1) {
-            return '';
-        }
+        $path = Security::safeLocalPath(is_string($path) ? trim($path) : '');
 
-        return (string) strtok($path, '?#');
+        return $path === '' ? '' : (string) strtok($path, '?#');
     }
 
     private static function rateLimited(): bool

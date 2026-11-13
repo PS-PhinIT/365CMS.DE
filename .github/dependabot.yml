@@ -1,11 +1,22 @@
 version: 2
 
+# Die Bibliotheken liegen als Kopie unter CMS/assets/ bzw. CMS/vendor/dompdf/ und haben dort keine
+# auswertbaren Manifeste. Überwacht werden deshalb die Spiegel-Manifeste unter .github/deps/ (exakte
+# Stände der Bundles, siehe DOC/assets/README.md). Versions-PRs sind abgeschaltet (Limit 0), weil ein
+# PR nur das Manifest, nicht die Kopie ändern würde; Sicherheitsmeldungen und -PRs bleiben aktiv.
 updates:
 
   - package-ecosystem: "composer"
-    directory: "/"
+    directory: "/.github/deps"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
+
+  - package-ecosystem: "npm"
+    directory: "/.github/deps"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
 
   - package-ecosystem: "github-actions"
     directory: "/"

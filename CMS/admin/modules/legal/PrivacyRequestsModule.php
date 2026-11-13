@@ -99,6 +99,7 @@ class PrivacyRequestsModule
 
             $row = (array)$r;
             $row['deadline'] = $this->buildDeadlineState($r);
+            $row['email_unverified'] = in_array((string) $r->status, ['pending', 'processing'], true) && $this->hasUnverifiedAccountEmail($r);
             if (($row['deadline']['state'] ?? '') === 'due_soon') {
                 $dueSoon++;
             }
@@ -152,7 +153,7 @@ class PrivacyRequestsModule
         return ['success' => true, 'message' => 'Anfrage wird bearbeitet.'];
     }
 
-    public function completeRequest(int $id): array
+    public function completeRequest(int $id, bool $includeUnverifiedEmail = false): array
     {
         if ($id <= 0) return ['success' => false, 'error' => 'Ungültige ID.'];
 
@@ -162,8 +163,19 @@ class PrivacyRequestsModule
             return ['success' => false, 'error' => 'Auskunftsanfrage nicht gefunden.'];
         }
 
+        $emailSkipped = false;
         if ($request && class_exists('\CMS\Hooks')) {
-            \CMS\Hooks::doAction('dsgvo_export_data', $request->user_id, $request->email);
+            // Wie bei der Löschung: Anträge aus einem Konto nur mit bestätigter Adresse über die E-Mail zuordnen –
+            // oder wenn der Admin die Adresse geprüft hat und das ausdrücklich auswählt.
+            $matchEmail = (int) ($request->user_id ?? 0) > 0
+                ? \CMS\Services\EmailVerificationService::getInstance()->matchableEmail((int) $request->user_id, (string) ($request->email ?? ''))
+                : (string) ($request->email ?? '');
+            $emailSkipped = $this->hasUnverifiedAccountEmail($request);
+            if ($emailSkipped && $includeUnverifiedEmail) {
+                $matchEmail = trim((string) $request->email);
+                $emailSkipped = false;
+            }
+            \CMS\Hooks::doAction('dsgvo_export_data', $request->user_id, $matchEmail);
         }
 
         $this->db->update('privacy_requests', [
@@ -181,7 +193,8 @@ class PrivacyRequestsModule
             'info'
         );
 
-        return ['success' => true, 'message' => 'Auskunft erteilt und als abgeschlossen markiert.'];
+        return ['success' => true, 'message' => 'Auskunft erteilt und als abgeschlossen markiert.'
+            . ($emailSkipped ? ' Hinweis: Die Adresse des Kontos war nicht bestätigt – Daten ohne Kontobezug wurden nicht einbezogen.' : '')];
     }
 
     public function rejectRequest(int $id, string $reason): array
@@ -285,6 +298,18 @@ class PrivacyRequestsModule
         );
 
         return ['success' => true, 'message' => 'Anfrage gelöscht.'];
+    }
+
+    /**
+     * true, wenn der Antrag aus einem Konto stammt, dessen Adresse nicht nachweislich bestätigt ist. Daten ohne
+     * Kontobezug (Newsletter-Abonnement, anonyme Formulareingänge) werden dann nur einbezogen, wenn der Admin
+     * die Adresse geprüft hat und das ausdrücklich auswählt.
+     */
+    private function hasUnverifiedAccountEmail(object $request): bool
+    {
+        return (int) ($request->user_id ?? 0) > 0
+            && trim((string) ($request->email ?? '')) !== ''
+            && \CMS\Services\EmailVerificationService::getInstance()->matchableEmail((int) $request->user_id, (string) $request->email) === '';
     }
 
     private function getRequestById(int $id): ?object

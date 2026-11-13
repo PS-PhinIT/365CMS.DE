@@ -466,8 +466,9 @@ final class InstallerService
         $results = ['dropped' => [], 'errors' => []];
 
         try {
-            $stmt = $pdo->query("SHOW TABLES LIKE '{$prefix}%'");
-            $tables = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+            // `_` und `%` sind in LIKE Platzhalter: ohne Maskierung träfe `cms_` auch `cms2_…` einer Nachbar-Installation.
+            $stmt = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote(self::likePrefixPattern($prefix)));
+            $tables = self::filterTablesByPrefix($stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [], $prefix);
             if ($tables === []) {
                 return $results;
             }
@@ -475,7 +476,7 @@ final class InstallerService
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
             foreach ($tables as $table) {
                 try {
-                    $pdo->exec("DROP TABLE IF EXISTS `{$table}`");
+                    $pdo->exec('DROP TABLE IF EXISTS `' . str_replace('`', '``', $table) . '`');
                     $results['dropped'][] = $table;
                 } catch (PDOException $e) {
                     $results['errors'][$table] = $e->getMessage();
@@ -487,6 +488,32 @@ final class InstallerService
         }
 
         return $results;
+    }
+
+    /** LIKE-Muster für „beginnt mit dem Präfix“ – Platzhalter im Präfix werden wörtlich genommen. */
+    public static function likePrefixPattern(string $prefix): string
+    {
+        return addcslashes($prefix, '\\_%') . '%';
+    }
+
+    /**
+     * Zweite Hürde nach dem LIKE: greift auch, wenn der SQL-Modus NO_BACKSLASH_ESCAPES die Maskierung aushebelt.
+     *
+     * @param array<int, mixed> $tables
+     * @return list<string>
+     */
+    public static function filterTablesByPrefix(array $tables, string $prefix): array
+    {
+        if ($prefix === '') {
+            return [];
+        }
+
+        $needle = strtolower($prefix);
+
+        return array_values(array_filter(
+            $tables,
+            static fn (mixed $table): bool => is_string($table) && str_starts_with(strtolower($table), $needle)
+        ));
     }
 
     public function testDatabaseConnection(string $host, string $name, string $user, string $pass): bool|string

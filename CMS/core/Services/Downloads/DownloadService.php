@@ -5,6 +5,8 @@
  *
  * Dateien liegen ausschließlich im privaten Speicher ({@see PrivateStorageService}) und werden
  * nur über die Download-Routen ausgeliefert; SHA-256 und Größe werden serverseitig berechnet.
+ * Ausnahme: übernommene Plugin-Dateien unter uploads/downloads ({@see self::LEGACY_UPLOADS_AREA}) – sie werden
+ * in den privaten Speicher verschoben, sobald der Download nicht mehr öffentlich ist.
  *
  * Hooks: `cms_after_download_save` ($id, $item), `download_deleted` ($id),
  *        Filter `cms_download_access` ($state, $item, $user).
@@ -617,6 +619,7 @@ final class DownloadService
             AuditLogger::instance()->log(AuditLogger::CAT_MEDIA, 'downloads.trash', 'Download in den Papierkorb verschoben', 'download', $id, [
                 'title' => (string) $row['title'],
             ], 'warning');
+            $this->privatizeLegacyFiles($id);
             Hooks::doAction('cms_download_trashed', $id);
         }
 
@@ -1030,6 +1033,143 @@ final class DownloadService
     }
 
     /**
+     * Nachlauf für Bestände: übernommene Dateien aller Downloads, die nicht (mehr) öffentlich und veröffentlicht
+     * sind, in den privaten Speicher verschieben. Erfasst Downloads, die vor Einführung von
+     * privatizeLegacyFiles() beschränkt oder als Entwurf übernommen wurden und seither nicht gespeichert wurden.
+     *
+     * @return int Anzahl der Dateien, die weiterhin öffentlich liegen
+     */
+    public function privatizeRestrictedLegacyFiles(int $limit = 200): int
+    {
+        if (!$this->isAvailable()) {
+            return 0;
+        }
+
+        $failed = 0;
+        try {
+            $rows = $this->repo->fetchAll(
+                'SELECT DISTINCT v.download_id FROM ' . $this->repo->table('downloads_versions') . ' v'
+                . ' INNER JOIN ' . $this->repo->table('downloads_items') . ' i ON i.id = v.download_id'
+                . " WHERE v.file_area = ? AND v.file_path <> '' AND (i.access_level <> 'public' OR i.status <> 'published')"
+                . ' ORDER BY v.download_id ASC LIMIT ' . max(1, $limit),
+                [self::LEGACY_UPLOADS_AREA]
+            );
+            foreach ($rows as $row) {
+                $failed += $this->privatizeLegacyFiles((int) $row['download_id']);
+            }
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('downloads')->error('Nachlauf für übernommene Download-Dateien fehlgeschlagen.', ['exception' => $e::class, 'message' => $e->getMessage()]);
+        }
+
+        return $failed;
+    }
+
+    /**
+     * Verschiebt übernommene Dateien eines Downloads aus uploads/downloads (dort direkt per URL abrufbar) in den
+     * privaten Speicher. Nötig, sobald der Download beschränkt, zurückgezogen oder in den Papierkorb gelegt wird –
+     * die Zugriffsprüfung der Download-Route greift für Direktabrufe unter /uploads/ nicht.
+     *
+     * @return int Anzahl der Dateien, die nicht verschoben werden konnten und weiterhin öffentlich liegen
+     */
+    public function privatizeLegacyFiles(int $downloadId): int
+    {
+        $failed = 0;
+        $moved = 0;
+        try {
+            foreach ($this->repo->versionsFor($downloadId) as $version) {
+                if ((string) ($version['file_area'] ?? '') !== self::LEGACY_UPLOADS_AREA || (string) ($version['file_path'] ?? '') === '') {
+                    continue;
+                }
+                $source = $this->absolutePath($version);
+                if ($source === null) {
+                    // Datei fehlt bereits: nichts, was öffentlich abrufbar wäre.
+                    continue;
+                }
+                $target = $this->moveToPrivateStorage($source, (string) ($version['file_ext'] ?? ''));
+                if ($target === null) {
+                    $failed++;
+                    continue;
+                }
+                if (!$this->repo->updateVersion((int) $version['id'], ['file_area' => $target['area'], 'file_path' => $target['path']])) {
+                    // Datensatz zeigt noch auf den alten Ort: Datei zurücklegen, damit der Download nicht verwaist.
+                    $private = PrivateStorageService::getInstance()->resolve($target['area'], $target['path']);
+                    if ($private !== null && @copy($private, $source)) {
+                        @unlink($private);
+                    }
+                    $failed++;
+                    continue;
+                }
+                $moved++;
+            }
+        } catch (\Throwable $e) {
+            $failed++;
+            Logger::instance()->withChannel('downloads')->error('Übernommene Download-Dateien konnten nicht geprüft werden.', ['id' => $downloadId, 'exception' => $e::class, 'message' => $e->getMessage()]);
+        }
+
+        if ($moved > 0) {
+            AuditLogger::instance()->log(AuditLogger::CAT_MEDIA, 'downloads.legacy_file_moved', 'Übernommene Download-Datei in den privaten Speicher verschoben', 'download', $downloadId, [
+                'count' => $moved,
+            ]);
+        }
+        if ($failed > 0) {
+            Logger::instance()->withChannel('downloads')->warning('Übernommene Download-Datei liegt weiterhin öffentlich unter uploads/downloads.', ['id' => $downloadId, 'count' => $failed]);
+            AuditLogger::instance()->log(AuditLogger::CAT_MEDIA, 'downloads.legacy_file_public', 'Übernommene Download-Datei konnte nicht in den privaten Speicher verschoben werden und bleibt direkt abrufbar', 'download', $downloadId, [
+                'count' => $failed,
+            ], 'warning');
+        }
+
+        return $failed;
+    }
+
+    /**
+     * Verschiebt eine Datei in den privaten Download-Speicher (zufälliger Name).
+     *
+     * @return array{area:string,path:string}|null null, wenn das Verschieben scheitert – das Original bleibt dann liegen
+     */
+    public function moveToPrivateStorage(string $source, string $extension): ?array
+    {
+        try {
+            $storage = PrivateStorageService::getInstance();
+            $area = $this->settings()->string('storage_area');
+            $name = $storage->randomFilename($extension !== '' ? $extension : (string) pathinfo($source, PATHINFO_EXTENSION));
+
+            return self::moveFileVerified($source, $storage->path($area) . $name) ? ['area' => $area, 'path' => $name] : null;
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('downloads')->warning('Datei konnte nicht in den privaten Speicher verschoben werden.', ['exception' => $e::class, 'message' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Kopieren, Prüfsumme vergleichen, erst dann das Original löschen. Bei jedem Fehler bleibt das Original
+     * unverändert und die unvollständige Kopie wird entfernt.
+     */
+    public static function moveFileVerified(string $source, string $destination): bool
+    {
+        if (!is_file($source) || file_exists($destination)) {
+            return false;
+        }
+        $hash = hash_file('sha256', $source);
+        if (!is_string($hash) || !@copy($source, $destination) || !hash_equals($hash, (string) hash_file('sha256', $destination))) {
+            if (is_file($destination)) {
+                @unlink($destination);
+            }
+
+            return false;
+        }
+        @chmod($destination, 0640);
+        if (!@unlink($source)) {
+            // Original nicht löschbar: Kopie verwerfen, sonst läge die Datei doppelt und weiterhin öffentlich.
+            @unlink($destination);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * @param array<string,mixed> $version
      */
     public function deleteFile(array $version): void
@@ -1106,6 +1246,10 @@ final class DownloadService
         }
         $item = $this->get($id);
         if ($item !== null) {
+            // Greift bei jedem Speichern, also auch für Bestandsfälle, die schon früher beschränkt wurden.
+            if ((string) ($item['access_level'] ?? 'public') !== 'public' || (string) ($item['status'] ?? '') !== 'published') {
+                $this->privatizeLegacyFiles($id);
+            }
             Hooks::doAction('cms_after_download_save', $id, $item);
         }
     }

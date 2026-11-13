@@ -2,6 +2,9 @@
 /**
  * Mitgliederbereich „Newsletter“ (`/member/plugin/newsletter`): Abonnement mit der Konto-Adresse an- und abmelden,
  * Thema (Segment) und Sprache wählen. Mit aktiviertem Double-Opt-In kommt auch hier eine Bestätigungsmail.
+ * Ein Abonnement ohne Kontobezug wird nur über eine bestätigte Konto-Adresse zugeordnet
+ * (EmailVerificationService::matchableEmail()). Konten ohne bestätigte Adresse fordern hier zuerst einen
+ * Bestätigungslink an (EmailVerificationService::requestAddressConfirmation()); danach steht alles zur Verfügung.
  *
  * @package CMSv2\Core\Services\Newsletter
  */
@@ -11,6 +14,7 @@ declare(strict_types=1);
 namespace CMS\Services\Newsletter;
 
 use CMS\Member\PluginDashboardRegistry;
+use CMS\Services\EmailVerificationService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -61,26 +65,40 @@ final class NewsletterMemberSection
         $notice = null;
         $email = NewsletterRepository::normalizeEmail((string) ($user->email ?? ''));
 
-        if ($action === 'subscribe' && $email !== '') {
+        if ($action === 'confirm_email') {
+            $sent = !self::hasVerifiedEmail($user)
+                && EmailVerificationService::getInstance()->requestAddressConfirmation((int) ($user->id ?? 0), NewsletterI18n::requestLocale());
+            $notice = $sent
+                ? ['success', (string) __('newsletter.member.confirm_sent')]
+                : ['danger', (string) __('newsletter.member.confirm_failed')];
+        } elseif ($action === 'subscribe' && $email !== '') {
             $locale = ($_POST['locale'] ?? '') === 'en' ? 'en' : 'de';
+            $verified = self::hasVerifiedEmail($user);
             if ($current !== null && $current['status'] === 'active') {
                 // Bereits aktiv: nur Thema und Sprache ändern.
                 $repo->saveSubscriber(['segment_slug' => (string) ($_POST['segment'] ?? ''), 'locale' => $locale, 'user_id' => (int) $user->id] + $current, (int) $current['id']);
                 $notice = ['success', (string) __('newsletter.member.saved')];
             } else {
-                $doubleOptIn = NewsletterSettings::flag('require_double_opt_in');
-                $result = $repo->subscribe([
+                // Unbestätigte Konto-Adresse: wie eine öffentliche Anmeldung behandeln – immer Double-Opt-In,
+                // keine Bindung an das Konto und dieselbe Meldung, egal ob die Adresse schon eingetragen ist.
+                $doubleOptIn = !$verified || NewsletterSettings::flag('require_double_opt_in');
+                $input = [
                     'email' => $email,
                     'first_name' => (string) ($user->first_name ?? ''),
                     'last_name' => (string) ($user->last_name ?? ''),
                     'segment' => (string) ($_POST['segment'] ?? ''),
                     'locale' => $locale,
                     'source' => 'member',
-                    'user_id' => (int) $user->id,
                     'consent_text' => NewsletterSettings::localized('consent_text', $locale),
-                ], $doubleOptIn);
+                ];
+                if ($verified) {
+                    $input['user_id'] = (int) $user->id;
+                }
+                $result = $repo->subscribe($input, $doubleOptIn);
                 if (!empty($result['success'])) {
-                    $repo->saveSubscriber(['user_id' => (int) $user->id] + ($repo->subscriber((int) $result['id']) ?? []), (int) $result['id']);
+                    if ($verified) {
+                        $repo->saveSubscriber(['user_id' => (int) $user->id] + ($repo->subscriber((int) $result['id']) ?? []), (int) $result['id']);
+                    }
                     if (!empty($result['send_confirmation']) && ($row = $repo->subscriber((int) $result['id'])) !== null) {
                         NewsletterMailer::sendConfirmation($row);
                     }
@@ -103,12 +121,28 @@ final class NewsletterMemberSection
         self::output($user, null);
     }
 
-    /** @return array<string, mixed>|null */
+    /**
+     * Abonnement des Kontos: über die user_id, über die Konto-Adresse nur, wenn diese nachweislich bestätigt ist.
+     * Sonst könnte ein Konto, das auf eine fremde Adresse registriert wurde, deren Abonnement einsehen,
+     * abmelden oder an sich binden.
+     *
+     * @return array<string, mixed>|null
+     */
     private static function find(object $user): ?array
     {
         $repo = NewsletterRepository::instance();
+        $own = $repo->subscriberByUser((int) ($user->id ?? 0));
+        if ($own !== null) {
+            return $own;
+        }
+        $email = EmailVerificationService::getInstance()->matchableEmail((int) ($user->id ?? 0), (string) ($user->email ?? ''));
 
-        return $repo->subscriberByUser((int) ($user->id ?? 0)) ?? $repo->subscriberByEmail((string) ($user->email ?? ''));
+        return $email !== '' ? $repo->subscriberByEmail($email) : null;
+    }
+
+    private static function hasVerifiedEmail(object $user): bool
+    {
+        return EmailVerificationService::getInstance()->matchableEmail((int) ($user->id ?? 0), (string) ($user->email ?? '')) !== '';
     }
 
     /** @param array{0: string, 1: string}|null $notice */
@@ -130,7 +164,18 @@ final class NewsletterMemberSection
             'pending' => 'newsletter.member.state_pending',
             default => 'newsletter.member.state_none',
         };
-        echo '<p>' . $e(sprintf((string) __($statusKey), (string) ($user->email ?? ''))) . '</p>';
+        if ($subscriber === null && !self::hasVerifiedEmail($user)) {
+            // Ohne bestätigte Adresse keine Aussage darüber, ob die Adresse den Newsletter bezieht.
+            // Anmelden und Verwalten erst mit bestätigter Adresse: Ein hier per Double-Opt-In angelegtes
+            // Abonnement bliebe ohne Kontobezug und wäre im Mitgliederbereich nicht sichtbar.
+            echo '<p>' . $e(sprintf((string) __('newsletter.member.state_unverified'), (string) ($user->email ?? ''))) . '</p>';
+            echo '<form method="post" action="' . $e($action) . '">' . $csrf . '<input type="hidden" name="newsletter_action" value="confirm_email">'
+                . '<button type="submit" class="btn btn-primary">' . $e(__('newsletter.member.confirm_email')) . '</button></form>';
+
+            return;
+        } else {
+            echo '<p>' . $e(sprintf((string) __($statusKey), (string) ($user->email ?? ''))) . '</p>';
+        }
 
         echo '<form method="post" action="' . $e($action) . '" class="mb-3">' . $csrf . '<input type="hidden" name="newsletter_action" value="subscribe">';
         $segments = NewsletterSettings::segments();

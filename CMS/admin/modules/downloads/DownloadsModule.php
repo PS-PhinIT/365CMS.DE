@@ -38,6 +38,13 @@ class DownloadsModule
     public function __construct(private readonly bool $canManage, private readonly bool $canViewStats)
     {
         $this->service = DownloadService::getInstance();
+
+        // Nachlauf für Bestände (einmal je Admin-Sitzung): übernommene Dateien beschränkter oder
+        // unveröffentlichter Downloads liegen sonst bis zum nächsten Speichern direkt abrufbar unter uploads/downloads.
+        if ($canManage && session_status() === PHP_SESSION_ACTIVE && empty($_SESSION['downloads_legacy_files_checked'])) {
+            $_SESSION['downloads_legacy_files_checked'] = 1;
+            $this->service->privatizeRestrictedLegacyFiles();
+        }
     }
 
     public function isAvailable(): bool
