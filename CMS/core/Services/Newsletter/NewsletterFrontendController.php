@@ -217,11 +217,8 @@ final class NewsletterFrontendController
             return;
         }
         $locale = NewsletterI18n::requestLocale();
-        $href = htmlspecialchars(NewsletterI18n::path('/newsletter', $locale), ENT_QUOTES, 'UTF-8');
-        $label = htmlspecialchars(NewsletterSettings::localized('nav_label', $locale) ?: 'Newsletter', ENT_QUOTES, 'UTF-8');
-        echo $context === 'mobile'
-            ? '<a href="' . $href . '" class="mobile-menu__newsletter-link">' . $label . '</a>'
-            : '<a href="' . $href . '" class="main-nav__link">' . $label . '</a>';
+        $label = NewsletterSettings::localized('nav_label', $locale) ?: 'Newsletter';
+        echo \CMS\Services\FeatureHooks\Registry::navItem(NewsletterI18n::path('/newsletter', $locale), $label, self::isNewsletterRequest(), $context);
     }
 
     /** Liegt eine öffentliche Newsletter-Seite vor (Stylesheet laden)? */

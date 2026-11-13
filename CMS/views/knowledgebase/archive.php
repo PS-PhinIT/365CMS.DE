@@ -135,7 +135,7 @@ $pageWindowEnd = $totalEntries > 0 ? min($totalEntries, $pageWindowStart + count
             </nav>
             <?php endif; ?>
 
-            <?php if (!empty($categories)): ?>
+            <?php if (!empty($categories) && ($settings['show_category_sidebar'] ?? '1') === '1'): ?>
                 <div class="cms-kb-chip-row cms-kb-chip-row--categories" aria-label="<?php echo htmlspecialchars($t('categories_aria', 'Kategorien'), ENT_QUOTES, 'UTF-8'); ?>">
                     <?php $allQuery = ['per_page' => $perPage, 'search_mode' => $searchMode]; if ($search !== '') { $allQuery['q'] = $search; } ?>
                     <a class="cms-kb-chip<?php echo $category === '' ? ' is-active' : ''; ?>" href="<?php echo htmlspecialchars($archiveUrl . '?' . http_build_query($allQuery), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($t('all_categories_chip', 'Alle'), ENT_QUOTES, 'UTF-8'); ?></a>

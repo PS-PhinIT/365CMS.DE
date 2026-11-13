@@ -153,7 +153,12 @@ final class IntegratedPluginService
             self::getInstance()->runPendingMigrations(5.0);
         }, 50);
         Hooks::addAction('cms_cron_daily', static function (): void {
-            self::getInstance()->runPendingMigrations(60.0);
+            // Ein Fehler hier darf die übrigen Tagesaufgaben nicht abbrechen.
+            try {
+                self::getInstance()->runPendingMigrations(60.0);
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('plugins.integration')->warning('Datenübernahme im Tageslauf fehlgeschlagen.', ['exception' => $e->getMessage()]);
+            }
         }, 30);
         AdminNoticeService::registerCheck('Integrierte Plugins', static fn (): ?array => self::getInstance()->noticeCheck());
     }
@@ -231,6 +236,7 @@ final class IntegratedPluginService
         }
         self::$migrationRunning = true;
         $deadline = microtime(true) + max(0.5, $budgetSeconds);
+        $kindsBefore = array_map([self::class, 'migrationNoticeKind'], array_filter($state, 'is_array'));
 
         try {
             foreach (self::PLUGINS as $slug => $definition) {
@@ -245,6 +251,7 @@ final class IntegratedPluginService
                 }
 
                 $done = false;
+                $error = '';
                 try {
                     if (!$migrator->hasSourceData()) {
                         $done = true;
@@ -258,6 +265,7 @@ final class IntegratedPluginService
                         'plugin' => $slug,
                         'exception' => $e,
                     ]);
+                    $error = get_debug_type($e) . ': ' . substr($e->getMessage(), 0, 200);
                 }
 
                 $report = [];
@@ -267,6 +275,10 @@ final class IntegratedPluginService
                 }
 
                 $state[$slug] = ['done' => $done, 'report' => $report, 'at' => date('c')];
+                if ($error !== '') {
+                    // Für den Systemhinweis: ohne diesen Vermerk bliebe der Fehlschlag nur im Protokoll sichtbar.
+                    $state[$slug]['error'] = $error;
+                }
                 if ($done) {
                     try {
                         AuditLogger::instance()->log(
@@ -287,6 +299,12 @@ final class IntegratedPluginService
             }
 
             $this->writeJsonOption(self::MIGRATION_OPTION, $state);
+            if ($kindsBefore !== array_map([self::class, 'migrationNoticeKind'], array_filter($state, 'is_array'))) {
+                try {
+                    AdminNoticeService::getInstance()->clearCache();
+                } catch (\Throwable) {
+                }
+            }
         } finally {
             self::$migrationRunning = false;
         }
@@ -316,6 +334,31 @@ final class IntegratedPluginService
     }
 
     /**
+     * Stand der Datenübernahme eines Plugins für den Systemhinweis:
+     * `failed` (letzter Lauf mit Ausnahme), `running` (noch nicht abgeschlossen),
+     * `gaps` (abgeschlossen, aber Datensätze ausgelassen) oder `done`.
+     *
+     * @param array<string, mixed> $state Eintrag aus MIGRATION_OPTION
+     */
+    public static function migrationNoticeKind(array $state): string
+    {
+        if (is_string($state['error'] ?? null) && $state['error'] !== '') {
+            return 'failed';
+        }
+        if (empty($state['done'])) {
+            return 'running';
+        }
+        $report = is_array($state['report'] ?? null) ? $state['report'] : [];
+        foreach (['forms_failed', 'submissions_skipped', 'missing_files'] as $key) {
+            if ((int) ($report[$key] ?? 0) > 0) {
+                return 'gaps';
+            }
+        }
+
+        return 'done';
+    }
+
+    /**
      * Hinweis im Sidebar-Footer für kürzlich deaktivierte Plugins.
      *
      * @return array{id:string,severity:string,title:string,text:string,url:string,link_label:string}|null
@@ -323,16 +366,27 @@ final class IntegratedPluginService
     public function noticeCheck(): ?array
     {
         $retired = $this->readJsonOption(self::RETIRED_OPTION);
+        $state = $this->readJsonOption(self::MIGRATION_OPTION);
         $cutoff = time() - self::NOTICE_DAYS * 86400;
         $labels = [];
         $url = '/admin/plugins';
+        $rank = ['done' => 0, 'running' => 1, 'gaps' => 2, 'failed' => 3];
+        $worst = 'done';
         foreach ($retired as $slug => $entry) {
             $at = is_array($entry) ? strtotime((string) ($entry['at'] ?? '')) : false;
-            if (!self::isIntegrated((string) $slug) || $at === false || $at < $cutoff) {
+            if (!self::isIntegrated((string) $slug) || $at === false) {
+                continue;
+            }
+            $kind = self::migrationNoticeKind(is_array($state[$slug] ?? null) ? $state[$slug] : []);
+            // Eine fehlgeschlagene Übernahme bleibt auch nach Ablauf der Hinweisfrist sichtbar.
+            if ($at < $cutoff && $kind !== 'failed') {
                 continue;
             }
             $labels[] = self::PLUGINS[$slug]['label'];
             $url = self::PLUGINS[$slug]['url'];
+            if ($rank[$kind] > $rank[$worst]) {
+                $worst = $kind;
+            }
         }
 
         if ($labels === []) {
@@ -340,13 +394,16 @@ final class IntegratedPluginService
         }
 
         $translate = static fn (string $text): string => function_exists('__') ? (string) __($text) : $text;
+        $text = $worst === 'done'
+            ? '%1$s ist seit 365CMS %2$s Teil des Cores. Das Plugin wurde deaktiviert, seine Daten wurden übernommen.'
+            : 'admin.plugins.integrated.notice_' . $worst;
 
         return AdminNoticeService::makeNotice(
             'plugins_integrated',
-            'info',
+            in_array($worst, ['gaps', 'failed'], true) ? 'warning' : 'info',
             $translate('Plugins jetzt Teil des Cores'),
             sprintf(
-                $translate('%1$s ist seit 365CMS %2$s Teil des Cores. Das Plugin wurde deaktiviert, seine Daten wurden übernommen.'),
+                $translate($text),
                 implode(', ', $labels),
                 self::SINCE_VERSION
             ),

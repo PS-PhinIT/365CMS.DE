@@ -5992,6 +5992,36 @@ input:checked + .slider:before { transform: translateX(22px); }
     box-sizing: border-box;
 }
 
+/* Block „Download“: Upload-Formular (Raster) und Trefferliste */
+.editorjs-holder .cms-dl-block__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem 0.75rem;
+}
+
+.editorjs-holder .cms-dl-block__field--wide {
+    grid-column: 1 / -1;
+}
+
+.editorjs-holder .cms-dl-block__props {
+    margin: 0.75rem 0 0;
+    padding: 0.5rem 0.75rem 0.75rem;
+    border: 1px solid var(--tblr-border-color, #d8dee6);
+    border-radius: 6px;
+}
+
+.editorjs-holder .cms-dl-block__props legend {
+    float: none;
+    width: auto;
+    padding: 0 0.25rem;
+    font-size: 0.875rem;
+}
+
+.editorjs-holder .cms-dl-block__results {
+    max-height: 14rem;
+    overflow: auto;
+}
+
 .editorjs-holder .cms-editorjs-tool--image.is-empty {
     min-height: 7rem;
     border: 1px dashed rgba(203, 213, 225, 0.7);

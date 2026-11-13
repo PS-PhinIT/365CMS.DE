@@ -26,6 +26,8 @@ final class DownloadStatsService
     public const PERIODS = [30, 90, 365];
     private const DEDUPE_HASH_TTL_HOURS = 24;
     private const PRUNE_BATCH = 5000;
+    /** Faktor auf `rate_limit_max` für Folgeanfragen (Range-Teilstücke, HEAD). */
+    private const RATE_LIMIT_FOLLOW_UP_FACTOR = 10;
 
     private static ?self $instance = null;
 
@@ -103,18 +105,21 @@ final class DownloadStatsService
     /**
      * Grenzwert je Besucher (HMAC über die IP, keine Klartext-IP).
      *
+     * Folgeanfragen desselben Abrufs (Range-Teilstücke, HEAD) laufen über einen eigenen, großzügigeren Zähler:
+     * segmentierte Downloads sollen nicht am Abruf-Limit scheitern, bleiben aber begrenzt.
+     *
      * @return int 0 = erlaubt, sonst Sekunden bis zum nächsten Fenster
      */
-    public function rateLimitRetryAfter(string $ip): int
+    public function rateLimitRetryAfter(string $ip, bool $followUp = false): int
     {
         $settings = DownloadSettings::getInstance();
         $repo = DownloadRepository::getInstance();
         if (!$settings->bool('rate_limit_enabled') || !$repo->isAvailable()) {
             return 0;
         }
-        $max = $settings->int('rate_limit_max');
+        $max = $settings->int('rate_limit_max') * ($followUp ? self::RATE_LIMIT_FOLLOW_UP_FACTOR : 1);
         $window = $settings->int('rate_limit_window');
-        $key = DownloadSecurity::hmac('rate|' . $ip);
+        $key = DownloadSecurity::hmac(($followUp ? 'rate-part|' : 'rate|') . $ip);
         $now = time();
         $cutoff = $now - $window;
         $table = $repo->table('downloads_rate_limits');

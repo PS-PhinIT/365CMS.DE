@@ -210,6 +210,11 @@ function cms_admin_hub_sites_view_config(HubSitesModule $module, string $viewAct
         'edit' => (function () use ($module): array {
             $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
             $data = $module->getEditData($id, cms_admin_hub_sites_pull_form_state());
+            // Papierkorb-Einträge sind nicht bearbeitbar; beim POST meldet save() den Fehler selbst.
+            if (!empty($data['trashed']) && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+                cms_admin_section_shell_flash('admin_alert', ['type' => 'warning', 'message' => (string) __('trash.edit.blocked')]);
+                cms_admin_section_shell_redirect(cms_admin_hub_sites_view_path('list'));
+            }
             $aiTranslationEnabled = !class_exists(CoreModuleService::class)
                 || CoreModuleService::getInstance()->isModuleEnabled('ai_services');
             $pageAssets = EditorJsService::getInstance()->getPageAssets();

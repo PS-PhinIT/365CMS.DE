@@ -616,17 +616,27 @@ final class EditorialCalendarService
             }
         }
 
+        $expectedStatus = $decision === self::MOVE_REPLAN ? 'draft' : 'published';
+
         try {
             if ($decision === self::MOVE_REPLAN) {
-                $this->db->execute(
+                $statement = $this->db->execute(
                     "UPDATE {$this->prefix}" . ($type === 'post' ? 'posts' : 'pages') . " SET planned_at = ?, updated_at = updated_at WHERE id = ? AND status = ?",
-                    [$newValue, $id, 'draft']
+                    [$newValue, $id, $expectedStatus]
                 );
             } else {
-                $this->db->execute(
+                $statement = $this->db->execute(
                     "UPDATE {$this->prefix}posts SET published_at = ?, updated_at = NOW() WHERE id = ? AND status = ?",
-                    [$newValue, $id, 'published']
+                    [$newValue, $id, $expectedStatus]
                 );
+            }
+
+            // rowCount() zählt geänderte Zeilen: 0 heißt entweder „gleicher Wert“ oder „Status inzwischen anders“.
+            if ($statement->rowCount() < 1) {
+                $fresh = $this->loadMoveRow($type, $id);
+                if (self::moveTargetChanged($fresh !== null ? (string) ($fresh->status ?? '') : null, $expectedStatus)) {
+                    return $this->moveResult(409, false, 'state_changed', self::t('calendar.move.error_state_changed'));
+                }
             }
         } catch (\Throwable $e) {
             $this->logError('Kalendereintrag konnte nicht verschoben werden.', $e, ['type' => $type, 'id' => $id, 'decision' => $decision]);
@@ -663,6 +673,15 @@ final class EditorialCalendarService
         $event = $this->buildEvent($type, $eventKind, $row, $site, $server);
 
         return $this->moveResult(200, true, $decision, $message, ['event' => $event]);
+    }
+
+    /**
+     * Hat ein anderer Vorgang den Eintrag zwischen Lesen und Schreiben verändert (Status gewechselt, in den
+     * Papierkorb gelegt, gelöscht)? $currentStatus ist null, wenn der Eintrag nicht mehr ladbar ist.
+     */
+    public static function moveTargetChanged(?string $currentStatus, string $expectedStatus): bool
+    {
+        return $currentStatus === null || $currentStatus !== $expectedStatus;
     }
 
     private function loadMoveRow(string $type, int $id): ?object

@@ -119,6 +119,7 @@ final class PageTrashProvider extends AbstractContentTrashProvider
         return [
             'page_revisions' => $this->deleteFrom('page_revisions', 'page_id = ?', [$id]),
             'seo_meta' => $this->deleteFrom('seo_meta', 'content_type = ? AND content_id = ?', ['page', $id]),
+            'translation_sync' => $this->deleteFrom('translation_sync', 'content_type = ? AND content_id = ?', ['page', $id]),
             'page_views' => $this->deleteFrom('page_views', 'page_id = ?', [$id]),
             'page_assignments' => $this->clearPageAssignments($id),
         ];

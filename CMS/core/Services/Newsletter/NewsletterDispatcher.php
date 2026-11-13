@@ -55,10 +55,18 @@ final class NewsletterDispatcher
         if ($recipients === 0) {
             return ['success' => false, 'error' => (string) __('newsletter.error.no_recipients')];
         }
-        $db->execute(
-            "UPDATE {$p}newsletter_campaigns SET status = 'sending', started_at = NOW(), recipient_count = ? WHERE id = ?",
-            [$recipients, $campaignId]
-        );
+        // Inhalt aus der Vorlage beim Start einfrieren: spätere Änderungen an der Vorlage dürfen laufende und
+        // versendete Ausgaben (Mails, Web-Ansicht, Archiv) nicht mehr verändern.
+        $sets = "status = 'sending', started_at = NOW(), recipient_count = ?";
+        $values = [$recipients];
+        if (trim((string) ($campaign['content_html'] ?? '')) === '' && trim((string) ($campaign['content_text'] ?? '')) === '' && (int) ($campaign['template_id'] ?? 0) > 0) {
+            $template = $repo->template((int) $campaign['template_id']);
+            if ($template !== null) {
+                $sets .= ', content_html = ?, content_text = ?';
+                array_push($values, (string) ($template['content_html'] ?? ''), (string) ($template['content_text'] ?? ''));
+            }
+        }
+        $db->execute("UPDATE {$p}newsletter_campaigns SET {$sets} WHERE id = ?", [...$values, $campaignId]);
         Hooks::doAction('cms_newsletter_campaign_started', $campaignId);
         Logger::instance()->withChannel('newsletter')->info('Newsletter-Versand gestartet.', ['campaign' => $campaignId, 'recipients' => $recipients]);
 

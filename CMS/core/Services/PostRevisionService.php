@@ -293,7 +293,8 @@ final class PostRevisionService
         }
 
         $fingerprint = $this->computeFingerprint($snapshot);
-        if ($this->getLatestFingerprint($postId) === $fingerprint) {
+        if ($this->getLatestFingerprint($postId) === $fingerprint
+            && !self::isStatusOnlyChange($type, $this->getLatestStatus($postId), (string) ($snapshot['status'] ?? ''))) {
             return ['stored' => false, 'reason' => 'unchanged', 'revision_id' => 0];
         }
 
@@ -886,6 +887,26 @@ final class PostRevisionService
         }
 
         return $trimmed;
+    }
+
+    /**
+     * Reiner Statuswechsel bei unverändertem Inhalt: braucht trotzdem eine Revision, weil „Letzte Änderungen“
+     * den Eintrag „Status geändert“ aus aufeinanderfolgenden Revisionen ableitet. Autosaves und Revisionen
+     * ohne bekannten Status (Altbestand) lösen keine Statusrevision aus.
+     */
+    public static function isStatusOnlyChange(string $type, ?string $latestStatus, string $status): bool
+    {
+        $latestStatus = trim((string) $latestStatus);
+        $status = trim($status);
+
+        return $type !== self::TYPE_AUTOSAVE && $latestStatus !== '' && $status !== '' && $latestStatus !== $status;
+    }
+
+    private function getLatestStatus(int $postId): ?string
+    {
+        $status = $this->db->get_var("SELECT status FROM {$this->table} WHERE post_id = ? ORDER BY id DESC LIMIT 1", [$postId]);
+
+        return is_scalar($status) ? (string) $status : null;
     }
 
     private function getLatestFingerprint(int $postId): ?string

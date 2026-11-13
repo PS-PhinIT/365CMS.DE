@@ -112,6 +112,9 @@
                         toast('danger', payload && payload.error ? payload.error : labels.error);
                         return;
                     }
+                    if (payload.resumed) {
+                        toast('warning', labels.exportResumed);
+                    }
                     run('export', payload.job, exportProgress, exportDone, exportButton);
                 }).catch(function () {
                     exportButton.disabled = false;

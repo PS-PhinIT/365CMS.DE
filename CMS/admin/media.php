@@ -19,8 +19,6 @@ const CMS_ADMIN_MEDIA_ALLOWED_ACTIONS = [
     'upload',
     'replace_item',
     'replace_items',
-    'save_filter_preset',
-    'delete_filter_preset',
     'create_folder',
     'delete_item',
     'rename_item',
@@ -327,20 +325,6 @@ function cms_admin_media_normalize_action_payload(MediaModule $module, string $a
         'replace_items' => [
             'item_paths' => cms_admin_media_normalize_ordered_paths($module, $post['item_paths'] ?? []),
         ],
-        'save_filter_preset' => [
-            'preset_label' => $module->normalizeFilterPresetLabel((string) ($post['preset_label'] ?? '')),
-            'preset_view' => $module->normalizeView((string) ($post['preset_view'] ?? 'list')),
-            'preset_category' => $module->normalizeCategory((string) ($post['preset_category'] ?? '')),
-            'preset_search' => $module->normalizeSearch((string) ($post['preset_search'] ?? '')),
-            'preset_usage_filter' => $module->normalizeUsageFilter((string) ($post['preset_usage_filter'] ?? 'all')),
-            'preset_file_type' => $module->normalizeFileTypeFilter((string) ($post['preset_file_type'] ?? 'all')),
-            'preset_extension' => $module->normalizeExtensionFilter((string) ($post['preset_extension'] ?? '')),
-            'preset_size_filter' => $module->normalizeSizeFilter((string) ($post['preset_size_filter'] ?? 'all')),
-            'preset_modified_filter' => $module->normalizeModifiedFilter((string) ($post['preset_modified_filter'] ?? 'all')),
-        ],
-        'delete_filter_preset' => [
-            'preset_slug' => $module->normalizeFilterPresetSlug((string) ($post['preset_slug'] ?? '')),
-        ],
         'create_folder' => [
             'parent_path' => $module->normalizePath((string) ($post['parent_path'] ?? '')),
             'folder_name' => cms_admin_media_normalize_text($post['folder_name'] ?? '', 120),
@@ -389,8 +373,6 @@ function cms_admin_media_validate_action_payload(string $action, array $payload)
     return match ($action) {
         'replace_item' => ($payload['item_path'] ?? '') === '' ? 'Ungültiger Bildpfad.' : null,
         'replace_items' => array_values(array_filter((array) ($payload['item_paths'] ?? []), static fn (mixed $path): bool => trim((string) $path) !== '')) === [] ? 'Bitte mindestens einen gültigen Bildpfad übermitteln.' : null,
-        'save_filter_preset' => ($payload['preset_label'] ?? '') === '' ? 'Bitte einen Namen für das Filter-Preset angeben.' : null,
-        'delete_filter_preset' => ($payload['preset_slug'] ?? '') === '' ? 'Ungültiges Filter-Preset.' : null,
         'create_folder' => ($payload['folder_name'] ?? '') === '' ? 'Bitte einen gültigen Ordnernamen angeben.' : null,
         'delete_item' => ($payload['item_path'] ?? '') === '' ? 'Ungültiger Elementpfad.' : null,
         'rename_item' => ($payload['old_path'] ?? '') === ''
@@ -757,23 +739,6 @@ function cms_admin_media_handle_action(MediaModule $module, string $action, stri
     return match ($action) {
         'upload' => [
             'flash' => $uploadFlash,
-            'redirect_path' => $redirectPath,
-        ],
-        'save_filter_preset' => [
-            'result' => $module->saveFilterPreset((string)($post['preset_label'] ?? ''), [
-                'view' => (string)($post['preset_view'] ?? 'list'),
-                'category' => (string)($post['preset_category'] ?? ''),
-                'search' => (string)($post['preset_search'] ?? ''),
-                'usage_filter' => (string)($post['preset_usage_filter'] ?? 'all'),
-                'file_type' => (string)($post['preset_file_type'] ?? 'all'),
-                'extension' => (string)($post['preset_extension'] ?? ''),
-                'size_filter' => (string)($post['preset_size_filter'] ?? 'all'),
-                'modified_filter' => (string)($post['preset_modified_filter'] ?? 'all'),
-            ]),
-            'redirect_path' => $redirectPath,
-        ],
-        'delete_filter_preset' => [
-            'result' => $module->deleteFilterPreset((string)($post['preset_slug'] ?? '')),
             'redirect_path' => $redirectPath,
         ],
         'create_folder' => [

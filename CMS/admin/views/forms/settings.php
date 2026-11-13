@@ -57,6 +57,7 @@ $fmMailTemplates = [
                 </div>
                 <div class="col-md-6"><?= $fmInput('default_recipient', 'forms.settings.default_recipient', 'email', 254, 'forms.settings.default_recipient_hint') ?></div>
                 <div class="col-md-6"><?= $fmInput('from_name', 'forms.settings.from_name', 'text', 150, 'forms.settings.from_name_hint') ?></div>
+                <div class="col-md-6"><?= $fmInput('from_email', 'forms.settings.from_email', 'email', 190, 'forms.settings.from_email_hint') ?></div>
                 <div class="col-md-6">
                     <label class="form-label" for="fmGlobal_retention_days"><?= $fmT('forms.settings.retention') ?></label>
                     <div class="input-group">

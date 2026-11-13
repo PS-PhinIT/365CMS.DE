@@ -160,6 +160,26 @@ final class NewsletterSettings
     }
 
     /**
+     * Adressfelder mit nicht leerem, ungültigem Wert – save() würde sie sonst kommentarlos leeren.
+     *
+     * @param array<string, mixed> $input
+     * @param list<string> $keys
+     * @return list<string>
+     */
+    public static function invalidEmailKeys(array $input, array $keys): array
+    {
+        $invalid = [];
+        foreach (array_intersect(self::EMAIL_KEYS, $keys) as $key) {
+            $raw = is_scalar($input[$key] ?? '') ? trim((string) ($input[$key] ?? '')) : '';
+            if ($raw !== '' && filter_var($raw, FILTER_VALIDATE_EMAIL) === false) {
+                $invalid[] = $key;
+            }
+        }
+
+        return $invalid;
+    }
+
+    /**
      * @param array<string, mixed> $input
      * @param list<string> $keys nur diese Schlüssel speichern (Formular eines Tabs)
      */

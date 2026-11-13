@@ -27,6 +27,9 @@ if (!defined('ABSPATH')) {
 
 final class TaxonomyExchangeProvider implements ExchangeProvider
 {
+    /** ImportContext-Namensraum: Ziel-ID einer Kategorie => alte ID ihrer noch nicht importierten Oberkategorie. */
+    private const PENDING_PARENTS = 'category_parent_pending';
+
     private Database $db;
     private string $table;
 
@@ -120,7 +123,13 @@ final class TaxonomyExchangeProvider implements ExchangeProvider
         ];
         if ($this->type === 'category') {
             $parent = (int) ($record['parent_id'] ?? 0);
-            $values['parent_id'] = $parent > 0 ? ($context->resolve('category', $parent) ?? null) : null;
+            $resolvedParent = $parent > 0 ? $context->resolve('category', $parent) : null;
+            // Steht die Oberkategorie erst später im Archiv (höhere ID), bleibt parent_id offen und wird
+            // nachgetragen, sobald sie importiert ist – statt die Hierarchie still zu verlieren.
+            $pendingParent = $parent > 0 && $resolvedParent === null ? $parent : 0;
+            if ($pendingParent === 0) {
+                $values['parent_id'] = $resolvedParent !== null ? (int) $resolvedParent : null;
+            }
             $values['sort_order'] = (int) ($record['sort_order'] ?? 0);
         }
 
@@ -129,12 +138,15 @@ final class TaxonomyExchangeProvider implements ExchangeProvider
             $existing = $this->findBySlug($slug);
             if ($existing !== null && $context->conflictStrategy === ImportContext::STRATEGY_SKIP) {
                 $context->map($this->type, $oldId, (int) $existing['id']);
+                $this->applyPendingParents($context, $oldId, (int) $existing['id']);
 
                 return new ImportResult(ImportResult::SKIPPED, (int) $existing['id'], $preview->message);
             }
             if ($existing !== null && $context->conflictStrategy === ImportContext::STRATEGY_OVERWRITE) {
                 $this->db->update($this->shortTable(), $values, ['id' => (int) $existing['id']]);
                 $context->map($this->type, $oldId, (int) $existing['id']);
+                $this->rememberPendingParent($context, (int) $existing['id'], $pendingParent ?? 0);
+                $this->applyPendingParents($context, $oldId, (int) $existing['id']);
 
                 return new ImportResult(ImportResult::UPDATED, (int) $existing['id']);
             }
@@ -148,8 +160,48 @@ final class TaxonomyExchangeProvider implements ExchangeProvider
             return new ImportResult(ImportResult::FAILED, null, (string) __('exchange.error.save'));
         }
         $context->map($this->type, $oldId, $newId);
+        $this->rememberPendingParent($context, $newId, $pendingParent ?? 0);
+        $this->applyPendingParents($context, $oldId, $newId);
 
         return new ImportResult($status, $newId, $status === ImportResult::RENAMED ? sprintf((string) __('exchange.result.renamed'), $slug) : '');
+    }
+
+    private function rememberPendingParent(ImportContext $context, int $categoryId, int $oldParentId): void
+    {
+        if ($this->type === 'category' && $oldParentId > 0) {
+            $context->map(self::PENDING_PARENTS, $categoryId, $oldParentId);
+        }
+    }
+
+    /**
+     * Trägt die gerade importierte Kategorie bei allen Unterkategorien nach, die vor ihr im Archiv standen.
+     */
+    private function applyPendingParents(ImportContext $context, int $oldId, int $targetId): void
+    {
+        if ($this->type !== 'category') {
+            return;
+        }
+
+        foreach (self::pendingChildrenOf($context->mapOf(self::PENDING_PARENTS), $oldId, $targetId) as $childId) {
+            $this->db->update($this->shortTable(), ['parent_id' => $targetId], ['id' => $childId]);
+            $context->map(self::PENDING_PARENTS, $childId, 0);
+        }
+    }
+
+    /**
+     * @param array<string|int, string|int> $pending Ziel-ID der Unterkategorie => alte ID der Oberkategorie (0 = erledigt)
+     * @return list<int> Ziel-IDs der Unterkategorien, die auf $oldParentId warten (ohne Selbstbezug)
+     */
+    public static function pendingChildrenOf(array $pending, int $oldParentId, int $targetId): array
+    {
+        $children = [];
+        foreach ($pending as $childId => $waitingFor) {
+            if ($oldParentId > 0 && (int) $waitingFor === $oldParentId && (int) $childId > 0 && (int) $childId !== $targetId) {
+                $children[] = (int) $childId;
+            }
+        }
+
+        return $children;
     }
 
     private function shortTable(): string

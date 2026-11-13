@@ -24,6 +24,7 @@ $exConfig = [
     'labels' => [
         'exportDone' => (string) __('exchange.export.done'),
         'download' => (string) __('exchange.export.download'),
+        'exportResumed' => (string) __('exchange.export.resumed'),
         'importDone' => (string) __('exchange.import.done'),
         'error' => (string) __('exchange.error.internal'),
         'statusCreated' => (string) __('exchange.status.created'),

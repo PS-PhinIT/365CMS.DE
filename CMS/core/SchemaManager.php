@@ -407,7 +407,7 @@ class SchemaManager
                 excerpt TEXT,
                 excerpt_en TEXT DEFAULT NULL,
                 featured_image VARCHAR(500),
-                status ENUM('draft','published','trash') NOT NULL DEFAULT 'draft',
+                status VARCHAR(20) NOT NULL DEFAULT 'draft',
                 author_id INT UNSIGNED NOT NULL,
                 author_display_name VARCHAR(150) DEFAULT NULL,
                 author_display_url VARCHAR(500) DEFAULT NULL,
@@ -1719,6 +1719,7 @@ class SchemaManager
         $this->ensureSiteTableSlugs();
         $this->ensurePostLocaleColumns();
         $this->ensureTrashColumns();
+        $this->ensurePostStatusColumn();
         $this->ensureFeatureSchema();
         $this->repairViewCounterUpdatedAt();
         $this->dropRedundantIndexes();
@@ -2255,6 +2256,39 @@ class SchemaManager
                 }
             }
         }
+    }
+
+    /**
+     * Beitragsstatus „private“: Die Spalte war ein ENUM ohne diesen Wert, der Editor bietet ihn aber an.
+     * Stellt Bestandsinstallationen auf VARCHAR(20) um (wie bei den Seiten) und setzt Beiträge, deren Status
+     * ohne Strict-Mode leer gespeichert wurde, auf Entwurf zurück.
+     */
+    private function ensurePostStatusColumn(): void
+    {
+        $table = $this->prefix . 'posts';
+
+        try {
+            $stmt = $this->db->getPdo()->query("SHOW COLUMNS FROM {$table} LIKE 'status'");
+            $column = $stmt instanceof \PDOStatement ? $stmt->fetch(PDO::FETCH_ASSOC) : false;
+            if (!is_array($column) || !self::postStatusColumnNeedsWidening((string) ($column['Type'] ?? ''))) {
+                return;
+            }
+
+            $this->db->getPdo()->exec("ALTER TABLE {$table} MODIFY COLUMN status VARCHAR(20) NOT NULL DEFAULT 'draft'");
+            $this->db->getPdo()->exec("UPDATE {$table} SET status = 'draft' WHERE status = ''");
+        } catch (\Throwable $e) {
+            error_log('SchemaManager::ensurePostStatusColumn() failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+        }
+    }
+
+    /**
+     * true, wenn der Spaltentyp ein ENUM ist, das den Beitragsstatus „private“ nicht kennt.
+     */
+    public static function postStatusColumnNeedsWidening(string $columnType): bool
+    {
+        $columnType = strtolower(trim($columnType));
+
+        return str_starts_with($columnType, 'enum(') && !str_contains($columnType, "'private'");
     }
 
     private function ensureColumnExists(string $table, string $column, string $alterSql): void

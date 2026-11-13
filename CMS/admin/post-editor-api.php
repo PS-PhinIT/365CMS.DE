@@ -17,7 +17,10 @@ if (!defined('ABSPATH')) {
  *                                                  (EditorJsBlockRegistry, Kontext „preview“); data/tunes als JSON
  * GET  ?action=form_choices                        aktive Formulare für den Block „Formular“ (Schlüssel, Titel)
  * GET  ?action=download_search[&q&category&type&ids] Downloads für den Block „Download“ (upload_downloads)
- * POST action=download_upload, file[, title, version]  Datei hochladen und als Download anlegen (upload_downloads)
+ * POST action=download_upload, file[, title, summary, category_id, version, properties[<schlüssel>], new_properties]
+ *                                                  Datei hochladen und als Download anlegen (upload_downloads);
+ *                                                  new_properties = JSON-Liste {label, type, value} legt neue
+ *                                                  Eigenschaftsfelder an (nur manage_downloads, wie die Einstellungen)
  *
  * Alle Aktionen: angemeldete Admin-Rolle + Beitrags-Capability + Besitzprüfung im PostsModule;
  * schreibende Aktionen zusätzlich mit CSRF-Token (Aktion admin_post_editor). `token` und `block_preview`
@@ -120,7 +123,7 @@ if ($action === 'form_choices') {
 if ($action === 'download_search') {
     $downloadService = \CMS\Services\Downloads\DownloadService::getInstance();
     if (!$downloadService->isAvailable()) {
-        $cmsPostEditorApiRespond(200, ['success' => true, 'items' => [], 'categories' => [], 'file_types' => []]);
+        $cmsPostEditorApiRespond(200, ['success' => true, 'items' => [], 'total' => 0, 'categories' => [], 'file_types' => [], 'property_fields' => []]);
     }
     $searchFilters = [
         'search' => \CMS\Services\Downloads\DownloadService::plainText(is_scalar($_GET['q'] ?? null) ? (string) $_GET['q'] : '', 100),
@@ -159,6 +162,10 @@ if ($action === 'download_search') {
         'categories' => array_map(static fn (array $term): array => ['id' => (int) $term['id'], 'name' => (string) $term['name']], $downloadService->categories(true)),
         'file_types' => $downloadService->repository()->usedFileTypes(),
         'can_manage' => $auth->hasCapability('manage_downloads'),
+        // Für den Tab „Hochladen“: Eigenschaftsfelder der Verwaltung und Upload-Grenzen.
+        'property_fields' => $downloadService->settings()->propertyFields(),
+        'allowed_types' => $downloadService->settings()->allowedExtensions(),
+        'max_size' => \CMS\Services\Downloads\DownloadSecurity::formatBytes($downloadService->settings()->maxSizeBytes()),
     ]);
 }
 
@@ -168,12 +175,63 @@ if ($action === 'download_upload') {
     if ($uploadFile === null) {
         $cmsPostEditorApiRespond(422, ['success' => false, 'error' => __('downloads.error.no_file')]);
     }
+    $uploadProperties = is_array($_POST['properties'] ?? null) ? $_POST['properties'] : [];
+    // Neue Eigenschaftsfelder gehören zu den Download-Einstellungen und brauchen deshalb manage_downloads.
+    $newProperties = json_decode(is_string($_POST['new_properties'] ?? null) ? $_POST['new_properties'] : '[]', true, 4);
+    $newProperties = is_array($newProperties) ? array_slice(array_values(array_filter($newProperties, 'is_array')), 0, 10) : [];
+    $addedPropertyKeys = [];
+    if ($newProperties !== []) {
+        if (!$auth->hasCapability('manage_downloads')) {
+            $cmsPostEditorApiRespond(403, ['success' => false, 'error' => __('downloads.block.property_forbidden')]);
+        }
+        $downloadSettings = $downloadService->settings();
+        $propertyFields = $downloadSettings->propertyFields();
+        $knownFieldCount = count($propertyFields);
+        foreach ($newProperties as $newProperty) {
+            $newLabel = is_scalar($newProperty['label'] ?? null) ? trim((string) $newProperty['label']) : '';
+            if ($newLabel === '') {
+                continue;
+            }
+            [$propertyFields, $newKey] = \CMS\Services\Downloads\DownloadSettings::appendPropertyField(
+                $propertyFields,
+                $newLabel,
+                is_scalar($newProperty['type'] ?? null) ? (string) $newProperty['type'] : 'text'
+            );
+            if ($newKey === '') {
+                $cmsPostEditorApiRespond(422, ['success' => false, 'error' => sprintf(__('downloads.block.property_create_failed'), $newLabel)]);
+            }
+            if (is_scalar($newProperty['value'] ?? null) && !array_key_exists($newKey, $uploadProperties)) {
+                $uploadProperties[$newKey] = (string) $newProperty['value'];
+            }
+        }
+        if (count($propertyFields) > $knownFieldCount) {
+            if (!$downloadSettings->save(['property_fields' => $propertyFields])) {
+                $cmsPostEditorApiRespond(500, ['success' => false, 'error' => __('downloads.admin.settings_failed')]);
+            }
+            $addedPropertyKeys = array_column(array_slice($propertyFields, $knownFieldCount), 'key');
+        }
+    }
     $uploadResult = $downloadService->createFromUpload($uploadFile, [
         'title' => is_scalar($_POST['title'] ?? null) ? (string) $_POST['title'] : '',
+        'summary' => is_scalar($_POST['summary'] ?? null) ? (string) $_POST['summary'] : '',
+        'category_id' => max(0, (int) ($_POST['category_id'] ?? 0)),
         'version' => is_scalar($_POST['version'] ?? null) ? (string) $_POST['version'] : '',
+        'properties' => $uploadProperties,
     ], (int) ($auth->getCurrentUser()->id ?? 0));
     if (empty($uploadResult['success'])) {
+        // Ohne Download bleiben die eben angelegten Eigenschaftsfelder nicht in den Einstellungen stehen.
+        if ($addedPropertyKeys !== []) {
+            $downloadService->settings()->save(['property_fields' => array_values(array_filter(
+                $downloadService->settings()->propertyFields(),
+                static fn (array $field): bool => !in_array($field['key'], $addedPropertyKeys, true)
+            ))]);
+        }
         $cmsPostEditorApiRespond(422, ['success' => false, 'error' => (string) ($uploadResult['error'] ?? __('downloads.error.upload_failed'))]);
+    }
+    if ($addedPropertyKeys !== []) {
+        \CMS\AuditLogger::instance()->log(\CMS\AuditLogger::CAT_SETTING, 'downloads.settings.property_fields', 'Eigenschaftsfelder im Editor ergänzt', 'downloads', null, [
+            'fields' => $addedPropertyKeys,
+        ]);
     }
     $uploaded = $downloadService->get((int) $uploadResult['id']);
     $cmsPostEditorApiRespond(200, [
@@ -184,7 +242,10 @@ if ($action === 'download_upload') {
             'status' => (string) ($uploaded['status'] ?? ''),
             'version' => (string) ($uploaded['current_version'] ?? ''),
             'edit_url' => '/admin/downloads?action=edit&id=' . (int) $uploadResult['id'],
+            // Ausgefüllte Eigenschaften: der Block zeigt sie nach dem Upload an (Option showProperties).
+            'property_keys' => array_keys($downloadService->repository()->propertyValuesForItems([(int) $uploadResult['id']])[(int) $uploadResult['id']] ?? []),
         ],
+        'property_fields' => $downloadService->settings()->propertyFields(),
     ]);
 }
 

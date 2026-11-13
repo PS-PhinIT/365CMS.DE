@@ -22,7 +22,7 @@ final class DownloadSettings
 {
     public const GROUP = 'downloads';
 
-    public const TEMPLATES = ['compact', 'card', 'featured'];
+    public const TEMPLATES = ['compact', 'card', 'featured', 'button'];
     public const ACCESS_LEVELS = ['public', 'logged_in', 'roles', 'member'];
     public const STATUSES = ['draft', 'published', 'archived', 'trash'];
     public const UPLOAD_STATUSES = ['published', 'draft'];
@@ -370,7 +370,8 @@ final class DownloadSettings
             if (preg_match('/^[a-z][a-z0-9_]{0,39}$/', $key) !== 1 || isset($seen[$key])) {
                 continue;
             }
-            $label = self::cut(trim((string) ($field['label'] ?? '')), 120);
+            // Bezeichnungen sind reiner Text (landen u. a. im Block-Menü des Editors).
+            $label = self::cut(trim(strip_tags((string) ($field['label'] ?? ''))), 120);
             $type = (string) ($field['type'] ?? 'text');
             $type = in_array($type, self::PROPERTY_TYPES, true) ? $type : 'text';
             $options = [];
@@ -391,6 +392,34 @@ final class DownloadSettings
         }
 
         return $result;
+    }
+
+    /**
+     * Ergänzt die Eigenschaftsfelder um ein neues Feld (Schlüssel aus der Bezeichnung). Gibt die neue Liste und den
+     * Schlüssel zurück; bei gleicher Bezeichnung bzw. gleichem Schlüssel den des vorhandenen Felds. Schlüssel `''`:
+     * Bezeichnung ergibt keinen gültigen Schlüssel oder die Höchstzahl (50) ist erreicht.
+     *
+     * @param list<array{key:string,label:string,type:string,options:list<string>}> $fields
+     * @return array{0:list<array{key:string,label:string,type:string,options:list<string>}>,1:string}
+     */
+    public static function appendPropertyField(array $fields, string $label, string $type = 'text'): array
+    {
+        $fields = self::normalizePropertyFields($fields);
+        $label = self::cut(trim(strip_tags($label)), 120);
+        $key = substr(trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower(strtr($label, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss', 'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue']))), '_'), 0, 40);
+        $key = rtrim($key, '_');
+        foreach ($fields as $field) {
+            if ($field['key'] === $key || strcasecmp($field['label'], $label) === 0) {
+                return [$fields, $field['key']];
+            }
+        }
+        // „select“ braucht Optionen und wird deshalb nur in den Einstellungen angelegt.
+        if (preg_match('/^[a-z][a-z0-9_]{0,39}$/', $key) !== 1 || count($fields) >= 50 || $type === 'select') {
+            return [$fields, ''];
+        }
+        $fields[] = ['key' => $key, 'label' => $label, 'type' => in_array($type, self::PROPERTY_TYPES, true) ? $type : 'text', 'options' => []];
+
+        return [$fields, $key];
     }
 
     /**

@@ -20,7 +20,7 @@ $nlC = (array) ($nlData['campaign'] ?? []);
 $nlNew = !empty($nlData['is_new']);
 $nlId = (int) ($nlC['id'] ?? 0);
 $nlStatus = (string) ($nlC['status'] ?? 'draft');
-$nlEditable = in_array($nlStatus, ['draft', 'scheduled', 'cancelled'], true);
+$nlEditable = in_array($nlStatus, ['draft', 'scheduled'], true);
 $nlCounts = (array) ($nlData['counts'] ?? []);
 $nlAction = $nlE(NewsletterModule::url(['section' => 'campaign', 'id' => $nlNew ? null : $nlId]));
 $nlHidden = $nlCsrf . '<input type="hidden" name="id" value="' . $nlId . '">';

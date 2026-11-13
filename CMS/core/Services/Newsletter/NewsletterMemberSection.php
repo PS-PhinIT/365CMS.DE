@@ -70,7 +70,9 @@ final class NewsletterMemberSection
             $verified = self::hasVerifiedEmail($user);
             if ($current !== null && $current['status'] === 'active') {
                 // Bereits aktiv: nur Thema und Sprache ändern.
-                $repo->saveSubscriber(['segment_slug' => (string) ($_POST['segment'] ?? ''), 'locale' => $locale, 'user_id' => (int) $user->id] + $current, (int) $current['id']);
+                // Ohne Themenauswahl (nur ein Thema definiert) bleibt das bisherige Thema erhalten.
+                $segment = trim((string) ($_POST['segment'] ?? '')) ?: (string) ($current['segment_slug'] ?? '');
+                $repo->saveSubscriber(['segment_slug' => $segment, 'locale' => $locale, 'user_id' => (int) $user->id] + $current, (int) $current['id']);
                 $notice = ['success', (string) __('newsletter.member.saved')];
             } else {
                 // Unbestätigte Konto-Adresse: wie eine öffentliche Anmeldung behandeln – immer Double-Opt-In,

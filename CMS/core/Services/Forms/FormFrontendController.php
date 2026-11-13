@@ -186,6 +186,15 @@ final class FormFrontendController
         $userId = self::currentUserId();
         $submissionId = 0;
         $storedFiles = [];
+        $fileCount = FormUploadService::countFiles($fields, $values);
+
+        // Ohne gespeicherten Eingang gibt es keine Ablage (die Mail nennt nur Dateinamen):
+        // lieber ablehnen als die Datei bei Erfolgsmeldung zu verwerfen.
+        if ($fileCount > 0 && empty($settings['store_submissions'])) {
+            Logger::instance()->withChannel('forms')->error('Formular mit Datei-Feld speichert keine Eingänge – Absendung mit Datei abgelehnt.', ['form' => $key]);
+
+            return self::failure(FormI18n::t('forms.error.save', $locale), [], $old);
+        }
 
         if (!empty($settings['store_submissions'])) {
             $submissionId = FormSubmissionService::getInstance()->create($form, $values, [
@@ -201,6 +210,17 @@ final class FormFrontendController
                 return self::failure(FormI18n::t('forms.error.save', $locale), [], $old);
             }
             $storedFiles = $uploads->storeAll($submissionId, $fields, $values, $requireUploaded);
+            if (count($storedFiles) < $fileCount) {
+                // Eingang samt bereits abgelegter Dateien zurücknehmen, statt ihn ohne Datei als Erfolg zu melden.
+                FormSubmissionService::getInstance()->deletePermanently($submissionId);
+                Logger::instance()->withChannel('forms')->error('Hochgeladene Dateien konnten nicht abgelegt werden.', [
+                    'form' => $key,
+                    'expected' => $fileCount,
+                    'stored' => count($storedFiles),
+                ]);
+
+                return self::failure(FormI18n::t('forms.error.save', $locale), [], $old);
+            }
         }
 
         $mailContext = [

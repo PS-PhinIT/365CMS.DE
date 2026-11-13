@@ -1194,7 +1194,9 @@
                         { label: 'Galerie', icon: '▦', block: 'imageGallery', description: 'Mehrere Bilder als Galerie' },
                         { label: 'Embed', icon: '▶', block: 'embed', description: 'YouTube/Vimeo/Codepen usw.' },
                         { label: 'Link-Karte', icon: '↗', block: 'linkTool', description: 'Link mit Vorschau' },
-                        { label: 'Anhang', icon: '⎙', block: 'attaches', description: 'Download-Datei anhängen' }
+                        { label: 'Anhang', icon: '⎙', block: 'attaches', description: 'Download-Datei anhängen' },
+                        // Core-Blöcke aus der EditorJsBlockRegistry; ohne geladenes Tool-Skript blendet isEditorToolAvailable() sie aus.
+                        { label: 'Download', icon: '⭳', block: 'download', description: 'Download auswählen oder hochladen' }
                     ]
                 },
                 {
@@ -1205,6 +1207,7 @@
                         { label: 'Hinweis', icon: '!', block: 'warning', description: 'Info-/Warnbox' },
                         { label: 'Alert', icon: '⚑', block: 'alert', data: { type: 'info', align: 'left' }, description: 'Klassische Alert-Box' },
                         { label: 'Akkordeon', icon: '⌄', block: 'accordion', description: 'Aufklappbarer Abschnitt' },
+                        { label: 'Formular', icon: '☰', block: 'form', description: 'Formular aus der Formularverwaltung' },
                         { label: 'Abstand', icon: '↕', block: 'spacer', data: { height: 40, preset: '40px' }, description: 'Vertikalen Weißraum einfügen' },
                         { label: 'Code', icon: '</>', block: 'code', description: 'Code-Beispiel' },
                         { label: 'HTML', icon: '{}', block: 'raw', description: 'Sanitizter HTML-Block' },

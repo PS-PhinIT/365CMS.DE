@@ -618,7 +618,12 @@ class Router
 
     private function matchRoute(string $pattern, string $uri): array|false
     {
-        $pattern = preg_replace('/:([a-zA-Z0-9_]+)/', '([a-zA-Z0-9_-]+)', $pattern);
+        // Datums-Parameter der Permalink-Struktur nur für Ziffern, damit /:year/:slug keine Pfade wie /download/<slug> trifft.
+        $pattern = preg_replace_callback('/:([a-zA-Z0-9_]+)/', static fn (array $m): string => match ($m[1]) {
+            'year' => '(\d{4})',
+            'month', 'day' => '(\d{1,2})',
+            default => '([a-zA-Z0-9_-]+)',
+        }, $pattern);
         $pattern = '#^' . $pattern . '$#';
 
         if (preg_match($pattern, $uri, $matches)) {

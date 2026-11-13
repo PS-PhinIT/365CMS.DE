@@ -325,6 +325,9 @@
                     message += ' ' + sprintf(t.checklistMissing, data.details.join(' '));
                 }
                 toast('danger', message);
+                if (data.code === 'state_changed') {
+                    loadEvents();
+                }
                 return;
             }
             toast('success', data.message || '');

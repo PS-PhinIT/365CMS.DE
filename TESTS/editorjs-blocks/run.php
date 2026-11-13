@@ -56,4 +56,72 @@ T::run('Sanitizer vor der Vorschau', static function (): void {
     T::same([], EditorJsBlockRegistry::sanitize('unknownBlock', ['ref' => 1]), 'unbekannter Typ liefert leere Daten');
 });
 
+T::run('Download-Block: vier Templates und Bereinigung', static function (): void {
+    $renderer = \CMS\Services\Downloads\DownloadRenderer::class;
+    $settings = \CMS\Services\Downloads\DownloadSettings::class;
+
+    T::same(['compact', 'card', 'featured', 'button'], $settings::TEMPLATES, 'vier Templates');
+    foreach ($settings::TEMPLATES as $template) {
+        T::check(is_file(ABSPATH . 'views/partials/download/' . $template . '.php'), 'Partial für „' . $template . '“ vorhanden');
+        T::same($template, $renderer::sanitizeBlock(['downloadIds' => [3], 'template' => $template])['template'], 'Template „' . $template . '“ bleibt erhalten');
+    }
+
+    T::same([4, 9, 2], $renderer::sanitizeBlock(['downloadIds' => ['4', 9, 0, -1, 'x', 2, 9], 'template' => 'compact'])['downloadIds'], 'Kompakt: mehrere gültige IDs, ohne Dubletten');
+    foreach (['card', 'featured', 'button'] as $template) {
+        T::same([4], $renderer::sanitizeBlock(['downloadIds' => [4, 9], 'template' => $template])['downloadIds'], '„' . $template . '“: nur ein Download');
+    }
+
+    $clean = $renderer::sanitizeBlock([
+        'downloadIds' => [7],
+        'template' => 'button',
+        'version' => '../1.0',
+        'url' => 'https://example.org/x.zip',
+        'options' => [
+            'showSize' => '0',
+            'showProperties' => ['plattform', 'Bad Key', 'plattform', '<b>', 7],
+            'buttonLabel' => "<b>Jetzt</b>\nladen",
+            'path' => '/etc/passwd',
+        ],
+    ]);
+    T::same(['downloadIds', 'version', 'template', 'options'], array_keys($clean), 'nur Referenzen und Optionen, keine Pfade oder URLs');
+    T::same('latest', $clean['version'], 'ungültige Version fällt auf latest zurück');
+    T::same(false, $clean['options']['showSize'], 'Schalter werden zu bool');
+    T::same(['plattform'], $clean['options']['showProperties'], 'nur gültige Eigenschaftsschlüssel, ohne Dubletten');
+    T::check(!str_contains($clean['options']['buttonLabel'], '<') && !str_contains($clean['options']['buttonLabel'], "\n"), 'Button-Text ohne HTML und Zeilenumbruch');
+    T::check(!array_key_exists('path', $clean['options']), 'unbekannte Optionen werden verworfen');
+});
+
+T::run('Download-Block: neue Eigenschaftsfelder', static function (): void {
+    $settings = \CMS\Services\Downloads\DownloadSettings::class;
+    $fields = [['key' => 'plattform', 'label' => 'Plattform', 'type' => 'select', 'options' => ['Windows', 'Linux']]];
+
+    [$next, $key] = $settings::appendPropertyField($fields, 'Geprüft am', 'date');
+    T::same('geprueft_am', $key, 'Schlüssel aus der Bezeichnung (Umlaute umschrieben)');
+    T::same(['key' => 'geprueft_am', 'label' => 'Geprüft am', 'type' => 'date', 'options' => []], $next[1], 'Feld wird angehängt');
+    T::same($next, $settings::normalizePropertyFields($next), 'Ergebnis besteht die Normalisierung der Einstellungen');
+
+    [$same, $existing] = $settings::appendPropertyField($fields, 'plattform', 'text');
+    T::same(['plattform', 1, 'select'], [$existing, count($same), $same[0]['type']], 'vorhandenes Feld wird wiederverwendet, nicht überschrieben');
+
+    T::same('', $settings::appendPropertyField($fields, '123', 'text')[1], 'Bezeichnung ohne Buchstaben am Anfang wird abgelehnt');
+    T::same('gr_masse', $settings::appendPropertyField($fields, 'Gr. & Maße!', 'text')[1], 'Sonderzeichen landen nicht im Schlüssel');
+    T::same('', $settings::appendPropertyField($fields, '<script>', 'text')[1], 'reines Markup ergibt kein Feld');
+    T::same('', $settings::appendPropertyField($fields, 'Auswahl', 'select')[1], 'Auswahlfelder nur über die Einstellungen');
+    T::same('text', $settings::appendPropertyField($fields, 'Hinweis', 'bogus')[0][1]['type'], 'unbekannter Typ wird zu text');
+
+    $full = [];
+    for ($i = 0; $i < 50; $i++) {
+        $full[] = ['key' => 'f' . $i, 'label' => 'F' . $i, 'type' => 'text', 'options' => []];
+    }
+    [$capped, $none] = $settings::appendPropertyField($full, 'Noch eins', 'text');
+    T::same(['', 50], [$none, count($capped)], 'höchstens 50 Felder');
+});
+
+T::run('Blockauswahl des Editors', static function (): void {
+    // Die Auswahl im Beitrags-/Seiteneditor ist eine feste Liste; Core-Blöcke müssen dort eingetragen sein.
+    $source = (string) file_get_contents(ABSPATH . 'assets/js/admin-content-editor.js');
+    T::check(str_contains($source, "block: 'download'"), 'Download steht in der Blockauswahl');
+    T::check(str_contains($source, "block: 'form'"), 'Formular steht in der Blockauswahl');
+});
+
 T::finish();
