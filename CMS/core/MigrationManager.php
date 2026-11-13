@@ -208,10 +208,14 @@ class MigrationManager
             // merken sich den vorherigen Status; Hub-Sites (site_tables) haben keinen, dort markiert
             // trashed_at den Papierkorb.
             "ALTER TABLE `{$p}posts` ADD COLUMN `previous_status` VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE `{$p}posts` ADD COLUMN `trash_slug` VARCHAR(255) DEFAULT NULL",
+            "ALTER TABLE `{$p}posts` ADD COLUMN `trash_slug_en` VARCHAR(255) DEFAULT NULL",
             "ALTER TABLE `{$p}posts` ADD COLUMN `trashed_at` DATETIME DEFAULT NULL",
             "ALTER TABLE `{$p}posts` ADD COLUMN `trashed_by` INT UNSIGNED DEFAULT NULL",
             "ALTER TABLE `{$p}posts` ADD INDEX `idx_trashed_at` (`trashed_at`)",
             "ALTER TABLE `{$p}pages` ADD COLUMN `previous_status` VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE `{$p}pages` ADD COLUMN `trash_slug` VARCHAR(200) DEFAULT NULL",
+            "ALTER TABLE `{$p}pages` ADD COLUMN `trash_slug_en` VARCHAR(200) DEFAULT NULL",
             "ALTER TABLE `{$p}pages` ADD COLUMN `trashed_at` DATETIME DEFAULT NULL",
             "ALTER TABLE `{$p}pages` ADD COLUMN `trashed_by` INT UNSIGNED DEFAULT NULL",
             "ALTER TABLE `{$p}pages` ADD INDEX `idx_trashed_at` (`trashed_at`)",

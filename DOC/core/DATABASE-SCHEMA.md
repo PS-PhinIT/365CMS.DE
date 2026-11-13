@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Datenbank & Schema
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** `v25` | **Status:** Stable
+> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Schema:** `v25` | **Status:** Stable
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (46 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v25'`, flag file `CMS/cache/db_schema_v25.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds the tables `cms_admin_menu_layouts` (custom admin sidebar layouts) and `cms_batch_jobs` (long-running admin tasks processed in steps). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (76 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v25'`, flag file `CMS/cache/db_schema_v25.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds 32 tables: `cms_admin_menu_layouts` (custom admin sidebar layouts), `cms_batch_jobs` (long-running admin tasks processed in steps) and the 30 feature tables listed in `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
 
 ## Deutsch
 
@@ -112,7 +112,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | neue Tabelle `batch_jobs` (Spalten siehe oben, Indizes `idx_batch_jobs_lookup (job_type, scope_key, status)` und `idx_batch_jobs_updated (updated_at)`) | lange Admin-Aufgaben in Schritten (z. B. Suchindex-Neuaufbau, Thumbnails, Import): je Typ und Scope höchstens ein aktiver Auftrag, jeder Schritt unter einer Sperre mit Ablaufzeit (120 s). Aufträge lassen sich nach dem Neuladen der Seite oder per Cron fortsetzen; abgeschlossene Aufträge werden nach 30 Tagen entfernt |
 | Spalten `planned_at` DATETIME NULL in `posts` und `pages` | Redaktionskalender: „Geplantes Datum“ für Entwürfe; rein redaktionell, veröffentlicht nichts |
 | `page_revisions`: Spalte `created_by` INT UNSIGNED NULL | Benutzer, der die Seitenrevision ausgelöst hat (Übersicht *Letzte Änderungen*); ältere Zeilen bleiben `NULL` |
-| Tabellen der Core-Funktionen, Liste `SchemaManager::FEATURE_TABLES` (siehe unten) | Formulare, Downloads, Feed-Aggregator, Übersetzungsstatus, Suchbegriff-Statistik und Medien-Papierkorb; dieselbe Definition für Neuinstallation, Update und Laufzeit-Absicherung |
+| Tabellen der Core-Funktionen, Liste `SchemaManager::FEATURE_TABLES` (siehe unten) | Formulare, Downloads, Feed-Aggregator, Knowledgebase, Newsletter, Übersetzungsstatus, Suchbegriff-Statistik und Medien-Papierkorb; dieselbe Definition für Neuinstallation, Update und Laufzeit-Absicherung |
 
 #### Tabellen aus `FEATURE_TABLES` (v25)
 
@@ -141,7 +141,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `search_term_daily` | day, locale, term, searches, zero_hits, result_sum | Tageswerte der Suchbegriffe (Löschregel `search_terms`) |
 | `trash_media` | id, original_path, storage_name, title, filetype, filesize, payload_json, trashed_at, trashed_by | Medien im Papierkorb (Datei im privaten Speicher `trash/media/`) |
 
-Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und Update von v24 (Feature-Tabellen, `batch_jobs`, `admin_menu_layouts`, `planned_at` und `page_revisions.created_by` entfernt, Version auf v24) ergeben dieselben 68 Tabellen und Spalten; die Version steht danach auf v25.
+Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und Update von v24 (Feature-Tabellen, `batch_jobs`, `admin_menu_layouts`, `planned_at` und `page_revisions.created_by` entfernt, Version auf v24) ergeben dieselben 68 Tabellen und Spalten; die Version steht danach auf v25. Die Zahl 68 ist der Stand dieses Tests; das aktuelle Schema enthält 76 Tabellendefinitionen (`SchemaManager::getSchemaQueries()`, einschließlich `kb_*` und `newsletter_*`), der Vergleich wurde damit nicht wiederholt.
 
 Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Die Papierkorb-Spalten stehen in den `CREATE TABLE`-Anweisungen, als `ALTER TABLE` in den v25-Migrationen und in der Laufzeitprüfung `SchemaManager::ensureTrashColumns()`, die Spalten und Index auch bei Installationen nachträgt, die v25 schon erreicht hatten. Das gewählte Profil steht in der Option `admin_menu_profile`.
 

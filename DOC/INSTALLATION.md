@@ -308,6 +308,8 @@ Do not use `777` in production.
 | Normal files | `644` |
 | `CMS/config.php` | `640` or `644` |
 | `CMS/config/app.php` | `640` or `644` (web-inaccessible via `config/.htaccess`) |
+| `CMS/config/` | writable by the server (`app.php`, `media-meta.json`, `media-settings.json`, `install.lock`); not publicly served |
+| `CMS/private/` (or `CMS_PRIVATE_PATH`) | writable by the server; not publicly served. Not shipped: create it beforehand or let the server create it (the CMS folder must be writable once) |
 | `CMS/logs/` | writable by the server only |
 | `CMS/cache/` | writable by the server |
 | `CMS/backups/` | not publicly served |
@@ -323,6 +325,8 @@ Keine pauschalen `777`-Rechte in Produktion.
 | normale Dateien | `644` |
 | `CMS/config.php` | `640` oder `644` |
 | `CMS/config/app.php` | `640` oder `644` (per `config/.htaccess` nicht direkt auslieferbar) |
+| `CMS/config/` | serverseitig beschreibbar (`app.php`, `media-meta.json`, `media-settings.json`, `install.lock`); nicht öffentlich auslieferbar |
+| `CMS/private/` (bzw. `CMS_PRIVATE_PATH`) | serverseitig beschreibbar; nicht öffentlich auslieferbar. Wird nicht ausgeliefert: vorab anlegen oder vom Server anlegen lassen (der CMS-Ordner muss dafür einmalig beschreibbar sein) |
 | `CMS/logs/` | nur serverseitig beschreibbar |
 | `CMS/cache/` | serverseitig beschreibbar |
 | `CMS/backups/` | nicht öffentlich auslieferbar |
@@ -481,11 +485,11 @@ Das erste Admin-Passwort nach der Installation sofort ändern.
 - [ ] `CMS_DEBUG` is `false`
 - [ ] HTTPS active
 - [ ] `SITE_URL` has no trailing slash and no subdirectory
-- [ ] `config/`, `logs/`, `cache/`, `backups/`, `core/` not publicly readable
+- [ ] `config/`, `logs/`, `cache/`, `backups/`, `core/`, `private/`, `vendor/` not publicly readable
 - [ ] First admin password changed (minimum 12 characters at install time)
 - [ ] `install.php` removed or locked down
 - [ ] Backups scheduled; `CMS_BACKUP_PATH` outside the web root or backup encryption enabled
-- [ ] Write access limited to `logs/`, `cache/`, `uploads/`, `backups/` (or the `CMS_BACKUP_PATH` directory)
+- [ ] Write access limited to `config/`, `logs/`, `cache/`, `uploads/`, `backups/` (or the `CMS_BACKUP_PATH` directory) and `private/` (or the `CMS_PRIVATE_PATH` directory)
 
 **Deutsch**
 
@@ -494,11 +498,11 @@ Das erste Admin-Passwort nach der Installation sofort ändern.
 - [ ] `CMS_DEBUG` ist `false`
 - [ ] HTTPS aktiv
 - [ ] `SITE_URL` ohne Trailing Slash und ohne Unterverzeichnis
-- [ ] `config/`, `logs/`, `cache/`, `backups/`, `core/` nicht öffentlich lesbar
+- [ ] `config/`, `logs/`, `cache/`, `backups/`, `core/`, `private/`, `vendor/` nicht öffentlich lesbar
 - [ ] erstes Admin-Passwort geändert (Installer: mindestens 12 Zeichen)
 - [ ] `install.php` entfernt oder abgesichert
 - [ ] regelmäßige Backups eingerichtet; `CMS_BACKUP_PATH` außerhalb des Webroots oder Backup-Verschlüsselung aktiv
-- [ ] Schreibrechte auf `logs/`, `cache/`, `uploads/`, `backups/` (bzw. das Verzeichnis aus `CMS_BACKUP_PATH`) begrenzt
+- [ ] Schreibrechte auf `config/`, `logs/`, `cache/`, `uploads/`, `backups/` (bzw. das Verzeichnis aus `CMS_BACKUP_PATH`) und `private/` (bzw. das Verzeichnis aus `CMS_PRIVATE_PATH`) begrenzt
 
 ---
 

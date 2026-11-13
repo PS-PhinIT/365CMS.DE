@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Theme – Komponenten & Helfer
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.0.9
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
 ## English (summary)
 

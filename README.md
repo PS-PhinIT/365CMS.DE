@@ -10,7 +10,7 @@
 
 | Key fact | Value |
 |---|---|
-| Core version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-11-08, status `stable`) |
+| Core version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-11-12, status `stable`) |
 | PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
 | Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v25` |
 | Shipped theme / plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress importer) |
@@ -33,7 +33,7 @@
 - PHP `8.4.1+` with `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
 - MySQL- or MariaDB-compatible database
 - Web server (Apache with `.htaccess` or nginx with equivalent rules) serving `CMS/`
-- Writable `config/`, `uploads/`, `cache/`, `logs/`, `backups/`
+- Writable `config/`, `uploads/`, `cache/`, `logs/`, `backups/`, `private/` (or the `CMS_PRIVATE_PATH` directory)
 
 ### Quick start
 
@@ -75,7 +75,7 @@ Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](C
 
 | Eckdaten | Wert |
 |---|---|
-| Core-Version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-11-08, Status `stable`) |
+| Core-Version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-11-12, Status `stable`) |
 | PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
 | Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v25` |
 | Mitgeliefertes Theme / Plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress-Import) |
@@ -98,7 +98,7 @@ Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](C
 - PHP `8.4.1+` mit `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
 - MySQL- oder MariaDB-kompatible Datenbank
 - Webserver (Apache mit `.htaccess` oder nginx mit gleichwertigen Regeln), der `CMS/` ausliefert
-- Schreibrechte für `config/`, `uploads/`, `cache/`, `logs/`, `backups/`
+- Schreibrechte für `config/`, `uploads/`, `cache/`, `logs/`, `backups/`, `private/` (bzw. das Verzeichnis aus `CMS_PRIVATE_PATH`)
 
 ### Schnellstart
 

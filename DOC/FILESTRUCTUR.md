@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: FILESTRUCTUR
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-10
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-13
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -46,17 +46,25 @@ Verified top-level entries of this repository:
 | Path | Type | Purpose |
 |---|---|---|
 | `CMS/` | directory | **productive runtime** (web root in typical deployments) |
+| `CMS_ASSETS/` | directory | source archives of the bundled third-party libraries |
 | `DOC/` | directory | public project documentation |
-| `RELEASE/` | directory | release packages and checksums (including `365CMS-3.4.0-*`) |
+| `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 3.5.0, 3.5.4, 3.5.5, 3.5.6, 4.0.0) |
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/content-types/` | directory | content type provider registry test: `php TESTS/content-types/run.php [-v]`; all suites: `php TESTS/run-all.php` (shared runner `TESTS/lib/TestRunner.php`) |
+| `TESTS/editorjs-blocks/` | directory | Editor.js block tests: `php TESTS/editorjs-blocks/run.php`, browser part `node TESTS/editorjs-blocks/browser/run.js` |
+| `TESTS/functions/` | directory | function tests without database: `php TESTS/functions/run.php` |
+| `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
+| `TESTS/update-swap/` | directory | update directory swap test: `php TESTS/update-swap/run.php` |
+| `.github/` | directory | `CODEOWNERS`, `SECURITY`, `dependabot.yml`, `workflows/security.yml`, `deps/` (dependency manifests for the scans) |
+| `.oss-scanner/` | directory | `Dockerfile`, `threat_model.md` |
+| `LICENSE` | file | licence |
 | `README.md` | file | public project README |
 | `Changelog.md` | file | project changelog |
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-10-02); they exist only in local maintainer workspaces. Of `TESTS/`, only `TESTS/admin-menu/` is versioned (4.0.0); the other suites whitelisted in `.gitignore` exist only locally.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. Under `TESTS/`, `run-all.php`, `lib/TestRunner.php` and the suites `admin-menu`, `content-types`, `editorjs-blocks`, `functions`, `security` and `update-swap` are versioned; the other suites whitelisted in `.gitignore` (`release-smoke`, `pdf-service`, `sitemap-service`, `dependency-governance`, `security-baseline`, `ai-services`, `runtime-warning-regressions`) exist only locally.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -67,17 +75,25 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | Pfad | Typ | Zweck |
 |---|---|---|
 | `CMS/` | Verzeichnis | **produktive Runtime** (in typischen Deployments das Webroot) |
+| `CMS_ASSETS/` | Verzeichnis | Quellarchive der gebündelten Drittbibliotheken |
 | `DOC/` | Verzeichnis | öffentliche Projektdokumentation |
-| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (einschließlich `365CMS-3.4.0-*`) |
+| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 3.5.0, 3.5.4, 3.5.5, 3.5.6, 4.0.0) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/content-types/` | Verzeichnis | Test der Inhaltstyp-Provider-Registry: `php TESTS/content-types/run.php [-v]`; alle Suiten: `php TESTS/run-all.php` (gemeinsamer Runner `TESTS/lib/TestRunner.php`) |
+| `TESTS/editorjs-blocks/` | Verzeichnis | Tests der Editor.js-Blöcke: `php TESTS/editorjs-blocks/run.php`, Browser-Teil `node TESTS/editorjs-blocks/browser/run.js` |
+| `TESTS/functions/` | Verzeichnis | Funktionstests ohne Datenbank: `php TESTS/functions/run.php` |
+| `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
+| `TESTS/update-swap/` | Verzeichnis | Test des Verzeichnistauschs beim Update: `php TESTS/update-swap/run.php` |
+| `.github/` | Verzeichnis | `CODEOWNERS`, `SECURITY`, `dependabot.yml`, `workflows/security.yml`, `deps/` (Abhängigkeitsmanifeste für die Scans) |
+| `.oss-scanner/` | Verzeichnis | `Dockerfile`, `threat_model.md` |
+| `LICENSE` | Datei | Lizenz |
 | `README.md` | Datei | öffentliches Projekt-README |
 | `Changelog.md` | Datei | Projekt-Changelog |
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-10-02); sie existieren nur in lokalen Maintainer-Arbeitsständen. Von `TESTS/` ist nur `TESTS/admin-menu/` versioniert (4.0.0); die übrigen in `.gitignore` freigegebenen Suites existieren nur lokal.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. Unter `TESTS/` sind `run-all.php`, `lib/TestRunner.php` und die Suiten `admin-menu`, `content-types`, `editorjs-blocks`, `functions`, `security` und `update-swap` versioniert; die übrigen in `.gitignore` freigegebenen Suiten (`release-smoke`, `pdf-service`, `sitemap-service`, `dependency-governance`, `security-baseline`, `ai-services`, `runtime-warning-regressions`) existieren nur lokal.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 
@@ -106,6 +122,8 @@ Subfolders (all present):
 | `DOC/admin/` | admin documentation |
 | `DOC/ai/` | AI concept docs |
 | `DOC/assets/` | asset / vendor docs (`ASSET.md`, `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` live **here**) |
+| `DOC/audit/` | follow-up audits |
+| `DOC/checks/` | code audit 2026-10-03 |
 | `DOC/core/` | core documentation |
 | `DOC/member/` | member documentation |
 | `DOC/plugins/` | plugin documentation |
@@ -141,6 +159,8 @@ Unterordner (alle vorhanden):
 | `DOC/admin/` | Admin-Dokumentation |
 | `DOC/ai/` | AI-Konzeptdokumente |
 | `DOC/assets/` | Asset-/Vendor-Dokumente (`ASSET.md`, `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` liegen **hier**) |
+| `DOC/audit/` | Folgeaudits |
+| `DOC/checks/` | Code-Audit 2026-10-03 |
 | `DOC/core/` | Core-Dokumentation |
 | `DOC/member/` | Member-Dokumentation |
 | `DOC/plugins/` | Plugin-Dokumentation |

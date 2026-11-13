@@ -161,7 +161,7 @@ Jeder künftige Ersatz sollte in derselben Reihenfolge umgesetzt werden:
 2. **Nativen Ersatz parallel einführen** – zunächst nur in klar abgegrenzten Pfaden
 3. **Feature-Lücken schließen** – UX, Accessibility und Edge-Cases angleichen
 4. **Altpfad entkoppeln** – alte Bibliothek nur noch fallback-artig halten
-5. **Dokumentation aktualisieren** – `DOC/ASSET.md`, `DOC/assets/README.md`, `DOC/ASSETS_NEW.md`, Changelog und diese Datei synchron halten
+5. **Dokumentation aktualisieren** – `DOC/assets/ASSET.md`, `DOC/assets/README.md`, `DOC/assets/ASSETS_NEW.md`, Changelog und diese Datei synchron halten
 
 ---
 
@@ -175,4 +175,4 @@ Die beste Reihenfolge lautet daher:
 2. `melbahja-seo` funktional in kleinere Core-Services aufteilen
 3. komplexe Sicherheits-, AI-, Übersetzungs- und Infrastruktur-Bibliotheken bewusst behalten, produktiv sauber bündeln und nur abstrahieren
 
-Wichtig für den aktuellen Dokumentationsstand: Die führende Runtime- und Strukturreferenz für aktive Asset-Pfade liegt jetzt zusätzlich in `DOC/FILELIST.md` und `DOC/assets/README.md`. Neue Integrationskandidaten außerhalb der Runtime werden in `DOC/ASSETS_NEW.md` separat bewertet, damit Roadmap, Runtime und Integrationsplanung nicht in einer Liste vermischt werden. Die kanonische AI-Zieldoku liegt ergänzend in `DOC/ai/AI-SERVICES.md`; der Admin-Kontext dazu bleibt unter `DOC/admin/system-settings/AI-SERVICES.md` beschrieben.
+Wichtig für den aktuellen Dokumentationsstand: Die führende Runtime- und Strukturreferenz für aktive Asset-Pfade liegt jetzt zusätzlich in `DOC/FILELIST.md` und `DOC/assets/README.md`. Neue Integrationskandidaten außerhalb der Runtime werden in `DOC/assets/ASSETS_NEW.md` separat bewertet, damit Roadmap, Runtime und Integrationsplanung nicht in einer Liste vermischt werden. Die kanonische AI-Zieldoku liegt ergänzend in `DOC/ai/AI-SERVICES.md`; der Admin-Kontext dazu bleibt unter `DOC/admin/system-settings/AI-SERVICES.md` beschrieben.

@@ -28,7 +28,7 @@
 
 - Support-Anfragen: Versionen und Umgebung ablesen (oder Diagnosebericht unter `/admin/diagnose` exportieren).
 - Nach einem Umzug: PHP-Limits, Schreibrechte und `SITE_URL` prüfen.
-- Vor Updates: freier Speicher, PHP ≥ 8.4, benötigte Erweiterungen.
+- Vor Updates: freier Speicher, PHP ≥ 8.4.1, benötigte Erweiterungen.
 
 ### Verwandte Dokumente
 

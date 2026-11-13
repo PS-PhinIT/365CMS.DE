@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Theme-Entwicklung – Übersicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.0.9
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
 ## English (summary)
 
-Documentation for building 365CMS themes. Themes live in `CMS/themes/<slug>/` and are rendered by `CMS\ThemeManager`. The shipped reference theme is **Meridian CMS Default** (`cms-default`, version 1.0.9). Start with [THEME-DEVELOPMENT.md](THEME-DEVELOPMENT.md) for the contract.
+Documentation for building 365CMS themes. Themes live in `CMS/themes/<slug>/` and are rendered by `CMS\ThemeManager`. The shipped reference theme is **Meridian CMS Default** (`cms-default`, version 1.1.0). Start with [THEME-DEVELOPMENT.md](THEME-DEVELOPMENT.md) for the contract.
 
 ## Deutsch
 

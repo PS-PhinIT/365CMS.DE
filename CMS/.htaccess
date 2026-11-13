@@ -88,7 +88,7 @@ ErrorDocument 429 /index.php
     
     # Fehlende statische Assets unter assets/, themes/, plugins/ und uploads/
     # direkt mit 404 beantworten, statt für jeden Bot-Treffer das CMS zu starten.
-    # Die schlanke Fehlerantwort setzt der <If>-Block unten.
+    # Die schlanke Fehlerantwort setzt der <If>-Block oben.
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip)$ - [R=404,L,NC]
 

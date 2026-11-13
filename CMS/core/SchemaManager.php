@@ -118,6 +118,7 @@ class SchemaManager
                 ip_address VARCHAR(45),
                 user_agent VARCHAR(255),
                 payload TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP NULL,
                 INDEX idx_user_id (user_id),
@@ -176,6 +177,8 @@ class SchemaManager
                 content_updated_at DATETIME DEFAULT NULL,
                 planned_at DATETIME DEFAULT NULL,
                 previous_status VARCHAR(20) DEFAULT NULL,
+                trash_slug VARCHAR(200) DEFAULT NULL,
+                trash_slug_en VARCHAR(200) DEFAULT NULL,
                 trashed_at DATETIME DEFAULT NULL,
                 trashed_by INT UNSIGNED DEFAULT NULL,
                 INDEX idx_slug_en (slug_en),
@@ -325,6 +328,7 @@ class SchemaManager
                 feature_integrations BOOLEAN DEFAULT 0,
                 feature_custom_domains BOOLEAN DEFAULT 0,
                 is_active BOOLEAN DEFAULT 1,
+                is_featured TINYINT(1) NOT NULL DEFAULT 0,
                 sort_order INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -425,6 +429,8 @@ class SchemaManager
                 content_updated_at DATETIME DEFAULT NULL,
                 planned_at DATETIME DEFAULT NULL,
                 previous_status VARCHAR(20) DEFAULT NULL,
+                trash_slug VARCHAR(255) DEFAULT NULL,
+                trash_slug_en VARCHAR(255) DEFAULT NULL,
                 trashed_at DATETIME DEFAULT NULL,
                 trashed_by INT UNSIGNED DEFAULT NULL,
                 INDEX idx_slug_en (slug_en),
@@ -1720,6 +1726,7 @@ class SchemaManager
         $this->ensurePostLocaleColumns();
         $this->ensureTrashColumns();
         $this->ensurePostStatusColumn();
+        $this->ensureReferencedColumns();
         $this->ensureFeatureSchema();
         $this->repairViewCounterUpdatedAt();
         $this->dropRedundantIndexes();
@@ -2224,7 +2231,7 @@ class SchemaManager
     }
 
     /**
-     * v25: Papierkorb (TrashProvider) – vorheriger Status, Zeitpunkt und Benutzer. Hub-Sites (site_tables)
+     * v25: Papierkorb (TrashProvider) – vorheriger Status, Original-Slugs, Zeitpunkt und Benutzer. Hub-Sites (site_tables)
      * haben keinen Status, dort markiert trashed_at den Papierkorb. Ergänzt Spalten und Index auch bei
      * Installationen, die v25 vor dieser Änderung erreicht haben.
      */
@@ -2237,6 +2244,15 @@ class SchemaManager
                     'previous_status',
                     "ALTER TABLE {$this->prefix}{$table} ADD COLUMN previous_status VARCHAR(20) DEFAULT NULL"
                 );
+                // Slug-Freigabe im Papierkorb: Original-Slugs, Länge wie slug/slug_en der Tabelle.
+                $slugLength = $table === 'pages' ? 200 : 255;
+                foreach (['trash_slug', 'trash_slug_en'] as $column) {
+                    $this->ensureColumnExists(
+                        $this->prefix . $table,
+                        $column,
+                        "ALTER TABLE {$this->prefix}{$table} ADD COLUMN {$column} VARCHAR({$slugLength}) DEFAULT NULL"
+                    );
+                }
             }
             $this->ensureColumnExists(
                 $this->prefix . $table,
@@ -2256,6 +2272,24 @@ class SchemaManager
                 }
             }
         }
+    }
+
+    /**
+     * Spalten, die der Code abfragt, die aber kein Schemaweg anlegte: Beginn einer Sitzung (Ø-Sitzungsdauer in
+     * Dashboard und Analytics) und das Kennzeichen „hervorgehoben“ der Abo-Pakete.
+     */
+    private function ensureReferencedColumns(): void
+    {
+        $this->ensureColumnExists(
+            $this->prefix . 'sessions',
+            'created_at',
+            "ALTER TABLE {$this->prefix}sessions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        );
+        $this->ensureColumnExists(
+            $this->prefix . 'subscription_plans',
+            'is_featured',
+            "ALTER TABLE {$this->prefix}subscription_plans ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active"
+        );
     }
 
     /**

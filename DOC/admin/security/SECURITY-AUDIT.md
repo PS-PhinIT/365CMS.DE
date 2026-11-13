@@ -14,7 +14,7 @@
 | Prüfpunkt | Was geprüft wird |
 |---|---|
 | HTTPS aktiv | Aktuelle Anfrage über HTTPS (`HTTPS`, Port 443 oder die Proxy-Header `X-Forwarded-Proto`, `X-Forwarded-SSL`, `Front-End-Https`). Dashboard und `StatusService` verwenden seit 4.0.0 dieselbe Erkennung |
-| PHP-Version | Seit 3.4.12 `ok` ab `CMS_MIN_PHP_VERSION` (8.4), `warning` bei 8.2–8.3, sonst `critical`. |
+| PHP-Version | Seit 3.4.12 `ok` ab `Version::minimumPhp()` (8.4.1), `warning` ab 8.2 bis darunter, sonst `critical`. |
 | `install.php` entfernt / gesperrt | OK, wenn der Installer gelöscht ist oder `config/install.lock` ihn sperrt (nur angemeldete Admins); Warnung, wenn `install.php` ohne Sperrdatei vorhanden ist. Updates liefern `install.php` wieder mit aus |
 | Debug-Modus | `CMS_DEBUG` in Produktion aus |
 | Uploads-Schutz (.htaccess) | `CMS/uploads/.htaccess` vorhanden (siehe [../media/MEDIA.md](../media/MEDIA.md)) |

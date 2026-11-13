@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Theme – JavaScript
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.0.9
+> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
 ## English (summary)
 
-Theme JavaScript must be external, deferred and compatible with the strict CSP (nonce-based `script-src`, Trusted Types, no inline handlers, no `eval`). `cms-default` ships one file, `js/theme.js` (vanilla JS, no dependencies), loaded in `before_footer` with a version query (`?v=1.0.9`) or through `AssetOptimizerService` when minification is enabled. Core scripts for consent, analytics, web vitals, PhotoSwipe and site tables are injected by the core via `head`/`body_end`.
+Theme JavaScript must be external, deferred and compatible with the strict CSP (nonce-based `script-src`, Trusted Types, no inline handlers, no `eval`). `cms-default` ships one file, `js/theme.js` (vanilla JS, no dependencies), loaded in `before_footer` with a version query (`?v=1.1.0`) or through `AssetOptimizerService` when minification is enabled. Core scripts for consent, analytics, web vitals, PhotoSwipe and site tables are injected by the core via `head`/`body_end`.
 
 ## Deutsch
 

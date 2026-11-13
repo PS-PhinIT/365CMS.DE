@@ -144,7 +144,7 @@ Die automatische Installation setzt eine gültige SHA-256-Prüfsumme im Manifest
 | Reproduzierbarkeit | Zweiter Bau aus demselben Commit ergibt identische Prüfsummen |
 | Updater-Grenzen | 4207 Einträge (Grenze 5000), entpackt 38,9 MB (Grenze 512 MB), keine Laufzeitpfade im Updatepaket |
 | Update von 3.5.6 | Verzeichnistausch mit dem Code des installierten 3.5.6-Updaters: alle 4207 Dateien inhaltsgleich, keine Altdateien, `config/`, `config.php` und `uploads/` bleiben; nachinstallierte Plugins gehen verloren (siehe Warnung oben) |
-| Neuinstallation | Vollpaket entpackt, Startseite leitet zum Installer, alle Installer-Schritte durchlaufen: 68 Tabellen, Schema `v25`, Administrator angelegt, Installer danach gesperrt (403); 103 Admin-Seiten ohne Serverfehler |
+| Neuinstallation | Vollpaket entpackt, Startseite leitet zum Installer, alle Installer-Schritte durchlaufen: 68 Tabellen (Stand dieses Tests; das Schema enthält 76 Tabellendefinitionen einschließlich `kb_*` und `newsletter_*`), Schema `v25`, Administrator angelegt, Installer danach gesperrt (403); 103 Admin-Seiten ohne Serverfehler |
 | MultiSite mit zwei Sites | Zweite Site angelegt (doppelter Host wird abgelehnt), Plugin nur einer Site zugewiesen: Menü erscheint nur dort, Site-Umschalter wechselt den Kontext |
 | Datenbank-Update | Update von `v24` auf `v25` ergibt dieselben Tabellen und Spalten wie die Neuinstallation |
 

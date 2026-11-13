@@ -27,6 +27,8 @@ $iconMap = [
     'hub' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/><path d="M5 5h4v4h-4z"/><path d="M15 5h4v4h-4z"/><path d="M5 15h4v4h-4z"/><path d="M15 15h4v4h-4z"/>',
     'plugin' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h10v10h-10z"/><path d="M9 3v4"/><path d="M15 3v4"/><path d="M3 9h4"/><path d="M3 15h4"/><path d="M17 9h4"/><path d="M17 15h4"/>',
     'shield' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3l8 4v5c0 5 -3.5 9 -8 9s-8 -4 -8 -9v-5l8 -4"/><path d="M9 12l2 2l4 -4"/>',
+    'file-text' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 9l1 0"/><path d="M9 13l6 0"/><path d="M9 17l6 0"/>',
+    'users' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/>',
     'default' => '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l11 0"/><path d="M9 12l11 0"/><path d="M9 18l11 0"/><path d="M5 6l0 .01"/><path d="M5 12l0 .01"/><path d="M5 18l0 .01"/>',
 ];
 $iconPath = $iconMap[$emptyStateIcon] ?? $iconMap['default'];

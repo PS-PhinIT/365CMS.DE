@@ -24,14 +24,12 @@ final class Registry
     /** @var list<class-string> Reihenfolge = Registrierungsreihenfolge */
     private const FEATURES = [
         \CMS\Services\IntegratedPluginService::class,
-        AdminMenuHooks::class,
         FeedHooks::class,
         DownloadHooks::class,
         KnowledgebaseHooks::class,
         NewsletterHooks::class,
         FormHooks::class,
         TrashHooks::class,
-        ToolbarHooks::class,
         SystemFeatureHooks::class,
         EditorialCalendarHooks::class,
         ContentOverviewHooks::class,
@@ -65,6 +63,9 @@ final class Registry
 
         foreach (self::FEATURES as $class) {
             if (!class_exists($class) || !method_exists($class, 'register')) {
+                Logger::instance()->withChannel('core.features')->warning('Funktionsbereich fehlt oder besitzt keine register()-Methode.', [
+                    'feature' => $class,
+                ]);
                 continue;
             }
 
