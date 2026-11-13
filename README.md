@@ -4,6 +4,11 @@
 
 ![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard_1.png)![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Website-Zustand_1.png)
 
+
+| Dashboard | Website Health |
+|:--:|:--:|
+| ![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard_1.png) | ![Screenshot 365CMS Website Health.](SCREENSHOTS/365CMS-Website-Zustand_1.png) |
+
 ## English
 
 ### What is 365CMS?
