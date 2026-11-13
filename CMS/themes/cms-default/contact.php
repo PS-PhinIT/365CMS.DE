@@ -122,11 +122,21 @@ $esc = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES, 
                 <?php endif; ?>
             </dl>
 
+            <?php
+            // Nur vorhandene Rechtsseiten verlinken (ohne veröffentlichte Seite liefe der Link auf 404).
+            $legalLinks = [];
+            foreach (['/impressum' => $isEnglish ? 'Imprint' : 'Impressum', '/datenschutz' => $isEnglish ? 'Privacy' : 'Datenschutz'] as $legalPath => $legalLabel) {
+                if (meridian_default_link_available($legalPath)) {
+                    $legalLinks[] = '<a href="' . SITE_URL . $legalPath . '">' . $legalLabel . '</a>';
+                }
+            }
+            ?>
+            <?php if ($legalLinks !== []): ?>
             <p class="contact-aside__legal">
-                <a href="<?php echo SITE_URL; ?>/impressum"><?php echo $isEnglish ? 'Imprint' : 'Impressum'; ?></a>
-                &nbsp;·&nbsp;
-                <a href="<?php echo SITE_URL; ?>/datenschutz"><?php echo $isEnglish ? 'Privacy' : 'Datenschutz'; ?></a>
+                <?php echo implode("\n                &nbsp;·&nbsp;\n                ", $legalLinks); ?>
+
             </p>
+            <?php endif; ?>
         </aside>
     </div>
 </div>

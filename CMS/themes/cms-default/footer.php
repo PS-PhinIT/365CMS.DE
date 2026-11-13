@@ -34,6 +34,17 @@ $footerAboutMenu = function_exists('theme_get_menu') ? theme_get_menu('footer_ab
 $footerLegalMenu = function_exists('theme_get_menu') ? theme_get_menu('footer_legal') : [];
 $footerGenericMenu = function_exists('theme_get_menu') ? theme_get_menu('footer') : [];
 
+// Standardmenüs verweisen auf optionale Seiten (/impressum, /datenschutz, /about): ohne veröffentlichte Seite nicht verlinken.
+$filterFooterMenu = static fn (array $items): array => array_values(array_filter(
+  $items,
+  static fn ($item): bool => !is_array($item) || meridian_default_link_available((string) ($item['href'] ?? $item['url'] ?? ''))
+));
+$footerTopicsMenu = $filterFooterMenu($footerTopicsMenu);
+$footerResourcesMenu = $filterFooterMenu($footerResourcesMenu);
+$footerAboutMenu = $filterFooterMenu($footerAboutMenu);
+$footerLegalMenu = $filterFooterMenu($footerLegalMenu);
+$footerGenericMenu = $filterFooterMenu($footerGenericMenu);
+
 if (empty($footerTopicsMenu) && !empty($footerGenericMenu)) {
   $footerTopicsMenu = $footerGenericMenu;
 }
@@ -135,7 +146,7 @@ $renderFooterMenuLinks = static function (array $items): void {
         <a href="<?php echo SITE_URL; ?>/blog">Script-Bibliothek</a>
         <a href="<?php echo SITE_URL; ?>/blog">Tutorials</a>
         <a href="<?php echo SITE_URL; ?>/search">Suche</a>
-        <a href="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>">Newsletter</a>
+        <a href="<?php echo SITE_URL; ?>/newsletter">Newsletter</a>
       <?php endif; ?>
     </div>
 
@@ -161,8 +172,11 @@ $renderFooterMenuLinks = static function (array $items): void {
       <?php if (!empty($footerLegalMenu)): ?>
         <?php $renderFooterMenuLinks($footerLegalMenu); ?>
       <?php else: ?>
-        <a href="<?php echo SITE_URL; ?>/impressum">Impressum</a>
-        <a href="<?php echo SITE_URL; ?>/datenschutz">Datenschutz</a>
+        <?php foreach (['/impressum' => 'Impressum', '/datenschutz' => 'Datenschutz'] as $legalPath => $legalLabel): ?>
+        <?php if (meridian_default_link_available($legalPath)): ?>
+        <a href="<?php echo SITE_URL . $legalPath; ?>"><?php echo $legalLabel; ?></a>
+        <?php endif; ?>
+        <?php endforeach; ?>
       <?php endif; ?>
     </div>
   </div>
