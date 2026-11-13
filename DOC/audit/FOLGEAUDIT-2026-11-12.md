@@ -32,7 +32,7 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 | Nr. | Prüfbereich | IDs | Pull Request | Status |
 |---|---|---|---|---|
 | 1 | Changelog 4.0.0, Anlage dieser Datei | CL-001 … CL-233 | #119 (Grundgerüst), #120 (Changelog) | erledigt |
-| 2 | Sicherheit und bekannte Exploits | SEC, DEP | PR 2 | offen |
+| 2 | Sicherheit und bekannte Exploits | SEC-49 … SEC-65, DEP-05 … DEP-08 | #121 | erledigt |
 | 3 | Fehlende Funktionen und unvollständige Logik | FUN | PR 3 | offen |
 | 4 | Fehlende oder falsche Verweise | REF | PR 4 | offen |
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN, BP | PR 5 | offen |
@@ -321,20 +321,71 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 
 ### 2. Sicherheit und bekannte Exploits
 
-**Prüfpunkte**
+**Vorgehen**
 
-- SQL-Injection: Prepared Statements und Parameter-Binding, zusammengesetzte Abfragen (`ORDER BY`, `LIMIT`, `IN`), dynamische Tabellen- und Spaltennamen
-- XSS: Ausgabe-Escaping in Admin, Mitgliederbereich, Theme und E-Mail-Vorlagen, Inline-Skripte, JSON in HTML
-- CSRF: Token-Prüfung bei allen zustandsändernden Anfragen (Formulare, AJAX, API)
-- Anmeldung und Sitzungen: Cookie-Flags, Sitzungswechsel nach Anmeldung, Passwort-Hashing, Schutz vor Durchprobieren, Rechteprüfung und Zugriff auf fremde Datensätze (IDOR)
-- Datei-Uploads, Pfade und Codeausführung: MIME-Typ, Endungen, Speicherort, `include`/`require` mit variablen Pfaden, `unserialize()`, `eval()`, Shell-Aufrufe
-- Bibliotheken: gebündelte PHP- und JavaScript-Bibliotheken gegen bekannte CVEs
+1. Zehn Suchstränge über `CMS/` (ohne Drittcode): SQL-Injection (Core/Services, Admin und Rest), XSS (Admin, Frontend und E-Mails), CSRF und Rechteprüfung im Admin, Zugriffskontrolle außerhalb des Admins, Anmeldung und Sitzungen, Dateien/Pfade/Codeausführung/SSRF, Missbrauch öffentlicher Endpunkte, Abhängigkeiten.
+2. Jeder der 26 gemeldeten Befunde wurde einzeln und unabhängig gegengeprüft (Datenfluss am Code, wo möglich mit isoliertem Skript, Abgleich mit dem Stand 3.5.6).
+3. Korrekturen in sechs Themenblöcken; danach drei unabhängige Prüfungen des Diffs (Korrektheit, Regressionen, Wirksamkeit), eine zweite Prüfrunde für den nachgebesserten Code und je eine Abschlussprüfung für Anmeldung und Bestätigungslinks.
+4. Prüfungen: `php -l` auf allen geänderten Dateien, `php TESTS/run-all.php` (fünf Suiten, darunter die neue Suite `security` mit 539 Prüfungen), YAML der Sprachdateien und der Workflows.
+
+**Grenzen der Prüfung:** Alles statisch bzw. mit isolierten Skripten ohne Datenbank (lokal PHP 8.3). Kein Lauf im Browser, kein Mailversand, kein CI-Lauf von Trivy und Dependabot. Vor der Auslieferung einmal durchklicken: Registrierung mit Bestätigungslink, E-Mail-Änderung, Anmeldung mit zweitem Faktor, Formular mit Eingangsbestätigung, Import eines eigenen Exports mit Medien, Speichern eines übernommenen Downloads.
 
 **Befunde**
 
 | ID | Fundstelle | Schwere | Beschreibung | Status |
 |---|---|---|---|---|
-| – | – | – | Prüfung steht aus (PR 2) | – |
+| SEC-49 | `CMS/core/Services/FeatureHooks/FormHooks.php:89`, `CMS/core/Services/Newsletter/NewsletterMemberSection.php:111`, `CMS/core/Services/MemberService.php` (Selbstauskunft) | 🔴 | Selbstauskunft, DSGVO-Anträge und Newsletter-Mitgliederbereich ordnen Formular-Einsendungen und Abonnements über die Konto-E-Mail-Adresse zu, auch wenn sie nie bestätigt wurde. Ein Konto mit fremder Adresse erhält fremde Daten und kann ein fremdes Abonnement ändern. Neu in 4.0.0. Korrektur: zentraler Helfer `EmailVerificationService::matchableEmail()`; ohne Nachweis (`email_verified_at`) nur Zuordnung über `user_id`. Admin-Ausführung von Anträgen aus unbestätigten Konten mit Kennzeichnung und eigener Aktion „inkl. Daten zur Adresse“. | [x] Behoben in PR #121 |
+| SEC-50 | `CMS/core/Auth/AuthManager.php:270` | 🟠 | Ungültige TOTP- und Backup-Codes sind nur je Sitzung und IP begrenzt, nicht je Konto. Bestand in 3.5.6. Korrektur: Grenze je Konto (10 in 15 Minuten, 30 in 24 Stunden), Zählen vor der Prüfung, Audit-Eintrag `mfa_account_throttled`, Hinweis-Mail höchstens einmal in 24 Stunden. | [x] Behoben in PR #121 |
+| SEC-51 | `CMS/core/Services/Newsletter/NewsletterFrontendController.php:280` | 🟡 | Offene Weiterleitung über `return_to` (Tabulator im Pfad), im Honeypot-Zweig vor der CSRF-Prüfung. Korrektur: `Security::safeLocalPath()`, CSRF-Prüfung zuerst. | [x] Behoben in PR #121 |
+| SEC-52 | `CMS/core/Services/Forms/FormMailer.php:116` | 🟡 | Eingangsbestätigung der Formulare versendet Besucher-Inhalt an frei wählbare Adressen. Korrektur: höchstens zwei Bestätigungen je Adresse und Stunde, Eingabewerte gekürzt und ohne Links, Standardvorlage ohne Namen und Feldliste. | [x] Behoben in PR #121 |
+| SEC-53 | `CMS/core/Services/Forms/FormSpamGuard.php:124` | 🟡 | Rate-Limit zählt nach der Verarbeitung und ist mit parallelen Anfragen überschreitbar; signierte Startzeit unbegrenzt wiederverwendbar. Korrektur: Zählen vor der Verarbeitung mit Nachprüfung, Startzeit an Formular gebunden und 24 Stunden gültig. | [x] Behoben in PR #121 |
+| SEC-54 | `CMS/core/Services/Exchange/MediaExchangeProvider.php:38` | 🟡 | Medienimport des Import/Export prüft nur eine Sperrliste von Endungen, nicht Whitelist und Inhalt wie der reguläre Upload. Korrektur: gemeinsame Prüfung `MediaService::validateLocalFile()`. | [x] Behoben in PR #121 |
+| SEC-55 | `CMS/core/Services/SiteTable/SiteTableRepository.php:41` | 🟡 | Hub-Sites im Papierkorb bleiben über ID erreichbar (Shortcode, Export-Route). Korrektur: `trashed_at IS NULL` in `getTableById()`. | [x] Behoben in PR #121 |
+| SEC-56 | `CMS/core/Services/Downloads/DownloadService.php:574` | 🟡 | Aus dem Plugin übernommene Dateien bleiben nach späterer Zugriffsbeschränkung unter `uploads/downloads/` abrufbar; die Datenübernahme behandelt unveröffentlichte Downloads als öffentlich. Korrektur: Verschieben in den privaten Speicher beim Speichern, bei der Übernahme und in einem Nachlauf mit Zeitbudget. | [x] Behoben in PR #121 |
+| SEC-57 | `CMS/core/Services/Knowledgebase/Http/PublicController.php:557` | 🟡 | JSON-LD ohne `JSON_HEX_TAG`: `</script>` in einem Eintrag beendet den Skriptblock. Korrektur: Kodierung mit HEX-Flags; die übrigen JSON-LD-Ausgaben waren korrekt. | [x] Behoben in PR #121 |
+| SEC-58 | `CMS/plugins/cms-importer/includes/class-admin.php:168` | 🟡 | Synchroner Upload-/Import-POST ohne CSRF-Prüfung. Bestand in 3.5.6. Korrektur: Token-Prüfung vor dem Lesen der Datei. | [x] Behoben in PR #121 |
+| SEC-59 | `CMS/core/Services/MemberService.php:187` | 🟡 | Passwortänderung prüft das aktuelle Passwort ohne Versuchslimit. Bestand in 3.5.6. Korrektur: `Auth::verifyCurrentPassword()` mit Limit `reauth`. | [x] Behoben in PR #121 |
+| SEC-60 | `CMS/core/Auth.php:561` | 🟡 | Die neutrale Registrierungsantwort verrät registrierte Adressen über die Benutzernamen-Prüfung. Korrektur: Reservierung des Namens für 24 Stunden (höchstens drei je Adresse). Restrisiko ohne erzwungene E-Mail-Verifizierung, siehe *Grenzen*. | [x] Behoben in PR #121 (Restrisiko dokumentiert) |
+| SEC-61 | `CMS/core/Services/EmailVerificationService.php:87` | ⚪ | Frei wählbarer Anzeigename in System-Mails an fremde Adressen. Korrektur: Mails ohne Namen; Registrierung übernimmt nur Benutzername, Adresse und Passwort. | [x] Behoben in PR #121 |
+| SEC-62 | `CMS/core/Routing/ThemeRouter.php:1280` | ⚪ | Entwürfe und geplante Inhalte sind für Anonyme an der Weiterleitung zum Login erkennbar. Bestand in 3.5.6. Korrektur: 404 für Anonyme, Vorschau für Berechtigte unverändert. | [x] Behoben in PR #121 |
+| SEC-63 | `CMS/install/InstallerService.php:469` | ⚪ | `cleanDatabase()` maskiert `_` im Präfix für `LIKE` nicht und kann Tabellen einer Nachbar-Installation löschen. Bestand in 3.5.6. Korrektur: Muster maskiert, Ergebnis am Präfix geprüft. | [x] Behoben in PR #121 |
+| SEC-64 | `CMS/core/Auth.php:1064` | 🟡 | Die Anmeldeverzögerung je Konto bindet per `sleep()` bis zu 30 Sekunden einen PHP-Worker und ist anonym auslösbar. Eine Korrektur ohne `sleep()` wurde umgesetzt, geprüft und wieder zurückgenommen: Sie hätte Kontoinhaber durch Dritte aussperrbar gemacht und widerspricht OFFEN-25 (keine harte Sperre). Verhalten unverändert wie bisher; Empfehlung unter *Grenzen*. | [x] Bewertet in PR #121, keine Änderung |
+| SEC-65 | `CMS/core/Routing/PublicRouter.php:657`, `CMS/core/Services/EmailChangeService.php` | 🟠 | Die Bestätigungslinks `/cms-verify-email` und `/cms-confirm-email-change` lösen per GET ein; ein Vorabruf durch Mailfilter bestätigt eine Adresse ohne Zutun des Postfachinhabers. Bestand vor dem Audit und hätte SEC-49 entwertet. Korrektur: GET zeigt eine Seite mit Schaltfläche, erst der POST löst ein. | [x] Behoben in PR #121 |
+| DEP-05 | `CMS/assets/suneditor/suneditor.min.js:1` | ⚪ | SunEditor 3.3.3 mit Hersteller-Korrekturen am Bereinigen von Inhalten in 3.4.x. Genutzt nur im Mitgliederprofil bei Editor-Typ SunEditor; die Eingabe wird serverseitig bereinigt. Korrektur: Update auf 3.4.3 aus dem npm-Paket, Quellarchiv ersetzt. | [x] Behoben in PR #121 |
+| DEP-06 | `.github/dependabot.yml:5` | ⚪ | Dependabot überwacht keine gebündelte Bibliothek (Composer-Eintrag ohne Manifest, kein npm-Eintrag). Korrektur: Spiegel-Manifeste unter `.github/deps/`, Abgleich in `TESTS/security/dependencies.php`. | [x] Behoben in PR #121 |
+| DEP-07 | `.github/workflows/security.yml:41` | ⚪ | Trivy erfasst nur Dompdf und lässt den Job nie fehlschlagen. Korrektur: Scan der Spiegel-Manifeste, Abbruch bei behebbaren Schwachstellen HIGH/CRITICAL. Der Job lief lokal nicht; die Wirkung zeigt der erste CI-Lauf. | [x] Behoben in PR #121 (Restrisiko dokumentiert) |
+| DEP-08 | `DOC/assets/README.md:53` | ⚪ | Dokumentierte Versionen weichen von den gebündelten Ständen ab. Korrektur: Stände per Dateiabgleich mit den Upstream-Tags bestimmt und eingetragen. | [x] Behoben in PR #121 |
+
+**Kein Befund nach Prüfung**
+
+- **SQL-Injection:** Zwei Tokenizer-Scans über `CMS/core/` (231 und 133 Stellen mit interpolierten Variablen in SQL) und die Durchsicht von Admin, Mitgliederbereich, Installer, Theme und Importer ergaben keine ausnutzbare Stelle. Abfragen laufen über Prepared Statements; `ORDER BY`, `LIMIT` und `IN` über Whitelists, Ganzzahl-Umwandlung und Platzhalter; Spaltennamen über `Database::validateIdentifier()`.
+- **XSS im Adminbereich:** kein Befund in den Views der neuen Bereiche und den Admin-Skripten.
+- **Medien-Papierkorb:** Der gemeldete Verdacht, `uploads/.htaccess` lasse sich über Medienverwaltung oder Papierkorb entfernen, wurde in der Gegenprüfung widerlegt.
+- **Capability-Prüfungen im Admin:** `/admin` steht nur der Rolle `admin` offen (`AdminRouter`), die feineren Capability-Prüfungen der Seiten wirken deshalb derzeit nicht als eigene Grenze. Kein Angriffsweg; als Architekturhinweis an Prüfbereich 7 übergeben.
+
+**Übergabe an andere Prüfbereiche**
+
+- Prüfbereich 5: `CMS/core/Routing/ApiRouter.php:335` – der Kategorie-Filter der Admin-Beitragsliste setzt `{$prefix}` in einfachen Anführungszeichen und erzeugt ungültiges SQL (Funktionsfehler, keine Injektion).
+
+**Grenzen der Umsetzung und Empfehlungen**
+
+- **SEC-64 (Anmeldeverzögerung):** Eine Lösung, die weder Worker bindet noch Inhaber aussperrbar macht, braucht einen eigenen Entwurf (zum Beispiel Aufgaben-Nachweis statt Wartezeit). Bis dahin begrenzt das IP-Limit die Zahl gleichzeitig wartender Anfragen je Adresse.
+- **SEC-60 (Registrierung):** Ohne *E-Mail-Verifizierung erzwingen* (Standard: aus) lässt sich an einer sofort möglichen Anmeldung erkennen, ob eine Adresse neu war. Empfehlung: die Option bei offener Registrierung einschalten.
+- **SEC-49:** Abonnements, die vor der Korrektur an ein fremdes Konto gebunden wurden, lassen sich im Code nicht erkennen. Der Postfachinhaber holt sie mit einem bestätigten Konto zurück.
+- **SEC-65:** Der Token steht beim Abruf weiter in der URL (bereits verschickte Links bleiben gültig) und damit in Zugriffslogs. Die Bestätigungsmail der E-Mail-Änderung kann über die Mail-Warteschlange laufen; dort liegt der Link bis zum Versand im Klartext.
+- **SEC-56:** Scheitert das Verschieben einer Datei, bleibt sie öffentlich; das steht im Audit-Log, die Oberfläche zeigt keine Warnung.
+- **DEP-06, DEP-07:** Dependabot-Alerts setzen voraus, dass Dependency Graph und Dependabot Alerts in den Repository-Einstellungen aktiv sind. Bei jedem Update einer gebündelten Bibliothek müssen die Spiegel-Manifeste mitgepflegt werden.
+- **Release-Pakete:** `RELEASE/365CMS-4.0.0-*.zip` und die Prüfsummen entsprechen dem Stand vor diesem PR und müssen nach dem Merge neu gebaut werden.
+
+**Für Betreiber sichtbare Änderungen**
+
+- Bestätigungslinks zeigen eine Seite mit Schaltfläche statt sofort zu bestätigen.
+- Konten ohne bestätigte Adresse sehen in Selbstauskunft und Newsletter-Bereich nur Daten mit Kontobezug.
+- Nach 10 ungültigen Codes des zweiten Faktors in 15 Minuten nimmt das Konto vorübergehend keine Codes an.
+- Eingangsbestätigungen von Formularen: höchstens zwei je Adresse und Stunde, Standardtext ohne Namen und Angaben.
+- Entwürfe und geplante Inhalte antworten Anonymen mit 404.
+- Import/Export überträgt nur Medien, die auch der Upload zuließe.
+- Der Security-Workflow kann ohne Codeänderung rot werden, wenn für eine gebündelte Bibliothek eine behebbare Schwachstelle veröffentlicht wird.
 
 ### 3. Fehlende Funktionen und unvollständige Logik
 
