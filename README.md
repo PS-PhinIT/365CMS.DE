@@ -2,9 +2,9 @@
 
 > **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
 
-| Dashboard | Website Health |
-|:--:|:--:|
-| ![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard_1.png) | ![Screenshot 365CMS Website Health.](SCREENSHOTS/365CMS-Website-Zustand_1.png) |
+| Dashboard | Posting List | New Posting | Mediathek | Website Health |
+|:--:|:--:|:--:|:--:|:--:|
+| ![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard_1.png) | ![Screenshot 365CMS Post List.](SCREENSHOTS/365CMS-PostList_1.png) | ![Screenshot 365CMS New Posting.](SCREENSHOTS/365CMS-NewPost_1.png) | ![Screenshot 365CMS Mediathek.](SCREENSHOTS/365CMS-Medien_1.png) | ![Screenshot 365CMS Website Health.](SCREENSHOTS/365CMS-Website-Zustand_1.png) |
 
 ## English
 
