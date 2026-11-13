@@ -160,8 +160,11 @@ class Auth
             $db = Database::instance();
             $userAgent = substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
             $db->execute(
-                "REPLACE INTO {$db->getPrefix()}sessions (id, user_id, ip_address, user_agent, payload, last_activity, expires_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?)",
+                // Kein REPLACE: created_at (Beginn der Sitzung) bleibt bei Folgeschreibvorgängen erhalten.
+                "INSERT INTO {$db->getPrefix()}sessions (id, user_id, ip_address, user_agent, payload, last_activity, expires_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?)
+                 ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), ip_address = VALUES(ip_address), user_agent = VALUES(user_agent),
+                    payload = VALUES(payload), last_activity = VALUES(last_activity), expires_at = VALUES(expires_at)",
                 [
                     self::sessionRegistryId(),
                     $userId,

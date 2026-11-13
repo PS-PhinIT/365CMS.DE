@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Meridian CMS Default Theme – Functions
  *
  * @package CMSDefault
- * @version 1.0.9
+ * @version 1.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -18,7 +18,7 @@ if (defined('MERIDIAN_THEME_FUNCTIONS_LOADED')) {
 
 define('MERIDIAN_THEME_FUNCTIONS_LOADED', true);
 
-define('MERIDIAN_THEME_VERSION', '1.0.9');
+define('MERIDIAN_THEME_VERSION', '1.1.0');
 define('MERIDIAN_THEME_DIR',     THEME_PATH . 'cms-default/');
 define('MERIDIAN_THEME_URL',     \CMS\ThemeManager::instance()->getThemeUrl());
 
@@ -775,7 +775,7 @@ HTML;
                 ['label' => 'Script-Bibliothek', 'url' => '/blog', 'target' => '_self'],
                 ['label' => 'Tutorials', 'url' => '/blog', 'target' => '_self'],
                 ['label' => 'Suche', 'url' => '/search', 'target' => '_self'],
-                ['label' => 'Newsletter', 'url' => meridian_auth_path('register'), 'target' => '_self'],
+                ['label' => 'Newsletter', 'url' => '/newsletter', 'target' => '_self'],
             ],
             'footer_about' => [
                 ['label' => 'Über uns', 'url' => '/about', 'target' => '_self'],
@@ -1426,6 +1426,46 @@ function meridian_archive_url(string $type, string $slug = ''): string
     }
 
     return rtrim((string) SITE_URL, '/') . '/blog' . ($slug !== '' ? '?' . $type . '=' . urlencode($slug) : '');
+}
+}
+
+if (!function_exists('meridian_default_link_available')) {
+/**
+ * Ob ein Menüziel erreichbar ist. Geprüft werden nur die optionalen Seiten der Standardmenüs
+ * (/impressum, /datenschutz, /about): ohne veröffentlichte Seite liefe der Link auf 404. Alle anderen Ziele gelten als erreichbar.
+ */
+function meridian_default_link_available(string $url): bool
+{
+    static $cache = [];
+
+    $path = (string) (parse_url(trim($url), PHP_URL_PATH) ?? '');
+    $sitePath = defined('SITE_URL') ? rtrim((string) (parse_url((string) SITE_URL, PHP_URL_PATH) ?? ''), '/') : '';
+    if ($sitePath !== '' && str_starts_with($path, $sitePath . '/')) {
+        $path = substr($path, strlen($sitePath));
+    }
+
+    $locale = 'de';
+    if (preg_match('#^/en(/.*)$#', $path, $match) === 1) {
+        $locale = 'en';
+        $path = $match[1];
+    }
+
+    $slug = trim($path, '/');
+    if (!in_array($slug, ['impressum', 'datenschutz', 'about'], true)) {
+        return true;
+    }
+
+    $key = $locale . ':' . $slug;
+    if (!isset($cache[$key])) {
+        try {
+            $page = \CMS\PageManager::instance()->getPageBySlug($slug, $locale);
+            $cache[$key] = $page !== null && ($page['status'] ?? '') === 'published';
+        } catch (\Throwable) {
+            $cache[$key] = false;
+        }
+    }
+
+    return $cache[$key];
 }
 }
 

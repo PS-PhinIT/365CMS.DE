@@ -1823,11 +1823,39 @@
         }
     }
 
+    // Topbar-Schaltfläche „Hochladen“ (/admin/media?action=upload): öffnet den Upload-Dialog der Bibliothek.
+    function openUploadModalFromQuery() {
+        var modalElement = document.getElementById('uploadModal');
+        var params;
+
+        try {
+            params = new URLSearchParams(window.location.search);
+        } catch (error) {
+            return;
+        }
+
+        if (!modalElement || params.get('action') !== 'upload') {
+            return;
+        }
+
+        if (window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        }
+
+        // Parameter entfernen, damit ein Neuladen den Dialog nicht erneut öffnet.
+        params.delete('action');
+        if (window.history && typeof window.history.replaceState === 'function') {
+            var query = params.toString();
+            window.history.replaceState(null, '', window.location.pathname + (query !== '' ? '?' + query : '') + window.location.hash);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initNativeUploader();
         initMediaPickers();
         initMediaLibraryActions();
         initMediaCategoryActions();
         initFeaturedMediaReplace();
+        openUploadModalFromQuery();
     });
 })();

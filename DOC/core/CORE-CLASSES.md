@@ -25,7 +25,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `AuditLogger` | `core/AuditLogger.php` | Audit-Log in `cms_audit_log` | `log()`, `loginSuccess()`, `loginFailed()`, `pluginAction()`, `themeSwitch()`, `userRoleChange()`, `backupAction()`, `getRecent()` |
 | `Debug` | `core/Debug.php` | Checkpoints und Query-Telemetrie bei `CMS_DEBUG` | `checkpoint()`, `query()` |
 | `Json` | `core/Json.php` | sichere JSON-Hilfen | `decodeArray()` u. a. |
-| `Version` | `core/Version.php` | `CURRENT = '4.0.0'`, `RELEASE_DATE = '2026-11-08'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
+| `Version` | `core/Version.php` | `CURRENT = '4.0.0'`, `RELEASE_DATE = '2026-11-12'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
 | `VendorRegistry` | `core/VendorRegistry.php` | Inventar und Laden gebündelter Bibliotheken | `loadAssetsAutoloader()`, `loadPackage()`, `getDiagnostics()` |
 | `WP_Error` | `core/WP_Error.php` | WordPress-kompatibles Fehlerobjekt | `get_error_code()`, `get_error_message()`, `get_error_data()`, `add()` |
 | `Api` | `core/Api.php` | generische JSON-API (Rate-Limit, `pages`, `users`) | `handleRequest()` |

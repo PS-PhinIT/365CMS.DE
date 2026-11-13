@@ -10,8 +10,8 @@ Recommended order for every release: **backup → check → core → database �
 
 ### Voraussetzungen
 
-- PHP **8.4+** (`CMS_MIN_PHP_VERSION`), Erweiterungen `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`.
-- Schreibrechte auf `uploads/`, `cache/`, `logs/`, das Backup-Verzeichnis (`backups/` bzw. seit 4.0.0 `CMS_BACKUP_PATH`), `assets/` und – für Core-Updates – den CMS-Ordner.
+- PHP **8.4.1+** (`CMS_MIN_PHP_VERSION`), Erweiterungen `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`.
+- Schreibrechte auf `config/`, `private/` (bzw. `CMS_PRIVATE_PATH`), `uploads/`, `cache/`, `logs/`, das Backup-Verzeichnis (`backups/` bzw. seit 4.0.0 `CMS_BACKUP_PATH`), `assets/` und – für Core-Updates – den CMS-Ordner.
 - Mindestens 1 GB freier Speicher (Warnung unter 2 GB).
 - Aktuelles Backup **inklusive** separat gesicherter `CMS/config/app.php` (nicht Bestandteil des CMS-Backups). Sie enthält seit 4.0.0 auch `CMS_ENCRYPTION_KEY`: Ohne diesen Schlüssel sind verschlüsselte Einstellungen, TOTP-Secrets und verschlüsselte Backups nicht mehr lesbar.
 

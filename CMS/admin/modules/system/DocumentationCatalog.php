@@ -411,7 +411,7 @@ final class DocumentationCatalog
             'member/README.md',
             'theme/README.md',
             'core/README.md',
-            'workflow/PLUGIN-REGISTRATION-WORKFLOW.MD',
+            'workflow/MARKETPLACE-WORKFLOW.md',
         ];
 
         $featured = [];

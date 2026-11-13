@@ -392,7 +392,7 @@ Für neue Pakete aus `/ASSETS` sollte künftig dieselbe Checkliste gelten:
 4. **Provider-/Security-/Quota-Risiken dokumentieren**
 5. **Nur den echten Runtime-Scope übernehmen** – nicht die komplette Upstream-Struktur
 6. **Admin- und Doku-Zielbild früh festhalten** – Menüpunkt, Capability-Modell, Feature-Gates, Operator-Sicht
-7. **Dokumentation synchron halten** – `DOC/ASSET.md`, `DOC/assets/README.md`, `DOC/ASSETS_OwnAssets.md`, `DOC/ai/AI-SERVICES.md`, `DOC/admin/system-settings/AI-SERVICES.md`, `README.md`, `Changelog.md`
+7. **Dokumentation synchron halten** – `DOC/assets/ASSET.md`, `DOC/assets/README.md`, `DOC/assets/ASSETS_OwnAssets.md`, `DOC/ai/AI-SERVICES.md`, `DOC/admin/system-settings/AI-SERVICES.md`, `README.md`, `Changelog.md`
 
 Kurzform für Entscheidungen:
 

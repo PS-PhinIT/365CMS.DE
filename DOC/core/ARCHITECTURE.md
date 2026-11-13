@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Architektur
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** v25 | **PHP:** ≥ 8.4
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** v25 | **PHP:** ≥ 8.4.1
 
 ## English (summary)
 
-365CMS is a framework-less PHP 8.4 application. Every web request enters through `CMS/index.php`, which loads `config/app.php`, configures the session cookie, includes `CMS/config.php` and the autoloader and starts `CMS\Bootstrap`. The bootstrap detects the runtime mode (`cli`, `api`, `admin`, `web`), validates bundled PHP requirements, connects to the database, runs pending migrations, sends security headers (CSP with nonce), starts the session, runs the application firewall, registers services in a small DI container, loads active plugins and – in web mode – the active theme, registers core cron hooks and finally fires `cms_init`. `Bootstrap::run()` lets plugins add routes (`register_routes`) and dispatches through `CMS\Router`, which loads exactly one route module group per request (API, admin, member or public+theme) and falls back to dynamic page/hub resolution and the theme's 404 page.
+365CMS is a framework-less PHP 8.4.1+ application. Every web request enters through `CMS/index.php`, which loads `config/app.php`, configures the session cookie, includes `CMS/config.php` and the autoloader and starts `CMS\Bootstrap`. The bootstrap detects the runtime mode (`cli`, `api`, `admin`, `web`), validates bundled PHP requirements, connects to the database, runs pending migrations, sends security headers (CSP with nonce), starts the session, runs the application firewall, registers services in a small DI container, loads active plugins and – in web mode – the active theme, registers core cron hooks and finally fires `cms_init`. `Bootstrap::run()` lets plugins add routes (`register_routes`) and dispatches through `CMS\Router`, which loads exactly one route module group per request (API, admin, member or public+theme) and falls back to dynamic page/hub resolution and the theme's 404 page.
 
 ## Deutsch
 
@@ -41,7 +41,7 @@ Admin-Module / Member-Controller / Theme-Templates ─► Services ─► Databa
 | Datei | Zweck |
 |---|---|
 | `CMS/index.php` | Web-Einstieg für alle Routen (Rewrite auf `index.php`); HTTPS-Erkennung, Session-Cookie-Domain, Session-GC-Laufzeit aus `perf_session_timeout_*` |
-| `CMS/config.php` | prüft PHP ≥ 8.4 (`CMS_MIN_PHP_VERSION`), lädt `config/app.php` oder leitet zum Installer |
+| `CMS/config.php` | prüft PHP ≥ 8.4.1 (`CMS_MIN_PHP_VERSION`), lädt `config/app.php` oder leitet zum Installer |
 | `CMS/config/app.php` | Konstanten: Datenbank, Schlüssel, `SITE_URL`, Pfade, Login-Limits, HTTPS/HSTS, LDAP, JWT, SMTP |
 | `CMS/install.php` + `CMS/install/` | Installer ([../INSTALLATION.md](../INSTALLATION.md)) |
 | `CMS/cron.php` | geplante Aufgaben (CLI oder Web-Cron mit Token) |

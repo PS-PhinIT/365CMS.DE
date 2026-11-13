@@ -396,12 +396,14 @@ class PluginDashboardRegistry
         $section = $this->getSection($slug);
 
         if ($section === null) {
+            http_response_code(404);
             require_once ABSPATH . 'member/partials/plugin-not-found.php';
             return;
         }
 
         // Berechtigungsprüfung
         if (!$this->checkCapability($section['capability'])) {
+            http_response_code(404);
             require_once ABSPATH . 'member/partials/plugin-not-found.php';
             return;
         }

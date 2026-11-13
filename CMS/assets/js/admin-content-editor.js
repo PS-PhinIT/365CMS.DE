@@ -1207,6 +1207,7 @@
                         { label: 'Hinweis', icon: '!', block: 'warning', description: 'Info-/Warnbox' },
                         { label: 'Alert', icon: '⚑', block: 'alert', data: { type: 'info', align: 'left' }, description: 'Klassische Alert-Box' },
                         { label: 'Akkordeon', icon: '⌄', block: 'accordion', description: 'Aufklappbarer Abschnitt' },
+                        { label: 'Button', icon: '⬜', block: 'button', description: 'Call-to-Action-Schaltfläche' },
                         { label: 'Formular', icon: '☰', block: 'form', description: 'Formular aus der Formularverwaltung' },
                         { label: 'Abstand', icon: '↕', block: 'spacer', data: { height: 40, preset: '40px' }, description: 'Vertikalen Weißraum einfügen' },
                         { label: 'Code', icon: '</>', block: 'code', description: 'Code-Beispiel' },

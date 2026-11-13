@@ -239,10 +239,8 @@ final class SearchService
     {
         // Index-Rebuild bei Page/Post-Speichern
         Hooks::addAction('cms_after_page_save', [$this, 'onPageSaved'], 50);
-        Hooks::addAction('page_saved', [$this, 'onPageSaved'], 50);
         Hooks::addAction('page_deleted', [$this, 'onPageDeleted'], 50);
         Hooks::addAction('cms_after_post_save', [$this, 'onPostSaved'], 50);
-        Hooks::addAction('post_saved', [$this, 'onPostSaved'], 50);
         Hooks::addAction('post_deleted', [$this, 'onPostDeleted'], 50);
 
         // Ermögliche Plugins, eigene Indizes zu registrieren

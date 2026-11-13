@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Dateistruktur
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Status:** Stable
 
 ## English (summary)
 
-`CMS/admin/` follows a three-layer pattern: **entry files** (`CMS/admin/<page>.php`, one per route, thin controllers with allow-lists and capability checks), **modules** (`CMS/admin/modules/<area>/<Name>Module.php`, business logic and persistence through core services) and **views** (`CMS/admin/views/<area>/*.php`, rendering only). Shared layout and request handling live in `CMS/admin/partials/`; the log sub-routes in `CMS/admin/logs/`. Several entry files are thin wrappers that select a section of a shared controller (`seo-page.php`, `performance-page.php`, `system-monitor-page.php`, `logs-page.php`, `ai-page.php`, `member-dashboard-page.php`) or redirect aliases.
+`CMS/admin/` follows a three-layer pattern: **entry files** (`CMS/admin/<page>.php`, one per route, thin controllers with allow-lists and capability checks), **modules** (`CMS/admin/modules/<area>/<Name>Module.php`, business logic and persistence through core services) and **views** (`CMS/admin/views/<area>/*.php`, rendering only). Shared layout and request handling live in `CMS/admin/partials/`; the log sub-routes in `CMS/admin/logs/`; the extension tabs of `/admin/settings` in `CMS/admin/settings-tabs/`. Several entry files are thin wrappers that select a section of a shared controller (`seo-page.php`, `performance-page.php`, `system-monitor-page.php`, `logs-page.php`, `ai-page.php`, `member-dashboard-page.php`) or redirect aliases.
 
 ## Deutsch
 
@@ -17,12 +17,14 @@ CMS/admin/
 ├── *-page.php                 # gemeinsame Controller für Seitengruppen (siehe unten)
 ├── logs/                      # /admin/logs/<section>: index, operational, security-audit, php-errors, channels
 ├── modules/                   # Fachlogik je Bereich
-│   ├── comments/  dashboard/  hub/  landing/  legal/  media/  member/  menus/
+│   ├── comments/  content/  dashboard/  downloads/  feeds/  forms/  hub/
+│   ├── knowledgebase/  landing/  legal/  media/  member/  menus/  newsletter/
 │   ├── pages/  plugins/  posts/  security/  seo/  settings/  subscriptions/
-│   └── system/  tables/  themes/  toc/  users/
+│   └── system/  tables/  themes/  toc/  trash/  users/
 ├── partials/                  # header.php, sidebar.php, topbar.php, footer.php,
 │                              # section-page-shell.php, redirect-alias-shell.php,
 │                              # post-action-shell.php, editorjs-inline-boot.php
+├── settings-tabs/             # Erweiterungs-Tabs von /admin/settings: admin-menu.php, feeds.php, security.php
 └── views/                     # Darstellung je Bereich (+ views/partials/ für gemeinsame Bausteine)
 ```
 

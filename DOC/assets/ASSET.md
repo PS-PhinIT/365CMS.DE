@@ -100,11 +100,11 @@ Empfohlener Ablauf pro Update:
 3. `CMS/assets/autoload.php` sowie Core-Verträge (`VendorRegistry`, `PdfService`, Editor-Services) gegen Pfadänderungen prüfen
 4. Falls ein Upstream nur Source-Dateien enthält, den Build lokal erzeugen und **erst dann** die Artefakte übernehmen
 5. Doku synchron halten:
-   - `DOC/ASSET.md`
+   - `DOC/assets/ASSET.md`
    - `DOC/assets/README.md`
+   - `DOC/assets/ASSETS_OwnAssets.md`
+   - `DOC/assets/ASSETS_NEW.md` für neue Kandidaten außerhalb der Runtime
 6. Spiegel-Manifeste für Dependabot/Trivy nachziehen: `.github/deps/composer.json` + `composer.lock` (PHP) bzw. `.github/deps/package.json` + `package-lock.json` (JS), Ablauf siehe [`README.md`](README.md#versionsüberwachung-dependabot--trivy); `php TESTS/run-all.php` prüft den Abgleich Manifest ↔ Bundle ↔ Doku
-   - `DOC/ASSETS_OwnAssets.md`
-   - `DOC/ASSETS_NEW.md` für neue Kandidaten außerhalb der Runtime
 
 ---
 

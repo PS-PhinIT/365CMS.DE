@@ -248,7 +248,7 @@ Eigene Bezeichnungen aus dem Editor werden nicht übersetzt.
 ### 12. Tests
 
 ```bash
-php TESTS/admin-menu/run.php        # PHP >= 8.4, ohne Datenbank; -v für Details
+php TESTS/admin-menu/run.php        # PHP >= 8.4.1, ohne Datenbank; -v für Details
 ```
 
 | Teil | Inhalt |

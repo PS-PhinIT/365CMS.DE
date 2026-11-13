@@ -83,6 +83,17 @@ final class EditorJsAssetService
         $mediaUploadUrlJs = (string) json_encode(rtrim((string) $siteUrl, '/') . '/api/media', $jsonFlags);
         $csrfTokenJs = (string) json_encode($csrfToken, $jsonFlags);
 
+        // Core-Blöcke der EditorJsBlockRegistry (Download, Formular) in der Schnellleiste – nur mit geladenem
+        // Tool-Skript und nur für Admins, weil die Tools /admin/post-editor-api nutzen (nicht im Mitgliederprofil).
+        $registryBlocks = [];
+        if (class_exists(\CMS\Auth::class) && \CMS\Auth::instance()->isAdmin()) {
+            foreach (EditorJsBlockRegistry::types() as $registryType) {
+                if (EditorJsBlockRegistry::script($registryType) !== '') {
+                    $registryBlocks[$registryType] = (string) EditorJsBlockRegistry::label($registryType);
+                }
+            }
+        }
+
         ob_start();
         ?>
         <input type="hidden"
@@ -174,6 +185,12 @@ final class EditorJsAssetService
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9l-4 3l4 3"/><path d="M16 9l4 3l-4 3"/><path d="M14 4l-4 16"/></svg>
                     <span>HTML</span>
                 </button>
+                <?php foreach ($registryBlocks as $registryType => $registryLabel): ?>
+                <button type="button" data-block="<?php echo htmlspecialchars($registryType, ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($registryLabel, ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars($registryLabel, ENT_QUOTES, 'UTF-8'); ?> einfügen">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                    <span><?php echo htmlspecialchars($registryLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                </button>
+                <?php endforeach; ?>
             </div>
 
             <div id="<?php echo htmlspecialchars($holderId, ENT_QUOTES); ?>"

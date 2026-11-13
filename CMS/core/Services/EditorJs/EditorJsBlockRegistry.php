@@ -75,6 +75,12 @@ final class EditorJsBlockRegistry
         return self::$blocks[$type]['label'] ?? null;
     }
 
+    /** Tool-Skript des Blocks relativ zu `CMS/assets/`; leer, wenn der Block kein Editor-Tool mitbringt. */
+    public static function script(string $type): string
+    {
+        return self::$blocks[$type]['script'] ?? '';
+    }
+
     /**
      * @return list<string> Asset-Pfade relativ zu `CMS/assets/`
      */

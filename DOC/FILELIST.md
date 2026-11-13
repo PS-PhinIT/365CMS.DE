@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: FILELIST
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-10
+> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-13
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -69,11 +69,15 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
 | `TESTS/content-types/` | content type provider registry test / Test der Inhaltstyp-Provider (`php TESTS/content-types/run.php [-v]`) |
+| `TESTS/editorjs-blocks/` | Editor.js block tests / Tests der Editor.js-Blöcke (`php TESTS/editorjs-blocks/run.php`, browser part / Browser-Teil `node TESTS/editorjs-blocks/browser/run.js`) |
+| `TESTS/functions/` | function tests without database / Funktionstests ohne Datenbank (`php TESTS/functions/run.php`) |
+| `TESTS/security/` | security tests / Sicherheitstests (`php TESTS/security/run.php`) |
+| `TESTS/update-swap/` | update directory swap test / Test des Verzeichnistauschs beim Update (`php TESTS/update-swap/run.php`) |
 | `CODE_OF_CONDUCT.md` | code of conduct |
 | `README.md` | public README |
 | `Changelog.md` | changelog |
 
-`ASSETS/` and `tools/` are not part of this repository; of `TESTS/` only `TESTS/admin-menu/` is versioned (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; von `TESTS/` ist nur `TESTS/admin-menu/` versioniert.
+`ASSETS/` and `tools/` are not part of this repository; under `TESTS/` six suites are versioned (`admin-menu`, `content-types`, `editorjs-blocks`, `functions`, `security`, `update-swap`), all run by `php TESTS/run-all.php` in CI (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; unter `TESTS/` sind sechs Suiten versioniert (`admin-menu`, `content-types`, `editorjs-blocks`, `functions`, `security`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
 
 Rule: **always know whether you are editing runtime, documentation, or source context.**
 
@@ -101,7 +105,6 @@ Regel: **immer klären, ob gerade Runtime, Doku oder Quellkontext bearbeitet wir
 | `cron.php` | cron entry |
 | `update.php` / `update.json` | updates |
 | `orders.php` | orders entry |
-| `default.php` | default helper entry |
 | `core/` | bootstrap, security, routing, services |
 | `admin/` | backend |
 | `member/` | member area |
@@ -113,7 +116,7 @@ Regel: **immer klären, ob gerade Runtime, Doku oder Quellkontext bearbeitet wir
 | `marketplace/` | marketplace manifests |
 | `vendor/` | extra vendor (`dompdf`) |
 | `views/` | extra views |
-| `uploads/`, `cache/`, `logs/`, `backups/`, `db/` | storage / ops |
+| `uploads/`, `cache/`, `logs/`, `backups/` | storage / ops |
 
 Hotspots: `core/Bootstrap.php`, `core/Security.php`, `core/ThemeManager.php`, `core/PluginManager.php`, `admin/`, `assets/js/`, `member/includes/class-member-controller.php`.
 
@@ -207,10 +210,10 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-372 files. Layout:
+391 files. Layout:
 
 - `CMS/admin/*.php` — HTTP entry points
-- `CMS/admin/modules/<domain>/` — domain modules (`comments`, `dashboard`, `hub`, `landing`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `users`)
+- `CMS/admin/modules/<domain>/` — domain modules (`comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
 - `CMS/admin/views/` — templates
 - `CMS/admin/partials/` — shared chrome (including sidebar)
 - `CMS/admin/logs/` — log UI helpers
@@ -220,7 +223,7 @@ Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `
 
 **Deutsch**
 
-372 Dateien. Aufbau:
+391 Dateien. Aufbau:
 
 - `CMS/admin/*.php` — HTTP-Einstiege
 - `CMS/admin/modules/<domain>/` — Fachmodule
@@ -239,8 +242,8 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
-- `assets/css/` — 20 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, hub, consent, EditorJS content, member, public)
-- `assets/js/` — 42 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 14 ES modules in `admin-shell/` and `post-editor/` (since 4.0.0, no build step)
+- `assets/css/` — 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
+- `assets/js/` — 58 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 18 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (since 4.0.0, no build step)
 - `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono as local WOFF2 files (since 4.0.0)
 - bundled libraries — see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
@@ -250,8 +253,8 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
-- `assets/css/` — 20 Stylesheets
-- `assets/js/` — 42 Skripte plus 14 ES-Module in `admin-shell/` und `post-editor/` (seit 4.0.0, ohne Build-Schritt)
+- `assets/css/` — 32 Stylesheets
+- `assets/js/` — 58 Skripte plus 18 ES-Module in `admin-shell/`, `editor-blocks/` und `post-editor/` (seit 4.0.0, ohne Build-Schritt)
 - `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien (seit 4.0.0)
 - gebündelte Bibliotheken — siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
@@ -304,12 +307,11 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 | `CMS/includes/` | 12 helper files, including `wordpress-compat.php` and `admin-menu-profiles.php` |
 | `CMS/lang/` | `de.yaml`, `en.yaml` |
 | `CMS/logs/` | `LOG_PATH` — not `var/logs/` (that directory does not exist here) |
-| `CMS/uploads/` | public uploads; `.gitkeep` in git |
+| `CMS/uploads/` | public uploads; `.gitkeep` and `.htaccess` in git |
 | `CMS/cache/` | cache, including optimizer output |
-| `CMS/db/` | DB artefacts |
 | `CMS/install/` | 10 installer files (six steps, including "Admin layout") |
 | `CMS/vendor/` | `dompdf` only in this tree — **no TCPDF** |
-| `CMS/views/` | extra views including auth |
+| `CMS/views/` | extra views: `auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/` |
 | `CMS/marketplace/` | core/plugin/theme index JSON |
 | `CMS/backups/` | local backups, protected |
 
@@ -321,17 +323,17 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 
 Canonical `DOC/` files: `README.md`, `INDEX.md`, `INSTALLATION.md`, `DEVLIST.md`, `FILELIST.md`, `FILESTRUCTUR.md`, `CMSFILESTRUCTUR.md`.
 
-Subfolders: `admin/`, `ai/`, `assets/`, `checks/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
+Subfolders: `admin/`, `ai/`, `assets/`, `audit/`, `checks/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
 
-Asset Markdown is under `DOC/assets/`. The code audit of 2026-10-03 is in `DOC/checks/`; open gaps are tracked in `core/STATUS.md`.
+Asset Markdown is under `DOC/assets/`. The code audit of 2026-10-03 is in `DOC/checks/`, the follow-up audits are in `DOC/audit/`; open gaps are tracked in `core/STATUS.md`.
 
 **Deutsch**
 
 Kanonische `DOC/`-Dateien: `README.md`, `INDEX.md`, `INSTALLATION.md`, `DEVLIST.md`, `FILELIST.md`, `FILESTRUCTUR.md`, `CMSFILESTRUCTUR.md`.
 
-Unterordner: `admin/`, `ai/`, `assets/`, `checks/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
+Unterordner: `admin/`, `ai/`, `assets/`, `audit/`, `checks/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
 
-Asset-Markdown liegt unter `DOC/assets/`. Das Code-Audit vom 2026-10-03 liegt unter `DOC/checks/`; offene Lücken stehen in `core/STATUS.md`.
+Asset-Markdown liegt unter `DOC/assets/`. Das Code-Audit vom 2026-10-03 liegt unter `DOC/checks/`, die Folgeaudits liegen unter `DOC/audit/`; offene Lücken stehen in `core/STATUS.md`.
 
 ---
 

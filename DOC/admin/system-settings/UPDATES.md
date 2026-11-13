@@ -45,7 +45,7 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
   "type": "core",
   "version": "4.0.0",
   "min_php": "8.4.1",
-  "released": "2026-11-08",
+  "released": "2026-11-12",
   "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
   "checksum_sha256": "<64 Hex-Zeichen>",

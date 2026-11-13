@@ -33,8 +33,8 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 |---|---|---|---|---|
 | 1 | Changelog 4.0.0, Anlage dieser Datei | CL-001 … CL-233 | #119 (Grundgerüst), #120 (Changelog) | erledigt |
 | 2 | Sicherheit und bekannte Exploits | SEC-49 … SEC-65, DEP-05 … DEP-08 | #121 | erledigt |
-| 3 | Fehlende Funktionen und unvollständige Logik | FUN-63 … FUN-94 | #122 | erledigt, eine Entscheidung offen |
-| 4 | Fehlende oder falsche Verweise | REF | PR 4 | offen |
+| 3 | Fehlende Funktionen und unvollständige Logik | FUN-63 … FUN-94 | #122 | erledigt, FUN-86 offen (Entscheidung) |
+| 4 | Fehlende oder falsche Verweise | REF-16 … REF-39 | #123 | erledigt |
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN, BP | PR 5 | offen |
 | 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | offen |
 | 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | offen |
@@ -480,17 +480,88 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 
 ### 4. Fehlende oder falsche Verweise
 
-**Prüfpunkte**
+**Vorgehen**
 
-- `require`/`include`/`use` und Namespaces: Pfade und Groß-/Kleinschreibung (Linux)
-- Verweise auf CSS, JavaScript, Bilder und Schriften, interne Links, Weiterleitungen, API-Endpunkte
-- Tabellen- und Spaltennamen im PHP-Code gegen das Schema (`SchemaManager`, Migrationen)
+1. Vier Suchstränge mit Skripten über den gesamten eigenen Code: PHP-Verweise (Includes, Autoloader, Klassen, Methoden, Funktionen), Assets/Links/Endpunkte, Datenbankschema, Dokumentation und Konfiguration. 21 Befunde, jeder einzeln gegengeprüft.
+2. Korrekturen in zwei Blöcken (Code und Konfiguration, Dokumentation).
+3. **Laufzeitprüfung gegen MariaDB 10.11** auf einer Kopie von `CMS/` (PHP-Entwicklungsserver, PHP 8.3.6 mit angepasster Mindestversion): Neuinstallation über `install.php`, Abgleich des Schemas über `information_schema`, Migrationen für Bestandsinstallationen, Durchlauf aller Seiten als angemeldeter Administrator mit Chromium, öffentliche Abläufe, Cron.
+4. Unabhängige Prüfung des Diffs (keine Fehler, zwei Hinweise) und Nachbesserung der Laufzeitfunde.
+
+**Ohne Befund (statisch)**
+
+- 677 `require`/`include`-Stellen: alle Ziele vorhanden, exakte Groß-/Kleinschreibung.
+- 409 eigene Klassen: Namespace und Name passen zum Pfad; 16.973 Klassenverweise, rund 29.000 Methodenaufrufe, 37.970 Funktionsaufrufe ohne fehlendes Ziel.
+- 108 Seitendateien und 109 Routen des Menükatalogs, 131 `/admin/…`-Adressen in PHP und JavaScript: jede hat Datei, Route oder Weiterleitung.
+
+**Ergebnis der Laufzeitprüfung**
+
+- Installation: alle sechs Schritte fehlerfrei. 76 Tabellen mit 831 Spalten, spaltengenau identisch mit `SchemaManager::getSchemaQueries()` (Typ, Nullable, Default, Extra); im Betrieb legen Laufzeitdienste zehn weitere Tabellen an.
+- Migrationen: `posts.status` von `ENUM` auf `VARCHAR(20)` mit Datenerhalt (aus PR #122); `trash_slug`, `trash_slug_en`, `sessions.created_at` und `subscription_plans.is_featured` werden nach dem Entfernen wieder angelegt.
+- Papierkorb: Slug wird freigegeben, bei Konflikt erhält der wiederhergestellte Beitrag `…-2`; endgültiges Löschen entfernt alle abhängigen Zeilen.
+- Durchlauf als Administrator: 452 Seitenaufrufe, alle 109 Katalog-Routen mit Status 200, kein Eintrag im PHP-Fehlerprotokoll, keine JavaScript-Fehler, keine rohen Sprachschlüssel.
+- Sechs echte Fehler und zwei Hinweise; die drei zum Thema Verweise sind unten als Befunde geführt, die übrigen an die folgenden Prüfbereiche übergeben.
+
+**Grenzen der Laufzeitprüfung:** PHP 8.3 statt 8.4, Entwicklungsserver statt Apache (`.htaccess` nur nachgebildet), kein Internet (Update-Prüfung, Marketplace, externe Feeds, SMTP, LDAP, Passkeys, Zahlungsanbieter nicht ausgeführt).
 
 **Befunde**
 
 | ID | Fundstelle | Schwere | Beschreibung | Status |
 |---|---|---|---|---|
-| – | – | – | Prüfung steht aus (PR 4) | – |
+| REF-16 | `CMS/core/Services/Trash/AbstractContentTrashProvider.php:431` | 🟠 | Papierkorb: Spalten trash_slug/trash_slug_en werden von keinem Installations- oder Migrationsweg angelegt, Slug-Freigabe ist dadurch nie aktiv. Korrektur: SCHEMAÄNDERUNG (ohne Erhöhung der Schema-Versionsnummer): Die Spalten trash_slug und trash_slug_en werden jetzt für posts (VARCHAR 255) und pages (VARCHAR 200) angelegt – in SchemaManager::getSchemaQueries() (Neuinstallation), idempotent in SchemaManager::ensureTrashColumns() (Laufzeit-Migration) und in den v25-Anweisungen des MigrationManager. Damit ist die Slug-Freigabe im Papierkorb aktiv; die Provider und Listen brauchten keine Änderung. | [x] Behoben in PR #123 |
+| REF-17 | `CMS/admin/partials/topbar.php:32` | 🟡 | Topbar-Schaltfläche 'Hochladen' verweist auf /admin/media?action=upload, den Parameter wertet niemand aus. Korrektur: Die Medienbibliothek wertet ?action=upload jetzt aus: Beim Laden öffnet sich der vorhandene Upload-Dialog (#uploadModal), danach wird der Parameter per history.replaceState aus der Adresse entfernt. Die Topbar-Zeile selbst blieb unverändert. | [x] Behoben in PR #123 |
+| REF-18 | `CMS/core/Services/FeatureHooks/Registry.php:27` | 🟡 | FeatureHooks-Registry verweist auf zwei nicht vorhandene Klassen (AdminMenuHooks, ToolbarHooks). Korrektur: Die Einträge AdminMenuHooks und ToolbarHooks wurden aus der FeatureHooks-Registry entfernt. Fehlende Klassen werden jetzt als Warnung im Kanal core.features protokolliert, wie es der Klassenkommentar zusagt. | [x] Behoben in PR #123 |
+| REF-19 | `DOC/CMSFILESTRUCTUR.md:104` | 🟡 | DOC/CMSFILESTRUCTUR.md: Inventar nennt nicht vorhandene Dateien/Ordner, falsche Zählungen und lässt 4.0.0-Dateien aus. Korrektur: Das Inventar ist per Skript mit dem Dateibestand abgeglichen. Zählungen: admin 391, assets 3107, core 329, 32 Stylesheets, 58 Skripte + 18 ES-Module. | [x] Behoben in PR #123 |
+| REF-20 | `DOC/FILELIST.md:76` | 🟡 | DOC/FILELIST.md: nicht vorhandene Einträge, veraltete Zahlen und falsche Aussage zu den Test-Suiten. Korrektur: FILELIST.md führt alle sechs Test-Suiten (Tabelle und Satz in EN/DE). default.php und db/ sind gestrichen. | [x] Behoben in PR #123 |
+| REF-21 | `DOC/README.md:33` | 🟡 | Veröffentlichungsdatum 4.0.0: Doku nennt 2026-11-08, Code und Manifeste 2026-11-12. Korrektur: Das Veröffentlichungsdatum von 4.0.0 steht an allen acht Stellen auf 2026-11-12, einschließlich der zwei zusätzlich gefundenen (CORE-CLASSES.md, Formatbeispiel in UPDATES.md). In STATUS.md ist 4.0.0 aus der Sammelangabe gelöst; 3.5.5 und 3.5.6 bleiben beim 08.11.2026. | [x] Behoben in PR #123 |
+| REF-22 | `DOC/assets/README.md:240` | 🟡 | Doku verweist auf nicht vorhandene Testdatei und auf alte Pfade der Asset-Dokumente. Korrektur: Der Verweis auf die nicht vorhandene Suite TESTS/csp-style-rewriter/run.php ist aus DOC/assets/README.md gestrichen. Die Pflege-Checklisten der drei Asset-Dokumente nennen jetzt DOC/assets/… (7 Ersetzungen); in ASSET.md steht die Unterliste wieder zusammenhängend unter Punkt 5. | [x] Behoben in PR #123 (teilweise, siehe Grenzen) |
+| REF-23 | `.gitignore:102` | 🟡 | .gitignore: Suiten TESTS/security und TESTS/functions sind auf Dateisystemen ohne Groß-/Kleinschreibung ignoriert; veraltete Freigaben. Korrektur: Die Regeln /tests/ und /tests/* samt dem gesamten Freigabeblock (inklusive der Freigaben für nicht vorhandene Testpfade) wurden entfernt; TESTS/ ist damit regulär versioniert. Außerdem entfernt: die Ignorierregel .github/workflows/ und die Freigaben für die nicht vorhandenen Prüfsummendateien 3.4.0, 3.5.2 und 3.5.3. | [x] Behoben in PR #123 (teilweise, siehe Grenzen) |
+| REF-24 | `DOC/INSTALLATION.md:488` | 🟡 | DOC/INSTALLATION.md: Produktions-Checkliste lässt config/ und private/ bei Schreibrechten und Sperrpfaden aus. Korrektur: Die Produktions-Checkliste (EN/DE) nennt bei den Schreibrechten jetzt auch config/ und private/ (bzw. CMS_PRIVATE_PATH) und bei den Sperrpfaden private/ und vendor/. | [x] Behoben in PR #123 |
+| REF-25 | `CMS/update.json:12` | ⚪ | update.json: Feld notes nennt nur drei der fünf in den Core übernommenen Plugins. Korrektur: Das Feld notes nennt in allen drei Manifesten jetzt Formulare, Downloads, Feed-Aggregator, Newsletter und Knowledgebase sowie die fünf Plugins cms-contact, cms-downloads, cms-feed, cms-newsletter und cms-knowledgebase. Alle anderen Felder (Version, Prüfsumme, URLs) sind unverändert. | [x] Behoben in PR #123 (teilweise, siehe Grenzen) |
+| REF-26 | `CMS/assets/js/admin-content-editor.js:1175` | ⚪ | Editor-Blocklisten weichen von den registrierten Tools ab: 'Button' fehlt in admin-content-editor.js, 'Download' und 'Formular' fehlen in der festen Schnellleiste. Korrektur: „Button“ steht jetzt in der Blockliste von admin-content-editor.js (Gruppe „Layout & Spezial“). Die feste Schnellleiste in EditorJsAssetService::render() wird tatsächlich ausgegeben (Knowledgebase-Editor, Mitgliederprofil) und gibt nun zusätzlich die Blöcke der EditorJsBlockRegistry (Download, Formular) aus – nur mit vorhandenem Tool-Skript und nur für Admins, weil die Tools /admin/post-editor-api nutzen. | [x] Behoben in PR #123 |
+| REF-27 | `CMS/admin/modules/system/DocumentationCatalog.php:414` | ⚪ | Dokumentationsübersicht: hervorgehobenes Dokument 'workflow/PLUGIN-REGISTRATION-WORKFLOW.MD' existiert nicht. Korrektur: Der tote Eintrag workflow/PLUGIN-REGISTRATION-WORKFLOW.MD in den hervorgehobenen Dokumenten wurde durch das vorhandene workflow/MARKETPLACE-WORKFLOW.md ersetzt. | [x] Behoben in PR #123 |
+| REF-28 | `CMS/admin/views/posts/list.php:232` | ⚪ | Leerzustand in Tabellen: drei Views übergeben Icon-Schlüssel, die die Icon-Tabelle nicht kennt. Korrektur: Die Icon-Tabelle des Leerzustands kennt jetzt die Schlüssel file-text und users; die drei Aufrufer blieben unverändert. | [x] Behoben in PR #123 |
+| REF-29 | `CMS/core/Services/DashboardService.php:404` | ⚪ | Weitere Spaltenprüfungen auf Spalten, die kein Schemaweg anlegt (geschützt, ohne Laufzeitfehler). Korrektur: SCHEMAÄNDERUNG (ohne Erhöhung der Schema-Versionsnummer): sessions.created_at und subscription_plans.is_featured stehen jetzt in SchemaManager::getSchemaQueries() und werden über die neue Laufzeitprüfung ensureReferencedColumns() (aufgerufen aus ensureRuntimeSchema()) idempotent nachgezogen. Das Sitzungsregister in Auth schreibt per INSERT … ON DUPLICATE KEY UPDATE statt REPLACE, damit created_at den Sitzungsbeginn behält. | [x] Behoben in PR #123 (teilweise, siehe Grenzen) |
+| REF-30 | `DOC/core/DATABASE-SCHEMA.md:7` | ⚪ | DOC/core/DATABASE-SCHEMA.md nennt veraltete Tabellenzahlen. Korrektur: DATABASE-SCHEMA.md nennt jetzt 76 Tabellen (aus SchemaManager::getSchemaQueries() per PHP gezählt) und für v25 die 32 neuen Tabellen: admin_menu_layouts, batch_jobs und die 30 FEATURE_TABLES. Die Zweckspalte führt zusätzlich Knowledgebase und Newsletter. | [x] Behoben in PR #123 |
+| REF-31 | `CMS/core/Services/SearchService.php:242` | ⚪ | SearchService hört auf die Hooks `page_saved` und `post_saved`, die nirgends ausgelöst werden. Korrektur: Die beiden nie ausgelösten Listener page_saved und post_saved in SearchService::initHooks() wurden entfernt. Die Index-Aktualisierung läuft unverändert einmal über cms_after_page_save und cms_after_post_save. | [x] Behoben in PR #123 |
+| REF-32 | `DOC/FILESTRUCTUR.md:50` | ⚪ | DOC/FILESTRUCTUR.md: verweist auf nicht vorhandene Release-Pakete 3.4.0 und nennt nur eine versionierte Test-Suite. Korrektur: Der Verweis auf 365CMS-3.4.0-* ist durch das Namensschema und die vorhandenen Versionen (3.5.0, 3.5.4, 3.5.5, 3.5.6, 4.0.0) ersetzt. Die TESTS-Aussage nennt run-all.php, lib/TestRunner.php und die sechs versionierten Suiten sowie die nur lokal vorhandenen. | [x] Behoben in PR #123 |
+| REF-33 | `CMS/themes/cms-default/update.json:7` | ⚪ | Theme cms-default: Version und Mindest-CMS-Version nach den 4.0.0-Änderungen nicht angehoben. Korrektur: Theme cms-default trägt jetzt Version 1.1.0 und setzt 365CMS 4.0.0 voraus (update.json, theme.json, style.css, functions.php inkl. MERIDIAN_THEME_VERSION, Theme-Katalog). | [x] Behoben in PR #123 (teilweise, siehe Grenzen) |
+| REF-34 | `DOC/admin/FILESTRUCTURE.md:20` | ⚪ | DOC/admin/FILESTRUCTURE.md und DOC/core/SERVICES.md kennen die 4.0.0-Module und -Service-Bereiche nicht. Korrektur: Der Verzeichnisbaum in admin/FILESTRUCTURE.md zeigt alle 27 Modulordner und settings-tabs/, auch in der englischen Zusammenfassung. SERVICES.md nennt alle 20 Unter-Namespaces und hat Tabellenzeilen für die sieben fehlenden Services. | [x] Behoben in PR #123 |
+| REF-35 | `DOC/core/ARCHITECTURE.md:44` | ⚪ | PHP-Mindestversion uneinheitlich angegeben (8.4 statt 8.4.1). Korrektur: Die PHP-Mindestversion steht einheitlich auf 8.4.1: ARCHITECTURE.md (Z. 3, 7, 44), DOC/README.md, INFO.md, ADMIN-MENU.md, UPDATE-DEPLOYMENT-WORKFLOW.md und .oss-scanner/threat_model.md. | [x] Behoben in PR #123 (teilweise, siehe Grenzen) |
+| REF-36 | `.github/SECURITY:1` | ⚪ | Kleinere Konfigurationsverweise: Sicherheitsrichtlinie ohne Dateiendung, Kommentar in .htaccess zeigt in die falsche Richtung. Korrektur: Die Sicherheitsrichtlinie heißt jetzt .github/SECURITY.md (Inhalt unverändert, per mv umbenannt, nicht per git mv). Der Kommentar in CMS/.htaccess Zeile 91 verweist auf den <If>-Block „oben“. | [x] Behoben in PR #123 |
+| REF-37 | `CMS/themes/cms-default/includes/theme-runtime-helpers.php:96` | 🟡 | Standardmenüs und Formulare verlinken nach der Neuinstallation auf nicht vorhandene Seiten (/impressum, /datenschutz, /about) (aus der Laufzeitprüfung). Korrektur: Standardmenüs und feste Links werden beim Rendern gefiltert: Ziele ohne vorhandene Seite oder Route erscheinen nicht. | [x] Behoben in PR #123 |
+| REF-38 | `CMS/themes/cms-default/functions.php:778` | 🟡 | Footer-Link „Newsletter“ führt zur Registrierung statt zu /newsletter (aus der Laufzeitprüfung). Korrektur: Standardeintrag und Rückfall im Footer zeigen auf `/newsletter`. | [x] Behoben in PR #123 |
+| REF-39 | `CMS/core/Member/PluginDashboardRegistry.php:399` | ⚪ | /member/plugin/<unbekannt> antwortet mit 200 statt 404 (aus der Laufzeitprüfung). Korrektur: Vor der Hinweisseite wird der Status 404 gesetzt. | [x] Behoben in PR #123 |
+
+**Schemaänderungen** (Schema-Version bleibt `v25`, Neuinstallation und Laufzeit-Migration, gegen MariaDB geprüft)
+
+- `posts.trash_slug`, `posts.trash_slug_en` (`VARCHAR(255)`), `pages.trash_slug`, `pages.trash_slug_en` (`VARCHAR(200)`)
+- `sessions.created_at`, `subscription_plans.is_featured`
+
+**Übergabe aus der Laufzeitprüfung**
+
+- Prüfbereich 5: `CMS/admin/views/seo/subnav.php:12` – „Sitemaps generieren“ und „robots.txt schreiben“ scheitern auf Redirect-Manager und 404-Monitor immer mit „Sicherheitstoken ungültig“.
+- Prüfbereich 5: `CMS/admin/modules/users/UserSettingsModule.php:52` – Benutzereinstellungen zeigen „Globale Benutzerregistrierung“ als aus, obwohl die Registrierung aktiv ist; Speichern schaltet sie unbeabsichtigt ab.
+- Prüfbereich 5: `CMS/themes/cms-default/404.php:26` – Englische Seiten (/en/…) haben lang="en", aber durchgehend deutsche Theme-Texte.
+- Prüfbereich 6: `CMS/admin/modules/menus/MenuEditorModule.php:540` – Jeder Aufruf des Menü-Editors (GET) löscht alle Menüeinträge und legt sie neu an.
+- Prüfbereich 7: Im Theme `cms-default` liegen nicht eingebundene Dateien unter `includes/` (u. a. `theme-runtime-helpers.php`, `theme-data-helpers.php`); `register.php` verlinkt fest auf `/agb` und `/datenschutz`.
+
+**Grenzen der Umsetzung**
+
+- **REF-16:** Inhalte, die schon vor dem Update im Papierkorb lagen, werden nicht nachträglich geparkt; ihr Slug bleibt bis zum Wiederherstellen oder Löschen belegt. Die JSON-Schnittstelle /api/v1/admin/posts liefert bei status=trash den Platzhalter-Slug statt des Originals (kein ausgeliefertes Skript nutzt sie mit diesem Filter).
+- **REF-19:** Die Gesamtzahlen je Bereich (391/3107/329) gelten für den Stand dieser Sitzung. Legen andere parallele Änderungen neue Dateien unter CMS/ an, müssen sie nachgezogen werden; der Test prüft diese drei Zahlen bewusst nicht.
+- **REF-20:** Die optionale .gitignore-Freigabe für TESTS/functions/ und TESTS/security/ ist nicht umgesetzt (keine Doku-Datei; .gitignore wird gerade anderweitig geändert).
+- **REF-22:** Changelog.md:586 (Eintrag 3.4.02) nennt die Suite weiterhin; die Datei darf laut Arbeitsregeln nicht geändert werden.
+- **REF-23:** Nicht geändert: CMS/config/app.php bleibt ignoriert (Absicht laut Kommentar), doppelte Einträge (/ASSETS/, *.log) bleiben. Neu aufgefallen und nicht behoben: Die Regeln AUDIT* / AUDIT treffen ohne Groß-/Kleinschreibung auch DOC/audit/ und Dateien wie CMS/admin/views/security/audit.php und CMS/admin/views/seo/audit.php (bereits versioniert, neue gleichnamige Dateien würden unter Windows/macOS ignoriert).
+- **REF-24:** Die optionale Erweiterung der Schreibprüfung in SystemInfoModule ist nicht umgesetzt (Code, außerhalb des Minimalplans).
+- **REF-25:** RELEASE/365CMS-4.0.0-full.zip enthält weiter die alte Kopie des Release-Manifests (ZIP und SHA256SUMS waren nicht anzufassen). Die veröffentlichte Kopie unter 365cms.de muss neu ausgespielt werden.
+- **REF-26:** Im Mitgliederprofil fehlen Download und Formular in der Schnellleiste bewusst weiter. Im Knowledgebase-Editor brauchen die beiden Blöcke die Rechte der Beitragseditor-API (Beitrags- bzw.
+- **REF-29:** (b) CMS/themes/cms-default/includes/theme-data-helpers.php wird nirgends eingebunden (ebenso die drei Geschwisterdateien in includes/, per grep ohne Include); die Dateien wurden weder korrigiert noch gelöscht. PackagesModule::ensurePlanColumns() bleibt als Rückfall bestehen.
+- **REF-30:** Der Vergleich Neuinstallation gegen Update lief nicht erneut (keine Datenbank), deshalb bleibt die 68 als Teststand stehen. Die Kommentare in CMS/core/SchemaManager.php:37 und MigrationManager.php:230 sind unverändert (Code, außerhalb dieses Themas).
+- **REF-31:** Ein externes Plugin, das die undokumentierten Namen page_saved/post_saved auslöst, erreicht den Suchindex darüber nicht mehr. Der Filter phinit_head_meta_data (SEOService) wurde nicht angefasst.
+- **REF-32:** Die toten .gitignore-Freigaben (3.4.0, 3.5.2, 3.5.3) bleiben unverändert (optional, keine Doku-Datei).
+- **REF-33:** Changelog.md (nicht anzufassen) erwähnt Theme 1.1.0 noch nicht. Die extern veröffentlichte Datei https://365cms.de/themes/cms-default/update.json muss denselben Stand bekommen, sonst steht dort weiter 1.0.9.
+- **REF-35:** Der Kopfkommentar in TESTS/admin-menu/run.php:5 ("PHP >= 8.4") ist unverändert: Die Datei ist Code und das Thema war auf Dokumentation beschränkt. Einzeilige Kommentaränderung, kann nachgezogen werden.
+- **REF-36:** Git zeigt die Umbenennung bis zum Commit als gelöschte .github/SECURITY plus neue, unversionierte .github/SECURITY.md; beide müssen zusammen eingecheckt werden. Ob GitHub die Richtlinie danach im Reiter „Security“ anzeigt, ist nicht geprüft.
 
 ### 5. Falsche Funktionen und veraltete PHP-/SQL-Konstrukte
 
