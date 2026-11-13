@@ -14,7 +14,7 @@
 
 ---
 
-### v4.0.0 — 12.11.2026
+### v4.0.0 — 12.11.2026 - Feature Release
 
 Version 4.0.0 nimmt fünf bisherige Plugins in den Core auf (Formulare, Newsletter, Knowledgebase, Downloads, Feed-Aggregator), erneuert die Administration (Seitenleiste mit Menü-Profilen, Beitragseditor mit Checkliste und Revisionen) und behebt die Befunde der Folgeaudits vom 08. und 09.11.2026. Die Einträge sind nach Typ gegliedert; Vergleichsstand ist 3.5.6.
 
