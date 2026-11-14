@@ -49,8 +49,11 @@
                 });
             }
 
-            img.parentNode.insertBefore(wrapper, img);
-            wrapper.appendChild(img);
+            // <picture> (AVIF/WebP-Quellen, seit 4.1.0) als Ganzes umschließen: Die <source>-Elemente wirken nur,
+            // solange das <img> direktes Kind von <picture> bleibt.
+            const target = img.parentElement && img.parentElement.tagName === 'PICTURE' ? img.parentElement : img;
+            target.parentNode.insertBefore(wrapper, target);
+            wrapper.appendChild(target);
         });
 
         // Initialize PhotoSwipe lightbox for this container

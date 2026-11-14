@@ -143,6 +143,10 @@ class MediaService {
             'max_upload_size' => '64M',
             'allowed_types' => ['image', 'document', 'video', 'audio', 'archive'],
             'auto_webp' => true,
+            // 4.1.0 (2a): AVIF zusätzlich zu WebP (Standard aus; wirkt nur nach erfolgreicher Probe-Kodierung).
+            'auto_avif' => false,
+            'avif_quality' => \CMS\Services\Media\AvifDerivativeService::DEFAULT_QUALITY,
+            'avif_speed' => \CMS\Services\Media\AvifDerivativeService::DEFAULT_SPEED,
             'strip_exif' => true,
             'jpeg_quality' => 85,
             'max_width' => 2560,
@@ -308,6 +312,9 @@ class MediaService {
             'max_upload_size' => $this->sanitizeSizeSetting((string) $this->getSettingValue($settings, ['max_upload_size'], $defaults['max_upload_size']), $defaults['max_upload_size']),
             'allowed_types' => $allowedTypes,
             'auto_webp' => $this->normalizeBooleanSetting($settings, 'auto_webp', (bool) $defaults['auto_webp']),
+            'auto_avif' => $this->normalizeBooleanSetting($settings, 'auto_avif', (bool) $defaults['auto_avif']),
+            'avif_quality' => max(1, min(100, (int) $this->getSettingValue($settings, ['avif_quality'], $defaults['avif_quality']))),
+            'avif_speed' => max(0, min(10, (int) $this->getSettingValue($settings, ['avif_speed'], $defaults['avif_speed']))),
             'strip_exif' => $this->normalizeBooleanSetting($settings, 'strip_exif', (bool) $defaults['strip_exif']),
             'jpeg_quality' => max(60, min(100, (int) $this->getSettingValue($settings, ['jpeg_quality'], $defaults['jpeg_quality']))),
             'max_width' => max(1, min(8000, (int) $this->getSettingValue($settings, ['max_width'], $defaults['max_width']))),
@@ -814,6 +821,14 @@ class MediaService {
             $paths[] = $variantPath;
         }
 
+        // 4.1.0 (2a): AVIF-Fassungen des Originals und der Größen
+        foreach (array_merge([$absolutePath], $this->getGeneratedVariantPaths($absolutePath)) as $avifSource) {
+            $avifPath = \CMS\Services\Media\AvifDerivativeService::derivativePath($avifSource, 'avif');
+            if ($avifPath !== '' && is_file($avifPath)) {
+                $paths[] = $avifPath;
+            }
+        }
+
         foreach (array_unique($paths) as $path) {
             $this->applyManagedMediaFileModeByAbsolutePath($path);
         }
@@ -1125,8 +1140,32 @@ class MediaService {
         if (!empty($settings['auto_webp'])) {
             $this->generateUploadWebpDerivative($absolutePath, $quality);
         }
+        $this->generateUploadAvifDerivatives($absolutePath, $settings);
 
         $this->applyGeneratedImageFileModes($absolutePath);
+    }
+
+    /**
+     * 4.1.0 (2a): AVIF nach WebP – je Bildgröße, nur behalten, wenn kleiner (AvifDerivativeService).
+     *
+     * @param array<string, mixed> $settings
+     */
+    private function generateUploadAvifDerivatives(string $absolutePath, array $settings): void
+    {
+        if (empty($settings['auto_avif']) || !is_file($absolutePath)) {
+            return;
+        }
+        try {
+            $avif = \CMS\Services\Media\AvifDerivativeService::getInstance();
+            if ($avif->isSupported()) {
+                $avif->generateForImage($absolutePath);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('AVIF-Fassungen konnten nach dem Upload nicht erzeugt werden.', [
+                'path' => $absolutePath,
+                'exception' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function generateUploadWebpDerivative(string $absolutePath, int $quality): void
@@ -1514,6 +1553,7 @@ class MediaService {
             $quality = max(60, min(100, (int) ($settings['jpeg_quality'] ?? 85)));
             $this->generateUploadWebpDerivative($storedAbsolutePath, $quality);
         }
+        $this->generateUploadAvifDerivatives($storedAbsolutePath, $settings);
 
         $this->applyGeneratedImageFileModes($storedAbsolutePath);
 
@@ -1674,7 +1714,54 @@ class MediaService {
      * Delete an item (file or folder)
      */
     public function deleteItem(string $path): bool|WP_Error {
-        return $this->uploadHandler->deleteItem($path);
+        // 4.1.0 (2a): erzeugte Fassungen (Größen, WebP, AVIF) eines Bildes mit entfernen. Vor dem Löschen ermitteln,
+        // weil dafür Zeitstempel und Metadaten der Quelle gebraucht werden.
+        $derivatives = $this->collectDerivativesForDeletion($path);
+
+        $result = $this->uploadHandler->deleteItem($path);
+        if ($result !== true) {
+            return $result;
+        }
+
+        foreach ($derivatives as $derivative) {
+            if (is_file($derivative) && @unlink($derivative)) {
+                $relative = $this->absoluteManagedPathToRelativePath($derivative);
+                if ($relative !== '') {
+                    $this->repository->purgeMetaForPath($relative);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<string> absolute Pfade
+     */
+    private function collectDerivativesForDeletion(string $path): array
+    {
+        $normalized = $this->normalizeManagedRelativePath($path);
+        if ($normalized === '') {
+            return [];
+        }
+        $absolute = $this->resolveManagedAbsolutePath($normalized);
+        if ($absolute instanceof WP_Error || !is_file($absolute)) {
+            return [];
+        }
+
+        try {
+            return \CMS\Services\Media\AvifDerivativeService::getInstance()->derivativesToDelete(
+                $absolute,
+                function (string $candidate): bool {
+                    $relative = $this->absoluteManagedPathToRelativePath($candidate);
+
+                    // Eigenständig hochgeladene Dateien haben eigene Metadaten (uploaded_at) und bleiben stehen.
+                    return $relative === '' || trim((string) ($this->repository->getFileMeta($relative)['uploaded_at'] ?? '')) !== '';
+                }
+            );
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -1951,6 +2038,40 @@ class MediaService {
             'detail' => $didWork ? 'Derivate erzeugt.' : 'Keine passende Derivat-Aktion notwendig.',
             'webp' => $webpStatus,
             'thumbnails' => $thumbnailStatus,
+        ];
+    }
+
+    /**
+     * 4.1.0 (2a): AVIF für ein Originalbild und seine erzeugten Größen (Auftrag „AVIF nachgenerieren“).
+     *
+     * @return array{path:string, status:string, detail:string, created:int}
+     *   status `processed` (mindestens eine Datei erzeugt), `skipped` oder `failed`
+     */
+    public function processAvifJobItem(string $relativePath): array
+    {
+        $normalizedPath = $this->normalizeManagedRelativePath($relativePath);
+        $absolutePath = $normalizedPath !== '' ? $this->resolveManagedAbsolutePath($normalizedPath) : new WP_Error('invalid_path', '');
+        if ($absolutePath instanceof WP_Error || !is_file($absolutePath) || !is_readable($absolutePath)) {
+            return ['path' => $normalizedPath, 'status' => 'failed', 'detail' => 'Datei nicht lesbar oder nicht vorhanden.', 'created' => 0];
+        }
+        if ($this->isGeneratedDerivativeVariant($absolutePath)) {
+            return ['path' => $normalizedPath, 'status' => 'skipped', 'detail' => 'Erzeugte Größe.', 'created' => 0];
+        }
+
+        $results = \CMS\Services\Media\AvifDerivativeService::getInstance()->generateForImage($absolutePath);
+        $this->applyGeneratedImageFileModes($absolutePath);
+        $created = count(array_filter($results, static fn (string $status): bool => $status === \CMS\Services\Media\AvifDerivativeService::STATUS_CREATED));
+        $failed = count(array_filter($results, static fn (string $status): bool => $status === \CMS\Services\Media\AvifDerivativeService::STATUS_FAILED));
+
+        if ($failed > 0 && $created === 0) {
+            return ['path' => $normalizedPath, 'status' => 'failed', 'detail' => 'AVIF-Kodierung fehlgeschlagen.', 'created' => 0];
+        }
+
+        return [
+            'path' => $normalizedPath,
+            'status' => $created > 0 ? 'processed' : 'skipped',
+            'detail' => $created > 0 ? 'AVIF erzeugt.' : 'Bereits vorhanden, nicht kleiner oder nicht unterstützt.',
+            'created' => $created,
         ];
     }
 

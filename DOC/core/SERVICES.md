@@ -64,6 +64,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 | Service | Aufgabe |
 |---|---|
+| `Media\AvifDerivativeService`, `Media\AvifRegenerationService` | AVIF-Fassungen (seit 4.1.0): Probe-Kodierung → Option `media_capabilities`, Erzeugung je Bildgröße nur wenn kleiner als WebP, Pixel-Budget 25 MP, `pictureSources()`/`pictureHtml()` für `<picture>`, Derivate beim Löschen; Auftrag `media_avif` (Schritte à 20) unter *Medien-Werkzeuge*; Hook `cms_media_derivative_created` ([MEDIA-TOOLS.md](../admin/media/MEDIA-TOOLS.md)) |
 | `MediaService` (+ `Media\MediaRepository`, `Media\UploadHandler`, `Media\ImageProcessor`) | Dateisystem-Bibliothek, Metadaten, Kategorien/Tags, Upload-Regeln, `.htaccess`-Schutz. Metadaten-Schreibzugriffe nur über `MediaRepository::updateMeta()` (Dateisperre) bzw. `setFileMeta()`/`mergeFileMeta()` je Datei |
 | `MediaUsageService` | Verwendungsnachweis (Beitragsbilder, Inhalte) |
 | `MediaDeliveryService` | geschützte Auslieferung `/media-file` |

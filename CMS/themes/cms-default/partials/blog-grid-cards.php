@@ -55,7 +55,7 @@ $svgs = [
         $gImageReference = (string) ($item->featured_image ?? '');
         $gImage = function_exists('meridian_get_picture_sources')
             ? meridian_get_picture_sources($gImageReference, null, 960, 560)
-            : ['url' => '', 'webp_url' => '', 'width' => 960, 'height' => 560];
+            : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 960, 'height' => 560];
         $gImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($gImageReference, 960, 560)
             : 'width="960" height="560"';
@@ -66,6 +66,9 @@ $svgs = [
         <?php if ($gImage['url'] !== ''): ?>
         <a href="<?php echo htmlspecialchars(meridian_post_url($item), ENT_QUOTES, 'UTF-8'); ?>" class="card-thumb" style="background:<?php echo $grad; ?>;">
             <picture>
+                <?php if (($gImage['avif_url'] ?? '') !== ''): ?>
+                <source srcset="<?php echo htmlspecialchars($gImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php endif; ?>
                 <?php if ($gImage['webp_url'] !== ''): ?>
                 <source srcset="<?php echo htmlspecialchars($gImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
                 <?php endif; ?>

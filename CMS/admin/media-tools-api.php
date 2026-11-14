@@ -18,6 +18,8 @@ use CMS\Auth;
 use CMS\Logger;
 use CMS\Security;
 use CMS\Services\BatchJobService;
+use CMS\Services\Media\AvifDerivativeService;
+use CMS\Services\Media\AvifRegenerationService;
 use CMS\Services\Media\ThumbnailRegenerationService;
 
 \CMS\CacheManager::instance()->sendResponseHeaders('private');
@@ -54,13 +56,31 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 
 $action = strtolower(trim((string) ($_POST['action'] ?? '')));
 $jobId = max(0, (int) ($_POST['job_id'] ?? 0));
-$service = ThumbnailRegenerationService::getInstance();
 $jobs = BatchJobService::getInstance();
+// 4.1.0 (2a): zwei Aufträge – Vorschaubilder (Standard) und „AVIF nachgenerieren“ (job=avif). Für step/cancel
+// entscheidet der Typ des gespeicherten Auftrags, nicht das Formularfeld.
+$kind = (string) ($_POST['job'] ?? '') === 'avif' ? 'avif' : 'thumbnails';
+if ($jobId > 0 && in_array($action, ['step', 'cancel'], true)) {
+    $storedJob = $jobs->find($jobId);
+    $kind = ($storedJob['type'] ?? '') === AvifRegenerationService::JOB_TYPE ? 'avif' : 'thumbnails';
+}
+$service = $kind === 'avif' ? AvifRegenerationService::getInstance() : ThumbnailRegenerationService::getInstance();
+$auditPrefix = $kind === 'avif' ? 'media.avif' : 'media.thumbnails';
 $public = static fn (?array $job): ?array => $job !== null ? $jobs->toPublic($job) : null;
 
 try {
     switch ($action) {
         case 'start':
+            if ($kind === 'avif') {
+                if (!AvifDerivativeService::getInstance()->isSupported()) {
+                    cms_admin_media_tools_api_error(409, 'media_tools.avif.unsupported');
+                }
+                $started = $service->start($userId > 0 ? $userId : null);
+                if (!$started['resumed']) {
+                    AuditLogger::instance()->log(AuditLogger::CAT_SYSTEM, 'media.avif.start', 'AVIF nachgenerieren gestartet', 'batch_job', (int) $started['job']['id'], ['total' => (int) $started['job']['total']]);
+                }
+                cms_admin_media_tools_api_respond(200, ['success' => true, 'resumed' => $started['resumed'], 'job' => $public($started['job'])]);
+            }
             if (!\CMS\Services\ImageService::getInstance()->isAvailable()) {
                 cms_admin_media_tools_api_error(409, 'media_tools.thumbs.no_library');
             }
@@ -79,7 +99,7 @@ try {
             if ($job === null) {
                 cms_admin_media_tools_api_error(404, 'media_tools.error.unknown_job');
             }
-            AuditLogger::instance()->log(AuditLogger::CAT_SYSTEM, 'media.thumbnails.cancel', 'Vorschaubilder neu erzeugen abgebrochen', 'batch_job', $jobId, ['processed' => (int) $job['processed'], 'total' => (int) $job['total']], 'warning');
+            AuditLogger::instance()->log(AuditLogger::CAT_SYSTEM, $auditPrefix . '.cancel', $kind === 'avif' ? 'AVIF nachgenerieren abgebrochen' : 'Vorschaubilder neu erzeugen abgebrochen', 'batch_job', $jobId, ['processed' => (int) $job['processed'], 'total' => (int) $job['total']], 'warning');
             cms_admin_media_tools_api_respond(200, ['success' => true, 'job' => $public($job)]);
 
         case 'status':

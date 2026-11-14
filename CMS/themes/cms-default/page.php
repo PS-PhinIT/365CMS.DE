@@ -26,7 +26,7 @@ $pageSlug = trim((string) ($page['slug'] ?? ''));
 $pageImageReference = (string) ($page['featured_image'] ?? '');
 $pageImage = function_exists('meridian_get_picture_sources')
     ? meridian_get_picture_sources($pageImageReference, null, 1600, 900)
-    : ['url' => '', 'webp_url' => '', 'width' => 1600, 'height' => 900];
+    : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 1600, 'height' => 900];
 $pageImageDimensions = function_exists('meridian_image_dimension_attributes')
     ? meridian_image_dimension_attributes($pageImageReference, 1600, 900)
     : 'width="1600" height="900"';
@@ -70,6 +70,9 @@ $pageId = (int) ($page['id'] ?? 0);
             <?php if ($pageImage['url'] !== ''): ?>
             <figure class="page-hero__media">
                 <picture>
+                    <?php if (($pageImage['avif_url'] ?? '') !== ''): ?>
+                    <source srcset="<?php echo htmlspecialchars($pageImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                    <?php endif; ?>
                     <?php if ($pageImage['webp_url'] !== ''): ?>
                     <source srcset="<?php echo htmlspecialchars($pageImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
                     <?php endif; ?>

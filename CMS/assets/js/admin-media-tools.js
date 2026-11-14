@@ -1,8 +1,10 @@
 /**
- * Medien-Werkzeuge: Vorschaubilder neu erzeugen – starten, unterbrochenen Lauf fortsetzen oder abbrechen.
+ * Medien-Werkzeuge: Vorschaubilder neu erzeugen und (seit 4.1.0) AVIF nachgenerieren – starten, unterbrochenen
+ * Lauf fortsetzen oder abbrechen.
  *
- * Erwartet ein Element [data-media-tools] mit JSON-Konfiguration
- * { endpoint, token, activeJob, runnerLabels, labels } und nutzt window.cmsBatchRunner.
+ * Erwartet je Auftrag ein Element [data-media-tools] mit JSON-Konfiguration
+ * { endpoint, token, job, activeJob, runnerLabels, labels } und nutzt window.cmsBatchRunner. `job` (z. B. 'avif')
+ * wird beim Start mitgeschickt; Schritte und Abbruch ordnet der Server über die Auftrags-ID zu.
  * Wird die Seite geschlossen, setzt der stündliche Cron den Auftrag fort.
  */
 (function () {
@@ -15,10 +17,13 @@
     }
 
     function init() {
-        var root = document.querySelector('[data-media-tools]');
-        if (!root || !window.cmsBatchRunner) {
+        if (!window.cmsBatchRunner) {
             return;
         }
+        document.querySelectorAll('[data-media-tools]').forEach(initCard);
+    }
+
+    function initCard(root) {
 
         var config;
         try {
@@ -46,6 +51,9 @@
             body.append('action', action);
             if (action === 'start') {
                 body.append('webp', webpInput && webpInput.checked ? '1' : '0');
+            }
+            if (config.job) {
+                body.append('job', String(config.job));
             }
             body.append('csrf_token', config.token);
             if (jobId) {
@@ -85,6 +93,7 @@
                 token: config.token,
                 stepAction: 'step',
                 cancelAction: 'cancel',
+                extra: config.job ? { job: String(config.job) } : {},
                 labels: config.runnerLabels || {},
                 onDone: function () {
                     toast('success', labels.done);
