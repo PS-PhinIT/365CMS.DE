@@ -66,6 +66,12 @@ $footerForgotText = (string) ($settings['footer_link_forgot'] ?? 'Passwort verge
 $footerHomeText = (string) ($settings['footer_link_home'] ?? 'Zur Startseite');
 $documentLanguage = trim((string) ($documentLanguage ?? $requestLocale ?? 'de'));
 $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl und Sonderzeichen.';
+$passkeyErrorText = trim((string) ($passkeyErrorText ?? '')) !== ''
+    ? (string) $passkeyErrorText
+    : 'Die Passkey-Anmeldung konnte nicht abgeschlossen werden. Bitte erneut versuchen oder Passwort-Login nutzen.';
+// Initialen für das Logo-Fallback multibyte-sicher (Umlaute/Emoji nicht zerschneiden).
+$brandInitials = function_exists('mb_substr') ? (string) mb_substr($brandName, 0, 2, 'UTF-8') : (string) substr($brandName, 0, 2);
+$showcase = is_array($showcase ?? null) ? $showcase : null;
 ?><!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars($documentLanguage !== '' ? $documentLanguage : 'de', ENT_QUOTES, 'UTF-8'); ?>">
 <head>
@@ -87,6 +93,7 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
             --cms-auth-input-bg: <?php echo htmlspecialchars((string) ($settings['input_background'] ?? '#f8fafc'), ENT_QUOTES, 'UTF-8'); ?>;
             --cms-auth-input-border: <?php echo htmlspecialchars((string) ($settings['input_border'] ?? '#cbd5e1'), ENT_QUOTES, 'UTF-8'); ?>;
             --cms-auth-card-width: <?php echo $cardWidth; ?>px;
+            --cms-auth-showcase-width: 1040px;
         }
 
         * { box-sizing: border-box; }
@@ -95,9 +102,14 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
             min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             color: var(--cms-auth-text);
+            background-color: var(--cms-auth-bg-start);
+            background-image: linear-gradient(160deg, var(--cms-auth-bg-start) 0%, var(--cms-auth-bg-end) 100%);
+            background-attachment: fixed;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 1.5rem;
             padding: 2rem 1rem;
         }
         .cms-auth-shell {
@@ -150,6 +162,12 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
         .cms-auth-panel .cms-auth-brand h1,
         .cms-auth-panel a {
             color: inherit;
+        }
+        .cms-auth-panel .cms-auth-brand .cms-auth-panel-headline {
+            margin: 0.65rem 0 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.2;
         }
         .cms-auth-panel-links {
             margin-top: 2rem;
@@ -352,6 +370,119 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
             height: 1px;
             background: rgba(148, 163, 184, 0.4);
         }
+        .cms-auth-card-title {
+            margin-top: 0;
+        }
+        .cms-auth-card-subtitle {
+            margin-top: -0.2rem;
+            color: var(--cms-auth-muted);
+            line-height: 1.5;
+        }
+        .cms-auth-passkey-message {
+            margin: 0.75rem 0 0;
+        }
+        .cms-auth-passkey-message:empty {
+            display: none;
+        }
+        /* Login-Showcase (LS-09/LS-10): Mobile-First einspaltig, Text vor Bild; ab 768 px zweispaltig. */
+        .cms-auth-showcase {
+            width: 100%;
+            max-width: var(--cms-auth-showcase-width);
+            display: grid;
+            gap: 1.5rem;
+            padding: 2rem;
+            border-radius: 24px;
+            background: var(--cms-auth-card-bg);
+            color: var(--cms-auth-text);
+            box-shadow: 0 30px 80px color-mix(in srgb, var(--cms-auth-text) 22%, transparent);
+        }
+        .cms-auth-shell--split ~ .cms-auth-showcase {
+            max-width: max(var(--cms-auth-showcase-width), min(1180px, calc(var(--cms-auth-card-width) + 360px)));
+        }
+        .cms-auth-showcase__content {
+            min-width: 0;
+        }
+        .cms-auth-showcase__eyebrow {
+            margin: 0 0 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--cms-auth-link);
+        }
+        .cms-auth-showcase__title {
+            margin: 0 0 0.75rem;
+            font-size: 1.5rem;
+            line-height: 1.25;
+        }
+        .cms-auth-showcase__text {
+            margin: 0 0 0.75rem;
+            color: var(--cms-auth-muted);
+            line-height: 1.6;
+        }
+        .cms-auth-showcase__features {
+            list-style: none;
+            margin: 1rem 0 0;
+            padding: 0;
+            display: grid;
+            gap: 0.6rem;
+        }
+        .cms-auth-showcase__feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            line-height: 1.5;
+        }
+        .cms-auth-showcase__check {
+            flex: 0 0 auto;
+            margin-top: 0.15rem;
+            color: var(--cms-auth-primary);
+        }
+        .cms-auth-showcase__cta-row {
+            margin: 1.5rem 0 0;
+        }
+        .cms-auth-showcase__cta {
+            display: inline-block;
+            padding: 0.75rem 1.25rem;
+            border-radius: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            background: var(--cms-auth-primary);
+            color: var(--cms-auth-primary-text);
+        }
+        .cms-auth-showcase__cta:hover {
+            text-decoration: underline;
+        }
+        .cms-auth-showcase a:focus-visible {
+            outline: 3px solid var(--cms-auth-link);
+            outline-offset: 3px;
+        }
+        .cms-auth-showcase__media {
+            margin: 0;
+            min-width: 0;
+        }
+        .cms-auth-showcase__image {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 16px;
+            border: 1px solid var(--cms-auth-input-border);
+            background: var(--cms-auth-input-bg);
+        }
+        @media (min-width: 768px) {
+            .cms-auth-showcase {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                align-items: center;
+                gap: 2rem;
+                padding: 2.5rem;
+            }
+            .cms-auth-showcase--no-image {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .cms-auth-showcase--image-left .cms-auth-showcase__media {
+                order: -1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -363,20 +494,20 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                         <?php if ($logoUrl !== ''): ?>
                             <img src="<?php echo htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="">
                         <?php else: ?>
-                            <span class="cms-auth-logo-fallback"><?php echo htmlspecialchars((string) substr($brandName, 0, 2), ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span class="cms-auth-logo-fallback"><?php echo htmlspecialchars($brandInitials, ENT_QUOTES, 'UTF-8'); ?></span>
                         <?php endif; ?>
                     </div>
                     <p><?php echo htmlspecialchars($brandName, ENT_QUOTES, 'UTF-8'); ?></p>
-                    <h1><?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?></h1>
+                    <p class="cms-auth-panel-headline"><?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?></p>
                     <?php if ($subheadline !== ''): ?>
                         <p><?php echo htmlspecialchars($subheadline, ENT_QUOTES, 'UTF-8'); ?></p>
                     <?php endif; ?>
-                    <div class="cms-auth-panel-links">
-                        <a href="<?php echo htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($footerHomeText, ENT_QUOTES, 'UTF-8'); ?></a>
-                        <?php if ($footerNote !== ''): ?>
+                    <?php // Dekorativer Bereich (aria-hidden): keine Links oder Überschriften – sie stehen in der Karte. ?>
+                    <?php if ($footerNote !== ''): ?>
+                        <div class="cms-auth-panel-links">
                             <span><?php echo htmlspecialchars($footerNote, ENT_QUOTES, 'UTF-8'); ?></span>
-                        <?php endif; ?>
-                    </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </aside>
         <?php endif; ?>
@@ -387,7 +518,7 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                         <?php if ($logoUrl !== ''): ?>
                             <img src="<?php echo htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="">
                         <?php else: ?>
-                            <span class="cms-auth-logo-fallback"><?php echo htmlspecialchars((string) substr($brandName, 0, 2), ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span class="cms-auth-logo-fallback"><?php echo htmlspecialchars($brandInitials, ENT_QUOTES, 'UTF-8'); ?></span>
                         <?php endif; ?>
                     </div>
                     <p><?php echo htmlspecialchars($brandName, ENT_QUOTES, 'UTF-8'); ?></p>
@@ -397,9 +528,9 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                     <?php endif; ?>
                 </div>
             <?php else: ?>
-                <h1 id="cms-auth-title" style="margin-top:0;"><?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?></h1>
+                <h1 id="cms-auth-title" class="cms-auth-card-title"><?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?></h1>
                 <?php if ($subheadline !== ''): ?>
-                    <p style="margin-top:-0.2rem;color:var(--cms-auth-muted);line-height:1.5;"><?php echo htmlspecialchars($subheadline, ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p class="cms-auth-card-subtitle"><?php echo htmlspecialchars($subheadline, ENT_QUOTES, 'UTF-8'); ?></p>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -455,12 +586,27 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                         <input type="hidden" name="authenticator_data" value="">
                         <input type="hidden" name="signature" value="">
                         <input type="hidden" name="credential_id" value="">
-                        <button id="cms-passkey-button" class="cms-auth-secondary-button" type="button"><?php echo htmlspecialchars($loginPasskeyButtonText, ENT_QUOTES, 'UTF-8'); ?></button>
+                        <button id="cms-passkey-button" class="cms-auth-secondary-button" type="button" aria-describedby="cms-passkey-message"><?php echo htmlspecialchars($loginPasskeyButtonText, ENT_QUOTES, 'UTF-8'); ?></button>
+                        <div id="cms-passkey-message" class="cms-auth-passkey-message" role="alert" data-error-text="<?php echo htmlspecialchars($passkeyErrorText, ENT_QUOTES, 'UTF-8'); ?>"></div>
                     </form>
                     <script <?= \CMS\Security::instance()->nonceAttr() ?>>
                         (function () {
                             const button = document.getElementById('cms-passkey-button');
                             const form = document.getElementById('cms-passkey-form');
+                            const messageBox = document.getElementById('cms-passkey-message');
+                            const showError = function () {
+                                if (!messageBox) {
+                                    return;
+                                }
+                                messageBox.className = 'cms-auth-passkey-message cms-auth-alert cms-auth-alert--error';
+                                messageBox.textContent = messageBox.dataset.errorText || 'Passkey-Anmeldung fehlgeschlagen.';
+                            };
+                            const clearError = function () {
+                                if (messageBox) {
+                                    messageBox.className = 'cms-auth-passkey-message';
+                                    messageBox.textContent = '';
+                                }
+                            };
                             if (!button || !form || !window.PublicKeyCredential || !navigator.credentials) {
                                 return;
                             }
@@ -500,6 +646,7 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
 
                                 submitting = true;
                                 button.disabled = true;
+                                clearError();
 
                                 try {
                                     const publicKey = Object.assign({}, optionsJson);
@@ -532,8 +679,9 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                                 } catch (error) {
                                     submitting = false;
                                     button.disabled = false;
-                                    const message = error && error.message ? error.message : 'Passkey-Anmeldung fehlgeschlagen.';
-                                    window.alert(message);
+                                    // Browsermeldungen (z. B. NotAllowedError) sind technisch und oft englisch: feste Meldung inline zeigen.
+                                    showError();
+                                    button.focus();
                                 }
                             });
                         }());
@@ -667,5 +815,8 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
             </div>
         </section>
     </main>
+    <?php if ($showcase !== null): ?>
+        <?php \CMS\Services\CmsAuthPageService::getInstance()->renderShowcase($showcase, (string) $pageType, 'cms'); ?>
+    <?php endif; ?>
 </body>
 </html>

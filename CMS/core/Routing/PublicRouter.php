@@ -770,8 +770,11 @@ final class PublicRouter
             $safeRedirectParts = $this->resolveAllowedRedirectParts($_GET['redirect'] ?? null);
             $safeRedirectTarget = $this->buildAllowedRedirectTarget($safeRedirectParts);
 
+            // Showcase (LS-15): dieselben Daten wie die Core-Loginseite; die Vorlage gibt sie über
+            // CmsAuthPageService::renderShowcase() oder eigenes Markup aus.
             ThemeManager::instance()->render('login', [
                 'login_redirect' => $safeRedirectTarget,
+                'showcase' => Services\CmsAuthPageService::getInstance()->getShowcase('login'),
             ]);
             return;
         }
@@ -782,7 +785,9 @@ final class PublicRouter
     public function redirectLegacyRegister(): void
     {
         if ($this->shouldRenderLegacyThemeAuthPage()) {
-            ThemeManager::instance()->render('register');
+            ThemeManager::instance()->render('register', [
+                'showcase' => Services\CmsAuthPageService::getInstance()->getShowcase('register'),
+            ]);
             return;
         }
 
