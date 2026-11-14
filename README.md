@@ -1,7 +1,6 @@
 <div align="center">
 
-<!-- Optional: Logo einbinden, falls gewünscht -->
-<!-- <img src="CMS/assets/images/LOGO_365CMS-150px.png" alt="365CMS Logo" width="110" /> -->
+<!-- <img src="https://365cms.de/assets/images/LOGO_365CMS-wo_Text-75px.png" /> -->
 
 # 365CMS
 
