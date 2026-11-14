@@ -12,12 +12,12 @@ if (!defined('ABSPATH')) {
 }
 
 $logoText       = meridian_setting('header', 'logo_text', defined('SITE_NAME') ? SITE_NAME : '365CMS');
-$footerDesc     = meridian_setting('footer', 'footer_description', 'Aktuelle Themen, fundierte Analysen und persönliche Geschichten – täglich neu.');
+$footerDesc     = meridian_setting('footer', 'footer_description', meridian_t('theme.footer.description'));
 $showFooterMenuArea = (bool) meridian_setting('footer', 'show_footer_menu_area', true);
 $showSocial     = (bool) meridian_setting('footer', 'show_social_icons', true);
-$col1Title      = meridian_setting('footer', 'col1_title', 'Rubriken');
-$col2Title      = meridian_setting('footer', 'col2_title', 'Ressourcen');
-$col3Title      = meridian_setting('footer', 'col3_title', 'Über');
+$col1Title      = meridian_setting('footer', 'col1_title', meridian_t('theme.footer.col_topics'));
+$col2Title      = meridian_setting('footer', 'col2_title', meridian_t('theme.footer.col_resources'));
+$col3Title      = meridian_setting('footer', 'col3_title', meridian_t('theme.footer.col_about'));
 $copyrightText  = meridian_copyright(meridian_setting('footer', 'copyright_text', ''));
 $showBackToTop  = (bool) meridian_setting('layout', 'show_back_to_top', true);
 
@@ -80,7 +80,7 @@ $renderFooterMenuLinks = static function (array $items): void {
 
     <!-- Brand Column -->
     <div class="ft-brand">
-      <a href="<?php echo SITE_URL; ?>/" class="site-logo-ft" aria-label="<?php echo htmlspecialchars($logoText); ?> – Startseite">
+      <a href="<?php echo SITE_URL; ?>/" class="site-logo-ft" aria-label="<?php echo esc_attr(meridian_t('theme.header.home_aria', ['{name}' => (string) $logoText])); ?>">
         <span class="lw"><?php echo htmlspecialchars($logoText); ?></span>
         <span class="ld"></span>
       </a>
@@ -131,7 +131,7 @@ $renderFooterMenuLinks = static function (array $items): void {
                    echo '<a href="'. htmlspecialchars(meridian_archive_url('category', (string) ($cat['slug'] ?? '')), ENT_QUOTES, 'UTF-8') .'">'. htmlspecialchars($cat['name'] ?? '') .'</a>';
               }
           } else {
-              echo '<a href="'. SITE_URL .'/blog">Alle Artikel</a>';
+              echo '<a href="'. SITE_URL .'/blog">' . esc_html(meridian_t('theme.footer.all_articles')) . '</a>';
           }
         ?>
       <?php endif; ?>
@@ -143,10 +143,10 @@ $renderFooterMenuLinks = static function (array $items): void {
       <?php if (!empty($footerResourcesMenu)): ?>
         <?php $renderFooterMenuLinks($footerResourcesMenu); ?>
       <?php else: ?>
-        <a href="<?php echo SITE_URL; ?>/blog">Script-Bibliothek</a>
-        <a href="<?php echo SITE_URL; ?>/blog">Tutorials</a>
-        <a href="<?php echo SITE_URL; ?>/search">Suche</a>
-        <a href="<?php echo SITE_URL; ?>/newsletter">Newsletter</a>
+        <a href="<?php echo SITE_URL; ?>/blog"><?php echo esc_html(meridian_t('theme.footer.script_library')); ?></a>
+        <a href="<?php echo SITE_URL; ?>/blog"><?php echo esc_html(meridian_t('theme.footer.tutorials')); ?></a>
+        <a href="<?php echo SITE_URL; ?>/search"><?php echo esc_html(meridian_t('theme.footer.search')); ?></a>
+        <a href="<?php echo SITE_URL; ?>/newsletter"><?php echo esc_html(meridian_t('theme.footer.newsletter')); ?></a>
       <?php endif; ?>
     </div>
 
@@ -172,9 +172,9 @@ $renderFooterMenuLinks = static function (array $items): void {
       <?php if (!empty($footerLegalMenu)): ?>
         <?php $renderFooterMenuLinks($footerLegalMenu); ?>
       <?php else: ?>
-        <?php foreach (['/impressum' => 'Impressum', '/datenschutz' => 'Datenschutz'] as $legalPath => $legalLabel): ?>
+        <?php foreach (['/impressum' => meridian_t('theme.footer.imprint'), '/datenschutz' => meridian_t('theme.footer.privacy')] as $legalPath => $legalLabel): ?>
         <?php if (meridian_default_link_available($legalPath)): ?>
-        <a href="<?php echo SITE_URL . $legalPath; ?>"><?php echo $legalLabel; ?></a>
+        <a href="<?php echo SITE_URL . $legalPath; ?>"><?php echo esc_html($legalLabel); ?></a>
         <?php endif; ?>
         <?php endforeach; ?>
       <?php endif; ?>
@@ -183,7 +183,7 @@ $renderFooterMenuLinks = static function (array $items): void {
 </footer>
 
 <?php if ($showBackToTop): ?>
-<button type="button" id="scrollTop" class="scroll-top" aria-label="Zurück nach oben" title="Zurück nach oben">
+<button type="button" id="scrollTop" class="scroll-top" aria-label="<?php echo esc_attr(meridian_t('theme.footer.back_to_top')); ?>" title="<?php echo esc_attr(meridian_t('theme.footer.back_to_top')); ?>">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 15l-6-6-6 6"/></svg>
 </button>
 <?php endif; ?>

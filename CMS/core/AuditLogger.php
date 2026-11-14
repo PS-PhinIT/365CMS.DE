@@ -97,7 +97,7 @@ class AuditLogger
                     $description,
                     $ipAddress,
                     $userAgent,
-                    !empty($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null,
+                    !empty($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR) : null,
                     $severity,
                 ]
             );
@@ -282,7 +282,11 @@ class AuditLogger
 
     private function sanitizeLogText(string $value, int $maxLength): string
     {
-        $value = trim(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value) ?? '');
+        // Ungültiges UTF-8 (z. B. im User-Agent) ersetzen statt den ganzen Text zu verlieren.
+        if (function_exists('mb_scrub')) {
+            $value = mb_scrub($value, 'UTF-8');
+        }
+        $value = trim(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value) ?? (preg_replace('/[\x00-\x1F\x7F]+/', ' ', $value) ?? $value));
 
         return function_exists('mb_substr') ? mb_substr($value, 0, $maxLength, 'UTF-8') : substr($value, 0, $maxLength);
     }
@@ -291,8 +295,8 @@ class AuditLogger
     private function sanitizeMetadata(array $metadata): array
     {
         foreach ($metadata as $key => $value) {
-            $normalizedKey = strtolower((string)$key);
-            if (preg_match('/(password|passwd|secret|token|nonce|csrf|auth|mfa|key|credential|cookie|session)/', $normalizedKey) === 1) {
+            // Gleicher Schlüsselfilter wie im Logger, damit beide nicht auseinanderlaufen.
+            if (Logger::isSensitiveKey($key)) {
                 $metadata[$key] = '***';
                 continue;
             }
@@ -313,6 +317,7 @@ class AuditLogger
     {
         $value = preg_replace('/([?&](?:token|csrf_token|nonce|key|secret|password|pass)=)[^&\s]+/i', '$1***', $value) ?? $value;
         $value = preg_replace('/\b(Bearer\s+)[A-Za-z0-9._~+\/-]+=*/i', '$1***', $value) ?? $value;
+        $value = preg_replace('/\b(password|passwd|secret|token|credential|api[_-]?key)(\s*[=:]\s*)[^\s&]+/i', '$1$2***', $value) ?? $value;
 
         return $value;
     }

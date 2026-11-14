@@ -1096,7 +1096,7 @@ final class EntryRepository
      */
     private function buildSearchCondition(string $search, string $searchMode, string $paramPrefix): array
     {
-        $needle = '%' . $search . '%';
+        $needle = '%' . \cms_escape_like($search) . '%';
         $sqlParts = [
             "title LIKE :{$paramPrefix}_title",
             "keyword LIKE :{$paramPrefix}_keyword",
@@ -1128,7 +1128,7 @@ final class EntryRepository
                 $sqlParts[] = "synonyms LIKE {$paramTokenNeedle}";
                 $params[$paramKeyword] = [$token, PDO::PARAM_STR];
                 $params[$paramTitle] = [$token, PDO::PARAM_STR];
-                $params[$paramTokenNeedle] = ['%' . $token . '%', PDO::PARAM_STR];
+                $params[$paramTokenNeedle] = ['%' . \cms_escape_like($token) . '%', PDO::PARAM_STR];
             }
         }
 

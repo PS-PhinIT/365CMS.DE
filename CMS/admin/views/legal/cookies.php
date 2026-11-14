@@ -490,7 +490,7 @@ $cookieManagerConfig = [
                     </div>
                     <div class="mb-3">
                         <label for="catSlug" class="form-label">Slug</label>
-                        <input type="text" name="category_slug" id="catSlug" class="form-control">
+                        <input type="text" name="category_slug" id="catSlug" class="form-control" maxlength="100">
                     </div>
                     <div class="mb-3">
                         <label for="catDesc" class="form-label">Beschreibung</label>

@@ -20,21 +20,20 @@ $recentPosts = meridian_get_recent_posts(3);
     <div class="error-page">
         <div class="error-page-inner">
             <div class="error-code">404</div>
-            <h1 class="error-title">Seite nicht gefunden</h1>
+            <h1 class="error-title"><?php echo esc_html(meridian_t('theme.404.title')); ?></h1>
             <p class="error-desc">
-                Die gesuchte Seite existiert nicht oder wurde verschoben.
-                Überprüfe die Adresse oder kehre zur Startseite zurück.
+                <?php echo esc_html(meridian_t('theme.404.text')); ?>
             </p>
             <div class="error-actions">
-                <a href="<?php echo SITE_URL; ?>/" class="btn-solid">Zur Startseite</a>
-                <a href="<?php echo SITE_URL; ?>/blog" class="btn-ghost">Blog durchsuchen</a>
+                <a href="<?php echo SITE_URL; ?>/" class="btn-solid"><?php echo esc_html(meridian_t('theme.common.back_home')); ?></a>
+                <a href="<?php echo SITE_URL; ?>/blog" class="btn-ghost"><?php echo esc_html(meridian_t('theme.404.browse_blog')); ?></a>
             </div>
         </div>
     </div>
 
     <?php if (!empty($recentPosts)): ?>
     <section class="error-suggestions">
-        <h2 class="section-label" style="text-align:center;margin-bottom:1.5rem;">Aktuelle Artikel</h2>
+        <h2 class="section-label" style="text-align:center;margin-bottom:1.5rem;"><?php echo esc_html(meridian_t('theme.404.recent_posts')); ?></h2>
         <div class="card-grid">
             <?php foreach ($recentPosts as $post): ?>
             <article class="card">

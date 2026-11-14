@@ -95,7 +95,7 @@ class MigrationManager
                 `last_used_at` TIMESTAMP NULL DEFAULT NULL,
                 INDEX `idx_user` (`user_id`),
                 UNIQUE INDEX `idx_cred_id` (`credential_id`(255))
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS `{$p}mail_log` (
                 `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `recipient` VARCHAR(255) NOT NULL,
@@ -112,7 +112,7 @@ class MigrationManager
                 INDEX `idx_recipient` (`recipient`),
                 INDEX `idx_created_at` (`created_at`),
                 INDEX `idx_source` (`source`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS `{$p}mail_queue` (
                 `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `recipient` VARCHAR(255) NOT NULL,
@@ -141,7 +141,7 @@ class MigrationManager
                 INDEX `idx_locked_at` (`locked_at`),
                 INDEX `idx_error_category` (`error_category`),
                 INDEX `idx_created_at` (`created_at`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "ALTER TABLE `{$p}mail_queue` ADD COLUMN `content_type` VARCHAR(20) NOT NULL DEFAULT 'html' AFTER `headers`",
             "ALTER TABLE `{$p}mail_queue` ADD COLUMN `source` VARCHAR(100) NOT NULL DEFAULT 'system' AFTER `content_type`",
             "ALTER TABLE `{$p}mail_queue` ADD COLUMN `max_attempts` INT UNSIGNED NOT NULL DEFAULT 5 AFTER `attempts`",

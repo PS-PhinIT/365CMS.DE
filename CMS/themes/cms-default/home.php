@@ -70,8 +70,8 @@ try {
     $excludeIds = array_merge(
         $heroPost ? [(int)$heroPost->id] : [],
         array_map(fn($p) => (int)$p->id, $articleList)
-    );
-    $placeholders = $excludeIds ? implode(',', array_fill(0, count($excludeIds), '?')) : '0';
+    ) ?: [0]; // Leerer Blog: ID 0 als Platzhalter, sonst stimmt die Parameterzahl nicht
+    $placeholders = implode(',', array_fill(0, count($excludeIds), '?'));
     $stmt = $pdo->prepare(
         "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), u.username) AS author_name, c.name AS category_name, c.slug AS category_slug
          FROM {$prefix}posts p
@@ -81,7 +81,7 @@ try {
          ORDER BY p.views DESC
          LIMIT 3"
     );
-    $stmt->execute($excludeIds ?: [0]);
+    $stmt->execute($excludeIds);
     $cardPosts = $stmt->fetchAll(\PDO::FETCH_OBJ);
 } catch (\Throwable $e) {
     $cardPosts = [];
@@ -94,7 +94,7 @@ try {
         $heroPost ? [(int)$heroPost->id] : [],
         array_map(fn($p) => (int)$p->id, $articleList),
         array_map(fn($p) => (int)$p->id, $cardPosts)
-    );
+    ) ?: [0]; // Leerer Blog: sonst entstünde „NOT IN ()“
     $placeholders = implode(',', array_fill(0, count($allExclude), '?'));
     $stmt = $pdo->prepare(
         "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), u.username) AS author_name, c.name AS category_name, c.slug AS category_slug
@@ -105,7 +105,7 @@ try {
          ORDER BY p.published_at DESC
          LIMIT 2"
     );
-    $stmt->execute($allExclude ?: [0]);
+    $stmt->execute($allExclude);
     $featurePosts = $stmt->fetchAll(\PDO::FETCH_OBJ);
 } catch (\Throwable $e) {
     $featurePosts = [];
@@ -190,7 +190,7 @@ $numRecent        = count($recentSidebar);
             <?php echo meridian_post_update_badge($heroPost); ?>
             <?php if (meridian_setting('blog', 'show_reading_time', true)): ?>
             <span class="meta-sep">·</span>
-            <span class="meta-read"><?php echo meridian_reading_time($heroPost->content); ?> Min. Lesezeit</span>
+            <span class="meta-read"><?php echo meridian_reading_time((string) ($heroPost->content ?? '')); ?> Min. Lesezeit</span>
             <?php endif; ?>
         </div>
     </div>
@@ -239,7 +239,7 @@ $numRecent        = count($recentSidebar);
                     <?php echo htmlspecialchars($post->title); ?>
                 </a>
             </div>
-            <?php $artExcerpt = $post->excerpt ?: meridian_excerpt($post->content, 120); ?>
+            <?php $artExcerpt = $post->excerpt ?: meridian_excerpt((string) ($post->content ?? ''), 120); ?>
             <?php if ($artExcerpt): ?>
             <div class="art-excerpt"><?php echo htmlspecialchars($artExcerpt); ?></div>
             <?php endif; ?>
@@ -247,7 +247,7 @@ $numRecent        = count($recentSidebar);
                 <time><?php echo meridian_format_date($post->published_at ?? $post->created_at); ?></time>
                 <?php if (meridian_setting('blog', 'show_reading_time', true)): ?>
                 <span class="dot"></span>
-                <span class="read-t"><?php echo meridian_reading_time($post->content); ?></span>
+                <span class="read-t"><?php echo meridian_reading_time((string) ($post->content ?? '')); ?></span>
                 <?php endif; ?>
                 <?php echo meridian_post_update_badge($post); ?>
             </div>
@@ -294,7 +294,7 @@ $numRecent        = count($recentSidebar);
                     <?php echo htmlspecialchars($post->title); ?>
                 </a>
             </h3>
-            <p><?php echo htmlspecialchars(meridian_excerpt($post->excerpt ?: $post->content, 100)); ?></p>
+            <p><?php echo htmlspecialchars(meridian_excerpt((string) ($post->excerpt ?: $post->content), 100)); ?></p>
             <div class="card-footer">
                 <time><?php echo meridian_format_date($post->published_at ?? $post->created_at, true); ?></time>
                 <?php echo meridian_post_update_badge($post); ?>
@@ -317,7 +317,7 @@ $numRecent        = count($recentSidebar);
                 <?php echo htmlspecialchars($post->title); ?>
             </a>
         </h3>
-        <p><?php echo htmlspecialchars(meridian_excerpt($post->excerpt ?: $post->content, 120)); ?></p>
+        <p><?php echo htmlspecialchars(meridian_excerpt((string) ($post->excerpt ?: $post->content), 120)); ?></p>
         <?php echo meridian_post_update_badge($post); ?>
         <a href="<?php echo htmlspecialchars(meridian_post_url($post), ENT_QUOTES, 'UTF-8'); ?>" class="feature-link">
             <?php echo htmlspecialchars($post->category_name ?: 'Weiterlesen'); ?> →

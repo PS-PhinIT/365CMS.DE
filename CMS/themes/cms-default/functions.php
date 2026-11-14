@@ -1495,12 +1495,12 @@ function meridian_footer_fallback_links(): array
     $links = [];
     foreach (['about', 'ueber-uns', 'ueber'] as $slug) {
         if ($pageExists($slug)) {
-            $links[] = ['label' => 'Über uns', 'url' => '/' . $slug];
+            $links[] = ['label' => meridian_t('theme.footer.about_us'), 'url' => '/' . $slug];
             break;
         }
     }
-    $links[] = ['label' => 'Kontakt', 'url' => '/contact'];
-    foreach (['impressum' => 'Impressum', 'datenschutz' => 'Datenschutz'] as $slug => $label) {
+    $links[] = ['label' => meridian_t('theme.footer.contact'), 'url' => '/contact'];
+    foreach (['impressum' => meridian_t('theme.footer.imprint'), 'datenschutz' => meridian_t('theme.footer.privacy')] as $slug => $label) {
         if ($pageExists($slug)) {
             $links[] = ['label' => $label, 'url' => '/' . $slug];
         }
@@ -1572,9 +1572,9 @@ function meridian_document_title(string $siteTitle, array $context = []): string
     $statusCode = http_response_code();
     $path = '/' . trim((string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/'), '/');
     if (is_int($statusCode) && $statusCode === 404) {
-        $label = 'Seite nicht gefunden';
+        $label = meridian_t('theme.404.title');
     } elseif (!empty($context['error_code'])) {
-        $label = 'Fehler ' . (int) $context['error_code'];
+        $label = meridian_t('theme.error.title_code', ['{code}' => (int) $context['error_code']]);
     } elseif (($name = $readName($context['category'] ?? null)) !== '') {
         $label = $name;
     } elseif (($name = $readName($context['tag'] ?? null)) !== '') {
@@ -1613,6 +1613,23 @@ function meridian_current_request_locale(): string
         return (string) ($context['locale'] ?? 'de');
     } catch (\Throwable $e) {
         return 'de';
+    }
+}
+
+/**
+ * Theme-Text in der Request-Sprache (/en/… → en), Schlüssel aus CMS/lang/<locale>.yaml.
+ *
+ * @param array<string, string|int> $params Platzhalter, z. B. ['{count}' => 3]
+ */
+function meridian_t(string $key, array $params = []): string
+{
+    static $locale = null;
+    $locale ??= meridian_current_request_locale();
+
+    try {
+        return \CMS\Services\TranslationService::getInstance()->translate($key, 'default', array_map('strval', $params), $locale);
+    } catch (\Throwable) {
+        return $key;
     }
 }
 
@@ -2286,7 +2303,7 @@ if (!function_exists('meridian_copyright')) {
     function meridian_copyright(string $template = ''): string
     {
         if ($template === '') {
-            $template = meridian_setting('footer', 'copyright_text', '© {year} {site_title}. Alle Rechte vorbehalten.');
+            $template = meridian_setting('footer', 'copyright_text', meridian_t('theme.footer.copyright'));
         }
         $siteName = defined('SITE_NAME') ? SITE_NAME : '365CMS';
         $text = str_replace(['{year}', '{site_title}'], [date('Y'), $siteName], $template);

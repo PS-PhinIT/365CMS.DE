@@ -73,6 +73,24 @@ final class CronRunnerService
         }
 
         $lockHandle = $this->acquireLock();
+        if ($lockHandle === false) {
+            // Sperrdatei nicht anlegbar: nicht als „bereits aktiv“ melden, sonst laufen Aufgaben unbemerkt nie.
+            $this->recordRunStatus(false, $task, 'Sperrdatei nicht anlegbar');
+            $lockError = function_exists('__') ? (string) __('cron.runner.lock_unavailable') : '';
+
+            return [
+                'success' => false,
+                'task' => $task,
+                'mode' => $mode,
+                'source' => $source,
+                'result' => $result,
+                'error_code' => 'lock_unavailable',
+                'error' => $lockError !== '' && $lockError !== 'cron.runner.lock_unavailable'
+                    ? $lockError
+                    : 'Cron-Sperrdatei konnte nicht angelegt werden. Details wurden intern protokolliert.',
+            ];
+        }
+
         if ($lockHandle === null) {
             return [
                 'success' => false,
@@ -264,16 +282,25 @@ final class CronRunnerService
     }
 
     /**
-     * @return resource|null
+     * Sperre unter cache/ (wie die Update-Sperre): unabhängig von sys_get_temp_dir() und open_basedir.
+     *
+     * @return resource|false|null Handle; false = Sperrdatei nicht anlegbar (protokolliert); null = Sperre belegt
      */
     private function acquireLock()
     {
-        $lockFile = rtrim((string) sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '365cms-cron-' . hash('sha256', ABSPATH) . '.lock';
-        $lockHandle = @fopen($lockFile, 'c+');
-        if (!is_resource($lockHandle) || !@flock($lockHandle, LOCK_EX | LOCK_NB)) {
-            if (is_resource($lockHandle)) {
-                @fclose($lockHandle);
-            }
+        $lockDirectory = rtrim((string) ABSPATH, '/\\') . DIRECTORY_SEPARATOR . 'cache';
+        $lockFile = $lockDirectory . DIRECTORY_SEPARATOR . '.cron-run.lock';
+        $lockHandle = (is_dir($lockDirectory) || @mkdir($lockDirectory, 0755, true) || is_dir($lockDirectory))
+            ? @fopen($lockFile, 'c+')
+            : false;
+        if (!is_resource($lockHandle)) {
+            \CMS\Logger::instance()->withChannel('cron')->error('Cron lock file could not be opened.', ['path' => $lockFile]);
+
+            return false;
+        }
+
+        if (!@flock($lockHandle, LOCK_EX | LOCK_NB)) {
+            @fclose($lockHandle);
 
             return null;
         }

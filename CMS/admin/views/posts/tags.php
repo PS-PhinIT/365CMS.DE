@@ -194,14 +194,14 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
             <div class="alert alert-danger taxonomy-form-error d-none" data-taxonomy-form-error role="alert"></div>
             <div class="mb-3">
                 <label class="form-label required" for="postTagPanelName">Name</label>
-                <input type="text" class="form-control" id="postTagPanelName" name="tag_name" value="<?php echo htmlspecialchars($editTagName, ENT_QUOTES); ?>" data-taxonomy-field="tag_name" data-taxonomy-name required>
+                <input type="text" class="form-control" id="postTagPanelName" name="tag_name" value="<?php echo htmlspecialchars($editTagName, ENT_QUOTES); ?>" maxlength="100" data-taxonomy-field="tag_name" data-taxonomy-name required>
                 <div class="taxonomy-validation-error d-none" data-taxonomy-error-for="tag_name"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label" for="postTagPanelSlug">Slug</label>
                 <div class="input-group">
                     <span class="input-group-text">/</span>
-                    <input type="text" class="form-control" id="postTagPanelSlug" name="tag_slug" value="<?php echo htmlspecialchars($editTagSlug, ENT_QUOTES); ?>" placeholder="wird automatisch generiert" data-taxonomy-field="tag_slug" data-taxonomy-slug>
+                    <input type="text" class="form-control" id="postTagPanelSlug" name="tag_slug" value="<?php echo htmlspecialchars($editTagSlug, ENT_QUOTES); ?>" placeholder="wird automatisch generiert" maxlength="100" data-taxonomy-field="tag_slug" data-taxonomy-slug>
                 </div>
                 <div class="taxonomy-validation-error d-none" data-taxonomy-error-for="tag_slug"></div>
             </div>
@@ -209,7 +209,7 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
                 <label class="form-label" for="postTagPanelSlugEn">Slug (EN)</label>
                 <div class="input-group">
                     <span class="input-group-text">/</span>
-                    <input type="text" class="form-control" id="postTagPanelSlugEn" name="tag_slug_en" value="<?php echo htmlspecialchars($editTagSlugEn, ENT_QUOTES); ?>" placeholder="optional – für englische Archiv-URLs" data-taxonomy-field="tag_slug_en">
+                    <input type="text" class="form-control" id="postTagPanelSlugEn" name="tag_slug_en" value="<?php echo htmlspecialchars($editTagSlugEn, ENT_QUOTES); ?>" placeholder="optional – für englische Archiv-URLs" maxlength="100" data-taxonomy-field="tag_slug_en">
                 </div>
                 <div class="form-hint">Optionaler zweiter Slug für das englische Tag-Archiv. Leer lassen, um den Haupt-Slug für alle Sprachen zu nutzen.</div>
                 <div class="taxonomy-validation-error d-none" data-taxonomy-error-for="tag_slug_en"></div>

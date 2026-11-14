@@ -254,10 +254,14 @@ class Database implements DatabaseInterface
 
     /**
      * Insert data (mit Error-Tracking)
+     *
+     * Ausführungsfehler → false, `last_error` und Eintrag im Fehlerlog; Vorbereitungs-/Bezeichnerfehler → Exception.
      */
     public function insert(string $table, array $data): int|bool
     {
         $startedAt = microtime(true);
+        $this->last_error = '';
+        $sql = '';
         try {
             $table = $this->prefix . $table;
             $keys = array_keys($data);
@@ -272,25 +276,27 @@ class Database implements DatabaseInterface
 
             if (!$result) {
                 $error = $this->lastStatement->errorInfo();
-                $this->last_error = $error[2] ?? 'Unknown error';
-                return false;
+                return $this->recordWriteFailure('insert', $table, (string) ($error[2] ?? 'Unknown error'), $sql);
             }
 
             $this->logQueryTelemetry($sql, array_values($data), $startedAt);
 
             return (int) $this->pdo->lastInsertId();
         } catch (\PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return false;
+            return $this->recordWriteFailure('insert', $table, $e->getMessage(), $sql);
         }
     }
 
     /**
      * Update data (mit Error-Tracking)
+     *
+     * Ausführungsfehler → false, `last_error` und Eintrag im Fehlerlog; Vorbereitungs-/Bezeichnerfehler → Exception.
      */
     public function update(string $table, array $data, array $where): bool
     {
         $startedAt = microtime(true);
+        $this->last_error = '';
+        $sql = '';
         try {
             $table = $this->prefix . $table;
             $set = [];
@@ -314,17 +320,27 @@ class Database implements DatabaseInterface
 
             if (!$result) {
                 $error = $this->lastStatement->errorInfo();
-                $this->last_error = $error[2] ?? 'Unknown error';
-                return false;
+                return $this->recordWriteFailure('update', $table, (string) ($error[2] ?? 'Unknown error'), $sql);
             }
 
             $this->logQueryTelemetry($sql, $values, $startedAt);
 
             return true;
         } catch (\PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return false;
+            return $this->recordWriteFailure('update', $table, $e->getMessage(), $sql);
         }
+    }
+
+    /** Merkt und protokolliert einen Ausführungsfehler von insert()/update() (ohne Parameterwerte). */
+    private function recordWriteFailure(string $operation, string $table, string $message, string $sql): false
+    {
+        $this->last_error = $message;
+        // Doppelte Werte (z. B. E-Mail-Adressen) nicht ins Log übernehmen.
+        $logMessage = preg_replace("/(Duplicate entry ').*?(' for key)/s", '$1***$2', $message) ?? $message;
+        error_log('Database::' . $operation . '(' . $this->sanitizeDiagnosticText($table, 120) . ') failed: '
+            . $this->sanitizeDiagnosticText($logMessage) . ($sql !== '' ? ' | SQL: ' . $this->summarizeSqlForLog($sql) : ''));
+
+        return false;
     }
 
     /**

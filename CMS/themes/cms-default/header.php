@@ -97,7 +97,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
 </head>
 <body class="meridian-theme">
 
-  <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
+  <a class="skip-link" href="#main-content"><?php echo esc_html(meridian_t('theme.header.skip_link')); ?></a>
   <?php if (class_exists('\CMS\Hooks')) { \CMS\Hooks::doAction('body_start'); } ?>
 
 <?php if ($flashMsg): ?>
@@ -114,7 +114,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
 
     <!-- Logo + optionaler Titel daneben -->
     <div class="site-logo-group">
-      <a href="<?php echo SITE_URL; ?>/" class="site-logo" aria-label="<?php echo htmlspecialchars($logoText); ?> – Startseite">
+      <a href="<?php echo SITE_URL; ?>/" class="site-logo" aria-label="<?php echo esc_attr(meridian_t('theme.header.home_aria', ['{name}' => (string) $logoText])); ?>">
         <?php if ($logoType === 'image' && $logoImageUrl): ?>
             <img src="<?php echo htmlspecialchars($logoImageUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($logoText); ?>" <?php echo $logoDimensionAttributes; ?> <?php echo $logoLoadingAttributes; ?> style="max-height:<?php echo $logoHeight; ?>px;display:block;width:auto;">
         <?php else: ?>
@@ -131,10 +131,10 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
     </div>
 
     <!-- Primary Nav -->
-    <nav class="primary-nav" aria-label="Hauptnavigation">
+    <nav class="primary-nav" aria-label="<?php echo esc_attr(meridian_t('theme.nav.primary')); ?>">
         <?php
         $navItems = [
-            ['label' => 'Startseite', 'href' => SITE_URL . '/'],
+            ['label' => meridian_t('theme.nav.home'), 'href' => SITE_URL . '/'],
             ['label' => 'Blog',        'href' => SITE_URL . '/blog'],
         ];
         $mobileNavItems = [];
@@ -189,28 +189,28 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
     <!-- Header Actions -->
     <div class="header-actions">
       <?php if ($showSearch): ?>
-      <button type="button" class="btn-icon" id="searchToggle" aria-label="Suche öffnen" aria-expanded="false" aria-controls="headerSearch">
+      <button type="button" class="btn-icon" id="searchToggle" aria-label="<?php echo esc_attr(meridian_t('theme.header.search_open')); ?>" aria-expanded="false" aria-controls="headerSearch">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
       <?php endif; ?>
 
       <?php if ($isLoggedIn): ?>
-          <a href="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . $accountPath, ENT_QUOTES, 'UTF-8'); ?>" class="btn-ghost">Mein Bereich</a>
+          <a href="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . $accountPath, ENT_QUOTES, 'UTF-8'); ?>" class="btn-ghost"><?php echo esc_html(meridian_t('theme.header.account')); ?></a>
           <form method="POST" action="<?php echo htmlspecialchars($logoutAction, ENT_QUOTES, 'UTF-8'); ?>" class="logout-form">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($logoutToken, ENT_QUOTES, 'UTF-8'); ?>">
             <button type="submit" class="btn-ghost btn-ghost--button">Logout</button>
           </form>
       <?php else: ?>
           <?php if ($showLoginBtn): ?>
-          <a href="<?php echo htmlspecialchars(meridian_auth_url('login'), ENT_QUOTES, 'UTF-8'); ?>" class="btn-ghost">Anmelden</a>
+          <a href="<?php echo htmlspecialchars(meridian_auth_url('login'), ENT_QUOTES, 'UTF-8'); ?>" class="btn-ghost"><?php echo esc_html(meridian_t('theme.header.login')); ?></a>
           <?php endif; ?>
           <?php if ($showRegBtn): ?>
-          <a href="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>" class="btn-solid">Registrieren</a>
+          <a href="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>" class="btn-solid"><?php echo esc_html(meridian_t('theme.header.register')); ?></a>
           <?php endif; ?>
       <?php endif; ?>
 
       <!-- Hamburger (nur mobil sichtbar via CSS) -->
-      <button type="button" class="nav-toggle" id="navToggle" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobileNavPanel">
+      <button type="button" class="nav-toggle" id="navToggle" aria-label="<?php echo esc_attr(meridian_t('theme.header.menu_open')); ?>" aria-expanded="false" aria-controls="mobileNavPanel">
         <span class="nav-toggle-bar"></span>
         <span class="nav-toggle-bar"></span>
         <span class="nav-toggle-bar"></span>
@@ -220,10 +220,10 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
   <?php if ($showSearch): ?>
   <div class="header-search" id="headerSearch" aria-hidden="true">
     <form class="header-search-form" action="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . '/search', ENT_QUOTES, 'UTF-8'); ?>" method="GET" role="search">
-      <label for="headerSearchInput" class="sr-only">Website durchsuchen</label>
-      <input type="search" id="headerSearchInput" name="q" class="form-control header-search-input" placeholder="Suchen…" maxlength="200" autocomplete="off">
-      <button type="submit" class="btn-submit">Suchen</button>
-      <button type="button" class="btn-icon" id="searchClose" aria-label="Suche schließen">
+      <label for="headerSearchInput" class="sr-only"><?php echo esc_html(meridian_t('theme.header.search_label')); ?></label>
+      <input type="search" id="headerSearchInput" name="q" class="form-control header-search-input" placeholder="<?php echo esc_attr(meridian_t('theme.header.search_placeholder')); ?>" maxlength="200" autocomplete="off">
+      <button type="submit" class="btn-submit"><?php echo esc_html(meridian_t('theme.header.search_submit')); ?></button>
+      <button type="button" class="btn-icon" id="searchClose" aria-label="<?php echo esc_attr(meridian_t('theme.header.search_close')); ?>">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </form>
@@ -233,12 +233,12 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
 
 <!-- Kategorie/Menü-Leiste -->
 <?php if ($headerBarMode !== 'none'): ?>
-<nav class="category-bar" aria-label="<?php echo $headerBarMode === 'categories' ? 'Kategorien' : 'Sekundärnavigation'; ?>">
+<nav class="category-bar" aria-label="<?php echo esc_attr(meridian_t($headerBarMode === 'categories' ? 'theme.nav.categories' : 'theme.nav.secondary')); ?>">
   <div class="category-bar-inner">
     
     <?php if ($headerBarMode === 'categories'): ?>
-        <span class="cat-label" aria-hidden="true">Kategorien</span>
-        <a href="<?php echo SITE_URL; ?>/blog" class="<?php echo $currentPath === '/blog' ? 'active' : ''; ?>"<?php echo $currentPath === '/blog' ? ' aria-current="page"' : ''; ?>>Alle</a>
+        <span class="cat-label" aria-hidden="true"><?php echo esc_html(meridian_t('theme.nav.categories')); ?></span>
+        <a href="<?php echo SITE_URL; ?>/blog" class="<?php echo $currentPath === '/blog' ? 'active' : ''; ?>"<?php echo $currentPath === '/blog' ? ' aria-current="page"' : ''; ?>><?php echo esc_html(meridian_t('theme.nav.all')); ?></a>
         <?php
         $cats = function_exists('meridian_get_categories') ? meridian_get_categories(8) : [];
         if (!empty($cats)):
@@ -264,7 +264,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
         ?>
             <a href="<?php echo htmlspecialchars($mUrl); ?>"><?php echo htmlspecialchars($mLabel); ?></a>
         <?php endforeach; else: ?>
-            <span style="font-size:0.8rem;color:var(--ink-muted);">Kein Menü für Position "Sekundär" zugewiesen.</span>
+            <span style="font-size:0.8rem;color:var(--ink-muted);"><?php echo esc_html(meridian_t('theme.nav.no_secondary_menu')); ?></span>
         <?php endif; ?>
     <?php endif; ?>
 
@@ -276,9 +276,9 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
 <div id="mobileNavOverlay" class="mobile-nav-overlay" aria-hidden="true"></div>
 
 <!-- Mobile Nav Panel (Slide-in von rechts) -->
-<nav id="mobileNavPanel" class="mobile-nav-panel" aria-hidden="true" inert aria-label="Mobile Navigation">
+<nav id="mobileNavPanel" class="mobile-nav-panel" aria-hidden="true" inert aria-label="<?php echo esc_attr(meridian_t('theme.nav.mobile')); ?>">
   <div class="mobile-nav-header">
-    <a href="<?php echo SITE_URL; ?>/" class="site-logo" aria-label="<?php echo htmlspecialchars($logoText); ?> – Startseite" style="text-decoration:none;">
+    <a href="<?php echo SITE_URL; ?>/" class="site-logo" aria-label="<?php echo esc_attr(meridian_t('theme.header.home_aria', ['{name}' => (string) $logoText])); ?>" style="text-decoration:none;">
       <?php if ($logoType === 'image' && $logoImageUrl): ?>
         <img src="<?php echo htmlspecialchars($logoImageUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($logoText); ?>" <?php echo $logoDimensionAttributes; ?> <?php echo $logoLoadingAttributes; ?> style="max-height:32px;width:auto;">
       <?php else: ?>
@@ -286,7 +286,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
         <span class="logo-dot"></span>
       <?php endif; ?>
     </a>
-    <button type="button" id="mobileNavClose" class="btn-icon" aria-label="Menü schließen" style="margin-left:auto;">
+    <button type="button" id="mobileNavClose" class="btn-icon" aria-label="<?php echo esc_attr(meridian_t('theme.header.menu_close')); ?>" style="margin-left:auto;">
       <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
@@ -318,17 +318,17 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
     <div style="height:1px;background:var(--rule);margin:.5rem 1.25rem;"></div>
 
     <?php if ($isLoggedIn): ?>
-      <a href="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . $accountPath, ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link"><span aria-hidden="true">👤</span> Mein Bereich</a>
+      <a href="<?php echo htmlspecialchars(rtrim((string) SITE_URL, '/') . $accountPath, ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link"><span aria-hidden="true">👤</span> <?php echo esc_html(meridian_t('theme.header.account')); ?></a>
       <form method="POST" action="<?php echo htmlspecialchars($logoutAction, ENT_QUOTES, 'UTF-8'); ?>" class="logout-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($logoutToken, ENT_QUOTES, 'UTF-8'); ?>">
-        <button type="submit" class="mobile-nav-link mobile-nav-link--button"><span aria-hidden="true">⬡</span> Abmelden</button>
+        <button type="submit" class="mobile-nav-link mobile-nav-link--button"><span aria-hidden="true">⬡</span> <?php echo esc_html(meridian_t('theme.header.logout')); ?></button>
       </form>
     <?php else: ?>
       <?php if ($showLoginBtn): ?>
-      <a href="<?php echo htmlspecialchars(meridian_auth_url('login'), ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link"><span aria-hidden="true">🔑</span> Anmelden</a>
+      <a href="<?php echo htmlspecialchars(meridian_auth_url('login'), ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link"><span aria-hidden="true">🔑</span> <?php echo esc_html(meridian_t('theme.header.login')); ?></a>
       <?php endif; ?>
       <?php if ($showRegBtn): ?>
-      <a href="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link" style="color:var(--accent);font-weight:600;"><span aria-hidden="true">✨</span> Registrieren</a>
+      <a href="<?php echo htmlspecialchars(meridian_auth_url('register'), ENT_QUOTES, 'UTF-8'); ?>" class="mobile-nav-link" style="color:var(--accent);font-weight:600;"><span aria-hidden="true">✨</span> <?php echo esc_html(meridian_t('theme.header.register')); ?></a>
       <?php endif; ?>
     <?php endif; ?>
   </div>
@@ -336,8 +336,8 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
   <?php if ($showSearch): ?>
   <div class="mobile-nav-search">
     <form action="<?php echo SITE_URL; ?>/search" method="GET" role="search" style="display:flex;gap:.5rem;">
-      <input type="search" name="q" placeholder="Suchen…" class="form-control form-control--sm" aria-label="Suche" style="flex:1;">
-      <button type="submit" class="btn-submit" aria-label="Suche absenden" style="padding:.35rem .85rem;font-size:.82rem;"><span aria-hidden="true">→</span></button>
+      <input type="search" name="q" placeholder="<?php echo esc_attr(meridian_t('theme.header.search_placeholder')); ?>" class="form-control form-control--sm" aria-label="<?php echo esc_attr(meridian_t('theme.header.search_aria')); ?>" style="flex:1;">
+      <button type="submit" class="btn-submit" aria-label="<?php echo esc_attr(meridian_t('theme.header.search_send')); ?>" style="padding:.35rem .85rem;font-size:.82rem;"><span aria-hidden="true">→</span></button>
     </form>
   </div>
   <?php endif; ?>

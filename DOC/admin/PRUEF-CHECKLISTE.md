@@ -13,7 +13,7 @@ Checklist for reviewing a change to the administration (core page, module, view 
 **Routing & Struktur**
 - [ ] Route `/admin/<seite>` löst über `AdminRouter` auf die vorgesehene Datei auf; Slug nur `[a-zA-Z0-9_-]`.
 - [ ] Einstieg, Modul und View existieren und folgen der Schichtentrennung ([FILESTRUCTURE.md](FILESTRUCTURE.md)).
-- [ ] Neue Seite hat eine Zeile in `CMS\Services\AdminMenu\CoreCatalog` und einen Platz in beiden Profilen (`ProfileLayouts`: *Klassisch* und *Strukturiert*); `php TESTS/admin-menu/run.php` ist grün. Gehört sie zu einem Feature-Bereich, steht sie zusätzlich in `CoreModuleService::MODULES[...]['admin_pages']`.
+- [ ] Neue Seite hat eine Zeile in `CMS\Services\AdminMenu\CoreCatalog` und einen Platz in beiden Profilen (`ProfileLayouts`: *Klassisch* und *Strukturiert*). Gehört sie zu einem Feature-Bereich, steht sie zusätzlich in `CoreModuleService::MODULES[...]['admin_pages']`.
 - [ ] Alt-Routen leiten weiter statt 404.
 
 **Zugriff & Eingaben**

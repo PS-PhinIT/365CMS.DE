@@ -176,13 +176,13 @@ Die Bundles unter `CMS/assets/` und `CMS/vendor/dompdf/` sind Kopien ohne Lockfi
 
 - `.github/dependabot.yml` überwacht beide Manifeste (Composer, npm) sowie die GitHub Actions. Versions-PRs sind für die Manifeste abgeschaltet; Sicherheitsmeldungen (Dependabot Alerts) bleiben aktiv. Voraussetzung in den Repository-Einstellungen: *Dependency graph* und *Dependabot alerts* aktiviert.
 - `.github/workflows/security.yml` (Job `trivy-fs`) scannt `.github/deps/` und bricht bei behebbaren Funden der Stufe HIGH/CRITICAL ab; MEDIUM/LOW werden nur berichtet.
-- `TESTS/security/dependencies.php` (Teil von `php TESTS/run-all.php`) prüft, dass Manifest, Lockdatei, `CMS/vendor/dompdf/composer/installed.json`, die in den Bundles lesbaren Versionen und die Tabellen in diesem Dokument übereinstimmen.
+- Dass Manifest, Lockdatei, `CMS/vendor/dompdf/composer/installed.json`, die in den Bundles lesbaren Versionen und die Tabellen in diesem Dokument übereinstimmen, wird von Hand geprüft (die frühere Prüfung unter `TESTS/` wurde entfernt).
 
 **Bei jedem Bundle-Update:**
 
 1. Version in `.github/deps/composer.json` bzw. `package.json` anpassen.
 2. Lockdatei neu erzeugen: `composer update --no-install --ignore-platform-reqs` bzw. `npm install --package-lock-only --ignore-scripts && node prune-lock.mjs` (jeweils in `.github/deps/`).
-3. Spalte *Runtime-Stand* in diesem Dokument und in `ASSET.md` nachziehen, dann `php TESTS/run-all.php`.
+3. Spalte *Runtime-Stand* in diesem Dokument und in `ASSET.md` nachziehen und den Abgleich prüfen.
 
 Grenzen: Die lokal gebauten Editor.js-Plugins `link`, `hyperlink` und `anchor` sind keinem Upstream-Build exakt zuordenbar und mit dem nächstliegenden Stand eingetragen. Ein Dependabot-PR ändert nur das Manifest, nie die Kopie unter `CMS/assets/`; das Bundle muss von Hand aktualisiert werden.
 

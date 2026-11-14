@@ -11,10 +11,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Auch als Notfallseite aus index.php eingebunden (ggf. ohne functions.php/Datenbank): dann deutscher Text.
+$errorT = static function (string $key, string $fallback): string {
+    $text = function_exists('meridian_t') ? meridian_t($key) : $key;
+    return $text !== $key ? $text : $fallback;
+};
+
 // Der Router übergibt `error_code`, `error_title`, `error_message`; ältere Aufrufer nutzen die camelCase-Namen.
 $errorCode    = $errorCode    ?? $error_code    ?? 500;
-$errorTitle   = $errorTitle   ?? $error_title   ?? 'Serverfehler';
-$errorMessage = $errorMessage ?? $error_message ?? 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
+$errorTitle   = $errorTitle   ?? $error_title   ?? $errorT('theme.error.default_title', 'Serverfehler');
+$errorMessage = $errorMessage ?? $error_message ?? $errorT('theme.error.default_message', 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.');
 
 if (!headers_sent()) {
     http_response_code((int)$errorCode);
@@ -28,7 +34,7 @@ if (!headers_sent()) {
             <h1 class="error-title"><?php echo htmlspecialchars($errorTitle); ?></h1>
             <p class="error-desc"><?php echo htmlspecialchars($errorMessage); ?></p>
             <div class="error-actions">
-                <a href="<?php echo SITE_URL; ?>/" class="btn-solid">Zur Startseite</a>
+                <a href="<?php echo SITE_URL; ?>/" class="btn-solid"><?php echo htmlspecialchars($errorT('theme.common.back_home', 'Zur Startseite'), ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php
                 $errorBackUrl = (string) ($_SERVER['HTTP_REFERER'] ?? '');
                 $errorSiteHost = (string) parse_url(SITE_URL, PHP_URL_HOST);
@@ -38,7 +44,7 @@ if (!headers_sent()) {
                 }
                 ?>
                 <?php if ($errorBackUrl !== ''): ?>
-                <a href="<?php echo htmlspecialchars($errorBackUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn-ghost">Zurück</a>
+                <a href="<?php echo htmlspecialchars($errorBackUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn-ghost"><?php echo htmlspecialchars($errorT('theme.error.back', 'Zurück'), ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php endif; ?>
             </div>
         </div>

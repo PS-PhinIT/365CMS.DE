@@ -97,8 +97,7 @@ CMS/tmp-hub-template-dump.php
 AUDIT/*
 AUDIT*
 AUDIT
-# TESTS/ ist vollständig versioniert. Keine Regel für /tests/: Auf Dateisystemen ohne Groß-/Kleinschreibung
-# (Windows, macOS) träfe sie auch TESTS/ und würde neue Suiten stillschweigend ausschließen.
+# Keine Regel für /tests/: Auf Dateisystemen ohne Groß-/Kleinschreibung (Windows, macOS) träfe sie auch TESTS/.
 /STAGING/tests/
 */Test/*
 CMS/assets/translation/Test/

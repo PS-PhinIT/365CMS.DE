@@ -1228,7 +1228,7 @@ PHP;
                 INDEX idx_source_wp (source_type, source_wp_id),
                 INDEX idx_source_ref (source_type, source_reference),
                 INDEX idx_target (target_type, target_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
     }
 

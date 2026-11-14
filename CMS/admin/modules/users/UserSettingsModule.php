@@ -49,7 +49,8 @@ class UserSettingsModule
 
         return [
             'settings' => [
-                'registration_enabled' => ($settings['registration_enabled'] ?? '0') === '1',
+                // Standard wie CmsAuthPageService::SHARED_SETTING_DEFAULTS: fehlende Option = Registrierung offen
+                'registration_enabled' => ($settings['registration_enabled'] ?? '1') === '1',
                 'member_registration_enabled' => ($settings['member_registration_enabled'] ?? '1') === '1',
                 'member_email_verification' => ($settings['member_email_verification'] ?? '0') === '1',
                 'member_default_role' => $this->userService->resolveRegistrationRole((string)($settings['member_default_role'] ?? 'member')),

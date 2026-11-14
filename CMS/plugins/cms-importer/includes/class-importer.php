@@ -72,7 +72,7 @@ class CMS_Importer_DB
                 finished_at       TIMESTAMP NULL,
                 user_id           INT UNSIGNED NULL,
                 INDEX idx_user (user_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         // Importierte Meta-Felder (nicht auf CMS-Felder gemappte Keys)
@@ -87,7 +87,7 @@ class CMS_Importer_DB
                 meta_value  LONGTEXT,
                 INDEX idx_log (log_id),
                 INDEX idx_key (meta_key(100))
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         $db->query("
@@ -109,7 +109,7 @@ class CMS_Importer_DB
                 INDEX idx_source_wp (source_type, source_wp_id),
                 INDEX idx_source_ref (source_type, source_reference),
                 INDEX idx_target (target_type, target_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         self::ensure_import_item_columns($db, $p);

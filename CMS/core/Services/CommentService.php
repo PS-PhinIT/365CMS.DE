@@ -249,7 +249,8 @@ class CommentService
 
         if ($normalizedFilters['query'] !== '') {
             $like = '%' . $this->escapeLikeValue($normalizedFilters['query']) . '%';
-            $where[] = '(c.author LIKE ? ESCAPE "\\" OR c.author_email LIKE ? ESCAPE "\\" OR c.content LIKE ? ESCAPE "\\" OR COALESCE(p.title, "") LIKE ? ESCAPE "\\")';
+            // '!' als Escape-Zeichen: unabhängig von NO_BACKSLASH_ESCAPES/ANSI_QUOTES
+            $where[] = "(c.author LIKE ? ESCAPE '!' OR c.author_email LIKE ? ESCAPE '!' OR c.content LIKE ? ESCAPE '!' OR COALESCE(p.title, '') LIKE ? ESCAPE '!')";
             array_push($params, $like, $like, $like, $like);
         }
 
@@ -319,7 +320,7 @@ class CommentService
 
     private function escapeLikeValue(string $value): string
     {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+        return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value);
     }
 
     public function getCounts(): array

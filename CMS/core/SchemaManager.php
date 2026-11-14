@@ -52,6 +52,9 @@ class SchemaManager
         'newsletter_subscribers', 'newsletter_templates', 'newsletter_campaigns', 'newsletter_sends', 'newsletter_settings',
     ];
 
+    /** Kollation neuer Tabellen; auf MySQL 5.7/8 und MariaDB 10.x/11.x vorhanden. */
+    public const DEFAULT_COLLATION = 'utf8mb4_unicode_ci';
+
     private Database $db;
     private string $prefix;
     private string $charset;
@@ -66,7 +69,9 @@ class SchemaManager
     public static function getSchemaQueries(string $prefix, string $charset): array
     {
         $p = $prefix;
-        $c = $charset;
+        // Feste Kollation statt Server-Standard (MySQL 8: utf8mb4_0900_ai_ci, MariaDB: utf8mb4_general_ci),
+        // wie die übrigen Tabellen; greift nur beim Anlegen, bestehende Tabellen bleiben unverändert.
+        $c = strtolower($charset) === 'utf8mb4' ? $charset . ' COLLATE=' . self::DEFAULT_COLLATION : $charset;
 
         return [
             'users' => "CREATE TABLE IF NOT EXISTS {$p}users (

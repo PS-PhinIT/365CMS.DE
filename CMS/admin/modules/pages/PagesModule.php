@@ -275,7 +275,7 @@ class PagesModule
             }
             $where[] = '(' . implode(' OR ', array_map(static fn (string $column): string => $column . ' LIKE ?', $searchColumns)) . ')';
             foreach ($searchColumns as $ignored) {
-                $params[] = "%{$search}%";
+                $params[] = '%' . \cms_escape_like($search) . '%';
             }
         }
 

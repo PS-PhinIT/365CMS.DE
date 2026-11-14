@@ -25,8 +25,8 @@ $currentPage = $currentPage ?? 1;
 $totalPages  = $totalPages  ?? 1;
 
 $showSidebar = meridian_show_sidebar();
-$activeCategory = htmlspecialchars($_GET['category'] ?? '');
-$activeTag      = htmlspecialchars($_GET['tag'] ?? '');
+$activeCategory = htmlspecialchars(\CMS\Http\Request::stringFromGet('category'));
+$activeTag      = htmlspecialchars(\CMS\Http\Request::stringFromGet('tag'));
 $pageTitle      = 'Blog';
 if ($activeCategory) {
     $pageTitle = 'Kategorie: ' . $activeCategory;
@@ -149,7 +149,7 @@ $tagCloud = meridian_get_tags(20); // [name, slug, count] – Links über den Sl
                     <div style="display:flex;gap:.5rem;">
                         <input type="search" name="q" class="form-control form-control--sm"
                                placeholder="Artikel suchen …" autocomplete="off"
-                               value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>">
+                               value="<?php echo htmlspecialchars(\CMS\Http\Request::stringFromGet('q')); ?>">
                         <button type="submit" class="btn-solid" aria-label="Suchen">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>

@@ -179,7 +179,8 @@ final class EditorialCalendarService
 
     /**
      * Neuer Zeitpunkt (Serverzeit) beim Verschieben auf `$targetDate` (Website-Datum). Die Uhrzeit des bisherigen
-     * Termins in Website-Zeit bleibt erhalten.
+     * Termins in Website-Zeit bleibt erhalten; existiert sie am Zieltag nicht (Beginn der Sommerzeit), rückt sie auf
+     * die nächste gültige Uhrzeit (02:30 → 03:30).
      */
     public static function computeMoveTarget(?string $currentServerValue, string $targetDate, \DateTimeZone $server, \DateTimeZone $site): ?string
     {
@@ -190,7 +191,10 @@ final class EditorialCalendarService
 
         $current = self::serverToSite($currentServerValue, $server, $site);
         $time = $current?->format('H:i:s') ?? self::DEFAULT_TIME;
-        $target = self::parseStrict('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . $time, $site);
+        $value = $date->format('Y-m-d') . ' ' . $time;
+        // Datum ist geprüft, Uhrzeit wohlgeformt: Uhrzeit in der Zeitumstellungs-Lücke ohne Rückformatierungs-Vergleich übernehmen.
+        $target = self::parseStrict('Y-m-d H:i:s', $value, $site)
+            ?? (\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $value, $site) ?: null);
 
         return $target?->setTimezone($server)->format('Y-m-d H:i:s');
     }

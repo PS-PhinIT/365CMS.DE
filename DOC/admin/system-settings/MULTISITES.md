@@ -116,4 +116,4 @@ Beim Lesen wird jeder Eintrag normalisiert. Ungültige oder doppelte Einträge w
 | Benutzer-Präferenz | `CMS\Services\AdminUiPreferenceService` (`admin_ui_prefs.site`) |
 | Umschalter (JSON) | `CMS/admin/admin-ui.php`, `action=switch_site` |
 
-Tests: `php TESTS/admin-menu/run.php` prüft unter anderem, dass MultiSites in beiden Profilen als Kachel unter *Einstellungen* bzw. *Konfiguration* steht.
+MultiSites steht in beiden Profilen als Kachel unter *Einstellungen* bzw. *Konfiguration*.

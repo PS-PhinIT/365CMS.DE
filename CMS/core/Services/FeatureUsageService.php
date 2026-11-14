@@ -328,7 +328,7 @@ final class FeatureUsageService
             INDEX idx_route_group (route_group),
             INDEX idx_user_id (user_id),
             INDEX idx_last_used_at (last_used_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
         try {
             $this->db->query($sql);

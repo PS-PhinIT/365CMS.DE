@@ -237,6 +237,7 @@ final class ApiRouter
 
         $page = max(1, (int)($_GET['page'] ?? 1));
         $limit = min(200, max(10, (int)($_GET['limit'] ?? 50)));
+        $page = min($page, intdiv(PHP_INT_MAX, $limit));
         $search = $this->normalizeSearchFilter($_GET['search'] ?? '');
         $status = $this->normalizeTextFilter($_GET['status'] ?? '', 32);
 
@@ -300,6 +301,8 @@ final class ApiRouter
 
         $page = max(1, (int)($_GET['page'] ?? 1));
         $limit = min(100, max(5, (int)($_GET['limit'] ?? 20)));
+        // Seitenzahl begrenzen, damit der Offset ein Integer bleibt (kein Float im LIMIT)
+        $page = min($page, intdiv(PHP_INT_MAX, $limit));
         $offset = ($page - 1) * $limit;
         $search = $this->normalizeSearchFilter($_GET['search'] ?? '');
         $status = trim((string)($_GET['status'] ?? 'all'));
@@ -324,17 +327,15 @@ final class ApiRouter
         }
         if ($search !== '') {
             $where[] = '(p.title LIKE ? OR p.title_en LIKE ? OR p.slug LIKE ? OR p.slug_en LIKE ?)';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+            $like = '%' . \cms_escape_like($search) . '%';
+            array_push($params, $like, $like, $like, $like);
         }
         if ($category > 0) {
-            $where[] = '(p.category_id = ? OR EXISTS (
+            $where[] = "(p.category_id = ? OR EXISTS (
                 SELECT 1
                 FROM {$prefix}post_category_rel pcr
                 WHERE pcr.post_id = p.id AND pcr.category_id = ?
-            ))';
+            ))";
             $params[] = $category;
             $params[] = $category;
         }
@@ -416,6 +417,8 @@ final class ApiRouter
 
         $page = max(1, (int)($_GET['page'] ?? 1));
         $limit = min(100, max(5, (int)($_GET['limit'] ?? 20)));
+        // Seitenzahl begrenzen, damit der Offset ein Integer bleibt (kein Float im LIMIT)
+        $page = min($page, intdiv(PHP_INT_MAX, $limit));
         $offset = ($page - 1) * $limit;
         $search = $this->normalizeSearchFilter($_GET['search'] ?? '');
         $status = $this->normalizeTextFilter($_GET['status'] ?? '', 32);
@@ -437,10 +440,8 @@ final class ApiRouter
         }
         if ($search !== '') {
             $where[] = '(p.title LIKE ? OR p.title_en LIKE ? OR p.slug LIKE ? OR p.slug_en LIKE ?)';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+            $like = '%' . \cms_escape_like($search) . '%';
+            array_push($params, $like, $like, $like, $like);
         }
         $whereStr = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
@@ -507,6 +508,8 @@ final class ApiRouter
 
         $page = max(1, (int)($_GET['page'] ?? 1));
         $limit = min(100, max(5, (int)($_GET['limit'] ?? 20)));
+        // Seitenzahl begrenzen, damit der Offset ein Integer bleibt (kein Float im LIMIT)
+        $page = min($page, intdiv(PHP_INT_MAX, $limit));
         $offset = ($page - 1) * $limit;
         $search = $this->normalizeSearchFilter($_GET['search'] ?? '');
         $role = $this->normalizeTextFilter($_GET['role'] ?? 'all', 64);
@@ -530,9 +533,8 @@ final class ApiRouter
         }
         if ($search !== '') {
             $where[] = '(u.username LIKE ? OR u.email LIKE ? OR u.display_name LIKE ?)';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+            $like = '%' . \cms_escape_like($search) . '%';
+            array_push($params, $like, $like, $like);
         }
         $whereStr = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 

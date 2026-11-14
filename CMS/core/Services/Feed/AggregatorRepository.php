@@ -416,7 +416,7 @@ final class AggregatorRepository
     }
 
     /**
-     * @param array<string, mixed> $filters `public`, `category_id`, `source_id`, `search`, `status`, `since`, `source_ids`, `category_ids`
+     * @param array<string, mixed> $filters `public`, `category_id`, `source_id`, `search`, `status`, `since`, `fetched_since`, `fetched_before`, `source_ids`, `category_ids`
      * @return list<array<string, mixed>>
      */
     public function items(array $filters = [], int $offset = 0, int $limit = 20): array
@@ -762,13 +762,13 @@ final class AggregatorRepository
     }
 
     /**
-     * Neueste sichtbare Artikel der angegebenen Quellen bzw. Bereiche seit `$since`.
+     * Neueste sichtbare Artikel der angegebenen Quellen bzw. Bereiche, die seit `$since` (und vor `$until`) abgerufen wurden.
      *
      * @param list<int> $sourceIds
      * @param list<int> $categoryIds
      * @return list<array<string, mixed>>
      */
-    public function recentItems(array $sourceIds, array $categoryIds, string $since, int $limit): array
+    public function recentItems(array $sourceIds, array $categoryIds, string $since, int $limit, ?string $until = null): array
     {
         $sourceIds = $this->ids($sourceIds);
         $categoryIds = $this->ids($categoryIds);
@@ -776,7 +776,10 @@ final class AggregatorRepository
             return [];
         }
 
-        $filters = ['since' => $since, 'status' => 'visible'];
+        $filters = ['fetched_since' => $since, 'status' => 'visible'];
+        if ($until !== null) {
+            $filters['fetched_before'] = $until;
+        }
         if ($sourceIds !== []) {
             $filters['source_ids'] = $sourceIds;
         }
@@ -1085,6 +1088,15 @@ final class AggregatorRepository
         if (!empty($filters['since'])) {
             $where[] = 'i.pub_date >= ?';
             $params[] = (string) $filters['since'];
+        }
+        // Abrufzeitpunkt (created_at) statt Feed-Datum: spät abgerufene Artikel gehen sonst im Digest verloren.
+        if (!empty($filters['fetched_since'])) {
+            $where[] = 'i.created_at >= ?';
+            $params[] = (string) $filters['fetched_since'];
+        }
+        if (!empty($filters['fetched_before'])) {
+            $where[] = 'i.created_at < ?';
+            $params[] = (string) $filters['fetched_before'];
         }
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {

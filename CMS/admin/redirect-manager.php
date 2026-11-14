@@ -179,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $alert = cms_admin_redirect_manager_pull_alert();
 
 $csrfToken = Security::instance()->generateToken('admin_redirect_manager');
+$seoSuiteCsrfToken = Security::instance()->generateToken('admin_seo_suite');
 $pageTitle = 'Weiterleitungen';
 $activePage = 'redirect-manager';
 $pageAssets = [

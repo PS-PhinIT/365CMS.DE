@@ -39,6 +39,12 @@ class UpdateService
     private const UPDATE_MAX_ARCHIVE_FILE_BYTES = 268435456;
     private const UPDATE_MAX_ARCHIVE_UNCOMPRESSED_BYTES = 536870912;
 
+    /** Sperrdatei, die index.php, cron.php und orders.php vor dem Bootstrap prüfen (503 während des Core-Tauschs). */
+    private const UPDATE_MAINTENANCE_LOCK = 'cache/.update.lock';
+    /** Gültigkeit der vom Updater gesetzten Sperre in Sekunden (die Einstiegsdateien deckeln zusätzlich auf 60 Minuten). */
+    private const UPDATE_MAINTENANCE_LOCK_TTL = 300;
+    private const INSTALL_LOCK_BUSY_MESSAGE = 'Ein anderes Update wird bereits installiert.';
+
     private const ALLOWED_UPDATE_HOSTS = [
         '365cms.de',
         'www.365cms.de',
@@ -1172,13 +1178,16 @@ class UpdateService
             );
         }
 
-        $lockHandle = $this->acquireInstallLock();
+        $lockHandle = null;
         $tmpFile = '';
         $stagingRoot = '';
         $backupPath = '';
         $installationCompleted = false;
+        $maintenanceLockFile = '';
 
         try {
+            $lockHandle = $this->acquireInstallLock();
+
             // Temporäre Datei erstellen (eigene .zip-Benennung, kein tempnam-Leak)
             $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR
                 . '365cms_upd_' . bin2hex(random_bytes(8)) . '.zip';
@@ -1246,12 +1255,27 @@ class UpdateService
             }
             $this->assertInstallSourceSafe($installSource, $type);
 
+            if ($type === 'core') {
+                // Während des Tauschs keine Anfragen in die halb getauschte Installation laufen lassen.
+                ignore_user_abort(true);
+                if (function_exists('set_time_limit')) {
+                    set_time_limit(300);
+                }
+                $maintenanceLockFile = $this->setMaintenanceLock();
+            }
+
             if ($this->canUseAtomicDirectorySwap($type, $targetDir)) {
                 $this->swapDirectoryAtomically($installSource, $targetDir, $backupPath);
             } else {
                 $this->swapDirectoryContentsWithRollback($installSource, $targetDir, $backupPath, $type);
             }
             $installationCompleted = true;
+
+            // Alten Bytecode und Stat-/Realpath-Cache verwerfen, bevor die Sperre fällt.
+            clearstatcache(true);
+            if (function_exists('opcache_reset')) {
+                @opcache_reset();
+            }
 
             // Temporäre Datei löschen
             if (file_exists($tmpFile)) { unlink($tmpFile); } // M-03
@@ -1266,9 +1290,11 @@ class UpdateService
 
         } catch (\Throwable $e) {
             if (file_exists($tmpFile)) { unlink($tmpFile); } // M-03
-            $message = str_contains($e->getMessage(), 'automatische Wiederherstellung ist unvollständig')
-                ? 'Update konnte nicht vollständig zurückgerollt werden. Das Recovery-Verzeichnis wurde erhalten; bitte die CMS-Logs prüfen.'
-                : 'Update konnte nicht installiert werden.';
+            $message = match (true) {
+                str_contains($e->getMessage(), 'automatische Wiederherstellung ist unvollständig') => 'Update konnte nicht vollständig zurückgerollt werden. Das Recovery-Verzeichnis wurde erhalten; bitte die CMS-Logs prüfen.',
+                $e->getMessage() === self::INSTALL_LOCK_BUSY_MESSAGE => self::INSTALL_LOCK_BUSY_MESSAGE,
+                default => 'Update konnte nicht installiert werden.',
+            };
 
             return $this->failInstallResult(
                 'updates.install.failed',
@@ -1295,8 +1321,31 @@ class UpdateService
                 $this->removeDirectory($backupPath);
             }
 
+            if ($maintenanceLockFile !== '' && is_file($maintenanceLockFile) && !@unlink($maintenanceLockFile)) {
+                Logger::instance()->withChannel('updates.service')->error('Update maintenance lock could not be removed.', [
+                    'path' => $maintenanceLockFile,
+                ]);
+            }
+            clearstatcache(true);
+
             $this->releaseInstallLock($lockHandle);
         }
+    }
+
+    /** Setzt die Update-Sperre für die Einstiegsdateien und liefert ihren Pfad. */
+    private function setMaintenanceLock(): string
+    {
+        $lockFile = rtrim((string) ABSPATH, '/\\') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, self::UPDATE_MAINTENANCE_LOCK);
+        $lockDirectory = dirname($lockFile);
+        if (!is_dir($lockDirectory) && !mkdir($lockDirectory, 0755, true) && !is_dir($lockDirectory)) {
+            throw new \RuntimeException('Update-Sperrverzeichnis konnte nicht vorbereitet werden.');
+        }
+
+        if (file_put_contents($lockFile, (string) (time() + self::UPDATE_MAINTENANCE_LOCK_TTL), LOCK_EX) === false) {
+            throw new \RuntimeException('Update-Sperre konnte nicht gesetzt werden: ' . $lockFile);
+        }
+
+        return $lockFile;
     }
 
     /**
@@ -1778,7 +1827,7 @@ class UpdateService
 
         if (!flock($handle, LOCK_EX | LOCK_NB)) {
             fclose($handle);
-            throw new \RuntimeException('Ein anderes Update wird bereits installiert.');
+            throw new \RuntimeException(self::INSTALL_LOCK_BUSY_MESSAGE);
         }
 
         return $handle;
@@ -2042,10 +2091,16 @@ class UpdateService
         // In plugins/ und themes/ ersetzt ein Core-Update nur die mitgelieferten Unterordner;
         // nachinstallierte Plugins und eigene Themes bleiben erhalten.
         $mergedCoreEntries = $type === 'core' ? ['plugins', 'themes'] : [];
+        // Dateien der obersten Ebene (index.php, cron.php, .htaccess …) werden beim Core-Update nicht
+        // weggeschoben, sondern ins Backup kopiert und per rename() atomar überschrieben. So existieren
+        // Einstiegsdateien durchgehend und beantworten Anfragen über die Update-Sperre mit 503.
+        $isOverwritableFile = static fn (string $entry): bool => $type === 'core'
+            && is_file($targetDir . DIRECTORY_SEPARATOR . $entry) && !is_link($targetDir . DIRECTORY_SEPARATOR . $entry)
+            && is_file($sourceDir . DIRECTORY_SEPARATOR . $entry) && !is_link($sourceDir . DIRECTORY_SEPARATOR . $entry);
 
         try {
             foreach ($this->listDirectoryEntries($targetDir) as $entry) {
-                if (in_array($entry, $preservedCoreEntries, true)) {
+                if (in_array($entry, $preservedCoreEntries, true) || $isOverwritableFile($entry)) {
                     continue;
                 }
 
@@ -2089,6 +2144,13 @@ class UpdateService
                         $movedEntries[] = $relative;
                     }
                     continue;
+                }
+
+                if ($isOverwritableFile($entry)) {
+                    if (!copy($targetDir . DIRECTORY_SEPARATOR . $entry, $backupPath . DIRECTORY_SEPARATOR . $entry)) {
+                        throw new \RuntimeException('Bestehende Datei konnte nicht ins Rollback-Verzeichnis kopiert werden: ' . $entry);
+                    }
+                    $backedUpEntries[] = $entry;
                 }
 
                 if (!$this->moveUpdateEntry($sourceDir, $targetDir, $entry)) {

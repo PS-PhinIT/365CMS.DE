@@ -287,7 +287,7 @@ class DownloadsModule
         }
         $repo = $this->service->repository();
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $since = date('Y-m-d', time() - ($days - 1) * 86400);
+        $since = DownloadStatsService::dayBefore(time(), $days - 1);
         $hits = [];
         try {
             foreach ($repo->fetchAll(

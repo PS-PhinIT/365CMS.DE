@@ -277,7 +277,7 @@ final class LandingPluginService
             }
 
             if (is_string($callback) && str_contains($callback, '::')) {
-                return new \ReflectionMethod($callback);
+                return \ReflectionMethod::createFromMethodName($callback);
             }
 
             if ($callback instanceof \Closure) {

@@ -36,6 +36,8 @@ class Router
         'is_localized' => false,
     ];
     private bool $notFoundLogged = false;
+    /** Routing-Pfad ohne Sprachpräfix des aktuellen dispatch() (für JSON-Fehler unter /api). */
+    private string $routingUri = '/';
 
     public static function instance(): self
     {
@@ -162,6 +164,7 @@ class Router
         Debug::checkpoint('router.dispatch.start', ['method' => $method, 'uri' => $uri]);
         $this->requestContext = Services\ContentLocalizationService::getInstance()->resolveRequestContext($uri);
         $routingUri = (string)($this->requestContext['base_uri'] ?? $uri);
+        $this->routingUri = $routingUri;
 
         $this->applyRequestCacheHeaders($routingUri, $method);
 
@@ -846,6 +849,11 @@ class Router
             $this->notFoundLogged = true;
         }
 
+        if ($this->isApiRequest($this->routingUri)) {
+            $this->renderApiError(404, 'not_found');
+            return;
+        }
+
         http_response_code(404);
 
         $rendered = '';
@@ -1067,6 +1075,11 @@ class Router
             return;
         }
 
+        if ($this->isApiRequest($this->routingUri)) {
+            $this->renderApiError($status, $status === 405 ? 'method_not_allowed' : 'error_' . $status);
+            return;
+        }
+
         if (!headers_sent()) {
             http_response_code($status);
             header('Cache-Control: no-store, private');
@@ -1085,6 +1098,41 @@ class Router
             $message !== '' ? $message : 'Die Anfrage konnte nicht verarbeitet werden.',
             $this->requestUri
         );
+    }
+
+    /** JSON-Fehlerantwort für /api (Format wie ApiRouter::jsonError() und Wartungsmodus); ein gesetzter Allow-Header bleibt erhalten. */
+    private function renderApiError(int $status, string $error): void
+    {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Cache-Control: no-store, private');
+            header('Content-Type: application/json; charset=utf-8');
+            if (in_array($status, [429, 503], true)) {
+                header('Retry-After: 120');
+            }
+        }
+
+        echo json_encode(['success' => false, 'error' => $error], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Bettet ein Fehlerseiten-Fragment ohne eigenes `<html>` in ein minimales Dokument mit dem Theme-Stylesheet ein.
+     * Auch vom globalen Fehlerhandler in index.php genutzt (dort ohne Datenbank).
+     */
+    public static function wrapStandaloneErrorDocument(string $fragment, string $title, string $locale, string $stylesheetUrl = ''): string
+    {
+        if (stripos($fragment, '<html') !== false) {
+            return $fragment;
+        }
+
+        $stylesheet = $stylesheetUrl !== ''
+            ? '<link rel="stylesheet" href="' . htmlspecialchars($stylesheetUrl, ENT_QUOTES, 'UTF-8') . '">'
+            : '';
+
+        return '<!DOCTYPE html><html lang="' . htmlspecialchars($locale, ENT_QUOTES, 'UTF-8') . '"><head><meta charset="UTF-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
+            . '<title>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</title>' . $stylesheet
+            . '</head><body class="error-standalone">' . $fragment . '</body></html>';
     }
 
     /**
@@ -1139,15 +1187,13 @@ class Router
 
         // Eigenständige Fehlerseiten (z. B. Wartungsmodus) ohne Theme-Kopf: Fragment in ein minimales Dokument
         // mit dem Theme-Stylesheet einbetten, damit Besucher keine ungestaltete Seite sehen.
-        if (!empty($data['error_standalone']) && stripos($rendered, '<html') === false) {
-            $stylesheet = '';
-            if (is_file($themePath . 'style.css')) {
-                $stylesheet = '<link rel="stylesheet" href="' . htmlspecialchars(rtrim($themeManager->getThemeUrl(), '/') . '/style.css', ENT_QUOTES, 'UTF-8') . '">';
-            }
-            $rendered = '<!DOCTYPE html><html lang="' . htmlspecialchars($this->getRequestLocale(), ENT_QUOTES, 'UTF-8') . '"><head><meta charset="UTF-8">'
-                . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
-                . '<title>' . htmlspecialchars($status . ($title !== '' ? ' – ' . $title : ''), ENT_QUOTES, 'UTF-8') . '</title>' . $stylesheet
-                . '</head><body class="error-standalone">' . $rendered . '</body></html>';
+        if (!empty($data['error_standalone'])) {
+            $rendered = self::wrapStandaloneErrorDocument(
+                $rendered,
+                $status . ($title !== '' ? ' – ' . $title : ''),
+                $this->getRequestLocale(),
+                is_file($themePath . 'style.css') ? rtrim($themeManager->getThemeUrl(), '/') . '/style.css' : ''
+            );
         }
 
         echo $rendered;
