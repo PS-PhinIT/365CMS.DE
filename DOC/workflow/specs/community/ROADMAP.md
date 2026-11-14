@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Roadmap & Fortschritt
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -25,8 +25,8 @@ Aufwand in Personentagen (PT), grob geschätzt einschließlich Tests und Doku; �
 
 | WP | Inhalt | Features | Abhängig von | PT |
 |---|---|---|---|---|
-| **WP-C0** | Entscheidungen E1–E11 bestätigen ([README.md](README.md) §4); Bibliotheken prüfen (CommonMark, Highlighting, `gregwar/captcha`, Proof-of-Work) inkl. Lizenz, PHP 8.4/8.5, CSP | – | – | 2 |
-| **WP-C1** | Modul-Gerüst: `CoreModuleService`-Eintrag, `CommunityHooks`, Einstellungen (`Support/Settings`) mit Typen/Grenzen, Sprachschlüssel, Admin-Katalog-Einträge (ausgeblendet bis Seiten existieren), Schema v26 mit allen Tabellen (`Installer`), Update-Schritt Capabilities + neue Rolle `moderator` | COM-ADM-03, COM-MOD-01 (Teil) | C0 | 5 |
+| **WP-C0** | Entscheidungen E1–E12 bestätigen (E11 gesetzt: 4.2/v27); Abhängigkeiten aus 4.1.0 nutzen (Hooks `user_deleted`/`user_role_changed`, Webhooks, Alerting, `CaptchaService` falls vorgezogen) ([README.md](README.md) §4); Bibliotheken prüfen (CommonMark, Highlighting, `gregwar/captcha`, Proof-of-Work) inkl. Lizenz, PHP 8.4/8.5, CSP | – | – | 2 |
+| **WP-C1** | Modul-Gerüst: `CoreModuleService`-Eintrag, `CommunityHooks`, Einstellungen (`Support/Settings`) mit Typen/Grenzen, Sprachschlüssel, Admin-Katalog-Einträge (ausgeblendet bis Seiten existieren), Schema v27 mit allen Tabellen (`Installer`), Update-Schritt Capabilities + neue Rolle `moderator` | COM-ADM-03, COM-MOD-01 (Teil) | C0 | 5 |
 | **WP-C2** | Struktur: Kategorien/Foren-Baum, Admin „Struktur“ (Drag & Drop, Tastatur), Forentypen und -status, Rechte-Matrix inkl. Vererbung, Forum-Moderatoren, `CommunityAccess` mit Tests | COM-CORE-02, COM-MOD-01, COM-MOD-02 | C1 | 8 |
 | **WP-C3** | Inhalte: Themen/Beiträge erstellen, antworten, zitieren, bearbeiten mit Verlauf, weich löschen; Zähler; Seitennavigation; Startseite, Forum, Thema, Listen „Neu/Aktiv/Unbeantwortet“; Permalinks; Gelesen-Status | COM-CORE-03…06, 09, 11, 12, COM-INT-09, 10 | C2 | 12 |
 | **WP-C4** | Editor & Rendering: Markdown-Renderer, Purifier-Profil `community`, Code-Highlighting, Vorschau-Endpunkt, Werkzeugleiste, lokale Entwürfe (Basis), BBCode-Renderer für Altbestand | COM-CORE-07, 08, COM-UX-05 (lokal) | C0, C3 | 7 |
@@ -84,7 +84,7 @@ flowchart LR
 |---|---|---|
 | Planung (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/community/` (14.11.2026) |
 | WP-C0 Entscheidungen & Bibliotheken | ⬜ | |
-| WP-C1 Modul-Gerüst & Schema v26 | ⬜ | |
+| WP-C1 Modul-Gerüst & Schema v27 | ⬜ | |
 | WP-C2 Struktur & Rechte | ⬜ | |
 | WP-C3 Themen, Beiträge, Gelesen-Status | ⬜ | |
 | WP-C4 Editor & Rendering | ⬜ | |

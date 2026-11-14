@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Community-Modul (Forum)
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung · noch kein Code | **Update:** 2026-11-14
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 · Schema v27 | **Status:** Planung · noch kein Code | **Update:** 2026-11-14
 > **Ersetzt:** [FORUM-PLUGIN-WORKFLOW.md](../../FORUM-PLUGIN-WORKFLOW.md) (Integrationsfahrplan aus 3.5.0) · **Muster:** [PLUGIN-INTEGRATION.md](../PLUGIN-INTEGRATION.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
@@ -49,22 +49,24 @@ SECURITY-PRIVACY → ROADMAP. WORKFLOWS, THEME-UI und TEST-PLAN begleiten die je
 
 ### 4. Grundsatzentscheidungen
 
-Empfehlungen sind markiert; **offene Punkte** brauchen vor Arbeitspaket 1 eine Bestätigung.
+Alle Punkte sind entschieden (Rückmeldung vom 14.11.2026, eingetragen in der Spalte „Entscheidung“). Wo die Wahl
+offen gelassen wurde („was am besten passt“), steht die getroffene Festlegung; Versionen und Lizenzen der Assets
+werden in WP-C0 noch einmal am Repository geprüft.
 
-| # | Frage | Empfehlung | Begründung | Status |
+| # | Frage | Entscheidung | Begründung | Status |
 |---|---|---|---|---|
-| E1 | Core-Modul oder Plugin? | **Core-Modul** `community`, abschaltbar über `CoreModuleService` | Gleiches Vorgehen wie bei Feed, Downloads, Formularen, Wissensdatenbank und Newsletter in 4.0.0; nutzt Core-Dienste direkt; ein Ort für Sicherheit und Updates | Modul |
-| E2 | Name im Admin und in der URL | Admin: **„Community“**; öffentliche Basis **`/forum`** (einstellbar) | `/forum` hält alle Plugin-URLs ohne Umleitung gültig | /forum oder was der Admin eingestellt hat, std. aber /forum |
-| E3 | Adressen für Themen | `/forum/thema/{id}-{slug}` (DE), `/en/forum/topic/{id}-{slug}` (EN); Auflösung über die ID, falscher Slug → 301 auf die kanonische Adresse; alt `/forum/thread/{id}` → 301 | Lesbar wie gewünscht (`/thema/482-welches-php-framework`), robust gegen Titeländerungen | was am besten bei einem forum passt! |
-| E4 | Speicherformat und Editor | **Markdown (CommonMark + GFM-Tabellen/Aufgaben), kein Roh-HTML**; Editor = Textfeld mit Werkzeugleiste, Vorschau, Einfügen/Ziehen von Bildern; serverseitiges Rendern, Ausgabe durch `PurifierService` (eigenes Profil `community`); Code-Blöcke mit Syntax-Highlighting | Sicher (kein HTML von Nutzern), portabel, Zitate und Code natürlich; Alternative SunEditor (schon im Core, speichert HTML) bleibt als Option für Admins | einen passenden auf GitHub als Asset laden oder entsprechend bauen |
-| E5 | Markdown- und Highlighting-Bibliothek | `league/commonmark` (vendored unter `assets/`), Highlighting serverseitig mit `scrivo/highlight.php` **oder** im Browser mit selbst gehostetem `highlight.js` | Keine externen CDNs (CSP, DSGVO); serverseitig = kein JS nötig, im Browser = weniger Serverlast | nichts extern! Alles seitens des 365CMS kommend |
-| E6 | Alte BBCode-Beiträge aus `cms-forum` | Spalte `format` je Beitrag (`markdown`, `bbcode`); BBCode-Beiträge werden mit dem übernommenen `BBCodeParser` gerendert; beim nächsten Bearbeiten Umwandlung in Markdown | Keine verlustbehaftete Massenkonvertierung bei der Migration | nichts zu übernehmen da das Plugin nirgends bisher aktiv war! |
-| E7 | Captcha | Neuer Core-Dienst **`CaptchaService`** mit Anbietern: eingebaut (Rechenaufgabe aus `FormSpamGuard`), selbst gehosteter Proof-of-Work (Standard, ohne Drittanbieter), Bild-Captcha mit **`gregwar/captcha`**, Cloudflare Turnstile, hCaptcha, optional Google reCAPTCHA (**`google/recaptcha`**). Nicht verwenden: `olakunlevpn/phpcapcha` (proprietäre Schrift, keine Lizenzdatei), `capskip/capskip-php` (Captcha-*Löser*, Angriffswerkzeug). Bewertung: [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) §3 | Wird auch von Formularen und Registrierung genutzt; Drittanbieter nur mit Einwilligung bzw. Hinweis im Datenschutztext und CSP-Freigabe | entscheide dich für das Asset packet was passt! |
-| E8 | Private Nachrichten | Vorhandenen `MessageService` nutzen (1:1); **Gruppen-Konversationen** als Erweiterung des Core-Dienstes, nicht als Forum-eigene Tabellen | Ein Postfach für alle Mitglieder statt zwei, aufbauend auf die 365CMS Funktionen, nichts eigenes hier! |
-| E9 | OAuth / Social Login | Eigenes Core-Vorhaben (Auth), nicht Teil des Community-Moduls; Community nutzt es, sobald vorhanden | Betrifft Login für die ganze Site, nicht nur das Forum | aufbauend auf die 365CMS Funktionen, nichts eigenes hier! |
-| E10 | Mandanten / MultiSite | Keine `site_id` (wie [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3); Hosts über die bestehende Auflösung | Verbindliche Festlegung aus 4.0.0 | gesetzt |
-| E11 | Version und Schema | Eigenes Release (Vorschlag **4.1**), **ein** neuer Schema-Stand **v26**, idempotente Migrationen | Wie in 4.0.0 |  was eben hier passt! |
-| E12 | Ablage der Tests | Vor WP-C1 festlegen: eigene Suite im Repository, eigenes Test-Repository oder lokale Ausführung mit Nachweis im PR | `TESTS/` wurde am 14.11.2026 aus `main` entfernt (Commit `6edfacc`); CI prüft derzeit nur Semgrep/Trivy | entsprechend wiederherstellen oder neu erstellen |
+| E1 | Core-Modul oder Plugin? | **Core-Modul** `community`, abschaltbar über `CoreModuleService` | wie Feed, Downloads, Formulare, Wissensdatenbank, Newsletter in 4.0.0 | gesetzt |
+| E2 | Basis-Adresse | **`/forum`** als Standard, im Admin änderbar | lesbar, üblich | gesetzt |
+| E3 | Adressen für Themen | **`/forum/thema/{id}-{slug}`** (DE), **`/en/forum/topic/{id}-{slug}`** (EN); Auflösung über die ID, falscher Slug → 301 | ID macht die Adresse robust gegen Titeländerungen, Slug sorgt für Lesbarkeit und SEO – Muster großer Foren (Discourse, phpBB mit SEO-URLs) | gesetzt |
+| E4 | Speicherformat und Editor | **Markdown (CommonMark + GFM), kein Roh-HTML**; Werkzeugleiste, Vorschau, Bild-Upload als **eigener Baustein** (Vanilla-ES-Modul, Tabler-Tokens, kein externer Editor) | sicher, leichtgewichtig, ohne Build-Schritt | gesetzt |
+| E5 | Markdown- und Highlighting-Bibliothek | **`league/commonmark`** (serverseitig) und **`highlight.js`** (nur benötigte Sprachen) als Assets unter `CMS/assets/`, über `VendorRegistry` geführt; **keine externen Quellen/CDNs** | beide verbreitet, MIT bzw. BSD-3; Highlighting nur auf Seiten mit Code geladen | gesetzt |
+| E6 | Daten aus `cms-forum` | **Keine Übernahme**: Das Plugin war nirgends aktiv. Kein Migrator, keine Plugin-Weiterleitungen, kein BBCode-Altbestand; [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) dient nur noch als Funktions-Referenz | spart Arbeitspaket WP-C12 | gesetzt |
+| E7 | Captcha | **`gregwar/captcha`** (MIT, gepflegt) als Asset für das Bild-Captcha **plus** eingebaute Rechenaufgabe als barrierefreie Alternative; Honeypot, Mindestzeit, Rate-Limits davor. **Keine Drittanbieter** (Turnstile, hCaptcha, reCAPTCHA) – passt zu „nichts extern“ | lokal, DSGVO ohne Einwilligung | gesetzt |
+| E8 | Private Nachrichten | **Core-`MessageService`**; Gruppen-Konversationen als Erweiterung des Core-Dienstes, nichts Forum-eigenes | ein Postfach für alle Mitglieder | gesetzt |
+| E9 | OAuth / Social Login | **Core-Funktion** (in 4.1.0: Entra-ID-SSO, [../v4.1/01-IDENTITY.md](../v4.1/01-IDENTITY.md)); die Community nutzt sie | Anmeldung gilt für die ganze Site | gesetzt |
+| E10 | Mandanten / MultiSite | keine `site_id` ([KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3) | verbindlich aus 4.0.0 | gesetzt |
+| E11 | Version und Schema | **Release 4.2**, eigener Schema-Stand **v27** (4.1.0 belegt v26, [../v4.1/](../v4.1/README.md)) | Roadmap 4.1.0 kommt zuerst | gesetzt |
+| E12 | Ablage der Tests | **`TESTS/<suite>/run.php`** mit `TESTS/lib/TestRunner.php` (in `main` wiederhergestellt) | wie die übrigen Core-Suiten | gesetzt |
 
 ### 5. Nicht-Ziele (in diesem Vorhaben)
 

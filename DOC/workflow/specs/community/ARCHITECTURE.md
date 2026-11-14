@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Architektur
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -26,7 +26,7 @@ retention, private storage, admin menu, member dashboard, sitemap, GDPR), the co
 ```text
 CMS/
 ├── core/Services/Community/
-│   ├── Database/Installer.php            Tabellen (Schema v26), Standard-Rechte, Standard-Ränge
+│   ├── Database/Installer.php            Tabellen (Schema v27), Standard-Rechte, Standard-Ränge
 │   ├── Repository/                       reine Datenzugriffe, nur gebundene Parameter
 │   │   ├── CategoryRepository.php  ForumRepository.php  TopicRepository.php  PostRepository.php
 │   │   ├── ReactionRepository.php  SubscriptionRepository.php  ReadStateRepository.php
