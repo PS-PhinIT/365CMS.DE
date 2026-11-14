@@ -256,7 +256,7 @@ final class ProfileLayouts
     /** @return list<string> */
     private static function settingsSecurityItems(): array
     {
-        return ['settings.security', 'security.antispam', 'security.firewall'];
+        return ['settings.security', 'settings.sso', 'security.antispam', 'security.firewall'];
     }
 
     /** @return list<string> */

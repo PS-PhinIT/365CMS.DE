@@ -12,9 +12,12 @@ use CMS\Auth\AuthManager;
 use CMS\Auth\MFA\BackupCodesManager;
 use CMS\Auth\MFA\TotpAdapter;
 use CMS\Auth\Passkey\WebAuthnAdapter;
+use CMS\Auth\SSO\EntraSsoService;
+use CMS\Auth\SSO\OidcFlowState;
 use CMS\Member\MemberI18n;
 use CMS\Member\MemberSanitizer;
 use CMS\Member\PluginDashboardRegistry;
+use CMS\Routing\SsoRouter;
 use CMS\Services\CmsAuthPageService;
 use CMS\Services\CoreModuleService;
 use CMS\Services\MediaService;
@@ -1618,7 +1621,7 @@ final class MemberController
         }
 
         $action = (string)($_POST['action'] ?? '');
-        if (!in_array($action, ['password_change', 'totp_start', 'totp_confirm', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all'], true)) {
+        if (!in_array($action, ['password_change', 'totp_start', 'totp_confirm', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all', 'sso_link', 'sso_unlink'], true)) {
             return;
         }
 
@@ -1626,6 +1629,7 @@ final class MemberController
             'password_change' => 'security_password',
             'passkey_register', 'passkey_delete' => 'security_passkey',
             'sessions_revoke_all' => 'security_sessions',
+            'sso_link', 'sso_unlink' => 'security_sso',
             default => 'security_mfa',
         };
 
@@ -1657,12 +1661,36 @@ final class MemberController
         // Sitzung soll MFA nicht abschalten, eigene Passkeys/Backup-Codes anlegen oder Passkeys
         // des Kontoinhabers entfernen können (MD-11). `totp_confirm` ist an das per Passwort
         // gestartete Setup dieser Sitzung gebunden.
-        if (in_array($action, ['totp_start', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all'], true)) {
-            $reauth = $this->auth->verifyCurrentPassword($userId, (string)($_POST['current_password'] ?? ''));
+        // 4.1.0 (1c): Einen Faktor *hinzufügen* darf eine frische Microsoft-Anmeldung (≤ 10 min) statt des Passworts
+        // bestätigen (SSO-Konten ohne bekanntes Passwort); Entfernen, Verknüpfen und Trennen verlangen immer das Passwort.
+        if (in_array($action, ['totp_start', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all', 'sso_link', 'sso_unlink'], true)) {
+            $currentPassword = (string)($_POST['current_password'] ?? '');
+            $reauth = $currentPassword === '' && in_array($action, ['totp_start', 'passkey_register'], true) && EntraSsoService::isFreshSsoSession($userId)
+                ? true
+                : $this->auth->verifyCurrentPassword($userId, $currentPassword);
             if ($reauth !== true) {
                 $this->flash('danger', (string)$reauth);
                 $this->redirect('/member/security');
             }
+        }
+
+        if ($action === 'sso_link') {
+            $sso = EntraSsoService::getInstance();
+            if (!$sso->isAvailable()) {
+                $this->flash('danger', EntraSsoService::MESSAGES['unavailable']);
+                $this->redirect('/member/security');
+            }
+            if ($sso->isLinked($userId)) {
+                $this->flash('info', MemberI18n::t('member.security.sso_already_linked'));
+                $this->redirect('/member/security');
+            }
+            SsoRouter::redirectToProvider($sso->startUrl(OidcFlowState::PURPOSE_LINK, '/member/security', $userId));
+        }
+
+        if ($action === 'sso_unlink') {
+            $unlinked = EntraSsoService::getInstance()->unlink($userId);
+            $this->flash($unlinked ? 'success' : 'danger', MemberI18n::t($unlinked ? 'member.security.sso_unlinked' : 'member.security.sso_unlink_failed'));
+            $this->redirect('/member/security');
         }
 
         if ($action === 'sessions_revoke_all') {
@@ -1792,7 +1820,27 @@ final class MemberController
             'mfa_enforced_pending' => $this->isMfaSetupPending($userId),
             'totp_setup' => is_array($setup) ? $setup : null,
             'passkey_payload' => $passkeyPayload,
+            // 4.1.0 (1c): Entra-ID-Verknüpfung
+            'sso' => $this->buildSsoSecurityData($userId),
         ];
+    }
+
+    /**
+     * @return array{available:bool, identity:?array<string,mixed>, fresh:bool}
+     */
+    private function buildSsoSecurityData(int $userId): array
+    {
+        try {
+            $sso = EntraSsoService::getInstance();
+
+            return [
+                'available' => $sso->isAvailable(),
+                'identity' => $sso->identityForUser($userId),
+                'fresh' => EntraSsoService::isFreshSsoSession($userId),
+            ];
+        } catch (\Throwable) {
+            return ['available' => false, 'identity' => null, 'fresh' => false];
+        }
     }
 
     /**

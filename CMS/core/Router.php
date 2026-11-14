@@ -90,6 +90,10 @@ class Router
         }
 
         $this->loadRouteModule('PublicRouter');
+        // 4.1.0 (1c): Entra-ID-Anmeldung unter /cms-login/sso/ (Start, Callback).
+        if (str_starts_with($this->requestUri, '/cms-login/sso/')) {
+            $this->loadRouteModule('SsoRouter');
+        }
         $this->loadRouteModule('ThemeRouter');
     }
 
@@ -404,7 +408,7 @@ class Router
             return false;
         }
 
-        $exempt = ['/login', '/logout', '/cms-login', '/cms-password-forgot', '/forgot-password', '/cms-verify-email', '/cms-confirm-email-change', '/mfa-challenge', '/mfa-setup', '/mfa-disable', '/health'];
+        $exempt = ['/login', '/logout', '/cms-login', '/cms-login/sso/entra/start', '/cms-login/sso/entra/callback', '/cms-password-forgot', '/forgot-password', '/cms-verify-email', '/cms-confirm-email-change', '/mfa-challenge', '/mfa-setup', '/mfa-disable', '/health'];
         if (in_array($routingUri, $exempt, true)) {
             return false;
         }
@@ -806,7 +810,7 @@ class Router
             }
         }
 
-        if (in_array($routingUri, ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/cms-verify-email', '/cms-confirm-email-change', '/logout', '/mfa-challenge', '/mfa-setup', '/order'], true)) {
+        if (in_array($routingUri, ['/login', '/register', '/forgot-password', '/cms-login', '/cms-login/sso/entra/start', '/cms-login/sso/entra/callback', '/cms-register', '/cms-password-forgot', '/cms-verify-email', '/cms-confirm-email-change', '/logout', '/mfa-challenge', '/mfa-setup', '/order'], true)) {
             $cache->sendResponseHeaders('private');
             return;
         }

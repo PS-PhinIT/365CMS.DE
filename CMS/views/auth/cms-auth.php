@@ -333,6 +333,17 @@ $showcase = is_array($showcase ?? null) ? $showcase : null;
         .cms-auth-secondary-button:hover {
             transform: translateY(-1px);
         }
+        .cms-auth-sso-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+        .cms-auth-sso-icon {
+            flex: 0 0 auto;
+        }
         .cms-auth-footer {
             margin-top: 1.5rem;
             text-align: center;
@@ -686,6 +697,13 @@ $showcase = is_array($showcase ?? null) ? $showcase : null;
                             });
                         }());
                     </script>
+                <?php endif; ?>
+                <?php if (!empty($ssoLogin['available'])): ?>
+                    <div class="cms-auth-divider">oder</div>
+                    <a class="cms-auth-secondary-button cms-auth-sso-button" href="<?php echo htmlspecialchars((string) $ssoLogin['url'], ENT_QUOTES, 'UTF-8'); ?>" rel="nofollow">
+                        <svg class="cms-auth-sso-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="0" y="0" width="7.5" height="7.5" fill="#f25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7fba00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#ffb900"/></svg>
+                        <span><?php echo htmlspecialchars((string) $ssoLogin['label'], ENT_QUOTES, 'UTF-8'); ?></span>
+                    </a>
                 <?php endif; ?>
             <?php elseif ($pageType === 'register'): ?>
                 <?php if (!$registerEnabled): ?>

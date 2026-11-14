@@ -437,6 +437,22 @@ class Auth
             return 'Ihr Konto ist deaktiviert.';
         }
 
+        // 4.1.0 (1c): Passwort-Login je nach Einstellung „Lokale Anmeldung“ nur noch für Admins bzw. nicht für
+        // mit Entra verknüpfte Konten. Erst nach korrektem Passwort geprüft – verrät nichts über fremde Konten.
+        if (!$this->isPasswordLoginAllowedForUser($user)) {
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                'login_password_disabled',
+                'Passwort-Login abgelehnt: Konto meldet sich über Microsoft an.',
+                'user',
+                (int) $user->id,
+                [],
+                'warning'
+            );
+
+            return 'Bitte melde dich mit Microsoft an.';
+        }
+
         // 4.1.0: Abgelaufenes Passwort (Höchstalter der Richtlinie) – die Weiche in Router::dispatch() erlaubt dann nur
         // noch die Passwortänderung. Gilt nur für den Passwort-Login; SSO-Anmeldungen setzen kein Flag.
         if (PasswordPolicyService::getInstance()->isExpired((int) $user->id)) {
@@ -460,6 +476,25 @@ class Auth
         AuditLogger::instance()->loginSuccess($username);
         
         return true;
+    }
+
+    /**
+     * Einstellung „Lokale Anmeldung“ der Entra-ID-Anmeldung (EntraSettings::passwordLoginAllowed()). Bei Fehlern
+     * bleibt der Passwort-Login erlaubt, damit eine defekte SSO-Konfiguration niemanden aussperrt.
+     */
+    private function isPasswordLoginAllowedForUser(object $user): bool
+    {
+        try {
+            $settings = \CMS\Auth\SSO\EntraSsoService::getInstance()->settings();
+            if (($settings['local_login'] ?? \CMS\Auth\SSO\EntraSettings::LOCAL_LOGIN_ALL) === \CMS\Auth\SSO\EntraSettings::LOCAL_LOGIN_ALL) {
+                return true;
+            }
+            $isLinked = \CMS\Auth\SSO\EntraSsoService::getInstance()->isLinked((int) $user->id);
+
+            return \CMS\Auth\SSO\EntraSettings::passwordLoginAllowed($settings, (string) ($user->role ?? '') === 'admin', $isLinked);
+        } catch (\Throwable) {
+            return true;
+        }
     }
 
     /**
@@ -1389,6 +1424,8 @@ class Auth
         $_SESSION['session_start_time'] = time();
         $this->touchSessionRegistry((int) $user->id, $this->getConfiguredSessionLifetime((string) ($user->role ?? 'member')), time(), true);
         unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember'], $_SESSION['mfa_pending_since'], $_SESSION['mfa_failed_attempts']);
+        // 4.1.0 (1c): SSO-Merkmale gelten nur für die Anmeldung, die sie gesetzt hat (EntraSsoService setzt sie danach neu).
+        unset($_SESSION['auth_sso_mfa_user_id'], $_SESSION['auth_sso_user_id'], $_SESSION['auth_sso_at']);
 
         $this->refreshSessionCookie((string) ($user->role ?? 'member'), $remember);
         $this->bindCurrentSessionToDeviceCookie((int)$user->id);

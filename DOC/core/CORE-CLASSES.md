@@ -40,6 +40,11 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `Auth\Passkey\WebAuthnAdapter` | `core/Auth/Passkey/` | WebAuthn-Registrierung und -Anmeldung |
 | `Auth\LDAP\LdapAuthProvider` | `core/Auth/LDAP/` | LDAP/AD-Anmeldung, Verzeichnis-Sync |
 | `Auth\MFA\TotpAdapter`, `BackupCodesManager` | `core/Auth/MFA/` | Zweiter Faktor (Secrets seit 4.0.0 verschlüsselt über `CryptoService`), Backup-Codes |
+| `Auth\SSO\EntraSsoService` | `core/Auth/SSO/` | Entra-ID-Anmeldung (seit 4.1.0): Start, Callback (Rate-Limit → `state` → Code → ID-Token → Zuordnung → `completeLoginForUserId`), Verknüpfen/Trennen, frische SSO-Anmeldung als Re-Auth ([SSO-ENTRA.md](../admin/security/SSO-ENTRA.md)) |
+| `Auth\SSO\EntraIdProvider` (`OidcProviderInterface`) | `core/Auth/SSO/` | Autorisierungs-URL (PKCE S256), Token-Tausch, ID-Token-Prüfung (nur RS256, JWKS-Cache 24 h, `iss`/`aud`/`nonce`/`tid`/`oid`/`ver`), `amr`, `xms_edov`, „Verbindung prüfen“ |
+| `Auth\SSO\EntraSettings` | `core/Auth/SSO/` | Einstellungsgruppe `auth_entra` (Secret verschlüsselt), `passwordLoginAllowed()`, Secret-Ablaufhinweis |
+| `Auth\SSO\IdentityLinker` (`IdentityStoreInterface`, `DatabaseIdentityStore`) | `core/Auth/SSO/` | Kontozuordnung über `tid`+`oid` (`user_identities`), bedingte automatische Verknüpfung, Provisioning, Rollen-Mapping |
+| `Auth\SSO\OidcFlowState` | `core/Auth/SSO/` | `state`/`nonce`/PKCE-Verifier in der Sitzung, einmalig, 10 Minuten |
 | `Totp` | `core/Totp.php` | RFC-6238-TOTP: Secret, Code, `otpauth://`-URI, QR-Code |
 
 ### Inhalte, Themes, Plugins, Abos
@@ -61,6 +66,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `AdminRouter` | `/admin`, `/admin/:page`, `/admin/logs/:section`, `/admin/plugins/:plugin/:page` |
 | `MemberRouter` | `/member`, `/member/:page`, `/member/plugin/:slug[/:action[/:id]]`, `/dashboard` |
 | `PublicRouter` | Login/Registrierung/Passwort, Bestätigungslinks (`/cms-verify-email`, `/cms-confirm-email-change`), Logout, MFA, `/order`, `/comments/post`, `/cookie-einstellungen`, `/media-file` |
+| `SsoRouter` | `/cms-login/sso/entra/start`, `/cms-login/sso/entra/callback` (Zwischenseite wegen `SameSite=Strict`, seit 4.1.0) |
 | `ThemeRouter` | `/`, `/blog`, Beitrags-Permalinks, Archive, `/search`, `/sitemap`, `/sitemap.xml`, `/robots.txt`, `/feed`, `/contact`, Autoren, `/security.txt`, IndexNow-Key, Tabellen-Export |
 | `ThemeArchiveRepository` | Datenabfragen für Kategorie-/Tag-/Autoren-Archive |
 

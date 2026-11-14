@@ -325,8 +325,11 @@ T::run('Favoriten: Titel, Permalink, merken und entfernen (MD-16)', static funct
 
 T::run('Sicherheit: Re-Auth, Login-Weiterleitung, kein SQL im Controller (MD-01, MD-10, MD-11, MD-12)', static function (): void {
     $controller = memberSource('member/includes/class-member-controller.php');
-    T::check(preg_match("/in_array\\(\\\$action, \\['totp_start', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all'\\], true\\)\\)\\s*\\{\\s*\\\$reauth/", $controller) === 1,
-        'passkey_delete verlangt das aktuelle Passwort');
+    T::check(preg_match("/in_array\\(\\\$action, \\['totp_start', 'totp_disable', 'backup_generate', 'passkey_register', 'passkey_delete', 'sessions_revoke_all', 'sso_link', 'sso_unlink'\\], true\\)\\)\\s*\\{\\s*\\\$currentPassword = [^;]+;\\s*\\\$reauth/", $controller) === 1,
+        'passkey_delete und SSO-Verknüpfen/-Trennen verlangen das aktuelle Passwort');
+    // 4.1.0 (1c): Die frische Microsoft-Anmeldung ersetzt das Passwort nur beim Hinzufügen eines Faktors.
+    T::check(str_contains($controller, "\$currentPassword === '' && in_array(\$action, ['totp_start', 'passkey_register'], true) && EntraSsoService::isFreshSsoSession(\$userId)"),
+        'SSO-Re-Auth nur für totp_start und passkey_register');
     T::check(preg_match("/privacy_delete_request'\\) \\{.*?verifyCurrentPassword/s", $controller) === 1, 'Löschantrag verlangt das aktuelle Passwort');
     T::check(str_contains(memberSource('member/privacy.php'), 'name="current_password"'), 'Löschformular hat ein Passwortfeld');
     T::check(str_contains($controller, "CmsAuthPageService::getInstance()->getPublicPath('login'") && !str_contains($controller, "'Location: /login"), 'Login-Weiterleitung über CmsAuthPageService');

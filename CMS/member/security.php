@@ -27,14 +27,21 @@ $score = max(0, min(100, (int)($security['score'] ?? 0)));
 $recommendations = array_values(array_filter((array)($security['recommendations'] ?? []), 'is_array'));
 $mfaToken = $controller->csrfToken('security_mfa');
 $passkeyToken = $controller->csrfToken('security_passkey');
+// 4.1.0 (1c): Entra-ID-Verknüpfung; frische Microsoft-Anmeldung ersetzt das Passwort beim Hinzufügen eines Faktors.
+$ssoData = is_array($securityData['sso'] ?? null) ? $securityData['sso'] : ['available' => false, 'identity' => null, 'fresh' => false];
+$ssoIdentity = is_array($ssoData['identity'] ?? null) ? $ssoData['identity'] : null;
+$ssoFresh = !empty($ssoData['fresh']);
 $memberProgressValues = [$score];
 
 /** Passwortfeld für die Re-Authentifizierung sicherheitsrelevanter Aktionen. */
-$passwordField = static function (string $id) use ($e, $t): void {
+$passwordField = static function (string $id, bool $optional = false) use ($e, $t): void {
     ?>
     <div>
         <label class="form-label" for="<?= $e($id) ?>"><?= $e($t('member.security.current_password')) ?></label>
-        <input class="form-control" id="<?= $e($id) ?>" name="current_password" type="password" autocomplete="current-password" required>
+        <input class="form-control" id="<?= $e($id) ?>" name="current_password" type="password" autocomplete="current-password"<?= $optional ? '' : ' required' ?>>
+        <?php if ($optional): ?>
+            <div class="form-hint"><?= $e($t('member.security.sso_fresh_hint')) ?></div>
+        <?php endif; ?>
     </div>
     <?php
 };
@@ -158,7 +165,7 @@ include __DIR__ . '/partials/header.php';
                             <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
                                 <input type="hidden" name="action" value="totp_start">
                                 <input type="hidden" name="csrf_token" value="<?= $e($mfaToken) ?>">
-                                <?php $passwordField('totp_start_current_password'); ?>
+                                <?php $passwordField('totp_start_current_password', $ssoFresh); ?>
                                 <button type="submit" class="btn btn-primary"><?= $e($t('member.security.totp_setup')) ?></button>
                             </form>
                         <?php else: ?>
@@ -208,7 +215,7 @@ include __DIR__ . '/partials/header.php';
                                 <input class="form-control" id="credential_name" name="credential_name" type="text" maxlength="100" value="<?= $e($t('member.security.passkey_default_name')) ?>">
                             </div>
                             <div class="col-12 col-md-4">
-                                <?php $passwordField('passkey_current_password'); ?>
+                                <?php $passwordField('passkey_current_password', $ssoFresh); ?>
                             </div>
                             <div class="col-12 col-md-4">
                                 <button type="button" class="btn btn-primary" data-passkey-register><?= $e($t('member.security.passkey_register')) ?></button>
@@ -259,6 +266,45 @@ include __DIR__ . '/partials/header.php';
                 </table>
             </div>
         </section>
+
+        <?php if (!empty($ssoData['available']) || $ssoIdentity !== null): ?>
+            <section class="card" aria-labelledby="member-sso-title">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="card-title" id="member-sso-title"><?= $e($t('member.security.sso')) ?></h2>
+                    <span class="badge <?= $ssoIdentity !== null ? 'bg-green-lt text-green' : 'bg-secondary-lt text-secondary' ?>">
+                        <?= $e($t($ssoIdentity !== null ? 'member.security.sso_linked' : 'member.security.sso_not_linked')) ?>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary"><?= $e($t('member.security.sso_intro')) ?></p>
+                    <?php if ($ssoIdentity !== null): ?>
+                        <dl class="row mb-3">
+                            <?php if ((string) ($ssoIdentity['email_at_link'] ?? '') !== ''): ?>
+                                <dt class="col-5 col-md-4"><?= $e($t('member.security.sso_account')) ?></dt>
+                                <dd class="col-7 col-md-8"><?= $e((string) $ssoIdentity['email_at_link']) ?></dd>
+                            <?php endif; ?>
+                            <dt class="col-5 col-md-4"><?= $e($t('member.security.sso_linked_at')) ?></dt>
+                            <dd class="col-7 col-md-8"><?= $e(MemberI18n::formatDate((string) ($ssoIdentity['linked_at'] ?? ''))) ?></dd>
+                            <dt class="col-5 col-md-4"><?= $e($t('member.security.sso_last_login')) ?></dt>
+                            <dd class="col-7 col-md-8"><?= $e((string) ($ssoIdentity['last_login_at'] ?? '') !== '' ? MemberI18n::formatDate((string) $ssoIdentity['last_login_at']) : '–') ?></dd>
+                        </dl>
+                        <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="<?= $e($t('member.security.sso_confirm_unlink')) ?>">
+                            <input type="hidden" name="action" value="sso_unlink">
+                            <input type="hidden" name="csrf_token" value="<?= $e($controller->csrfToken('security_sso')) ?>">
+                            <?php $passwordField('sso_unlink_current_password'); ?>
+                            <button type="submit" class="btn btn-outline-danger"><?= $e($t('member.security.sso_unlink')) ?></button>
+                        </form>
+                    <?php else: ?>
+                        <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
+                            <input type="hidden" name="action" value="sso_link">
+                            <input type="hidden" name="csrf_token" value="<?= $e($controller->csrfToken('security_sso')) ?>">
+                            <?php $passwordField('sso_link_current_password'); ?>
+                            <button type="submit" class="btn btn-primary"><?= $e($t('member.security.sso_link')) ?></button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </section>
+        <?php endif; ?>
 
         <section class="card" aria-labelledby="member-sessions-title">
             <div class="card-header"><h2 class="card-title" id="member-sessions-title"><?= $e($t('member.security.sessions')) ?></h2></div>

@@ -108,6 +108,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `guest_orders_assigned` | Action | `$userId, $count` (Gastbestellungen der bestätigten Adresse dem Konto zugeordnet; seit 4.0.0) |
 | `user_sessions_revoked` | Action | `$userId, $initiator` (`'member'`/`'admin'`; alle Sitzungen und API-Tokens beendet, `Auth::revokeAllSessions()`; seit 4.0.0) |
 | `cms_password_changed` | Action | `$userId, $source` (`'register'`, `'member'`, `'admin_create'`, `'admin_update'`, `'reset'`; nach jedem gespeicherten Passwort, `PasswordPolicyService::recordChange()`; seit 4.1.0) |
+| `cms_sso_login` | Action | `$userId, $provider` (`'entra'`), `$claims` (`tid`, `oid`, `name`, `email`, `roles`, `groups`, `amr`; nie Tokens); nach jeder SSO-Anmeldung mit fertiger Sitzung (seit 4.1.0) |
+| `cms_sso_user_provisioned` | Action | `$userId, $provider, $claims`; Konto bei der ersten SSO-Anmeldung angelegt (seit 4.1.0) |
+| `user_role_changed` | Action | `$userId, $fromRole, $toRole, $source` (`'sso'` = Rollen-Mapping der Entra-Anmeldung; seit 4.1.0) |
 | `cms_mfa_enforcement_required` | Filter | `$required` (bool), `$user`; kann den MFA-Zwang für ein Konto zusätzlich einschalten, für eine gewählte Rolle nicht aufheben (seit 4.1.0) |
 | `cms_password_policy` | Filter | `$policy` (`min_length`, `require_uppercase`/`_lowercase`/`_digit`/`_special`, `max_age_days`, `history`); Ergebnis kann die Einstellungen nur verschärfen, nie abschwächen (seit 4.1.0) |
 | `subscription_assigned` | Action | `$userId, $planId` |

@@ -99,6 +99,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Legal | [admin/legal/README.md](admin/legal/README.md) |
 | Security | [admin/security/README.md](admin/security/README.md) |
 | Login thresholds and lockout | [admin/security/LOGIN-THRESHOLDS.md](admin/security/LOGIN-THRESHOLDS.md) |
+| Sign-in with Microsoft Entra ID (SSO, 4.1.0) | [admin/security/SSO-ENTRA.md](admin/security/SSO-ENTRA.md) |
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
 | Toolbar: cache & maintenance mode | [admin/system-settings/TOOLBAR.md](admin/system-settings/TOOLBAR.md) |
