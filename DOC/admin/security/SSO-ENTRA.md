@@ -55,7 +55,7 @@ abgelaufenes Secret.
 
 - Start `GET /cms-login/sso/entra/start` legt `state`, `nonce` und PKCE-Verifier (je 32 Byte) für 10 Minuten in die Sitzung; jeder `state` ist einmalig.
 - Das Sitzungs-Cookie ist `SameSite=Strict` und fehlt beim Rücksprung von Microsoft. Der Callback antwortet deshalb zuerst mit einer kurzen Zwischenseite, die sich per `<meta http-equiv="refresh">` selbst mit `hop=1` aufruft; erst dieser Aufruf von der eigenen Seite trägt die Sitzung und löst den Code ein.
-- Ungültiger oder wiederverwendeter `state` → 400 und Audit `sso_state_invalid`; mehr als 20 Fehlschläge je IP in 15 Minuten → 429 (`sso_callback`).
+- Ungültiger oder wiederverwendeter `state` → 400 und Audit `sso_state_invalid`; mehr als 20 Fehlschläge je IP in 15 Minuten (auch Abbrüche bei Microsoft) → 429 (`sso_callback`). Ein Callback ohne eigenen Start in der Sitzung wird mit 400 abgelehnt, ohne zu zählen – eine fremde Seite kann so das Limit einer geteilten IP nicht ausschöpfen.
 - Ohne MFA-Nachweis im Token und mit lokaler Authenticator-App folgt die gewohnte Code-Abfrage. Fehlt bei MFA-Zwang ein Faktor, landet die Sitzung auf `/mfa-setup`; dort (und beim Hinzufügen von TOTP oder Passkey im Mitgliederbereich) ersetzt eine höchstens 10 Minuten alte Microsoft-Anmeldung die Passwortabfrage.
 - Gespeichert werden keine Tokens, nur Tenant-ID, Objekt-ID, Adresse zum Zeitpunkt der Verknüpfung und Zeitpunkte.
 

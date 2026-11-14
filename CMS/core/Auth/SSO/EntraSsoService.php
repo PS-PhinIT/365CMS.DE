@@ -119,7 +119,13 @@ final class EntraSsoService
             return $this->error('login', 'rate_limited', 429);
         }
 
-        $consumed = (new OidcFlowState())->consume($query['state'] ?? null);
+        $flowState = new OidcFlowState();
+        if (!$flowState->hasPending()) {
+            // Kein eigener Start in dieser Sitzung (z. B. fremd eingebettete Callback-URL): weder zählen noch
+            // protokollieren – sonst könnte eine fremde Seite das Limit einer geteilten IP ausschöpfen.
+            return $this->error('login', 'state', 400);
+        }
+        $consumed = $flowState->consume($query['state'] ?? null);
         if (!$consumed['ok']) {
             $this->fail('sso_state_invalid', 'SSO-Callback ohne gültigen state.', null, ['reason' => $consumed['reason']]);
 
@@ -134,7 +140,7 @@ final class EntraSsoService
 
         if (isset($query['error'])) {
             $error = preg_match('/^[a-z_]{1,60}$/', (string) $query['error']) === 1 ? (string) $query['error'] : 'error';
-            $this->audit('sso_login_failed', 'Entra-Anmeldung von Microsoft abgelehnt oder abgebrochen.', null, ['error' => $error]);
+            $this->fail('sso_login_failed', 'Entra-Anmeldung von Microsoft abgelehnt oder abgebrochen.', null, ['error' => $error]);
 
             return $this->error($purpose, $error === 'access_denied' ? 'cancelled' : 'generic', 400);
         }
