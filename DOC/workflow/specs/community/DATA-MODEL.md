@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Datenmodell
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) · Schema **v26** | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 · Schema **v27** | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
 Database design of the Community module: 27 tables with prefix `community_`, created by
-`Community\Database\Installer` through `SchemaManager` (schema v26, idempotent, one definition shared by fresh
+`Community\Database\Installer` through `SchemaManager` (schema v27, idempotent, one definition shared by fresh
 install, update and runtime check). It lists columns, keys and indexes, denormalised counters and their maintenance,
 status values, what is reused from existing core tables (users, roles, user_groups, notifications, messages,
 favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin tables (`{prefix}cmsforum_*`).
@@ -13,6 +13,7 @@ favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin 
 
 ### 1. Grundsätze
 
+- **E6:** keine Datenübernahme aus `cms-forum` – alle `legacy_id`-Spalten in den Definitionen unten entfallen bei der Umsetzung.
 - Präfix **`{prefix}community_`**; Engine InnoDB, `utf8mb4_unicode_ci`; alle IDs `INT UNSIGNED` bzw. `BIGINT UNSIGNED` bei sehr großen Tabellen (Beiträge, Reaktionen, Lesestatus, Ereignisse).
 - Zeiten als `DATETIME` in UTC (Ausgabe in der Zeitzone der Site), nicht `TIMESTAMP` (Jahr-2038-Grenze, keine automatische Zeitzone).
 - Strukturierte Werte als `LONGTEXT` in Spalten `*_json` (Core-Konvention wie `form_forms.fields_json`), nicht als Typ `JSON` (MariaDB-Kompatibilität).
@@ -144,7 +145,7 @@ CREATE TABLE {p}community_posts (
   is_first_post TINYINT(1) NOT NULL DEFAULT 0,
   status VARCHAR(20) NOT NULL DEFAULT 'published',    -- published | pending | hidden | deleted | rejected
   status_reason VARCHAR(255) NULL,                    -- Grund für hidden/rejected (für Autor sichtbar)
-  format VARCHAR(10) NOT NULL DEFAULT 'markdown',     -- markdown | bbcode (Altbestand, E6)
+  format VARCHAR(10) NOT NULL DEFAULT 'markdown',     -- markdown (weitere Formate nur bei Bedarf)
   body MEDIUMTEXT NOT NULL,                           -- Quelle
   body_html MEDIUMTEXT NULL,                          -- gerendert + gereinigt (Cache)
   rendered_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -408,7 +409,9 @@ Reparatur: Batch-Job „Community-Zähler neu berechnen“ (`BatchJobService`) j
 | `settings` | Gruppe `community` |
 | `search_queries` | Suchstatistik (Quelle `community`) |
 
-### 6. Zuordnung der Plugin-Tabellen (`{prefix}cmsforum_*`)
+### 6. Zuordnung der Plugin-Tabellen (`{prefix}cmsforum_*`) – entfällt (E6)
+
+> Keine Datenübernahme: Die Spalten `legacy_id` und der Wert `format = 'bbcode'` sowie die Tabelle `community_redirects` für Plugin-Adressen werden bei der Umsetzung **nicht** angelegt. Die Zuordnung unten bleibt nur als Referenz.
 
 Die Tabellen heißen im Plugin `cmsforum_*` (nicht `forum_*`). Die Übernahme läuft über `legacy_id`, ein zweiter Lauf
 ändert nichts. Details und Prüfungen: [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md).

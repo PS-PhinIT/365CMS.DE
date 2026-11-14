@@ -234,6 +234,7 @@ final class WebAuthnAdapter
             name            VARCHAR(128) DEFAULT '',
             created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
             last_used_at    TIMESTAMP    NULL DEFAULT NULL,
+            user_verified   TINYINT(1)   NULL DEFAULT NULL,
             INDEX idx_user      (user_id),
             UNIQUE INDEX idx_cred_id (credential_id(255))
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -249,7 +250,7 @@ final class WebAuthnAdapter
         $credentialId = $this->extractBinaryString($data->credentialId ?? null, 'credentialId');
         $aaguid = $this->normalizeAaguid($data->AAGUID ?? null);
 
-        $db->insert('passkey_credentials', [
+        $row = [
             'user_id'         => $userId,
             'credential_id'   => base64_encode($credentialId),
             'public_key'      => $data->credentialPublicKey,
@@ -257,7 +258,12 @@ final class WebAuthnAdapter
             'aaguid'          => $aaguid,
             'attestation_fmt' => $data->attestationFormat ?? null,
             'name'            => $name,
-        ]);
+        ];
+        // 4.1.0: User Verification bei der Registrierung (lbuchs/WebAuthn: $data->userVerified) für den MFA-Zwang.
+        if (isset($this->credentialsTableColumns['user_verified'])) {
+            $row['user_verified'] = !empty($data->userVerified) ? 1 : 0;
+        }
+        $db->insert('passkey_credentials', $row);
     }
 
     /**
@@ -360,6 +366,35 @@ final class WebAuthnAdapter
         return $this->ensureCredentialsTable();
     }
 
+    /**
+     * 4.1.0: Nach einer Anmeldung mit gesetztem UV-Bit (Signatur bereits geprüft) gilt der Passkey als
+     * Faktor mit User Verification – so zählen auch Bestandspasskeys (user_verified = NULL) beim MFA-Zwang.
+     */
+    public function markUserVerified(int $credentialDbId): void
+    {
+        if ($credentialDbId <= 0 || !$this->ensureCredentialsTable() || !isset($this->credentialsTableColumns['user_verified'])) {
+            return;
+        }
+
+        Database::instance()->update('passkey_credentials', ['user_verified' => 1], ['id' => $credentialDbId]);
+    }
+
+    /**
+     * Anzahl der Passkeys mit User Verification eines Kontos (MFA-Zwang).
+     */
+    public function countUserVerifiedCredentials(int $userId): int
+    {
+        if ($userId <= 0 || !$this->ensureCredentialsTable() || !isset($this->credentialsTableColumns['user_verified'])) {
+            return 0;
+        }
+        $db = Database::instance();
+
+        return (int) $db->get_var(
+            "SELECT COUNT(*) FROM {$db->getPrefix()}passkey_credentials WHERE user_id = ? AND user_verified = 1",
+            [$userId]
+        );
+    }
+
     private function ensureCredentialsTable(): bool
     {
         if ($this->credentialsTableAvailable !== null) {
@@ -413,6 +448,8 @@ final class WebAuthnAdapter
                 'name' => "ADD COLUMN name VARCHAR(128) DEFAULT '' AFTER attestation_fmt",
                 'created_at' => "ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER name",
                 'last_used_at' => "ADD COLUMN last_used_at TIMESTAMP NULL DEFAULT NULL AFTER created_at",
+                // 4.1.0: UV-Flag (PIN/Biometrie) – zählt beim MFA-Zwang nur mit 1.
+                'user_verified' => "ADD COLUMN user_verified TINYINT(1) NULL DEFAULT NULL AFTER last_used_at",
             ];
 
             foreach ($requiredColumns as $column => $ddl) {

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Architektur
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -26,7 +26,7 @@ retention, private storage, admin menu, member dashboard, sitemap, GDPR), the co
 ```text
 CMS/
 ├── core/Services/Community/
-│   ├── Database/Installer.php            Tabellen (Schema v26), Standard-Rechte, Standard-Ränge
+│   ├── Database/Installer.php            Tabellen (Schema v27), Standard-Rechte, Standard-Ränge
 │   ├── Repository/                       reine Datenzugriffe, nur gebundene Parameter
 │   │   ├── CategoryRepository.php  ForumRepository.php  TopicRepository.php  PostRepository.php
 │   │   ├── ReactionRepository.php  SubscriptionRepository.php  ReadStateRepository.php
@@ -58,7 +58,6 @@ CMS/
 │   ├── CommunityMemberSection.php        Mitgliederbereich (PluginDashboardRegistry)
 │   └── CommunityRetentionRules.php       Löschfristen (DataRetentionService::registerRule)
 ├── core/Services/FeatureHooks/CommunityHooks.php   Registrierung aller Hooks, Cron, Badges
-├── core/Services/PluginMigration/ForumPluginMigrator.php
 ├── core/Services/Security/CaptchaService.php        neu, gemeinsam mit Formularen/Registrierung (E7)
 ├── views/community/                      Frontend-Vorlagen, per Theme überschreibbar (THEME-UI §2)
 ├── admin/views/community/                Admin-Ansichten

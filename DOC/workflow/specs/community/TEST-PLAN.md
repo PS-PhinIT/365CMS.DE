@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Testplan
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -32,7 +32,7 @@ implementation) and the release gate. The repository's `TESTS/` directory was re
 | `uploads` | Allowlist Endung + Signatur, Polyglot (JPEG mit PHP), SVG, übergroße Pixel, EXIF entfernt, WebP-Umwandlung, Auslieferung mit Rechten und Headern, verwaiste Uploads nach 24 h | `shell.php.jpg`, Zip-Bombe wird nicht entpackt | P1 |
 | `search-seo` | Suche mit Filtern und Rechtefilter, Index-Aktualisierung bei Ereignissen, kanonische URLs, 301 bei falschem Slug/alten URLs, `noindex`-Regeln, Sitemap ohne interne Foren, Schema.org valide | Thema umbenannt → alte Slug-URL 301 | P1 |
 | `privacy` – DSGVO & Fristen | Export vollständig, Anonymisieren vs. Löschen, Zitate neutralisiert, jede Löschfrist-Regel | gelöschtes Mitglied erscheint als „Gelöschtes Mitglied“, Profil 404 | P1 |
-| `migration` – cms-forum | Vorschau, Probelauf, Zählungen je Tabelle, BBCode-Stichprobe, Spaltenvariante `text`/`option_text`, Rechte-Abbildung, Sperren, Anhänge mit Prüfsummen, alle alten URLs, zweiter Lauf ohne Änderung, Liste „Verhalten ändert sich“ | Daten aus dem Plugin-Installer + Zufallsdaten (10.000 Beiträge) | P1 |
+| ~~`migration` – cms-forum~~ (entfällt, E6) | Vorschau, Probelauf, Zählungen je Tabelle, BBCode-Stichprobe, Spaltenvariante `text`/`option_text`, Rechte-Abbildung, Sperren, Anhänge mit Prüfsummen, alle alten URLs, zweiter Lauf ohne Änderung, Liste „Verhalten ändert sich“ | Daten aus dem Plugin-Installer + Zufallsdaten (10.000 Beiträge) | P1 |
 | `settings` | jede Einstellung aus `Support/Settings` hat einen Leser und einen Wirkungstest; Grenzen und Typen werden erzwungen | statischer Test: jeder Schlüssel kommt außerhalb von Settings/Admin-View vor | P1 |
 | `performance` | Abfragebudget je Seite (≤ 6 bei warmem Cache), Lasttest 10.000 Themen / 500.000 Beiträge (Startseite, Forum, Thema Seite 1 und letzte Seite, Suche) | Seite 400 eines Themas ohne `OFFSET`-Scan (EXPLAIN) | P1 |
 | `browser` – Oberfläche | Playwright: Schreiben, Vorschau, Zitieren, Melden-Dialog, Moderationsmenü, Upload per Ziehen, Entwurf wiederherstellen, mobil 360 px, Dark Mode, Tastaturbedienung | kein waagerechtes Scrollen bei 320 px | P1 |
@@ -43,14 +43,13 @@ implementation) and the release gate. The repository's `TESTS/` directory was re
 
 - Generator für Struktur (3 Kategorien, 12 Foren in 3 Ebenen, 1 internes Forum je Gruppe), Mitglieder je Rolle/Stufe/Sperre, Themen mit allen Zuständen (angepinnt, geschlossen, gelöst, Umfrage, Anhänge, verschoben, wartend, ausgeblendet).
 - Lastdaten per Batch (10.000 Themen, 500.000 Beiträge, 5.000 Mitglieder, 1 Mio. Reaktionen).
-- Plugin-Daten für `migration`: Installation von `cms-forum` 3.0.4 in einer Testinstanz bzw. SQL-Abzug mit beiden Spaltenvarianten der Umfrageoptionen.
+- ~~Plugin-Daten für `migration`~~ (entfällt, E6): Installation von `cms-forum` 3.0.4 in einer Testinstanz bzw. SQL-Abzug mit beiden Spaltenvarianten der Umfrageoptionen.
 
 ### 4. Freigabe-Kriterien (Release P1)
 
 - [ ] Alle Suiten der Phase P1 grün, Gegenproben dokumentiert.
 - [ ] Rechte-Matrix ohne Ausnahme; XSS-Korpus ohne Treffer.
-- [ ] Paritäts-Checkliste in [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) vollständig abgehakt.
-- [ ] Migration mit realen Plugin-Daten geprobt, Bericht abgelegt.
+- [ ] Funktions-Referenz in [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) §2 abgedeckt.
 - [ ] Abfragebudget und Lasttest erfüllt; Lighthouse ≥ 90.
 - [ ] Semgrep/Trivy (`security.yml`) ohne neue Befunde.
 - [ ] Doku aktualisiert: `DOC/admin/…`, `DOC/member/…`, `DOC/core/HOOKS-REFERENCE.md`, `DOC/core/DATABASE-SCHEMA.md`, Changelog; ROADMAP-Fortschritt gepflegt.

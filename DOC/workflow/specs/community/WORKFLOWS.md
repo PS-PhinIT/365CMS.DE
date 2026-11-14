@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Abläufe
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -170,7 +170,9 @@ stateDiagram-v2
 4. Rechtstexte ergänzen (Legal-Modul bietet Textbausteine), Menüeintrag „Forum“ im Theme-Menü anlegen.
 5. Optional: Datenübernahme aus `cms-forum` (W15).
 
-### W15 – Übernahme aus cms-forum
+### W15 – Übernahme aus cms-forum (entfällt, E6)
+
+> Entfällt: `cms-forum` war nirgends aktiv, es gibt keine Daten zu übernehmen. Text bleibt als Referenz.
 
 1. Erkennung: aktives oder installiertes `cms-forum` und Tabellen `{prefix}cmsforum_*` → Admin-Hinweis mit Link.
 2. `/admin/community-import`: Vorschau (Anzahl je Tabelle, erkannte Probleme: verwaiste Beiträge, fehlende Dateien, Spaltenvariante `text`/`option_text`).

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Funktionskatalog
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -120,6 +120,6 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 | COM-ADM-01 | **Admin-Bereich „Community“** | Übersicht (Kennzahlen, offene Meldungen, Warteschlange), Struktur (Kategorien & Foren), Themen, Moderation (Warteschlange, Meldungen, Verwarnungen, Sperren, Protokoll), Ränge & Abzeichen, Rechte, Einstellungen. Einträge im Admin-Menü-Katalog beider Profile, Badges für Meldungen und Warteschlange. | `AdminMenu\CoreCatalog`, `BadgeProvider` | P1 | ✅ (Plugin-Admin) |
 | COM-ADM-02 | **Einstellungen** | Allgemein, Beiträge & Editor, Rechte-Standards, Spam & Grenzen, Anhänge, Benachrichtigungen, SEO, Darstellung. **Jede Einstellung hat eine Wirkung und einen Test** (Lehre aus ⚠️-Einträgen des Plugins). | `SettingsService` | P1 | 🟡 |
 | COM-ADM-03 | **Modul an/aus** | Über `CoreModuleService`; aus = öffentliche Routen 404, Admin-Seiten ausgeblendet, Daten bleiben. | `CoreModuleService` | P1 | – |
-| COM-ADM-04 | **Datenübernahme aus cms-forum** | Migrator mit Vorschau, idempotent, Plugin wird danach deaktiviert; Details [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md). | `IntegratedPluginService`, `PluginMigrator` | P1 | – |
+| COM-ADM-04 | ~~**Datenübernahme aus cms-forum**~~ **entfällt (E6)** | Migrator mit Vorschau, idempotent, Plugin wird danach deaktiviert; Details [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md). | `IntegratedPluginService`, `PluginMigrator` | P1 | – |
 | COM-ADM-05 | **Statistik** | Beiträge/Themen/aktive Mitglieder pro Tag (30/90/365), Top-Foren, Antwortzeit bis erste Antwort, Anteil gelöster Fragen; ohne personenbezogene Rohdaten. | neu | P2 | 🟡 |
 | COM-ADM-06 | **Papierkorb, Export/Import** | Themen im Core-Papierkorb (`TrashProvider`); Export/Import der Struktur (Kategorien, Foren, Rechte, Einstellungen) über `ExchangeProvider`; Beiträge nur im DSGVO-Export. | `ContentTypeRegistry` | P1 / P2 | ⬜ |

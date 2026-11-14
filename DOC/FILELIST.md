@@ -65,6 +65,8 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `DOC/` | documentation |
 | `RELEASE/` | release zips and checksums |
 | `SCREENSHOTS/` | screenshots |
+| `TESTS/mfa-enforcement/` | Role-based MFA enforcement and account gate (4.1.0) / Rollenbasierter MFA-Zwang und Konto-Weiche (4.1.0) (`php TESTS/mfa-enforcement/run.php`) |
+| `TESTS/password-policy/` | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration / Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung (`php TESTS/password-policy/run.php [-v]`) |
 | `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
@@ -82,6 +84,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/member-area/` | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup / Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit (`php TESTS/member-area/run.php [-v]`) |
 | `TESTS/newsletter-member/` | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping / Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping (`php TESTS/newsletter-member/run.php [-v]`) |
 | `TESTS/release-3.4.0/` | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release) / Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases) (`php TESTS/release-3.4.0/run.php`) |
+| `TESTS/schema-v26/` | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check / Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung (`php TESTS/schema-v26/run.php [-v]`) |
 | `TESTS/security/` | security tests / Sicherheitstests (`php TESTS/security/run.php`) |
 | `TESTS/theme-contract/` | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments / Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente (`php TESTS/theme-contract/run.php [Theme-Wurzeln …]`) |
 | `TESTS/update-swap/` | update directory swap test / Test des Verzeichnistauschs beim Update (`php TESTS/update-swap/run.php`) |

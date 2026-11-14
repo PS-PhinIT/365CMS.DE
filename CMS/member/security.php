@@ -41,6 +41,9 @@ $passwordField = static function (string $id) use ($e, $t): void {
 
 include __DIR__ . '/partials/header.php';
 ?>
+<?php if (!empty($securityData['mfa_enforced_pending'])): ?>
+    <div class="alert alert-warning" role="alert"><?= $e($t('member.security.mfa_enforced_notice')) ?></div>
+<?php endif; ?>
 <div class="row g-4">
     <div class="col-12 col-xl-4 vstack gap-4">
         <section class="card" aria-labelledby="member-security-score-title">

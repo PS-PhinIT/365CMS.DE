@@ -30,7 +30,7 @@ class MigrationManager
      * Aktuelle Schema-Version – erhöhen wenn neue Migrations hinzukommen.
      * Wird in cms_settings (option_name = 'db_schema_version') gespeichert.
      */
-    public const SCHEMA_VERSION = 'v25';
+    public const SCHEMA_VERSION = 'v25'; // v26 mit der Release-Vorbereitung 4.1.0 (siehe SchemaManager::SCHEMA_VERSION)
 
     public function __construct(Database $db)
     {
@@ -229,12 +229,16 @@ class MigrationManager
             "ALTER TABLE `{$p}pages` ADD INDEX `idx_planned_at` (`planned_at`)",
             // v25: Auslöser einer Seitenrevision (Übersicht „Letzte Änderungen“).
             "ALTER TABLE `{$p}page_revisions` ADD COLUMN `created_by` INT UNSIGNED DEFAULT NULL",
+            // v26 (4.1.0): Passwort-Alter für die konfigurierbare Richtlinie und das User-Verification-Flag
+            // der Passkeys (zählt beim MFA-Zwang nur mit UV). Bestandswerte bleiben NULL.
+            "ALTER TABLE `{$p}users` ADD COLUMN `password_changed_at` DATETIME NULL DEFAULT NULL",
+            "ALTER TABLE `{$p}passkey_credentials` ADD COLUMN `user_verified` TINYINT(1) NULL DEFAULT NULL",
         ];
 
         // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –
         // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge.
         $schemaQueries = SchemaManager::getSchemaQueries($p, $charset);
-        foreach (SchemaManager::FEATURE_TABLES as $featureTable) {
+        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26) as $featureTable) {
             if (isset($schemaQueries[$featureTable])) {
                 $migrations[] = $schemaQueries[$featureTable];
             }

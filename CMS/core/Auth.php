@@ -12,6 +12,7 @@ namespace CMS;
 
 use CMS\Auth\MFA\TotpAdapter;
 use CMS\Services\EmailVerificationService;
+use CMS\Services\Security\PasswordPolicyService;
 use CMS\Services\UserService;
 
 if (!defined('ABSPATH')) {
@@ -20,13 +21,6 @@ if (!defined('ABSPATH')) {
 
 class Auth
 {
-    private const PASSWORD_POLICY_MIN_LENGTH = 12;
-    private const PASSWORD_POLICY_PATTERNS = [
-        'uppercase' => '/[A-Z]/',
-        'lowercase' => '/[a-z]/',
-        'digit' => '/\d/',
-        'special' => '/[^a-zA-Z0-9]/',
-    ];
 
     private const DEVICE_COOKIE_NAME = 'cms_device';
     /** bcrypt-Hash (Kosten wie Security::hashPassword) eines festen Werts – nur für Timing-Angleichung. */
@@ -443,6 +437,14 @@ class Auth
             return 'Ihr Konto ist deaktiviert.';
         }
 
+        // 4.1.0: Abgelaufenes Passwort (Höchstalter der Richtlinie) – die Weiche in Router::dispatch() erlaubt dann nur
+        // noch die Passwortänderung. Gilt nur für den Passwort-Login; SSO-Anmeldungen setzen kein Flag.
+        if (PasswordPolicyService::getInstance()->isExpired((int) $user->id)) {
+            $_SESSION['password_change_required'] = true;
+        } else {
+            unset($_SESSION['password_change_required']);
+        }
+
         // H-02: MFA-Check – wenn TOTP aktiv, Pending-Session setzen statt direkt einloggen
         if ($this->isMfaEnabled((int)$user->id)) {
             $_SESSION['mfa_pending_user_id'] = (int)$user->id;
@@ -599,16 +601,19 @@ class Auth
         $requiresVerification = $this->isEmailVerificationRequired();
 
         // Create user
+        $passwordHash = $security->hashPassword($password);
         $userId = $db->insert('users', [
             'username' => $username,
             'email' => $email,
-            'password' => $security->hashPassword($password),
+            'password' => $passwordHash,
             'display_name' => $displayName,
             'role' => $registrationRole,
             'status' => $requiresVerification ? EmailVerificationService::STATUS_UNVERIFIED : 'active'
         ]);
         
         if ($userId) {
+            PasswordPolicyService::getInstance()->recordChange((int) $userId, $passwordHash, 'register');
+
             try {
                 SubscriptionManager::instance()->assignConfiguredDefaultPlan((int) $userId);
             } catch (\Throwable $e) {
@@ -709,123 +714,36 @@ class Auth
     }
 
     /**
-     * Liefert die technische Passwort-Policy als strukturierte Definition.
+     * Liefert die wirksame Passwort-Richtlinie als strukturierte Definition (konfigurierbar seit 4.1.0,
+     * `PasswordPolicyService`; Standard = bisheriges Verhalten: 12 Zeichen, vier Zeichenklassen).
      *
      * @return array<string, mixed>
      */
     public static function getPasswordPolicyDefinition(): array
     {
-        return [
-            'min_length' => self::PASSWORD_POLICY_MIN_LENGTH,
-            'patterns' => [
-                'uppercase' => '[A-Z]',
-                'lowercase' => '[a-z]',
-                'digit' => '\\d',
-                'special' => '[^a-zA-Z0-9]',
-            ],
-        ];
+        return PasswordPolicyService::getInstance()->evaluate('')['definition'];
     }
 
     /**
-     * Bewertet ein Passwort gegen die aktuelle Runtime-Policy.
+     * Bewertet ein Passwort gegen die wirksame Richtlinie; mit Benutzer-ID zusätzlich gegen die Passwort-Historie.
      *
      * @return array<string, mixed>
      */
-    public static function evaluatePasswordPolicy(string $password): array
+    public static function evaluatePasswordPolicy(string $password, ?int $userId = null): array
     {
-        $length = self::countPasswordLength($password);
-
-        $requirements = [
-            [
-                'key' => 'min_length',
-                'label' => 'Mindestens ' . self::PASSWORD_POLICY_MIN_LENGTH . ' Zeichen',
-                'message' => 'Das Passwort muss mindestens ' . self::PASSWORD_POLICY_MIN_LENGTH . ' Zeichen lang sein.',
-                'passed' => $length >= self::PASSWORD_POLICY_MIN_LENGTH,
-            ],
-            [
-                'key' => 'uppercase',
-                'label' => 'Mindestens ein Großbuchstabe',
-                'message' => 'Das Passwort muss mindestens einen Großbuchstaben enthalten.',
-                'passed' => preg_match(self::PASSWORD_POLICY_PATTERNS['uppercase'], $password) === 1,
-            ],
-            [
-                'key' => 'lowercase',
-                'label' => 'Mindestens ein Kleinbuchstabe',
-                'message' => 'Das Passwort muss mindestens einen Kleinbuchstaben enthalten.',
-                'passed' => preg_match(self::PASSWORD_POLICY_PATTERNS['lowercase'], $password) === 1,
-            ],
-            [
-                'key' => 'digit',
-                'label' => 'Mindestens eine Ziffer',
-                'message' => 'Das Passwort muss mindestens eine Ziffer (0–9) enthalten.',
-                'passed' => preg_match(self::PASSWORD_POLICY_PATTERNS['digit'], $password) === 1,
-            ],
-            [
-                'key' => 'special',
-                'label' => 'Mindestens ein Sonderzeichen',
-                'message' => 'Das Passwort muss mindestens ein Sonderzeichen enthalten (z. B. !@#$%^&*).',
-                'passed' => preg_match(self::PASSWORD_POLICY_PATTERNS['special'], $password) === 1,
-            ],
-        ];
-
-        $message = null;
-        foreach ($requirements as $requirement) {
-            if (!empty($requirement['passed'])) {
-                continue;
-            }
-
-            $message = (string) ($requirement['message'] ?? 'Die Passwort-Policy ist nicht erfüllt.');
-            break;
-        }
-
-        return [
-            'valid' => $message === null,
-            'message' => $message,
-            'length' => $length,
-            'min_length' => self::PASSWORD_POLICY_MIN_LENGTH,
-            'requirements' => $requirements,
-            'definition' => self::getPasswordPolicyDefinition(),
-        ];
-    }
-
-    private static function countPasswordLength(string $password): int
-    {
-        if ($password === '') {
-            return 0;
-        }
-
-        if (function_exists('mb_strlen')) {
-            return mb_strlen($password, 'UTF-8');
-        }
-
-        $characterCount = preg_match_all('/./us', $password, $matches);
-        if ($characterCount !== false) {
-            return $characterCount;
-        }
-
-        return strlen($password);
+        return PasswordPolicyService::getInstance()->evaluate($password, $userId);
     }
 
     /**
-     * M-18: Passwort-Policy validieren.
-     *
-     * Anforderungen:
-     *  - Mindestlänge: 12 Zeichen
-     *  - Mindestens 1 Großbuchstabe (A-Z)
-     *  - Mindestens 1 Kleinbuchstabe (a-z)
-     *  - Mindestens 1 Ziffer (0-9)
-     *  - Mindestens 1 Sonderzeichen (!@#$%^&* etc.)
+     * M-18: Passwort-Richtlinie prüfen (Mindestlänge, Zeichenklassen; mit Benutzer-ID auch Wiederverwendung).
      *
      * @param  string   $password Das zu prüfende Passwort (Klartext).
+     * @param  int|null $userId   Konto, dessen Historie geprüft wird (Änderung/Zurücksetzen); null bei Neuanlage.
      * @return true|string        true wenn gültig, Fehlermeldung sonst.
      */
-    public static function validatePasswordPolicy(string $password): true|string
+    public static function validatePasswordPolicy(string $password, ?int $userId = null): true|string
     {
-        $evaluation = self::evaluatePasswordPolicy($password);
-
-        return !empty($evaluation['valid'])
-            ? true
-            : (string) ($evaluation['message'] ?? 'Die Passwort-Policy ist nicht erfüllt.');
+        return PasswordPolicyService::getInstance()->validate($password, $userId);
     }
 
     /**
