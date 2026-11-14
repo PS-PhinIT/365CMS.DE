@@ -437,20 +437,11 @@ class Auth
             return 'Ihr Konto ist deaktiviert.';
         }
 
-        // 4.1.0 (1c): Passwort-Login je nach Einstellung „Lokale Anmeldung“ nur noch für Admins bzw. nicht für
-        // mit Entra verknüpfte Konten. Erst nach korrektem Passwort geprüft – verrät nichts über fremde Konten.
-        if (!$this->isPasswordLoginAllowedForUser($user)) {
-            AuditLogger::instance()->log(
-                AuditLogger::CAT_SECURITY,
-                'login_password_disabled',
-                'Passwort-Login abgelehnt: Konto meldet sich über Microsoft an.',
-                'user',
-                (int) $user->id,
-                [],
-                'warning'
-            );
-
-            return 'Bitte melde dich mit Microsoft an.';
+        // 4.1.0 (1c): Einstellung „Lokale Anmeldung“ (gilt ebenso für Passkey und LDAP, siehe AuthManager).
+        // Erst nach korrektem Passwort geprüft – verrät nichts über fremde Konten.
+        $localLoginRejected = \CMS\Auth\SSO\EntraSsoService::getInstance()->rejectLocalLogin((int) $user->id, 'password', (string) ($user->role ?? ''));
+        if ($localLoginRejected !== null) {
+            return $localLoginRejected;
         }
 
         // 4.1.0: Abgelaufenes Passwort (Höchstalter der Richtlinie) – die Weiche in Router::dispatch() erlaubt dann nur
@@ -476,25 +467,6 @@ class Auth
         AuditLogger::instance()->loginSuccess($username);
         
         return true;
-    }
-
-    /**
-     * Einstellung „Lokale Anmeldung“ der Entra-ID-Anmeldung (EntraSettings::passwordLoginAllowed()). Bei Fehlern
-     * bleibt der Passwort-Login erlaubt, damit eine defekte SSO-Konfiguration niemanden aussperrt.
-     */
-    private function isPasswordLoginAllowedForUser(object $user): bool
-    {
-        try {
-            $settings = \CMS\Auth\SSO\EntraSsoService::getInstance()->settings();
-            if (($settings['local_login'] ?? \CMS\Auth\SSO\EntraSettings::LOCAL_LOGIN_ALL) === \CMS\Auth\SSO\EntraSettings::LOCAL_LOGIN_ALL) {
-                return true;
-            }
-            $isLinked = \CMS\Auth\SSO\EntraSsoService::getInstance()->isLinked((int) $user->id);
-
-            return \CMS\Auth\SSO\EntraSettings::passwordLoginAllowed($settings, (string) ($user->role ?? '') === 'admin', $isLinked);
-        } catch (\Throwable) {
-            return true;
-        }
     }
 
     /**

@@ -632,16 +632,16 @@ T::run('Einstellungen', static function () use ($roles): void {
     T::check(!EntraSettings::isReady(['client_secret_set' => false] + $ready), 'ohne Secret nicht bereit');
     $mode = static fn (string $m): array => ['local_login' => $m] + $ready;
     T::same([true, true, true], [
-        EntraSettings::passwordLoginAllowed($mode('all'), false, true),
-        EntraSettings::passwordLoginAllowed($mode('disabled_for_linked'), false, false),
-        EntraSettings::passwordLoginAllowed($mode('disabled_for_linked'), true, true),
-    ], 'Passwort-Login: all; nicht verknüpft; Admin-Notfallzugang');
+        EntraSettings::localLoginAllowed($mode('all'), false, true),
+        EntraSettings::localLoginAllowed($mode('disabled_for_linked'), false, false),
+        EntraSettings::localLoginAllowed($mode('disabled_for_linked'), true, true),
+    ], 'Lokale Anmeldung: all; nicht verknüpft; Admin-Notfallzugang');
     T::same([false, false, true], [
-        EntraSettings::passwordLoginAllowed($mode('disabled_for_linked'), false, true),
-        EntraSettings::passwordLoginAllowed($mode('admins_only'), false, false),
-        EntraSettings::passwordLoginAllowed($mode('admins_only'), true, false),
-    ], 'Passwort-Login: verknüpft gesperrt; admins_only');
-    T::check(EntraSettings::passwordLoginAllowed(['local_login' => 'admins_only', 'enabled' => false] + $ready, false, true), 'ohne eingerichtete SSO-Anmeldung nie gesperrt');
+        EntraSettings::localLoginAllowed($mode('disabled_for_linked'), false, true),
+        EntraSettings::localLoginAllowed($mode('admins_only'), false, false),
+        EntraSettings::localLoginAllowed($mode('admins_only'), true, false),
+    ], 'Lokale Anmeldung: verknüpft gesperrt; admins_only');
+    T::check(EntraSettings::localLoginAllowed(['local_login' => 'admins_only', 'enabled' => false] + $ready, false, true), 'ohne eingerichtete SSO-Anmeldung nie gesperrt');
 
     T::same(9, EntraSettings::secretDaysLeft(['client_secret_expires' => '2027-01-10'], strtotime('2026-12-31 12:00:00 UTC')), 'Tage bis zum Ablauf');
     T::same(null, EntraSettings::secretExpiryNotice(['enabled' => true, 'client_secret_expires' => '2027-06-01'], strtotime('2026-12-31 UTC')), 'kein Hinweis bei > 30 Tagen');
@@ -693,7 +693,33 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
 
     $auth = $read('core/Auth.php');
     T::check(str_contains($auth, "unset(\$_SESSION['auth_sso_mfa_user_id'], \$_SESSION['auth_sso_user_id'], \$_SESSION['auth_sso_at']);"), 'jede Anmeldung setzt SSO-Merkmale zurück');
-    T::check(str_contains($auth, '$this->isPasswordLoginAllowedForUser($user)') && str_contains($auth, 'EntraSettings::passwordLoginAllowed('), 'Passwort-Login beachtet „Lokale Anmeldung“');
+    // „Lokale Anmeldung“ gilt für jeden Weg an Microsoft vorbei: Passwort, Passkey, LDAP – jeweils nach dem Faktor,
+    // vor der TOTP-Abfrage (MFA_REQUIRED) und vor dem Sitzungsaufbau.
+    $gateBefore = static function (string $source, string $method, string $call, array $later): bool {
+        $start = strpos($source, $method);
+        if ($start === false) {
+            return false;
+        }
+        $next = strpos($source, "\n    public function ", $start + strlen($method));
+        $body = substr($source, $start, $next === false ? null : $next - $start);
+        $gate = strpos($body, $call);
+        if ($gate === false) {
+            return false;
+        }
+        foreach ($later as $marker) {
+            $pos = strpos($body, $marker);
+            if ($pos === false || $pos < $gate) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+    $authManager = $read('core/Auth/AuthManager.php');
+    T::check($gateBefore($auth, 'public function login(', "rejectLocalLogin((int) \$user->id, 'password'", ['isMfaEnabled(', 'completeAuthenticatedSession(']), 'Passwort-Login beachtet „Lokale Anmeldung“ (vor MFA und Sitzung)');
+    T::check($gateBefore($authManager, 'public function authenticateViaPasskey(', "rejectLocalLogin(\$userId, 'passkey')", ["'MFA_REQUIRED'", 'completeLoginForUserId(']), 'Passkey-Login beachtet „Lokale Anmeldung“ (vor MFA und Sitzung)');
+    T::check($gateBefore($authManager, 'public function authenticateViaLdap(', "rejectLocalLogin(\$userId, 'ldap')", ["'MFA_REQUIRED'", 'completeLoginForUserId(']), 'LDAP-Login beachtet „Lokale Anmeldung“ (vor MFA und Sitzung)');
+    T::check(!str_contains($authManager . $auth, 'passwordLoginAllowed('), 'keine Sonderprüfung nur für Passwörter mehr');
 
     $public = $read('core/Routing/PublicRouter.php');
     T::check(str_contains($public, "\$currentPassword === '' && \\CMS\\Auth\\SSO\\EntraSsoService::isFreshSsoSession(\$userId)"), '/mfa-setup: frische SSO-Anmeldung als Re-Auth');

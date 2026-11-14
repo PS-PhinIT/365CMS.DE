@@ -53,6 +53,7 @@ final class EntraSsoService
         'identity_taken' => 'Dieses Microsoft-Konto ist bereits mit einem anderen Konto verknüpft.',
         'user_has_identity' => 'Dein Konto ist bereits mit einem anderen Microsoft-Konto verknüpft. Trenne die Verknüpfung zuerst.',
         'link_session' => 'Bitte melde dich erneut an und starte die Verknüpfung noch einmal.',
+        'local_login_disabled' => 'Bitte melde dich mit Microsoft an.',
     ];
 
     private static ?self $instance = null;
@@ -353,6 +354,34 @@ final class EntraSsoService
         }
 
         return $removed;
+    }
+
+    /**
+     * Einstellung „Lokale Anmeldung“ für Passwort-, Passkey- und LDAP-Anmeldung. Liefert null (erlaubt) oder die
+     * Meldung für die Loginseite und protokolliert die Ablehnung. Erst nach erfolgreicher Prüfung des jeweiligen
+     * Faktors aufrufen – die Antwort verrät dann nichts über fremde Konten. Bei Fehlern bleibt die lokale Anmeldung
+     * erlaubt, damit eine defekte SSO-Konfiguration niemanden aussperrt.
+     *
+     * @param 'password'|'passkey'|'ldap' $method
+     */
+    public function rejectLocalLogin(int $userId, string $method, ?string $role = null): ?string
+    {
+        try {
+            $settings = $this->settings();
+            if (($settings['local_login'] ?? EntraSettings::LOCAL_LOGIN_ALL) === EntraSettings::LOCAL_LOGIN_ALL) {
+                return null;
+            }
+            $role ??= (string) ((new DatabaseIdentityStore())->findUser($userId)->role ?? '');
+            if (EntraSettings::localLoginAllowed($settings, $role === 'admin', $this->isLinked($userId))) {
+                return null;
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $this->audit('login_local_disabled', 'Lokale Anmeldung abgelehnt: Konto meldet sich über Microsoft an.', $userId, ['method' => $method], 'warning');
+
+        return self::MESSAGES['local_login_disabled'];
     }
 
     /**

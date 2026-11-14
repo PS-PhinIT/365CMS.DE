@@ -223,16 +223,16 @@ final class EntraSettings
     }
 
     /**
-     * Darf sich ein Konto mit Passwort anmelden? Wirkt nur, solange die Entra-Anmeldung bereitsteht – sonst
-     * könnte eine halbe Konfiguration alle aussperren.
+     * Darf sich ein Konto lokal anmelden – mit Passwort, Passkey oder LDAP, also an Microsoft vorbei? Wirkt nur,
+     * solange die Entra-Anmeldung bereitsteht – sonst könnte eine halbe Konfiguration alle aussperren.
      *
-     * - `all`: Passwort-Login für alle Konten.
+     * - `all`: lokale Anmeldung für alle Konten.
      * - `disabled_for_linked`: verknüpfte Konten nur über Microsoft; Admins behalten den Notfallzugang.
-     * - `admins_only`: Passwort-Login nur noch für Admins (Notfallzugang), alle anderen über Microsoft.
+     * - `admins_only`: lokale Anmeldung nur noch für Admins (Notfallzugang), alle anderen über Microsoft.
      *
      * @param array<string, mixed> $settings
      */
-    public static function passwordLoginAllowed(array $settings, bool $isAdmin, bool $isLinked): bool
+    public static function localLoginAllowed(array $settings, bool $isAdmin, bool $isLinked): bool
     {
         if (!self::isReady($settings) || $isAdmin) {
             return true;
