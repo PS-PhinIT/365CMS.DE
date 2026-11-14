@@ -1996,7 +1996,7 @@ default:
   "sso_settings.local_login.all": "Für alle Konten erlaubt"
   "sso_settings.local_login.disabled_for_linked": "Nicht für verknüpfte Konten (Admins ausgenommen)"
   "sso_settings.local_login.admins_only": "Nur noch für Admins (Notfallzugang)"
-  "sso_settings.local_login_hint": "Sperrt alle Anmeldewege an Microsoft vorbei – Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren in Entra auch im CMS wirken. Gilt nur, solange die Anmeldung mit Microsoft eingerichtet ist. Admins behalten immer den lokalen Notfallzugang."
+  "sso_settings.local_login_hint": "Sperrt alle Anmeldewege an Microsoft vorbei – Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren in Entra auch im CMS wirken. Beim Einschalten enden laufende lokale Sitzungen betroffener Konten mit der nächsten Anfrage; über Microsoft begonnene Sitzungen bleiben. Gilt nur, solange die Anmeldung mit Microsoft eingerichtet ist. Admins behalten immer den lokalen Notfallzugang."
   "sso_settings.mfa_from_amr": "MFA aus Entra anerkennen"
   "sso_settings.mfa_from_amr_hint": "Belegt das ID-Token einen zweiten Faktor (amr: mfa, ngcmfa, fido, rsa), gilt er für diese Sitzung als MFA (MFA-Zwang) und die lokale Code-Abfrage entfällt."
   "sso_settings.mapping.heading": "Rollen-Mapping"
