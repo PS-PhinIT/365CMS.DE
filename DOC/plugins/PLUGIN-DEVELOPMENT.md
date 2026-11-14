@@ -1,5 +1,5 @@
 > **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 4.0.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-10 (Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`, `AdminMenuService`, `AdminNavigationService`, `PluginSiteAssignmentService`)
+> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-14 (Plugin-Layout-Vertrag; Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`, `AdminMenuService`, `AdminNavigationService`, `PluginSiteAssignmentService`)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 
 # 365CMS Plugin Development
@@ -92,6 +92,7 @@ The canonical hook names and signatures are maintained in the Core hook document
 Use `add_menu_page()` for a top-level menu and `add_submenu_page()` for child pages. Both helpers store capability, title, slug, callback, and menu relationships in the central registry. The admin router resolves:
 
 - `/admin/plugins/:plugin/:page` for registered plugin pages;
+- `/admin/plugins/:plugin` for the plugin's main page (top-level callback, otherwise its first submenu); `?page=<subpage>` selects a registered subpage;
 - the plugin callback or a compatibility fallback;
 - normal and AJAX output paths;
 - the central shell when the callback does not provide a complete layout.
@@ -111,6 +112,24 @@ Sidebar presentation (4.0.0): the registration contract above is unchanged – t
 The admin router loads `assets/css/admin-plugins.css` after the plugin stylesheets on every plugin page. It styles the shared building blocks inside `.cms-plugin-admin-content` in the flat 365CMS core look: `.admin-page-header` (title, description, `.header-actions`), `.dashboard-grid` with `.stat-card` (`.stat-number`, `.stat-label`), `.admin-card` with `*-panel-header`, info/note/action cards (`*-info-card`, `*-note-card`, `*-action-card` with `__eyebrow`, `__value`, `__title`, `__text`), left sub-navigation, `.users-table` and empty states. Use these classes instead of plugin-specific card, hero or emoji styling; decorative icon tiles are hidden. Icon-only buttons use Tabler icons (`<i class="ti ti-pencil" aria-hidden="true"></i>`) plus a `title`. The top-level menu title follows the pattern `<family> | <name>`: `365CMS | …` for the public plugins (e.g. `365CMS | Kontakt`), `M365 | …` for the M365 plugins by PhinIT and `PHINIT | …` for the other PhinIT plugins. The core sorts plugin menus alphabetically in the **Plugin Extensions** section, so each family stays together; submenus and page titles keep the plain feature name.
 
 For path routes (`/admin/plugins/:plugin/:page`) the router sets `$_GET['page']` to the requested page before calling the callback, so dispatchers and the active sidebar entry can rely on it. Pass the active page slug to `renderAdminLayoutStart()`.
+
+#### Plugin layout contract (4.0.0)
+
+Every plugin admin page uses the same two-level structure inside `.cms-plugin-admin-content`:
+
+```text
+.cms-plugin-layout
+├── .cms-plugin-header            name (h1), version/status badge, one-line description | 3–4 KPI cards
+└── .cms-plugin-workspace         grid: 240px minmax(0, 1fr), gap 1.5rem; one column below 992px
+    ├── .cms-plugin-sidebar       plugin menu, first item "Übersicht", aria-current="page", Tabler icons, optional badges
+    └── .cms-plugin-main          content: overview (dashboard) or subpage (header → toolbar/filter → content)
+```
+
+- **Header:** from 992px name left and KPI cards (`.cms-plugin-kpi`, at most four) right in one row; on smaller screens the cards wrap below the title.
+- **Plugin menu:** lists every subpage; tabs of a subpage (`?tab=`) belong in this menu as items (optionally under a group heading), not as a second tab bar inside the content. Below 992px the menu becomes a wrapping bar above the content.
+- **Overview:** quick actions, status/system check (API connection, cron/sync, configuration, tables …) and recent activity as a compact list.
+- **Rendering:** the router loads `admin/partials/plugin-workspace.php` before the plugin callback. `cms_plugin_workspace_open([...])` (keys `plugin`, `title`, `icon`, `version`, `status`, `description`, `stats`, `nav`) prints header, grid, menu and opens the content column, `cms_plugin_workspace_close()` closes it, `cms_plugin_dashboard(['actions' => …, 'checks' => …, 'activity' => …])` renders the overview. The active menu item is derived from `?view=`, the path `/admin/plugins/<plugin>/<subpage>` and `$_GET['page']` unless an item sets `active`. Check `function_exists('cms_plugin_workspace_open')` to stay compatible with older cores.
+- **Styling:** `admin-plugins.css` (classes `.cms-plugin-header`, `__info`, `__stats`, `.cms-plugin-workspace`, `.cms-plugin-sidebar`, `.cms-plugin-main`, `.cms-plugin-panel`, `.cms-plugin-actions`, `.cms-plugin-checks`, `.cms-plugin-activity`) uses the `--cms-*`/`--tblr-*` tokens only, a corner radius of at most 2px, and follows the Tabler dark theme (`data-bs-theme="dark"`). The markup contains no inline styles, inline scripts or event handlers.
 
 #### Content Security Policy
 
@@ -282,6 +301,7 @@ Die kanonischen Hook-Namen und Signaturen stehen in der Core-Hook-Dokumentation.
 Für ein Hauptmenü wird `add_menu_page()`, für Unterseiten `add_submenu_page()` verwendet. Beide Helfer speichern Capability, Titel, Slug, Callback und Menübeziehungen in der zentralen Registry. Der AdminRouter löst auf:
 
 - `/admin/plugins/:plugin/:page` für registrierte Pluginseiten;
+- `/admin/plugins/:plugin` für die Hauptseite des Plugins (Hauptmenü-Callback, sonst die erste Unterseite); `?page=<unterseite>` wählt eine registrierte Unterseite;
 - Plugin-Callback oder Kompatibilitätsfallback;
 - normale und AJAX-Ausgabewege;
 - zentrale Shell, wenn der Callback kein vollständiges Layout liefert.
@@ -301,6 +321,49 @@ Darstellung in der Seitenleiste (4.0.0): Der Registrierungsvertrag oben bleibt u
 Der AdminRouter lädt auf jeder Plugin-Seite `assets/css/admin-plugins.css` nach den Plugin-Stylesheets. Die Datei gestaltet die gemeinsamen Bausteine innerhalb von `.cms-plugin-admin-content` im flachen Stil der 365CMS-Kernseiten: `.admin-page-header` (Titel, Beschreibung, `.header-actions`), `.dashboard-grid` mit `.stat-card` (`.stat-number`, `.stat-label`), `.admin-card` mit `*-panel-header`, Info-/Hinweis-/Schnellzugriffskarten (`*-info-card`, `*-note-card`, `*-action-card` mit `__eyebrow`, `__value`, `__title`, `__text`), linke Unternavigation, `.users-table` und Leerzustände. Plugins verwenden diese Klassen statt eigener Karten-, Hero- oder Emoji-Gestaltung; dekorative Icon-Kacheln werden ausgeblendet. Reine Icon-Buttons nutzen Tabler-Icons (`<i class="ti ti-pencil" aria-hidden="true"></i>`) plus `title`. Der Hauptmenütitel folgt dem Schema `<Familie> | <Name>`: `365CMS | …` für die öffentlichen Plugins (z. B. `365CMS | Kontakt`), `M365 | …` für die M365-Plugins von PhinIT und `PHINIT | …` für die weiteren PhinIT-Plugins. Der Core sortiert Plugin-Menüs im Abschnitt **„Plugin-Erweiterungen“** alphabetisch, dadurch stehen die Familien zusammen; Untermenüs und Seitentitel behalten den schlichten Funktionsnamen.
 
 Bei Pfad-Routen (`/admin/plugins/:plugin/:page`) setzt der Router vor dem Callback `$_GET['page']` auf die angeforderte Seite, sodass Dispatcher und aktive Sidebar-Markierung sich darauf verlassen können. Den aktiven Seiten-Slug an `renderAdminLayoutStart()` übergeben.
+
+#### Plugin-Layout-Vertrag (4.0.0)
+
+Jede Plugin-Adminseite folgt innerhalb von `.cms-plugin-admin-content` derselben zweistufigen Struktur:
+
+```text
+.cms-plugin-layout
+├── .cms-plugin-header            Name (h1), Versions-/Status-Badge, Einzeiler | 3–4 KPI-Karten
+└── .cms-plugin-workspace         Grid: 240px minmax(0, 1fr), Gap 1.5rem; unter 992px einspaltig
+    ├── .cms-plugin-sidebar       Plugin-Menü, erster Punkt „Übersicht“, aria-current="page", Tabler-Icons, optionale Zähler-Badges
+    └── .cms-plugin-main          Inhalt: Übersicht (Dashboard) oder Unterseite (Header → Toolbar/Filter → Inhalt)
+```
+
+- **Kopfzeile:** Ab 992px stehen Name links und KPI-Karten (`.cms-plugin-kpi`, höchstens vier) rechtsbündig in einer Zeile; darunter brechen die Karten unter den Titel um.
+- **Plugin-Menü:** enthält alle Unterseiten. Reiter einer Unterseite (`?tab=`) gehören als Menüpunkte hierher (optional unter einer Zwischenüberschrift), nicht als zweite Reiterleiste im Inhalt. Unter 992px wird das Menü zur umbrechenden Leiste über dem Inhalt.
+- **Übersicht:** Schnellaktionen, Status-/System-Check (API-Verbindung, Cron/Sync, Konfiguration, Tabellen …) und letzte Aktivitäten als kompakte Liste.
+- **Rendern:** Der Router lädt vor dem Plugin-Callback `admin/partials/plugin-workspace.php`. `cms_plugin_workspace_open([...])` (Schlüssel `plugin`, `title`, `icon`, `version`, `status`, `description`, `stats`, `nav`, optional `nav_explicit`) gibt Kopfzeile, Grid und Menü aus und öffnet die Inhaltsspalte, `cms_plugin_workspace_close()` schließt sie, `cms_plugin_dashboard(['actions' => …, 'checks' => …, 'activity' => …, 'sections' => …])` rendert die Übersicht. Den aktiven Menüpunkt ermittelt das Partial aus `?view=`, dem Pfad `/admin/plugins/<plugin>/<unterseite>` und `$_GET['page']`, sofern kein Punkt `active` setzt. Mit `function_exists('cms_plugin_workspace_open')` bleiben Plugins mit älteren Cores kompatibel.
+
+```php
+echo cms_plugin_workspace_open([
+    'plugin'      => 'mein-plugin',
+    'title'       => 'PHINIT | Mein Plugin',
+    'icon'        => 'ti ti-puzzle',
+    'version'     => MEIN_PLUGIN_VERSION,
+    'status'      => ['label' => 'Aktiv', 'tone' => 'success'],
+    'description' => 'Einzeiler zum Zweck des Plugins.',
+    'stats'       => [['label' => 'Einträge', 'value' => 12, 'icon' => 'ti ti-list', 'url' => '/admin/plugins/mein-plugin/mein-plugin-entries']],
+    'nav'         => [
+        ['slug' => 'mein-plugin', 'label' => 'Übersicht', 'icon' => 'ti ti-layout-dashboard'],
+        ['slug' => 'mein-plugin-entries', 'label' => 'Einträge', 'icon' => 'ti ti-list', 'badge' => 3],
+        ['slug' => 'mein-plugin-settings', 'label' => 'Einstellungen', 'icon' => 'ti ti-settings'],
+    ],
+]);
+echo cms_plugin_dashboard([
+    'actions'  => [['label' => 'Neuer Eintrag', 'url' => '/admin/plugins/mein-plugin/mein-plugin-entries?action=new', 'icon' => 'ti ti-plus', 'primary' => true]],
+    'checks'   => [['label' => 'API-Verbindung', 'status' => 'ok', 'value' => 'verbunden'], ['label' => 'Cron', 'status' => 'warning', 'value' => 'seit 3 Tagen nicht gelaufen']],
+    'activity' => ['heading' => 'Zuletzt bearbeitet', 'items' => [['title' => 'Eintrag A', 'meta' => '14.11.2026', 'badge' => 'Entwurf', 'tone' => 'warning']]],
+]);
+echo cms_plugin_workspace_close();
+```
+
+- **Gestaltung:** `admin-plugins.css` (Klassen `.cms-plugin-header`, `__info`, `__stats`, `.cms-plugin-workspace`, `.cms-plugin-sidebar`, `.cms-plugin-main`, `.cms-plugin-panel`, `.cms-plugin-actions`, `.cms-plugin-checks`, `.cms-plugin-activity`) nutzt ausschließlich die Tokens `--cms-*`/`--tblr-*`, höchstens 2px Kantenrundung und folgt dem Tabler-Dark-Theme (`data-bs-theme="dark"`). Das Markup enthält keine Inline-Styles, Inline-Scripts oder Event-Handler.
+- **Status-Werte:** `ok`/`success`, `warning`, `error`/`danger`, `info`, `muted`; Badges und KPI-Karten nutzen dieselben Töne.
 
 #### Content Security Policy
 

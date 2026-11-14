@@ -36,8 +36,22 @@ final class AdminRouter
         $this->router->addRoute('POST', '/admin/:page', [$this, 'renderAdminPage']);
         $this->router->addRoute('GET', '/admin/logs/:section', [$this, 'renderAdminLogsSection']);
         $this->router->addRoute('POST', '/admin/logs/:section', [$this, 'renderAdminLogsSection']);
+        $this->router->addRoute('GET', '/admin/plugins/:plugin', [$this, 'renderPluginIndex']);
+        $this->router->addRoute('POST', '/admin/plugins/:plugin', [$this, 'renderPluginIndex']);
         $this->router->addRoute('GET', '/admin/plugins/:plugin/:page', [$this, 'renderPluginPage']);
         $this->router->addRoute('POST', '/admin/plugins/:plugin/:page', [$this, 'renderPluginPage']);
+    }
+
+    /**
+     * Kurzadresse /admin/plugins/<plugin>: öffnet die Hauptseite (Übersicht) des Plugins.
+     * `?page=<unterseite>` wählt eine registrierte Unterseite (Fallback älterer Links).
+     */
+    public function renderPluginIndex(string $plugin): void
+    {
+        $page = $_GET['page'] ?? '';
+        $page = is_string($page) && preg_match('/^[a-zA-Z0-9_-]+$/', $page) === 1 ? $page : $plugin;
+
+        $this->renderPluginPage($plugin, $page);
     }
 
     public function renderAdmin(): void
@@ -153,6 +167,7 @@ final class AdminRouter
             && strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
         $this->ensureAdminMenuCompatibility();
+        $this->loadPluginWorkspaceHelpers();
 
         try {
             Hooks::doAction('cms_admin_menu');
@@ -180,6 +195,29 @@ final class AdminRouter
                     $callback = $child['callable'] ?? null;
                     $title = $child['page_title'] ?? $title;
                     break 2;
+                }
+            }
+        }
+
+        // Hauptseite ohne gleichnamige Unterseite (z. B. /admin/plugins/<plugin>): Hauptmenü-Callback,
+        // sonst die erste registrierte Unterseite.
+        if ((!$callback || !is_callable($callback)) && $page === $plugin) {
+            foreach ($menus as $menu) {
+                if (($menu['menu_slug'] ?? null) !== $plugin || !empty($menu['hidden'])) {
+                    continue;
+                }
+                if (is_callable($menu['callable'] ?? null)) {
+                    $callback = $menu['callable'];
+                    $title = $menu['page_title'] ?? $title;
+                    break;
+                }
+                foreach ((array) ($menu['children'] ?? []) as $child) {
+                    if (is_array($child) && is_callable($child['callable'] ?? null)) {
+                        $callback = $child['callable'];
+                        $title = $child['page_title'] ?? $title;
+                        $page = (string) ($child['menu_slug'] ?? $page);
+                        break 2;
+                    }
                 }
             }
         }
@@ -350,6 +388,18 @@ final class AdminRouter
         $legacyMenuPartial = ABSPATH . 'admin/partials/admin-menu.php';
         if (is_file($legacyMenuPartial) && !function_exists('renderAdminLayoutStart')) {
             require_once $legacyMenuPartial;
+        }
+    }
+
+    /**
+     * Render-Helfer des einheitlichen Plugin-Layouts (cms_plugin_workspace_open(), cms_plugin_dashboard() …)
+     * vor dem Plugin-Callback bereitstellen.
+     */
+    private function loadPluginWorkspaceHelpers(): void
+    {
+        $partial = ABSPATH . 'admin/partials/plugin-workspace.php';
+        if (!function_exists('cms_plugin_workspace_open') && is_file($partial)) {
+            require_once $partial;
         }
     }
 

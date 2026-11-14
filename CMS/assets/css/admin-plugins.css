@@ -414,3 +414,877 @@ body.admin-body .cms-plugin-admin-content .btn > .ti:only-child {
         grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * Einheitliches Plugin-Layout (Layout-Vertrag 4.0.0)
+ * Markup: admin/partials/plugin-workspace.php
+ *   .cms-plugin-layout
+ *     .cms-plugin-header (__info | __stats)
+ *     .cms-plugin-workspace (.cms-plugin-sidebar | .cms-plugin-main)
+ * Kantenrundung höchstens 2px, Farben nur über Tokens.
+ * ══════════════════════════════════════════════════════════════════════════ */
+body.admin-body .cms-plugin-admin-content .cms-plugin-layout {
+    --cms-plugin-layout-radius: min(var(--cms-plugin-radius), 2px);
+    --cms-plugin-success: var(--cms-success, var(--tblr-success, #15803d));
+    --cms-plugin-success-soft: var(--cms-success-soft, #f0fdf4);
+    --cms-plugin-warning: var(--cms-warning, var(--tblr-warning, #b45309));
+    --cms-plugin-warning-soft: var(--cms-warning-soft, #fffbeb);
+    --cms-plugin-danger: var(--cms-danger, var(--tblr-danger, #b91c1c));
+    --cms-plugin-danger-soft: var(--cms-danger-soft, #fef2f2);
+    --cms-plugin-accent-strong: var(--cms-accent-strong, var(--cms-plugin-primary));
+    --cms-plugin-on-primary: var(--tblr-primary-fg, #ffffff);
+    --cms-plugin-focus: var(--cms-focus-outline, 2px solid var(--cms-plugin-primary));
+    --cms-plugin-focus-offset: var(--cms-focus-offset, 2px);
+    --cms-plugin-transition: var(--cms-duration, 180ms) var(--cms-ease, ease);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+/* ── 1. Kopfzeile: Name links, KPI-Karten rechts ──────────────────────── */
+body.admin-body .cms-plugin-admin-content .cms-plugin-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0;
+    padding: 0 0 1.25rem;
+    border-bottom: 1px solid var(--cms-plugin-border-soft);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__icon {
+    display: inline-flex;
+    flex: 0 0 2.5rem;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-primary-soft);
+    color: var(--cms-plugin-accent-strong);
+    font-size: 1.25rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__titlerow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.625rem;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__title {
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0;
+    color: var(--cms-plugin-text);
+    overflow-wrap: anywhere;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__brand {
+    color: var(--cms-plugin-muted);
+    font-weight: 600;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__sep {
+    margin: 0 0.375rem;
+    color: var(--cms-plugin-border);
+    font-weight: 400;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.0625rem 0.5rem;
+    border: 1px solid var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-surface);
+    color: var(--cms-plugin-soft);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__badge--success { border-color: color-mix(in srgb, var(--cms-plugin-success) 40%, transparent); background: var(--cms-plugin-success-soft); color: var(--cms-plugin-success); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__badge--warning { border-color: color-mix(in srgb, var(--cms-plugin-warning) 40%, transparent); background: var(--cms-plugin-warning-soft); color: var(--cms-plugin-warning); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__badge--danger { border-color: color-mix(in srgb, var(--cms-plugin-danger) 40%, transparent); background: var(--cms-plugin-danger-soft); color: var(--cms-plugin-danger); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__badge--info { border-color: var(--cms-plugin-primary-border); background: var(--cms-plugin-primary-soft); color: var(--cms-plugin-accent-strong); }
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__desc {
+    margin: 0;
+    max-width: 60rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cms-plugin-muted);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-header__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi {
+    display: flex;
+    min-width: 0;
+    margin: 0;
+    border: 1px solid var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-surface);
+    box-shadow: var(--cms-plugin-shadow);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi,
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__link {
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi:has(> .cms-plugin-kpi__link) {
+    padding: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__link {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--cms-plugin-layout-radius);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi:has(> .cms-plugin-kpi__link:hover) {
+    border-color: var(--cms-plugin-primary-border);
+    background: var(--cms-plugin-primary-soft);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__link:focus-visible {
+    outline: var(--cms-plugin-focus);
+    outline-offset: var(--cms-plugin-focus-offset);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__icon {
+    display: inline-flex;
+    flex: 0 0 2rem;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-primary-soft);
+    color: var(--cms-plugin-accent-strong);
+    font-size: 1.0625rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi--success .cms-plugin-kpi__icon { background: var(--cms-plugin-success-soft); color: var(--cms-plugin-success); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi--warning .cms-plugin-kpi__icon { background: var(--cms-plugin-warning-soft); color: var(--cms-plugin-warning); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi--danger .cms-plugin-kpi__icon { background: var(--cms-plugin-danger-soft); color: var(--cms-plugin-danger); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi--muted .cms-plugin-kpi__icon { background: var(--cms-plugin-surface-soft); color: var(--cms-plugin-muted); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi--warning { border-color: color-mix(in srgb, var(--cms-plugin-warning) 40%, var(--cms-plugin-border)); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi--danger { border-color: color-mix(in srgb, var(--cms-plugin-danger) 40%, var(--cms-plugin-border)); }
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__value {
+    overflow: hidden;
+    color: var(--cms-plugin-text);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__label {
+    color: var(--cms-plugin-muted);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* ── 2. Arbeitsbereich: links Plugin-Menü, rechts Inhalt ──────────────── */
+body.admin-body .cms-plugin-admin-content .cms-plugin-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-main {
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-main > :first-child {
+    margin-top: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-main > :last-child {
+    margin-bottom: 0;
+}
+
+/* Breite Inhalte (Tabellen, Code) scrollen in ihrem Container statt die Seite zu verbreitern */
+body.admin-body .cms-plugin-admin-content .cms-plugin-main :is(.table-responsive, .users-table-container, pre) {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar {
+    min-width: 0;
+    padding: 0.5rem;
+    border: 1px solid var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-surface);
+    box-shadow: var(--cms-plugin-shadow);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__item {
+    display: flex;
+    min-width: 0;
+    margin: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid transparent;
+    border-radius: var(--cms-plugin-layout-radius);
+    background: transparent;
+    color: var(--cms-plugin-soft);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.3;
+    text-decoration: none;
+    transition: background-color var(--cms-plugin-transition), border-color var(--cms-plugin-transition), color var(--cms-plugin-transition);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link > .ti {
+    flex: 0 0 auto;
+    color: var(--cms-plugin-muted);
+    font-size: 1.0625rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link:hover {
+    background: var(--cms-plugin-surface-soft);
+    color: var(--cms-plugin-text);
+    text-decoration: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link:focus-visible {
+    outline: var(--cms-plugin-focus);
+    outline-offset: var(--cms-plugin-focus-offset);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link:is(.is-active, [aria-current="page"]) {
+    border-color: var(--cms-plugin-primary-border);
+    background: var(--cms-plugin-primary-soft);
+    color: var(--cms-plugin-accent-strong);
+    font-weight: 600;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link:is(.is-active, [aria-current="page"]) > .ti {
+    color: inherit;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__group {
+    flex: 1 0 100%;
+    margin: 0.5rem 0 0.125rem;
+    padding: 0.5rem 0.625rem 0.125rem;
+    border-top: 1px solid var(--cms-plugin-border-soft);
+    color: var(--cms-plugin-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__group--end {
+    margin: 0.25rem 0;
+    padding: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__badge {
+    flex: 0 0 auto;
+    min-width: 1.375rem;
+    padding: 0 0.375rem;
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-surface-soft);
+    border: 1px solid var(--cms-plugin-border-soft);
+    color: var(--cms-plugin-soft);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.375rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__badge--warning { background: var(--cms-plugin-warning-soft); color: var(--cms-plugin-warning); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__badge--danger { background: var(--cms-plugin-danger-soft); color: var(--cms-plugin-danger); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__badge--success { background: var(--cms-plugin-success-soft); color: var(--cms-plugin-success); }
+
+/* ── Dashboard (Menüpunkt „Übersicht“) ────────────────────────────────── */
+body.admin-body .cms-plugin-admin-content .cms-plugin-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+/* Plugin-eigene Bausteine unterhalb des Dashboards (z. B. Steckbrief) mit gleichem Abstand */
+body.admin-body .cms-plugin-admin-content .cms-plugin-dashboard + * {
+    margin-top: 1.5rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-dashboard__intro {
+    margin: 0;
+    max-width: 72ch;
+    color: var(--cms-plugin-muted);
+    font-size: 0.875rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-dashboard__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-panel {
+    min-width: 0;
+    margin: 0;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-surface);
+    box-shadow: var(--cms-plugin-shadow);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-panel__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin: 0 0 0.875rem;
+    padding: 0 0 0.625rem;
+    border-bottom: 1px solid var(--cms-plugin-border-soft);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-panel__title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: var(--cms-plugin-text);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-panel__more {
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-empty {
+    margin: 0;
+    padding: 1rem;
+    border: 1px dashed var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    color: var(--cms-plugin-muted);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+/* Schnellaktionen */
+body.admin-body .cms-plugin-admin-content .cms-plugin-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-actions__item {
+    display: flex;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 0.625rem;
+    min-width: 0;
+    min-height: var(--cms-target-size, 44px);
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-surface);
+    color: var(--cms-plugin-text);
+    text-decoration: none;
+    transition: background-color var(--cms-plugin-transition), border-color var(--cms-plugin-transition);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action:hover {
+    border-color: var(--cms-plugin-primary-border);
+    background: var(--cms-plugin-primary-soft);
+    color: var(--cms-plugin-text);
+    text-decoration: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action:focus-visible {
+    outline: var(--cms-plugin-focus);
+    outline-offset: var(--cms-plugin-focus-offset);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action__icon {
+    display: inline-flex;
+    flex: 0 0 1.75rem;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--cms-plugin-layout-radius);
+    background: var(--cms-plugin-primary-soft);
+    color: var(--cms-plugin-accent-strong);
+    font-size: 1rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action--primary {
+    border-color: var(--cms-plugin-primary);
+    background: var(--cms-plugin-primary);
+    color: var(--cms-plugin-on-primary);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action--primary:hover {
+    border-color: var(--cms-plugin-accent-strong);
+    background: var(--cms-plugin-accent-strong);
+    color: var(--cms-plugin-on-primary);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action--primary .cms-plugin-action__icon {
+    background: color-mix(in srgb, var(--cms-plugin-on-primary) 18%, transparent);
+    color: inherit;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action--primary .cms-plugin-action__text {
+    color: color-mix(in srgb, var(--cms-plugin-on-primary) 85%, transparent);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action__external {
+    font-size: 0.8125rem;
+    opacity: 0.7;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-action__text {
+    color: var(--cms-plugin-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+/* Status-/System-Check */
+body.admin-body .cms-plugin-admin-content .cms-plugin-checks,
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5625rem 0;
+    border-bottom: 1px solid var(--cms-plugin-border-soft);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check:last-child,
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__item:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check:first-child,
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__item:first-child {
+    padding-top: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check__icon {
+    flex: 0 0 auto;
+    margin-top: 0.0625rem;
+    font-size: 1.125rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check--success .cms-plugin-check__icon { color: var(--cms-plugin-success); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-check--warning .cms-plugin-check__icon { color: var(--cms-plugin-warning); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-check--danger .cms-plugin-check__icon { color: var(--cms-plugin-danger); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-check--info .cms-plugin-check__icon { color: var(--cms-plugin-primary); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-check--muted .cms-plugin-check__icon { color: var(--cms-plugin-muted); }
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check__label {
+    color: var(--cms-plugin-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check__hint {
+    color: var(--cms-plugin-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-check__value {
+    flex: 0 0 auto;
+    max-width: 50%;
+    color: var(--cms-plugin-soft);
+    font-size: 0.8125rem;
+    text-align: right;
+    overflow-wrap: break-word;
+}
+
+/* Letzte Aktivitäten */
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5625rem 0;
+    border-bottom: 1px solid var(--cms-plugin-border-soft);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__title {
+    color: var(--cms-plugin-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+body.admin-body .cms-plugin-admin-content a.cms-plugin-activity__title:hover {
+    color: var(--cms-plugin-primary);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__meta {
+    color: var(--cms-plugin-muted);
+    font-size: 0.75rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__badge {
+    flex: 0 0 auto;
+    padding: 0.0625rem 0.5rem;
+    border: 1px solid var(--cms-plugin-border);
+    border-radius: var(--cms-plugin-layout-radius);
+    color: var(--cms-plugin-soft);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__badge--success { border-color: transparent; background: var(--cms-plugin-success-soft); color: var(--cms-plugin-success); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__badge--warning { border-color: transparent; background: var(--cms-plugin-warning-soft); color: var(--cms-plugin-warning); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__badge--danger { border-color: transparent; background: var(--cms-plugin-danger-soft); color: var(--cms-plugin-danger); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__badge--info { border-color: transparent; background: var(--cms-plugin-primary-soft); color: var(--cms-plugin-accent-strong); }
+body.admin-body .cms-plugin-admin-content .cms-plugin-activity__badge--muted { color: var(--cms-plugin-muted); }
+
+/* Bereichs-Kacheln */
+body.admin-body .cms-plugin-admin-content .cms-plugin-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tiles__item {
+    display: flex;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 0.625rem;
+    min-width: 0;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--cms-plugin-border-soft);
+    border-radius: var(--cms-plugin-layout-radius);
+    color: var(--cms-plugin-text);
+    text-decoration: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile:hover {
+    border-color: var(--cms-plugin-primary-border);
+    background: var(--cms-plugin-surface-soft);
+    color: var(--cms-plugin-text);
+    text-decoration: none;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile:focus-visible {
+    outline: var(--cms-plugin-focus);
+    outline-offset: var(--cms-plugin-focus-offset);
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile__icon {
+    flex: 0 0 auto;
+    color: var(--cms-plugin-primary);
+    font-size: 1.125rem;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile__text {
+    color: var(--cms-plugin-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+body.admin-body .cms-plugin-admin-content .cms-plugin-tile__chevron {
+    flex: 0 0 auto;
+    align-self: center;
+    color: var(--cms-plugin-muted);
+}
+
+/* ── Desktop ab 992px: Kopfzeile einzeilig, Menü links ────────────────── */
+@media (min-width: 992px) {
+    body.admin-body .cms-plugin-admin-content .cms-plugin-header {
+        flex-flow: row wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem 1.5rem;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-header__info {
+        flex: 1 1 18rem;
+    }
+
+    /* Passen die Karten nicht neben den Titel, rutschen sie gemeinsam in die nächste Zeile. */
+    body.admin-body .cms-plugin-admin-content .cms-plugin-header__stats {
+        display: flex;
+        flex: 0 1 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        margin-left: auto;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-header__stats > .cms-plugin-kpi {
+        flex: 0 0 auto;
+        min-width: 8.75rem;
+        max-width: 14rem;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-workspace {
+        grid-template-columns: 240px minmax(0, 1fr);
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-workspace--single {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar {
+        position: sticky;
+        top: calc(var(--cms-topbar-height, 60px) + 1rem);
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__list {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        gap: 0.125rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    body.admin-body .cms-plugin-admin-content .cms-plugin-dashboard__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* ── Mobil unter 992px: Menü als umbrechende Leiste über dem Inhalt ───── */
+@media (max-width: 991.98px) {
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__item {
+        flex: 0 1 auto;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link {
+        min-height: 2.25rem;
+        white-space: nowrap;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__label {
+        overflow-wrap: normal;
+    }
+}
+
+@media (max-width: 575.98px) {
+    body.admin-body .cms-plugin-admin-content .cms-plugin-header__stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-kpi,
+    body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__link {
+        gap: 0.5rem;
+        padding: 0.5rem 0.625rem;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__icon {
+        flex-basis: 1.625rem;
+        width: 1.625rem;
+        height: 1.625rem;
+        font-size: 0.9375rem;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-kpi__value {
+        font-size: 1rem;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__item {
+        flex: 1 1 calc(50% - 0.25rem);
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-sidebar__link {
+        white-space: normal;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-check {
+        flex-wrap: wrap;
+    }
+
+    body.admin-body .cms-plugin-admin-content .cms-plugin-check__value {
+        max-width: none;
+        flex-basis: 100%;
+        padding-left: 1.75rem;
+        text-align: left;
+    }
+}
+
+/* ── Dark-Mode ─────────────────────────────────────────────────────────────
+ * Aktiv mit data-bs-theme="dark" (Tabler) oder .theme-dark am <html>/<body>. Der Core 4.0.0 legt die
+ * Tabler-Tokens in :root auf helle Werte fest; deshalb eigene Tokens --cms-dark-* mit Rückfallwerten,
+ * die ein dunkles Admin-Theme überschreiben kann. */
+:is([data-bs-theme="dark"], .theme-dark) body.admin-body .cms-plugin-admin-content,
+body.admin-body:is([data-bs-theme="dark"], .theme-dark) .cms-plugin-admin-content {
+    --cms-plugin-surface: var(--cms-dark-surface, #1d2430);
+    --cms-plugin-surface-soft: var(--cms-dark-surface-soft, #242c3a);
+    --cms-plugin-border: var(--cms-dark-border, #3a4456);
+    --cms-plugin-border-soft: var(--cms-dark-border-soft, #2e3747);
+    --cms-plugin-text: var(--cms-dark-text, #e6e9ef);
+    --cms-plugin-muted: var(--cms-dark-text-muted, #9aa4b5);
+    --cms-plugin-soft: var(--cms-dark-text-soft, #c3cad6);
+    --cms-plugin-primary-soft: color-mix(in srgb, var(--cms-plugin-primary) 22%, transparent);
+    --cms-plugin-primary-border: color-mix(in srgb, var(--cms-plugin-primary) 50%, transparent);
+    --cms-plugin-shadow: none;
+}
+
+:is([data-bs-theme="dark"], .theme-dark) body.admin-body .cms-plugin-admin-content .cms-plugin-layout,
+body.admin-body:is([data-bs-theme="dark"], .theme-dark) .cms-plugin-admin-content .cms-plugin-layout {
+    --cms-plugin-accent-strong: color-mix(in srgb, var(--cms-plugin-primary) 55%, var(--cms-plugin-text));
+    --cms-plugin-success: color-mix(in srgb, var(--cms-success, #15803d) 60%, var(--cms-plugin-text));
+    --cms-plugin-warning: color-mix(in srgb, var(--cms-warning, #b45309) 60%, var(--cms-plugin-text));
+    --cms-plugin-danger: color-mix(in srgb, var(--cms-danger, #b91c1c) 60%, var(--cms-plugin-text));
+    --cms-plugin-success-soft: color-mix(in srgb, var(--cms-plugin-success) 18%, transparent);
+    --cms-plugin-warning-soft: color-mix(in srgb, var(--cms-plugin-warning) 18%, transparent);
+    --cms-plugin-danger-soft: color-mix(in srgb, var(--cms-plugin-danger) 18%, transparent);
+    color: var(--cms-plugin-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.admin-body .cms-plugin-admin-content :is(.cms-plugin-sidebar__link, .cms-plugin-action) {
+        transition: none;
+    }
+}

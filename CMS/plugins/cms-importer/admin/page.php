@@ -31,11 +31,11 @@ $selectedAuthorDisplayName = htmlspecialchars($selected_author_display_name ?? '
 
     <div class="admin-page-header">
         <div>
-            <h2>📥 WordPress Importer</h2>
+            <h2>Import</h2>
             <p>Importiere WXR-Exporte, Kommentare, Tabellen, SEO-Daten, Bilder sowie Rank-Math-SEO-Settings und Weiterleitungen nach 365CMS.</p>
         </div>
         <div class="header-actions">
-            <a href="/admin/plugins/cms-importer/cms-importer-log" class="btn btn-secondary">📋 Protokoll</a>
+            <a href="/admin/plugins/cms-importer/cms-importer-log" class="btn btn-secondary"><i class="ti ti-list-details me-1" aria-hidden="true"></i>Protokoll</a>
         </div>
     </div>
 

@@ -5,7 +5,7 @@
 
 ## English (summary)
 
-Installed plugins are managed at `/admin/plugins` (`CMS/admin/plugins.php` → `CMS/admin/modules/plugins/PluginsModule.php` → `CMS/admin/views/plugins/list.php`, runtime `CMS\PluginManager`). Plugins live in `CMS/plugins/<slug>/<slug>.php`; their metadata comes from the file header (`Plugin Name`, `Description`, `Version`, `Author`, `Requires`, `Requires Plugins`, `Requires CMS`) and an optional `update.json`. Active slugs are stored in `cms_settings.option_name = 'active_plugins'`. Actions: `activate`, `deactivate`, `delete`. The shipped plugin `cms-importer` (3.0.3) is protected against deletion and upload overwrite.
+Installed plugins are managed at `/admin/plugins` (`CMS/admin/plugins.php` → `CMS/admin/modules/plugins/PluginsModule.php` → `CMS/admin/views/plugins/list.php`, runtime `CMS\PluginManager`). Plugins live in `CMS/plugins/<slug>/<slug>.php`; their metadata comes from the file header (`Plugin Name`, `Description`, `Version`, `Author`, `Requires`, `Requires Plugins`, `Requires CMS`) and an optional `update.json`. Active slugs are stored in `cms_settings.option_name = 'active_plugins'`. Actions: `activate`, `deactivate`, `delete`. The shipped plugin `cms-importer` (3.1.0) is protected against deletion and upload overwrite.
 
 Plugin admin pages live at `/admin/plugins/<plugin>/<page>`. They appear in the collapsed sidebar section **"Aktive Plugins"** (active plugins) at the end of the sidebar, in every profile ([ADMIN-MENU.md](../ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)). Only a custom layout can place them elsewhere.
 
@@ -62,7 +62,7 @@ Die Site-Liste kommt aus `CMS\Services\AdminSiteContextService` (Option `admin_s
 
 | Slug | Name | Version | Zweck |
 |---|---|---|---|
-| `cms-importer` | CMS WordPress Importer | 3.0.3 | Import von WordPress-WXR (Beiträge, Seiten, Kommentare, Tabellen, SEO-Metadaten, Bilder) und Rank-Math-Settings-JSON (SEO-Defaults, Weiterleitungen); unbekannte Meta-Felder als Markdown-Bericht |
+| `cms-importer` | CMS WordPress Importer | 3.1.0 | Import von WordPress-WXR (Beiträge, Seiten, Kommentare, Tabellen, SEO-Metadaten, Bilder) und Rank-Math-Settings-JSON (SEO-Defaults, Weiterleitungen); unbekannte Meta-Felder als Markdown-Bericht |
 
 ### Verwandte Dokumente
 

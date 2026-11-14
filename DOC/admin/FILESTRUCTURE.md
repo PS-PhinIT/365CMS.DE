@@ -23,7 +23,8 @@ CMS/admin/
 │   └── system/  tables/  themes/  toc/  trash/  users/
 ├── partials/                  # header.php, sidebar.php, topbar.php, footer.php,
 │                              # section-page-shell.php, redirect-alias-shell.php,
-│                              # post-action-shell.php, editorjs-inline-boot.php
+│                              # post-action-shell.php, editorjs-inline-boot.php,
+│                              # plugin-workspace.php (Plugin-Layout-Vertrag 4.0.0)
 ├── settings-tabs/             # Erweiterungs-Tabs von /admin/settings: admin-menu.php, feeds.php, security.php
 └── views/                     # Darstellung je Bereich (+ views/partials/ für gemeinsame Bausteine)
 ```
