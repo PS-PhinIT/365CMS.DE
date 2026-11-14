@@ -5,6 +5,8 @@ define('ABSPATH', dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'CMS' . DIRECTORY_
 
 require ABSPATH . 'core/Services/AI/AiProviderInterface.php';
 require ABSPATH . 'core/Services/AI/Providers/MockAiProvider.php';
+require ABSPATH . 'core/VendorRegistry.php';
+require ABSPATH . 'core/Services/SEO/SeoSchemaRenderer.php';
 require ABSPATH . 'core/Services/AI/SeoMetadataGenerationPipeline.php';
 
 use CMS\Services\AI\AiProviderInterface;

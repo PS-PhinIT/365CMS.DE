@@ -68,16 +68,25 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
+| `TESTS/ai-admin-contract/` | static contract of the AI admin integration (routes, CSRF, quota, SSRF guard, sanitizing) / statischer Vertrag der AI-Admin-Integration (Routen, CSRF, Quota, SSRF-Schutz, Bereinigung) (`php TESTS/ai-admin-contract/run.php`) |
+| `TESTS/ai-content-creator/` | AI content draft pipeline with mock provider / AI-Entwurfs-Pipeline mit Mock-Provider (`php TESTS/ai-content-creator/run.php`) |
+| `TESTS/ai-editorjs-translation/` | Editor.js translation pipeline: batches, segment order, size limits / Editor.js-Übersetzungs-Pipeline: Batches, Segmentreihenfolge, Größenlimits (`php TESTS/ai-editorjs-translation/run.php`) |
+| `TESTS/ai-policy/` | AI provider policy gates (external data sharing, beta providers, scopes) / Freigaben der AI-Provider-Richtlinie (externe Datenweitergabe, Beta-Provider, Scopes) (`php TESTS/ai-policy/run.php`) |
+| `TESTS/ai-seo-metadata/` | AI SEO metadata pipeline (normalizing, schema type, robots) / AI-SEO-Metadaten-Pipeline (Normalisierung, Schema-Typ, Robots) (`php TESTS/ai-seo-metadata/run.php`) |
+| `TESTS/analytics-consent/` | analytics output and CSP only with configured provider and consent / Analytics-Ausgabe und CSP nur mit konfiguriertem Anbieter und Einwilligung (`php TESTS/analytics-consent/run.php`) |
 | `TESTS/content-types/` | content type provider registry test / Test der Inhaltstyp-Provider (`php TESTS/content-types/run.php [-v]`) |
+| `TESTS/csp-style-rewriter/` | `InlineStyleRewriter`: `style` attributes to nonce CSS classes / `InlineStyleRewriter`: `style`-Attribute zu Nonce-CSS-Klassen (`php TESTS/csp-style-rewriter/run.php`) |
 | `TESTS/editorjs-blocks/` | Editor.js block tests / Tests der Editor.js-Blöcke (`php TESTS/editorjs-blocks/run.php`, browser part / Browser-Teil `node TESTS/editorjs-blocks/browser/run.js`) |
 | `TESTS/functions/` | function tests without database / Funktionstests ohne Datenbank (`php TESTS/functions/run.php`) |
+| `TESTS/release-3.4.0/` | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release) / Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases) (`php TESTS/release-3.4.0/run.php`) |
 | `TESTS/security/` | security tests / Sicherheitstests (`php TESTS/security/run.php`) |
+| `TESTS/theme-contract/` | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments / Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente (`php TESTS/theme-contract/run.php [Theme-Wurzeln …]`) |
 | `TESTS/update-swap/` | update directory swap test / Test des Verzeichnistauschs beim Update (`php TESTS/update-swap/run.php`) |
 | `CODE_OF_CONDUCT.md` | code of conduct |
 | `README.md` | public README |
 | `Changelog.md` | changelog |
 
-`ASSETS/` and `tools/` are not part of this repository; under `TESTS/` six suites are versioned (`admin-menu`, `content-types`, `editorjs-blocks`, `functions`, `security`, `update-swap`), all run by `php TESTS/run-all.php` in CI (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; unter `TESTS/` sind sechs Suiten versioniert (`admin-menu`, `content-types`, `editorjs-blocks`, `functions`, `security`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
+`ASSETS/` and `tools/` are not part of this repository; under `TESTS/` 15 suites are versioned (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; unter `TESTS/` sind 15 Suiten versioniert (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
 
 Rule: **always know whether you are editing runtime, documentation, or source context.**
 

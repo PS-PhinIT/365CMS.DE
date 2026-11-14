@@ -134,6 +134,20 @@ foreach ($result['editor_data']['blocks'] ?? [] as $index => $block) {
     );
 }
 
+$longSegmentProvider = new EditorJsTranslationBatchTestProvider();
+$longSegmentResult = EditorJsTranslationPipeline::getInstance()->translate(
+    ['editor_data' => ['blocks' => [['type' => 'paragraph', 'data' => ['text' => str_repeat('y', 2401)]]]]],
+    $longSegmentProvider,
+    ['supported_block_types' => ['paragraph']]
+);
+aiEditorJsTranslationAssert(
+    ($longSegmentResult['editor_data']['blocks'][0]['data']['text'] ?? '') === 'EN ' . str_repeat('y', 2401)
+        && count($longSegmentProvider->batches) === 1,
+    'Ein Einzelsegment über dem Batch-Limit muss allein übersetzt werden.'
+);
+
+// Einzelsegmente bis MAX_SINGLE_SEGMENT_CHARACTERS gehen allein an den Provider; erst darüber wird abgelehnt.
+$maxSingleSegmentCharacters = (int) (new ReflectionClassConstant(EditorJsTranslationPipeline::class, 'MAX_SINGLE_SEGMENT_CHARACTERS'))->getValue();
 $oversizedSegmentRejected = false;
 try {
     EditorJsTranslationPipeline::getInstance()->translate(
@@ -141,7 +155,7 @@ try {
             'editor_data' => [
                 'blocks' => [[
                     'type' => 'paragraph',
-                    'data' => ['text' => str_repeat('x', 2401)],
+                    'data' => ['text' => str_repeat('x', $maxSingleSegmentCharacters + 1)],
                 ]],
             ],
         ],
