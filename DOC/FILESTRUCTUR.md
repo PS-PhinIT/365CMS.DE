@@ -65,6 +65,7 @@ Verified top-level entries of this repository:
 | `TESTS/member-area/` | directory | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup: `php TESTS/member-area/run.php [-v]` |
 | `TESTS/newsletter-member/` | directory | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/release-3.4.0/` | directory | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/schema-v26/` | directory | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check: `php TESTS/schema-v26/run.php [-v]` |
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
 | `TESTS/theme-contract/` | directory | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments: `php TESTS/theme-contract/run.php [theme roots …]` |
 | `TESTS/update-swap/` | directory | update directory swap test: `php TESTS/update-swap/run.php` |
@@ -76,7 +77,7 @@ Verified top-level entries of this repository:
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 18 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `member-area`, `newsletter-member`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 19 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `member-area`, `newsletter-member`, `release-3.4.0`, `schema-v26`, `security`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -106,6 +107,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/member-area/` | Verzeichnis | Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit: `php TESTS/member-area/run.php [-v]` |
 | `TESTS/newsletter-member/` | Verzeichnis | Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/release-3.4.0/` | Verzeichnis | Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/schema-v26/` | Verzeichnis | Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung: `php TESTS/schema-v26/run.php [-v]` |
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
 | `TESTS/theme-contract/` | Verzeichnis | Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente: `php TESTS/theme-contract/run.php [Theme-Wurzeln …]` |
 | `TESTS/update-swap/` | Verzeichnis | Test des Verzeichnistauschs beim Update: `php TESTS/update-swap/run.php` |
@@ -117,7 +119,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 18 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `member-area`, `newsletter-member`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 19 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `member-area`, `newsletter-member`, `release-3.4.0`, `schema-v26`, `security`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 

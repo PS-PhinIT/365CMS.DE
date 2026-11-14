@@ -30,7 +30,15 @@ if (!class_exists(__NAMESPACE__ . '\\SchemaManager', false)) {
 
 class SchemaManager
 {
-    /** Flag-Datei-Version – erhöhen wenn Schema geändert wird */
+    /**
+     * Flag-Datei-Version – erhöhen wenn Schema geändert wird.
+     *
+     * Die Tabellen und Spalten von v26 (FEATURE_TABLES_V26, Release 4.1.0) sind bereits definiert: Neuinstallationen
+     * legen sie über getSchemaQueries() an, bestehende Installationen über ensureFeatureSchema() (Laufzeitprüfung,
+     * läuft nach jeder Änderung dieser Datei einmal). Die Marke selbst wird erst mit der Release-Vorbereitung von 4.1.0
+     * gehoben – zusammen mit MigrationManager::SCHEMA_VERSION, Version::CURRENT und dem Marketplace-Manifest
+     * (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
+     */
     public const SCHEMA_VERSION = 'v25';
 
     /**
@@ -50,6 +58,17 @@ class SchemaManager
         'translation_sync',
         'kb_entries', 'kb_categories', 'kb_settings',
         'newsletter_subscribers', 'newsletter_templates', 'newsletter_campaigns', 'newsletter_sends', 'newsletter_settings',
+    ];
+
+    /**
+     * v26 (Release 4.1.0): Tabellen für Passwort-Historie, SSO-Bindungen, Offsite-Backups und ausgehende Webhooks
+     * (DOC/workflow/specs/v4.1/SCHEMA-v26.md). Neuinstallation, Update und Laufzeitprüfung nutzen dieselbe Liste.
+     *
+     * @var list<string>
+     */
+    public const FEATURE_TABLES_V26 = [
+        'password_history', 'user_identities',
+        'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
     ];
 
     private Database $db;
@@ -80,6 +99,7 @@ class SchemaManager
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 last_login TIMESTAMP NULL,
+                password_changed_at DATETIME NULL DEFAULT NULL,
                 INDEX idx_role (role)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
@@ -137,6 +157,7 @@ class SchemaManager
                 name VARCHAR(128) DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_used_at TIMESTAMP NULL DEFAULT NULL,
+                user_verified TINYINT(1) NULL DEFAULT NULL,
                 INDEX idx_user (user_id),
                 UNIQUE INDEX idx_cred_id (credential_id(255))
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
@@ -1397,6 +1418,84 @@ class SchemaManager
                 trashed_by INT UNSIGNED NULL,
                 INDEX idx_trash_media_trashed (trashed_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Papierkorb der Mediendateien'",
+
+            // v26: Passwort-Historie (PasswordPolicyService) – frühere bcrypt-Hashes, nie Klartext.
+            'password_history' => "CREATE TABLE IF NOT EXISTS {$p}password_history (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                created_at DATETIME NOT NULL,
+                INDEX idx_password_history_user (user_id, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Frühere Passwort-Hashes für die Wiederverwendungssperre'",
+
+            // v26: SSO-Bindungen (Entra ID). Zuordnung nur über unveränderliche IDs (tenant_id + subject = oid),
+            // nie über Benutzername oder E-Mail (GHSA-6hhv-gc4g-f4r7). Keine Tokens.
+            'user_identities' => "CREATE TABLE IF NOT EXISTS {$p}user_identities (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                provider VARCHAR(20) NOT NULL,
+                tenant_id CHAR(36) NOT NULL,
+                subject VARCHAR(64) NOT NULL,
+                email_at_link VARCHAR(150) NULL,
+                provisioned TINYINT(1) NOT NULL DEFAULT 0,
+                linked_at DATETIME NOT NULL,
+                last_login_at DATETIME NULL,
+                UNIQUE KEY uq_user_identities_subject (provider, tenant_id, subject),
+                UNIQUE KEY uq_user_identities_user_provider (user_id, provider),
+                INDEX idx_user_identities_user (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='SSO-Bindungen (Entra ID)'",
+
+            // v26: Offsite-Status je Backup (OffsiteBackupService, S3-kompatibel).
+            'backup_offsite_uploads' => "CREATE TABLE IF NOT EXISTS {$p}backup_offsite_uploads (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                backup_name VARCHAR(128) NOT NULL,
+                target VARCHAR(20) NOT NULL DEFAULT 's3',
+                object_prefix VARCHAR(255) NOT NULL,
+                status VARCHAR(12) NOT NULL,
+                bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                files INT UNSIGNED NOT NULL DEFAULT 0,
+                attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                last_error VARCHAR(500) NULL,
+                uploaded_at DATETIME NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                UNIQUE KEY uq_backup_offsite_backup_target (backup_name, target),
+                INDEX idx_backup_offsite_status (status, updated_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Offsite-Uploads der Backups'",
+
+            // v26: Ausgehende Webhooks (WebhookService). Geheimnis verschlüsselt (CryptoService, Kontext settings).
+            'webhook_endpoints' => "CREATE TABLE IF NOT EXISTS {$p}webhook_endpoints (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                url VARCHAR(500) NOT NULL,
+                events_json LONGTEXT NOT NULL,
+                secret_encrypted TEXT NOT NULL,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                consecutive_failures INT UNSIGNED NOT NULL DEFAULT 0,
+                disabled_reason VARCHAR(255) NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Empfänger ausgehender Webhooks'",
+
+            // v26: Zustellungen ausgehender Webhooks (Warteschlange mit Wiederholungen).
+            'webhook_deliveries' => "CREATE TABLE IF NOT EXISTS {$p}webhook_deliveries (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                endpoint_id INT UNSIGNED NOT NULL,
+                delivery_uuid CHAR(36) NOT NULL,
+                event VARCHAR(60) NOT NULL,
+                payload_json LONGTEXT NOT NULL,
+                status VARCHAR(12) NOT NULL DEFAULT 'pending',
+                attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                next_attempt_at DATETIME NULL,
+                response_status SMALLINT NULL,
+                last_error VARCHAR(500) NULL,
+                created_at DATETIME NOT NULL,
+                delivered_at DATETIME NULL,
+                UNIQUE KEY uq_webhook_deliveries_uuid (delivery_uuid),
+                INDEX idx_webhook_deliveries_due (status, next_attempt_at),
+                INDEX idx_webhook_deliveries_endpoint (endpoint_id, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Zustellungen ausgehender Webhooks'",
         ];
     }
 
@@ -2196,7 +2295,7 @@ class SchemaManager
     private function ensureFeatureSchema(): void
     {
         $queries = self::getSchemaQueries($this->prefix, $this->charset);
-        foreach (self::FEATURE_TABLES as $table) {
+        foreach (array_merge(self::FEATURE_TABLES, self::FEATURE_TABLES_V26) as $table) {
             if (!isset($queries[$table])) {
                 continue;
             }
@@ -2206,6 +2305,18 @@ class SchemaManager
                 error_log(sprintf('SchemaManager::ensureFeatureSchema(%s) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
             }
         }
+
+        // v26: Passwort-Alter (PasswordPolicyService) und User-Verification-Flag der Passkeys (MFA-Zwang).
+        $this->ensureColumnExists(
+            $this->prefix . 'users',
+            'password_changed_at',
+            "ALTER TABLE {$this->prefix}users ADD COLUMN password_changed_at DATETIME NULL DEFAULT NULL"
+        );
+        $this->ensureColumnExists(
+            $this->prefix . 'passkey_credentials',
+            'user_verified',
+            "ALTER TABLE {$this->prefix}passkey_credentials ADD COLUMN user_verified TINYINT(1) NULL DEFAULT NULL"
+        );
 
         // v25: Wer hat eine Seitenrevision ausgelöst? (Übersicht „Letzte Änderungen“)
         $this->ensureColumnExists(

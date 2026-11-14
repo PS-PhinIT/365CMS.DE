@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (76 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v25'`, flag file `CMS/cache/db_schema_v25.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds 32 tables: `cms_admin_menu_layouts` (custom admin sidebar layouts), `cms_batch_jobs` (long-running admin tasks processed in steps) and the 30 feature tables listed in `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (81 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v25'`, flag file `CMS/cache/db_schema_v25.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds 32 tables: `cms_admin_menu_layouts` (custom admin sidebar layouts), `cms_batch_jobs` (long-running admin tasks processed in steps) and the 30 feature tables listed in `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`. In preparation for release 4.1.0 (schema `v26`, marker raised with the release) five further tables are already defined in `SchemaManager::FEATURE_TABLES_V26` – `cms_password_history`, `cms_user_identities`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries` – plus the columns `cms_users.password_changed_at` and `cms_passkey_credentials.user_verified`; existing installations receive them through the runtime check `SchemaManager::ensureFeatureSchema()`.
 
 ## Deutsch
 
@@ -140,6 +140,20 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `search_queries` | id, term, locale, result_count, created_at | Suchbegriffe der Frontend-Suche – ohne IP, Benutzer, Session; täglich verdichtet und gelöscht |
 | `search_term_daily` | day, locale, term, searches, zero_hits, result_sum | Tageswerte der Suchbegriffe (Löschregel `search_terms`) |
 | `trash_media` | id, original_path, storage_name, title, filetype, filesize, payload_json, trashed_at, trashed_by | Medien im Papierkorb (Datei im privaten Speicher `trash/media/`) |
+
+#### Tabellen aus `FEATURE_TABLES_V26` (Vorbereitung Release 4.1.0)
+
+Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA-v26.md). Die Versionsmarke bleibt bis zum Release `v25`; Neuinstallationen erhalten die Tabellen über `getSchemaQueries()`, bestehende Installationen über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()`, die ALTER-Schritte im `MigrationManager` greifen ab der Marke `v26`.
+
+| Tabelle / Spalte | Spalten | Zweck |
+|---|---|---|
+| `password_history` | id, user_id, password_hash, created_at | frühere bcrypt-Hashes für die Wiederverwendungssperre der Passwort-Richtlinie |
+| `user_identities` | id, user_id, provider, tenant_id, subject, email_at_link, provisioned, linked_at, last_login_at | SSO-Bindungen (Entra ID) – eindeutig über provider + tenant_id + subject (`oid`), nie über Benutzername/E-Mail; keine Tokens |
+| `backup_offsite_uploads` | id, backup_name, target, object_prefix, status, bytes, files, attempts, last_error, uploaded_at, created_at, updated_at | Offsite-Status je Backup (S3-kompatibel) |
+| `webhook_endpoints` | id, name, url, events_json, secret_encrypted, is_active, consecutive_failures, disabled_reason, created_by, created_at, updated_at | Empfänger ausgehender Webhooks; Geheimnis über `CryptoService` |
+| `webhook_deliveries` | id, endpoint_id, delivery_uuid, event, payload_json, status, attempts, next_attempt_at, response_status, last_error, created_at, delivered_at | Zustell-Warteschlange mit Wiederholungen |
+| `users.password_changed_at` | DATETIME NULL | Passwort-Alter für das optionale Höchstalter; Bestand `NULL` (rechnet ab `created_at`) |
+| `passkey_credentials.user_verified` | TINYINT(1) NULL | UV-Flag der Registrierung; zählt beim MFA-Zwang nur mit `1` |
 
 Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und Update von v24 (Feature-Tabellen, `batch_jobs`, `admin_menu_layouts`, `planned_at` und `page_revisions.created_by` entfernt, Version auf v24) ergeben dieselben 68 Tabellen und Spalten; die Version steht danach auf v25. Die Zahl 68 ist der Stand dieses Tests; das aktuelle Schema enthält 76 Tabellendefinitionen (`SchemaManager::getSchemaQueries()`, einschließlich `kb_*` und `newsletter_*`), der Vergleich wurde damit nicht wiederholt.
 

@@ -13,7 +13,7 @@ that the schema does not guarantee.
 
 ### 1. Mechanik (wie v25)
 
-1. `SchemaManager::SCHEMA_VERSION` und `MigrationManager::SCHEMA_VERSION` → `'v26'`.
+1. **Versionsmarke erst mit dem Release:** `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION`, `Version::CURRENT` und `schema_version` im Marketplace-Manifest werden in **einem** Schritt der Release-Vorbereitung 4.1.0 auf `v26`/`4.1.0` gehoben (das Manifest beschreibt das veröffentlichte Paket, die Release-Suite prüft die Übereinstimmung). Bis dahin entstehen die v26-Tabellen und -Spalten bei Neuinstallationen über `getSchemaQueries()` und bei bestehenden Installationen über `SchemaManager::ensureFeatureSchema()` (Laufzeitprüfung, läuft nach jeder Änderung von `SchemaManager.php` einmal); die ALTER-Schritte im `MigrationManager` sind bereits eingetragen und greifen ab der Marke v26.
 2. Das Community-Modul (Release 4.2) ist **nicht** Teil von v26; es bringt Schema **v27** ([../community/DATA-MODEL.md](../community/DATA-MODEL.md)).
 3. Neue Tabellen nur in `SchemaManager::getSchemaQueries()`; Liste `SchemaManager::FEATURE_TABLES_V26` (Abhängigkeitsreihenfolge) wird von Neuinstallation, `MigrationManager::run()` und der Laufzeitprüfung genutzt – eine Definition, drei Wege.
 4. Spaltenerweiterungen als `ALTER TABLE … ADD COLUMN` in `MigrationManager::run()`; bekannte Fehler („Duplicate column“, „Duplicate key name“ …) werden wie bisher ignoriert → idempotent.
