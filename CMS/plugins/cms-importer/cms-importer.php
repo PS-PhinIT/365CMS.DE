@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CMS WordPress Importer
  * Description: Importiert WordPress-WXR-Exportdateien sowie Rank-Math-Settings-JSON mit sinnvollen SEO-Defaults und Weiterleitungen samt Beiträgen, Seiten, Kommentaren, Tabellen, SEO-Metadaten und Bildern passend nach 365CMS. Unbekannte Meta-Felder werden protokolliert und als Markdown-Bericht gespeichert.
- * Version:      3.0.3
+ * Version:      3.1.0
  * Author:       365 Network
  * Author URI:   https://365network.de
  *
@@ -22,7 +22,7 @@ if (defined('CMS_IMPORTER_BOOTSTRAPPED')) {
 define('CMS_IMPORTER_BOOTSTRAPPED', true);
 
 // ── Plugin Constants ─────────────────────────────────────────────────────────
-defined('CMS_IMPORTER_VERSION') || define('CMS_IMPORTER_VERSION', '3.0.3');
+defined('CMS_IMPORTER_VERSION') || define('CMS_IMPORTER_VERSION', '3.1.0');
 defined('CMS_IMPORTER_PLUGIN_DIR') || define('CMS_IMPORTER_PLUGIN_DIR', dirname(__FILE__) . '/');
 defined('CMS_IMPORTER_PLUGIN_URL') || define('CMS_IMPORTER_PLUGIN_URL', '/plugins/cms-importer/');
 defined('CMS_IMPORTER_TEXT_DOMAIN') || define('CMS_IMPORTER_TEXT_DOMAIN', 'cms-importer');

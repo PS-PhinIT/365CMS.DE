@@ -32,6 +32,9 @@ class CMS_Importer_Admin
 
     private static ?self $instance = null;
 
+    /** Unterseite mit Upload und Ordner-Import (bis 3.0.3 die Hauptseite). */
+    public const PAGE_IMPORT = 'cms-importer-import';
+
     /** Maximale Upload-Größe (50 MB) */
     private const MAX_UPLOAD_MB = 50;
 
@@ -62,24 +65,34 @@ class CMS_Importer_Admin
             return;
         }
 
-        // Hauptmenü registrieren
+        // Hauptmenü registrieren (Ziel: Übersicht nach dem Plugin-Layout-Vertrag 4.0.0)
         add_menu_page(
             'WordPress Importer',
             '365CMS | WP Importer',
             'admin',
             'cms-importer',
-            [$this, 'render_import_page'],
-            '📥',
+            [$this, 'render_overview_page'],
+            'ti ti-file-import',
             80
+        );
+
+        // Untermenü: Übersicht (erster Menüpunkt)
+        add_submenu_page(
+            'cms-importer',
+            'WordPress Importer – Übersicht',
+            'Übersicht',
+            'admin',
+            'cms-importer',
+            [$this, 'render_overview_page']
         );
 
         // Untermenü: Import
         add_submenu_page(
             'cms-importer',
-            'WordPress Importer',
+            'WordPress Importer – Import',
             'Import',
             'admin',
-            'cms-importer',
+            self::PAGE_IMPORT,
             [$this, 'render_import_page']
         );
 
@@ -105,6 +118,200 @@ class CMS_Importer_Admin
     }
 
     // ── Seiten-Renderer ───────────────────────────────────────────────────────
+
+    /**
+     * Übersicht (Hauptseite): Schnellaktionen, System-Check und letzte Importe.
+     * Formulare und Bericht-Downloads, die noch auf die alte Hauptseite zielen, verarbeitet weiter die Import-Seite.
+     */
+    public function render_overview_page(): void
+    {
+        $isPost = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
+        if ($isPost || (string) ($_GET['action'] ?? '') === 'download_report') {
+            $this->render_import_page();
+            return;
+        }
+
+        $this->render_in_workspace('cms-importer', function (): void {
+            $data = $this->overview_data();
+            echo function_exists('cms_plugin_dashboard')
+                ? cms_plugin_dashboard($data)
+                : '<p><a class="btn btn-primary" href="/admin/plugins/cms-importer/' . self::PAGE_IMPORT . '">Import starten</a></p>';
+        });
+    }
+
+    /**
+     * Rahmen des einheitlichen Plugin-Layouts (Kopfzeile, Plugin-Menü, Inhalt) um eine Seite legen.
+     * Ohne Core-Partial (ältere Cores) erscheint die Seite unverändert.
+     */
+    private function render_in_workspace(string $active, callable $render): void
+    {
+        if (!function_exists('cms_plugin_workspace_open')) {
+            $render();
+            return;
+        }
+
+        echo cms_plugin_workspace_open($this->workspace_args($active));
+        $render();
+        echo cms_plugin_workspace_close();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function workspace_args(string $active): array
+    {
+        $logs = $this->get_recent_logs(1);
+        $last = $logs[0] ?? null;
+        $files = $this->scan_import_folder();
+        $lastErrors = $last !== null ? (int) ($last->errors ?? 0) : 0;
+        $lastStarted = $last !== null ? strtotime((string) ($last->started_at ?? '')) : false;
+
+        return [
+            'plugin' => 'cms-importer',
+            'title' => '365CMS | WP Importer',
+            'icon' => 'ti ti-file-import',
+            'version' => CMS_IMPORTER_VERSION,
+            'description' => 'WordPress-Exporte (WXR/JSON) mit Bildern, SEO-Daten, Tabellen und Weiterleitungen nach 365CMS übernehmen.',
+            'stats' => [
+                ['label' => 'Importe', 'value' => $this->count_logs(), 'icon' => 'ti ti-history', 'url' => '/admin/plugins/cms-importer/cms-importer-log'],
+                ['label' => 'Dateien bereit', 'value' => count($files), 'icon' => 'ti ti-files', 'url' => '/admin/plugins/cms-importer/' . self::PAGE_IMPORT],
+                ['label' => 'Letzter Import', 'value' => $lastStarted !== false ? date('d.m.Y', $lastStarted) : '–', 'icon' => 'ti ti-clock'],
+                ['label' => 'Fehler (letzter Import)', 'value' => $lastErrors, 'icon' => 'ti ti-alert-triangle', 'tone' => $lastErrors > 0 ? 'danger' : ''],
+            ],
+            'nav' => [
+                ['slug' => 'cms-importer', 'label' => 'Übersicht', 'url' => '/admin/plugins/cms-importer/cms-importer', 'icon' => 'ti ti-layout-dashboard', 'active' => $active === 'cms-importer'],
+                ['slug' => self::PAGE_IMPORT, 'label' => 'Import', 'url' => '/admin/plugins/cms-importer/' . self::PAGE_IMPORT, 'icon' => 'ti ti-file-import', 'badge' => count($files), 'active' => $active === self::PAGE_IMPORT],
+                ['slug' => 'cms-importer-log', 'label' => 'Protokoll', 'url' => '/admin/plugins/cms-importer/cms-importer-log', 'icon' => 'ti ti-list-details', 'active' => $active === 'cms-importer-log'],
+            ],
+            'nav_explicit' => true,
+        ];
+    }
+
+    /**
+     * Daten der Übersicht für cms_plugin_dashboard().
+     *
+     * @return array<string, mixed>
+     */
+    private function overview_data(): array
+    {
+        $importUrl = '/admin/plugins/cms-importer/' . self::PAGE_IMPORT;
+        $logUrl = '/admin/plugins/cms-importer/cms-importer-log';
+        $files = $this->scan_import_folder();
+
+        $actions = [
+            ['label' => 'Datei hochladen und importieren', 'url' => $importUrl, 'icon' => 'ti ti-upload', 'primary' => true, 'description' => 'WXR- oder JSON-Export hochladen, Vorschau prüfen, importieren.'],
+            ['label' => 'Aus Import-Ordner', 'url' => $importUrl, 'icon' => 'ti ti-folder-open', 'description' => count($files) . ' Datei(en) in uploads/import/ und den WordPress-Exportordnern.'],
+            ['label' => 'Import-Protokoll', 'url' => $logUrl, 'icon' => 'ti ti-list-details', 'description' => 'Ergebnisse, Laufzeiten und Meta-Berichte aller Importe.'],
+            ['label' => 'Bereinigung', 'url' => $importUrl, 'icon' => 'ti ti-eraser', 'description' => 'Importierte Beiträge, Seiten, SEO-Daten oder Tabellen gezielt entfernen.'],
+        ];
+
+        $checks = [];
+        $tableOk = $this->import_table_exists();
+        $checks[] = $tableOk
+            ? ['label' => 'Protokoll-Tabelle', 'status' => 'ok', 'value' => 'import_log vorhanden']
+            : ['label' => 'Protokoll-Tabelle', 'status' => 'warning', 'value' => 'fehlt', 'hint' => 'Wird beim ersten Import angelegt.'];
+
+        $importDir = rtrim($this->get_import_dir(), '/\\');
+        if ($importDir === '') {
+            $checks[] = ['label' => 'Import-Ordner', 'status' => 'info', 'value' => 'UPLOAD_PATH nicht gesetzt'];
+        } elseif (!is_dir($importDir)) {
+            $checks[] = ['label' => 'Import-Ordner', 'status' => 'warning', 'value' => 'fehlt', 'hint' => 'Wird beim nächsten Aufruf einer Importer-Seite angelegt; sonst Schreibrechte für uploads/ prüfen.'];
+        } else {
+            $checks[] = is_writable($importDir)
+                ? ['label' => 'Import-Ordner', 'status' => 'ok', 'value' => 'beschreibbar']
+                : ['label' => 'Import-Ordner', 'status' => 'error', 'value' => 'nicht beschreibbar', 'hint' => 'Schreibrechte für uploads/import/ setzen.'];
+        }
+
+        $checks[] = class_exists('XMLReader') && function_exists('simplexml_load_string')
+            ? ['label' => 'XML-Unterstützung', 'status' => 'ok', 'value' => 'XMLReader, SimpleXML']
+            : ['label' => 'XML-Unterstützung', 'status' => 'error', 'value' => 'PHP-Erweiterung fehlt', 'hint' => 'xmlreader und simplexml werden für WXR-Dateien benötigt.'];
+
+        $uploadLimit = $this->ini_bytes((string) ini_get('upload_max_filesize'));
+        $postLimit = $this->ini_bytes((string) ini_get('post_max_size'));
+        $effective = min($uploadLimit > 0 ? $uploadLimit : PHP_INT_MAX, $postLimit > 0 ? $postLimit : PHP_INT_MAX);
+        $limitMb = $effective === PHP_INT_MAX ? self::MAX_UPLOAD_MB : (int) floor($effective / 1048576);
+        $checks[] = $limitMb >= self::MAX_UPLOAD_MB
+            ? ['label' => 'Upload-Grenze', 'status' => 'ok', 'value' => $limitMb . ' MB']
+            : ['label' => 'Upload-Grenze', 'status' => 'warning', 'value' => $limitMb . ' MB', 'hint' => 'Größere Exporte über den Import-Ordner einlesen (Plugin-Grenze ' . self::MAX_UPLOAD_MB . ' MB).'];
+
+        $checks[] = function_exists('curl_init') || ini_get('allow_url_fopen')
+            ? ['label' => 'Bilddownload', 'status' => 'ok', 'value' => function_exists('curl_init') ? 'cURL' : 'allow_url_fopen']
+            : ['label' => 'Bilddownload', 'status' => 'warning', 'value' => 'nicht möglich', 'hint' => 'cURL oder allow_url_fopen aktivieren, damit Bilder übernommen werden.'];
+
+        $items = [];
+        foreach ($this->get_recent_logs(6) as $log) {
+            $errors = (int) ($log->errors ?? 0);
+            $started = strtotime((string) ($log->started_at ?? ''));
+            $items[] = [
+                'title' => (string) ($log->filename ?? 'Import'),
+                'url' => $logUrl,
+                'meta' => ($started !== false ? date('d.m.Y, H:i', $started) . ' · ' : '')
+                    . (int) ($log->imported ?? 0) . ' von ' . (int) ($log->total ?? 0) . ' importiert',
+                'badge' => $errors > 0 ? $errors . ' Fehler' : (empty($log->finished_at) ? 'läuft/abgebrochen' : 'OK'),
+                'tone' => $errors > 0 ? 'danger' : (empty($log->finished_at) ? 'warning' : 'success'),
+            ];
+        }
+
+        return [
+            'actions' => $actions,
+            'checks' => $checks,
+            'activity' => [
+                'heading' => 'Letzte Importe',
+                'items' => $items,
+                'empty' => 'Noch keine Importe durchgeführt.',
+                'more_url' => $logUrl,
+                'more_label' => 'Zum Protokoll',
+            ],
+        ];
+    }
+
+    private function count_logs(): int
+    {
+        if (!class_exists('CMS\Database')) {
+            return 0;
+        }
+        try {
+            $db = CMS\Database::instance();
+            $p = $db->getPrefix();
+
+            return (int) ($db->get_var("SELECT COUNT(*) FROM {$p}import_log") ?? 0);
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    private function import_table_exists(): bool
+    {
+        if (!class_exists('CMS\Database')) {
+            return false;
+        }
+        try {
+            $db = CMS\Database::instance();
+            $p = $db->getPrefix();
+            $db->get_var("SELECT 1 FROM {$p}import_log LIMIT 1");
+
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function ini_bytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '-1') {
+            return 0;
+        }
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+
+        return match ($unit) {
+            'g' => $number * 1073741824,
+            'm' => $number * 1048576,
+            'k' => $number * 1024,
+            default => $number,
+        };
+    }
 
     public function render_import_page(): void
     {
@@ -183,7 +390,12 @@ class CMS_Importer_Admin
         $selected_author_id = max(0, (int) ($_POST['assigned_author_id'] ?? 0));
         $selected_author_display_name = trim((string) ($_POST['author_display_name'] ?? ''));
 
-        include CMS_IMPORTER_PLUGIN_DIR . 'admin/page.php';
+        $this->render_in_workspace(self::PAGE_IMPORT, static function () use (
+            $message, $msg_type, $result, $nonce, $nonce_download, $nonce_cleanup, $log_entries, $import_files,
+            $import_dir_url, $cleanup_stats, $available_authors, $selected_author_id, $selected_author_display_name
+        ): void {
+            include CMS_IMPORTER_PLUGIN_DIR . 'admin/page.php';
+        });
     }
 
     public function render_log_page(): void
@@ -203,7 +415,11 @@ class CMS_Importer_Admin
         $nonce_download = $security ? $security->createNonce('cms-importer-download') : '';
         $nonce_cleanup = $security ? $security->createNonce('cms-importer-cleanup') : '';
         $cleanup_stats = $this->get_cleanup_stats();
-        include CMS_IMPORTER_PLUGIN_DIR . 'admin/log.php';
+        $this->render_in_workspace('cms-importer-log', static function () use (
+            $message, $msg_type, $log_entries, $nonce_download, $nonce_cleanup, $cleanup_stats
+        ): void {
+            include CMS_IMPORTER_PLUGIN_DIR . 'admin/log.php';
+        });
     }
 
     // ── AJAX: Datei-Upload ────────────────────────────────────────────────────
