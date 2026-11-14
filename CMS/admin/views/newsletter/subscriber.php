@@ -56,6 +56,8 @@ $nlAction = $nlE(NewsletterModule::url(['section' => 'subscriber', 'id' => $nlNe
                 <div class="card-header"><h3 class="card-title"><?= $nlT('newsletter.admin.consent_title') ?></h3></div>
                 <div class="card-body">
                     <dl class="row mb-0 small">
+                        <?php $nlAccount = is_array($nlData['account'] ?? null) ? $nlData['account'] : null; ?>
+                        <dt class="col-5 fw-normal text-secondary"><?= $nlT('newsletter.member.admin_user_account') ?></dt><dd class="col-7"><?php if ($nlAccount === null): ?><?= $nlT('newsletter.member.admin_user_none') ?><?php elseif (!empty($nlAccount['exists'])): ?><a href="<?= $nlE('/admin/users?action=edit&id=' . (int) $nlAccount['id']) ?>"><?= $nlE((string) $nlAccount['name'] !== '' ? $nlAccount['name'] : '#' . (int) $nlAccount['id']) ?></a> <span class="text-secondary">(<?= $nlT('newsletter.member.admin_user_id', (int) $nlAccount['id']) ?>)</span><?php else: ?><?= $nlT('newsletter.member.admin_user_missing', (int) $nlAccount['id']) ?><?php endif; ?></dd>
                         <dt class="col-5 fw-normal text-secondary"><?= $nlT('newsletter.admin.col_source') ?></dt><dd class="col-7"><?= $nlT('newsletter.source.' . (in_array($nlS['source'] ?? '', \CMS\Services\Newsletter\NewsletterRepository::SOURCES, true) ? $nlS['source'] : 'admin')) ?></dd>
                         <dt class="col-5 fw-normal text-secondary"><?= $nlT('newsletter.admin.created_at') ?></dt><dd class="col-7"><?= $nlE($nlDate($nlS['created_at'] ?? '')) ?></dd>
                         <dt class="col-5 fw-normal text-secondary"><?= $nlT('newsletter.admin.consent_at') ?></dt><dd class="col-7"><?= $nlE($nlDate($nlS['consent_at'] ?? '')) ?></dd>
@@ -73,6 +75,23 @@ $nlAction = $nlE(NewsletterModule::url(['section' => 'subscriber', 'id' => $nlNe
                         <?= $nlCsrf ?><input type="hidden" name="action" value="delete_subscriber"><input type="hidden" name="id" value="<?= $nlId ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><?= $nlT('newsletter.admin.delete_subscriber') ?></button>
                     </form>
                 </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-header"><h3 class="card-title"><?= $nlT('newsletter.member.admin_consent_log_title') ?></h3></div>
+                <?php $nlLog = is_array($nlData['consent_log'] ?? null) ? $nlData['consent_log'] : []; ?>
+                <?php if ($nlLog === []): ?>
+                    <div class="card-body text-secondary"><?= $nlT('newsletter.member.admin_consent_log_empty') ?></div>
+                <?php else: ?>
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($nlLog as $nlEntry): ?>
+                            <?php $nlLogAction = in_array($nlEntry['action'] ?? '', \CMS\Services\Newsletter\NewsletterConsentLog::ACTIONS, true) ? (string) $nlEntry['action'] : 'subscribe'; ?>
+                            <div class="list-group-item small">
+                                <div class="d-flex justify-content-between gap-2"><span><?= $nlT('newsletter.member.admin_log_' . $nlLogAction) ?><?php if ((string) ($nlEntry['source'] ?? '') !== ''): ?> <span class="text-secondary">(<?= $nlE($nlEntry['source']) ?>)</span><?php endif; ?></span><span class="text-secondary text-nowrap"><?= $nlE($nlDate($nlEntry['created_at'] ?? '')) ?></span></div>
+                                <?php if ((string) ($nlEntry['consent_text'] ?? '') !== ''): ?><div class="text-secondary mt-1">„<?= $nlE($nlEntry['consent_text']) ?>“</div><?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card">
                 <div class="card-header"><h3 class="card-title"><?= $nlT('newsletter.admin.history_title') ?></h3></div>

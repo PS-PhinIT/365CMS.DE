@@ -37,11 +37,33 @@
 
         var image = document.createElement('img');
         image.src = value;
-        image.alt = variant === 'favicon' ? 'Favicon Vorschau' : 'Website-Logo Vorschau';
+        image.alt = variant === 'favicon'
+            ? 'Favicon Vorschau'
+            : (variant === 'screenshot' ? 'Bildvorschau' : 'Website-Logo Vorschau');
         image.style.border = '1px solid var(--tblr-border-color)';
         image.style.background = '#fff';
 
-        if (variant === 'favicon') {
+        if (variant === 'screenshot') {
+            // Größere Vorschau für Screenshots/Fotos (z. B. Login-Showcase), Seitenverhältnis bleibt erhalten.
+            previewElement.className = 'mt-2 cms-media-preview cms-media-preview--screenshot';
+            image.className = 'cms-media-preview__image';
+            image.loading = 'lazy';
+            image.decoding = 'async';
+            image.style.display = 'block';
+            image.style.maxWidth = '100%';
+            image.style.width = 'auto';
+            image.style.maxHeight = '240px';
+            image.style.height = 'auto';
+            image.style.objectFit = 'contain';
+            image.style.borderRadius = '8px';
+            image.style.padding = '4px';
+
+            var path = document.createElement('code');
+            path.className = 'd-block mt-1 small text-break';
+            path.textContent = value;
+            previewElement.appendChild(image);
+            previewElement.appendChild(path);
+        } else if (variant === 'favicon') {
             previewElement.className = 'mt-2 d-flex align-items-center gap-2';
             image.width = 32;
             image.height = 32;

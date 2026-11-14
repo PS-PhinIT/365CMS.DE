@@ -46,7 +46,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | [`member/`](member/) | Mitgliederbereich: Routen, Dashboard, Plugin-Registry, Sicherheit |
 | [`theme/`](theme/) | Theme-Entwicklung, Templates, JavaScript, Komponenten, Design-System |
 | [`plugins/`](plugins/) | Quick Start, Entwicklerhandbuch, Marketplace |
-| [`workflow/`](workflow/) | Schritt-für-Schritt-Abläufe: Inhalte, Medien-Upload, API, Marketplace, Update/Deployment, Integrationsfahrpläne Forum/Newsletter |
+| [`workflow/`](workflow/) | Schritt-für-Schritt-Abläufe: Inhalte, Medien-Upload, API, Marketplace, Update/Deployment, Integrationsfahrpläne Newsletter, Planung des Community-Moduls (Forum) unter [`workflow/specs/community/`](workflow/specs/community/README.md) |
 | [`ai/`](ai/) | AI Services, Provider, Assets |
 | [`assets/`](assets/) | Gebündelte Bibliotheken unter `CMS/assets/` und `CMS/vendor/dompdf/` |
 

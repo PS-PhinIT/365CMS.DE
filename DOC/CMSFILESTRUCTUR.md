@@ -59,8 +59,8 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/install/` | 10 |
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
-| `CMS/assets/css/` | 32 stylesheets |
-| `CMS/assets/js/` | 58 scripts + 18 ES modules (`admin-shell/`, `editor-blocks/`, `post-editor/`) |
+| `CMS/assets/css/` | 33 stylesheets |
+| `CMS/assets/js/` | 58 scripts + 21 ES modules (`admin-shell/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
 ---
 
@@ -174,7 +174,7 @@ Subdirectories:
 | `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `ThemeArchiveRepository.php`, `ThemeRouter.php` |
 | `core/Services/` | domain services (see [FILELIST.md](FILELIST.md) and [DEVLIST.md](DEVLIST.md)) |
 
-Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminToolbarService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `BatchJobService`, `CmsAuthPageService`, `CommentService`, `ContentChangesService`, `ContentEditPermission`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorialCalendarService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `EnvironmentInfoService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `IntegratedPluginService`, `JwtService`, `LandingPageService`, `LoginThrottleSettings`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PrivateStorageService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TranslationStatusService`, `TrustedProxyService`, `UpdateService`, `UserService`.
+Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminToolbarService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `BatchJobService`, `CmsAuthPageService`, `CommentService`, `ContentChangesService`, `ContentEditPermission`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorialCalendarService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `EnvironmentInfoService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `IntegratedPluginService`, `JwtService`, `LandingPageService`, `LoginThrottleSettings`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberContentService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `NotificationService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PrivateStorageService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TranslationStatusService`, `TrustedProxyService`, `UpdateService`, `UserService`.
 
 Service subfolders: `AdminMenu/`, `AI/`, `ContentTypes/`, `Downloads/`, `EditorJs/`, `Exchange/`, `FeatureHooks/`, `Feed/`, `Forms/`, `Knowledgebase/`, `Landing/`, `Legal/`, `Media/`, `Newsletter/`, `PluginMigration/`, `Retention/`, `Search/`, `SEO/`, `SiteTable/`, `Trash/`.
 
@@ -346,6 +346,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `knowledgebase-tooltip.css`
 - `main.css`
 - `member-dashboard.css`
+- `member-newsletter.css`
 - `newsletter-public.css`
 
 ### JavaScript (`CMS/assets/js/`)
@@ -413,6 +414,7 @@ ES modules without build step / ES-Module ohne Build-Schritt (since/seit 4.0.0):
 
 - `admin-shell/`: `api.js`, `dom.js`, `drawer.js`, `recent-links.js`, `shell.js`, `sidebar.js`, `site-switcher.js`, `toolbar.js`, `user-menu.js`
 - `editor-blocks/`: `block-preview.js`, `download-block.js`, `form-block.js`
+- `member/`: `media.js`, `passkey.js`, `uploads.js` (loaded on demand by `member-dashboard.js` / bei Bedarf von `member-dashboard.js` geladen)
 - `post-editor/`: `autosave.js`, `checklist.js`, `dialog.js`, `editor.js`, `focus-mode.js`, `revisions.js`
 
 ### Bundled library folders | Gebündelte Bibliotheksordner

@@ -88,12 +88,13 @@ T::run('E-Mail-Zuordnung: Selbstauskunft, Löschung und Newsletter-Bereich nutze
         T::check(!str_contains($source, "doAction('{$hook}', \$request->user_id, \$request->email)"), "{$hook}: gespeicherte Adresse wird nicht ungeprüft übergeben");
     }
 
-    $section = $read('core/Services/Newsletter/NewsletterMemberSection.php');
+    // Seit 4.0.0 liegt die Logik im NewsletterMemberService (Widget und Unterseite); Verhalten: TESTS/newsletter-member/.
+    $section = $read('core/Services/Newsletter/NewsletterMemberService.php');
     T::check(!str_contains($section, "subscriberByEmail((string) (\$user->email ?? ''))"), 'Newsletter-Bereich sucht das Abonnement nicht über die ungeprüfte Konto-Adresse');
-    T::check(str_contains($section, "\$email !== '' ? \$repo->subscriberByEmail(\$email) : null"), 'Rückgriff auf die Adresse nur mit matchableEmail()');
-    T::check(str_contains($section, "\$doubleOptIn = !\$verified || NewsletterSettings::flag('require_double_opt_in')"), 'unbestätigtes Konto: Anmeldung immer per Double-Opt-In');
+    T::check(str_contains($section, "\$email !== '' ? \$this->repo->subscriberByEmail(\$email) : null"), 'Rückgriff auf die Adresse nur mit matchableEmail()');
+    T::check(str_contains($section, "return !\$verified || \$status === 'bounced' || NewsletterSettings::flag('require_double_opt_in');"), 'unbestätigtes Konto: Anmeldung immer per Double-Opt-In');
     T::check(
-        substr_count($section, "'user_id' => (int) \$user->id") === 2 && str_contains($section, "if (\$verified) {\n                    \$input['user_id'] = (int) \$user->id;"),
+        substr_count($section, "'user_id' => (int)") === 2 && str_contains($section, "if (\$verified) {\n            \$payload['user_id'] = (int) (\$user->id ?? 0);"),
         'Bindung an das Konto nur bei bestätigter Adresse oder eigenem Abonnement'
     );
 
@@ -132,8 +133,10 @@ T::run('E-Mail-Zuordnung: kein per GET einlösbarer Bestätigungslink für aktiv
     $verify = substr($service, $start, (int) strpos($service, 'public function markVerifiedByEmail(') - $start);
     T::check(!str_contains($verify, 'confirmActiveAddress') && !str_contains($verify, 'META_VERIFIED_AT'), 'der Link-Abruf setzt bei aktiven Konten keinen Nachweis');
 
-    $section = (string) file_get_contents(ABSPATH . 'core/Services/Newsletter/NewsletterMemberSection.php');
-    T::check(!str_contains($section, 'confirm_email') && str_contains($section, 'newsletter.member.state_unverified'), 'Mitgliederbereich verweist auf den Passwort-Reset statt einen Link zu senden');
+    $section = (string) file_get_contents(ABSPATH . 'core/Services/Newsletter/NewsletterMemberSection.php')
+        . (string) file_get_contents(ABSPATH . 'core/Services/Newsletter/NewsletterMemberService.php');
+    $template = (string) file_get_contents(ABSPATH . 'views/member/widgets/newsletter.php');
+    T::check(!str_contains($section . $template, 'confirm_email') && str_contains($template, "\$nlT('state_unverified'"), 'Mitgliederbereich verweist auf den Passwort-Reset statt einen Link zu senden');
 });
 
 T::run('E-Mail-Zuordnung: Admin sieht den übersprungenen Abgleich und entscheidet ausdrücklich', static function (): void {

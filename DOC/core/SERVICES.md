@@ -76,12 +76,14 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | Service | Aufgabe |
 |---|---|
 | `UserService` | Benutzer-CRUD, Sammelaktionen, Rollen, Statistik |
-| `MemberService` | Profil, Privatsphäre, Datenexport, Löschantrag, Sicherheitsempfehlungen |
-| `MessageService` | Nachrichten zwischen Mitgliedern |
+| `MemberContentService` | Inhalte eines Mitglieds: `getContentStats()`, `getRecentComments()`, `getFavoritePosts()`, `isFavorite()`, `toggleFavorite()`, `removeFavorite()` (seit 4.0.0) |
+| `MemberService` | Profil, Privatsphäre, Datenexport, Löschantrag, Sicherheitsempfehlungen; Request-Cache für `getUserMeta()` (`flushUserMetaCache()`), `getRecentActivity()`, `getMemberOrders()`, `resolveMessageRecipientId()`, `setUserMeta()` |
+| `MessageService` | Nachrichten zwischen Mitgliedern; legt beim Senden eine Benachrichtigung `message` für den Empfänger an |
+| `NotificationService` | In-App-Benachrichtigungen der Mitglieder: `create()`, `markRead()`, `markAllRead()`, `countUnread()`, `getRecent()`; wertet `notification_preferences` aus, Action `cms_member_notification_created` (seit 4.0.0) |
 | `JwtService` | JWT erzeugen/prüfen für die optionale Bearer-Anmeldung der API (`/api/v1/auth/token`, nur mit `JWT_SECRET`, siehe [API-REFERENCE.md](API-REFERENCE.md)) |
 | `EmailVerificationService` | Bestätigung neuer Konten per Link (`/cms-verify-email`, Option `member_email_verification`, Status `unverified`), danach Zuordnung von Gastbestellungen |
 | `EmailChangeService` | E-Mail-Änderung mit Bestätigungslink an die neue Adresse (`/cms-confirm-email-change`, 48 h), Hinweis an die alte Adresse, Zuordnung von Gastbestellungen (seit 4.0.0) |
-| `CmsAuthPageService` | CMS-eigene Login-/Registrierungs-/Passwort-Seiten, Reset-Ablauf |
+| `CmsAuthPageService` | CMS-eigene Login-/Registrierungs-/Passwort-Seiten, Reset-Ablauf; seit 4.0.0 Login-Showcase `getShowcase(string $pageType = 'login'): ?array` (Rohwerte), `renderShowcase()` (bindet `<theme>/auth/showcase.php` oder `views/auth/partials/showcase.php` ein) und Farbimport `getThemeLoginColors()`/`importThemeColors()` aus `theme.json` → `login_page.colors` |
 
 ### Mail & Integration
 
@@ -169,7 +171,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `Downloads\…` | Downloads mit Versionen, Zugriffsschutz, Statistik und Editor-Block ([DOWNLOADS.md](../admin/media/DOWNLOADS.md)) |
 | `Feed\…` | Feed-Aggregator: Quellen, Abruf-Warteschlange, OPML, Digest-Versand ([FEEDS.md](../admin/system-settings/FEEDS.md)) |
 | `Knowledgebase\…` | Knowledgebase-Einträge, automatische Verlinkung, CSV-Pakete ([KNOWLEDGEBASE.md](../admin/pages-posts/KNOWLEDGEBASE.md)) |
-| `Newsletter\…` | Abonnenten, Kampagnen, Versand, Frontend-Seiten ([NEWSLETTER.md](../admin/pages-posts/NEWSLETTER.md)) |
+| `Newsletter\…` | Abonnenten, Kampagnen, Versand, Frontend-Seiten ([NEWSLETTER.md](../admin/pages-posts/NEWSLETTER.md)); seit 4.0.0 `NewsletterMemberService` (Status, An-/Abmeldung, Einstellungen, erneutes Senden im Mitgliederbereich, Rate-Limit 10/h je Konto) und `NewsletterConsentLog` (Einwilligungsverlauf im Audit-Log, Kategorie `newsletter`) |
 | `Trash\…` | Papierkorb (`TrashService`) mit Providern für Beiträge, Seiten, Hub-Sites und Medien ([TRASH.md](../admin/pages-posts/TRASH.md)) |
 | `Exchange\…` | Export/Import von Inhalten (`ContentExchangeService` und Provider, [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md)) |
 | `Search\…` | Suchindex (`SearchIndexService`), Suchbegriff-Statistik (`SearchTermStatsService`) und Suchprovider ([SEARCH-INDEX.md](../admin/system-settings/SEARCH-INDEX.md)) |

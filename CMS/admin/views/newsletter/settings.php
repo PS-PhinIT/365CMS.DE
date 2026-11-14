@@ -49,6 +49,8 @@ $nlTabs = ['general' => 'newsletter.admin.settings_general', 'content' => 'newsl
                     <div class="form-hint mb-2"><?= $nlT('newsletter.admin.set_double_opt_in_hint') ?></div>
                     <?= $nlSwitch('show_name_fields', 'newsletter.admin.set_show_names') ?>
                     <?= $nlSwitch('show_segment_choice', 'newsletter.admin.set_segment_choice') ?>
+                    <?= $nlSwitch('member_widget_enabled', 'newsletter.member.admin_widget_enabled') ?>
+                    <div class="form-hint mb-2"><?= $nlT('newsletter.member.admin_widget_enabled_hint') ?></div>
                     <div class="mt-3 col-sm-6 px-0"><?= $nlInput('confirm_expiry_days', 'newsletter.admin.set_expiry', 'number', ' min="1" max="365"') ?><div class="form-hint"><?= $nlT('newsletter.admin.set_expiry_hint') ?></div></div>
                 </div>
             </div></div>

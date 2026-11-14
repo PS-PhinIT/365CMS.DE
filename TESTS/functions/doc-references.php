@@ -69,7 +69,7 @@ T::run('Doku: Tabellenzahl, Veröffentlichungsdatum und PHP-Mindestversion', sta
     $minPhp = (string) ($manifest['min_php'] ?? '');
     T::check($released !== '' && $minPhp !== '', 'CMS/update.json enthält released und min_php');
 
-    foreach (['README.md' => 'released ' . $released, 'DOC/README.md' => "RELEASE_DATE = '" . $released . "'",
+    foreach (['README.md' => 'released `' . $released . '`', 'DOC/README.md' => "RELEASE_DATE = '" . $released . "'",
         'DOC/core/STATUS.md' => 'Release `' . $released . '`', 'DOC/core/CORE-CLASSES.md' => "RELEASE_DATE = '" . $released . "'",
         'DOC/admin/system-settings/UPDATES.md' => '"released": "' . $released . '"'] as $file => $needle) {
         T::check(str_contains(docRefRead($file), $needle), $file . ' nennt das Veröffentlichungsdatum aus update.json', $needle);

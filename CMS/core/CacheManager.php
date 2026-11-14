@@ -111,7 +111,7 @@ class CacheManager implements CacheInterface
             return $default;
         }
 
-        $raw = file_get_contents($file);
+        $raw = $this->readCacheFile($file);
         if ($raw === false) {
             return $default;
         }
@@ -656,6 +656,20 @@ class CacheManager implements CacheInterface
 
         $timestamp = strtotime($lastModified);
         return $timestamp !== false && $timestamp > 0 ? $timestamp : null;
+    }
+
+    /**
+     * Liest eine Cache-Datei ohne Warnung, falls sie zwischen file_exists() und dem Lesen
+     * von einem parallelen Request (TTL-Ablauf, flush, GC) gelöscht wurde.
+     */
+    private function readCacheFile(string $file): string|false
+    {
+        set_error_handler(static fn (): bool => true);
+        try {
+            return file_get_contents($file);
+        } finally {
+            restore_error_handler();
+        }
     }
 
     private function getCacheFile(string $key): string

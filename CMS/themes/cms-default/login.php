@@ -54,7 +54,7 @@ $loginRedirect = trim((string)($login_redirect ?? ''));
 $loginValue = trim((string)($_POST['username'] ?? $_POST['email'] ?? ''));
 ?>
 
-<div class="auth-main" style="background:linear-gradient(135deg,#e3f2fd 0%,#f5f9fc 100%);min-height:calc(100vh - 200px);display:flex;align-items:center;padding:2rem 1.5rem;">
+<div class="auth-main" style="background:linear-gradient(135deg,#e3f2fd 0%,#f5f9fc 100%);min-height:calc(100vh - 200px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;padding:2rem 1.5rem;">
     <div style="width:100%;max-width:440px;margin:0 auto;">
 
         <!-- Auth Card -->
@@ -153,4 +153,12 @@ $loginValue = trim((string)($_POST['username'] ?? $_POST['email'] ?? ''));
 
         </div>
     </div>
+
+    <?php
+    // Login-Showcase (LS-15): Daten aus CmsAuthPageService::getShowcase('login'), Markup aus dem Core-Partial
+    // bzw. einem Theme-Override auth/showcase.php; Gestaltung in style.css (.auth-main .cms-auth-showcase).
+    if (!empty($showcase) && is_array($showcase) && class_exists('\CMS\Services\CmsAuthPageService')) {
+        \CMS\Services\CmsAuthPageService::getInstance()->renderShowcase($showcase, 'login', 'legacy');
+    }
+    ?>
 </div>

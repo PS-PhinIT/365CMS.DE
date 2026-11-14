@@ -3,7 +3,7 @@
  * Texte in einer bestimmten Sprache (für Mails an Abonnenten in deren Sprache) und sprachabhängige Pfade.
  * Nutzt dieselbe Katalog-Logik wie der Feed-Aggregator.
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);

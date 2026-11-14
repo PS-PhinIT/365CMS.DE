@@ -6,7 +6,7 @@
  * Angezeigt werden nur Eingänge, die mit dem angemeldeten Konto abgesendet wurden. Löschen läuft per POST mit
  * dem Core-Token der Registry (`csrf => core`).
  *
- * @package CMSv2\Core\Services\Forms
+ * @package CMS\Services\Forms
  */
 
 declare(strict_types=1);
@@ -61,9 +61,12 @@ final class FormMemberSection
     }
 
     /**
+     * Verarbeitet das Löschen vor jeder Ausgabe; die Registry zeigt die Meldung nach der 303-Weiterleitung als Flash.
+     *
      * @param array<string, mixed> $params
+     * @return array{type: string, message: string}|null
      */
-    public static function handlePost(object $user, array $params = []): void
+    public static function handlePost(object $user, array $params = []): ?array
     {
         $userId = (int) ($user->id ?? 0);
         $id = (int) ($_POST['submission_id'] ?? 0);
@@ -76,7 +79,7 @@ final class FormMemberSection
                 : ['danger', FormI18n::t('forms.member.delete_failed')];
         }
 
-        self::renderList($userId, $notice);
+        return $notice !== null ? ['type' => $notice[0], 'message' => $notice[1]] : null;
     }
 
     /**

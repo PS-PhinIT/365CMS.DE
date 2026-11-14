@@ -20,11 +20,11 @@ $esc_nonce_cleanup = htmlspecialchars($nonce_cleanup ?? '');
 
     <div class="admin-page-header">
         <div>
-            <h2>📋 Import-Protokoll</h2>
+            <h2>Import-Protokoll</h2>
             <p>Übersicht aller WordPress-Imports inklusive Meta-Berichte, Laufzeiten und Ergebniszahlen.</p>
         </div>
         <div class="header-actions">
-            <a href="/admin/plugins/cms-importer/cms-importer" class="btn btn-secondary">← Zurück zum Import</a>
+            <a href="/admin/plugins/cms-importer/cms-importer-import" class="btn btn-secondary"><i class="ti ti-arrow-left me-1" aria-hidden="true"></i>Zum Import</a>
         </div>
     </div>
 

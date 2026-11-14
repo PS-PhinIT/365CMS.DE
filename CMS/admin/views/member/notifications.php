@@ -68,6 +68,11 @@ $frequencies = $data['digestFrequencies'] ?? [];
                                     <input id="notification_sender_name" name="notification_sender_name" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($notifications['sender_name'] ?? '')); ?>">
                                 </div>
                             </div>
+                            <div class="form-hint mt-3" id="notification_email_hint">
+                                Hinweis: Benachrichtigungen erscheinen im Mitgliederbereich (NotificationService). Ein E-Mail-Versand
+                                ist in 4.0.0 noch nicht angebunden – E-Mail-Schalter, Digest-Frequenz und Absendername werden gespeichert
+                                und greifen erst, wenn der Versand ergänzt ist.
+                            </div>
                         </div>
                     </div>
 

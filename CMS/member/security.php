@@ -1,15 +1,17 @@
 <?php
 declare(strict_types=1);
 
+use CMS\Member\MemberI18n;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/includes/bootstrap.php';
+require __DIR__ . '/includes/bootstrap.php';
 
 $controller->handleSecurityRequest();
 
-$pageTitle = 'Sicherheit';
+$pageTitle = $t('member.nav.security');
 $pageKey = 'security';
 $pageAssets = [];
 $securityData = $controller->getSecurityPageData();
@@ -21,279 +23,286 @@ $totpSetup = is_array($securityData['totp_setup'] ?? null) ? $securityData['totp
 $totpQrUrl = trim((string)($totpSetup['qr_data_uri'] ?? $totpSetup['qr_url'] ?? ''));
 $totpSecret = trim((string)($totpSetup['secret'] ?? ''));
 $totpOtpUri = trim((string)($totpSetup['otp_uri'] ?? ''));
+$score = max(0, min(100, (int)($security['score'] ?? 0)));
+$recommendations = array_values(array_filter((array)($security['recommendations'] ?? []), 'is_array'));
+$mfaToken = $controller->csrfToken('security_mfa');
+$passkeyToken = $controller->csrfToken('security_passkey');
+$memberProgressValues = [$score];
+
+/** Passwortfeld für die Re-Authentifizierung sicherheitsrelevanter Aktionen. */
+$passwordField = static function (string $id) use ($e, $t): void {
+    ?>
+    <div>
+        <label class="form-label" for="<?= $e($id) ?>"><?= $e($t('member.security.current_password')) ?></label>
+        <input class="form-control" id="<?= $e($id) ?>" name="current_password" type="password" autocomplete="current-password" required>
+    </div>
+    <?php
+};
 
 include __DIR__ . '/partials/header.php';
 ?>
 <div class="row g-4">
-    <div class="col-xl-4">
-        <div class="card mb-4">
+    <div class="col-12 col-xl-4 vstack gap-4">
+        <section class="card" aria-labelledby="member-security-score-title">
             <div class="card-header">
-                <h3 class="card-title">Security Score</h3>
+                <h2 class="card-title" id="member-security-score-title"><?= $e($t('member.kpi.security_score')) ?></h2>
             </div>
             <div class="card-body text-center">
-                <div class="display-4 fw-bold text-primary mb-2"><?= (int)($security['score'] ?? 0) ?></div>
-                <p class="text-secondary mb-3"><?= htmlspecialchars((string)($security['score_message'] ?? '')) ?></p>
+                <p class="display-4 fw-bold text-primary mb-2"><?= $score ?><span class="visually-hidden"> / 100</span></p>
+                <p class="text-secondary mb-3"><?= $e($security['score_message'] ?? '') ?></p>
                 <div class="progress progress-sm">
-                    <div class="progress-bar bg-primary" style="width: <?= (int)($security['score'] ?? 0) ?>%"></div>
+                    <div class="progress-bar bg-primary member-progress" data-member-progress="<?= $score ?>" role="progressbar" aria-valuenow="<?= $score ?>" aria-valuemin="0" aria-valuemax="100" aria-labelledby="member-security-score-title"></div>
                 </div>
             </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 class="card-title">Empfehlungen</h3></div>
-            <div class="list-group list-group-flush">
-                <?php foreach ((array)($security['recommendations'] ?? []) as $recommendation): ?>
-                    <div class="list-group-item d-flex gap-3">
-                        <span class="badge <?= !empty($recommendation['done']) ? 'bg-green-lt text-green' : 'bg-amber-lt text-amber' ?> mt-1">
-                            <?= !empty($recommendation['done']) ? '✓' : '!' ?>
-                        </span>
-                        <div><?= htmlspecialchars((string)($recommendation['text'] ?? '')) ?></div>
+        </section>
+        <section class="card" aria-labelledby="member-security-recommendations-title">
+            <div class="card-header"><h2 class="card-title" id="member-security-recommendations-title"><?= $e($t('member.security.recommendations')) ?></h2></div>
+            <?php if ($recommendations === []): ?>
+                <div class="card-body">
+                    <div class="member-empty">
+                        <span class="member-empty__icon" aria-hidden="true">✓</span>
+                        <p class="member-empty__text mb-0"><?= $e($t('member.security.recommendations_empty')) ?></p>
                     </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
+                </div>
+            <?php else: ?>
+                <ul class="list-group list-group-flush">
+                    <?php foreach ($recommendations as $recommendation): ?>
+                        <?php $done = !empty($recommendation['done']); ?>
+                        <li class="list-group-item d-flex gap-3">
+                            <span class="badge <?= $done ? 'bg-green-lt text-green' : 'bg-amber-lt text-amber' ?> mt-1">
+                                <span aria-hidden="true"><?= $done ? '✓' : '!' ?></span>
+                                <span class="visually-hidden"><?= $e($t($done ? 'member.security.done' : 'member.security.open')) ?></span>
+                            </span>
+                            <div><?= $e($recommendation['text'] ?? '') ?></div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </section>
     </div>
 
-    <div class="col-xl-8">
-        <div class="row g-4">
-            <div class="col-12">
-                <form class="card" method="post" action="">
-                    <input type="hidden" name="action" value="password_change">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_password'), ENT_QUOTES) ?>">
-                    <div class="card-header"><h3 class="card-title">Passwort ändern</h3></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label" for="current_password">Aktuelles Passwort</label>
-                                <input class="form-control" id="current_password" name="current_password" type="password" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="new_password">Neues Passwort</label>
-                                <input class="form-control" id="new_password" name="new_password" type="password" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="confirm_password">Wiederholen</label>
-                                <input class="form-control" id="confirm_password" name="confirm_password" type="password" required>
-                            </div>
-                        </div>
+    <div class="col-12 col-xl-8 vstack gap-4">
+        <form class="card" method="post" action="" aria-labelledby="member-password-title">
+            <input type="hidden" name="action" value="password_change">
+            <input type="hidden" name="csrf_token" value="<?= $e($controller->csrfToken('security_password')) ?>">
+            <div class="card-header"><h2 class="card-title" id="member-password-title"><?= $e($t('member.security.password_change')) ?></h2></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="current_password"><?= $e($t('member.security.current_password')) ?></label>
+                        <input class="form-control" id="current_password" name="current_password" type="password" autocomplete="current-password" required>
                     </div>
-                    <div class="card-footer text-end">
-                        <button type="submit" class="btn btn-primary">Passwort speichern</button>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="new_password"><?= $e($t('member.security.new_password')) ?></label>
+                        <input class="form-control" id="new_password" name="new_password" type="password" autocomplete="new-password" required>
                     </div>
-                </form>
-            </div>
-
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">Zwei-Faktor-Authentifizierung</h3>
-                        <span class="badge <?= !empty($securityData['totp_enabled']) ? 'bg-green-lt text-green' : 'bg-secondary-lt text-secondary' ?>">
-                            <?= !empty($securityData['totp_enabled']) ? 'Aktiv' : 'Nicht aktiv' ?>
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <?php if ($totpSetup !== null): ?>
-                            <div class="row g-4 align-items-center">
-                                <div class="col-md-4 text-center">
-                                    <?php if ($totpQrUrl !== ''): ?>
-                                        <img class="img-fluid rounded border" src="<?= htmlspecialchars($totpQrUrl, ENT_QUOTES) ?>" alt="TOTP QR-Code">
-                                    <?php else: ?>
-                                        <div class="border rounded p-4 bg-light text-secondary">QR-Code derzeit nicht verfügbar</div>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="col-md-8">
-                                    <p class="text-secondary">Scanne den QR-Code mit deiner Authenticator-App und bestätige anschließend den 6-stelligen Code.</p>
-                                    <?php if ($totpSecret !== ''): ?>
-                                        <div class="mb-3">
-                                            <div class="small text-secondary mb-1">Manuelle Einrichtung</div>
-                                            <code><?= htmlspecialchars($totpSecret) ?></code>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if ($totpOtpUri !== ''): ?>
-                                        <div class="mb-3 small text-secondary text-break">
-                                            OTP-URI: <a href="<?= htmlspecialchars($totpOtpUri, ENT_QUOTES) ?>"><?= htmlspecialchars($totpOtpUri) ?></a>
-                                        </div>
-                                    <?php endif; ?>
-                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
-                                        <input type="hidden" name="action" value="totp_confirm">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
-                                        <div>
-                                            <label class="form-label" for="totp_code">TOTP-Code</label>
-                                            <input class="form-control" id="totp_code" name="totp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">MFA aktivieren</button>
-                                    </form>
-                                </div>
-                            </div>
-                        <?php else: ?>
-                            <p class="text-secondary">Schütze dein Konto zusätzlich mit einem Authenticator und Backup-Codes.</p>
-                            <div class="d-flex flex-wrap gap-2">
-                                <?php if (empty($securityData['totp_enabled'])): ?>
-                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
-                                        <input type="hidden" name="action" value="totp_start">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
-                                        <div>
-                                            <label class="form-label" for="totp_start_current_password">Aktuelles Passwort</label>
-                                            <input class="form-control" id="totp_start_current_password" name="current_password" type="password" autocomplete="current-password" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">TOTP einrichten</button>
-                                    </form>
-                                <?php else: ?>
-                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="Neue Backup-Codes erzeugen? Die bisherigen Codes werden ungültig.">
-                                        <input type="hidden" name="action" value="backup_generate">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
-                                        <div>
-                                            <label class="form-label" for="backup_current_password">Aktuelles Passwort</label>
-                                            <input class="form-control" id="backup_current_password" name="current_password" type="password" autocomplete="current-password" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-primary">Backup-Codes erneuern</button>
-                                    </form>
-                                    <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="Zwei-Faktor-Authentifizierung wirklich deaktivieren?">
-                                        <input type="hidden" name="action" value="totp_disable">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_mfa'), ENT_QUOTES) ?>">
-                                        <div>
-                                            <label class="form-label" for="mfa_disable_current_password">Aktuelles Passwort</label>
-                                            <input class="form-control" id="mfa_disable_current_password" name="current_password" type="password" autocomplete="current-password" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-danger">MFA deaktivieren</button>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="card-footer text-secondary small">
-                        Verfügbare Backup-Codes: <?= (int)($securityData['backup_count'] ?? 0) ?>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="confirm_password"><?= $e($t('member.security.confirm_password')) ?></label>
+                        <input class="form-control" id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
                     </div>
                 </div>
             </div>
+            <div class="card-footer text-end">
+                <button type="submit" class="btn btn-primary"><?= $e($t('member.security.password_save')) ?></button>
+            </div>
+        </form>
 
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">Passkeys</h3>
-                        <span class="badge <?= !empty($passkeyPayload['available']) ? 'bg-blue-lt text-blue' : 'bg-secondary-lt text-secondary' ?>">
-                            <?= !empty($passkeyPayload['available']) ? 'Verfügbar' : 'Nicht verfügbar' ?>
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-secondary">Registriere einen Hardware-Key oder Plattform-Passkey für schnellere und sicherere Logins.</p>
-                        <?php if (!empty($passkeyPayload['available'])): ?>
-                            <form method="post" action="" data-passkey-form data-passkey-options='<?= htmlspecialchars((string)($passkeyPayload['options_json'] ?? '{}'), ENT_QUOTES) ?>'>
-                                <input type="hidden" name="action" value="passkey_register">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_passkey'), ENT_QUOTES) ?>">
-                                <input type="hidden" name="client_data_json" value="">
-                                <input type="hidden" name="attestation_object" value="">
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-4">
-                                        <label class="form-label" for="credential_name">Bezeichnung</label>
-                                        <input class="form-control" id="credential_name" name="credential_name" type="text" value="Mein Gerät">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label" for="passkey_current_password">Aktuelles Passwort</label>
-                                        <input class="form-control" id="passkey_current_password" name="current_password" type="password" autocomplete="current-password" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button type="button" class="btn btn-primary" data-passkey-register>Passkey registrieren</button>
-                                    </div>
+        <section class="card" aria-labelledby="member-mfa-title">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title" id="member-mfa-title"><?= $e($t('member.security.mfa')) ?></h2>
+                <span class="badge <?= !empty($securityData['totp_enabled']) ? 'bg-green-lt text-green' : 'bg-secondary-lt text-secondary' ?>">
+                    <?= $e($t(!empty($securityData['totp_enabled']) ? 'member.common.active' : 'member.common.inactive')) ?>
+                </span>
+            </div>
+            <div class="card-body">
+                <?php if ($totpSetup !== null): ?>
+                    <div class="row g-4 align-items-center">
+                        <div class="col-12 col-md-4 text-center">
+                            <?php if ($totpQrUrl !== ''): ?>
+                                <img class="img-fluid rounded border" src="<?= $e($totpQrUrl) ?>" alt="<?= $e($t('member.security.totp_qr_alt')) ?>" width="200" height="200">
+                            <?php else: ?>
+                                <div class="border rounded p-4 bg-light text-secondary"><?= $e($t('member.security.totp_qr_missing')) ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <p class="text-secondary"><?= $e($t('member.security.totp_instructions')) ?></p>
+                            <?php if ($totpSecret !== ''): ?>
+                                <div class="mb-3">
+                                    <div class="small text-secondary mb-1"><?= $e($t('member.security.totp_manual')) ?></div>
+                                    <code class="text-break"><?= $e($totpSecret) ?></code>
                                 </div>
+                            <?php endif; ?>
+                            <?php if ($totpOtpUri !== ''): ?>
+                                <div class="mb-3 small text-secondary text-break">
+                                    OTP-URI: <a href="<?= $e($totpOtpUri) ?>"><?= $e($totpOtpUri) ?></a>
+                                </div>
+                            <?php endif; ?>
+                            <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
+                                <input type="hidden" name="action" value="totp_confirm">
+                                <input type="hidden" name="csrf_token" value="<?= $e($mfaToken) ?>">
+                                <div>
+                                    <label class="form-label" for="totp_code"><?= $e($t('member.security.totp_code')) ?></label>
+                                    <input class="form-control" id="totp_code" name="totp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><?= $e($t('member.security.totp_activate')) ?></button>
+                            </form>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <p class="text-secondary"><?= $e($t('member.security.mfa_intro')) ?></p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <?php if (empty($securityData['totp_enabled'])): ?>
+                            <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end">
+                                <input type="hidden" name="action" value="totp_start">
+                                <input type="hidden" name="csrf_token" value="<?= $e($mfaToken) ?>">
+                                <?php $passwordField('totp_start_current_password'); ?>
+                                <button type="submit" class="btn btn-primary"><?= $e($t('member.security.totp_setup')) ?></button>
+                            </form>
+                        <?php else: ?>
+                            <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="<?= $e($t('member.security.confirm_backup')) ?>">
+                                <input type="hidden" name="action" value="backup_generate">
+                                <input type="hidden" name="csrf_token" value="<?= $e($mfaToken) ?>">
+                                <?php $passwordField('backup_current_password'); ?>
+                                <button type="submit" class="btn btn-outline-primary"><?= $e($t('member.security.backup_renew')) ?></button>
+                            </form>
+                            <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="<?= $e($t('member.security.confirm_mfa_disable')) ?>">
+                                <input type="hidden" name="action" value="totp_disable">
+                                <input type="hidden" name="csrf_token" value="<?= $e($mfaToken) ?>">
+                                <?php $passwordField('mfa_disable_current_password'); ?>
+                                <button type="submit" class="btn btn-outline-danger"><?= $e($t('member.security.mfa_disable')) ?></button>
                             </form>
                         <?php endif; ?>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table card-table table-vcenter">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Erstellt</th>
-                                    <th class="w-1"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($credentials === []): ?>
-                                    <tr><td colspan="3" class="text-secondary">Noch keine Passkeys registriert.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($credentials as $credential): ?>
-                                        <?php
-                                        $credentialName = is_array($credential)
-                                            ? (string)($credential['name'] ?? 'Passkey')
-                                            : (string)($credential->name ?? 'Passkey');
-                                        $credentialCreatedAt = is_array($credential)
-                                            ? (string)($credential['created_at'] ?? '')
-                                            : (string)($credential->created_at ?? '');
-                                        $credentialRecordId = is_array($credential)
-                                            ? (int)($credential['id'] ?? 0)
-                                            : (int)($credential->id ?? 0);
-                                        ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($credentialName) ?></td>
-                                            <td><?= htmlspecialchars($credentialCreatedAt) ?></td>
-                                            <td>
-                                                <form method="post" action="" data-cms-confirm="Passkey wirklich entfernen?">
-                                                    <input type="hidden" name="action" value="passkey_delete">
-                                                    <input type="hidden" name="credential_id" value="<?= $credentialRecordId ?>">
-                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_passkey'), ENT_QUOTES) ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Entfernen</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
+            <div class="card-footer text-secondary small">
+                <?= $e($t('member.security.backup_count', ['count' => (int)($securityData['backup_count'] ?? 0)])) ?>
+            </div>
+        </section>
 
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">Aktive Sessions</h3></div>
-                    <div class="table-responsive">
-                        <table class="table card-table table-vcenter">
-                            <thead>
-                                <tr>
-                                    <th>Session</th>
-                                    <th>IP / User Agent</th>
-                                    <th>Zuletzt aktiv</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($sessions === []): ?>
-                                    <tr><td colspan="3" class="text-secondary">Keine Sessions gefunden.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($sessions as $session): ?>
-                                        <tr>
-                                            <?php $sessionKey = (string) ($session->id ?? ''); ?>
-                                            <td>
-                                                <code><?= htmlspecialchars(substr($sessionKey, 0, 8), ENT_QUOTES, 'UTF-8') ?></code>
-                                                <?php if ($sessionKey !== '' && session_id() !== '' && hash_equals($sessionKey, hash('sha256', session_id()))): ?>
-                                                    <span class="badge bg-green-lt ms-1">Diese Sitzung</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <div><?= htmlspecialchars((string)($session->ip_address ?? 'Unbekannt')) ?></div>
-                                                <div class="text-secondary small"><?= htmlspecialchars((string)($session->user_agent ?? '')) ?></div>
-                                            </td>
-                                            <td><?= htmlspecialchars((string)($session->last_activity ?? '')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer">
-                        <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="Alle anderen Sitzungen und API-Tokens abmelden?">
-                            <input type="hidden" name="action" value="sessions_revoke_all">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($controller->csrfToken('security_sessions'), ENT_QUOTES) ?>">
-                            <div>
-                                <label class="form-label" for="sessions_revoke_current_password">Aktuelles Passwort</label>
-                                <input class="form-control" id="sessions_revoke_current_password" name="current_password" type="password" autocomplete="current-password" required>
-                            </div>
-                            <button type="submit" class="btn btn-outline-danger">Überall sonst abmelden</button>
-                        </form>
-                        <div class="text-secondary small mt-2">Beendet alle anderen Browser-Sitzungen und macht ausgestellte API-Tokens ungültig. Das Passwort bleibt unverändert.</div>
-                    </div>
-                </div>
+        <section class="card" aria-labelledby="member-passkeys-title">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title" id="member-passkeys-title"><?= $e($t('member.security.passkeys')) ?></h2>
+                <span class="badge <?= !empty($passkeyPayload['available']) ? 'bg-blue-lt text-blue' : 'bg-secondary-lt text-secondary' ?>">
+                    <?= $e($t(!empty($passkeyPayload['available']) ? 'member.security.available' : 'member.security.unavailable')) ?>
+                </span>
             </div>
-        </div>
+            <div class="card-body">
+                <p class="text-secondary"><?= $e($t('member.security.passkeys_intro')) ?></p>
+                <?php if (!empty($passkeyPayload['available'])): ?>
+                    <form method="post" action="" data-passkey-form data-passkey-options="<?= $e((string)($passkeyPayload['options_json'] ?? '{}')) ?>"
+                          data-msg-options="<?= $e($t('member.security.passkey_error_options')) ?>"
+                          data-msg-create="<?= $e($t('member.security.passkey_error_create')) ?>"
+                          data-msg-cancelled="<?= $e($t('member.security.passkey_error_cancelled')) ?>"
+                          data-msg-unsupported="<?= $e($t('member.security.passkey_error_unsupported')) ?>">
+                        <input type="hidden" name="action" value="passkey_register">
+                        <input type="hidden" name="csrf_token" value="<?= $e($passkeyToken) ?>">
+                        <input type="hidden" name="client_data_json" value="">
+                        <input type="hidden" name="attestation_object" value="">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="credential_name"><?= $e($t('member.security.passkey_name')) ?></label>
+                                <input class="form-control" id="credential_name" name="credential_name" type="text" maxlength="100" value="<?= $e($t('member.security.passkey_default_name')) ?>">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <?php $passwordField('passkey_current_password'); ?>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <button type="button" class="btn btn-primary" data-passkey-register><?= $e($t('member.security.passkey_register')) ?></button>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger mt-3 mb-0" role="alert" data-passkey-error hidden></div>
+                    </form>
+                <?php endif; ?>
+            </div>
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter">
+                    <caption class="visually-hidden"><?= $e($t('member.security.passkeys_caption')) ?></caption>
+                    <thead>
+                        <tr>
+                            <th scope="col"><?= $e($t('member.security.col_name')) ?></th>
+                            <th scope="col"><?= $e($t('member.security.col_created')) ?></th>
+                            <th scope="col" class="w-1"><span class="visually-hidden"><?= $e($t('member.media.actions')) ?></span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($credentials === []): ?>
+                            <tr><td colspan="3" class="text-secondary"><?= $e($t('member.security.passkeys_empty')) ?></td></tr>
+                        <?php else: ?>
+                            <?php foreach ($credentials as $credential): ?>
+                                <?php
+                                $credentialName = is_array($credential) ? (string)($credential['name'] ?? 'Passkey') : (string)($credential->name ?? 'Passkey');
+                                $credentialCreatedAt = is_array($credential) ? (string)($credential['created_at'] ?? '') : (string)($credential->created_at ?? '');
+                                $credentialRecordId = is_array($credential) ? (int)($credential['id'] ?? 0) : (int)($credential->id ?? 0);
+                                $passwordId = 'passkey_delete_password_' . $credentialRecordId;
+                                ?>
+                                <tr>
+                                    <td><?= $e($credentialName) ?></td>
+                                    <td><?= $e(MemberI18n::formatDate($credentialCreatedAt)) ?></td>
+                                    <td>
+                                        <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="<?= $e($t('member.security.confirm_passkey_delete')) ?>">
+                                            <input type="hidden" name="action" value="passkey_delete">
+                                            <input type="hidden" name="credential_id" value="<?= $credentialRecordId ?>">
+                                            <input type="hidden" name="csrf_token" value="<?= $e($passkeyToken) ?>">
+                                            <label class="visually-hidden" for="<?= $e($passwordId) ?>"><?= $e($t('member.security.current_password')) ?></label>
+                                            <input class="form-control form-control-sm member-inline-password" id="<?= $e($passwordId) ?>" name="current_password" type="password" autocomplete="current-password" placeholder="<?= $e($t('member.security.current_password')) ?>" required>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><?= $e($t('member.security.passkey_remove')) ?><span class="visually-hidden">: <?= $e($credentialName) ?></span></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="member-sessions-title">
+            <div class="card-header"><h2 class="card-title" id="member-sessions-title"><?= $e($t('member.security.sessions')) ?></h2></div>
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter">
+                    <caption class="visually-hidden"><?= $e($t('member.security.sessions_caption')) ?></caption>
+                    <thead>
+                        <tr>
+                            <th scope="col"><?= $e($t('member.security.col_session')) ?></th>
+                            <th scope="col"><?= $e($t('member.security.col_client')) ?></th>
+                            <th scope="col"><?= $e($t('member.security.col_last_active')) ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($sessions === []): ?>
+                            <tr><td colspan="3" class="text-secondary"><?= $e($t('member.security.sessions_empty')) ?></td></tr>
+                        <?php else: ?>
+                            <?php foreach ($sessions as $session): ?>
+                                <?php $sessionKey = (string) ($session->id ?? ''); ?>
+                                <tr>
+                                    <td>
+                                        <code><?= $e(substr($sessionKey, 0, 8)) ?></code>
+                                        <?php if ($sessionKey !== '' && session_id() !== '' && hash_equals($sessionKey, hash('sha256', session_id()))): ?>
+                                            <span class="badge bg-green-lt ms-1"><?= $e($t('member.security.this_session')) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div><?= $e(($session->ip_address ?? '') !== '' ? $session->ip_address : $t('member.common.unknown')) ?></div>
+                                        <div class="text-secondary small text-break"><?= $e($session->user_agent ?? '') ?></div>
+                                    </td>
+                                    <td><?= $e(MemberI18n::formatDate($session->last_activity ?? '')) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <form method="post" action="" class="d-flex flex-wrap gap-2 align-items-end" data-cms-confirm="<?= $e($t('member.security.confirm_revoke')) ?>">
+                    <input type="hidden" name="action" value="sessions_revoke_all">
+                    <input type="hidden" name="csrf_token" value="<?= $e($controller->csrfToken('security_sessions')) ?>">
+                    <?php $passwordField('sessions_revoke_current_password'); ?>
+                    <button type="submit" class="btn btn-outline-danger"><?= $e($t('member.security.revoke_all')) ?></button>
+                </form>
+                <p class="text-secondary small mt-2 mb-0"><?= $e($t('member.security.revoke_hint')) ?></p>
+            </div>
+        </section>
     </div>
 </div>
 <?php include __DIR__ . '/partials/footer.php';

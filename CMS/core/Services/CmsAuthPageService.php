@@ -34,6 +34,31 @@ final class CmsAuthPageService
     ];
     private const ALLOWED_LAYOUT_VARIANTS = ['centered', 'split'];
     private const ALLOWED_SLUG_MODES = ['cms', 'legacy'];
+    private const SHOWCASE_PAGE_MODES = ['login', 'login_register'];
+    private const SHOWCASE_IMAGE_POSITIONS = ['left', 'right'];
+    private const SHOWCASE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
+    private const SHOWCASE_MAX_FEATURES = 8;
+    private const SHOWCASE_FEATURE_MAX_LENGTH = 140;
+    private const SHOWCASE_PARTIAL = 'views/auth/partials/showcase.php';
+    private const THEME_SHOWCASE_PARTIAL = 'auth/showcase.php';
+
+    /**
+     * Farbschlüssel der Loginseite, die ein Theme über `login_page.colors` in seiner theme.json vorschlagen kann.
+     *
+     * @var list<string>
+     */
+    public const COLOR_SETTING_KEYS = [
+        'background_start',
+        'background_end',
+        'card_background',
+        'text_color',
+        'muted_color',
+        'primary_color',
+        'primary_text_color',
+        'link_color',
+        'input_background',
+        'input_border',
+    ];
 
     /** @var array<string, string> */
     private const SHARED_SETTING_DEFAULTS = [
@@ -199,13 +224,36 @@ final class CmsAuthPageService
         }
     }
 
-    /** @return array{success:bool,message?:string,error?:string} */
+    /**
+     * Speichert alle Einstellungen der Loginseite. Bei Eingabefehlern (z. B. Showcase-Bild ohne Alternativtext)
+     * wird nichts geschrieben; `errors` und die normalisierten `values` gehen an den Aufrufer zurück.
+     *
+     * @return array{success:bool,message?:string,error?:string,errors?:list<string>,values?:array<string,string>,changed_keys?:list<string>}
+     */
     public function saveSettings(array $input): array
     {
         $this->settingsCache = null;
 
         try {
             $values = $this->normalizeSettingsInput($input);
+            $errors = $this->collectSettingsErrors($input, $values);
+            if ($errors !== []) {
+                return [
+                    'success' => false,
+                    'error' => 'CMS Loginpage wurde nicht gespeichert: ' . implode(' ', $errors),
+                    'errors' => $errors,
+                    'values' => $values,
+                ];
+            }
+
+            $previous = $this->getSettings();
+            $this->settingsCache = null;
+            $changedKeys = [];
+            foreach ($values as $key => $value) {
+                if ((string) ($previous[$key] ?? '') !== $value) {
+                    $changedKeys[] = $key;
+                }
+            }
 
             foreach ($values as $key => $value) {
                 $optionName = array_key_exists($key, self::SHARED_SETTING_DEFAULTS)
@@ -216,11 +264,228 @@ final class CmsAuthPageService
                 }
             }
 
-            return ['success' => true, 'message' => 'CMS Loginpage gespeichert.'];
+            return ['success' => true, 'message' => 'CMS Loginpage gespeichert.', 'changed_keys' => $changedKeys];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'CMS Loginpage konnte nicht gespeichert werden: ' . $e->getMessage()];
         } finally {
             $this->settingsCache = null;
+        }
+    }
+
+    /**
+     * Farbvorschlag des aktiven Themes aus `theme.json` → `login_page.colors` (nur bekannte Schlüssel, nur #rrggbb).
+     *
+     * @return array<string, string>
+     */
+    public function getThemeLoginColors(): array
+    {
+        $themeJson = $this->readActiveThemeJson();
+        $loginPage = is_array($themeJson['login_page'] ?? null) ? $themeJson['login_page'] : [];
+
+        return $this->normalizeThemeColors($loginPage['colors'] ?? null);
+    }
+
+    /**
+     * Filtert einen `login_page.colors`-Block auf die bekannten Farbschlüssel mit gültigem `#rrggbb`-Wert.
+     *
+     * @return array<string, string>
+     */
+    public function normalizeThemeColors(mixed $colors): array
+    {
+        if (!is_array($colors)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach (self::COLOR_SETTING_KEYS as $key) {
+            $value = $colors[$key] ?? null;
+            if (!is_string($value) || preg_match('/^#[0-9a-fA-F]{6}$/', trim($value)) !== 1) {
+                continue;
+            }
+
+            $normalized[$key] = strtolower(trim($value));
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Übernimmt die Farben aus `login_page.colors` des aktiven Themes in die `cms_loginpage_*`-Farbeinstellungen.
+     * Andere Einstellungen bleiben unverändert.
+     *
+     * @return array{success:bool,message?:string,error?:string,changed_keys?:list<string>,theme?:string}
+     */
+    public function importThemeColors(): array
+    {
+        $colors = $this->getThemeLoginColors();
+        $themeSlug = $this->getActiveThemeSlug();
+        if ($colors === []) {
+            return ['success' => false, 'error' => 'Das aktive Theme liefert keine Farben für die Loginseite (theme.json → login_page.colors).'];
+        }
+
+        $this->settingsCache = null;
+
+        try {
+            $previous = $this->getSettings();
+            $changedKeys = [];
+            foreach ($colors as $key => $value) {
+                if ((string) ($previous[$key] ?? '') !== $value) {
+                    $changedKeys[] = $key;
+                }
+                if (!$this->upsertSetting(self::SETTING_PREFIX . $key, $value)) {
+                    throw new \RuntimeException('Einstellung „' . self::SETTING_PREFIX . $key . '“ konnte nicht persistiert werden.');
+                }
+            }
+
+            return [
+                'success' => true,
+                'message' => count($colors) . ' Farbwert(e) aus dem Theme „' . $themeSlug . '“ übernommen.',
+                'changed_keys' => $changedKeys,
+                'theme' => $themeSlug,
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => 'Theme-Farben konnten nicht übernommen werden: ' . $e->getMessage()];
+        } finally {
+            $this->settingsCache = null;
+        }
+    }
+
+    public function getActiveThemeSlug(): string
+    {
+        try {
+            return class_exists(\CMS\ThemeManager::class) ? \CMS\ThemeManager::instance()->getActiveThemeSlug() : '';
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * Showcase-Bereich (Bild und Text) unter dem Login-Formular.
+     *
+     * Liefert null, wenn der Showcase deaktiviert ist, nicht zur Seite passt oder weder Überschrift noch
+     * Feature-Punkte gesetzt sind. Alle Werte sind Rohtexte – Templates escapen selbst.
+     *
+     * @return array{position:string,eyebrow:string,headline:string,paragraphs:list<string>,features:list<string>,cta:?array{label:string,url:string},image:?array{src:string,webp:?string,alt:string,width:?int,height:?int}}|null
+     */
+    public function getShowcase(string $pageType = 'login'): ?array
+    {
+        return $this->buildShowcase($this->getSettings(), $pageType);
+    }
+
+    /**
+     * Wie getShowcase(), aber mit übergebenen Einstellungen (Vorschau, Tests).
+     *
+     * @param array<string, mixed> $settings
+     * @return array{position:string,eyebrow:string,headline:string,paragraphs:list<string>,features:list<string>,cta:?array{label:string,url:string},image:?array{src:string,webp:?string,alt:string,width:?int,height:?int}}|null
+     */
+    public function buildShowcase(array $settings, string $pageType = 'login'): ?array
+    {
+        if ((string) ($settings['showcase_enabled'] ?? '0') !== '1') {
+            return null;
+        }
+
+        $pageMode = $this->sanitizeEnum((string) ($settings['showcase_pages'] ?? 'login'), self::SHOWCASE_PAGE_MODES, 'login');
+        $allowedPages = $pageMode === 'login_register' ? ['login', 'register'] : ['login'];
+        if (!in_array($pageType, $allowedPages, true)) {
+            return null;
+        }
+
+        $headline = trim((string) ($settings['showcase_headline'] ?? ''));
+        $features = $this->splitShowcaseFeatures((string) ($settings['showcase_features'] ?? ''));
+        if ($headline === '' && $features === []) {
+            return null;
+        }
+
+        $paragraphs = [];
+        foreach (preg_split('/\R+/u', (string) ($settings['showcase_text'] ?? '')) ?: [] as $line) {
+            $line = trim($line);
+            if ($line !== '') {
+                $paragraphs[] = $line;
+            }
+        }
+
+        $cta = null;
+        $ctaLabel = trim((string) ($settings['showcase_cta_label'] ?? ''));
+        $ctaUrl = $this->sanitizeUrl($settings['showcase_cta_url'] ?? '');
+        if ($ctaLabel !== '' && $ctaUrl !== '') {
+            $cta = ['label' => $ctaLabel, 'url' => $ctaUrl];
+        }
+
+        $image = null;
+        $imageUrl = $this->sanitizeShowcaseImageUrl($settings['showcase_image_url'] ?? '');
+        $imageAlt = trim((string) ($settings['showcase_image_alt'] ?? ''));
+        if ($imageUrl !== '' && $imageAlt !== '') {
+            $width = (int) ($settings['showcase_image_width'] ?? 0);
+            $height = (int) ($settings['showcase_image_height'] ?? 0);
+            $hasSize = $width > 0 && $height > 0;
+            $image = [
+                'src' => $imageUrl,
+                'webp' => $this->resolveShowcaseWebpUrl($imageUrl),
+                'alt' => $imageAlt,
+                'width' => $hasSize ? $width : null,
+                'height' => $hasSize ? $height : null,
+            ];
+        }
+
+        return [
+            'position' => $this->sanitizeEnum((string) ($settings['showcase_image_position'] ?? 'left'), self::SHOWCASE_IMAGE_POSITIONS, 'left'),
+            'eyebrow' => trim((string) ($settings['showcase_eyebrow'] ?? '')),
+            'headline' => $headline,
+            'paragraphs' => $paragraphs,
+            'features' => $features,
+            'cta' => $cta,
+            'image' => $image,
+        ];
+    }
+
+    /**
+     * Pfad des Showcase-Partials: `<aktives Theme>/auth/showcase.php`, sonst das Core-Partial.
+     */
+    public function resolveShowcasePartial(): string
+    {
+        try {
+            if (class_exists(\CMS\ThemeManager::class)) {
+                $themePath = rtrim(\CMS\ThemeManager::instance()->getThemePath(), '/\\');
+                $override = $themePath . '/' . self::THEME_SHOWCASE_PARTIAL;
+                if ($themePath !== '' && is_file($override)) {
+                    return $override;
+                }
+            }
+        } catch (\Throwable) {
+            // Ohne Theme-Kontext bleibt es beim Core-Partial.
+        }
+
+        return ABSPATH . self::SHOWCASE_PARTIAL;
+    }
+
+    /**
+     * Gibt den Showcase aus (Theme-Override oder Core-Partial). Das Partial erhält `$showcase`, `$pageType`
+     * und `$showcaseMode` (`cms` = Core-Loginseite, `legacy` = Theme-Vorlage).
+     *
+     * @param array<string, mixed>|null $showcase
+     */
+    public function renderShowcase(?array $showcase, string $pageType = 'login', string $mode = 'cms'): void
+    {
+        if ($showcase === null || $showcase === []) {
+            return;
+        }
+
+        $partial = $this->resolveShowcasePartial();
+        if (!is_file($partial)) {
+            return;
+        }
+
+        $render = static function (string $__showcasePartial, array $showcase, string $pageType, string $showcaseMode): void {
+            include $__showcasePartial;
+        };
+
+        try {
+            $render($partial, $showcase, $pageType, in_array($mode, ['cms', 'legacy'], true) ? $mode : 'cms');
+        } catch (\Throwable $e) {
+            $this->logger->error('Login-Showcase konnte nicht gerendert werden.', [
+                'partial' => basename(dirname($partial)) . '/' . basename($partial),
+                'exception' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -305,6 +570,8 @@ final class CmsAuthPageService
 
         $registerEnabled = $this->isRegistrationEnabled($settings);
         $legalLinks = $this->resolveLegalLinks($settings);
+        $passkeyErrorText = $this->resolveLoginErrorFallback('passkey');
+        $showcase = $this->buildShowcase($settings, $pageType);
 
         $viewFile = ABSPATH . 'views/auth/cms-auth.php';
         if (!is_file($viewFile)) {
@@ -626,6 +893,19 @@ final class CmsAuthPageService
             'footer_link_register' => 'Registrieren',
             'footer_link_forgot' => 'Passwort vergessen',
             'footer_link_home' => 'Zur Startseite',
+            'showcase_enabled' => '0',
+            'showcase_pages' => 'login',
+            'showcase_image_url' => '',
+            'showcase_image_alt' => '',
+            'showcase_image_width' => '',
+            'showcase_image_height' => '',
+            'showcase_image_position' => 'left',
+            'showcase_eyebrow' => '',
+            'showcase_headline' => '',
+            'showcase_text' => '',
+            'showcase_features' => '',
+            'showcase_cta_label' => '',
+            'showcase_cta_url' => '',
             'password_reset_expiry_minutes' => '60',
             'password_reset_email_subject' => '[{site_name}] Passwort zurücksetzen',
             'password_reset_email_body' => "Hallo,\n\ndu hast eine Anfrage zum Zurücksetzen deines Passworts gestellt.\n\nKlicke auf den folgenden Link (gültig für {expires_minutes} Minuten):\n{reset_url}\n\nFalls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.\n\nViele Grüße\n{brand_name}",
@@ -636,6 +916,8 @@ final class CmsAuthPageService
     private function normalizeSettingsInput(array $input): array
     {
         $publishedPageIds = $this->getPublishedPageIdMap();
+        $showcaseImageUrl = $this->sanitizeShowcaseImageUrl($input['showcase_image_url'] ?? '');
+        $showcaseImageSize = $showcaseImageUrl !== '' ? $this->readShowcaseImageSize($showcaseImageUrl) : null;
 
         return [
             'brand_name' => $this->sanitizeText($input['brand_name'] ?? $this->getDefaultSettings()['brand_name'], 80),
@@ -699,7 +981,217 @@ final class CmsAuthPageService
             'privacy_page_id' => $this->sanitizeExistingId($input['privacy_page_id'] ?? 0, $publishedPageIds),
             'terms_page_id' => $this->sanitizeExistingId($input['terms_page_id'] ?? 0, $publishedPageIds),
             'imprint_page_id' => $this->sanitizeExistingId($input['imprint_page_id'] ?? 0, $publishedPageIds),
+            'showcase_enabled' => !empty($input['showcase_enabled']) ? '1' : '0',
+            'showcase_pages' => $this->sanitizeEnum((string) ($input['showcase_pages'] ?? 'login'), self::SHOWCASE_PAGE_MODES, 'login'),
+            'showcase_image_url' => $showcaseImageUrl,
+            'showcase_image_alt' => $this->sanitizeText($input['showcase_image_alt'] ?? '', 160),
+            'showcase_image_width' => $showcaseImageSize !== null ? (string) $showcaseImageSize['width'] : '',
+            'showcase_image_height' => $showcaseImageSize !== null ? (string) $showcaseImageSize['height'] : '',
+            'showcase_image_position' => $this->sanitizeEnum((string) ($input['showcase_image_position'] ?? 'left'), self::SHOWCASE_IMAGE_POSITIONS, 'left'),
+            'showcase_eyebrow' => $this->sanitizeText($input['showcase_eyebrow'] ?? '', 60),
+            'showcase_headline' => $this->sanitizeText($input['showcase_headline'] ?? '', 120),
+            'showcase_text' => $this->sanitizeShowcaseText($input['showcase_text'] ?? ''),
+            'showcase_features' => implode("\n", $this->splitShowcaseFeatures((string) ($input['showcase_features'] ?? ''))),
+            'showcase_cta_label' => $this->sanitizeText($input['showcase_cta_label'] ?? '', 60),
+            'showcase_cta_url' => $this->sanitizeUrl($input['showcase_cta_url'] ?? ''),
         ];
+    }
+
+    /**
+     * Prüfungen, die nicht still korrigiert werden (der Admin muss die Eingabe anpassen).
+     *
+     * @param array<string, string> $values
+     * @return list<string>
+     */
+    private function collectSettingsErrors(array $input, array $values): array
+    {
+        $errors = [];
+        $rawImageUrl = trim((string) ($input['showcase_image_url'] ?? ''));
+        if ($rawImageUrl !== '' && $values['showcase_image_url'] === '') {
+            $errors[] = 'Showcase-Bild: Erlaubt sind nur Bilder aus der Mediathek (Pfad unter /uploads/, Endung jpg, jpeg, png, webp oder avif).';
+        }
+
+        if ($values['showcase_image_url'] !== '' && $values['showcase_image_alt'] === '') {
+            $errors[] = 'Showcase-Bild: Bitte einen Alternativtext angeben.';
+        }
+
+        $rawCtaUrl = trim((string) ($input['showcase_cta_url'] ?? ''));
+        if ($rawCtaUrl !== '' && $values['showcase_cta_url'] === '') {
+            $errors[] = 'Showcase-Link: Die Ziel-URL ist ungültig (erlaubt sind interne Pfade und http(s)-Adressen).';
+        } elseif (($values['showcase_cta_label'] === '') !== ($values['showcase_cta_url'] === '')) {
+            $errors[] = 'Showcase-Link: Bitte Linktext und Ziel-URL gemeinsam angeben.';
+        }
+
+        return $errors;
+    }
+
+    /** Fließtext des Showcase: kein HTML, höchstens 600 Zeichen, jede nicht leere Zeile wird ein Absatz. */
+    private function sanitizeShowcaseText(mixed $value): string
+    {
+        $text = $this->sanitizeMultilineText(strip_tags((string) $value), 600);
+        $lines = array_map('trim', explode("\n", $text));
+
+        return trim(implode("\n", $lines));
+    }
+
+    /** @return list<string> */
+    private function splitShowcaseFeatures(string $value): array
+    {
+        $features = [];
+        foreach (preg_split('/\R/u', $value) ?: [] as $line) {
+            $line = $this->sanitizeText($line, self::SHOWCASE_FEATURE_MAX_LENGTH);
+            if ($line === '') {
+                continue;
+            }
+
+            $features[] = $line;
+            if (count($features) >= self::SHOWCASE_MAX_FEATURES) {
+                break;
+            }
+        }
+
+        return $features;
+    }
+
+    /**
+     * Nur lokale Bilder aus der Mediathek: Pfad unter `/uploads/` (auch unterhalb eines `SITE_URL`-Unterpfads),
+     * erlaubte Endungen, ohne Query, Fragment und Pfad-Traversal. Absolute URLs mit dem Origin von `SITE_URL`
+     * werden auf den Pfad gekürzt; alle anderen externen URLs werden abgelehnt (CSP `img-src`).
+     */
+    private function sanitizeShowcaseImageUrl(mixed $value): string
+    {
+        $url = trim((string) $value);
+        if ($url === '' || preg_match('/[\x00-\x20\x7F"\'<>\\\\]/', $url) === 1) {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $url) === 1) {
+            $siteParts = parse_url(defined('SITE_URL') ? (string) SITE_URL : '');
+            $urlParts = parse_url($url);
+            if (!is_array($siteParts) || !is_array($urlParts) || empty($siteParts['host'])) {
+                return '';
+            }
+
+            $sameOrigin = strtolower((string) ($urlParts['scheme'] ?? '')) === strtolower((string) ($siteParts['scheme'] ?? ''))
+                && strtolower((string) ($urlParts['host'] ?? '')) === strtolower((string) $siteParts['host'])
+                && (int) ($urlParts['port'] ?? 0) === (int) ($siteParts['port'] ?? 0)
+                && !isset($urlParts['user'])
+                && !isset($urlParts['pass']);
+            if (!$sameOrigin || isset($urlParts['query']) || isset($urlParts['fragment'])) {
+                return '';
+            }
+
+            $url = (string) ($urlParts['path'] ?? '');
+        }
+
+        if (!str_starts_with($url, '/') || str_starts_with($url, '//')) {
+            return '';
+        }
+
+        if (preg_match('#^(?:/[A-Za-z0-9._~%-]+)*?/uploads/(?:[A-Za-z0-9._~%@+-]+/)*[A-Za-z0-9._~%@+-]+\.([A-Za-z0-9]+)$#', $url, $matches) !== 1) {
+            return '';
+        }
+
+        if (preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $url) === 1 || preg_match('/%(?:2e|2f|5c|00)/i', $url) === 1) {
+            return '';
+        }
+
+        if (!in_array(strtolower($matches[1]), self::SHOWCASE_IMAGE_EXTENSIONS, true) || $this->uploadRelativePath($url) === null) {
+            return '';
+        }
+
+        return $url;
+    }
+
+    /**
+     * Pfad innerhalb von `uploads/` für eine Showcase-Bild-URL, oder null, wenn die URL nicht auf das
+     * Upload-Verzeichnis dieser Installation zeigt.
+     */
+    private function uploadRelativePath(string $url): ?string
+    {
+        $sitePath = rtrim((string) (parse_url(defined('SITE_URL') ? (string) SITE_URL : '', PHP_URL_PATH) ?? ''), '/');
+        foreach (array_unique([$sitePath . '/uploads/', '/uploads/']) as $prefix) {
+            if (!str_starts_with($url, $prefix)) {
+                continue;
+            }
+
+            $relative = rawurldecode(substr($url, strlen($prefix)));
+
+            return $relative !== '' && !str_contains($relative, '..') && !str_contains($relative, "\0") ? $relative : null;
+        }
+
+        return null;
+    }
+
+    private function resolveShowcaseFilePath(string $url): ?string
+    {
+        $relative = $this->uploadRelativePath($url);
+        if ($relative === null) {
+            return null;
+        }
+
+        $uploadRoot = rtrim(defined('UPLOAD_PATH') ? (string) UPLOAD_PATH : ABSPATH . 'uploads/', '/\\');
+        $resolvedRoot = realpath($uploadRoot);
+        $resolved = realpath($uploadRoot . '/' . $relative);
+        if ($resolvedRoot === false || $resolved === false || !is_file($resolved)) {
+            return null;
+        }
+
+        return str_starts_with($resolved, rtrim($resolvedRoot, '/\\') . DIRECTORY_SEPARATOR) ? $resolved : null;
+    }
+
+    /** @return array{width:int,height:int}|null */
+    private function readShowcaseImageSize(string $url): ?array
+    {
+        $file = $this->resolveShowcaseFilePath($url);
+        if ($file === null) {
+            return null;
+        }
+
+        try {
+            $dimensions = ImageService::getInstance()->getDimensions($file);
+        } catch (\Throwable) {
+            $dimensions = null;
+        }
+
+        $width = (int) ($dimensions['width'] ?? 0);
+        $height = (int) ($dimensions['height'] ?? 0);
+
+        return $width > 0 && $height > 0 ? ['width' => $width, 'height' => $height] : null;
+    }
+
+    /** WebP-Geschwisterdatei (`bild.jpg` → `bild.webp`), nur wenn sie im Upload-Verzeichnis existiert. */
+    private function resolveShowcaseWebpUrl(string $url): ?string
+    {
+        $extension = strtolower((string) pathinfo($url, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
+            return null;
+        }
+
+        $webpUrl = (string) preg_replace('/\.[A-Za-z0-9]+$/', '.webp', $url);
+
+        return $webpUrl !== $url && $this->resolveShowcaseFilePath($webpUrl) !== null ? $webpUrl : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function readActiveThemeJson(): array
+    {
+        try {
+            if (!class_exists(\CMS\ThemeManager::class)) {
+                return [];
+            }
+
+            $file = rtrim(\CMS\ThemeManager::instance()->getThemePath(), '/\\') . '/theme.json';
+            if (!is_file($file) || !is_readable($file)) {
+                return [];
+            }
+
+            $decoded = json_decode((string) file_get_contents($file), true);
+
+            return is_array($decoded) ? $decoded : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private function renderTemplateText(string $template, array $variables): string

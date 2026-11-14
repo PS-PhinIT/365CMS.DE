@@ -209,7 +209,8 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | [MARKETPLACE-WORKFLOW.md](workflow/MARKETPLACE-WORKFLOW.md) | Install plugin / theme from marketplace |
 | [API-INTEGRATION-WORKFLOW.md](workflow/API-INTEGRATION-WORKFLOW.md) | JSON endpoints, custom routes via `register_routes`, JWT note |
 | [NEWSLETTER-PLUGIN-WORKFLOW.md](workflow/NEWSLETTER-PLUGIN-WORKFLOW.md) | Double opt-in, campaigns, GDPR (integration roadmap, not shipped) |
-| [FORUM-PLUGIN-WORKFLOW.md](workflow/FORUM-PLUGIN-WORKFLOW.md) | Threads, moderation, full-text search (integration roadmap, not shipped) |
+| [FORUM-PLUGIN-WORKFLOW.md](workflow/FORUM-PLUGIN-WORKFLOW.md) | Threads, moderation, full-text search (superseded by the Community module plan) |
+| [specs/community/](workflow/specs/community/README.md) | Community module (forum) – plan: features, architecture, data model, permissions & moderation, workflows, security & privacy, theme/UI, migration from cms-forum, roadmap, test plan / Community-Modul (Forum) – Planung |
 
 ---
 
