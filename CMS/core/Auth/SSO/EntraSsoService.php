@@ -385,6 +385,27 @@ final class EntraSsoService
     }
 
     /**
+     * Laufende Sitzung prüfen (Auth::checkSession): lokal begonnene Sitzungen betroffener Konten enden, sobald die
+     * Sperre „Lokale Anmeldung“ gilt. Bei Fehlern läuft die Sitzung weiter (keine Aussperrung durch defekte Daten).
+     */
+    public static function sessionMayContinue(int $userId, string $role): bool
+    {
+        try {
+            $mode = \CMS\Services\SettingsService::getInstance()->getString(EntraSettings::GROUP, EntraSettings::ENFORCED_LOCAL_LOGIN_KEY, EntraSettings::LOCAL_LOGIN_ALL);
+
+            return EntraSettings::sessionMayContinue(
+                $userId,
+                $role,
+                $mode,
+                $_SESSION ?? [],
+                static fn (int $id): bool => self::getInstance()->isLinked($id)
+            );
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    /**
      * Frische SSO-Anmeldung dieses Kontos in dieser Sitzung (≤ 10 min) – ersetzt bei SSO-Sitzungen das Passwort
      * als Re-Auth beim Hinzufügen eines zweiten Faktors (01-IDENTITY §3.4).
      */

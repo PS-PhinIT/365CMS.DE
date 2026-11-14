@@ -129,6 +129,23 @@ class Auth
         }
         unset($this->currentUser->password_fingerprint);
 
+        // 4.1.0 (1c): Sperre „Lokale Anmeldung“ eingeschaltet → lokal begonnene Sitzungen betroffener Konten enden mit
+        // der nächsten Anfrage; über Microsoft begonnene Sitzungen und Admins bleiben angemeldet.
+        if ($this->currentUser !== null
+            && !\CMS\Auth\SSO\EntraSsoService::sessionMayContinue((int) $userId, (string) ($this->currentUser->role ?? ''))) {
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                'session_local_login_ended',
+                'Lokale Sitzung beendet: Konto meldet sich nur noch über Microsoft an.',
+                'user',
+                (int) $userId,
+                [],
+                'warning'
+            );
+            $this->forceExpireSession();
+            return;
+        }
+
         if ($this->currentUser !== null) {
             $this->touchSessionRegistry((int) $userId, $maxLifetime, $sessionStart);
         }

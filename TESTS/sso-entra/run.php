@@ -642,6 +642,32 @@ T::run('Einstellungen', static function () use ($roles): void {
         EntraSettings::localLoginAllowed($mode('admins_only'), true, false),
     ], 'Lokale Anmeldung: verknüpft gesperrt; admins_only');
     T::check(EntraSettings::localLoginAllowed(['local_login' => 'admins_only', 'enabled' => false] + $ready, false, true), 'ohne eingerichtete SSO-Anmeldung nie gesperrt');
+    T::same(['admins_only', 'all', 'all'], [
+        EntraSettings::enforcedLocalLogin($mode('admins_only')),
+        EntraSettings::enforcedLocalLogin(['client_secret_set' => false] + $mode('admins_only')),
+        EntraSettings::enforcedLocalLogin($mode('unbekannt')),
+    ], 'wirksamer Modus nur bei fertiger Einrichtung');
+
+    // Laufende Sitzungen beim Umschalten
+    $calls = 0;
+    $linked = static function (int $id) use (&$calls): bool {
+        $calls++;
+
+        return $id === 7;
+    };
+    $local = ['user_id' => 7];
+    $viaSso = ['user_id' => 7, 'auth_sso_user_id' => 7];
+    T::check(EntraSettings::sessionMayContinue(7, 'member', 'all', $local, $linked), 'Sitzung: ohne Sperre läuft sie weiter');
+    T::same(0, $calls, 'Sitzung: ohne Sperre keine Abfrage der Verknüpfung');
+    T::check(!EntraSettings::sessionMayContinue(7, 'member', 'admins_only', $local, $linked), 'Sitzung: admins_only beendet lokale Sitzung');
+    T::check(EntraSettings::sessionMayContinue(7, 'member', 'admins_only', $viaSso, $linked), 'Sitzung: über Microsoft begonnen → läuft weiter');
+    T::check(!EntraSettings::sessionMayContinue(7, 'member', 'admins_only', ['auth_sso_user_id' => 8], $linked), 'Sitzung: SSO-Merkmal eines anderen Kontos zählt nicht');
+    T::check(EntraSettings::sessionMayContinue(1, 'admin', 'admins_only', $local, $linked), 'Sitzung: Admin-Notfallzugang bleibt');
+    T::check(!EntraSettings::sessionMayContinue(7, 'member', 'disabled_for_linked', $local, $linked), 'Sitzung: verknüpftes Konto, lokal begonnen → endet');
+    T::check(EntraSettings::sessionMayContinue(9, 'member', 'disabled_for_linked', ['user_id' => 9], $linked), 'Sitzung: nicht verknüpftes Konto → läuft weiter');
+    $calls = 0;
+    EntraSettings::sessionMayContinue(7, 'member', 'admins_only', $local, $linked);
+    T::same(0, $calls, 'Sitzung: admins_only braucht keine Abfrage der Verknüpfung');
 
     T::same(9, EntraSettings::secretDaysLeft(['client_secret_expires' => '2027-01-10'], strtotime('2026-12-31 12:00:00 UTC')), 'Tage bis zum Ablauf');
     T::same(null, EntraSettings::secretExpiryNotice(['enabled' => true, 'client_secret_expires' => '2027-06-01'], strtotime('2026-12-31 UTC')), 'kein Hinweis bei > 30 Tagen');
@@ -720,6 +746,9 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
     T::check($gateBefore($authManager, 'public function authenticateViaPasskey(', "rejectLocalLogin(\$userId, 'passkey')", ["'MFA_REQUIRED'", 'completeLoginForUserId(']), 'Passkey-Login beachtet „Lokale Anmeldung“ (vor MFA und Sitzung)');
     T::check($gateBefore($authManager, 'public function authenticateViaLdap(', "rejectLocalLogin(\$userId, 'ldap')", ["'MFA_REQUIRED'", 'completeLoginForUserId(']), 'LDAP-Login beachtet „Lokale Anmeldung“ (vor MFA und Sitzung)');
     T::check(!str_contains($authManager . $auth, 'passwordLoginAllowed('), 'keine Sonderprüfung nur für Passwörter mehr');
+    T::check($gateBefore($auth, 'private function checkSession(', 'EntraSsoService::sessionMayContinue(', ['$this->forceExpireSession();' . "\n            return;\n        }\n\n        if (\$this->currentUser !== null) {\n            \$this->touchSessionRegistry("]), 'Sitzungsprüfung beendet lokale Sitzungen bei eingeschalteter Sperre');
+    T::check(preg_match('/if \(\$this->currentUser !== null\s*&& !\\\\CMS\\\\Auth\\\\SSO\\\\EntraSsoService::sessionMayContinue\(\(int\) \$userId, \(string\) \(\$this->currentUser->role \?\? \'\'\)\)\) \{\s*AuditLogger::instance\(\)->log\([^;]+;\s*\$this->forceExpireSession\(\);\s*return;/', $auth) === 1, 'Sitzungsprüfung: Bedingung unverändert, Ablehnung beendet die Sitzung');
+    T::check(str_contains($read('core/Auth/SSO/EntraSettings.php'), '$settings->set(self::GROUP, self::ENFORCED_LOCAL_LOGIN_KEY, self::enforcedLocalLogin($clean), false, 1);'), 'wirksamer Modus als autoload-Option gespeichert (keine Abfrage je Anfrage)');
 
     $public = $read('core/Routing/PublicRouter.php');
     T::check(str_contains($public, "\$currentPassword === '' && \\CMS\\Auth\\SSO\\EntraSsoService::isFreshSsoSession(\$userId)"), '/mfa-setup: frische SSO-Anmeldung als Re-Auth');

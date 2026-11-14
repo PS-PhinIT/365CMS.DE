@@ -32,6 +32,9 @@ final class EntraSettings
     public const LOCAL_LOGIN_DISABLED_FOR_LINKED = 'disabled_for_linked';
     public const LOCAL_LOGIN_MODES = [self::LOCAL_LOGIN_ALL, self::LOCAL_LOGIN_ADMINS_ONLY, self::LOCAL_LOGIN_DISABLED_FOR_LINKED];
 
+    /** Wirksamer Modus der lokalen Anmeldung (autoload), für die Prüfung laufender Sitzungen. */
+    public const ENFORCED_LOCAL_LOGIN_KEY = 'local_login_enforced';
+
     /** Feste Scopes: kein Zugriffstoken für Graph, nur Identität. */
     public const SCOPES = 'openid profile email';
 
@@ -234,15 +237,52 @@ final class EntraSettings
      */
     public static function localLoginAllowed(array $settings, bool $isAdmin, bool $isLinked): bool
     {
-        if (!self::isReady($settings) || $isAdmin) {
+        return self::localLoginAllowedForMode(self::enforcedLocalLogin($settings), $isAdmin, $isLinked);
+    }
+
+    /**
+     * Wirksamer Modus: der eingestellte, solange die Entra-Anmeldung bereitsteht, sonst `all`.
+     *
+     * @param array<string, mixed> $settings
+     */
+    public static function enforcedLocalLogin(array $settings): string
+    {
+        $mode = (string) ($settings['local_login'] ?? self::LOCAL_LOGIN_ALL);
+
+        return self::isReady($settings) && in_array($mode, self::LOCAL_LOGIN_MODES, true) ? $mode : self::LOCAL_LOGIN_ALL;
+    }
+
+    public static function localLoginAllowedForMode(string $mode, bool $isAdmin, bool $isLinked): bool
+    {
+        if ($isAdmin) {
             return true;
         }
 
-        return match ((string) ($settings['local_login'] ?? self::LOCAL_LOGIN_ALL)) {
+        return match ($mode) {
             self::LOCAL_LOGIN_ADMINS_ONLY => false,
             self::LOCAL_LOGIN_DISABLED_FOR_LINKED => !$isLinked,
             default => true,
         };
+    }
+
+    /**
+     * Darf eine bestehende Sitzung weiterlaufen? Über Microsoft begonnene Sitzungen ja; lokal begonnene (Passwort,
+     * Passkey, LDAP) nur, solange das Konto lokal anmelden dürfte. So enden lokale Sitzungen betroffener Konten mit
+     * der nächsten Anfrage, sobald die Sperre eingeschaltet wird. Rein (Sitzung und Verknüpfung werden übergeben).
+     *
+     * @param array<string, mixed> $session
+     * @param \Closure(int): bool $isLinked wird nur bei `disabled_for_linked` und Nicht-Admins aufgerufen
+     */
+    public static function sessionMayContinue(int $userId, string $role, string $mode, array $session, \Closure $isLinked): bool
+    {
+        if ($mode === self::LOCAL_LOGIN_ALL || $role === 'admin') {
+            return true;
+        }
+        if ($userId > 0 && (int) ($session['auth_sso_user_id'] ?? 0) === $userId) {
+            return true;
+        }
+
+        return self::localLoginAllowedForMode($mode, false, $mode === self::LOCAL_LOGIN_DISABLED_FOR_LINKED && $isLinked($userId));
     }
 
     public static function redirectUri(): string
@@ -327,6 +367,9 @@ final class EntraSettings
             'local_login' => $clean['local_login'],
             'button_label' => $clean['button_label'],
         ]);
+        // Wirksamer Modus als automatisch geladene Option: Die Sitzungsprüfung (Auth::checkSession) liest ihn bei
+        // jeder Anfrage aus dem Options-Cache, ohne zusätzliche Datenbankabfrage.
+        $settings->set(self::GROUP, self::ENFORCED_LOCAL_LOGIN_KEY, self::enforcedLocalLogin($clean), false, 1);
 
         return $clean;
     }

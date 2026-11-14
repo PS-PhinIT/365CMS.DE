@@ -35,7 +35,7 @@ encrypted and never shown again. No tokens are stored.
 | Weitere erlaubte Tenants | Multi-Tenant nur mit Allowlist (Autorität `organizations`); die automatische Verknüpfung ist dann aus |
 | Bestehende Konten automatisch verknüpfen | Standard aus; Bedingungen siehe §3 |
 | Neue Konten anlegen | Standard aus; Konto mit Standardrolle oder Rolle aus dem Mapping, zufälliges Passwort |
-| Lokale Anmeldung (Passwort, Passkey, LDAP) | `all` · `disabled_for_linked` (verknüpfte Konten nur über Microsoft) · `admins_only` (lokal nur noch Admins). Gilt für **jeden** Weg an Microsoft vorbei – Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren eines Kontos in Entra auch im CMS wirken; ein vorher angelegter Passkey öffnet das Konto dann nicht mehr. Admins behalten immer den lokalen Notfallzugang; wirkt nur, solange SSO eingerichtet ist |
+| Lokale Anmeldung (Passwort, Passkey, LDAP) | `all` · `disabled_for_linked` (verknüpfte Konten nur über Microsoft) · `admins_only` (lokal nur noch Admins). Gilt für **jeden** Weg an Microsoft vorbei – Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren eines Kontos in Entra auch im CMS wirken; ein vorher angelegter Passkey öffnet das Konto dann nicht mehr. Beim Einschalten enden laufende lokal begonnene Sitzungen betroffener Konten mit ihrer nächsten Anfrage (Audit `session_local_login_ended`); über Microsoft begonnene Sitzungen laufen weiter. Der wirksame Modus liegt als automatisch geladene Option `auth_entra.local_login_enforced` vor, die Prüfung kostet keine zusätzliche Datenbankabfrage (nur bei `disabled_for_linked` eine je Anfrage eines Nicht-Admins). Admins behalten immer den lokalen Notfallzugang; wirkt nur, solange SSO eingerichtet ist |
 | MFA aus Entra anerkennen | `amr` mit `mfa`, `ngcmfa`, `fido` oder `rsa` gilt für die Sitzung als zweiter Faktor (MFA-Zwang aus [LOGIN-THRESHOLDS.md](LOGIN-THRESHOLDS.md)) |
 | Rollen-Mapping | erste passende Zeile gewinnt; `admin` nur mit „Admin-Rolle erlauben“ |
 | Rollen synchronisieren | nur für über SSO angelegte Konten; Herabstufen erlaubt |
@@ -63,7 +63,7 @@ abgelaufenes Secret.
 
 Audit (Kategorie Sicherheit): `sso_login_success`, `sso_login_failed`, `sso_login_mfa_pending`, `sso_token_invalid`,
 `sso_state_invalid`, `sso_login_blocked`, `sso_link_conflict`, `sso_linked`, `sso_unlinked`, `sso_user_provisioned`,
-`sso_role_changed`, `sso_groups_overage`, `sso_settings_saved`, `sso_connection_test`, `login_local_disabled` (mit `method`: `password`, `passkey` oder `ldap`).
+`sso_role_changed`, `sso_groups_overage`, `sso_settings_saved`, `sso_connection_test`, `login_local_disabled` (mit `method`: `password`, `passkey` oder `ldap`), `session_local_login_ended`.
 
 Hooks: `cms_sso_login` (`$userId, 'entra', $claims` ohne Token), `cms_sso_user_provisioned`, `user_role_changed`
 (`$userId, $from, $to, 'sso'`) – siehe [../../core/HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md).
