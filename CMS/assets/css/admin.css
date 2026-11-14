@@ -8263,6 +8263,35 @@ button.content-shortcode-chip {
     z-index: 2;
 }
 
+.cms-loginpage-showcase-preview__img {
+    display: block;
+    max-width: 100%;
+    max-height: 240px;
+    height: auto;
+    object-fit: contain;
+    border: 1px solid var(--tblr-border-color);
+    border-radius: 8px;
+    padding: 4px;
+    background: #fff;
+}
+
+.cms-loginpage-theme-colors__list {
+    display: grid;
+    gap: 0.4rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.cms-loginpage-theme-colors__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.cms-loginpage-theme-colors__swatch {
+    flex: 0 0 auto;
+}
+
 .menu-page-picker-highlight {
     background: var(--color-background-secondary);
     border-radius: var(--border-radius-md);
