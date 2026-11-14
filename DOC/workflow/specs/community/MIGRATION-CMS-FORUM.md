@@ -1,6 +1,8 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Übernahme aus cms-forum
 > **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md) · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md)
 
+> **Entscheidung E6 (14.11.2026):** `cms-forum` war auf keiner Installation aktiv – es gibt **keine Datenübernahme**, keinen Migrator und keine Plugin-Weiterleitungen. Dieses Dokument bleibt als **Funktions-Referenz** (§1, §2, §4) erhalten: Es zeigt, welche Funktionen das Community-Modul mindestens abdecken muss und welche Einstellungen im Plugin wirkungslos waren. §3, §5 und §6 entfallen.
+
 ## English (summary)
 
 How the Community core module replaces the `cms-forum` plugin (repository `PS-PhinIT/365CMS.DE-PLUGINS`, v3.0.4,

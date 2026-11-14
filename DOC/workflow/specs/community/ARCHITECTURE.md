@@ -58,7 +58,6 @@ CMS/
 │   ├── CommunityMemberSection.php        Mitgliederbereich (PluginDashboardRegistry)
 │   └── CommunityRetentionRules.php       Löschfristen (DataRetentionService::registerRule)
 ├── core/Services/FeatureHooks/CommunityHooks.php   Registrierung aller Hooks, Cron, Badges
-├── core/Services/PluginMigration/ForumPluginMigrator.php
 ├── core/Services/Security/CaptchaService.php        neu, gemeinsam mit Formularen/Registrierung (E7)
 ├── views/community/                      Frontend-Vorlagen, per Theme überschreibbar (THEME-UI §2)
 ├── admin/views/community/                Admin-Ansichten

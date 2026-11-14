@@ -42,6 +42,8 @@ retention periods, third-party captchas and consent) and the security checklist 
 
 ### 3. Captcha: Dienst und Bibliotheken
 
+> **Entscheidung E7 (14.11.2026):** `gregwar/captcha` als Asset (Bild-Captcha) plus eingebaute Rechenaufgabe als barrierefreie Alternative. **Keine Drittanbieter** – Turnstile, hCaptcha und reCAPTCHA werden nicht eingebaut (Vorgabe „nichts extern“). Die Bewertung unten bleibt als Begründung.
+
 **`CaptchaService`** (neu, `core/Services/Security/`): eine Schnittstelle `CaptchaProvider` mit `render(context)`,
 `verify(request, context)`, `requiresConsent()`, `cspSources()`. Genutzt von Community, Formularen (ersetzt die
 eigene Rechenaufgabe in `FormSpamGuard` als Anbieter „eingebaut“) und Registrierung. Barrierefreiheit: Jeder
