@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+use CMS\Member\MemberI18n;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -9,11 +11,10 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 if (class_exists('\CMS\Services\CoreModuleService')
     && !\CMS\Services\CoreModuleService::getInstance()->isModuleEnabled('subscription_member_area')) {
-    header('Location: /member/dashboard');
-    exit;
+    $controller->redirect($controller->getHomePath());
 }
 
-$pageTitle = 'Abo & Bestellungen';
+$pageTitle = $t('member.nav.subscription');
 $pageKey = 'subscription';
 $pageAssets = [];
 $memberService = \CMS\Services\MemberService::getInstance();
@@ -21,100 +22,98 @@ $subscription = $memberService->getUserSubscription($controller->getUserId());
 $renewalNotice = $memberService->getSubscriptionRenewalNotice($controller->getUserId());
 $packages = $memberService->getAvailablePackages();
 $orders = $controller->getOrders();
-$renewalAlertClass = match ((string) ($renewalNotice['severity'] ?? 'info')) {
+$renewalSeverity = (string) ($renewalNotice['severity'] ?? 'info');
+$renewalAlertClass = match ($renewalSeverity) {
     'danger' => 'alert-danger',
     'warning' => 'alert-warning',
     default => 'alert-info',
 };
+$isEnglish = MemberI18n::locale() === 'en';
+$money = static fn (float $amount): string => '€ ' . number_format($amount, 2, $isEnglish ? '.' : ',', $isEnglish ? ',' : '.');
 
 include __DIR__ . '/partials/header.php';
 ?>
 <div class="row g-4">
-    <div class="col-xl-4">
-        <div class="card mb-4">
-            <div class="card-header"><h3 class="card-title">Aktives Paket</h3></div>
+    <div class="col-12 col-xl-4 vstack gap-4">
+        <section class="card" aria-labelledby="member-subscription-active-title">
+            <div class="card-header"><h2 class="card-title" id="member-subscription-active-title"><?= $e($t('member.subscription.active')) ?></h2></div>
             <div class="card-body">
                 <?php if ($subscription !== null): ?>
-                    <div class="display-6 mb-2"><?= htmlspecialchars((string)($subscription->package_name ?? $subscription->name ?? 'Paket')) ?></div>
+                    <p class="display-6 mb-2"><?= $e($subscription->package_name ?? $subscription->name ?? '') ?></p>
                     <?php if (!empty($subscription->status)): ?>
-                        <div class="badge bg-primary-lt mb-3"><?= htmlspecialchars((string)$subscription->status) ?></div>
+                        <div class="badge bg-primary-lt mb-3"><?= $e($subscription->status) ?></div>
                     <?php endif; ?>
                     <?php if (!empty($renewalNotice['due_label'])): ?>
-                        <div class="text-secondary mb-3">
-                            <?= htmlspecialchars(!empty($renewalNotice['is_auto_renewal']) ? 'Nächste Verlängerung: ' : 'Laufzeit bis: ') ?><?= htmlspecialchars((string)$renewalNotice['due_label']) ?>
-                        </div>
+                        <p class="text-secondary mb-3">
+                            <?= $e($t(!empty($renewalNotice['is_auto_renewal']) ? 'member.subscription.next_renewal' : 'member.subscription.runs_until', ['date' => (string) $renewalNotice['due_label']])) ?>
+                        </p>
                     <?php elseif (!empty($subscription->end_date)): ?>
-                        <div class="text-secondary mb-3">Läuft bis <?= htmlspecialchars((string)$subscription->end_date) ?></div>
+                        <p class="text-secondary mb-3"><?= $e($t('member.subscription.runs_until', ['date' => MemberI18n::formatDate((string) $subscription->end_date, false)])) ?></p>
                     <?php endif; ?>
                     <?php if (!empty($renewalNotice['has_notice'])): ?>
-                        <div class="alert <?= htmlspecialchars($renewalAlertClass, ENT_QUOTES) ?> mb-0" role="alert">
+                        <div class="alert <?= $e($renewalAlertClass) ?> mb-0" role="<?= $renewalSeverity === 'danger' ? 'alert' : 'status' ?>">
                             <?php if (!empty($renewalNotice['title'])): ?>
-                                <div class="fw-semibold mb-1"><?= htmlspecialchars((string)$renewalNotice['title']) ?></div>
+                                <div class="fw-semibold mb-1"><?= $e($renewalNotice['title']) ?></div>
                             <?php endif; ?>
-                            <div><?= htmlspecialchars((string)($renewalNotice['message'] ?? '')) ?></div>
+                            <div><?= $e($renewalNotice['message'] ?? '') ?></div>
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
-                    <div class="text-secondary">Aktuell ist kein aktives Paket hinterlegt.</div>
+                    <p class="text-secondary mb-0"><?= $e($t('member.subscription.none')) ?></p>
                 <?php endif; ?>
             </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 class="card-title">Buchbare Pakete</h3></div>
-            <div class="list-group list-group-flush">
-                <?php if ($packages === []): ?>
-                    <div class="card-body text-secondary">Keine aktiven Pakete gefunden.</div>
-                <?php else: ?>
+        </section>
+        <section class="card" aria-labelledby="member-subscription-packages-title">
+            <div class="card-header"><h2 class="card-title" id="member-subscription-packages-title"><?= $e($t('member.subscription.packages')) ?></h2></div>
+            <?php if ($packages === []): ?>
+                <div class="card-body text-secondary"><?= $e($t('member.subscription.packages_empty')) ?></div>
+            <?php else: ?>
+                <ul class="list-group list-group-flush">
                     <?php foreach ($packages as $package): ?>
-                        <div class="list-group-item">
+                        <li class="list-group-item">
                             <div class="d-flex justify-content-between align-items-start gap-3">
                                 <div>
-                                    <div class="fw-medium"><?= htmlspecialchars((string)($package->name ?? 'Paket')) ?></div>
-                                    <div class="text-secondary small"><?= htmlspecialchars((string)($package->description ?? '')) ?></div>
+                                    <div class="fw-medium"><?= $e($package->name ?? '') ?></div>
+                                    <div class="text-secondary small"><?= $e($package->description ?? '') ?></div>
                                 </div>
-                                <div class="text-end">
-                                    <?php if (isset($package->price_monthly)): ?>
-                                        <div class="fw-medium">€ <?= number_format((float)$package->price_monthly, 2, ',', '.') ?></div>
-                                        <div class="text-secondary small">monatlich</div>
-                                    <?php endif; ?>
-                                </div>
+                                <?php if (isset($package->price_monthly)): ?>
+                                    <div class="text-end">
+                                        <div class="fw-medium"><?= $e($money((float) $package->price_monthly)) ?></div>
+                                        <div class="text-secondary small"><?= $e($t('member.subscription.monthly')) ?></div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
-                        </div>
+                        </li>
                     <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
+                </ul>
+            <?php endif; ?>
+        </section>
     </div>
 
-    <div class="col-xl-8">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title">Bestellhistorie</h3></div>
+    <div class="col-12 col-xl-8">
+        <section class="card" aria-labelledby="member-subscription-orders-title">
+            <div class="card-header"><h2 class="card-title" id="member-subscription-orders-title"><?= $e($t('member.subscription.orders')) ?></h2></div>
             <div class="table-responsive">
                 <table class="table card-table table-vcenter">
+                    <caption class="visually-hidden"><?= $e($t('member.subscription.orders')) ?></caption>
                     <thead>
                         <tr>
-                            <th>Bestellung</th>
-                            <th>Paket</th>
-                            <th>Status</th>
-                            <th>Betrag</th>
-                            <th>Datum</th>
+                            <th scope="col"><?= $e($t('member.subscription.col_order')) ?></th>
+                            <th scope="col"><?= $e($t('member.subscription.col_package')) ?></th>
+                            <th scope="col"><?= $e($t('member.subscription.col_status')) ?></th>
+                            <th scope="col"><?= $e($t('member.subscription.col_amount')) ?></th>
+                            <th scope="col"><?= $e($t('member.subscription.col_date')) ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if ($orders === []): ?>
-                            <tr><td colspan="5" class="text-secondary">Noch keine Bestellungen vorhanden.</td></tr>
+                            <tr><td colspan="5" class="text-secondary"><?= $e($t('member.subscription.orders_empty')) ?></td></tr>
                         <?php else: ?>
                             <?php foreach ($orders as $order): ?>
                                 <?php
                                 $status = strtolower(trim((string)($order->normalized_status ?? $order->status ?? 'pending')));
-                                $statusLabel = match ($status) {
-                                    'paid' => 'Bezahlt',
-                                    'pending' => 'Offen',
-                                    'cancelled' => 'Storniert',
-                                    'refunded' => 'Erstattet',
-                                    'failed' => 'Fehlgeschlagen',
-                                    default => $status !== '' ? $status : 'Unbekannt',
-                                };
+                                $knownStatus = in_array($status, ['paid', 'pending', 'cancelled', 'refunded', 'failed'], true);
+                                $statusLabel = $knownStatus ? $t('member.subscription.status_' . $status) : ($status !== '' ? $status : $t('member.common.unknown'));
                                 $statusClass = match ($status) {
                                     'paid' => 'green',
                                     'pending' => 'yellow',
@@ -125,20 +124,20 @@ include __DIR__ . '/partials/header.php';
                                 ?>
                                 <tr>
                                     <td>
-                                        <div class="fw-medium"><?= htmlspecialchars((string)($order->order_number ?? ('#' . (int)($order->id ?? 0)))) ?></div>
-                                        <div class="text-secondary small"><?= htmlspecialchars((string)($order->resolved_customer_email ?? $order->customer_email ?? $order->email ?? '')) ?></div>
+                                        <div class="fw-medium"><?= $e($order->order_number ?? ('#' . (int)($order->id ?? 0))) ?></div>
+                                        <div class="text-secondary small"><?= $e($order->resolved_customer_email ?? $order->customer_email ?? $order->email ?? '') ?></div>
                                     </td>
-                                    <td><?= htmlspecialchars((string)($order->plan_name ?? 'Unbekannt')) ?></td>
-                                    <td><span class="badge bg-<?= htmlspecialchars($statusClass) ?>-lt"><?= htmlspecialchars($statusLabel) ?></span></td>
-                                    <td><?= isset($order->display_amount) ? '€ ' . number_format((float)$order->display_amount, 2, ',', '.') : '–' ?></td>
-                                    <td><?= htmlspecialchars((string)($order->created_at ?? '')) ?></td>
+                                    <td><?= $e(($order->plan_name ?? '') !== '' ? $order->plan_name : $t('member.common.unknown')) ?></td>
+                                    <td><span class="badge bg-<?= $e($statusClass) ?>-lt"><?= $e($statusLabel) ?></span></td>
+                                    <td><?= isset($order->display_amount) ? $e($money((float) $order->display_amount)) : '–' ?></td>
+                                    <td><?= $e(MemberI18n::formatDate($order->created_at ?? '', false)) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </div>
 </div>
 <?php include __DIR__ . '/partials/footer.php';

@@ -2,7 +2,9 @@
 /**
  * Member Router Module
  *
- * @package CMSv2\Core
+ * Routen `/dashboard`, `/member`, `/member/:page` und `/member/plugin/:slug[/:action[/:id]]`.
+ *
+ * @package CMS\Routing
  */
 
 declare(strict_types=1);
@@ -62,7 +64,7 @@ final class MemberRouter
             return;
         }
 
-        $this->router->redirect('/member/dashboard');
+        $this->router->redirect($this->resolveMemberHomePath());
     }
 
     public function renderMember(): void
@@ -72,7 +74,28 @@ final class MemberRouter
             return;
         }
 
-        $this->router->redirect('/member/dashboard');
+        // Direkt auf die Startseite: bei abgeschaltetem Dashboard ohne Umweg über /member/dashboard (MD-03).
+        $this->router->redirect($this->resolveMemberHomePath());
+    }
+
+    /**
+     * Startseite des Mitgliederbereichs laut Einstellungen (`/member/dashboard` oder `/member/profile`).
+     */
+    private function resolveMemberHomePath(): string
+    {
+        try {
+            $controllerFile = ABSPATH . 'member/includes/class-member-controller.php';
+            if (!class_exists(\CMS\MemberArea\MemberController::class, false) && is_file($controllerFile)) {
+                require_once $controllerFile;
+            }
+
+            if (class_exists(\CMS\MemberArea\MemberController::class, false)) {
+                return \CMS\MemberArea\MemberController::instance()->getHomePath();
+            }
+        } catch (\Throwable) {
+        }
+
+        return '/member/dashboard';
     }
 
     public function renderMemberPage(string $page): void

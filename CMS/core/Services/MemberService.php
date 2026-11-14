@@ -17,6 +17,8 @@ use CMS\Auth\MFA\BackupCodesManager;
 use CMS\Auth\Passkey\WebAuthnAdapter;
 use CMS\Database;
 use CMS\Json;
+use CMS\Member\MemberI18n;
+use CMS\Member\MemberSanitizer;
 use CMS\Security;
 
 if (!defined('ABSPATH')) {
@@ -28,6 +30,28 @@ class MemberService
     private static ?self $instance = null;
     private Database $db;
     private string $prefix;
+
+    /** @var array<int, array<string, string>> Request-Cache für getUserMeta() je Benutzer (MD-13) */
+    private array $metaCache = [];
+
+    /** Erlaubte Werte für `notification_frequency`. */
+    public const NOTIFICATION_FREQUENCIES = ['immediate', 'daily', 'weekly'];
+
+    /** Schalter der Benachrichtigungs-Einstellungen mit Standardwert. */
+    public const NOTIFICATION_PREFERENCE_DEFAULTS = [
+        'email_notifications'    => true,
+        'email_marketing'        => false,
+        'email_updates'          => true,
+        'email_security'         => true,
+        'browser_notifications'  => false,
+        'desktop_notifications'  => false,
+        'mobile_notifications'   => false,
+        'notify_new_features'    => true,
+        'notify_promotions'      => false,
+        'notify_messages'        => true,
+        'notify_comments'        => true,
+        'notify_events'          => true,
+    ];
 
     private const PUBLIC_PROFILE_FIELDS = [
         'avatar' => ['label' => 'Profilbild', 'type' => 'image'],
@@ -147,6 +171,10 @@ class MemberService
      */
     public function getUserMeta(int $userId): array
     {
+        if (isset($this->metaCache[$userId])) {
+            return $this->metaCache[$userId];
+        }
+
         $rows = $this->db->get_results(
             "SELECT meta_key, meta_value FROM {$this->prefix}user_meta WHERE user_id = ?",
             [$userId]
@@ -154,9 +182,23 @@ class MemberService
 
         $meta = [];
         foreach ((array)$rows as $row) {
-            $meta[$row->meta_key] = $row->meta_value;
+            $meta[(string) $row->meta_key] = (string) $row->meta_value;
         }
-        return $meta;
+
+        return $this->metaCache[$userId] = $meta;
+    }
+
+    /**
+     * Verwirft den Request-Cache von getUserMeta(), z. B. nach Schreibzugriffen außerhalb dieses Services.
+     */
+    public function flushUserMetaCache(?int $userId = null): void
+    {
+        if ($userId === null) {
+            $this->metaCache = [];
+            return;
+        }
+
+        unset($this->metaCache[$userId]);
     }
 
     // ── Passwort & 2FA ────────────────────────────────────────────────────────
@@ -217,23 +259,12 @@ class MemberService
     {
         $meta = $this->getUserMeta($userId);
         $raw  = $meta['notification_preferences'] ?? null;
-        $defaults = [
-            'email_notifications'    => true,
-            'email_marketing'        => false,
-            'email_updates'          => true,
-            'email_security'         => true,
-            'browser_notifications'  => false,
-            'desktop_notifications'  => false,
-            'mobile_notifications'   => false,
-            'notify_new_features'    => true,
-            'notify_promotions'      => false,
-            'notification_frequency' => 'immediate',
-        ];
+        $defaults = self::NOTIFICATION_PREFERENCE_DEFAULTS + ['notification_frequency' => 'immediate'];
 
         if ($raw) {
             $saved = Json::decodeArray($raw, []);
             if (is_array($saved)) {
-                return array_merge($defaults, $saved);
+                return $this->normalizeNotificationPreferences(array_merge($defaults, $saved));
             }
         }
 
@@ -241,12 +272,33 @@ class MemberService
     }
 
     /**
-     * Benachrichtigungs-Präferenzen speichern.
+     * Benachrichtigungs-Präferenzen speichern. Unbekannte Schlüssel werden verworfen, Schalter als
+     * Boolean und die Frequenz nur aus NOTIFICATION_FREQUENCIES übernommen (MD-09).
      */
     public function updateNotificationPreferences(int $userId, array $preferences): bool
     {
-        $this->setUserMeta($userId, 'notification_preferences', json_encode($preferences));
+        $clean = $this->normalizeNotificationPreferences($preferences);
+        $this->setUserMeta($userId, 'notification_preferences', (string) json_encode($clean));
         return true;
+    }
+
+    /**
+     * @param array<string, mixed> $preferences
+     * @return array<string, bool|string>
+     */
+    public function normalizeNotificationPreferences(array $preferences): array
+    {
+        $clean = [];
+        foreach (self::NOTIFICATION_PREFERENCE_DEFAULTS as $key => $default) {
+            $clean[$key] = array_key_exists($key, $preferences) ? !empty($preferences[$key]) : $default;
+        }
+        $clean['notification_frequency'] = MemberSanitizer::choice(
+            $preferences['notification_frequency'] ?? 'immediate',
+            self::NOTIFICATION_FREQUENCIES,
+            'immediate'
+        );
+
+        return $clean;
     }
 
     /**
@@ -256,18 +308,82 @@ class MemberService
      */
     public function getRecentNotifications(int $userId, int $limit = 10): array
     {
-        $table = $this->prefix . 'notifications';
+        return NotificationService::getInstance()->getRecent($userId, $limit);
+    }
 
-        // Tabelle kann optional fehlen
+    // ── Aktivität, Bestellungen, Empfänger (aus MemberController verschoben, MD-12) ──
+
+    /**
+     * Letzte Einträge aus dem Aktivitätsprotokoll des Mitglieds.
+     *
+     * @return array<int, object>
+     */
+    public function getRecentActivity(int $userId, int $limit = 8): array
+    {
         try {
-            $rows = $this->db->get_results(
-                "SELECT id, user_id, type, title, message, url, is_read, read_at, created_at FROM {$table} WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
-                [$userId, $limit]
-            );
-            return (array)$rows;
+            return $this->db->get_results(
+                "SELECT action, description, created_at FROM {$this->prefix}activity_log WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+                [$userId, max(1, min(100, $limit))]
+            ) ?: [];
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    /**
+     * Fest zugeordnete Bestellungen des Mitglieds. Gastbestellungen per (unbestätigter) E-Mail werden nicht
+     * zugeordnet, weil sie fremde Rechnungs- und Kontaktdaten offenlegen würden.
+     *
+     * @return array<int, object>
+     */
+    public function getMemberOrders(int $userId, int $limit = 25): array
+    {
+        if (!CoreModuleService::getInstance()->isModuleEnabled('subscriptions')) {
+            return [];
+        }
+
+        try {
+            return $this->db->get_results(
+                "SELECT o.*, p.name AS plan_name
+                 FROM {$this->prefix}orders o
+                 LEFT JOIN {$this->prefix}subscription_plans p ON p.id = o.plan_id
+                 WHERE o.user_id = ?
+                 ORDER BY o.created_at DESC
+                 LIMIT ?",
+                [$userId, max(1, min(100, $limit))]
+            ) ?: [];
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Empfänger einer Mitgliedernachricht: Benutzername oder E-Mail eines aktiven Kontos; ein Anzeigename
+     * nur, wenn er genau einem aktiven Konto gehört.
+     */
+    public function resolveMessageRecipientId(string $input): int
+    {
+        $input = trim($input);
+        if ($input === '') {
+            return 0;
+        }
+
+        foreach (['username', 'email'] as $column) {
+            $id = (int) ($this->db->get_var(
+                "SELECT id FROM {$this->prefix}users WHERE status = 'active' AND {$column} = ? LIMIT 1",
+                [$input]
+            ) ?? 0);
+            if ($id > 0) {
+                return $id;
+            }
+        }
+
+        $rows = $this->db->get_results(
+            "SELECT id FROM {$this->prefix}users WHERE status = 'active' AND display_name = ? LIMIT 2",
+            [$input]
+        ) ?: [];
+
+        return count($rows) === 1 ? (int) ($rows[0]->id ?? 0) : 0;
     }
 
     // ── Datenschutz ───────────────────────────────────────────────────────────
@@ -465,7 +581,7 @@ class MemberService
         return [
             'stored_meta_fields' => count($this->getUserMeta($userId)),
             'sessions'           => count($this->getActiveSessions($userId)),
-            'notifications'      => count($this->getRecentNotifications($userId, 999)),
+            'notifications'      => count($this->getRecentNotifications($userId, 200)),
         ];
     }
 
@@ -831,19 +947,10 @@ class MemberService
         $lastLoginTs   = $lastLoginRaw ? strtotime($lastLoginRaw) : null;
 
         if ($lastLoginTs) {
-            $lastLoginFormatted = date('d.m.Y H:i', $lastLoginTs);
-            $diffSec = time() - $lastLoginTs;
-            if ($diffSec < 60) {
-                $lastLoginRelative = 'gerade eben';
-            } elseif ($diffSec < 3600) {
-                $lastLoginRelative = 'vor ' . (int)($diffSec / 60) . ' Min.';
-            } elseif ($diffSec < 86400) {
-                $lastLoginRelative = 'vor ' . (int)($diffSec / 3600) . ' Std.';
-            } else {
-                $lastLoginRelative = 'vor ' . (int)($diffSec / 86400) . ' Tagen';
-            }
+            $lastLoginFormatted = MemberI18n::formatDate((string) $lastLoginTs);
+            $lastLoginRelative = MemberI18n::relative((string) $lastLoginTs);
         } else {
-            $lastLoginFormatted = 'Noch nicht erfasst';
+            $lastLoginFormatted = MemberI18n::t('member.dashboard.not_recorded');
             $lastLoginRelative  = '–';
         }
 
@@ -866,18 +973,7 @@ class MemberService
 
         // ── Passwort-Änderung relativ ──────────────────────────────────
         $pwChangedRaw      = $security['password_changed'] ?? null;
-        $pwChangedRelative = '–';
-        if ($pwChangedRaw) {
-            $pwTs    = strtotime($pwChangedRaw);
-            $diffSec = time() - $pwTs;
-            if ($diffSec < 86400) {
-                $pwChangedRelative = 'vor ' . (int)($diffSec / 3600) . ' Std.';
-            } elseif ($diffSec < 30 * 86400) {
-                $pwChangedRelative = 'vor ' . (int)($diffSec / 86400) . ' Tagen';
-            } else {
-                $pwChangedRelative = date('d.m.Y', $pwTs);
-            }
-        }
+        $pwChangedRelative = $pwChangedRaw ? MemberI18n::relative((string) $pwChangedRaw) : '–';
 
         // ── Aktive Sessions (nur Anzahl) ───────────────────────────────
         $activeSessions = count($this->getActiveSessions($userId));
@@ -888,8 +984,8 @@ class MemberService
             'subscription'              => $subscription,
             'subscription_visible'      => $subscriptionModuleEnabled && $subscription !== null,
             'subscription_module_enabled' => $subscriptionModuleEnabled,
-            'permissions'               => $this->getUserPermissions($userId),
-            'recent_notifications'      => $this->getRecentNotifications($userId, 5),
+            // Benachrichtigungen lädt MemberController::getDashboardData() gefiltert nach den Admin-Typen;
+            // Abo-Berechtigungen liefert getUserPermissions() bei Bedarf (MD-24).
             'security'                  => $security,
             // Formatierte Werte für Views
             'last_login_formatted'      => $lastLoginFormatted,
@@ -907,8 +1003,9 @@ class MemberService
     /**
      * User-Meta-Feld schreiben (upsert).
      * Nutzt ON DUPLICATE KEY UPDATE für atomische Operation (erfordert UNIQUE KEY uq_user_meta).
+     * Hält den Request-Cache von getUserMeta() aktuell.
      */
-    private function setUserMeta(int $userId, string $key, string $value): void
+    public function setUserMeta(int $userId, string $key, string $value): void
     {
         $this->db->execute(
             "INSERT INTO {$this->prefix}user_meta (user_id, meta_key, meta_value)
@@ -916,6 +1013,10 @@ class MemberService
              ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)",
             [$userId, $key, $value]
         );
+
+        if (isset($this->metaCache[$userId])) {
+            $this->metaCache[$userId][$key] = $value;
+        }
     }
 
     private function ensurePrivacyRequestSchema(): void
