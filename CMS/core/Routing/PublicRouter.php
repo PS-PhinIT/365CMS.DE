@@ -388,6 +388,15 @@ final class PublicRouter
             . '<h2 class="cms-mfa-title">🔐 Zwei-Faktor-Authentifizierung einrichten</h2>'
             . '<p class="cms-mfa-lead">Scanne den QR-Code mit deiner Authenticator-App (z. B. Google Authenticator, Authy) und gib anschließend den 6-stelligen Code ein.</p>';
 
+        // 4.1.0: Hinweis bei MFA-Zwang – Alternative Passkey (mit PIN/Biometrie) über die Sicherheitsseite.
+        $currentUser = $auth->currentUser();
+        if ($currentUser !== null && Services\Security\MfaEnforcementService::getInstance()->isRequiredFor($currentUser)) {
+            echo '<div class="cms-mfa-alert cms-mfa-alert--info" role="status">'
+                . 'Für deine Rolle ist ein zweiter Faktor verpflichtend. Alternativ kannst du auf der '
+                . '<a href="/member/security">Sicherheitsseite</a> einen Passkey mit PIN oder Biometrie einrichten.'
+                . '</div>';
+        }
+
         if ($error) {
             echo '<div class="cms-mfa-alert cms-mfa-alert--error" role="alert">❌ '
                 . htmlspecialchars((string)$error) . '</div>';
@@ -495,6 +504,14 @@ final class PublicRouter
         $reauth = Auth::instance()->verifyCurrentPassword((int)$_SESSION['user_id'], (string)($_POST['current_password'] ?? ''));
         if ($reauth !== true) {
             $this->setMemberAlert('danger', (string)$reauth);
+            $this->router->redirect('/member/security');
+            return;
+        }
+
+        $currentUser = Auth::instance()->currentUser();
+        if ($currentUser !== null && !Services\Security\MfaEnforcementService::getInstance()->canRemoveFactor($currentUser, 'totp')) {
+            // 4.1.0: Bei MFA-Zwang bleibt mindestens ein Faktor (zuerst Passkey mit PIN/Biometrie hinzufügen).
+            $this->setMemberAlert('danger', 'Für deine Rolle ist 2FA verpflichtend. Richte zuerst einen Passkey ein, bevor du die App-Bestätigung abschaltest.');
             $this->router->redirect('/member/security');
             return;
         }

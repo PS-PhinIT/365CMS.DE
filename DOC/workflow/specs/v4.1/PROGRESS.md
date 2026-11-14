@@ -11,7 +11,7 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 |---|---|---|---|
 | 0 | Analyse und Spezifikation (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/v4.1/` (14.11.2026) |
 | 1a | Passwort-Richtlinie mit Historie und Ablauf | ✅ | `Security\PasswordPolicyService`, Einbindung in Registrierung/Admin/Mitglied/Zurücksetzen, Formular unter *Login & Sperren*, Unicode-Zeichenklassen (Server und Live-Tester), Ablauf-Flag beim Login (Weiche: 1b); `TESTS/password-policy` 53 Prüfungen, Gegenproben (Historie, Filter) schlagen fehl |
-| 1b | Rollenbasierter MFA-Zwang | ⬜ | |
+| 1b | Rollenbasierter MFA-Zwang | ✅ | `Security\MfaEnforcementService`, Konto-Weiche `Router::enforceAccountGates()` (Passwort-Ablauf vor MFA), Passkeys speichern `user_verified` (Registrierung, nachträglich bei UV-Login), Schutz vor Entfernen des letzten Faktors (`/mfa-disable`, Mitgliederbereich), Formular *MFA-Zwang je Rolle* mit Selbstaussperr-Schutz; `TESTS/mfa-enforcement` 173 Prüfungen, Gegenprobe (Präfix-Allowlist, TOTP-Abschalten) schlägt mit 8 Fehlern fehl |
 | 1c | Entra-ID-SSO (OIDC) | ⬜ | |
 | 2a | AVIF-Derivate | ⬜ | |
 | 2b | Verwendungsnachweis Medien | ⬜ | |

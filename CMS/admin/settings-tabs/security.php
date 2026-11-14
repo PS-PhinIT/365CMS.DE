@@ -16,11 +16,14 @@ if (!defined('ABSPATH')) {
 use CMS\Auth;
 use CMS\Security;
 use CMS\Services\LoginThrottleSettings;
+use CMS\Services\Security\MfaEnforcementService;
 use CMS\Services\Security\PasswordPolicyService;
+use CMS\Services\UserService;
 
 const CMS_ADMIN_SECURITY_SETTINGS_CAPABILITY = 'manage_settings';
 const CMS_ADMIN_SECURITY_SETTINGS_CSRF_ACTION = 'admin_security_settings';
 const CMS_ADMIN_PASSWORD_POLICY_CSRF_ACTION = 'admin_password_policy';
+const CMS_ADMIN_MFA_POLICY_CSRF_ACTION = 'admin_mfa_policy';
 
 if (!Auth::instance()->isAdmin() || !Auth::instance()->hasCapability(CMS_ADMIN_SECURITY_SETTINGS_CAPABILITY)) {
     header('Location: /');
@@ -52,6 +55,43 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string) ($_POST['form']
     }
 
     header('Location: /admin/settings?tab=security#password-policy', true, 303);
+    exit;
+}
+
+// 4.1.0: MFA-Zwang je Rolle (eigenes Formular, eigenes CSRF-Token, Selbstaussperr-Schutz, Audit-Log).
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string) ($_POST['form'] ?? '') === 'mfa_policy') {
+    if (!Security::instance()->verifyToken((string) ($_POST['csrf_token'] ?? ''), CMS_ADMIN_MFA_POLICY_CSRF_ACTION)) {
+        $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => __('security_settings.error.csrf')];
+    } else {
+        $mfaAdmin = Auth::instance()->currentUser();
+        $mfaRequested = is_array($_POST['enforced_roles'] ?? null) ? $_POST['enforced_roles'] : [];
+        $mfaKnownRoles = array_map('strval', array_keys(UserService::getInstance()->getAvailableRoles()));
+        $mfaService = MfaEnforcementService::getInstance();
+        $mfaOwnRole = (string) ($mfaAdmin->role ?? '');
+        $mfaOwnFactor = $mfaService->hasRecognisedFactor((int) ($mfaAdmin->id ?? 0));
+
+        if (MfaEnforcementService::wouldLockOut(array_intersect(MfaEnforcementService::normalizeRoles($mfaRequested), $mfaKnownRoles), $mfaOwnRole, $mfaOwnFactor)) {
+            $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => __('mfa_policy.error.self_lockout')];
+        } else {
+            try {
+                $before = $mfaService->enforcedRoles();
+                $saved = MfaEnforcementService::save($mfaRequested, $mfaKnownRoles);
+                \CMS\AuditLogger::instance()->log(
+                    \CMS\AuditLogger::CAT_SECURITY,
+                    'mfa_policy_saved',
+                    'MFA-Zwang für Rollen gespeichert',
+                    'settings',
+                    null,
+                    ['before' => $before, 'after' => $saved]
+                );
+                $_SESSION['admin_alert'] = ['type' => 'success', 'message' => __('mfa_policy.saved')];
+            } catch (\Throwable) {
+                $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => __('security_settings.error.save')];
+            }
+        }
+    }
+
+    header('Location: /admin/settings?tab=security#mfa-policy', true, 303);
     exit;
 }
 
@@ -92,6 +132,10 @@ $securityThresholds = LoginThrottleSettings::describe();
 $securityCsrfToken = Security::instance()->generateToken(CMS_ADMIN_SECURITY_SETTINGS_CSRF_ACTION);
 $passwordPolicy = PasswordPolicyService::getInstance()->definition();
 $passwordPolicyCsrfToken = Security::instance()->generateToken(CMS_ADMIN_PASSWORD_POLICY_CSRF_ACTION);
+$mfaPolicyRoles = UserService::getInstance()->getAvailableRoles();
+$mfaPolicyEnforced = MfaEnforcementService::getInstance()->enforcedRoles();
+$mfaPolicyOwnFactor = MfaEnforcementService::getInstance()->hasRecognisedFactor((int) (Auth::instance()->currentUser()->id ?? 0));
+$mfaPolicyCsrfToken = Security::instance()->generateToken(CMS_ADMIN_MFA_POLICY_CSRF_ACTION);
 $pageTitle = __('security_settings.title');
 $activePage = 'settings-security';
 $settingsTabsActive = 'security';

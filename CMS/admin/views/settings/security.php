@@ -11,6 +11,10 @@ if (!defined('ABSPATH')) {
  * @var array<string,string>|null $securityAlert
  * @var array{min_length:int,require_uppercase:bool,require_lowercase:bool,require_digit:bool,require_special:bool,max_age_days:int,history:int} $passwordPolicy
  * @var string $passwordPolicyCsrfToken
+ * @var array<string,string> $mfaPolicyRoles
+ * @var list<string> $mfaPolicyEnforced
+ * @var bool $mfaPolicyOwnFactor
+ * @var string $mfaPolicyCsrfToken
  */
 
 use CMS\Services\LoginThrottleSettings;
@@ -143,6 +147,33 @@ $secTimeout = $securityThresholds['timeout'];
                         <?php endforeach; ?>
                     </fieldset>
                     <p class="form-hint mt-3 mb-0"><?= $secT('password_policy.scope_hint') ?></p>
+                </div>
+                <div class="card-footer text-end">
+                    <button class="btn btn-primary" type="submit"><?= $secEsc((string) __('Save Changes')) ?></button>
+                </div>
+            </form>
+
+            <form method="post" action="/admin/settings?tab=security" class="card mt-3" id="mfa-policy">
+                <input type="hidden" name="csrf_token" value="<?= $secEsc($mfaPolicyCsrfToken) ?>">
+                <input type="hidden" name="form" value="mfa_policy">
+                <div class="card-header">
+                    <h2 class="card-title"><?= $secT('mfa_policy.heading') ?></h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary"><?= $secT('mfa_policy.intro') ?></p>
+                    <?php if (!$mfaPolicyOwnFactor): ?>
+                        <div class="alert alert-warning" role="status"><?= $secT('mfa_policy.own_factor_missing') ?></div>
+                    <?php endif; ?>
+                    <fieldset>
+                        <legend class="form-label"><?= $secT('mfa_policy.roles') ?></legend>
+                        <?php foreach ($mfaPolicyRoles as $mfaRoleKey => $mfaRoleLabel): ?>
+                            <label class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="enforced_roles[]" value="<?= $secEsc($mfaRoleKey) ?>"<?= in_array((string) $mfaRoleKey, $mfaPolicyEnforced, true) ? ' checked' : '' ?>>
+                                <span class="form-check-label"><?= $secEsc($mfaRoleLabel) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </fieldset>
+                    <p class="form-hint mt-3 mb-0"><?= $secT('mfa_policy.factors_hint') ?></p>
                 </div>
                 <div class="card-footer text-end">
                     <button class="btn btn-primary" type="submit"><?= $secEsc((string) __('Save Changes')) ?></button>

@@ -127,6 +127,81 @@ class Router
         $module->registerRoutes();
     }
 
+    /**
+     * Konto-Weiche (4.1.0): abgelaufenes Passwort → nur Passwortänderung; MFA-Zwang ohne Faktor → nur Einrichtung.
+     * Die Entscheidung trifft `MfaEnforcementService::decide()`; hier nur Kontext sammeln und antworten.
+     *
+     * @return bool true, wenn die Anfrage beantwortet wurde
+     */
+    private function enforceAccountGates(string $routingUri, string $method): bool
+    {
+        $auth = Auth::instance();
+        $user = $auth->currentUser();
+        if ($user === null || $auth->isBearerAuthenticated()) {
+            return false;
+        }
+
+        $userId = (int) ($user->id ?? 0);
+        $service = Services\Security\MfaEnforcementService::getInstance();
+        $passwordChange = !empty($_SESSION[Services\Security\MfaEnforcementService::SESSION_PASSWORD_CHANGE]);
+        try {
+            $mfaRequired = !$passwordChange && $service->isRequiredFor($user);
+            $hasFactor = $mfaRequired && $service->hasRecognisedFactor($userId);
+        } catch (\Throwable $e) {
+            // Einstellungen nicht lesbar: lieber nicht aussperren, aber protokollieren.
+            error_log('365CMS MFA-Weiche: ' . $e->getMessage());
+            $mfaRequired = false;
+            $hasFactor = true;
+        }
+
+        $decision = Services\Security\MfaEnforcementService::decide([
+            'logged_in' => true,
+            'path' => $routingUri,
+            'method' => $method,
+            'action' => is_string($_POST['action'] ?? null) ? (string) $_POST['action'] : '',
+            'api' => $this->isApiRequest($routingUri),
+            'password_change_required' => $passwordChange,
+            'mfa_required' => $mfaRequired,
+            'has_factor' => $hasFactor,
+        ]);
+        if ($decision === null) {
+            return false;
+        }
+
+        if ($decision['gate'] === 'mfa' && empty($_SESSION['mfa_enforcement_logged'])) {
+            $_SESSION['mfa_enforcement_logged'] = 1;
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_SECURITY,
+                'mfa_enforcement_redirect',
+                'MFA-Zwang: Konto ohne zweiten Faktor zur Einrichtung umgeleitet.',
+                'user',
+                $userId,
+                ['role' => (string) ($user->role ?? ''), 'path' => $routingUri]
+            );
+        }
+
+        if ($decision['type'] === 'json') {
+            http_response_code((int) ($decision['status'] ?? 403));
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
+            echo json_encode(['error' => (string) ($decision['error'] ?? 'forbidden')]);
+
+            return true;
+        }
+
+        if ($decision['gate'] === 'password') {
+            $_SESSION['member_alert'] ??= [
+                'type' => 'warning',
+                'message' => 'Dein Passwort ist abgelaufen. Bitte vergib ein neues Passwort, um fortzufahren.',
+                'payload' => [],
+            ];
+        }
+
+        $this->redirect((string) ($decision['target'] ?? '/'), 303);
+
+        return true;
+    }
+
     private function isApiRequest(string $uri): bool
     {
         return $uri === '/api' || str_starts_with($uri, '/api/');
@@ -198,6 +273,11 @@ class Router
 
         if ($this->shouldServeMaintenancePage($routingUri)) {
             $this->renderMaintenancePage($routingUri);
+            return;
+        }
+
+        // 4.1.0: Konto-Weiche (Passwort-Ablauf, rollenbasierter MFA-Zwang) – vor jedem Inhalt und vor dem CSRF-Block.
+        if ($this->enforceAccountGates($routingUri, $method)) {
             return;
         }
 
