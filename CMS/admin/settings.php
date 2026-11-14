@@ -26,6 +26,7 @@ const CMS_ADMIN_SETTINGS_FORM_STATE_SESSION_KEY = 'admin_settings_form_state';
 const CMS_ADMIN_SETTINGS_EXTENSION_TABS = [
     'feeds' => 'feeds.php',
     'security' => 'security.php',
+    'sso' => 'sso.php',
     'admin-menu' => 'admin-menu.php',
 ];
 

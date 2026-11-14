@@ -38,6 +38,11 @@ final class SystemFeatureHooks
             'Barrierefreiheitserklärung',
             static fn (): ?array => AccessibilityStatementService::getInstance()->reviewNotice()
         );
+        // 4.1.0 (1c): Client-Secret der Entra-ID-Anmeldung läuft in 30 Tagen ab (oder ist abgelaufen).
+        AdminNoticeService::registerCheck(
+            'Entra-ID-Anmeldung',
+            static fn (): ?array => \CMS\Auth\SSO\EntraSettings::secretExpiryNotice(\CMS\Auth\SSO\EntraSettings::load())
+        );
     }
 
     public static function registerRetentionRules(): void

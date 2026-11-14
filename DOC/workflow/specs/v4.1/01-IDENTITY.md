@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 1: Identität, Anmeldung & Konto-Sicherheit
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** Spezifikation, Umsetzung begonnen | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 1a, 1b, 1c umgesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -220,13 +220,13 @@ ALTER TABLE {p}passkey_credentials ADD COLUMN user_verified TINYINT(1) NULL;
 
 ### 3.9 Sicherheits-Gates
 
-- [ ] `state`, `nonce`, PKCE (S256) Pflicht; Callback ohne gültigen `state` → 400 + Audit.
-- [ ] Token-Endpunkt und JWKS nur `login.microsoftonline.com` über `Http\Client` (SSRF-Schutz bleibt aktiv), Antwortgröße begrenzt.
-- [ ] Zuordnung nur über `tid`+`oid`; E-Mail-Verknüpfung nur nach §3.3.
-- [ ] Rücksprungziel nur lokal (gleiche Prüfung wie der Login-`redirect`).
-- [ ] Rate-Limit `sso_callback` je IP (`Security::checkDbRateLimit`).
-- [ ] Session-ID nach Login erneuert (`completeLoginForUserId`).
-- [ ] Client-Secret nur verschlüsselt, nie in Logs/Fehlermeldungen; Fehler von Entra gekürzt und escaped.
+- [x] `state`, `nonce`, PKCE (S256) Pflicht; Callback ohne gültigen `state` → 400 + Audit.
+- [x] Token-Endpunkt und JWKS nur `login.microsoftonline.com` über `Http\Client` (SSRF-Schutz bleibt aktiv), Antwortgröße begrenzt.
+- [x] Zuordnung nur über `tid`+`oid`; E-Mail-Verknüpfung nur nach §3.3.
+- [x] Rücksprungziel nur lokal (gleiche Prüfung wie der Login-`redirect`).
+- [x] Rate-Limit `sso_callback` je IP (`Security::checkDbRateLimit`).
+- [x] Session-ID nach Login erneuert (`completeLoginForUserId`).
+- [x] Client-Secret nur verschlüsselt, nie in Logs/Fehlermeldungen; Fehler von Entra gekürzt und escaped.
 
 ### 3.10 Tests (`TESTS/sso-entra/run.php`)
 
@@ -235,3 +235,20 @@ Mit lokal erzeugtem RSA-Schlüssel und Fake-JWKS/Token-Endpunkt (kein Netzwerk):
 abgelaufen, falsche/wiederverwendete `nonce`); `state` fehlt/wiederverwendet/abgelaufen; Zuordnungsfälle aus §3.3
 inkl. Angriff „`preferred_username` = admin“ und „E-Mail eines Admin-Kontos ohne `xms_edov`“; gesperrtes Konto;
 Provisioning an/aus; Rollen-Mapping mit Herab-/Hochstufung; `amr`-Auswertung; Gegenprobe.
+
+### 3.11 Umsetzung (14.11.2026) – Abweichungen und Präzisierungen
+
+| Punkt | Umsetzung |
+|---|---|
+| Callback und `SameSite=Strict` | Das Sitzungs-Cookie fehlt beim Rücksprung von `login.microsoftonline.com`. Der Callback liefert zuerst eine Zwischenseite (`<meta http-equiv="refresh">` auf dieselbe URL mit `hop=1`); erst dieser von der eigenen Seite ausgelöste Aufruf trägt die Sitzung. In Chromium nachgestellt. |
+| Verknüpfen/Trennen | Statt eigener Routen `POST /member/security/sso/entra/link` und `…/unlink` die Aktionen `sso_link`/`sso_unlink` auf `/member/security` (CSRF `security_sso`, Passwort) – gleiche Konvention wie die Passkey-Aktionen; `/member/security` ist auch während der Konto-Weiche erreichbar. Re-Auth nur per Passwort (kein Passkey-Re-Auth im Bestand). |
+| Zusätzliche Dateien | `EntraSettings` (Gruppe `auth_entra`), `EntraSsoService` (Ablauf), `IdentityStoreInterface` + `DatabaseIdentityStore` (austauschbar für Tests). |
+| „Rollen mit Admin-Zugriff“ (§3.3) | `admin`, `editor`, `author` plus alle Rollen mit MFA-Zwang werden nie automatisch verknüpft. |
+| `allow_admin_mapping` | eine globale Einstellung; eine Mapping-Regel auf `admin` wirkt nur, wenn sie gesetzt ist. Die Standardrolle ist nie `admin`. |
+| Rollen-Sync ohne passende Regel | Zielrolle = Standardrolle (Herabstufen), nur für provisionierte Konten mit „synchronisieren“. |
+| Gruppen-Overage | keine Graph-Abfrage; Audit `sso_groups_overage`, es zählen nur App-Rollen. |
+| `amr` | anerkannt: `mfa`, `ngcmfa`, `fido`, `rsa` (Einstellung `mfa_from_amr`). Fehlt `amr` im v2-Token, gilt das als kein Nachweis. |
+| `local_login` | `disabled_for_linked`: verknüpfte Nicht-Admins nur über Microsoft; `admins_only`: Passwort-Login nur für Admins. Wirkt nur bei fertig eingerichteter SSO-Anmeldung. |
+| Re-Auth über frische SSO-Anmeldung | `/mfa-setup` sowie `totp_start`/`passkey_register` im Mitgliederbereich; Entfernen von Faktoren, Verknüpfen und Trennen verlangen weiter das Passwort. |
+| Provisioning | verlangt den Claim `email` (sonst Ablehnung); bestätigt (`email_verified_at`) nur mit `xms_edov`. Existiert ein Konto mit der Adresse und greift die automatische Verknüpfung nicht → Ablehnung + `sso_link_conflict`, nie ein zweites Konto. |
+| Capability `security.sso` | in `RolesModule` vergebbar; die Vergabe an Standardrollen folgt mit dem Update-Schritt `capabilities_v26` (Admins haben sie über die Rolle). |

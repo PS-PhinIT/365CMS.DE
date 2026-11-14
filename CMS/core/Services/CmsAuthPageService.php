@@ -569,6 +569,22 @@ final class CmsAuthPageService
             $passkeyPayload = ['available' => false, 'options_json' => '{}'];
         }
 
+        // 4.1.0 (1c): Knopf „Mit Microsoft anmelden“, sobald die Entra-ID-Anmeldung bereitsteht.
+        $ssoLogin = ['available' => false, 'url' => '', 'label' => ''];
+        if ($pageType === 'login') {
+            try {
+                $ssoService = \CMS\Auth\SSO\EntraSsoService::getInstance();
+                if ($ssoService->isAvailable()) {
+                    $ssoLogin = [
+                        'available' => true,
+                        'url' => \CMS\Auth\SSO\EntraSettings::START_PATH . ($loginRedirect !== '' ? '?redirect=' . rawurlencode($loginRedirect) : ''),
+                        'label' => (string) ($ssoService->settings()['button_label'] ?? 'Mit Microsoft anmelden'),
+                    ];
+                }
+            } catch (\Throwable) {
+            }
+        }
+
         $registerEnabled = $this->isRegistrationEnabled($settings);
         $legalLinks = $this->resolveLegalLinks($settings);
         $passkeyErrorText = $this->resolveLoginErrorFallback('passkey');

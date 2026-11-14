@@ -60,7 +60,7 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
 | `CMS/assets/css/` | 33 stylesheets |
-| `CMS/assets/js/` | 58 scripts + 21 ES modules (`admin-shell/`, `editor-blocks/`, `member/`, `post-editor/`) |
+| `CMS/assets/js/` | 59 scripts + 21 ES modules (`admin-shell/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
 ---
 
@@ -167,11 +167,11 @@ Subdirectories:
 
 | Path | Contents / Inhalt |
 |---|---|
-| `core/Auth/` | `AuthManager.php`, `LDAP/LdapAuthProvider.php`, `MFA/BackupCodesManager.php`, `MFA/TotpAdapter.php`, `Passkey/WebAuthnAdapter.php` |
+| `core/Auth/` | `AuthManager.php`, `LDAP/LdapAuthProvider.php`, `MFA/BackupCodesManager.php`, `MFA/TotpAdapter.php`, `Passkey/WebAuthnAdapter.php`; since/seit 4.1.0 `SSO/` (Entra ID): `DatabaseIdentityStore.php`, `EntraIdProvider.php`, `EntraSettings.php`, `EntraSsoService.php`, `IdentityLinker.php`, `IdentityStoreInterface.php`, `OidcFlowState.php`, `OidcProviderInterface.php` |
 | `core/Contracts/` | interfaces (cache, DB, logger, …) |
 | `core/Http/` | HTTP client / transport |
 | `core/Member/` | member core registration |
-| `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `ThemeArchiveRepository.php`, `ThemeRouter.php` |
+| `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `SsoRouter.php` (4.1.0), `ThemeArchiveRepository.php`, `ThemeRouter.php` |
 | `core/Services/` | domain services (see [FILELIST.md](FILELIST.md) and [DEVLIST.md](DEVLIST.md)) |
 
 Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminToolbarService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `BatchJobService`, `CmsAuthPageService`, `CommentService`, `ContentChangesService`, `ContentEditPermission`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorialCalendarService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `EnvironmentInfoService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `IntegratedPluginService`, `JwtService`, `LandingPageService`, `LoginThrottleSettings`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberContentService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `NotificationService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PrivateStorageService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TranslationStatusService`, `TrustedProxyService`, `UpdateService`, `UserService`.
@@ -386,6 +386,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `admin-settings.js`
 - `admin-sidebar-editor.js`
 - `admin-site-tables.js`
+- `admin-sso-settings.js`
 - `admin-subscriptions.js`
 - `admin-system-cron.js`
 - `admin-theme-explorer.js`
@@ -431,7 +432,7 @@ These folders were **not** found under `CMS/assets/` (older docs mentioned them)
 
 **English**
 
-`CMS/admin/` contains 391 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
+`CMS/admin/` contains 394 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
 
 Module directories: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `newsletter`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
@@ -439,14 +440,14 @@ Entry examples that match public admin routes include `index.php`, `pages.php`, 
 
 **Deutsch**
 
-`CMS/admin/` enthält 391 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
+`CMS/admin/` enthält 394 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
 
 Modulverzeichnisse: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `newsletter`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
 Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php` sowie die übrigen `CMS/admin/*.php`-Dateien. Neu in 4.0.0: `admin-ui.php` (JSON-Endpunkt der Admin-Shell), `post-editor-api.php` (JSON-Endpunkt des Beitragseditors) und `plugin-assignment.php` (Plugin-Zuweisung je Site, View `views/settings/plugin-assignment.php`). Ebenfalls neu: `multisites.php` (Einstellungsbereich MultiSites, View `views/settings/multisites.php`), `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`, Views `views/configuration/`), `settings-tabs/admin-menu.php` (Einstellungs-Tab „Admin-Menü“ mit dem Sidebar-Editor, Views `views/settings/admin-menu.php` und `views/settings/admin-sidebar-editor.php`), `settings-tabs/feeds.php` (RSS-Einstellungs-Controller und View `views/settings/feeds.php`), `partials/sidebar-nav.php` (Sidebar-Liste, auch für die Vorschau) und `views/settings/partials-tabs.php` (gemeinsame Tab-Leiste der Einstellungsbereiche).
 
 
-New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`.
+New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`; since/seit 4.1.0 `settings-tabs/sso.php` (view/View `views/settings/sso.php`).
 
 ---
 

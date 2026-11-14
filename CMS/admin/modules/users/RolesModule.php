@@ -38,6 +38,7 @@ class RolesModule
         'knowledgebase' => ['manage_knowledgebase'],
         'newsletter' => ['manage_newsletter'],
         'system'   => ['manage_search_index', 'manage_feeds', 'manage_admin_menu'],
+        'security' => ['security.sso'],
     ];
 
     public function __construct()

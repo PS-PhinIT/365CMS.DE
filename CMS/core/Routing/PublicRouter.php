@@ -390,11 +390,19 @@ final class PublicRouter
 
         // 4.1.0: Hinweis bei MFA-Zwang – Alternative Passkey (mit PIN/Biometrie) über die Sicherheitsseite.
         $currentUser = $auth->currentUser();
+        $ssoFresh = \CMS\Auth\SSO\EntraSsoService::isFreshSsoSession($userId);
         if ($currentUser !== null && Services\Security\MfaEnforcementService::getInstance()->isRequiredFor($currentUser)) {
             echo '<div class="cms-mfa-alert cms-mfa-alert--info" role="status">'
                 . 'Für deine Rolle ist ein zweiter Faktor verpflichtend. Alternativ kannst du auf der '
                 . '<a href="/member/security">Sicherheitsseite</a> einen Passkey mit PIN oder Biometrie einrichten.'
                 . '</div>';
+            if ((int) ($_SESSION[\CMS\Auth\SSO\EntraSsoService::SESSION_SSO_USER] ?? 0) === $userId) {
+                // 4.1.0 (1c): SSO-Anmeldung ohne MFA-Nachweis im Token.
+                echo '<div class="cms-mfa-alert cms-mfa-alert--info" role="status">'
+                    . 'Deine Microsoft-Anmeldung hat keinen zweiten Faktor nachgewiesen. Bitte MFA in Entra ID '
+                    . '(Conditional Access) aktivieren lassen oder hier lokal einrichten.'
+                    . '</div>';
+            }
         }
 
         if ($error) {
@@ -422,7 +430,8 @@ final class PublicRouter
             . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($csrfToken) . '">'
             . '<div class="cms-mfa-field">'
             . '<label class="cms-mfa-label" for="cms-mfa-setup-password">Aktuelles Passwort</label>'
-            . '<input type="password" id="cms-mfa-setup-password" name="current_password" required autocomplete="current-password" class="cms-mfa-input">'
+            . '<input type="password" id="cms-mfa-setup-password" name="current_password"' . ($ssoFresh ? '' : ' required') . ' autocomplete="current-password" class="cms-mfa-input">'
+            . ($ssoFresh ? '<p class="cms-mfa-hint">Du hast dich eben mit Microsoft angemeldet – das Passwort kannst du leer lassen.</p>' : '')
             . '</div>'
             . '<div class="cms-mfa-field">'
             . '<label class="cms-mfa-label" for="cms-mfa-setup-code">Bestätigungscode aus der App</label>'
@@ -452,8 +461,12 @@ final class PublicRouter
         $userId = (int)$_SESSION['user_id'];
         $code = $this->requestString($_POST['totp_code'] ?? '', 12);
 
-        // Eine übernommene Sitzung darf keinen eigenen Authenticator hinterlegen.
-        $reauth = Auth::instance()->verifyCurrentPassword($userId, (string)($_POST['current_password'] ?? ''));
+        // Eine übernommene Sitzung darf keinen eigenen Authenticator hinterlegen. 4.1.0 (1c): Bei SSO-Konten ohne
+        // bekanntes Passwort gilt die frische Microsoft-Anmeldung (≤ 10 min) dieser Sitzung als Re-Auth.
+        $currentPassword = (string)($_POST['current_password'] ?? '');
+        $reauth = $currentPassword === '' && \CMS\Auth\SSO\EntraSsoService::isFreshSsoSession($userId)
+            ? true
+            : Auth::instance()->verifyCurrentPassword($userId, $currentPassword);
         if ($reauth !== true) {
             $_SESSION['error'] = (string)$reauth;
             $this->router->redirect($this->getLocalizedPublicPath('/mfa-setup'));
@@ -1267,6 +1280,22 @@ final class PublicRouter
     private function normalizeAllowedRedirectTarget(mixed $candidate): string
     {
         return $this->buildAllowedRedirectTarget($this->resolveAllowedRedirectParts($candidate));
+    }
+
+    /**
+     * Gleiche Prüfung wie der Login-`redirect` (nur lokale Ziele) – für die SSO-Routen (`SsoRouter`).
+     */
+    public function safeRedirectTarget(mixed $candidate): string
+    {
+        return $this->normalizeAllowedRedirectTarget($candidate);
+    }
+
+    /**
+     * Ziel nach erfolgreicher Anmeldung (Admins landen statt im Mitgliederbereich im Dashboard).
+     */
+    public function successfulLoginTarget(string $redirectTarget): string
+    {
+        return $this->resolveSuccessfulLoginRedirect($redirectTarget);
     }
 
     private function toSameOriginRelativePath(string $candidate): string

@@ -63,7 +63,7 @@ Vorher/Nachher). Standard: keine Rolle.
   `mfa_enforcement_redirect` ins Audit-Log.
 - **Anerkannte Faktoren:** aktive Authenticator-App (TOTP) oder ein Passkey mit User Verification (PIN/Biometrie,
   `passkey_credentials.user_verified = 1`). Passkeys aus der Zeit vor 4.1.0 zählen nach der nächsten Anmeldung mit
-  PIN/Biometrie. Eine Entra-ID-Anmeldung mit MFA-Nachweis gilt nur für die laufende Sitzung (Bereich 1c).
+  PIN/Biometrie. Eine Entra-ID-Anmeldung mit MFA-Nachweis (`amr`) gilt nur für die laufende Sitzung ([SSO-ENTRA.md](SSO-ENTRA.md)).
 - **Kein Aussperren:** Die eigene Rolle lässt sich nur wählen, wenn das eigene Konto bereits einen Faktor hat. Bei aktivem
   Zwang lehnen `/mfa-disable`, „2FA deaktivieren“ und „Passkey entfernen“ das Entfernen des letzten Faktors ab.
 - **Reihenfolge der Weiche** (`Router::dispatch()`, nach dem Wartungsmodus, vor dem CSRF-Block): erst abgelaufenes

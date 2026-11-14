@@ -23,11 +23,12 @@ CMS/core/
 │   ├── AuthManager.php
 │   ├── LDAP/LdapAuthProvider.php
 │   ├── MFA/TotpAdapter.php, BackupCodesManager.php
-│   └── Passkey/WebAuthnAdapter.php
+│   ├── Passkey/WebAuthnAdapter.php
+│   └── SSO/                   # Entra ID (4.1.0): EntraSsoService, EntraIdProvider, EntraSettings, IdentityLinker, OidcFlowState, Store
 ├── Contracts/                 # CacheInterface, DatabaseInterface, LoggerInterface
 ├── Http/                      # Client, Request, InlineStyleRewriter
 ├── Member/                    # PluginDashboardRegistry
-├── Routing/                   # ApiRouter, AdminRouter, MemberRouter, PublicRouter, ThemeRouter, ThemeArchiveRepository
+├── Routing/                   # ApiRouter, AdminRouter, MemberRouter, PublicRouter, SsoRouter (4.1.0), ThemeRouter, ThemeArchiveRepository
 └── Services/                  # ~70 Fachservices
     ├── AI/ (+ Providers/)      # KI-Dienste
     ├── EditorJs/              # Editor.js-Hilfsklassen

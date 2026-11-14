@@ -548,7 +548,7 @@ foreach (OPTIONAL_MODULES as $module => $prefix) {
 
 T::run('Teil 1: Katalog', static function () use ($catalogList, $tabler, $extensionTabs): void {
     T::check(count($tabler) > 1000, 'Tabler-Icon-Liste geladen (' . count($tabler) . ' Icons)');
-    T::same(['feeds' => 'feeds.php', 'security' => 'security.php', 'admin-menu' => 'admin-menu.php'], $extensionTabs, 'Erweiterungs-Tabs aus admin/settings.php gelesen');
+    T::same(['feeds' => 'feeds.php', 'security' => 'security.php', 'sso' => 'sso.php', 'admin-menu' => 'admin-menu.php'], $extensionTabs, 'Erweiterungs-Tabs aus admin/settings.php gelesen');
 
     $settings = am_read('admin/settings.php');
     $dispatch = strpos($settings, "require __DIR__ . '/settings-tabs/'");

@@ -12,7 +12,7 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 | 0 | Analyse und Spezifikation (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/v4.1/` (14.11.2026) |
 | 1a | Passwort-Richtlinie mit Historie und Ablauf | ✅ | `Security\PasswordPolicyService`, Einbindung in Registrierung/Admin/Mitglied/Zurücksetzen, Formular unter *Login & Sperren*, Unicode-Zeichenklassen (Server und Live-Tester), Ablauf-Flag beim Login (Weiche: 1b); `TESTS/password-policy` 53 Prüfungen, Gegenproben (Historie, Filter) schlagen fehl |
 | 1b | Rollenbasierter MFA-Zwang | ✅ | `Security\MfaEnforcementService`, Konto-Weiche `Router::enforceAccountGates()` (Passwort-Ablauf vor MFA), Passkeys speichern `user_verified` (Registrierung, nachträglich bei UV-Login), Schutz vor Entfernen des letzten Faktors (`/mfa-disable`, Mitgliederbereich), Formular *MFA-Zwang je Rolle* mit Selbstaussperr-Schutz; `TESTS/mfa-enforcement` 173 Prüfungen, Gegenprobe (Präfix-Allowlist, TOTP-Abschalten) schlägt mit 8 Fehlern fehl |
-| 1c | Entra-ID-SSO (OIDC) | ⬜ | |
+| 1c | Entra-ID-SSO (OIDC) | ✅ | `core/Auth/SSO/` (`EntraIdProvider`, `OidcFlowState`, `IdentityLinker`, `EntraSsoService`, `EntraSettings`), `Routing\SsoRouter` mit Zwischenseite gegen `SameSite=Strict` (in Chromium geprüft: Cookie fehlt beim Rücksprung, ist nach dem Meta-Refresh da), Tab *Einstellungen → SSO* (`security.sso`, Secret verschlüsselt, „Verbindung prüfen“, Rollen-Mapping), Knopf auf `/cms-login`, Verknüpfen/Trennen unter `/member/security`, lokale Anmeldung abschaltbar (Admin-Notfallzugang), MFA aus `amr`, frische SSO-Anmeldung als Re-Auth beim Hinzufügen eines Faktors, Secret-Ablaufhinweis; Handbuch [SSO-ENTRA.md](../../../admin/security/SSO-ENTRA.md); `TESTS/sso-entra` 194 Prüfungen, Gegenprobe (6 eingebaute Fehler: alg-Vorprüfung, nonce, iss exakt, privilegierte Rollen, `xms_edov`, state-Einmalverwendung) schlägt mit 13 Fehlern fehl |
 | 2a | AVIF-Derivate | ⬜ | |
 | 2b | Verwendungsnachweis Medien | ⬜ | |
 | 3a | Vier-Augen-Prinzip (`pending`) | ⬜ | |
@@ -23,4 +23,4 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 | 5 | Zahlungen & Rechnungen | ⬜ | |
 | 6a | CLI | ⬜ | |
 | 6b | Alerting | ⬜ | |
-| S | Schema v26 (gemeinsam) | 🟡 | Tabellen/Spalten für 1 und 4 definiert (`FEATURE_TABLES_V26`), Marke folgt mit dem Release; `TESTS/schema-v26` |
+| S | Schema v26 (gemeinsam) | 🟡 | Tabellen/Spalten für 1 und 4 definiert (`FEATURE_TABLES_V26`), Marke folgt mit dem Release; `TESTS/schema-v26`. Offen für das Release: Update-Schritt `capabilities_v26` (u. a. `security.sso`; Admins haben sie bis dahin über die Rolle) |

@@ -22,6 +22,7 @@ $settingsTabsDefinitions = [
     'multisites' => ['label' => 'MultiSites', 'url' => \CMS\Services\AdminSiteContextService::ADMIN_PATH, 'capability' => 'manage_settings'],
     'feeds' => ['label' => 'Feeds', 'url' => '/admin/settings?tab=feeds', 'capability' => 'manage_feeds', 'file' => 'feeds.php'],
     'security' => ['label' => 'Sicherheit', 'url' => '/admin/settings?tab=security', 'capability' => 'manage_settings', 'file' => 'security.php'],
+    'sso' => ['label' => 'SSO', 'url' => '/admin/settings?tab=sso', 'capability' => 'security.sso', 'file' => 'sso.php'],
     'admin-menu' => ['label' => 'Admin-Menü', 'url' => '/admin/settings?tab=admin-menu', 'capability' => 'manage_admin_menu', 'file' => 'admin-menu.php'],
     'content' => ['label' => 'Beiträge & Sites', 'url' => '/admin/settings?tab=content', 'capability' => 'manage_settings', 'end' => true],
 ];
