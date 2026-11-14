@@ -94,6 +94,10 @@ Geliefert werden nur öffentlich sichtbare Inhalte: veröffentlicht, nicht im Pa
 
 Die Export/Import-Provider des Cores liegen unter `CMS/core/Services/Exchange/` (Formulare: `CMS/core/Services/Forms/FormContentProvider.php`, Knowledgebase: `CMS/core/Services/Knowledgebase/KnowledgebaseContentProvider.php`); die Oberfläche beschreibt [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md).
 
+### Tests
+
+`php TESTS/content-types/run.php` prüft die Registry (Anmeldung je Fähigkeit, Doppelanmeldung, ungültige Typen, Sortierung, einmaliges Auslösen der Action) und die Wertobjekte, darunter die `realpath`-Prüfung von `ImportContext::stagedFile()`. `php TESTS/run-all.php` führt alle Suiten aus.
+
 ### Verwandte Dokumente
 
 [SERVICES.md](SERVICES.md) · [HOOKS-REFERENCE.md](HOOKS-REFERENCE.md) · [../plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md)

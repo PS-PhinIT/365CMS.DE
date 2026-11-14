@@ -85,7 +85,7 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 - eine Zeile in `CMS\Services\AdminMenu\CoreCatalog` (ID, Label, Route, Icon, Capabilities, Seitendatei, `page`-Slug, bei Kacheln die Kategorie),
 - einen Platz in beiden Profilen in `ProfileLayouts`.
 
-Die Sichtbarkeit hängt weiterhin am Core-Modul (`CoreModuleService::isAdminPageEnabled()`). `CMS/admin/partials/sidebar.php` rendert nur.
+`php TESTS/admin-menu/run.php` prüft Katalog und Profile sowie die Capabilities, die in der Seitendatei geprüft werden. Die Sichtbarkeit hängt weiterhin am Core-Modul (`CoreModuleService::isAdminPageEnabled()`). `CMS/admin/partials/sidebar.php` rendert nur.
 
 ### 2. Plugin-Adminseite
 

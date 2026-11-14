@@ -164,7 +164,7 @@ Downloads und Formulare können später eigene Provider anmelden, ohne dass der 
   - **Erweiterungs-Tabs** in `/admin/settings` (Feeds, Sicherheit, Admin-Menü) werden vor dem `manage_settings`-Gate der Einstellungsseite verteilt. Jeder Tab prüft das isAdmin-Gate und seine eigene Capability selbst.
   - **Vorgeplante Seiten:** Der statische Test führt die 14 noch fehlenden Seitendateien aus Phase B und WP1–4 in der Liste `RESERVED_FILES`. Bis dahin ist der Seitendatei-Check für sie ausgesetzt, und die Einträge bleiben ausgeblendet. Sobald eine dieser Dateien existiert, schlägt der Test fehl, bis sie aus der Liste entfernt ist. Ab dann gilt der normale Zugriffsvergleich.
   - **Abdeckung in Gegenrichtung:** Jede Datei unter `admin/*.php`, `admin/logs/*.php` und `admin/settings-tabs/*.php` steht entweder im Katalog oder in der kommentierten Liste `NOT_IN_MENU` (Weiterleitungs-Aliasse, JSON-Endpunkte, gemeinsame Renderer). Eine neue Admin-Seite ohne Menüeintrag fällt so auf.
-  - **Test im Repository:** `TESTS/admin-menu/run.php` lief ohne Datenbank im CI-Job „PHP Syntax Check“. Mit dem Ordner `TESTS/` wurde er am 14.11.2026 entfernt.
+  - **Test im Repository:** `TESTS/admin-menu/run.php` ist versioniert (`.gitignore`-Whitelist wie bei den übrigen Suites) und läuft ohne Datenbank. Er ist als Schritt im CI-Job „PHP Syntax Check“ (PHP 8.4 und 8.5) eingebunden.
   - **Welches Layout gilt:**
     1. Hat die aktuelle Site ein eigenes Layout, gilt es immer.
     2. Sonst gilt das globale eigene Layout, wenn als Profil „Eigenes Layout“ gewählt ist.

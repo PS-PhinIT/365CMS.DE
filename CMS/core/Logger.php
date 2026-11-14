@@ -31,9 +31,10 @@ class Logger implements LoggerInterface
 {
     /**
      * Muster für Kontext-/Metadatenschlüssel mit Zugangsdaten (Eingabe: normalisierter snake_case-Schlüssel, siehe isSensitiveKey()).
-     * Eindeutige Wörter wirken als Teilstring, mehrdeutige (key, auth, session, pass, mfa, otp) nur als ganzer Namensteil.
+     * Eindeutige Wörter wirken als Teilstring, mehrdeutige (auth, session, pass, pwd, mfa, otp, jwt, …) nur als ganzer Namensteil.
+     * Jeder Schlüssel auf `_key` gilt als Zugangsdatum, außer bekannte Bezeichner-Felder (cache_key, setting_key, form_key, …).
      */
-    public const SENSITIVE_KEY_PATTERN = '/password|passwd|secret|token|nonce|csrf|credential|cookie|credit_card|authorization|apikey|privatekey|(?:^|_)(?:pass|mfa|otp)(?:_|$)|(?:^|_)(?:api|auth|private|license|encryption|signing|access)_key$|(?:^|_)(?:session_id|sessionid)$|^(?:key|auth|session)$/';
+    public const SENSITIVE_KEY_PATTERN = '/password|passwd|passphrase|secret|token|nonce|csrf|credential|cookie|credit_card|authorization|apikey|privatekey|(?:^|_)(?:pass|pwd|mfa|otp|hmac|jwt|bearer|signature)(?:_|$)|(?:^|_)(?!(?:cache|setting|form|template|meta|count|font|feature|status|source|scope|usage|assignment|option|field|config|lang|translation|route|sort|group|section|item|state|type|name|id)_key$)[a-z0-9]+_key$|(?:^|_)(?:session_id|sessionid)$|^(?:key|auth|session)$/';
 
     // ── PSR-3 Log-Level-Konstanten (aufsteigend nach Gewicht) ──────────────
 

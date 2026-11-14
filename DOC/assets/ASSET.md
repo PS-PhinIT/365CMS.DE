@@ -104,7 +104,7 @@ Empfohlener Ablauf pro Update:
    - `DOC/assets/README.md`
    - `DOC/assets/ASSETS_OwnAssets.md`
    - `DOC/assets/ASSETS_NEW.md` für neue Kandidaten außerhalb der Runtime
-6. Spiegel-Manifeste für Dependabot/Trivy nachziehen: `.github/deps/composer.json` + `composer.lock` (PHP) bzw. `.github/deps/package.json` + `package-lock.json` (JS), Ablauf siehe [`README.md`](README.md#versionsüberwachung-dependabot--trivy); den Abgleich Manifest ↔ Bundle ↔ Doku von Hand prüfen
+6. Spiegel-Manifeste für Dependabot/Trivy nachziehen: `.github/deps/composer.json` + `composer.lock` (PHP) bzw. `.github/deps/package.json` + `package-lock.json` (JS), Ablauf siehe [`README.md`](README.md#versionsüberwachung-dependabot--trivy); `php TESTS/run-all.php` prüft den Abgleich Manifest ↔ Bundle ↔ Doku
 
 ---
 

@@ -50,6 +50,21 @@ Verified top-level entries of this repository:
 | `DOC/` | directory | public project documentation |
 | `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 3.5.0, 3.5.4, 3.5.5, 3.5.6, 4.0.0) |
 | `SCREENSHOTS/` | directory | screenshots |
+| `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
+| `TESTS/ai-admin-contract/` | directory | static contract of the AI admin integration (routes, CSRF, quota, SSRF guard, sanitizing): `php TESTS/ai-admin-contract/run.php` |
+| `TESTS/ai-content-creator/` | directory | AI content draft pipeline with mock provider: `php TESTS/ai-content-creator/run.php` |
+| `TESTS/ai-editorjs-translation/` | directory | Editor.js translation pipeline: batches, segment order, size limits: `php TESTS/ai-editorjs-translation/run.php` |
+| `TESTS/ai-policy/` | directory | AI provider policy gates (external data sharing, beta providers, scopes): `php TESTS/ai-policy/run.php` |
+| `TESTS/ai-seo-metadata/` | directory | AI SEO metadata pipeline (normalizing, schema type, robots): `php TESTS/ai-seo-metadata/run.php` |
+| `TESTS/analytics-consent/` | directory | analytics output and CSP only with configured provider and consent: `php TESTS/analytics-consent/run.php` |
+| `TESTS/content-types/` | directory | content type provider registry test: `php TESTS/content-types/run.php [-v]`; all suites: `php TESTS/run-all.php` (shared runner `TESTS/lib/TestRunner.php`) |
+| `TESTS/csp-style-rewriter/` | directory | `InlineStyleRewriter`: `style` attributes to nonce CSS classes: `php TESTS/csp-style-rewriter/run.php` |
+| `TESTS/editorjs-blocks/` | directory | Editor.js block tests: `php TESTS/editorjs-blocks/run.php`, browser part `node TESTS/editorjs-blocks/browser/run.js` |
+| `TESTS/functions/` | directory | function tests without database: `php TESTS/functions/run.php` |
+| `TESTS/release-3.4.0/` | directory | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
+| `TESTS/theme-contract/` | directory | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments: `php TESTS/theme-contract/run.php [theme roots …]` |
+| `TESTS/update-swap/` | directory | update directory swap test: `php TESTS/update-swap/run.php` |
 | `.github/` | directory | `CODEOWNERS`, `SECURITY`, `dependabot.yml`, `workflows/security.yml`, `deps/` (dependency manifests for the scans) |
 | `.oss-scanner/` | directory | `Dockerfile`, `threat_model.md` |
 | `LICENSE` | file | licence |
@@ -58,7 +73,7 @@ Verified top-level entries of this repository:
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. The former `TESTS/` folder was removed from the repository on 2026-11-14; there are no versioned test suites.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 15 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -73,6 +88,21 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `DOC/` | Verzeichnis | öffentliche Projektdokumentation |
 | `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 3.5.0, 3.5.4, 3.5.5, 3.5.6, 4.0.0) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
+| `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
+| `TESTS/ai-admin-contract/` | Verzeichnis | statischer Vertrag der AI-Admin-Integration (Routen, CSRF, Quota, SSRF-Schutz, Bereinigung): `php TESTS/ai-admin-contract/run.php` |
+| `TESTS/ai-content-creator/` | Verzeichnis | AI-Entwurfs-Pipeline mit Mock-Provider: `php TESTS/ai-content-creator/run.php` |
+| `TESTS/ai-editorjs-translation/` | Verzeichnis | Editor.js-Übersetzungs-Pipeline: Batches, Segmentreihenfolge, Größenlimits: `php TESTS/ai-editorjs-translation/run.php` |
+| `TESTS/ai-policy/` | Verzeichnis | Freigaben der AI-Provider-Richtlinie (externe Datenweitergabe, Beta-Provider, Scopes): `php TESTS/ai-policy/run.php` |
+| `TESTS/ai-seo-metadata/` | Verzeichnis | AI-SEO-Metadaten-Pipeline (Normalisierung, Schema-Typ, Robots): `php TESTS/ai-seo-metadata/run.php` |
+| `TESTS/analytics-consent/` | Verzeichnis | Analytics-Ausgabe und CSP nur mit konfiguriertem Anbieter und Einwilligung: `php TESTS/analytics-consent/run.php` |
+| `TESTS/content-types/` | Verzeichnis | Test der Inhaltstyp-Provider-Registry: `php TESTS/content-types/run.php [-v]`; alle Suiten: `php TESTS/run-all.php` (gemeinsamer Runner `TESTS/lib/TestRunner.php`) |
+| `TESTS/csp-style-rewriter/` | Verzeichnis | `InlineStyleRewriter`: `style`-Attribute zu Nonce-CSS-Klassen: `php TESTS/csp-style-rewriter/run.php` |
+| `TESTS/editorjs-blocks/` | Verzeichnis | Tests der Editor.js-Blöcke: `php TESTS/editorjs-blocks/run.php`, Browser-Teil `node TESTS/editorjs-blocks/browser/run.js` |
+| `TESTS/functions/` | Verzeichnis | Funktionstests ohne Datenbank: `php TESTS/functions/run.php` |
+| `TESTS/release-3.4.0/` | Verzeichnis | Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
+| `TESTS/theme-contract/` | Verzeichnis | Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente: `php TESTS/theme-contract/run.php [Theme-Wurzeln …]` |
+| `TESTS/update-swap/` | Verzeichnis | Test des Verzeichnistauschs beim Update: `php TESTS/update-swap/run.php` |
 | `.github/` | Verzeichnis | `CODEOWNERS`, `SECURITY`, `dependabot.yml`, `workflows/security.yml`, `deps/` (Abhängigkeitsmanifeste für die Scans) |
 | `.oss-scanner/` | Verzeichnis | `Dockerfile`, `threat_model.md` |
 | `LICENSE` | Datei | Lizenz |
@@ -81,7 +111,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. Der frühere Ordner `TESTS/` wurde am 14.11.2026 aus dem Repository entfernt; versionierte Test-Suiten gibt es nicht mehr.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 15 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 

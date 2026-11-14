@@ -9,7 +9,7 @@ Since 4.0.0 the admin sidebar is data-driven. A **catalog** (`CMS\Services\Admin
 
 Plugins keep registering their menus with `add_menu_page()` / `add_submenu_page()` in the `cms_admin_menu` hook, which is unchanged. Every page of an active plugin that the layout does not place itself appears in the last sidebar section, **"Aktive Plugins"** (active plugins), in every profile. The section is collapsed by default and shows the number of its entries; it opens for the current plugin page, for "expand all" or when the user expanded it. A plugin with one page is a link, a plugin with several pages a group; both are sorted alphabetically. Only a custom layout can place plugin pages elsewhere. `cms_admin_menu_set_preferred_parent()` and the filter `cms_admin_menu_preferred_parents` remain for compatibility but no longer affect placement. No entry is ever lost.
 
-To add a core page: add a catalog row, place the ID in both profiles and update the spec trees.
+To add a core page: add a catalog row, place the ID in both profiles, update the spec trees, and run `php TESTS/admin-menu/run.php`.
 
 ## Deutsch
 
@@ -64,9 +64,11 @@ Ein Eintrag ist sichtbar, wenn die Seitendatei existiert, das Core-Modul aktiv i
 
 **Neue Core-Seite aufnehmen:**
 
-1. Seitendatei mit Zugriffsprüfung anlegen.
+1. Seitendatei mit Zugriffsprüfung anlegen. Prüft die Seite ihre Capability als String-Literal oder als Konstante in derselben Datei, vergleicht der Test sie automatisch mit dem Katalog. Andernfalls (Bereichs-Map, Closure, gemeinsamer Renderer) einen kommentierten Eintrag in `MANUAL_ACCESS` in `TESTS/admin-menu/run.php` ergänzen.
 2. Katalogzeile ergänzen, mit denselben Capabilities wie die Seite.
-3. Die ID in **beiden** Profilen platzieren (`ProfileLayouts::classic()` und `structured()`) und die Bäume in [ADMIN-MENU-PROFILE.md](../workflow/specs/ADMIN-MENU-PROFILE.md) nachziehen. Menügruppen haben höchstens 8 Einträge (Ausnahme: SEO); größere Bereiche werden Kachelseiten.
+3. Die ID in **beiden** Profilen platzieren (`ProfileLayouts::classic()` und `structured()`) und die Bäume in [ADMIN-MENU-PROFILE.md](../workflow/specs/ADMIN-MENU-PROFILE.md) nachziehen. Menügruppen haben höchstens 8 Einträge (Ausnahme: SEO); größere Bereiche werden Kachelseiten. Beides prüft der Test.
+4. Entsteht die Seite erst später, die Datei in `RESERVED_FILES` eintragen. Seitendateien, die bewusst nicht im Menü stehen (Aliasse, JSON-Endpunkte, Renderer), gehören in `NOT_IN_MENU`.
+5. `php TESTS/admin-menu/run.php` ausführen.
 
 ### 4. Plugin-Menüs im Abschnitt „Aktive Plugins“
 
@@ -245,4 +247,17 @@ Eigene Bezeichnungen aus dem Editor werden nicht übersetzt.
 
 ### 12. Tests
 
-Der frühere statische Test `TESTS/admin-menu/run.php` ist mit dem Ordner `TESTS/` aus dem Repository entfernt worden. Katalog, Profile und Capabilities bei Änderungen von Hand prüfen.
+```bash
+php TESTS/admin-menu/run.php        # PHP >= 8.4.1, ohne Datenbank; -v für Details
+```
+
+| Teil | Inhalt |
+|---|---|
+| 1 | Katalog: IDs, Routen, Seitendateien, Icons, Badges, Kategorien |
+| 2 | Statischer Zugriffsvergleich Seitendatei ↔ Katalog; Sonderfälle in `MANUAL_ACCESS` |
+| 3 | Abdeckung: jede Adminseite steht im Katalog oder in `NOT_IN_MENU` |
+| 4 | Beide Profile: jeder Eintrag genau einmal platziert, Entscheidungen aus KLARSTELLUNGEN §7 |
+| 5a–5e | Unit-Tests für Validator, Registry, Builder, Plugin-API und Sidebar-Modell mit Fake-Rechten |
+| 6 | Installer-Schritt im eigenen PHP-Prozess ohne Autoloader |
+
+Der Test ändert nie Rollen oder Rechte in der Datenbank. Er läuft in der CI im Workflow `security.yml`.

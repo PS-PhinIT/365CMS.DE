@@ -412,9 +412,15 @@ class Security
     
     /**
      * Verify CSRF token
+     *
+     * Nimmt Rohwerte aus $_POST/$_GET an; Nicht-Strings (z. B. csrf_token[]=x) gelten als ungültig statt TypeError.
      */
-    public function verifyToken(string $token, string $action = 'default'): bool
+    public function verifyToken(mixed $token, string $action = 'default'): bool
     {
+        if (!is_string($token)) {
+            return false;
+        }
+
         $token = trim($token);
         if ($token === '' || !isset($_SESSION['csrf_tokens'][$action])) {
             return false;

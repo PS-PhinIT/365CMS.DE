@@ -34,9 +34,9 @@ class UsersModule
      */
     public function getListData(): array
     {
-        $roleFilter   = $_GET['role'] ?? '';
-        $statusFilter = $_GET['status'] ?? '';
-        $search       = trim($_GET['q'] ?? '');
+        $roleFilter   = \CMS\Http\Request::stringFromGet('role');
+        $statusFilter = \CMS\Http\Request::stringFromGet('status');
+        $search       = trim(\CMS\Http\Request::stringFromGet('q'));
         $page         = max(1, (int)($_GET['page'] ?? 1));
         $perPage      = 25;
 

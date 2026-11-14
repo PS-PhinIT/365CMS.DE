@@ -38,8 +38,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Die Bibliotheken unter CMS/assets/ sind Kopien ohne Lockfile; Trivy erkennt sie nur über die
-      # Spiegel-Manifeste in .github/deps/ (composer.lock, package-lock.json). Den Abgleich Manifest ↔ Bundle
-      # bei jedem Bundle-Update von Hand prüfen (DOC/assets/README.md).
+      # Spiegel-Manifeste in .github/deps/ (composer.lock, package-lock.json). Der Abgleich Manifest ↔ Bundle
+      # läuft in TESTS/security/dependencies.php.
       - name: Trivy – gebündelte Bibliotheken (blockierend ab HIGH)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -96,3 +96,6 @@ jobs:
             find CMS -type f -name "*.php" -print0
           fi | \
           xargs -0 -n1 php -l
+
+      - name: Test-Suiten (statisch, ohne Datenbank)
+        run: php TESTS/run-all.php
