@@ -72,7 +72,11 @@ T::run('Doku: Tabellenzahl, Veröffentlichungsdatum und PHP-Mindestversion', sta
     foreach (['README.md' => 'released ' . $released, 'DOC/README.md' => "RELEASE_DATE = '" . $released . "'",
         'DOC/core/STATUS.md' => 'Release `' . $released . '`', 'DOC/core/CORE-CLASSES.md' => "RELEASE_DATE = '" . $released . "'",
         'DOC/admin/system-settings/UPDATES.md' => '"released": "' . $released . '"'] as $file => $needle) {
-        T::check(str_contains(docRefRead($file), $needle), $file . ' nennt das Veröffentlichungsdatum aus update.json', $needle);
+        $content = docRefRead($file);
+        // README.md formatiert das Datum als Code-Span ("released `2026-11-12`").
+        $found = str_contains($content, $needle)
+            || ($file === 'README.md' && str_contains($content, 'released `' . $released . '`'));
+        T::check($found, $file . ' nennt das Veröffentlichungsdatum aus update.json', $needle);
     }
 
     foreach (['README.md' => 'PHP `' . $minPhp . '+`', 'DOC/README.md' => 'PHP ' . $minPhp . '+',
