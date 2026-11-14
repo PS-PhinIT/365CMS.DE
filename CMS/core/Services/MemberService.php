@@ -20,6 +20,7 @@ use CMS\Json;
 use CMS\Member\MemberI18n;
 use CMS\Member\MemberSanitizer;
 use CMS\Security;
+use CMS\Services\Security\PasswordPolicyService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -216,7 +217,7 @@ class MemberService
         if ($new !== $confirm) {
             return 'Neues Passwort und Bestätigung stimmen nicht überein.';
         }
-        $policyResult = \CMS\Auth::validatePasswordPolicy($new);
+        $policyResult = \CMS\Auth::validatePasswordPolicy($new, $userId);
         if ($policyResult !== true) {
             return $policyResult;
         }
@@ -228,10 +229,14 @@ class MemberService
             return (string) $reauth;
         }
 
+        $newHash = Security::hashPassword($new);
         $this->db->execute(
             "UPDATE {$this->prefix}users SET password = ? WHERE id = ?",
-            [Security::hashPassword($new), $userId]
+            [$newHash, $userId]
         );
+        PasswordPolicyService::getInstance()->recordChange($userId, $newHash, 'member');
+        // Ein abgelaufenes Passwort ist damit erneuert (Weiche in Router::dispatch()).
+        unset($_SESSION['password_change_required']);
         \CMS\Auth::instance()->refreshPasswordFingerprint($userId);
 
         return true;

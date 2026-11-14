@@ -65,6 +65,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `DOC/` | documentation |
 | `RELEASE/` | release zips and checksums |
 | `SCREENSHOTS/` | screenshots |
+| `TESTS/password-policy/` | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration / Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung (`php TESTS/password-policy/run.php [-v]`) |
 | `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |

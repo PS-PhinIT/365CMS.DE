@@ -7,6 +7,7 @@ use CMS\Auth;
 use CMS\Database;
 use CMS\Logger;
 use CMS\Security;
+use CMS\Services\Security\PasswordPolicyService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -779,8 +780,17 @@ final class CmsAuthPageService
                 return ['success' => false, 'message' => 'Dieser Reset-Link ist abgelaufen. Bitte fordere einen neuen Link an.'];
             }
 
+            // Wiederverwendung erst prüfbar, wenn das Konto feststeht (Historie je Benutzer).
+            $resetUserId = (int) $this->db->get_var("SELECT id FROM {$this->prefix}users WHERE email = ? LIMIT 1", [(string) $row->email]);
+            if ($resetUserId > 0 && PasswordPolicyService::getInstance()->isReused($resetUserId, $password)) {
+                return ['success' => false, 'message' => (string) PasswordPolicyService::getInstance()->validate($password, $resetUserId)];
+            }
+
             $passwordHash = Security::instance()->hashPassword($password);
             $this->db->execute("UPDATE {$this->prefix}users SET password = ? WHERE email = ?", [$passwordHash, (string) $row->email]);
+            if ($resetUserId > 0) {
+                PasswordPolicyService::getInstance()->recordChange($resetUserId, $passwordHash, 'reset');
+            }
             $this->db->execute("DELETE FROM {$this->prefix}password_resets WHERE email = ?", [(string) $row->email]);
             EmailVerificationService::getInstance()->markVerifiedByEmail((string) $row->email);
             // Bestehende Sitzungen werden über den Passwort-Fingerprint ungültig (Auth::checkSession());

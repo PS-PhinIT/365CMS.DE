@@ -107,6 +107,8 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `user_email_changed` | Action | `$userId, $previousEmail, $newEmail` (nach Bestätigung über `/cms-confirm-email-change` oder Admin-Änderung ohne Bestätigung; seit 4.0.0) |
 | `guest_orders_assigned` | Action | `$userId, $count` (Gastbestellungen der bestätigten Adresse dem Konto zugeordnet; seit 4.0.0) |
 | `user_sessions_revoked` | Action | `$userId, $initiator` (`'member'`/`'admin'`; alle Sitzungen und API-Tokens beendet, `Auth::revokeAllSessions()`; seit 4.0.0) |
+| `cms_password_changed` | Action | `$userId, $source` (`'register'`, `'member'`, `'admin_create'`, `'admin_update'`, `'reset'`; nach jedem gespeicherten Passwort, `PasswordPolicyService::recordChange()`; seit 4.1.0) |
+| `cms_password_policy` | Filter | `$policy` (`min_length`, `require_uppercase`/`_lowercase`/`_digit`/`_special`, `max_age_days`, `history`); Ergebnis kann die Einstellungen nur verschärfen, nie abschwächen (seit 4.1.0) |
 | `subscription_assigned` | Action | `$userId, $planId` |
 | `dsgvo_export_data` | Action | `$userId, $email` (Auskunft abgeschlossen) |
 | `dsgvo_delete_data` | Action | `$userId, $email` (unmittelbar vor der endgültigen Kontolöschung – Plugins löschen hier ihre Daten) |

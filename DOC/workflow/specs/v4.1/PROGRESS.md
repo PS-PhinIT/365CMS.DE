@@ -10,7 +10,7 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 | # | Arbeitspaket | Status | Ergebnis / Nachweis |
 |---|---|---|---|
 | 0 | Analyse und Spezifikation (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/v4.1/` (14.11.2026) |
-| 1a | Passwort-Richtlinie mit Historie und Ablauf | ⬜ | |
+| 1a | Passwort-Richtlinie mit Historie und Ablauf | ✅ | `Security\PasswordPolicyService`, Einbindung in Registrierung/Admin/Mitglied/Zurücksetzen, Formular unter *Login & Sperren*, Unicode-Zeichenklassen (Server und Live-Tester), Ablauf-Flag beim Login (Weiche: 1b); `TESTS/password-policy` 53 Prüfungen, Gegenproben (Historie, Filter) schlagen fehl |
 | 1b | Rollenbasierter MFA-Zwang | ⬜ | |
 | 1c | Entra-ID-SSO (OIDC) | ⬜ | |
 | 2a | AVIF-Derivate | ⬜ | |
@@ -23,4 +23,4 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 | 5 | Zahlungen & Rechnungen | ⬜ | |
 | 6a | CLI | ⬜ | |
 | 6b | Alerting | ⬜ | |
-| S | Schema v26 (gemeinsam) | ⬜ | |
+| S | Schema v26 (gemeinsam) | 🟡 | Tabellen/Spalten für 1 und 4 definiert (`FEATURE_TABLES_V26`), Marke folgt mit dem Release; `TESTS/schema-v26` |

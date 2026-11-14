@@ -23,3 +23,28 @@ source. The limits apply to admin and member login and additionally cap password
   der Login. Die zusätzliche Verzögerung je Konto nach 5 Fehlversuchen bleibt unabhängig davon aktiv.
 - Änderungen werden im Audit-Log festgehalten (`security.login_thresholds_updated`).
 - Dienst: `CMS\Services\LoginThrottleSettings` (`maxAttempts()`, `lockoutSeconds()`, `describe()`, `save()`).
+
+## Passwort-Richtlinie (seit 4.1.0)
+
+Zweites Formular auf derselben Seite (eigenes CSRF-Token `admin_password_policy`, Audit-Log `password_policy_saved`).
+Die Standardwerte entsprechen dem Verhalten bis 4.0.0.
+
+| Feld | Bereich | Standard |
+|---|---|---|
+| Mindestlänge | 8–128 Zeichen | 12 |
+| Zeichenklassen | Groß-, Kleinbuchstabe, Ziffer, Sonderzeichen (je abschaltbar) | alle an |
+| Passwort-Historie | 0–24 (0 = aus) | 5 |
+| Höchstalter | 0–730 Tage (0 = nie) | 0 |
+
+- **Zeichenklassen sind Unicode-fähig:** Umlaute zählen als Groß- bzw. Kleinbuchstaben, als Sonderzeichen gilt alles außer
+  Buchstaben und Ziffern (bis 4.0.0 nur `A–Z`/`a–z`; `ß` zählte als Sonderzeichen). Der Live-Tester unter
+  *Benutzer → Einstellungen* prüft mit denselben Mustern.
+- **Geltungsbereich:** Registrierung, Passwortänderung im Mitgliederbereich, Anlegen/Bearbeiten im Admin, Zurücksetzen per
+  Link. Die Historie wird geprüft, sobald das Konto feststeht (Änderung, Admin-Bearbeitung, Zurücksetzen); gespeichert werden
+  nur bcrypt-Hashes (`password_history`). Historie 0 löscht die gespeicherten Hashes beim nächsten Wechsel.
+- **Höchstalter:** Nach dem Passwort-Login mit abgelaufenem Passwort führt jede Seite zur Passwortänderung, bis ein neues
+  Passwort gesetzt ist. Grundlage ist `users.password_changed_at` (Bestandskonten: Registrierungsdatum).
+- **Erweiterungen** können die Richtlinie über den Filter `cms_password_policy` nur verschärfen; jede Änderung löst
+  `cms_password_changed` aus.
+- Dienst: `CMS\Services\Security\PasswordPolicyService`; Spezifikation:
+  [workflow/specs/v4.1/01-IDENTITY.md](../../workflow/specs/v4.1/01-IDENTITY.md) §1a.

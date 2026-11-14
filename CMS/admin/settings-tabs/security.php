@@ -16,9 +16,11 @@ if (!defined('ABSPATH')) {
 use CMS\Auth;
 use CMS\Security;
 use CMS\Services\LoginThrottleSettings;
+use CMS\Services\Security\PasswordPolicyService;
 
 const CMS_ADMIN_SECURITY_SETTINGS_CAPABILITY = 'manage_settings';
 const CMS_ADMIN_SECURITY_SETTINGS_CSRF_ACTION = 'admin_security_settings';
+const CMS_ADMIN_PASSWORD_POLICY_CSRF_ACTION = 'admin_password_policy';
 
 if (!Auth::instance()->isAdmin() || !Auth::instance()->hasCapability(CMS_ADMIN_SECURITY_SETTINGS_CAPABILITY)) {
     header('Location: /');
@@ -27,6 +29,31 @@ if (!Auth::instance()->isAdmin() || !Auth::instance()->hasCapability(CMS_ADMIN_S
 
 $securityAlert = $_SESSION['admin_alert'] ?? null;
 unset($_SESSION['admin_alert']);
+
+// 4.1.0: Passwort-Richtlinie (eigenes Formular, eigenes CSRF-Token, Audit-Log).
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string) ($_POST['form'] ?? '') === 'password_policy') {
+    if (!Security::instance()->verifyToken((string) ($_POST['csrf_token'] ?? ''), CMS_ADMIN_PASSWORD_POLICY_CSRF_ACTION)) {
+        $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => __('security_settings.error.csrf')];
+    } else {
+        try {
+            $saved = PasswordPolicyService::save($_POST);
+            \CMS\AuditLogger::instance()->log(
+                \CMS\AuditLogger::CAT_SECURITY,
+                'password_policy_saved',
+                'Passwort-Richtlinie gespeichert',
+                'settings',
+                null,
+                $saved
+            );
+            $_SESSION['admin_alert'] = ['type' => 'success', 'message' => __('password_policy.saved')];
+        } catch (\Throwable) {
+            $_SESSION['admin_alert'] = ['type' => 'danger', 'message' => __('security_settings.error.save')];
+        }
+    }
+
+    header('Location: /admin/settings?tab=security#password-policy', true, 303);
+    exit;
+}
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $parse = static function (mixed $raw): int|false|null {
@@ -63,6 +90,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 $securityThresholds = LoginThrottleSettings::describe();
 $securityCsrfToken = Security::instance()->generateToken(CMS_ADMIN_SECURITY_SETTINGS_CSRF_ACTION);
+$passwordPolicy = PasswordPolicyService::getInstance()->definition();
+$passwordPolicyCsrfToken = Security::instance()->generateToken(CMS_ADMIN_PASSWORD_POLICY_CSRF_ACTION);
 $pageTitle = __('security_settings.title');
 $activePage = 'settings-security';
 $settingsTabsActive = 'security';

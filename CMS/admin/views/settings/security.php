@@ -9,9 +9,12 @@ if (!defined('ABSPATH')) {
  * @var array{attempts:array{value:int,source:string,constant:?int,setting:?int},timeout:array{value:int,source:string,constant:?int,setting:?int}} $securityThresholds
  * @var string $securityCsrfToken
  * @var array<string,string>|null $securityAlert
+ * @var array{min_length:int,require_uppercase:bool,require_lowercase:bool,require_digit:bool,require_special:bool,max_age_days:int,history:int} $passwordPolicy
+ * @var string $passwordPolicyCsrfToken
  */
 
 use CMS\Services\LoginThrottleSettings;
+use CMS\Services\Security\PasswordPolicyService;
 
 $secEsc = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $secT = static fn (string $key, string|int ...$args): string => htmlspecialchars($args !== [] ? vsprintf((string) __($key), $args) : (string) __($key), ENT_QUOTES, 'UTF-8');
@@ -94,6 +97,54 @@ $secTimeout = $securityThresholds['timeout'];
                     <?php else: ?>
                         <span></span>
                     <?php endif; ?>
+                    <button class="btn btn-primary" type="submit"><?= $secEsc((string) __('Save Changes')) ?></button>
+                </div>
+            </form>
+
+            <form method="post" action="/admin/settings?tab=security" class="card mt-3" id="password-policy">
+                <input type="hidden" name="csrf_token" value="<?= $secEsc($passwordPolicyCsrfToken) ?>">
+                <input type="hidden" name="form" value="password_policy">
+                <div class="card-header">
+                    <h2 class="card-title"><?= $secT('password_policy.heading') ?></h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary"><?= $secT('password_policy.intro') ?></p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="pp-min-length"><?= $secT('password_policy.min_length') ?></label>
+                            <input class="form-control" type="number" id="pp-min-length" name="min_length" required
+                                   min="<?= PasswordPolicyService::MIN_LENGTH_FLOOR ?>" max="<?= PasswordPolicyService::MIN_LENGTH_CEILING ?>"
+                                   value="<?= (int) $passwordPolicy['min_length'] ?>">
+                            <div class="form-hint"><?= $secT('password_policy.min_length_hint', PasswordPolicyService::MIN_LENGTH_FLOOR, PasswordPolicyService::MIN_LENGTH_CEILING) ?></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="pp-history"><?= $secT('password_policy.history') ?></label>
+                            <input class="form-control" type="number" id="pp-history" name="history" required
+                                   min="0" max="<?= PasswordPolicyService::HISTORY_CEILING ?>" value="<?= (int) $passwordPolicy['history'] ?>">
+                            <div class="form-hint"><?= $secT('password_policy.history_hint', PasswordPolicyService::HISTORY_CEILING) ?></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="pp-max-age"><?= $secT('password_policy.max_age') ?></label>
+                            <div class="input-group">
+                                <input class="form-control" type="number" id="pp-max-age" name="max_age_days" required
+                                       min="0" max="<?= PasswordPolicyService::MAX_AGE_CEILING ?>" value="<?= (int) $passwordPolicy['max_age_days'] ?>">
+                                <span class="input-group-text"><?= $secT('password_policy.days') ?></span>
+                            </div>
+                            <div class="form-hint"><?= $secT('password_policy.max_age_hint', PasswordPolicyService::MAX_AGE_CEILING) ?></div>
+                        </div>
+                    </div>
+                    <fieldset class="mt-3">
+                        <legend class="form-label"><?= $secT('password_policy.classes') ?></legend>
+                        <?php foreach (PasswordPolicyService::CLASSES as $ppKey => $ppClass): ?>
+                            <label class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="require_<?= $secEsc($ppKey) ?>" value="1"<?= !empty($passwordPolicy['require_' . $ppKey]) ? ' checked' : '' ?>>
+                                <span class="form-check-label"><?= $secEsc($ppClass['label']) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </fieldset>
+                    <p class="form-hint mt-3 mb-0"><?= $secT('password_policy.scope_hint') ?></p>
+                </div>
+                <div class="card-footer text-end">
                     <button class="btn btn-primary" type="submit"><?= $secEsc((string) __('Save Changes')) ?></button>
                 </div>
             </form>
