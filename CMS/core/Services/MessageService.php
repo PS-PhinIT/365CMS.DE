@@ -198,7 +198,39 @@ class MessageService
         ]);
 
         $newId = $this->db->lastInsertId();
-        return $newId ? (int) $newId : false;
+        if (!$newId) {
+            return false;
+        }
+
+        $this->notifyRecipient($recipientId, (int) ($parentId ?: $newId), $subject);
+
+        return (int) $newId;
+    }
+
+    /**
+     * Legt für den Empfänger eine In-App-Benachrichtigung „Neue Nachricht“ an (MD-17). Der Typ `message` kann
+     * im Mitgliederbereich abbestellt werden; Fehler beim Anlegen verhindern den Versand nicht.
+     */
+    private function notifyRecipient(int $recipientId, int $threadId, string $subject): void
+    {
+        if (!class_exists(NotificationService::class)) {
+            return;
+        }
+
+        try {
+            $title = class_exists(\CMS\Member\MemberI18n::class)
+                ? \CMS\Member\MemberI18n::t('member.messages.new')
+                : 'Neue Nachricht';
+            NotificationService::getInstance()->create(
+                $recipientId,
+                'message',
+                $title,
+                $subject,
+                '/member/messages?thread=' . $threadId
+            );
+        } catch (\Throwable) {
+            // Benachrichtigung ist optional.
+        }
     }
 
     /**

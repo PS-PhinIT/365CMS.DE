@@ -1,12 +1,16 @@
 <?php
 /**
- * Mitgliederbereich „Newsletter“ (`/member/plugin/newsletter`): Abonnement mit der Konto-Adresse an- und abmelden,
- * Thema (Segment) und Sprache wählen. Mit aktiviertem Double-Opt-In kommt auch hier eine Bestätigungsmail.
- * Ein Abonnement ohne Kontobezug wird nur über eine bestätigte Konto-Adresse zugeordnet
- * (EmailVerificationService::matchableEmail()). Konten ohne bestätigte Adresse erhalten hier nur den Hinweis,
- * die Adresse über einen Passwort-Reset zu bestätigen; danach steht alles zur Verfügung.
+ * Mitgliederbereich „Newsletter“: Unterseite `/member/plugin/newsletter` und Dashboard-Widget (Anker `#newsletter`).
  *
- * @package CMSv2\Core\Services\Newsletter
+ * Beide nutzen dieselbe Vorlage `views/member/widgets/newsletter.php` (im Theme überschreibbar als
+ * `<theme>/member/widgets/newsletter.php`) und denselben Service (NewsletterMemberService). Formulare posten an
+ * `/member/plugin/newsletter`; die Registry verarbeitet den POST vor jeder Ausgabe, setzt die Rückmeldung als
+ * Flash und leitet mit 303 auf `return_to` (dashboard → `/member/dashboard#newsletter`, sonst die Unterseite).
+ *
+ * Ein Abonnement ohne Kontobezug wird nur über eine bestätigte Konto-Adresse zugeordnet
+ * (EmailVerificationService::matchableEmail()); unbestätigte Konto-Adressen melden sich immer per Double-Opt-In an.
+ *
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);
@@ -14,7 +18,7 @@ declare(strict_types=1);
 namespace CMS\Services\Newsletter;
 
 use CMS\Member\PluginDashboardRegistry;
-use CMS\Services\EmailVerificationService;
+use CMS\ThemeManager;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -23,11 +27,25 @@ if (!defined('ABSPATH')) {
 final class NewsletterMemberSection
 {
     public const SLUG = 'newsletter';
+    public const ANCHOR = 'newsletter';
+    public const ACTION_URL = '/member/plugin/' . self::SLUG;
+    /** Kennung der Flash-Meldungen dieses Bereichs (`payload.source`). */
+    public const FLASH_SOURCE = 'newsletter';
 
     public static function register(PluginDashboardRegistry $registry): void
     {
         if (!NewsletterRepository::instance()->isAvailable()) {
             return;
+        }
+        $widget = [
+            'title' => (string) __('newsletter.member.title'),
+            'description' => (string) __('newsletter.member.widget_description'),
+            'color' => '#0d9488',
+            'stats_callback' => [self::class, 'stats'],
+            'anchor' => self::ANCHOR,
+        ];
+        if (NewsletterSettings::flag('member_widget_enabled')) {
+            $widget['render_callback'] = [self::class, 'renderWidget'];
         }
         $registry->register([
             'plugin' => 'cms-newsletter',
@@ -37,159 +55,151 @@ final class NewsletterMemberSection
             'category' => 'plugins',
             'priority' => 85,
             'csrf' => 'core',
-            'dashboard_widget' => [
-                'title' => (string) __('newsletter.member.title'),
-                'description' => (string) __('newsletter.member.widget_description'),
-                'color' => '#0d9488',
-                'stats_callback' => [self::class, 'stats'],
-            ],
+            'dashboard_widget' => $widget,
             'render_callback' => [self::class, 'render'],
             'post_callback' => [self::class, 'handlePost'],
         ]);
     }
 
-    /** @return array{count: int, label: string} */
+    /** Zählerkachel (Rückfall ohne Widget): 1 = aktiv abonniert. @return array{count: int, label: string} */
     public static function stats(object $user): array
     {
-        $status = (string) (self::find($user)['status'] ?? '');
+        $status = NewsletterMemberService::instance()->statusFor($user)['status'];
 
         return ['count' => $status === 'active' ? 1 : 0, 'label' => (string) __($status === 'active' ? 'newsletter.member.status_active' : 'newsletter.member.status_none')];
     }
 
-    /** @param array<string, mixed> $params */
-    public static function handlePost(object $user, array $params = []): void
+    /**
+     * POST an `/member/plugin/newsletter` (vor jeder Ausgabe aufgerufen). Rückgabe an die Registry:
+     * Flash-Meldung, Ziel der 303-Weiterleitung und Kennung für das Widget.
+     *
+     * @param array<string, mixed> $params
+     * @return array{type: string, message: string, redirect: string, payload: array<string, mixed>}
+     */
+    public static function handlePost(object $user, array $params = []): array
     {
-        $repo = NewsletterRepository::instance();
-        $action = (string) ($_POST['newsletter_action'] ?? '');
-        $current = self::find($user);
-        $notice = null;
-        $email = NewsletterRepository::normalizeEmail((string) ($user->email ?? ''));
+        $action = is_scalar($_POST['newsletter_action'] ?? null) ? (string) $_POST['newsletter_action'] : '';
+        $returnKey = ($_POST['return_to'] ?? '') === 'dashboard' ? 'dashboard' : 'section';
+        $result = NewsletterMemberService::instance()->handle($user, $action, [
+            'consent' => $_POST['newsletter_consent'] ?? null,
+            'segment' => $_POST['segment'] ?? null,
+            'locale' => $_POST['locale'] ?? null,
+        ]);
 
-        if ($action === 'subscribe' && $email !== '') {
-            $locale = ($_POST['locale'] ?? '') === 'en' ? 'en' : 'de';
-            $verified = self::hasVerifiedEmail($user);
-            if ($current !== null && $current['status'] === 'active') {
-                // Bereits aktiv: nur Thema und Sprache ändern.
-                // Ohne Themenauswahl (nur ein Thema definiert) bleibt das bisherige Thema erhalten.
-                $segment = trim((string) ($_POST['segment'] ?? '')) ?: (string) ($current['segment_slug'] ?? '');
-                $repo->saveSubscriber(['segment_slug' => $segment, 'locale' => $locale, 'user_id' => (int) $user->id] + $current, (int) $current['id']);
-                $notice = ['success', (string) __('newsletter.member.saved')];
-            } else {
-                // Unbestätigte Konto-Adresse: wie eine öffentliche Anmeldung behandeln – immer Double-Opt-In,
-                // keine Bindung an das Konto und dieselbe Meldung, egal ob die Adresse schon eingetragen ist.
-                $doubleOptIn = !$verified || NewsletterSettings::flag('require_double_opt_in');
-                $input = [
-                    'email' => $email,
-                    'first_name' => (string) ($user->first_name ?? ''),
-                    'last_name' => (string) ($user->last_name ?? ''),
-                    'segment' => (string) ($_POST['segment'] ?? ''),
-                    'locale' => $locale,
-                    'source' => 'member',
-                    'consent_text' => NewsletterSettings::localized('consent_text', $locale),
-                ];
-                if ($verified) {
-                    $input['user_id'] = (int) $user->id;
-                }
-                $result = $repo->subscribe($input, $doubleOptIn);
-                if (!empty($result['success'])) {
-                    if ($verified) {
-                        $repo->saveSubscriber(['user_id' => (int) $user->id] + ($repo->subscriber((int) $result['id']) ?? []), (int) $result['id']);
-                    }
-                    if (!empty($result['send_confirmation']) && ($row = $repo->subscriber((int) $result['id'])) !== null) {
-                        NewsletterMailer::sendConfirmation($row);
-                    }
-                    $notice = ['success', (string) __($doubleOptIn ? 'newsletter.member.check_inbox' : 'newsletter.member.subscribed')];
-                } else {
-                    $notice = ['danger', (string) __('newsletter.member.error')];
-                }
-            }
-        } elseif ($action === 'unsubscribe' && $current !== null) {
-            $repo->unsubscribeById((int) $current['id']);
-            $notice = ['success', (string) __('newsletter.member.unsubscribed')];
-        }
-
-        self::output($user, $notice);
+        return [
+            'type' => $result['type'],
+            'message' => $result['message'],
+            'redirect' => NewsletterMemberService::returnTarget($returnKey),
+            'payload' => ['source' => self::FLASH_SOURCE, 'code' => $result['code'], 'return_to' => $returnKey],
+        ];
     }
 
-    /** @param array<string, mixed> $params */
+    /** Unterseite: Meldungen zeigt der Kopf des Mitgliederbereichs (alerts.php). @param array<string, mixed> $params */
     public static function render(object $user, array $params = []): void
     {
-        self::output($user, null);
+        echo self::renderTemplate($user, 'section', null);
     }
 
     /**
-     * Abonnement des Kontos: über die user_id, über die Konto-Adresse nur, wenn diese nachweislich bestätigt ist.
-     * Sonst könnte ein Konto, das auf eine fremde Adresse registriert wurde, deren Abonnement einsehen,
-     * abmelden oder an sich binden.
+     * `dashboard_widget.render_callback`: Markup des Widgets. Eine Flash-Meldung dieses Bereichs mit
+     * `return_to = dashboard` wird hier (statt oben im Dashboard) angezeigt, damit sie am Rücksprung-Anker steht.
      *
-     * @return array<string, mixed>|null
+     * @param array<string, mixed> $context
      */
-    private static function find(object $user): ?array
+    public static function renderWidget(object $user, array $context = []): string
     {
-        $repo = NewsletterRepository::instance();
-        $own = $repo->subscriberByUser((int) ($user->id ?? 0));
-        if ($own !== null) {
-            return $own;
-        }
-        $email = EmailVerificationService::getInstance()->matchableEmail((int) ($user->id ?? 0), (string) ($user->email ?? ''));
-
-        return $email !== '' ? $repo->subscriberByEmail($email) : null;
+        return self::renderTemplate($user, 'dashboard', self::takeWidgetNotice());
     }
 
-    private static function hasVerifiedEmail(object $user): bool
+    /**
+     * Rendert die Widget-Vorlage (Theme-Override vor Core-Vorlage).
+     *
+     * @param array{type: string, message: string}|null $notice
+     */
+    public static function renderTemplate(object $user, string $returnTo, ?array $notice): string
     {
-        return EmailVerificationService::getInstance()->matchableEmail((int) ($user->id ?? 0), (string) ($user->email ?? '')) !== '';
+        $service = NewsletterMemberService::instance();
+        $uiLocale = $service->uiLocale();
+        $vars = [
+            'status' => $service->statusFor($user),
+            'csrfField' => PluginDashboardRegistry::instance()->csrfField(self::SLUG),
+            'actionUrl' => self::ACTION_URL,
+            'segments' => $service->segmentChoices($uiLocale),
+            'locales' => $service->localeChoices(),
+            'consentText' => $service->consentText($uiLocale),
+            'notice' => $notice,
+            'returnTo' => $returnTo === 'dashboard' ? 'dashboard' : 'section',
+        ];
+
+        return self::includeTemplate(self::templatePath(), $vars);
     }
 
-    /** @param array{0: string, 1: string}|null $notice */
-    private static function output(object $user, ?array $notice): void
+    /** Pfad der Vorlage: `<theme>/member/widgets/newsletter.php`, sonst `views/member/widgets/newsletter.php`. */
+    public static function templatePath(): string
     {
-        $e = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-        $subscriber = self::find($user);
-        $status = (string) ($subscriber['status'] ?? '');
-        $locale = (string) ($subscriber['locale'] ?? NewsletterI18n::requestLocale());
-        $segment = (string) ($subscriber['segment_slug'] ?? NewsletterSettings::get('default_segment'));
-        $csrf = PluginDashboardRegistry::instance()->csrfField(self::SLUG);
-        $action = '/member/plugin/' . self::SLUG;
-
-        if ($notice !== null) {
-            echo '<div class="alert alert-' . $e($notice[0]) . '" role="status">' . $e($notice[1]) . '</div>';
-        }
-        $statusKey = match ($status) {
-            'active' => 'newsletter.member.state_active',
-            'pending' => 'newsletter.member.state_pending',
-            default => 'newsletter.member.state_none',
-        };
-        if ($subscriber === null && !self::hasVerifiedEmail($user)) {
-            // Ohne bestätigte Adresse keine Aussage darüber, ob die Adresse den Newsletter bezieht.
-            // Anmelden und Verwalten erst mit bestätigter Adresse: Ein hier per Double-Opt-In angelegtes
-            // Abonnement bliebe ohne Kontobezug und wäre im Mitgliederbereich nicht sichtbar.
-            echo '<p>' . $e(sprintf((string) __('newsletter.member.state_unverified'), (string) ($user->email ?? ''))) . '</p>';
-
-            return;
-        } else {
-            echo '<p>' . $e(sprintf((string) __($statusKey), (string) ($user->email ?? ''))) . '</p>';
-        }
-
-        echo '<form method="post" action="' . $e($action) . '" class="mb-3">' . $csrf . '<input type="hidden" name="newsletter_action" value="subscribe">';
-        $segments = NewsletterSettings::segments();
-        if (count($segments) > 1) {
-            echo '<div class="mb-3"><label class="form-label" for="memberNlSegment">' . $e(__('newsletter.public.segment')) . '</label><select class="form-select" id="memberNlSegment" name="segment">';
-            foreach ($segments as $slug => $labels) {
-                echo '<option value="' . $e($slug) . '"' . ($slug === $segment ? ' selected' : '') . '>' . $e($labels[$locale] ?? $labels['de']) . '</option>';
+        try {
+            $themeFile = ThemeManager::instance()->getThemePath() . 'member/widgets/newsletter.php';
+            if (is_file($themeFile)) {
+                return $themeFile;
             }
-            echo '</select></div>';
+        } catch (\Throwable) {
         }
-        echo '<div class="mb-3"><label class="form-label" for="memberNlLocale">' . $e(__('newsletter.member.language')) . '</label><select class="form-select" id="memberNlLocale" name="locale">'
-            . '<option value="de"' . ($locale === 'de' ? ' selected' : '') . '>Deutsch</option><option value="en"' . ($locale === 'en' ? ' selected' : '') . '>English</option></select></div>';
-        if ($status !== 'active') {
-            echo '<p class="small text-secondary">' . $e(NewsletterSettings::localized('consent_text', $locale)) . '</p>';
-        }
-        echo '<button type="submit" class="btn btn-primary">' . $e(__($status === 'active' ? 'newsletter.member.save' : 'newsletter.member.subscribe')) . '</button></form>';
 
-        if (in_array($status, ['active', 'pending'], true)) {
-            echo '<form method="post" action="' . $e($action) . '">' . $csrf . '<input type="hidden" name="newsletter_action" value="unsubscribe">'
-                . '<button type="submit" class="btn btn-outline-danger">' . $e(__('newsletter.member.unsubscribe')) . '</button></form>';
+        return ABSPATH . 'views/member/widgets/newsletter.php';
+    }
+
+    /**
+     * Bindet die Vorlage mit genau den Variablen des Vertrags ein und liefert die Ausgabe.
+     *
+     * @param array<string, mixed> $vars
+     */
+    public static function includeTemplate(string $file, array $vars): string
+    {
+        if (!is_file($file)) {
+            return '';
         }
+        $level = ob_get_level();
+        ob_start();
+        try {
+            (static function (string $__file, array $__vars): void {
+                $status = $__vars['status'];
+                $csrfField = $__vars['csrfField'];
+                $actionUrl = $__vars['actionUrl'];
+                $segments = $__vars['segments'];
+                $locales = $__vars['locales'];
+                $consentText = $__vars['consentText'];
+                $notice = $__vars['notice'];
+                $returnTo = $__vars['returnTo'];
+                include $__file;
+            })($file, $vars);
+        } finally {
+            $html = '';
+            while (ob_get_level() > $level) {
+                $html = (string) ob_get_clean() . $html;
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * Holt eine Flash-Meldung dieses Bereichs für das Dashboard-Widget aus der Sitzung (und verbraucht sie).
+     *
+     * @return array{type: string, message: string}|null
+     */
+    private static function takeWidgetNotice(): ?array
+    {
+        $flash = $_SESSION['member_alert'] ?? null;
+        if (!is_array($flash) || ($flash['payload']['source'] ?? '') !== self::FLASH_SOURCE || ($flash['payload']['return_to'] ?? '') !== 'dashboard') {
+            return null;
+        }
+        if (class_exists(\CMS\MemberArea\MemberController::class, false)) {
+            $flash = \CMS\MemberArea\MemberController::instance()->consumeFlash() ?? $flash;
+        } else {
+            unset($_SESSION['member_alert']);
+        }
+        $type = in_array($flash['type'] ?? '', PluginDashboardRegistry::FLASH_TYPES, true) ? (string) $flash['type'] : 'info';
+
+        return ['type' => $type, 'message' => (string) ($flash['message'] ?? '')];
     }
 }

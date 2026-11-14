@@ -94,9 +94,15 @@ $settings = $data['settings'] ?? [];
                                 <label class="form-label" for="dashboard_logo">Logo-URL für Dashboard-Header</label>
                                 <input id="dashboard_logo" name="dashboard_logo" type="text" class="form-control" value="<?php echo htmlspecialchars((string)($settings['dashboard_logo'] ?? '')); ?>" placeholder="https://.../logo.svg">
                             </div>
-                            <div>
+                            <div class="mb-3">
                                 <label class="form-label" for="dashboard_welcome_text">Willkommenstext im Frontend</label>
-                                <textarea id="dashboard_welcome_text" name="dashboard_welcome_text" class="form-control" rows="5" placeholder="Dieser Text erscheint im hervorgehobenen Begrüßungsbereich des Member-Dashboards."><?php echo htmlspecialchars((string)($settings['dashboard_welcome_text'] ?? '')); ?></textarea>
+                                <textarea id="dashboard_welcome_text" name="dashboard_welcome_text" class="form-control" rows="5" aria-describedby="dashboard_welcome_text_hint" placeholder="Dieser Text erscheint im hervorgehobenen Begrüßungsbereich des Member-Dashboards."><?php echo htmlspecialchars((string)($settings['dashboard_welcome_text'] ?? '')); ?></textarea>
+                                <div class="form-hint" id="dashboard_welcome_text_hint">Erlaubt: Absätze, Links, fett, kursiv, Listen. Die Ausgabe wird bereinigt (PurifierService, Profil „strict“).</div>
+                            </div>
+                            <div>
+                                <label class="form-label" for="dashboard_footer_text">Fußzeilentext im Mitgliederbereich</label>
+                                <input id="dashboard_footer_text" name="dashboard_footer_text" type="text" maxlength="200" class="form-control" aria-describedby="dashboard_footer_text_hint" value="<?php echo htmlspecialchars((string)($settings['dashboard_footer_text'] ?? ''), ENT_QUOTES); ?>">
+                                <div class="form-hint" id="dashboard_footer_text_hint">Optional, reiner Text (max. 200 Zeichen). Leer = nur Jahr und Website-Name.</div>
                             </div>
                         </div>
                     </div>

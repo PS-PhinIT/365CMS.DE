@@ -2,7 +2,9 @@
 /**
  * Member Router Module
  *
- * @package CMSv2\Core
+ * Routen `/dashboard`, `/member`, `/member/:page` und `/member/plugin/:slug[/:action[/:id]]`.
+ *
+ * @package CMS\Routing
  */
 
 declare(strict_types=1);
@@ -62,7 +64,7 @@ final class MemberRouter
             return;
         }
 
-        $this->router->redirect('/member/dashboard');
+        $this->router->redirect($this->resolveMemberHomePath());
     }
 
     public function renderMember(): void
@@ -72,7 +74,28 @@ final class MemberRouter
             return;
         }
 
-        $this->router->redirect('/member/dashboard');
+        // Direkt auf die Startseite: bei abgeschaltetem Dashboard ohne Umweg über /member/dashboard (MD-03).
+        $this->router->redirect($this->resolveMemberHomePath());
+    }
+
+    /**
+     * Startseite des Mitgliederbereichs laut Einstellungen (`/member/dashboard` oder `/member/profile`).
+     */
+    private function resolveMemberHomePath(): string
+    {
+        try {
+            $controllerFile = ABSPATH . 'member/includes/class-member-controller.php';
+            if (!class_exists(\CMS\MemberArea\MemberController::class, false) && is_file($controllerFile)) {
+                require_once $controllerFile;
+            }
+
+            if (class_exists(\CMS\MemberArea\MemberController::class, false)) {
+                return \CMS\MemberArea\MemberController::instance()->getHomePath();
+            }
+        } catch (\Throwable) {
+        }
+
+        return '/member/dashboard';
     }
 
     public function renderMemberPage(string $page): void
@@ -116,12 +139,9 @@ final class MemberRouter
             return;
         }
 
-        if ($action !== '') {
-            $_GET['action'] = sanitize_key($action);
-        }
-        if ($id !== '' && ctype_digit($id)) {
-            $_GET['id'] = $id;
-        }
+        // Route-Parameter direkt übergeben statt in $_GET zu schreiben (kein Core-Bereich liest $_GET['action'|'id']).
+        $params = \CMS\Member\PluginDashboardRegistry::normalizeRouteParams(['action' => $action, 'id' => $id]);
+        $action = $params['action'] ?? '';
 
         $registry = \CMS\Member\PluginDashboardRegistry::instance();
         $registry->init();
@@ -136,7 +156,7 @@ final class MemberRouter
                 'plugin_slug' => $slug,
             ]
         );
-        $registry->handleRoute($slug);
+        $registry->handleRoute($slug, $params);
     }
 
     private function trackMemberFeature(string $page, string $routePath, string $label): void

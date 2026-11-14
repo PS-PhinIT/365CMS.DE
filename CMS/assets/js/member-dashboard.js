@@ -1,415 +1,93 @@
+/*!
+ * 365CMS Mitgliederbereich – Einstieg
+ *
+ * Klassisches Skript (mit `defer` eingebunden, auch von Themes ohne `type="module"` nutzbar).
+ * Lädt die Seitenmodule aus `js/member/` nur dort, wo sie gebraucht werden (UI-18):
+ *   passkey.js  – Passkey-Registrierung (Sicherheit)
+ *   uploads.js  – Datei-Upload (Dateien)
+ *   media.js    – Umbenennen/Verschieben-Dialoge (Dateien)
+ * Gemeinsam: Backup-Codes kopieren (Schaltfläche mit Rückmeldung, UI-12).
+ */
 (function () {
     'use strict';
 
-    function toBase64UrlFromBufferSource(bufferSource) {
-        if (!bufferSource) {
-            return '';
+    var currentScript = document.currentScript;
+    var scriptUrl = currentScript && currentScript.src ? new URL(currentScript.src, window.location.href) : null;
+
+    function moduleUrl(name) {
+        if (!scriptUrl) {
+            return null;
         }
 
-        const view = bufferSource instanceof Uint8Array
-            ? bufferSource
-            : new Uint8Array(bufferSource);
+        var url = new URL('member/' + name + '.js', scriptUrl);
+        // Cache-Busting des Einstiegsskripts (?v=…) an die Module weitergeben.
+        url.search = scriptUrl.search;
 
-        return toBase64Url(view);
+        return url.href;
     }
 
-    function toBase64Url(uint8Array) {
-        let binary = '';
-        uint8Array.forEach(function (byte) {
-            binary += String.fromCharCode(byte);
-        });
-        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-    }
-
-    function fromBase64Url(value) {
-        if (!value) {
-            return new Uint8Array();
-        }
-        const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = normalized + '==='.slice((normalized.length + 3) % 4);
-        const binary = atob(padded);
-        const bytes = new Uint8Array(binary.length);
-        for (let index = 0; index < binary.length; index += 1) {
-            bytes[index] = binary.charCodeAt(index);
-        }
-        return bytes;
-    }
-
-    function submitFormWithTemporarySubmitter(form) {
-        if (!form) {
-            return;
+    function loadModule(name) {
+        var url = moduleUrl(name);
+        if (!url) {
+            return Promise.resolve();
         }
 
-        if (typeof form.requestSubmit === 'function') {
-            const submitter = document.createElement('button');
-            submitter.type = 'submit';
-            submitter.hidden = true;
-            submitter.tabIndex = -1;
-            submitter.setAttribute('aria-hidden', 'true');
-            form.appendChild(submitter);
-            form.requestSubmit(submitter);
-            form.removeChild(submitter);
-            return;
-        }
-
-        const fallbackSubmitter = document.createElement('button');
-        fallbackSubmitter.type = 'submit';
-        fallbackSubmitter.hidden = true;
-        fallbackSubmitter.tabIndex = -1;
-        fallbackSubmitter.setAttribute('aria-hidden', 'true');
-        form.appendChild(fallbackSubmitter);
-        fallbackSubmitter.click();
-        form.removeChild(fallbackSubmitter);
-    }
-
-    function normalizePublicKeyOptions(options) {
-        if (!options || typeof options !== 'object') {
-            return options;
-        }
-
-        const publicKey = options.publicKey && typeof options.publicKey === 'object'
-            ? options.publicKey
-            : options;
-
-        if (publicKey.challenge) {
-            publicKey.challenge = fromBase64Url(publicKey.challenge);
-        }
-
-        if (publicKey.user && publicKey.user.id) {
-            publicKey.user.id = fromBase64Url(publicKey.user.id);
-        }
-
-        if (Array.isArray(publicKey.excludeCredentials)) {
-            publicKey.excludeCredentials = publicKey.excludeCredentials.map(function (credential) {
-                if (credential.id) {
-                    credential.id = fromBase64Url(credential.id);
-                }
-                return credential;
-            });
-        }
-
-        return publicKey;
-    }
-
-    function initPasskeys() {
-        const form = document.querySelector('[data-passkey-form]');
-        const trigger = document.querySelector('[data-passkey-register]');
-        if (!form || !trigger || !window.PublicKeyCredential || !navigator.credentials || typeof navigator.credentials.create !== 'function') {
-            return;
-        }
-
-        trigger.addEventListener('click', async function () {
-            const optionsJson = form.getAttribute('data-passkey-options') || '{}';
-            let options;
-            try {
-                options = JSON.parse(optionsJson);
-            } catch (error) {
-                window.alert('Die Passkey-Optionen konnten nicht gelesen werden.');
-                return;
+        return import(url).then(function (module) {
+            if (module && typeof module.init === 'function') {
+                module.init(document);
             }
-
-            try {
-                trigger.setAttribute('disabled', 'disabled');
-
-                const credential = await navigator.credentials.create({
-                    publicKey: normalizePublicKeyOptions(options)
-                });
-
-                if (!credential || !credential.response || !credential.response.clientDataJSON || !credential.response.attestationObject) {
-                    window.alert('Der Passkey konnte nicht erstellt werden.');
-                    return;
-                }
-
-                form.querySelector('input[name="client_data_json"]').value = toBase64UrlFromBufferSource(credential.response.clientDataJSON);
-                form.querySelector('input[name="attestation_object"]').value = toBase64UrlFromBufferSource(credential.response.attestationObject);
-                submitFormWithTemporarySubmitter(form);
-            } catch (error) {
-                window.alert(error && error.message ? error.message : 'Passkey-Registrierung wurde abgebrochen.');
-            } finally {
-                trigger.removeAttribute('disabled');
+        }).catch(function (error) {
+            if (window.console && typeof window.console.error === 'function') {
+                window.console.error('[member-dashboard] Modul ' + name + ' konnte nicht geladen werden.', error);
             }
-        });
-    }
-
-    function clearElement(element) {
-        if (!element) {
-            return;
-        }
-
-        while (element.firstChild) {
-            element.removeChild(element.firstChild);
-        }
-    }
-
-    async function uploadMemberFile(endpoint, token, path, file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('target_path', path);
-        formData.append('csrf_token', token);
-        formData.append('member_upload', '1');
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-Token': token
-            },
-            body: formData,
-            credentials: 'same-origin'
-        });
-
-        const payload = await response.json().catch(function () {
-            return {};
-        });
-
-        if (!response.ok || payload.success === false) {
-            const error = new Error(payload.error || 'Upload fehlgeschlagen.');
-            error.payload = payload;
-            throw error;
-        }
-
-        return payload;
-    }
-
-    function resolveMediaParentPath(path) {
-        const normalized = String(path || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-        if (!normalized) {
-            return '';
-        }
-
-        const segments = normalized.split('/');
-        segments.pop();
-
-        return segments.join('/');
-    }
-
-    function redirectToMemberMediaPath(path) {
-        const params = new URLSearchParams(window.location.search);
-        const normalizedPath = String(path || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-        const safeSegments = normalizedPath.split('/').filter(function (segment) {
-            return segment && segment !== '.' && segment !== '..';
-        });
-        const safePath = safeSegments.join('/');
-
-        if (safePath) {
-            params.set('path', safePath);
-        } else {
-            params.delete('path');
-        }
-
-        const queryString = params.toString();
-        window.location.search = queryString ? '?' + queryString : '';
-    }
-
-    function initMemberUploads() {
-        document.querySelectorAll('[data-member-upload-form]').forEach(function (form) {
-            const endpoint = form.getAttribute('data-upload-endpoint');
-            const path = form.getAttribute('data-upload-path');
-            const input = form.querySelector('input[type="file"]');
-            const status = form.querySelector('[data-member-upload-status]');
-            const results = form.querySelector('[data-member-upload-results]');
-            let currentToken = form.getAttribute('data-upload-token') || '';
-
-            if (!endpoint || !currentToken || !path || !input || !status || !results) {
-                return;
-            }
-
-            form.addEventListener('submit', async function (event) {
-                event.preventDefault();
-
-                const files = Array.from(input.files || []);
-                if (files.length === 0) {
-                    status.hidden = false;
-                    status.textContent = 'Bitte mindestens eine Datei auswählen.';
-                    results.hidden = true;
-                    clearElement(results);
-                    return;
-                }
-
-                const submitButton = form.querySelector('button[type="submit"]');
-                if (submitButton) {
-                    submitButton.disabled = true;
-                }
-
-                status.hidden = false;
-                status.textContent = 'Upload läuft…';
-                results.hidden = false;
-                clearElement(results);
-
-                let hadError = false;
-                let effectiveTargetPath = path;
-
-                for (let index = 0; index < files.length; index += 1) {
-                    const file = files[index];
-                    status.textContent = 'Upload ' + (index + 1) + ' von ' + files.length + ': ' + file.name;
-
-                    try {
-                        const payload = await uploadMemberFile(endpoint, currentToken, path, file);
-                        const item = document.createElement('div');
-                        item.className = 'alert alert-success py-2 mb-0';
-                        const fileName = document.createElement('strong');
-                        fileName.textContent = file.name;
-                        item.appendChild(fileName);
-                        item.appendChild(document.createTextNode(' erfolgreich hochgeladen.'));
-                        results.appendChild(item);
-
-                        if (payload.new_token) {
-                            currentToken = payload.new_token;
-                            form.setAttribute('data-upload-token', payload.new_token);
-                        }
-
-                        if (payload.path) {
-                            effectiveTargetPath = resolveMediaParentPath(payload.path);
-                        }
-                    } catch (error) {
-                        if (error && error.payload && error.payload.new_token) {
-                            currentToken = error.payload.new_token;
-                            form.setAttribute('data-upload-token', error.payload.new_token);
-                        }
-
-                        hadError = true;
-                        const item = document.createElement('div');
-                        item.className = 'alert alert-danger py-2 mb-0';
-                        const fileName = document.createElement('strong');
-                        fileName.textContent = file.name;
-                        item.appendChild(fileName);
-                        item.appendChild(document.createTextNode(': ' + (error && error.message ? error.message : 'Upload fehlgeschlagen.')));
-                        results.appendChild(item);
-                    }
-                }
-
-                status.textContent = hadError
-                    ? 'Upload abgeschlossen – mindestens eine Datei konnte nicht hochgeladen werden.'
-                    : 'Upload erfolgreich abgeschlossen. Seite wird aktualisiert…';
-
-                if (submitButton) {
-                    submitButton.disabled = false;
-                }
-
-                if (!hadError) {
-                    window.setTimeout(function () {
-                    redirectToMemberMediaPath(effectiveTargetPath);
-                    }, 900);
-                }
-            });
         });
     }
 
     function initBackupCodeCopy() {
-        const codes = document.querySelector('.member-backup-codes');
-        if (!codes || !navigator.clipboard) {
-            return;
-        }
+        document.querySelectorAll('[data-member-copy-codes]').forEach(function (button) {
+            var container = button.closest('.alert') || document;
+            var codes = container.querySelector('.member-backup-codes');
+            var status = container.querySelector('[data-member-copy-status]');
+            if (!codes || !navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                return;
+            }
 
-        codes.addEventListener('click', function () {
-            const text = Array.from(codes.querySelectorAll('code')).map(function (node) {
-                return node.textContent || '';
-            }).join('\n');
-            navigator.clipboard.writeText(text).catch(function () {
-                return undefined;
+            button.hidden = false;
+            button.addEventListener('click', function () {
+                var text = Array.prototype.map.call(codes.querySelectorAll('code'), function (node) {
+                    return node.textContent || '';
+                }).join('\n');
+
+                navigator.clipboard.writeText(text).then(function () {
+                    if (status) {
+                        status.textContent = button.getAttribute('data-copied-label') || '';
+                    }
+                }).catch(function () {
+                    if (status) {
+                        status.textContent = button.getAttribute('data-failed-label') || '';
+                    }
+                });
             });
         });
     }
 
-    function initMemberMediaActions() {
-        const configElement = document.getElementById('member-media-config');
-        if (!configElement) {
-            return;
-        }
-
-        let config = {};
-        try {
-            config = JSON.parse(configElement.textContent || '{}');
-        } catch (error) {
-            return;
-        }
-
-        const currentPath = config.currentPath || '';
-        const renameModalElement = document.getElementById(config.renameModalId || 'memberMediaRenameModal');
-        const renamePathField = document.getElementById(config.renamePathFieldId || 'memberMediaRenamePath');
-        const renameNameField = document.getElementById(config.renameNameFieldId || 'memberMediaRenameName');
-        const renameLabel = document.getElementById(config.renameLabelId || 'memberMediaRenameLabel');
-        const moveModalElement = document.getElementById(config.moveModalId || 'memberMediaMoveModal');
-        const movePathField = document.getElementById(config.movePathFieldId || 'memberMediaMovePath');
-        const moveTargetField = document.getElementById(config.moveTargetFieldId || 'memberMediaMoveTarget');
-        const moveLabel = document.getElementById(config.moveLabelId || 'memberMediaMoveLabel');
-        function populateRenameModal(trigger) {
-            if (!trigger || !renamePathField || !renameNameField) {
-                return;
-            }
-
-            const itemPath = trigger.getAttribute('data-media-path') || '';
-            const itemName = trigger.getAttribute('data-media-name') || 'Element';
-            renamePathField.value = itemPath;
-            renameNameField.value = itemName;
-            if (renameLabel) {
-                renameLabel.textContent = itemName;
-            }
-        }
-
-        function populateMoveModal(trigger) {
-            if (!trigger || !movePathField || !moveTargetField) {
-                return;
-            }
-
-            const itemPath = trigger.getAttribute('data-media-path') || '';
-            const itemName = trigger.getAttribute('data-media-name') || 'Element';
-            const targetPath = trigger.getAttribute('data-media-target') || currentPath;
-            movePathField.value = itemPath;
-            moveTargetField.value = targetPath;
-            if (moveTargetField.value !== targetPath && moveTargetField.options.length > 0) {
-                moveTargetField.selectedIndex = 0;
-            }
-            if (moveLabel) {
-                moveLabel.textContent = itemName;
-            }
-        }
-
-        // Fallback: store the triggering button on click, in case Bootstrap's
-        // show.bs.modal event.relatedTarget is null (can happen when trigger is
-        // inside a closing dropdown menu).
-        let pendingRenameTrigger = null;
-        let pendingMoveTrigger = null;
-
-        document.querySelectorAll('.js-member-media-open-rename').forEach(function (btn) {
-            btn.addEventListener('click', function () { pendingRenameTrigger = btn; });
-        });
-
-        document.querySelectorAll('.js-member-media-open-move').forEach(function (btn) {
-            btn.addEventListener('click', function () { pendingMoveTrigger = btn; });
-        });
-
-        if (renameModalElement) {
-            renameModalElement.addEventListener('show.bs.modal', function (event) {
-                const trigger = event.relatedTarget || pendingRenameTrigger;
-                pendingRenameTrigger = null;
-                populateRenameModal(trigger);
-            });
-
-            renameModalElement.addEventListener('shown.bs.modal', function () {
-                if (!renameNameField) {
-                    return;
-                }
-
-                window.setTimeout(function () {
-                    renameNameField.focus();
-                    renameNameField.select();
-                }, 50);
-            });
-        }
-
-        if (moveModalElement) {
-            moveModalElement.addEventListener('show.bs.modal', function (event) {
-                const trigger = event.relatedTarget || pendingMoveTrigger;
-                pendingMoveTrigger = null;
-                populateMoveModal(trigger);
-            });
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        initPasskeys();
-        initMemberUploads();
+    function init() {
         initBackupCodeCopy();
-        initMemberMediaActions();
-    });
+
+        if (document.querySelector('[data-passkey-form]')) {
+            loadModule('passkey');
+        }
+        if (document.querySelector('[data-member-upload-form]')) {
+            loadModule('uploads');
+        }
+        if (document.getElementById('member-media-config')) {
+            loadModule('media');
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 }());

@@ -37,12 +37,19 @@ T::run('Theme: Standardmenüs verlinken keine fehlenden Seiten', static function
 
 T::run('Mitgliederbereich: unbekannter Plugin-Bereich antwortet mit 404', static function (): void {
     $source = (string) file_get_contents(dirname(__DIR__, 2) . '/CMS/core/Member/PluginDashboardRegistry.php');
+    // Unbekannter Bereich und fehlende Berechtigung laufen über renderError(404); die Fehlerseite wird nur dort
+    // (Theme-Override oder Core-Vorlage) und erst nach http_response_code() eingebunden.
     T::check(
-        preg_match_all('#http_response_code\(404\);\s+require_once ABSPATH \. \'member/partials/plugin-not-found\.php\';#', $source) === 2,
-        'plugin-not-found.php wird beide Male mit Status 404 ausgeliefert'
+        preg_match('#if \(\$section === null \|\| !\$this->checkCapability\(\$section\[\'capability\'\]\)\) \{\s+\$this->renderError\(404\);#', $source) === 1,
+        'unbekannter Bereich und fehlende Berechtigung antworten mit 404'
+    );
+    $renderError = preg_match('#private function renderError\(int \$status\): void\s*\{(.*?)\n    \}#s', $source, $match) === 1 ? $match[1] : '';
+    T::check(
+        $renderError !== '' && strpos($renderError, 'http_response_code($status);') < strpos($renderError, 'plugin-not-found.php'),
+        'renderError() setzt den Statuscode vor der Einbindung der Fehlerseite'
     );
     T::check(
-        preg_match_all('#plugin-not-found\.php#', $source) === 2,
+        preg_match_all('#plugin-not-found\.php#', $source) === 2 && substr_count($renderError, 'plugin-not-found.php') === 2,
         'keine weitere Einbindung ohne Statuscode'
     );
 });
