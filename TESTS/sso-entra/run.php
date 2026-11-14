@@ -305,6 +305,15 @@ T::run('state, nonce und PKCE in der Sitzung', static function (): void {
     T::same('state_unknown', $flows->consume($states[0])['reason'], 'ältester Fluss fällt weg');
     T::check($flows->consume($states[5])['ok'], 'neuester Fluss bleibt');
 
+    $_SESSION = [];
+    T::check(!$flows->hasPending(), 'ohne Start kein offener Fluss');
+    $pending = $flows->begin(OidcFlowState::PURPOSE_LOGIN, '/member');
+    T::check($flows->hasPending(), 'nach dem Start offener Fluss');
+    $now += 601;
+    T::check(!$flows->hasPending(), 'abgelaufener Fluss zählt nicht');
+    $now -= 601;
+    $flows->consume($pending['state']);
+
     $link = $flows->begin(OidcFlowState::PURPOSE_LINK, '/member/security', 42);
     T::same(42, $flows->consume($link['state'])['flow']['user_id'] ?? null, 'Verknüpfen merkt sich das Konto');
     $threw = false;
@@ -668,9 +677,12 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
 
     $service = $read('core/Auth/SSO/EntraSsoService.php');
     $rate = strpos($service, 'Security::checkDbRateLimit($ip, self::RATE_LIMIT_ACTION');
-    $state = strpos($service, '(new OidcFlowState())->consume(');
+    $state = strpos($service, '$flowState->consume(');
     $exchange = strpos($service, '->exchangeCode(');
     $verify = strpos($service, '->verifyIdToken(');
+    $pendingCheck = strpos($service, '$flowState->hasPending()');
+    T::check($pendingCheck !== false && $pendingCheck < $state && !str_contains(substr($service, $pendingCheck, 400), '$this->fail('), 'Callback ohne eigenen Start zählt nicht gegen die IP');
+    T::check(str_contains($service, "\$this->fail('sso_login_failed', 'Entra-Anmeldung von Microsoft abgelehnt oder abgebrochen.'"), 'Abbruch/Fehler von Microsoft zählt für das Rate-Limit');
     T::check($rate !== false && $state !== false && $exchange !== false && $verify !== false && $rate < $state && $state < $exchange && $exchange < $verify, 'Reihenfolge: Rate-Limit → state → Code → ID-Token');
     T::check(str_contains($service, 'completeLoginForUserId($userId)'), 'Sitzung über completeLoginForUserId (neue Session-ID)');
     T::check(preg_match('/if \(\$mfaProof\) \{\s*\$_SESSION\[MfaEnforcementService::SESSION_SSO_MFA\] = \$userId;/', $service) === 1, 'SSO-MFA-Flag nur mit Nachweis aus amr');

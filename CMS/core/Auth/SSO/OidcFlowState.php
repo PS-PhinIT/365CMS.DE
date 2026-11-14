@@ -116,6 +116,14 @@ final class OidcFlowState
         ];
     }
 
+    /**
+     * Gibt es in dieser Sitzung einen noch gültigen Fluss? (Ohne: Callback stammt nicht aus einem eigenen Start.)
+     */
+    public function hasPending(): bool
+    {
+        return $this->prune($this->flows(), ($this->clock)()) !== [];
+    }
+
     /** RFC 7636 S256: BASE64URL(SHA256(code_verifier)). */
     public static function codeChallenge(string $verifier): string
     {
