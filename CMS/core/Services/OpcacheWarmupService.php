@@ -37,6 +37,15 @@ final class OpcacheWarmupService
         DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR,
         DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR,
         DIRECTORY_SEPARATOR . 'BACKUP' . DIRECTORY_SEPARATOR,
+        // Test-, Fixture- und Beispielcode deklariert häufig Stub-Klassen mit denselben Namen wie
+        // der Laufzeitcode (z. B. themes/<theme>/tests/*.php). Ein Vorkompilieren solcher Dateien
+        // führt zu "Cannot redeclare class …", sobald die echte Klasse geladen wird.
+        DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'test' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'fixtures' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'examples' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'node_modules' . DIRECTORY_SEPARATOR,
     ];
 
     private static ?self $instance = null;
@@ -163,6 +172,24 @@ final class OpcacheWarmupService
             $includedFiles[(string)(realpath($includedFile) ?: $includedFile)] = true;
         }
 
+        /** @var array<string, list<string>> $declaredBy */
+        $declaredBy = [];
+        /** @var array<string, int> $declarationCount */
+        $declarationCount = [];
+        foreach ($files as $file) {
+            $candidate = (string)($file['path'] ?? '');
+            if ($candidate === '' || !is_file($candidate)) {
+                continue;
+            }
+
+            $candidate = (string)(realpath($candidate) ?: $candidate);
+            $names = $this->extractDeclaredClassLikes($candidate);
+            $declaredBy[$candidate] = $names;
+            foreach ($names as $name) {
+                $declarationCount[$name] = ($declarationCount[$name] ?? 0) + 1;
+            }
+        }
+
         foreach ($files as $file) {
             $realPath = (string)($file['path'] ?? '');
             if ($realPath === '' || !is_file($realPath)) {
@@ -172,6 +199,18 @@ final class OpcacheWarmupService
             $realPath = (string)(realpath($realPath) ?: $realPath);
             if (isset($includedFiles[$realPath])) {
                 $skipped++;
+                continue;
+            }
+
+            // Klassen, die schon deklariert sind oder von mehreren Kandidaten deklariert werden,
+            // würden beim Kompilieren bzw. beim späteren Laden der jeweils anderen Datei einen
+            // nicht abfangbaren "Cannot redeclare class"-Fehler auslösen.
+            $conflict = $this->findDeclarationConflict($declaredBy[$realPath] ?? [], $declarationCount);
+            if ($conflict !== null) {
+                $failed[] = [
+                    'file' => $this->toRelativePath($realPath),
+                    'reason' => 'Übersprungen: Klasse ' . $conflict . ' ist bereits deklariert oder mehrfach vorhanden.',
+                ];
                 continue;
             }
 
@@ -196,7 +235,8 @@ final class OpcacheWarmupService
                 continue;
             }
 
-            if (!isset($failed[array_key_last($failed)]['file']) || $failed[array_key_last($failed)]['file'] !== $this->toRelativePath($realPath)) {
+            $lastFailed = $failed === [] ? null : $failed[array_key_last($failed)];
+            if (!is_array($lastFailed) || ($lastFailed['file'] ?? null) !== $this->toRelativePath($realPath)) {
                 $failed[] = [
                     'file' => $this->toRelativePath($realPath),
                     'reason' => 'opcache_compile_file() lieferte false zurück.',
@@ -328,13 +368,7 @@ final class OpcacheWarmupService
                     }
 
                     if ($current->isDir()) {
-                        foreach (self::EXCLUDED_SEGMENTS as $segment) {
-                            if (str_contains($normalizedPath . DIRECTORY_SEPARATOR, $this->normalizePath($segment))) {
-                                return false;
-                            }
-                        }
-
-                        return true;
+                        return !$this->isExcludedPath($normalizedPath . DIRECTORY_SEPARATOR);
                     }
 
                     return str_ends_with(strtolower($normalizedPath), '.php');
@@ -355,15 +389,7 @@ final class OpcacheWarmupService
                 continue;
             }
 
-            $skip = false;
-            foreach (self::EXCLUDED_SEGMENTS as $segment) {
-                if (str_contains($normalizedPath, $this->normalizePath($segment))) {
-                    $skip = true;
-                    break;
-                }
-            }
-
-            if ($skip) {
+            if ($this->isExcludedPath($normalizedPath)) {
                 continue;
             }
 
@@ -452,6 +478,114 @@ final class OpcacheWarmupService
         }
 
         return in_array($topLevel, self::ALLOWED_TOP_LEVEL_DIRECTORIES, true);
+    }
+
+    private function isExcludedPath(string $normalizedPath): bool
+    {
+        $haystack = strtolower($normalizedPath);
+        foreach (self::EXCLUDED_SEGMENTS as $segment) {
+            if (str_contains($haystack, strtolower($this->normalizePath($segment)))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Liefert die vollqualifizierten Namen (lowercase) aller in der Datei deklarierten
+     * Klassen, Interfaces, Traits und Enums.
+     *
+     * @return list<string>
+     */
+    private function extractDeclaredClassLikes(string $path): array
+    {
+        $code = @file_get_contents($path);
+        if (!is_string($code) || $code === '') {
+            return [];
+        }
+
+        try {
+            $tokens = token_get_all($code);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $names = [];
+        $namespace = '';
+        $count = count($tokens);
+        for ($i = 0; $i < $count; $i++) {
+            $token = $tokens[$i];
+            if (!is_array($token)) {
+                continue;
+            }
+
+            if ($token[0] === T_NAMESPACE) {
+                $namespace = '';
+                for ($j = $i + 1; $j < $count; $j++) {
+                    $next = $tokens[$j];
+                    if (is_array($next) && in_array($next[0], [T_NAME_QUALIFIED, T_STRING], true)) {
+                        $namespace = $next[1];
+                        break;
+                    }
+                    if (!is_array($next) && ($next === ';' || $next === '{')) {
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            $isEnum = defined('T_ENUM') && $token[0] === T_ENUM;
+            if (!in_array($token[0], [T_CLASS, T_INTERFACE, T_TRAIT], true) && !$isEnum) {
+                continue;
+            }
+
+            // "Foo::class" und "new class" (anonyme Klassen) ausschließen.
+            $prev = null;
+            for ($k = $i - 1; $k >= 0; $k--) {
+                $prev = $tokens[$k];
+                if (is_array($prev) && in_array($prev[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                    continue;
+                }
+                break;
+            }
+            if (is_array($prev) && in_array($prev[0], [T_DOUBLE_COLON, T_NEW], true)) {
+                continue;
+            }
+
+            for ($j = $i + 1; $j < $count; $j++) {
+                $next = $tokens[$j];
+                if (is_array($next) && $next[0] === T_WHITESPACE) {
+                    continue;
+                }
+                if (is_array($next) && $next[0] === T_STRING) {
+                    $names[] = strtolower(ltrim(($namespace !== '' ? $namespace . '\\' : '') . $next[1], '\\'));
+                }
+                break;
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * @param list<string> $names
+     * @param array<string, int> $declarationCount
+     */
+    private function findDeclarationConflict(array $names, array $declarationCount): ?string
+    {
+        foreach ($names as $name) {
+            if (($declarationCount[$name] ?? 0) > 1
+                || class_exists($name, false)
+                || interface_exists($name, false)
+                || trait_exists($name, false)
+                || (function_exists('enum_exists') && enum_exists($name, false))
+            ) {
+                return $name;
+            }
+        }
+
+        return null;
     }
 
     private function toRelativePath(string $path): string
