@@ -1,6 +1,6 @@
 <div align="center">
 
-<!-- <img src="https://365cms.de/assets/images/LOGO_365CMS-wo_Text-75px.png" /> -->
+<img src="https://365cms.de/assets/images/LOGO_365CMS-wo_Text-75px.png" />
 
 # 365CMS
 
