@@ -21,6 +21,7 @@ $category   = $data['category'] ?? '';
 $view       = $data['view'] ?? 'list';
 $search     = $data['search'] ?? '';
 $usageFilter = $data['usage_filter'] ?? 'all';
+$usageIndexBuilt = !empty($data['usage_index_built']);
 $fileTypeFilter = (string)($data['file_type_filter'] ?? 'all');
 $extensionFilter = (string)($data['extension_filter'] ?? '');
 $sizeFilter = (string)($data['size_filter'] ?? 'all');
@@ -463,6 +464,9 @@ if ($modifiedFilter !== 'all') {
 
         <?php if (!empty($alert)): ?>
             <?php $alertData = $alert; $alertMarginClass = 'mb-3'; require __DIR__ . '/../partials/flash-alert.php'; ?>
+        <?php endif; ?>
+        <?php if (!$usageIndexBuilt && $usageFilter !== 'all'): ?>
+            <div class="alert alert-info mb-3" role="status">Die Verwendung wird nur in Beiträgen und Seiten gesucht. Für Hub-Sites, Downloads, Formulare und Design unter <a href="/admin/media-tools#usage-index">Medien-Werkzeuge</a> einmal „Verwendungsindex neu aufbauen“ ausführen.</div>
         <?php endif; ?>
 
         <!-- Breadcrumb & Filter -->

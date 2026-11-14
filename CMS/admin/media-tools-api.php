@@ -20,6 +20,7 @@ use CMS\Security;
 use CMS\Services\BatchJobService;
 use CMS\Services\Media\AvifDerivativeService;
 use CMS\Services\Media\AvifRegenerationService;
+use CMS\Services\Media\MediaUsageRebuildService;
 use CMS\Services\Media\ThumbnailRegenerationService;
 
 \CMS\CacheManager::instance()->sendResponseHeaders('private');
@@ -57,20 +58,33 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 $action = strtolower(trim((string) ($_POST['action'] ?? '')));
 $jobId = max(0, (int) ($_POST['job_id'] ?? 0));
 $jobs = BatchJobService::getInstance();
-// 4.1.0 (2a): zwei Aufträge – Vorschaubilder (Standard) und „AVIF nachgenerieren“ (job=avif). Für step/cancel
-// entscheidet der Typ des gespeicherten Auftrags, nicht das Formularfeld.
-$kind = (string) ($_POST['job'] ?? '') === 'avif' ? 'avif' : 'thumbnails';
+// 4.1.0: drei Aufträge – Vorschaubilder (Standard), „AVIF nachgenerieren“ (job=avif, 2a) und „Verwendungsindex neu
+// aufbauen“ (job=usage, 2b). Für step/cancel entscheidet der Typ des gespeicherten Auftrags, nicht das Formularfeld.
+$jobKinds = [AvifRegenerationService::JOB_TYPE => 'avif', MediaUsageRebuildService::JOB_TYPE => 'usage'];
+$requestedKind = (string) ($_POST['job'] ?? '');
+$kind = in_array($requestedKind, ['avif', 'usage'], true) ? $requestedKind : 'thumbnails';
 if ($jobId > 0 && in_array($action, ['step', 'cancel'], true)) {
     $storedJob = $jobs->find($jobId);
-    $kind = ($storedJob['type'] ?? '') === AvifRegenerationService::JOB_TYPE ? 'avif' : 'thumbnails';
+    $kind = $jobKinds[(string) ($storedJob['type'] ?? '')] ?? 'thumbnails';
 }
-$service = $kind === 'avif' ? AvifRegenerationService::getInstance() : ThumbnailRegenerationService::getInstance();
-$auditPrefix = $kind === 'avif' ? 'media.avif' : 'media.thumbnails';
+$service = match ($kind) {
+    'avif' => AvifRegenerationService::getInstance(),
+    'usage' => MediaUsageRebuildService::getInstance(),
+    default => ThumbnailRegenerationService::getInstance(),
+};
+$auditPrefix = 'media.' . $kind;
 $public = static fn (?array $job): ?array => $job !== null ? $jobs->toPublic($job) : null;
 
 try {
     switch ($action) {
         case 'start':
+            if ($kind === 'usage') {
+                $started = $service->start($userId > 0 ? $userId : null);
+                if (!$started['resumed']) {
+                    AuditLogger::instance()->log(AuditLogger::CAT_SYSTEM, 'media.usage.start', 'Verwendungsindex neu aufbauen gestartet', 'batch_job', (int) $started['job']['id'], ['total' => (int) $started['job']['total']]);
+                }
+                cms_admin_media_tools_api_respond(200, ['success' => true, 'resumed' => $started['resumed'], 'job' => $public($started['job'])]);
+            }
             if ($kind === 'avif') {
                 if (!AvifDerivativeService::getInstance()->isSupported()) {
                     cms_admin_media_tools_api_error(409, 'media_tools.avif.unsupported');
@@ -99,7 +113,7 @@ try {
             if ($job === null) {
                 cms_admin_media_tools_api_error(404, 'media_tools.error.unknown_job');
             }
-            AuditLogger::instance()->log(AuditLogger::CAT_SYSTEM, $auditPrefix . '.cancel', $kind === 'avif' ? 'AVIF nachgenerieren abgebrochen' : 'Vorschaubilder neu erzeugen abgebrochen', 'batch_job', $jobId, ['processed' => (int) $job['processed'], 'total' => (int) $job['total']], 'warning');
+            AuditLogger::instance()->log(AuditLogger::CAT_SYSTEM, $auditPrefix . '.cancel', match ($kind) { 'avif' => 'AVIF nachgenerieren abgebrochen', 'usage' => 'Verwendungsindex neu aufbauen abgebrochen', default => 'Vorschaubilder neu erzeugen abgebrochen' }, 'batch_job', $jobId, ['processed' => (int) $job['processed'], 'total' => (int) $job['total']], 'warning');
             cms_admin_media_tools_api_respond(200, ['success' => true, 'job' => $public($job)]);
 
         case 'status':

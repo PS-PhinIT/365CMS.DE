@@ -71,6 +71,7 @@ class SchemaManager
      */
     public const FEATURE_TABLES_V26 = [
         'password_history', 'user_identities',
+        'media_usage',
         'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
     ];
 
@@ -1449,6 +1450,19 @@ class SchemaManager
                 UNIQUE KEY uq_user_identities_user_provider (user_id, provider),
                 INDEX idx_user_identities_user (user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='SSO-Bindungen (Entra ID)'",
+
+            // v26: Verwendungsnachweis für Medien (MediaUsageIndex, Bereich 2b). media_path ist der Originalpfad relativ zu
+            // uploads/; Derivate (Größen, WebP, AVIF) werden beim Indizieren auf das Original zurückgeführt.
+            'media_usage' => "CREATE TABLE IF NOT EXISTS {$p}media_usage (
+                media_path VARCHAR(500) NOT NULL,
+                content_type VARCHAR(30) NOT NULL,
+                content_id BIGINT UNSIGNED NOT NULL,
+                context VARCHAR(30) NOT NULL DEFAULT 'content',
+                updated_at DATETIME NOT NULL,
+                PRIMARY KEY (media_path(191), content_type, content_id, context),
+                KEY idx_media_usage_content (content_type, content_id),
+                KEY idx_media_usage_updated (updated_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Verwendungsnachweis für Medien'",
 
             // v26: Offsite-Status je Backup (OffsiteBackupService, S3-kompatibel).
             'backup_offsite_uploads' => "CREATE TABLE IF NOT EXISTS {$p}backup_offsite_uploads (

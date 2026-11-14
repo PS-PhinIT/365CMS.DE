@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Medien-Werkzeuge: Vorschaubilder neu erzeugen (#13) und Ausgabe der Urheberangaben (#11).
  *
- * @var array<string, mixed> $data sizes, image_count, max_images, active_job, latest_job, latest_webp, image_library, avif, license, api
+ * @var array<string, mixed> $data sizes, image_count, max_images, active_job, latest_job, latest_webp, image_library, avif, usage, license, api
  * @var string $csrfToken
  */
 
@@ -210,6 +210,49 @@ $mtSizeLabels = ['small' => 'media_tools.size.small', 'medium' => 'media_tools.s
             </div>
 
             <div class="col-lg-5">
+                <?php
+                // 4.1.0 (2b): Verwendungsindex neu aufbauen (job=usage)
+                $mtUsage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
+                $mtUsageActive = is_array($mtUsage['active_job'] ?? null) ? $mtUsage['active_job'] : null;
+                $mtUsageLatest = is_array($mtUsage['latest_job'] ?? null) ? $mtUsage['latest_job'] : null;
+                $mtUsageBuilt = (string) ($mtUsage['built_at'] ?? '');
+                $mtUsageConfig = $mtConfig;
+                $mtUsageConfig['job'] = 'usage';
+                $mtUsageConfig['activeJob'] = $mtUsageActive;
+                $mtUsageConfig['labels']['done'] = (string) __('media_tools.usage.done');
+                $mtUsageConfig['runnerLabels']['cancelTitle'] = (string) __('media_tools.usage.cancel_title');
+                $mtUsageConfig['runnerLabels']['cancelMessage'] = (string) __('media_tools.usage.cancel_message');
+                $mtUsageConfig['labels']['cancelTitle'] = $mtUsageConfig['runnerLabels']['cancelTitle'];
+                $mtUsageConfig['labels']['cancelMessage'] = $mtUsageConfig['runnerLabels']['cancelMessage'];
+                ?>
+                <div class="card mb-3" id="usage-index" data-media-tools="<?php echo $mtE(json_encode($mtUsageConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>">
+                    <div class="card-header"><h3 class="card-title"><?php echo $mtT('media_tools.usage.title'); ?></h3></div>
+                    <div class="card-body">
+                        <p class="text-secondary"><?php echo $mtT('media_tools.usage.intro'); ?></p>
+                        <?php if ($mtUsageActive !== null): ?>
+                            <div class="alert alert-warning" role="status" data-media-tools-notice>
+                                <?php echo $mtT('media_tools.thumbs.interrupted', $mtNumber((int) $mtUsageActive['processed']), $mtNumber((int) $mtUsageActive['total']), $mtDate((string) $mtUsageActive['created_at'])); ?>
+                            </div>
+                        <?php elseif ($mtUsageBuilt === ''): ?>
+                            <div class="alert alert-info" role="status" data-media-tools-notice><?php echo $mtT('media_tools.usage.not_built'); ?></div>
+                        <?php else: ?>
+                            <p data-media-tools-notice><?php echo $mtT('media_tools.usage.built_at', $mtDate($mtUsageBuilt)); ?></p>
+                        <?php endif; ?>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <button type="button" class="btn btn-primary" data-media-tools-start>
+                                <?php echo $mtT($mtUsageActive !== null ? 'media_tools.thumbs.resume' : 'media_tools.usage.start'); ?>
+                            </button>
+                            <?php if ($mtUsageActive !== null): ?>
+                                <button type="button" class="btn btn-outline-danger" data-media-tools-cancel><?php echo $mtT('search_index.runner_cancel'); ?></button>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mt-3" data-media-tools-progress hidden></div>
+                        <?php if ($mtUsageLatest !== null && $mtUsageActive === null && (string) $mtUsageLatest['message'] !== ''): ?>
+                            <p class="small text-secondary mt-3 mb-0" data-media-tools-latest><?php echo $mtE($mtUsageLatest['message']); ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <form class="card" method="post" action="/admin/media-tools" id="credits">
                     <input type="hidden" name="csrf_token" value="<?php echo $mtE($csrfToken); ?>">
                     <input type="hidden" name="action" value="save_license_output">

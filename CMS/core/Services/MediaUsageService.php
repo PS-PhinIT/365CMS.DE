@@ -34,6 +34,16 @@ final class MediaUsageService
      */
     public function buildUsageMap(array $relativePaths): array
     {
+        // 4.1.0 (2b): Nach dem ersten vollständigen Aufbau liefert der dauerhafte Index die Verwendungen über alle
+        // Inhaltsarten (Beiträge, Seiten, Hub-Sites, Downloads, Formulare, Design); bis dahin die Laufzeitsuche.
+        try {
+            $index = \CMS\Services\Media\MediaUsageIndex::getInstance();
+            if ($index->isBuilt()) {
+                return $index->usageMap(array_map('strval', $relativePaths));
+            }
+        } catch (\Throwable) {
+        }
+
         $targets = $this->normalizeTargetPaths($relativePaths);
         if ($targets === []) {
             return [];

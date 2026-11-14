@@ -46,6 +46,8 @@ final class MediaFeatureHooks
                 Logger::instance()->withChannel('media')->warning('Vorschaubilder konnten im Cron nicht weiter erzeugt werden.', ['exception' => $e->getMessage()]);
             }
         }, 60);
+        self::registerUsageIndexHooks();
+
         // 4.1.0 (2a): „AVIF nachgenerieren“ läuft ebenso im Cron weiter.
         Hooks::addAction('cms_cron_hourly', static function (): void {
             try {
@@ -57,6 +59,61 @@ final class MediaFeatureHooks
 
         if (defined('CMS_MODE') && CMS_MODE === 'web') {
             Hooks::addAction('body_end', [self::class, 'printSchema'], 20);
+        }
+    }
+
+    /**
+     * 4.1.0 (2b): Verwendungsindex der Medien über die Inhalts-Hooks aktuell halten (Papierkorb und Wiederherstellen
+     * lösen die Speicher-Hooks aus und zählen weiter als Verwendung); der Neuaufbau läuft im Cron weiter.
+     */
+    private static function registerUsageIndexHooks(): void
+    {
+        $hooks = [
+            'cms_after_post_save' => ['post', false],
+            'cms_after_post_copy_de_to_en' => ['post', false],
+            'post_deleted' => ['post', true],
+            'cms_after_page_save' => ['page', false],
+            'cms_after_page_copy_de_to_en' => ['page', false],
+            'page_deleted' => ['page', true],
+            'cms_after_hub_save' => ['hub_site', false],
+            'cms_after_download_save' => ['download', false],
+            'cms_download_trashed' => ['download', false],
+            'download_deleted' => ['download', true],
+            'cms_after_form_save' => ['form', false],
+            'cms_form_deleted' => ['form', true],
+        ];
+        foreach ($hooks as $hook => [$type, $deleted]) {
+            Hooks::addAction($hook, static function (mixed $id = 0) use ($type, $deleted): void {
+                self::guardUsage(static function () use ($type, $deleted, $id): void {
+                    $index = \CMS\Services\Media\MediaUsageIndex::getInstance();
+                    $deleted ? $index->removeContent($type, (int) $id) : $index->reindexContent($type, (int) $id);
+                });
+            }, 70);
+        }
+
+        // Theme-Einstellungen: mehrere Werte je Speichern → einmal am Ende der Anfrage neu indizieren.
+        Hooks::addAction('cms_theme_customizer_saved', static function (): void {
+            static $scheduled = false;
+            if ($scheduled) {
+                return;
+            }
+            $scheduled = true;
+            register_shutdown_function(static function (): void {
+                self::guardUsage(static fn () => \CMS\Services\Media\MediaUsageIndex::getInstance()->reindexContent('theme', 0));
+            });
+        }, 70);
+
+        Hooks::addAction('cms_cron_hourly', static function (): void {
+            self::guardUsage(static fn () => \CMS\Services\Media\MediaUsageRebuildService::getInstance()->continueInCron());
+        }, 62);
+    }
+
+    private static function guardUsage(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('media')->warning('Verwendungsindex der Medien konnte nicht aktualisiert werden.', ['exception' => $e->getMessage()]);
         }
     }
 

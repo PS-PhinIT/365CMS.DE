@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 2: Medien & Performance
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 2a umgesetzt ([PROGRESS.md](PROGRESS.md)), 2b Spezifikation | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 2a und 2b umgesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -78,3 +78,17 @@ CREATE TABLE {p}media_usage (
 
 **Tests (`TESTS/media-usage/run.php`):** Extraktion je Inhaltsart (inkl. Derivat-Namen und absoluter URLs), Reindex nach
 Speichern/Löschen, „Ungenutzt“ korrekt, Löschwarnung, keine Treffer für fremde Domains.
+
+**Umsetzung 2b (14.11.2026) – Präzisierungen:**
+
+| Punkt | Umsetzung |
+|---|---|
+| Einbindung | `MediaUsageService::buildUsageMap()` delegiert an den Index, sobald er einmal vollständig aufgebaut ist (Merker `media_usage_index_built_at`). Mediathek (Spalte, Filter „ungenutzt“) und `MediaTrashProvider::deletionWarnings()` brauchen dadurch keine eigene Änderung. Bis dahin bleibt die Laufzeitsuche (nur Beiträge/Seiten) aktiv, die Mediathek zeigt beim Filtern einen Hinweis. |
+| Extraktor-Schnittstelle | `ids(afterId, limit)` und `load(id)`; der Index sucht die Pfade selbst (`MediaPathNormalizer`) und trennt Editor.js-Blöcke: `imageGallery`/`carousel` → `gallery`, `attaches` → `attachment`. Zusätzlicher Kontext `content_en` für die englische Fassung (Badges der Mediathek). |
+| Derivate | nur auf das Original zurückgeführt, wenn das Original existiert; sonst ist die Datei selbst ein Original (`team-small.jpg`, `logo.webp`). Nackte Pfade ohne `uploads/` zählen anders als in der alten Laufzeitsuche nicht mehr (zu viele Fehltreffer). |
+| Hooks | Neu: `cms_after_form_save`, `cms_form_deleted`, `cms_theme_customizer_saved` (Theme: einmal je Anfrage neu indizieren). Hub-Sites lösen beim endgültigen Löschen keinen Hook aus; ihre Zeilen werden nicht mehr angezeigt (Inhalt fehlt) und beim nächsten Neuaufbau entfernt. Papierkorb zählt weiter als Verwendung. |
+| Downloads | Dateiversionen liegen im privaten Speicher, nicht in der Mediathek; erfasst werden Titelbild und Beschreibungen. |
+| Wiederverwendbare Blöcke, Community | folgen mit Bereich 3 bzw. 4.2 als eigene Extraktoren. |
+| Capability | Die Medien-Werkzeuge verlangen weiter `manage_media`; `media.tools` folgt mit dem Update-Schritt `capabilities_v26`. |
+| `unusedMedia()` | arbeitet auf einer übergebenen Pfadliste (die Mediathek listet Dateien aus dem Dateisystem). |
+
