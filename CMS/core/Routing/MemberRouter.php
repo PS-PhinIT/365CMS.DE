@@ -116,12 +116,9 @@ final class MemberRouter
             return;
         }
 
-        if ($action !== '') {
-            $_GET['action'] = sanitize_key($action);
-        }
-        if ($id !== '' && ctype_digit($id)) {
-            $_GET['id'] = $id;
-        }
+        // Route-Parameter direkt übergeben statt in $_GET zu schreiben (kein Core-Bereich liest $_GET['action'|'id']).
+        $params = \CMS\Member\PluginDashboardRegistry::normalizeRouteParams(['action' => $action, 'id' => $id]);
+        $action = $params['action'] ?? '';
 
         $registry = \CMS\Member\PluginDashboardRegistry::instance();
         $registry->init();
@@ -136,7 +133,7 @@ final class MemberRouter
                 'plugin_slug' => $slug,
             ]
         );
-        $registry->handleRoute($slug);
+        $registry->handleRoute($slug, $params);
     }
 
     private function trackMemberFeature(string $page, string $routePath, string $label): void

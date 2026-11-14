@@ -1,0 +1,67 @@
+/*
+ * Newsletter-Widget im Mitgliederbereich (Dashboard-Widget und /member/plugin/newsletter).
+ * Geladen über die Action `member_head` (NewsletterHooks) nur auf Dashboard und Newsletter-Unterseite.
+ * Farben über die Variablen des Mitgliederbereichs, keine Inline-Stile (CSP).
+ */
+
+.cms-nl-widget {
+    --cms-nl-gap: 0.5rem;
+    scroll-margin-top: 5rem;
+}
+
+.cms-nl-widget:focus {
+    outline: none;
+}
+
+.cms-nl-widget:focus-visible {
+    outline: 2px solid var(--member-primary, #4f46e5);
+    outline-offset: 2px;
+}
+
+.cms-nl-widget__status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--cms-nl-gap);
+}
+
+.cms-nl-widget__badge {
+    font-weight: 600;
+    white-space: normal;
+}
+
+.cms-nl-widget__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cms-nl-gap);
+}
+
+.cms-nl-widget__actions form {
+    margin: 0;
+}
+
+.cms-nl-widget input[readonly] {
+    background-color: var(--tblr-bg-surface-secondary, #f6f8fb);
+    cursor: default;
+}
+
+.cms-nl-widget .form-check-label {
+    line-height: 1.45;
+}
+
+.cms-nl-widget__more {
+    font-weight: 600;
+}
+
+@media (max-width: 575.98px) {
+    .cms-nl-widget__actions .btn,
+    .cms-nl-widget__form .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cms-nl-widget {
+        scroll-behavior: auto;
+    }
+}

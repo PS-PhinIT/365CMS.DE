@@ -2,7 +2,7 @@
 /**
  * Einstellungen des Newsletters (Tabelle `newsletter_settings`, Schlüssel wie im früheren Plugin plus Erweiterungen).
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);
@@ -32,6 +32,8 @@ final class NewsletterSettings
         'consent_text' => 'Ich möchte den Newsletter erhalten. Die Einwilligung kann ich jederzeit über den Abmeldelink in jeder Ausgabe widerrufen.',
         'consent_text_en' => 'I would like to receive the newsletter. I can withdraw my consent at any time using the unsubscribe link in every issue.',
         'confirm_expiry_days' => '14',
+        // Mitgliederbereich: Widget mit An-/Abmeldung auf dem Dashboard (aus = nur Kachel mit Link zur Unterseite)
+        'member_widget_enabled' => '1',
         // Öffentliche Seite
         'archive_title' => 'Newsletter',
         'archive_title_en' => 'Newsletter',
@@ -51,7 +53,7 @@ final class NewsletterSettings
         'mail_footer_en' => '',
     ];
 
-    private const BOOLEAN_KEYS = ['require_double_opt_in', 'show_segment_choice', 'show_name_fields', 'public_archive', 'show_nav_link'];
+    private const BOOLEAN_KEYS = ['require_double_opt_in', 'show_segment_choice', 'show_name_fields', 'public_archive', 'show_nav_link', 'member_widget_enabled'];
     private const NUMBER_RANGES = ['confirm_expiry_days' => [1, 365], 'batch_size' => [5, 1000]];
     private const TEXTAREA_KEYS = ['segments', 'consent_text', 'consent_text_en', 'archive_description', 'archive_description_en',
         'subscribe_intro', 'subscribe_intro_en', 'footer_note', 'footer_note_en', 'mail_footer', 'mail_footer_en'];
