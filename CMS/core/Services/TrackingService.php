@@ -64,7 +64,7 @@ class TrackingService
             INDEX idx_user_id (user_id),
             INDEX idx_session_id (session_id),
             INDEX idx_visited_at (visited_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
         try {
             $this->db->query($sql);

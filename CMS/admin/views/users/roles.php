@@ -408,7 +408,7 @@ $renderCapabilityDiffList = static function (array $groupedCapabilities) use ($g
                     <input type="hidden" name="action" value="add_role">
                     <div class="mb-3">
                         <label class="form-label" for="role_slug">Rollen-Slug</label>
-                        <input type="text" class="form-control" id="role_slug" name="role_slug" placeholder="z. B. moderator" required>
+                        <input type="text" class="form-control" id="role_slug" name="role_slug" placeholder="z. B. moderator" maxlength="20" required>
                         <div class="form-hint">Nur Kleinbuchstaben, Zahlen, Bindestriche und Unterstriche.</div>
                     </div>
                     <div>
@@ -444,7 +444,7 @@ $renderCapabilityDiffList = static function (array $groupedCapabilities) use ($g
                     <input type="hidden" name="action" value="add_capability">
                     <div class="mb-0">
                         <label class="form-label" for="capability_slug">Recht</label>
-                        <input type="text" class="form-control" id="capability_slug" name="capability_slug" placeholder="z. B. shop.orders.view" required>
+                        <input type="text" class="form-control" id="capability_slug" name="capability_slug" placeholder="z. B. shop.orders.view" maxlength="100" required>
                         <div class="form-hint">Format: <code>bereich.aktion</code> oder <code>bereich.unterbereich.aktion</code>.</div>
                     </div>
                 </div>
@@ -471,7 +471,7 @@ $renderCapabilityDiffList = static function (array $groupedCapabilities) use ($g
                     <input type="hidden" name="current_role" id="edit_role_current" value="">
                     <div class="mb-0">
                         <label class="form-label" for="edit_role_slug">Rollen-Slug</label>
-                        <input type="text" class="form-control" id="edit_role_slug" name="role_slug" required>
+                        <input type="text" class="form-control" id="edit_role_slug" name="role_slug" maxlength="20" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -530,7 +530,7 @@ $renderCapabilityDiffList = static function (array $groupedCapabilities) use ($g
                     <input type="hidden" name="current_capability" id="edit_capability_current" value="">
                     <div class="mb-0">
                         <label class="form-label" for="edit_capability_slug">Recht</label>
-                        <input type="text" class="form-control" id="edit_capability_slug" name="capability_slug" required>
+                        <input type="text" class="form-control" id="edit_capability_slug" name="capability_slug" maxlength="100" required>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -1384,8 +1384,22 @@
             panel.addEventListener('click', function (event) {
                 event.stopPropagation();
             });
+            stopEditorBlockEvents(panel);
 
             return panel;
+        }
+
+        // Bedienelemente liegen im .ce-block: Tasten-/Eingabe-Ereignisse nicht an die Block-Handler von Editor.js
+        // weiterreichen (Enter/Backspace würden sonst den Block teilen oder löschen). Escape bleibt für das Schließen frei.
+        function stopEditorBlockEvents(element) {
+            ['keydown', 'keyup', 'mousedown', 'paste', 'input'].forEach(function (type) {
+                element.addEventListener(type, function (event) {
+                    if (type === 'keydown' && event.key === 'Escape') {
+                        return;
+                    }
+                    event.stopPropagation();
+                });
+            });
         }
 
         function toggleInlineInserter(holder, insertButton, editorEntry, insertIndex) {
@@ -1400,7 +1414,7 @@
             panel = buildInlineInserterPanel(holder, editorEntry, insertIndex);
             insertButton.classList.add('is-open');
             insertButton.setAttribute('aria-expanded', 'true');
-            insertButton.insertAdjacentElement('afterend', panel);
+            insertButton.parentNode.appendChild(panel);
             bindInlineInserterDismiss(holder);
 
             window.setTimeout(function () {
@@ -1474,7 +1488,6 @@
         function renderEditorBlockUi(definition, editorEntry) {
             var holder = getElement(definition.holderId);
             var state = getEditorUiState(definition.holderId);
-            var redactor;
             var blocks;
             var signature;
             var isLargeDocument;
@@ -1487,7 +1500,6 @@
                 return;
             }
 
-            redactor = holder.querySelector('.codex-editor__redactor') || holder;
             blocks = holder.querySelectorAll('.ce-block');
             isLargeDocument = blocks.length > CMS_EDITOR_INLINE_INSERT_MAX_BLOCKS;
             holder.classList.toggle('cms-editor-large-document', isLargeDocument);
@@ -1567,6 +1579,7 @@
                     insertButton.className = 'cms-editor-insert-between';
                     insertButton.dataset.cmsEditorUi = 'true';
                     insertButton.dataset.mutationFree = 'true';
+                    insertButton.contentEditable = 'false';
                     insertButton.setAttribute('aria-label', 'Block hier einfügen');
                     insertButton.setAttribute('aria-haspopup', 'dialog');
                     insertButton.setAttribute('aria-expanded', 'false');
@@ -1576,7 +1589,10 @@
                         event.stopPropagation();
                         toggleInlineInserter(holder, insertButton, editorEntry, index + 1);
                     });
-                    redactor.insertBefore(insertButton, nextBlock);
+                    stopEditorBlockEvents(insertButton);
+                    // Im Block (an dessen Unterkante) statt als Geschwister: Editor.js ermittelt den aktuellen Block
+                    // über die Position unter den Kindern des Redactors (setCurrentBlockByChildNode).
+                    block.appendChild(insertButton);
                 });
 
                 setupImageHoverOverlay(holder, editorEntry.instance);
@@ -1652,6 +1668,11 @@
             var element = node && node.nodeType === 1 ? node : (node && node.parentElement ? node.parentElement : null);
 
             if (!element || typeof element.matches !== 'function') {
+                return false;
+            }
+
+            // Ein Block enthält selbst „+“-Schaltflächen; Hinzufügen/Entfernen von Blöcken ist keine reine UI-Mutation.
+            if (element.matches('.ce-block') || element.querySelector('.ce-block')) {
                 return false;
             }
 

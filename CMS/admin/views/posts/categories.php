@@ -249,14 +249,14 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
             <div class="alert alert-danger taxonomy-form-error d-none" data-taxonomy-form-error role="alert"></div>
             <div class="mb-3">
                 <label class="form-label required" for="postCategoryPanelName">Name</label>
-                <input type="text" class="form-control" id="postCategoryPanelName" name="cat_name" value="<?php echo htmlspecialchars($editCategoryName, ENT_QUOTES); ?>" data-taxonomy-field="cat_name" data-taxonomy-name required>
+                <input type="text" class="form-control" id="postCategoryPanelName" name="cat_name" value="<?php echo htmlspecialchars($editCategoryName, ENT_QUOTES); ?>" maxlength="100" data-taxonomy-field="cat_name" data-taxonomy-name required>
                 <div class="taxonomy-validation-error d-none" data-taxonomy-error-for="cat_name"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label" for="postCategoryPanelSlug">Slug</label>
                 <div class="input-group">
                     <span class="input-group-text">/</span>
-                    <input type="text" class="form-control" id="postCategoryPanelSlug" name="cat_slug" value="<?php echo htmlspecialchars($editCategorySlug, ENT_QUOTES); ?>" placeholder="wird automatisch generiert" data-taxonomy-field="cat_slug" data-taxonomy-slug>
+                    <input type="text" class="form-control" id="postCategoryPanelSlug" name="cat_slug" value="<?php echo htmlspecialchars($editCategorySlug, ENT_QUOTES); ?>" placeholder="wird automatisch generiert" maxlength="100" data-taxonomy-field="cat_slug" data-taxonomy-slug>
                 </div>
                 <div class="taxonomy-validation-error d-none" data-taxonomy-error-for="cat_slug"></div>
             </div>
@@ -264,7 +264,7 @@ $panelStateJson = htmlspecialchars((string) json_encode($panelState, JSON_UNESCA
                 <label class="form-label" for="postCategoryPanelSlugEn">Slug (EN)</label>
                 <div class="input-group">
                     <span class="input-group-text">/</span>
-                    <input type="text" class="form-control" id="postCategoryPanelSlugEn" name="cat_slug_en" value="<?php echo htmlspecialchars($editCategorySlugEn, ENT_QUOTES); ?>" placeholder="optional – für englische Archiv-URLs" data-taxonomy-field="cat_slug_en">
+                    <input type="text" class="form-control" id="postCategoryPanelSlugEn" name="cat_slug_en" value="<?php echo htmlspecialchars($editCategorySlugEn, ENT_QUOTES); ?>" placeholder="optional – für englische Archiv-URLs" maxlength="100" data-taxonomy-field="cat_slug_en">
                 </div>
                 <div class="form-hint">Optionaler zweiter Slug für das englische Kategorie-Archiv. Leer lassen, um den Haupt-Slug für alle Sprachen zu nutzen.</div>
                 <div class="taxonomy-validation-error d-none" data-taxonomy-error-for="cat_slug_en"></div>

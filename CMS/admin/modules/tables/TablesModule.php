@@ -83,8 +83,8 @@ class TablesModule
         $params = [];
         if ($search !== '') {
             $where    = 'WHERE table_name LIKE ? OR description LIKE ?';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+            $params[] = '%' . \cms_escape_like($search) . '%';
+            $params[] = '%' . \cms_escape_like($search) . '%';
         }
 
         $tables = $this->db->get_results(

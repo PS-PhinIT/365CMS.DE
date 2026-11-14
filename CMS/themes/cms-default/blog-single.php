@@ -28,12 +28,12 @@ $pDate = $pPublishedAt !== '' ? meridian_format_date($pPublishedAt, false) : '';
 $pDateAgo = $pPublishedAt !== '' ? time_ago($pPublishedAt) : '';
 $pContentUpdatedAt = trim((string) ($post->content_updated_at ?? ''));
 $pUpdatedDate = $pContentUpdatedAt !== '' ? meridian_format_date($pContentUpdatedAt, false) : '';
-$pAuthor = trim((string) ($post->author_name ?? 'Redaktion'));
+$pAuthor = trim((string) ($post->author_name ?? meridian_t('theme.post.default_author')));
 $pAuthIni = meridian_author_initials($pAuthor);
 $pCat = trim((string) ($post->category_name ?? 'Blog'));
 $pCatSlug = trim((string) ($post->category_slug ?? 'blog'));
 $pReadMinutes = !empty($post->read_time) ? max(1, (int) $post->read_time) : meridian_reading_time($pContent);
-$pRead = $pReadMinutes . ' Min. Lesezeit';
+$pRead = meridian_t('theme.post.reading_time', ['{minutes}' => $pReadMinutes]);
 $pTags = $post->tags ?? [];
 $pFeaturedImageReference = (string) ($post->featured_image ?? '');
 $pFeaturedImage = function_exists('meridian_get_picture_sources')
@@ -113,7 +113,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
 
   <div class="breadcrumb-bar">
     <nav class="breadcrumb-inner" aria-label="Breadcrumb">
-      <a href="<?php echo SITE_URL; ?>/">Startseite</a><span class="sep">›</span>
+      <a href="<?php echo SITE_URL; ?>/"><?php echo esc_html(meridian_t('theme.nav.home')); ?></a><span class="sep">›</span>
       <a href="<?php echo SITE_URL; ?>/blog">Blog</a><span class="sep">›</span>
       <a href="<?php echo htmlspecialchars(meridian_archive_url('category', (string) ($pCatSlug)), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($pCat, ENT_QUOTES, 'UTF-8'); ?></a><span class="sep">›</span>
       <span class="cur"><?php echo $pTitle; ?></span>
@@ -141,40 +141,40 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
             <div class="avatar-sm"><?php echo htmlspecialchars($pAuthIni, ENT_QUOTES, 'UTF-8'); ?></div>
             <div>
               <div class="name"><?php echo htmlspecialchars($pAuthor, ENT_QUOTES, 'UTF-8'); ?></div>
-              <div class="role">Redaktion &amp; Autorenprofil</div>
+              <div class="role"><?php echo esc_html(meridian_t('theme.post.author_role')); ?></div>
             </div>
           </div>
           <?php endif; ?>
 
           <div class="post-hero__meta-list">
             <?php if ($pDate !== ''): ?>
-            <span><strong>Veröffentlicht</strong> <?php echo htmlspecialchars($pDate, ENT_QUOTES, 'UTF-8'); ?></span>
+            <span><strong><?php echo esc_html(meridian_t('theme.post.published')); ?></strong> <?php echo htmlspecialchars($pDate, ENT_QUOTES, 'UTF-8'); ?></span>
             <?php endif; ?>
             <?php if ($pDateAgo !== ''): ?>
             <span><?php echo htmlspecialchars($pDateAgo, ENT_QUOTES, 'UTF-8'); ?></span>
             <?php endif; ?>
             <?php if ($pUpdatedDate !== ''): ?>
-            <span><strong>Aktualisiert</strong> <?php echo htmlspecialchars($pUpdatedDate, ENT_QUOTES, 'UTF-8'); ?></span>
+            <span><strong><?php echo esc_html(meridian_t('theme.post.updated')); ?></strong> <?php echo htmlspecialchars($pUpdatedDate, ENT_QUOTES, 'UTF-8'); ?></span>
             <?php endif; ?>
             <?php if ($showViews && $pViews > 0): ?>
-            <span><?php echo number_format($pViews, 0, ',', '.'); ?> Aufrufe</span>
+            <span><?php echo esc_html(meridian_t('theme.post.views', ['{count}' => number_format($pViews, 0, ',', '.')])); ?></span>
             <?php endif; ?>
           </div>
         </div>
       </div>
 
-      <aside class="post-stat-card" aria-label="Artikeldetails">
+      <aside class="post-stat-card" aria-label="<?php echo esc_attr(meridian_t('theme.post.details_aria')); ?>">
         <div class="post-stat-card__item">
-          <span class="post-stat-card__label">Kategorie</span>
+          <span class="post-stat-card__label"><?php echo esc_html(meridian_t('theme.post.category')); ?></span>
           <span class="post-stat-card__value"><?php echo htmlspecialchars($pCat, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
         <div class="post-stat-card__item">
-          <span class="post-stat-card__label">Lesezeit</span>
+          <span class="post-stat-card__label"><?php echo esc_html(meridian_t('theme.post.reading_label')); ?></span>
           <span class="post-stat-card__value"><?php echo htmlspecialchars($pRead, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
         <?php if ($pDate !== ''): ?>
         <div class="post-stat-card__item">
-          <span class="post-stat-card__label">Stand</span>
+          <span class="post-stat-card__label"><?php echo esc_html(meridian_t('theme.post.as_of')); ?></span>
           <span class="post-stat-card__value"><?php echo htmlspecialchars($pDate, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
         <?php endif; ?>
@@ -201,7 +201,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
 
     <?php if (!empty($pTags)): ?>
     <div class="post-footer-bar post-footer-bar--detail">
-      <span class="pf-label">Schlagwörter</span>
+      <span class="pf-label"><?php echo esc_html(meridian_t('theme.post.tags')); ?></span>
       <div class="pf-tags">
         <?php foreach ((is_array($post->tag_items ?? null) && $post->tag_items !== [] ? $post->tag_items : $pTags) as $tag): $tagLink = meridian_tag_link_data($tag); if ($tagLink['name'] === '') { continue; } ?>
         <a href="<?php echo htmlspecialchars(meridian_archive_url('tag', $tagLink['slug']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($tagLink['name'], ENT_QUOTES, 'UTF-8'); ?></a>
@@ -215,10 +215,10 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
       <div class="author-box author-box--elevated">
         <div class="author-avatar-lg"><?php echo htmlspecialchars($pAuthIni, ENT_QUOTES, 'UTF-8'); ?></div>
         <div class="author-box-info">
-          <div class="label">Über den Autor</div>
+          <div class="label"><?php echo esc_html(meridian_t('theme.post.about_author')); ?></div>
           <h2><?php echo htmlspecialchars($pAuthor, ENT_QUOTES, 'UTF-8'); ?></h2>
-          <div class="arole">Redaktion · Schwerpunkt <?php echo htmlspecialchars($pCat, ENT_QUOTES, 'UTF-8'); ?></div>
-          <p>Konzipiert, verdichtet und veröffentlicht Beiträge mit Fokus auf nachvollziehbare Praxis, klare Struktur und einen brauchbaren Erkenntnisgewinn statt Deko-Textwüste.</p>
+          <div class="arole"><?php echo esc_html(meridian_t('theme.post.author_focus', ['{category}' => $pCat])); ?></div>
+          <p><?php echo esc_html(meridian_t('theme.post.author_bio')); ?></p>
         </div>
       </div>
     </div>
@@ -226,20 +226,20 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
 
     <?php if ($showRelated && !empty($relatedPosts)): ?>
     <section class="related-section" aria-labelledby="related-posts-heading">
-      <div class="section-label"><h2 id="related-posts-heading">Verwandte Artikel</h2></div>
+      <div class="section-label"><h2 id="related-posts-heading"><?php echo esc_html(meridian_t('theme.post.related')); ?></h2></div>
       <div class="related-grid">
         <?php foreach ($relatedPosts as $rp): $rp = (array) $rp;
             $rTitleRaw = trim((string) ($rp['title'] ?? ''));
             $rTitle = htmlspecialchars($rTitleRaw, ENT_QUOTES, 'UTF-8');
             $rLink = meridian_post_url($rp);
-            $rCat = trim((string) ($rp['category_name'] ?? 'Tipp'));
+            $rCat = trim((string) ($rp['category_name'] ?? meridian_t('theme.post.related_fallback_category')));
             $rDate = !empty($rp['published_at'] ?? $rp['created_at'] ?? '')
                 ? meridian_format_date((string) ($rp['published_at'] ?? $rp['created_at']), true)
                 : '';
             $rExcerptRaw = trim((string) ($rp['excerpt'] ?? ''));
             $rExcerpt = $rExcerptRaw !== ''
                 ? htmlspecialchars($rExcerptRaw, ENT_QUOTES, 'UTF-8')
-                : 'Mehr aus diesem Themenfeld lesen';
+                : esc_html(meridian_t('theme.post.related_more'));
             $rImageRef = (string) ($rp['featured_image'] ?? '');
             $rPicture = function_exists('meridian_get_picture_sources')
                 ? meridian_get_picture_sources($rImageRef, null, 720, 405)
@@ -280,27 +280,27 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
 
     <?php if ($shouldRenderCommentsSection): ?>
     <section id="comments" class="comments-section" aria-labelledby="comments-heading">
-      <div class="section-label"><h2 id="comments-heading">Kommentare<?php echo $approvedCommentCount > 0 ? ' (' . $approvedCommentCount . ')' : ''; ?></h2></div>
+      <div class="section-label"><h2 id="comments-heading"><?php echo esc_html(meridian_t('theme.comments.title')); ?><?php echo $approvedCommentCount > 0 ? ' (' . $approvedCommentCount . ')' : ''; ?></h2></div>
 
       <?php if ($approvedCommentCount > 0): ?>
-      <div class="comment-thread" aria-label="Freigegebene Kommentare">
+      <div class="comment-thread" aria-label="<?php echo esc_attr(meridian_t('theme.comments.thread_aria')); ?>">
         <?php foreach ($approvedComments as $comment): ?>
           <?php
-            $commentAuthor = trim((string) ($comment->author ?? 'Gast'));
+            $commentAuthor = trim((string) ($comment->author ?? meridian_t('theme.comments.guest')));
             $commentDateRaw = (string) ($comment->post_date ?? '');
             $commentDate = $commentDateRaw !== '' ? meridian_format_date($commentDateRaw, false) : '';
             $commentDateIso = $commentDateRaw !== '' ? date(DATE_ATOM, strtotime($commentDateRaw) ?: time()) : '';
             $commentText = nl2br(htmlspecialchars((string) ($comment->content ?? ''), ENT_QUOTES, 'UTF-8'));
-            $commentInitials = meridian_author_initials($commentAuthor !== '' ? $commentAuthor : 'Gast');
+            $commentInitials = meridian_author_initials($commentAuthor !== '' ? $commentAuthor : meridian_t('theme.comments.guest'));
             $commentIsAnonymous = !empty($comment->is_anonymous);
           ?>
           <article class="comment-item" id="comment-<?php echo (int) ($comment->id ?? 0); ?>">
             <div class="comment-av"><?php echo htmlspecialchars($commentInitials, ENT_QUOTES, 'UTF-8'); ?></div>
             <div class="comment-body">
               <div class="comment-meta-row">
-                <span class="comment-name"><?php echo htmlspecialchars($commentAuthor !== '' ? $commentAuthor : 'Gast', ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="comment-name"><?php echo htmlspecialchars($commentAuthor !== '' ? $commentAuthor : meridian_t('theme.comments.guest'), ENT_QUOTES, 'UTF-8'); ?></span>
                 <?php if ($commentIsAnonymous): ?>
-                <span class="comment-author-tag">Anonym</span>
+                <span class="comment-author-tag"><?php echo esc_html(meridian_t('theme.comments.anonymous')); ?></span>
                 <?php endif; ?>
                 <?php if ($commentDate !== ''): ?>
                 <time class="comment-date" datetime="<?php echo htmlspecialchars($commentDateIso, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($commentDate, ENT_QUOTES, 'UTF-8'); ?></time>
@@ -308,16 +308,16 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
               </div>
               <div class="comment-text"><?php echo $commentText; ?></div>
               <?php if (!empty($comment->edited_at)): ?>
-              <p class="comment-edited-note">Bearbeitet vom Administrator</p>
+              <p class="comment-edited-note"><?php echo esc_html(meridian_t('theme.comments.edited')); ?></p>
               <?php endif; ?>
             </div>
           </article>
         <?php endforeach; ?>
       </div>
       <?php elseif ($postAllowsComments): ?>
-      <p class="comments-empty">Noch keine Kommentare – sei der Erste.</p>
+      <p class="comments-empty"><?php echo esc_html(meridian_t('theme.comments.empty')); ?></p>
       <?php elseif (!$postAllowsComments): ?>
-      <p class="comments-empty">Für diesen Beitrag sind derzeit keine Kommentare veröffentlicht.</p>
+      <p class="comments-empty"><?php echo esc_html(meridian_t('theme.comments.none_published')); ?></p>
       <?php endif; ?>
 
       <?php if (is_array($commentFormState) && !empty($commentFormState['message'])): ?>
@@ -328,7 +328,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
 
       <?php if ($postAllowsComments): ?>
       <div class="comment-form-wrap">
-        <h3>Einen Kommentar hinterlassen</h3>
+        <h3><?php echo esc_html(meridian_t('theme.comments.form_title')); ?></h3>
         <?php
           $commentCsrf = '';
           if (class_exists('\\CMS\\Security')) {
@@ -341,22 +341,22 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
            <input type="text" name="comment_hp" value="" tabindex="-1" autocomplete="off" aria-hidden="true" class="visually-hidden">
            <input type="hidden" name="comment_started_at" value="<?php echo time(); ?>">
            <div class="form-2col">
-              <div class="form-field"><label>Name <span class="form-required">*</span></label><input type="text" name="author" placeholder="Dein Name" required maxlength="100" autocomplete="name" value="<?php echo htmlspecialchars($commentFormValues['author'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo $isLoggedInCommentAuthor ? ' readonly' : ''; ?>></div>
-              <div class="form-field"><label>E-Mail <span class="form-required">*</span></label><input type="email" name="email" placeholder="deine@email.de" required maxlength="200" autocomplete="email" value="<?php echo htmlspecialchars($commentFormValues['email'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo $isLoggedInCommentAuthor ? ' readonly' : ''; ?>></div>
-              <div class="form-field form-full"><label>Kommentar <span class="form-required">*</span></label><textarea name="comment" placeholder="Dein Kommentar …" required maxlength="5000"><?php echo htmlspecialchars($commentFormValues['comment'], ENT_QUOTES, 'UTF-8'); ?></textarea></div>
+              <div class="form-field"><label><?php echo esc_html(meridian_t('theme.comments.name')); ?> <span class="form-required">*</span></label><input type="text" name="author" placeholder="<?php echo esc_attr(meridian_t('theme.comments.name_placeholder')); ?>" required maxlength="100" autocomplete="name" value="<?php echo htmlspecialchars($commentFormValues['author'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo $isLoggedInCommentAuthor ? ' readonly' : ''; ?>></div>
+              <div class="form-field"><label><?php echo esc_html(meridian_t('theme.comments.email')); ?> <span class="form-required">*</span></label><input type="email" name="email" placeholder="<?php echo esc_attr(meridian_t('theme.comments.email_placeholder')); ?>" required maxlength="200" autocomplete="email" value="<?php echo htmlspecialchars($commentFormValues['email'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo $isLoggedInCommentAuthor ? ' readonly' : ''; ?>></div>
+              <div class="form-field form-full"><label><?php echo esc_html(meridian_t('theme.comments.comment')); ?> <span class="form-required">*</span></label><textarea name="comment" placeholder="<?php echo esc_attr(meridian_t('theme.comments.comment_placeholder')); ?>" required maxlength="5000"><?php echo htmlspecialchars($commentFormValues['comment'], ENT_QUOTES, 'UTF-8'); ?></textarea></div>
            </div>
            <?php if ($isLoggedInCommentAuthor): ?>
            <label class="checkbox-label" style="margin-bottom: .9rem;">
              <input type="checkbox" name="comment_anonymous" value="1" <?php echo !empty($commentFormValues['comment_anonymous']) ? 'checked' : ''; ?>>
-             <span>Kommentar anonym veröffentlichen</span>
+             <span><?php echo esc_html(meridian_t('theme.comments.anonymous_label')); ?></span>
            </label>
            <?php endif; ?>
-           <button type="submit" class="btn-submit">Kommentar absenden →</button>
-           <p class="form-text" style="margin-top: .75rem;">Kommentare werden vor der Veröffentlichung geprüft.</p>
+           <button type="submit" class="btn-submit"><?php echo esc_html(meridian_t('theme.comments.submit')); ?></button>
+           <p class="form-text" style="margin-top: .75rem;"><?php echo esc_html(meridian_t('theme.comments.moderation_hint')); ?></p>
         </form>
       </div>
       <?php else: ?>
-      <p class="comments-login-hint">Die Kommentarfunktion ist für diesen Beitrag geschlossen.</p>
+      <p class="comments-login-hint"><?php echo esc_html(meridian_t('theme.comments.closed')); ?></p>
       <?php endif; ?>
     </section>
     <?php endif; ?>

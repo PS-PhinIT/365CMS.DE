@@ -21,6 +21,8 @@ class CookieManagerModule
     private array $existingCategorySlugsCache = [];
 
     private const int MAX_CATEGORY_NAME_LENGTH = 100;
+    // cookie_categories.slug und cookie_services.category_slug sind VARCHAR(100)
+    private const int MAX_CATEGORY_SLUG_LENGTH = 100;
     private const int MAX_CATEGORY_DESCRIPTION_LENGTH = 1000;
     private const int MAX_CATEGORY_SCRIPTS_LENGTH = 20000;
     private const int MAX_SERVICE_NAME_LENGTH = 150;
@@ -353,7 +355,7 @@ class CookieManagerModule
             return ['success' => false, 'error' => 'Name ist erforderlich.'];
         }
 
-        $slug = $this->sanitizeSlug((string)($post['category_slug'] ?? ''), $name, 'category');
+        $slug = $this->sanitizeSlug((string)($post['category_slug'] ?? ''), $name, 'category', self::MAX_CATEGORY_SLUG_LENGTH);
         if ($slug === '') {
             return ['success' => false, 'error' => 'Kategorie-Slug ist ungültig.'];
         }
@@ -593,7 +595,7 @@ class CookieManagerModule
             'name' => $this->sanitizeText((string)($post['service_name'] ?? $service['name']), self::MAX_SERVICE_NAME_LENGTH, (string)$service['name']),
             'slug' => $slug,
             'provider' => $this->sanitizeText((string)($post['service_provider'] ?? $service['provider']), self::MAX_PROVIDER_LENGTH, (string)$service['provider']),
-            'category_slug' => $this->sanitizeSlug((string)($post['category_slug'] ?? ($service['is_essential'] ?? false ? 'necessary' : $service['category_slug'])), $service['category_slug'], 'necessary'),
+            'category_slug' => $this->sanitizeSlug((string)($post['category_slug'] ?? ($service['is_essential'] ?? false ? 'necessary' : $service['category_slug'])), $service['category_slug'], 'necessary', self::MAX_CATEGORY_SLUG_LENGTH),
             'description' => $this->sanitizeText((string)($post['service_description'] ?? $service['description']), self::MAX_SERVICE_DESCRIPTION_LENGTH, (string)$service['description']),
             'cookie_names' => '',
             'code_snippet' => '',
@@ -951,7 +953,7 @@ class CookieManagerModule
 
             $result['name'] = $this->sanitizeText((string)($result['name'] ?? self::CURATED_SERVICES[$slug]['name']), self::MAX_SERVICE_NAME_LENGTH, (string)self::CURATED_SERVICES[$slug]['name']);
             $result['provider'] = $this->sanitizeText((string)($result['provider'] ?? self::CURATED_SERVICES[$slug]['provider']), self::MAX_PROVIDER_LENGTH, (string)self::CURATED_SERVICES[$slug]['provider']);
-            $result['category_slug'] = $this->sanitizeSlug((string)($result['category_slug'] ?? self::CURATED_SERVICES[$slug]['category_slug']), (string)self::CURATED_SERVICES[$slug]['category_slug'], 'necessary');
+            $result['category_slug'] = $this->sanitizeSlug((string)($result['category_slug'] ?? self::CURATED_SERVICES[$slug]['category_slug']), (string)self::CURATED_SERVICES[$slug]['category_slug'], 'necessary', self::MAX_CATEGORY_SLUG_LENGTH);
             $result['sources'] = $sources;
             $result['self_hostable'] = $slug === 'matomo';
             $normalized[] = $result;
@@ -1163,7 +1165,7 @@ class CookieManagerModule
         return function_exists('mb_substr') ? mb_substr($result, 0, self::MAX_COOKIE_NAMES_LENGTH) : substr($result, 0, self::MAX_COOKIE_NAMES_LENGTH);
     }
 
-    private function sanitizeSlug(string $value, string $fallbackSource, string $prefix): string
+    private function sanitizeSlug(string $value, string $fallbackSource, string $prefix, int $maxLength = 120): string
     {
         $source = $value !== '' ? $value : $fallbackSource;
         $slug = preg_replace('/[^a-z0-9-]/', '', strtolower(str_replace(' ', '-', $source))) ?? '';
@@ -1173,7 +1175,7 @@ class CookieManagerModule
             $slug = $prefix . '-' . date('His');
         }
 
-        return function_exists('mb_substr') ? mb_substr($slug, 0, 120) : substr($slug, 0, 120);
+        return function_exists('mb_substr') ? mb_substr($slug, 0, $maxLength) : substr($slug, 0, $maxLength);
     }
 
     private function slugExistsInTable(string $table, string $slug, int $excludeId = 0): bool

@@ -20,6 +20,9 @@ class RolesModule
     private string $prefix;
 
     private const ROLES = ['admin', 'editor', 'author', 'member'];
+    // Spaltenbreiten: users.role VARCHAR(20), role_permissions.capability VARCHAR(100)
+    private const MAX_ROLE_SLUG_LENGTH = 20;
+    private const MAX_CAPABILITY_LENGTH = 100;
 
     private const CAPABILITIES = [
         'pages'    => ['pages.view', 'pages.create', 'pages.edit', 'pages.delete', 'pages.publish', 'manage_pages'],
@@ -244,6 +247,9 @@ class RolesModule
         if ($slug === '') {
             return ['success' => false, 'error' => 'Bitte einen gültigen Rollen-Slug angeben.'];
         }
+        if (strlen($slug) > self::MAX_ROLE_SLUG_LENGTH) {
+            return ['success' => false, 'error' => sprintf((string) __('admin.roles.error.role_slug_too_long'), self::MAX_ROLE_SLUG_LENGTH)];
+        }
 
         $roles = $this->getKnownRoles();
         if (in_array($slug, $roles, true)) {
@@ -297,6 +303,9 @@ class RolesModule
 
         if ($currentRole === '' || $newRole === '') {
             return ['success' => false, 'error' => 'Bitte gültige Rollen-Slugs angeben.'];
+        }
+        if (strlen($newRole) > self::MAX_ROLE_SLUG_LENGTH) {
+            return ['success' => false, 'error' => sprintf((string) __('admin.roles.error.role_slug_too_long'), self::MAX_ROLE_SLUG_LENGTH)];
         }
 
         if (in_array($currentRole, self::ROLES, true)) {
@@ -427,6 +436,9 @@ class RolesModule
                 'error'   => 'Bitte eine gültige Berechtigung im Format modul.aktion angeben, z. B. shop.orders.view.',
             ];
         }
+        if (strlen($capability) > self::MAX_CAPABILITY_LENGTH) {
+            return ['success' => false, 'error' => sprintf((string) __('admin.roles.error.capability_too_long'), self::MAX_CAPABILITY_LENGTH)];
+        }
 
         $capabilities = $this->getKnownCapabilities();
         foreach ($capabilities as $caps) {
@@ -473,6 +485,9 @@ class RolesModule
 
         if ($currentCapability === '' || $newCapability === '') {
             return ['success' => false, 'error' => 'Bitte gültige Berechtigungen angeben.'];
+        }
+        if (strlen($newCapability) > self::MAX_CAPABILITY_LENGTH) {
+            return ['success' => false, 'error' => sprintf((string) __('admin.roles.error.capability_too_long'), self::MAX_CAPABILITY_LENGTH)];
         }
 
         if ($this->isCoreCapability($currentCapability)) {

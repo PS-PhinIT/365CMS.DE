@@ -577,7 +577,7 @@ T::run('Einstellungen und Admin (NL-13, NL-14)', static function (): void {
     T::same('1', NewsletterSettings::DEFAULTS['member_widget_enabled'] ?? null, 'member_widget_enabled standardmäßig an');
     $module = (string) file_get_contents(ABSPATH . 'admin/modules/newsletter/NewsletterModule.php');
     T::check(str_contains($module, "'show_name_fields', 'member_widget_enabled']"), 'Schalter im Tab Allgemein gespeichert');
-    T::check(str_contains($module, "'unsubscribed_at', 'user_id'], ';');"), 'CSV-Export mit Spalte user_id');
+    T::check(str_contains($module, "'unsubscribed_at', 'user_id'], ';', '\"', '');"), 'CSV-Export mit Spalte user_id');
     $view = (string) file_get_contents(ABSPATH . 'admin/views/newsletter/subscriber.php');
     T::check(str_contains($view, "'/admin/users?action=edit&id=' . (int) \$nlAccount['id']"), 'Detailansicht verlinkt das Benutzerkonto');
     $settings = (string) file_get_contents(ABSPATH . 'admin/views/newsletter/settings.php');

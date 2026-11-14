@@ -479,7 +479,8 @@ class GroupsModule
 
         $slug = strtolower($slug);
         $slug = preg_replace('/[^a-z0-9]+/i', '-', $slug) ?? '';
-        $slug = trim($slug, '-');
+        // user_groups.slug ist VARCHAR(100)
+        $slug = trim(substr(trim($slug, '-'), 0, 100), '-');
 
         return $slug !== '' ? $slug : 'gruppe';
     }
@@ -490,7 +491,9 @@ class GroupsModule
         $suffix = 2;
 
         while ($this->slugExists($slug, $groupId)) {
-            $slug = $baseSlug . '-' . $suffix;
+            // Basis kürzen, damit Slug samt Zähler in VARCHAR(100) passt
+            $suffixText = '-' . $suffix;
+            $slug = rtrim(substr($baseSlug, 0, 100 - strlen($suffixText)), '-') . $suffixText;
             $suffix++;
         }
 
@@ -557,7 +560,7 @@ class GroupsModule
     public function save(array $post): array
     {
         $id          = (int)($post['id'] ?? 0);
-        $name        = $this->normalizeScalarText($post['name'] ?? '', 120);
+        $name        = $this->normalizeScalarText($post['name'] ?? '', 100);
         $slug        = $this->normalizeSlug($post['slug'] ?? '', $name);
         $description = $this->normalizeScalarText($post['description'] ?? '', 500);
         $memberIds   = $this->normalizeMemberIds($post['member_ids'] ?? []);

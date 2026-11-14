@@ -258,7 +258,7 @@ class PostsModule
                     INDEX idx_category_id (category_id),
                     FOREIGN KEY (post_id) REFERENCES {$this->prefix}posts(id) ON DELETE CASCADE,
                     FOREIGN KEY (category_id) REFERENCES {$this->prefix}post_categories(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('admin.posts')->warning('Beitrags-Kategorie-Relationstabelle konnte nicht automatisch angelegt werden.', [
@@ -295,7 +295,7 @@ class PostsModule
                     INDEX idx_post_id (post_id),
                     INDEX idx_author_id (author_id),
                     INDEX idx_created_at (created_at)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
 
             $columns = [
@@ -556,7 +556,7 @@ class PostsModule
             }
             $where[] = '(' . implode(' OR ', array_map(static fn (string $column): string => $column . ' LIKE ?', $searchColumns)) . ')';
             foreach ($searchColumns as $ignored) {
-                $params[] = "%{$search}%";
+                $params[] = '%' . \cms_escape_like($search) . '%';
             }
         }
 
@@ -1587,9 +1587,9 @@ class PostsModule
     public function saveCategory(array $post): array
     {
         $id   = (int)($post['cat_id'] ?? 0);
-        $name = $this->sanitizePlainText((string)($post['cat_name'] ?? ''), 255);
-        $slug = $this->normalizeSlug((string)($post['cat_slug'] ?? ''));
-        $slugEn = $this->normalizeSlug((string)($post['cat_slug_en'] ?? ''));
+        $name = $this->sanitizePlainText((string)($post['cat_name'] ?? ''), 100);
+        $slug = $this->normalizeSlug((string)($post['cat_slug'] ?? ''), 100);
+        $slugEn = $this->normalizeSlug((string)($post['cat_slug_en'] ?? ''), 100);
         $description = $this->sanitizePlainText((string)($post['cat_description'] ?? ''), 2000);
         $parentId = (int) ($post['parent_id'] ?? 0);
         $replacementCategoryId = (int) ($post['replacement_category_id'] ?? 0);
@@ -1598,7 +1598,7 @@ class PostsModule
             return ['success' => false, 'error' => 'Kategoriename darf nicht leer sein.'];
         }
         if ($slug === '') {
-            $slug = $this->normalizeSlug($this->generateSlug($name));
+            $slug = $this->normalizeSlug($this->generateSlug($name), 100);
         }
 
         if ($slug === '') {
@@ -2085,16 +2085,16 @@ class PostsModule
     public function saveTag(array $post): array
     {
         $id = (int) ($post['tag_id'] ?? 0);
-        $name = $this->sanitizePlainText((string) ($post['tag_name'] ?? ''), 120);
-        $slug = $this->normalizeSlug((string) ($post['tag_slug'] ?? ''));
-        $slugEn = $this->normalizeSlug((string) ($post['tag_slug_en'] ?? ''));
+        $name = $this->sanitizePlainText((string) ($post['tag_name'] ?? ''), 100);
+        $slug = $this->normalizeSlug((string) ($post['tag_slug'] ?? ''), 100);
+        $slugEn = $this->normalizeSlug((string) ($post['tag_slug_en'] ?? ''), 100);
         $description = $this->sanitizePlainText((string) ($post['tag_description'] ?? ''), 2000);
 
         if ($name === '') {
             return ['success' => false, 'error' => 'Tag-Name darf nicht leer sein.'];
         }
 
-        $slug = $slug !== '' ? $slug : $this->normalizeSlug($this->generateSlug($name));
+        $slug = $slug !== '' ? $slug : $this->normalizeSlug($this->generateSlug($name), 100);
         if ($slug === '') {
             return ['success' => false, 'error' => 'Bitte einen gültigen Tag-Slug angeben.'];
         }
@@ -3374,11 +3374,15 @@ class PostsModule
         return trim($slug, '-');
     }
 
-    private function normalizeSlug(string $slug): string
+    private function normalizeSlug(string $slug, int $maxLength = 0): string
     {
         $slug = $this->toLowercase(trim($slug));
         $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug) ?? $slug;
         $slug = preg_replace('/-+/', '-', $slug) ?? $slug;
+        // Optional auf die Spaltenbreite kürzen (Kategorien/Tags: VARCHAR(100))
+        if ($maxLength > 0) {
+            $slug = $this->truncateText(trim($slug, '-'), $maxLength);
+        }
         return trim($slug, '-');
     }
 
@@ -3709,15 +3713,16 @@ class PostsModule
                 continue;
             }
 
-            $slug = $this->normalizeSlug($this->generateSlug($name));
+            // Gekürzter Slug vor der Duplikatprüfung; post_tags.name/slug sind VARCHAR(100)
+            $slug = $this->normalizeSlug($this->generateSlug($name), 100);
             if ($slug === '' || isset($seen[$slug])) {
                 continue;
             }
 
             $seen[$slug] = true;
             $normalized[] = [
-                'name' => $this->truncateText($name, 120),
-                'slug' => $this->truncateText($slug, 160),
+                'name' => $this->truncateText($name, 100),
+                'slug' => $slug,
             ];
         }
 

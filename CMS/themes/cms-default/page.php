@@ -39,7 +39,7 @@ $pageId = (int) ($page['id'] ?? 0);
 <article class="page-detail">
     <div class="breadcrumb-bar">
         <nav class="breadcrumb-inner" aria-label="Breadcrumb">
-            <a href="<?php echo SITE_URL; ?>/">Startseite</a>
+            <a href="<?php echo SITE_URL; ?>/"><?php echo esc_html(meridian_t('theme.nav.home')); ?></a>
             <span class="sep" aria-hidden="true">›</span>
             <span class="cur" aria-current="page"><?php echo $pageTitle; ?></span>
         </nav>
@@ -48,7 +48,7 @@ $pageId = (int) ($page['id'] ?? 0);
     <div class="page-detail-shell">
         <header class="page-hero<?php echo $pageImage['url'] !== '' ? ' page-hero--with-media' : ''; ?>">
             <div class="page-hero__intro">
-                <div class="page-hero__eyebrow">Seite</div>
+                <div class="page-hero__eyebrow"><?php echo esc_html(meridian_t('theme.page.eyebrow')); ?></div>
                 <h1 class="page-hero__title"><?php echo $pageTitle; ?></h1>
                 <?php if ($pageExcerpt !== ''): ?>
                 <p class="page-hero__excerpt"><?php echo $pageExcerpt; ?></p>
@@ -56,7 +56,7 @@ $pageId = (int) ($page['id'] ?? 0);
 
                 <div class="page-hero__meta">
                     <?php if ($pageUpdatedLabel !== ''): ?>
-                    <span><strong>Aktualisiert</strong> <?php echo htmlspecialchars($pageUpdatedLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                    <span><strong><?php echo esc_html(meridian_t('theme.post.updated')); ?></strong> <?php echo htmlspecialchars($pageUpdatedLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                     <?php endif; ?>
                     <?php if ($pageUpdatedAgo !== ''): ?>
                     <span><?php echo htmlspecialchars($pageUpdatedAgo, ENT_QUOTES, 'UTF-8'); ?></span>

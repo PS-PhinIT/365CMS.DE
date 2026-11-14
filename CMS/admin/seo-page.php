@@ -192,7 +192,10 @@ function cms_admin_seo_normalize_redirect_target(mixed $returnTo, string $fallba
         return $fallback;
     }
 
-    return in_array($targetPath, cms_admin_seo_allowed_routes(), true) ? $targetPath : $fallback;
+    // Rücksprung auch zu Weiterleitungen und 404-Monitor (SEO-Subnavigation)
+    $allowedTargets = array_merge(cms_admin_seo_allowed_routes(), ['/admin/redirect-manager', '/admin/not-found-monitor']);
+
+    return in_array($targetPath, $allowedTargets, true) ? $targetPath : $fallback;
 }
 
 $seoPageConfig = cms_admin_seo_normalize_page_config(array_merge(

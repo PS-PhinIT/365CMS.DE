@@ -50,6 +50,14 @@ final class Request
         return $_SESSION[$key] ?? $default;
     }
 
+    /** Liest einen GET-Parameter als String; Arrays (z. B. ?q[]=x) zählen als nicht gesetzt. */
+    public static function stringFromGet(string $key, string $default = ''): string
+    {
+        $value = $_GET[$key] ?? null;
+
+        return is_string($value) ? $value : $default;
+    }
+
     public static function boolFromGet(string $key, bool $default = false): bool
     {
         if (!array_key_exists($key, $_GET)) {

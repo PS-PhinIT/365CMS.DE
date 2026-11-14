@@ -1241,13 +1241,14 @@ final class SeoSuiteModule
 	{
 		$settings = $this->loadSettings(self::SCHEMA_DEFAULTS);
 		$distribution = array_map(static fn(object $row): array => [
-			'schema_type' => (string)($row->schema_type ?? 'WebPage'),
-			'count' => (int)($row->count ?? 0),
+			'schema_type' => (string)($row->schema_label ?? 'WebPage'),
+			'count' => (int)($row->cnt ?? 0),
 		], $this->db->get_results(
-			"SELECT COALESCE(NULLIF(schema_type, ''), 'WebPage') AS schema_type, COUNT(*) AS count
+			// Gruppierung über den Alias: MariaDB erkennt den NULLIF-Ausdruck unter ONLY_FULL_GROUP_BY nicht als gleich
+			"SELECT COALESCE(NULLIF(schema_type, ''), 'WebPage') AS schema_label, COUNT(*) AS cnt
 			 FROM {$this->prefix}seo_meta
-			 GROUP BY COALESCE(NULLIF(schema_type, ''), 'WebPage')
-			 ORDER BY count DESC"
+			 GROUP BY schema_label
+			 ORDER BY cnt DESC"
 		) ?: []);
 
 		return [

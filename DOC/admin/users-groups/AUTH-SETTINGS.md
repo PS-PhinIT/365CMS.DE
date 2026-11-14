@@ -21,7 +21,7 @@
 
 | Schalter | Option | Standard | Wirkung |
 |---|---|---|---|
-| Globale Benutzerregistrierung | `registration_enabled` | aus | Öffentliche Registrierung (Standardpfad `/cms-register`, `/register` leitet weiter; Pfade konfigurierbar unter CMS-Loginseite) |
+| Globale Benutzerregistrierung | `registration_enabled` | an | Öffentliche Registrierung (Standardpfad `/cms-register`, `/register` leitet weiter; Pfade konfigurierbar unter CMS-Loginseite) |
 | Registrierung im Member-Bereich | `member_registration_enabled` | an | Registrierungseinstieg im Member-Kontext |
 | E-Mail-Verifizierung erzwingen | `member_email_verification` | aus | Neue Registrierungen müssen den Bestätigungslink aus der Mail öffnen, bevor sie sich anmelden können (seit 4.0.0 durchgesetzt, vorher ohne Wirkung). Bestehende Konten bleiben unverändert; siehe [E-Mail-Verifizierung](#e-mail-verifizierung-seit-400) |
 | Standardrolle neuer Mitglieder | `member_default_role` | `member` | Nur Rollen ohne Adminrechte wählbar (`UserService::resolveRegistrationRole()`) |

@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Recommended order for every release: **backup → check → core → database → plugins/theme → verify**. The admin page `/admin/updates` reads the core source (`core_update_url`, default `https://365cms.de/marketplace/core/365cms/update.json`, GitHub fallback), plugin registry and theme marketplace (results cached one hour). Installation is refused without a valid SHA-256 checksum; archives are extracted with limits (5,000 entries, 256 MB per file, 512 MB total). Core swaps preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `uploads/` and, since 4.0.0, plugins and themes that are not part of the package (only the bundled `cms-importer` and `cms-default` are replaced; an update from 3.x still runs the old updater, which replaces `plugins/` and `themes/` completely – back up extra plugins and themes first). Keep a separate copy of `config/app.php`; since 4.0.0 it holds `CMS_ENCRYPTION_KEY`, without which encrypted settings, TOTP secrets and encrypted backups cannot be read. Afterwards run the database update (idempotent `CREATE`/`ALTER` migrations up to schema `v25`). For manual deployments (Git/SFTP) the same rules apply: never overwrite `config/` and `uploads/`, then open `/admin/updates` and run the database update.
+Recommended order for every release: **backup → check → core → database → plugins/theme → verify**. The admin page `/admin/updates` reads the core source (`core_update_url`, default `https://365cms.de/marketplace/core/365cms/update.json`, GitHub fallback), plugin registry and theme marketplace (results cached one hour). Installation is refused without a valid SHA-256 checksum; archives are extracted with limits (5,000 entries, 256 MB per file, 512 MB total). Core swaps preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `uploads/` and, since 4.0.0, plugins and themes that are not part of the package (only the bundled `cms-importer` and `cms-default` are replaced; an update from 3.x still runs the old updater, which replaces `plugins/` and `themes/` completely – back up extra plugins and themes first). Keep a separate copy of `config/app.php`; since 4.0.0 it holds `CMS_ENCRYPTION_KEY`, without which encrypted settings, TOTP secrets and encrypted backups cannot be read. Afterwards run the database update (idempotent `CREATE`/`ALTER` migrations up to schema `v25`). For manual deployments (Git/SFTP) the same rules apply: never overwrite `config/` and `uploads/`, then open `/admin/updates` and run the database update. During the file swap, `index.php`, `cron.php` and `orders.php` answer with 503 + `Retry-After` while `CMS/cache/.update.lock` exists (the built-in updater sets and removes it; for FTP deployments create an empty file there first and delete it afterwards; it expires after 60 minutes).
 
 ## Deutsch
 
@@ -24,22 +24,28 @@ Recommended order for every release: **backup → check → core → database �
 5. **Plugins/Theme** (`install_plugin`, `install_theme`) in dieser Reihenfolge aktualisieren.
 6. **Nacharbeiten:** Cache leeren (`/admin/performance-cache`), Sicherheits-Audit (`/admin/security-audit`), Systemprüfung (`/admin/info`, `/admin/diagnose`), Stichprobe im Frontend. Der Bootstrap erkennt geänderte Dateien und wärmt den OPcache vor (`OpcacheWarmupService::maybeWarmAfterDeploy()`).
 
+**Update-Sperre:** Während des Dateitauschs setzt der Updater `CMS/cache/.update.lock` (Inhalt: Ablaufzeit, 5 Minuten) und entfernt sie danach in jedem Fall; anschließend leert er OPcache und Stat-Cache. Solange die Datei existiert, antworten `index.php` (Frontend, `/admin`, `/member`, `/api`), `cron.php` und `orders.php` noch vor dem Bootstrap mit **503** und `Retry-After` (API und Cron als JSON `{"success":false,"error":"maintenance"}`, CLI-Cron mit Exit-Code 75). Eine Sperre gilt höchstens 60 Minuten ab Änderungszeit; hängen gebliebene Sperren laufen dadurch von selbst ab.
+
 ### B) Manuelles Deployment (Git, SFTP, CI)
 
 1. Wartungsfenster ankündigen; Backup wie oben.
-2. Neue Dateien nach `CMS/` übertragen, **ohne** `config/`, `config.php`, `uploads/`, `cache/`, `logs/`, `backups/` zu überschreiben. Bei Git-basierten Deployments diese Pfade außerhalb der Arbeitskopie halten oder ignorieren.
-3. Datei-Rechte prüfen (Webserver-Benutzer muss `uploads/`, `cache/`, `logs/` und das Backup-Verzeichnis – `backups/` bzw. `CMS_BACKUP_PATH` – schreiben können).
-4. OPcache leeren (PHP-FPM-Reload) oder auf die automatische Erkennung im Bootstrap vertrauen.
-5. Als Administrator `/admin/updates` öffnen → `run_database_update`.
-6. Nacharbeiten wie in A) Schritt 6.
+2. **Update-Sperre setzen:** leere Datei `CMS/cache/.update.lock` anlegen (per FTP neu erstellen, nicht mit altem Zeitstempel hochladen; per Shell `touch CMS/cache/.update.lock`). Sie gilt 60 Minuten; längere Übertragungen zwischendurch erneut anlegen. Das erste Einspielen einer Version mit Sperrprüfung ist noch ungeschützt, weil die alte `index.php` die Datei nicht kennt.
+3. Neue Dateien nach `CMS/` übertragen, **ohne** `config/`, `config.php`, `uploads/`, `cache/`, `logs/`, `backups/` zu überschreiben. Bei Git-basierten Deployments diese Pfade außerhalb der Arbeitskopie halten oder ignorieren.
+4. Datei-Rechte prüfen (Webserver-Benutzer muss `uploads/`, `cache/`, `logs/` und das Backup-Verzeichnis – `backups/` bzw. `CMS_BACKUP_PATH` – schreiben können).
+5. OPcache leeren (PHP-FPM-Reload) oder auf die automatische Erkennung im Bootstrap vertrauen.
+6. **Update-Sperre entfernen:** `CMS/cache/.update.lock` löschen.
+7. Als Administrator `/admin/updates` öffnen → `run_database_update`.
+8. Nacharbeiten wie in A) Schritt 6.
 
 Beispiel (rsync):
 
 ```bash
+ssh user@server 'touch /var/www/365cms/cache/.update.lock'
 rsync -av --delete \
   --exclude 'config/' --exclude 'config.php' \
   --exclude 'uploads/' --exclude 'cache/' --exclude 'logs/' --exclude 'backups/' \
   ./CMS/ user@server:/var/www/365cms/
+ssh user@server 'rm -f /var/www/365cms/cache/.update.lock'
 ```
 
 > **Achtung `config/app.php`:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Wird `config/app.php` durch ein Deployment ersetzt oder vom Installer neu erzeugt, gehen eigene Konstanten verloren. Eigene Werte daher dokumentieren und nach jedem Installer-Lauf prüfen (siehe [core/STATUS.md](../core/STATUS.md)). Das gilt besonders für `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` und `CMS_BACKUP_PATH` (seit 4.0.0).

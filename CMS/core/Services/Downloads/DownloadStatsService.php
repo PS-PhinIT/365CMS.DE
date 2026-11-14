@@ -255,6 +255,19 @@ final class DownloadStatsService
         return $deleted;
     }
 
+    /**
+     * Kalendertag `$daysBack` Tage vor `$now` (Y-m-d) in der Zeitzone, in der `stat_date` geschrieben wird.
+     * Rechnet in Kalendertagen statt 86400 Sekunden, damit Tage mit Zeitumstellung (23/25 h) stimmen.
+     */
+    public static function dayBefore(int $now, int $daysBack): string
+    {
+        return (new \DateTimeImmutable('@' . $now))
+            ->setTimezone(new \DateTimeZone(date_default_timezone_get()))
+            ->setTime(12, 0)
+            ->modify('-' . max(0, $daysBack) . ' days')
+            ->format('Y-m-d');
+    }
+
     private function retentionCutoff(?int $now): string
     {
         return date('Y-m-d H:i:s', ($now ?? time()) - $this->retentionDays() * 86400);
@@ -271,14 +284,14 @@ final class DownloadStatsService
     {
         $days = self::normalizePeriod($days);
         $now ??= time();
-        $start = date('Y-m-d', $now - ($days - 1) * 86400);
+        $start = self::dayBefore($now, $days - 1);
         $map = [];
         foreach ($this->periodRows($start, $downloadId, ['date']) as $row) {
             $map[$row['date']] = ($map[$row['date']] ?? 0) + $row['hits'];
         }
         $series = [];
         for ($i = $days - 1; $i >= 0; $i--) {
-            $date = date('Y-m-d', $now - $i * 86400);
+            $date = self::dayBefore($now, $i);
             $series[] = ['date' => $date, 'hits' => (int) ($map[$date] ?? 0)];
         }
 
@@ -296,7 +309,7 @@ final class DownloadStatsService
         if (!$repo->isAvailable()) {
             return [];
         }
-        $start = date('Y-m-d', ($now ?? time()) - (self::normalizePeriod($days) - 1) * 86400);
+        $start = self::dayBefore($now ?? time(), self::normalizePeriod($days) - 1);
         $period = [];
         foreach ($this->periodRows($start, $downloadId, ['version']) as $row) {
             $period[$row['version_id']] = ($period[$row['version_id']] ?? 0) + $row['hits'];
@@ -325,7 +338,7 @@ final class DownloadStatsService
         if (!$repo->isAvailable()) {
             return [];
         }
-        $start = date('Y-m-d', ($now ?? time()) - (self::normalizePeriod($days) - 1) * 86400);
+        $start = self::dayBefore($now ?? time(), self::normalizePeriod($days) - 1);
         $hits = [];
         foreach ($this->periodRows($start, null, ['download']) as $row) {
             $hits[$row['download_id']] = ($hits[$row['download_id']] ?? 0) + $row['hits'];
@@ -357,7 +370,7 @@ final class DownloadStatsService
         if (!$repo->isAvailable()) {
             return [];
         }
-        $start = date('Y-m-d', ($now ?? time()) - (self::normalizePeriod($days) - 1) * 86400);
+        $start = self::dayBefore($now ?? time(), self::normalizePeriod($days) - 1);
         $hits = [];
         foreach ($this->periodRows($start, $downloadId, ['source']) as $row) {
             if ($row['source_id'] <= 0 || !in_array($row['source_type'], DownloadSecurity::SOURCE_TYPES, true)) {
@@ -431,7 +444,7 @@ final class DownloadStatsService
         if (!$repo->isAvailable()) {
             return $rows;
         }
-        $start = date('Y-m-d', ($now ?? time()) - (self::normalizePeriod($days) - 1) * 86400);
+        $start = self::dayBefore($now ?? time(), self::normalizePeriod($days) - 1);
         $grouped = [];
         foreach ($this->periodRows($start, $downloadId, ['date', 'download', 'version', 'source']) as $row) {
             $key = implode('|', [$row['date'], $row['download_id'], $row['version_id'], $row['source_type'], $row['source_id']]);

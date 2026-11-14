@@ -9,7 +9,8 @@ if (!defined('CMS_ADMIN_SEO_VIEW')) {
     exit;
 }
 
-$seoActionToken = (string) ($csrfToken ?? '');
+// Sitemap/robots.txt laufen über /admin/seo-sitemap und brauchen das Token der Aktion admin_seo_suite
+$seoActionToken = (string) ($seoSuiteCsrfToken ?? $csrfToken ?? '');
 $seoActionEndpoint = '/admin/seo-sitemap';
 $seoReturnTo = (string) ($_SERVER['REQUEST_URI'] ?? '/admin/seo-sitemap');
 

@@ -277,7 +277,7 @@ final class NewsletterModule
         header('Cache-Control: no-store');
         $out = fopen('php://output', 'wb');
         fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['email', 'first_name', 'last_name', 'status', 'segment', 'language', 'source', 'subscribed_at', 'consent_at', 'confirmed_at', 'unsubscribed_at', 'user_id'], ';');
+        fputcsv($out, ['email', 'first_name', 'last_name', 'status', 'segment', 'language', 'source', 'subscribed_at', 'consent_at', 'confirmed_at', 'unsubscribed_at', 'user_id'], ';', '"', '');
         // Seitenweise lesen: listSubscribers() liefert höchstens 5.000 Zeilen je Aufruf.
         $offset = 0;
         do {
@@ -286,7 +286,7 @@ final class NewsletterModule
                 $cells = [$row['email'], $row['first_name'], $row['last_name'], $row['status'], $row['segment_slug'], $row['locale'] ?? 'de', $row['source'], $row['created_at'], $row['consent_at'] ?? '', $row['confirmed_at'] ?? '', $row['unsubscribed_at'] ?? '', (int) ($row['user_id'] ?? 0) > 0 ? (string) (int) $row['user_id'] : ''];
                 // Formel-Injection in Tabellenprogrammen verhindern.
                 $cells = array_map(static fn (mixed $v): string => preg_match('/^[=+\-@\t\r]/', (string) $v) === 1 ? "'" . $v : (string) $v, $cells);
-                fputcsv($out, $cells, ';');
+                fputcsv($out, $cells, ';', '"', '');
             }
             $offset += 5000;
             flush();
@@ -421,7 +421,7 @@ final class NewsletterModule
                 continue;
             }
             $delimiter = substr_count($line, ';') >= substr_count($line, ',') ? ';' : ',';
-            $cols = array_map('trim', str_getcsv($line, $delimiter, '"', '\\'));
+            $cols = array_map('trim', str_getcsv($line, $delimiter, '"', ''));
             $email = NewsletterRepository::normalizeEmail($cols[0] ?? '');
             if ($email === '') {
                 if (!in_array(strtolower($cols[0] ?? ''), ['email', 'e-mail', 'mail'], true)) {

@@ -129,8 +129,9 @@ final class DigestMailer
         $locale = FeedI18n::normalizeLocale((string) ($digest['language'] ?? 'de'));
         $lastSent = !$test && !empty($digest['last_sent_at']) ? strtotime((string) $digest['last_sent_at']) : false;
         $since = date('Y-m-d H:i:s', $lastSent !== false ? $lastSent : $now - 86400);
-        $items = $this->repository->recentItems([], LegacyNormalizer::idList($digest['category_ids'] ?? '[]'), $since, (int) $settings['digest_max_items']);
         $sentAt = date('Y-m-d H:i:s', $now);
+        // Halboffenes Intervall [letzter Versand, jetzt) nach Abrufzeitpunkt: jeder Artikel genau einmal.
+        $items = $this->repository->recentItems([], LegacyNormalizer::idList($digest['category_ids'] ?? '[]'), $since, (int) $settings['digest_max_items'], $test ? null : $sentAt);
 
         if ($items === [] && !$test) {
             $this->repository->markDigestSent((int) $digest['id'], $sentAt);
@@ -178,8 +179,10 @@ final class DigestMailer
         $frequency = LegacyNormalizer::frequency($subscription['frequency'] ?? 'daily');
         $lastSent = !empty($subscription['last_sent_at']) ? strtotime((string) $subscription['last_sent_at']) : false;
         $since = date('Y-m-d H:i:s', $lastSent !== false ? $lastSent : $now - ($frequency === 'weekly' ? 7 * 86400 : 86400));
-        $items = $this->repository->recentItems(LegacyNormalizer::idList($subscription['source_ids'] ?? '[]'), [], $since, (int) $settings['digest_max_items']);
-        $markAt = date('Y-m-d H:i:s', $windowStart);
+        // Tatsächlichen Auswahlzeitpunkt speichern (nicht den Fensterbeginn), sonst doppelte Artikel im nächsten Abo-Versand.
+        // Wegen $now >= $windowStart bleibt das Abo im laufenden Fenster trotzdem nicht erneut fällig.
+        $markAt = date('Y-m-d H:i:s', $now);
+        $items = $this->repository->recentItems(LegacyNormalizer::idList($subscription['source_ids'] ?? '[]'), [], $since, (int) $settings['digest_max_items'], $markAt);
 
         if ($items === []) {
             $this->repository->markSubscriptionSent((int) $subscription['id'], $markAt);

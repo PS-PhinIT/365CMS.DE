@@ -70,12 +70,18 @@ final class SourceFetcher
         $now = time();
         $new = 0;
         $filtered = 0;
+        // Artikel außerhalb der Aufbewahrungsfrist nicht importieren (gleiche Grenze wie pruneItems(), 0 = keine Grenze).
+        $retentionDays = (int) AggregatorSettings::get('item_retention_days');
+        $cutoff = $retentionDays > 0 ? date('Y-m-d H:i:s', $now - $retentionDays * 86400) : null;
 
         foreach ($items as $rawItem) {
             if (!is_array($rawItem)) {
                 continue;
             }
             $item = self::normalizeItem($rawItem, $now);
+            if ($cutoff !== null && $item['pub_date'] < $cutoff) {
+                continue;
+            }
             if ($filter->excludes($item)) {
                 $filtered++;
                 continue;

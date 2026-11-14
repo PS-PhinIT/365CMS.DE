@@ -12,6 +12,7 @@ namespace CMS\Routing;
 use CMS\Api;
 use CMS\Services\CmsAuthPageService;
 use CMS\Database;
+use CMS\Http\Request;
 use CMS\PageManager;
 use CMS\PluginManager;
 use CMS\Router;
@@ -172,12 +173,12 @@ final class ThemeRouter
     {
         $type = $this->normalizeSearchType($_GET['type'] ?? '');
         $sort = Services\SiteSearchService::normalizeSort($_GET['sort'] ?? '');
-        $location = trim((string)($_GET['location'] ?? ''));
-        $filter = trim((string)($_GET['filter'] ?? ''));
+        $location = trim(Request::stringFromGet('location'));
+        $filter = trim(Request::stringFromGet('filter'));
         $contentLocale = $this->getResolvedContentLocale();
 
         $siteSearch = Services\SiteSearchService::getInstance();
-        $parsed = Services\SiteSearchService::parseQuery(is_string($_GET['q'] ?? null) ? $_GET['q'] : '');
+        $parsed = Services\SiteSearchService::parseQuery(Request::stringFromGet('q'));
         $query = $parsed['query'];
 
         $results = [];
@@ -701,7 +702,7 @@ final class ThemeRouter
 
     public function renderBlogIndex(): void
     {
-        $requestedCategory = trim((string) ($_GET['category'] ?? ''));
+        $requestedCategory = trim(Request::stringFromGet('category'));
         if ($requestedCategory !== '') {
             $resolvedCategorySlug = $this->resolveRequestedCategorySlug($requestedCategory);
             if ($resolvedCategorySlug === '') {
@@ -714,7 +715,7 @@ final class ThemeRouter
             return;
         }
 
-        $requestedTag = trim((string) ($_GET['tag'] ?? ''));
+        $requestedTag = trim(Request::stringFromGet('tag'));
         if ($requestedTag !== '') {
             $resolvedTagSlug = $this->resolveRequestedTagSlug($requestedTag);
             if ($resolvedTagSlug === '') {
@@ -787,7 +788,7 @@ final class ThemeRouter
             $categoryData['slug'] = $categoryData['slug_en'];
         }
 
-        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = trim(Request::stringFromGet('q'));
         $page = max(1, (int) ($_GET['page'] ?? $_GET['p'] ?? 1));
         $perPage = 10;
 
@@ -855,7 +856,7 @@ final class ThemeRouter
     public function renderCategoryArchiveIndex(): void
     {
         $locale = $this->getResolvedContentLocale();
-        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = trim(Request::stringFromGet('q'));
         $page = max(1, (int) ($_GET['page'] ?? $_GET['p'] ?? 1));
         $perPage = 18;
         $overview = $this->buildArchiveOverviewPage(
@@ -899,7 +900,7 @@ final class ThemeRouter
         $db = Database::instance();
         $prefix = $db->getPrefix();
         $locale = $this->getResolvedContentLocale();
-        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = trim(Request::stringFromGet('q'));
         $page = max(1, (int) ($_GET['page'] ?? $_GET['p'] ?? 1));
         $perPage = 10;
 
@@ -1055,7 +1056,7 @@ final class ThemeRouter
     public function renderTagArchiveIndex(): void
     {
         $locale = $this->getResolvedContentLocale();
-        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = trim(Request::stringFromGet('q'));
         $page = max(1, (int) ($_GET['page'] ?? $_GET['p'] ?? 1));
         $perPage = 24;
         $overview = $this->buildArchiveOverviewPage(

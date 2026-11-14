@@ -151,6 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $alert = cms_admin_not_found_monitor_pull_alert();
 
 $csrfToken = Security::instance()->generateToken('admin_redirect_manager');
+$seoSuiteCsrfToken = Security::instance()->generateToken('admin_seo_suite');
 $pageTitle = '404-Monitor';
 $activePage = 'not-found-monitor';
 $pageAssets = [

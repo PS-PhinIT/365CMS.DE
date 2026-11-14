@@ -7,6 +7,40 @@
 
 declare(strict_types=1);
 
+// Update-Sperre (Core-Update/FTP-Deployment): bewusst inline ohne core/, Autoloader, Datenbank und Session,
+// weil die Installation währenddessen unvollständig sein kann. cache/.update.lock enthält die Ablaufzeit
+// (Unix-Zeit); eine leere, manuell angelegte Datei gilt 60 Minuten. Höchstalter 60 Minuten ab Änderungszeit.
+(static function (): void {
+    $lockFile = __DIR__ . '/cache/.update.lock';
+    $lockMtime = is_file($lockFile) ? (int) @filemtime($lockFile) : 0;
+    if ($lockMtime <= 0) {
+        return;
+    }
+    $lockUntil = (int) trim((string) @file_get_contents($lockFile, false, null, 0, 32));
+    $lockUntil = $lockUntil > 0 ? min($lockUntil, $lockMtime + 3600) : $lockMtime + 3600;
+    if ($lockUntil <= time()) {
+        return; // abgelaufene bzw. hängen gebliebene Sperre ignorieren
+    }
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDERR, "365CMS: Update läuft, bitte später erneut versuchen.\n");
+        exit(75);
+    }
+    $retryAfter = (string) max(5, min(120, $lockUntil - time()));
+    http_response_code(503);
+    header('Retry-After: ' . $retryAfter);
+    header('Cache-Control: no-store, private');
+    header('X-Robots-Tag: noindex');
+    $lockPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?? '/');
+    if (preg_match('#^/(?:[a-z]{2}(?:-[a-z]{2})?/)?api(?:/|$)#i', $lockPath) === 1 || basename(__FILE__) === 'cron.php') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo '{"success":false,"error":"maintenance","retry_after":' . $retryAfter . '}';
+    } else {
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>Wartung</title></head><body><h1>Wartung</h1><p>Die Website wird gerade aktualisiert. Bitte in wenigen Augenblicken erneut versuchen.</p></body></html>';
+    }
+    exit;
+})();
+
 // Load configuration
 if (file_exists(__DIR__ . '/config.php')) {
     require_once __DIR__ . '/config.php';

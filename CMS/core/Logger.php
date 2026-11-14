@@ -29,6 +29,13 @@ if (!defined('ABSPATH')) {
 
 class Logger implements LoggerInterface
 {
+    /**
+     * Muster für Kontext-/Metadatenschlüssel mit Zugangsdaten (Eingabe: normalisierter snake_case-Schlüssel, siehe isSensitiveKey()).
+     * Eindeutige Wörter wirken als Teilstring, mehrdeutige (auth, session, pass, pwd, mfa, otp, jwt, …) nur als ganzer Namensteil.
+     * Jeder Schlüssel auf `_key` gilt als Zugangsdatum, außer bekannte Bezeichner-Felder (cache_key, setting_key, form_key, …).
+     */
+    public const SENSITIVE_KEY_PATTERN = '/password|passwd|passphrase|secret|token|nonce|csrf|credential|cookie|credit_card|authorization|apikey|privatekey|(?:^|_)(?:pass|pwd|mfa|otp|hmac|jwt|bearer|signature)(?:_|$)|(?:^|_)(?!(?:cache|setting|form|template|meta|count|font|feature|status|source|scope|usage|assignment|option|field|config|lang|translation|route|sort|group|section|item|state|type|name|id)_key$)[a-z0-9]+_key$|(?:^|_)(?:session_id|sessionid)$|^(?:key|auth|session)$/';
+
     // ── PSR-3 Log-Level-Konstanten (aufsteigend nach Gewicht) ──────────────
 
     public const EMERGENCY = 'emergency'; // System ist unbrauchbar
@@ -151,13 +158,13 @@ class Logger implements LoggerInterface
 
         // Message interpolation (PSR-3 §1.2)
         $message = $this->interpolate($message, $context);
-        $message = $this->sanitizeLogLine($message);
+        $message = $this->sanitizeLogLine($this->maskInlineSecrets($message));
 
-        // Exception-Stack-Trace anhängen
+        // Exception anhängen – ebenfalls bereinigt (keine Zeilenumbrüche/Log-Injection, keine Geheimnisse)
         if (isset($context['exception']) && $context['exception'] instanceof \Throwable) {
             $e       = $context['exception'];
-            $message .= ' | Exception: ' . get_class($e) . ': ' . $e->getMessage()
-                . ' in ' . $e->getFile() . ':' . $e->getLine();
+            $message .= ' | Exception: ' . get_class($e) . ': ' . $this->sanitizeLogLine($this->maskInlineSecrets($e->getMessage()))
+                . ' in ' . $this->sanitizeLogLine($e->getFile()) . ':' . $e->getLine();
         }
 
         // Formatierte Log-Zeile
@@ -252,7 +259,7 @@ class Logger implements LoggerInterface
     private function formatContext(array $context): string
     {
         $safe = $this->sanitizeContext($context);
-        return json_encode($safe, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+        return json_encode($safe, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR) ?: '{}';
     }
 
     /**
@@ -260,13 +267,12 @@ class Logger implements LoggerInterface
      */
     private function sanitizeContext(array $context): array
     {
-        $sensitivePattern = '/(password|passwd|secret|token|nonce|csrf|key|auth|mfa|credit_card|credential|cookie|session)/i';
         foreach ($context as $k => $v) {
-            if (preg_match($sensitivePattern, (string)$k) === 1) {
+            if (self::isSensitiveKey($k)) {
                 $context[$k] = '***';
             } elseif ($v instanceof \Throwable) {
                 // Exceptions in serialisierbares Format umwandeln
-                $context[$k] = get_class($v) . ': ' . $this->sanitizeLogLine($v->getMessage());
+                $context[$k] = get_class($v) . ': ' . $this->sanitizeLogLine($this->maskInlineSecrets($v->getMessage()));
             } elseif (is_string($v)) {
                 $context[$k] = $this->sanitizeLogLine($this->maskInlineSecrets($v));
             } elseif (is_array($v)) {
@@ -274,6 +280,19 @@ class Logger implements LoggerInterface
             }
         }
         return $context;
+    }
+
+    /**
+     * Schlüssel mit Zugangsdaten (auch für AuditLogger-Metadaten). Geprüft werden ganze Namensteile
+     * (snake_case, camelCase, Bindestriche), damit z. B. `cache_key`, `author_id`, `keyword` oder
+     * `session_timeout` lesbar bleiben; `password`, `api_key`, `csrfToken`, `session_id`, `key` bleiben maskiert.
+     */
+    public static function isSensitiveKey(int|string $key): bool
+    {
+        $normalized = strtolower(preg_replace('/([a-z0-9])([A-Z])/', '$1_$2', (string) $key) ?? (string) $key);
+        $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized) ?? $normalized;
+
+        return preg_match(self::SENSITIVE_KEY_PATTERN, trim($normalized, '_')) === 1;
     }
 
     private function sanitizeChannel(string $channel): string
@@ -287,7 +306,11 @@ class Logger implements LoggerInterface
 
     private function sanitizeLogLine(string $value): string
     {
-        $value = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value) ?? '';
+        // Ungültiges UTF-8 (z. B. Latin-1-Dateinamen) ersetzen statt die ganze Meldung zu verlieren.
+        if (function_exists('mb_scrub')) {
+            $value = mb_scrub($value, 'UTF-8');
+        }
+        $value = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value) ?? (preg_replace('/[\x00-\x1F\x7F]+/', ' ', $value) ?? $value);
 
         return trim($value);
     }
@@ -296,6 +319,7 @@ class Logger implements LoggerInterface
     {
         $value = preg_replace('/([?&](?:token|csrf_token|nonce|key|secret|password|pass)=)[^&\s]+/i', '$1***', $value) ?? $value;
         $value = preg_replace('/\b(Bearer\s+)[A-Za-z0-9._~+\/-]+=*/i', '$1***', $value) ?? $value;
+        $value = preg_replace('/\b(password|passwd|secret|token|credential|api[_-]?key)(\s*[=:]\s*)[^\s&]+/i', '$1$2***', $value) ?? $value;
 
         return $value;
     }

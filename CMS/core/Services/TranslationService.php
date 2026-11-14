@@ -79,20 +79,25 @@ final class TranslationService
         return $locales !== [] ? $locales : ['de', 'en'];
     }
 
-    public function translate(string $message, string $domain = 'default', array $parameters = []): string
+    /**
+     * @param string|null $locale Abweichende Sprache (z. B. Request-Sprache im Theme); null = Systemsprache
+     */
+    public function translate(string $message, string $domain = 'default', array $parameters = [], ?string $locale = null): string
     {
-        if ($this->translatorHas($message, $domain)) {
+        $locale = ($locale !== null && isset($this->fallbackCatalog[$locale])) ? $locale : $this->locale;
+
+        if ($this->translatorHas($message, $domain, $locale)) {
             try {
                 /** @var string $result */
-                $result = $this->translator->trans($message, $parameters, $domain, $this->locale);
+                $result = $this->translator->trans($message, $parameters, $domain, $locale);
                 return $result;
             } catch (\Throwable) {
                 $this->translator = null;
             }
         }
 
-        $translated = $this->fallbackCatalog[$this->locale][$domain][$message]
-            ?? $this->fallbackCatalog[$this->locale]['default'][$message]
+        $translated = $this->fallbackCatalog[$locale][$domain][$message]
+            ?? $this->fallbackCatalog[$locale]['default'][$message]
             ?? $message;
 
         if ($parameters !== []) {
@@ -144,14 +149,14 @@ final class TranslationService
      * Unbekannte Keys laufen bewusst über den Fallback-Katalog, damit
      * Plural-Keys nicht als unübersetzter Original-Text zurückkommen.
      */
-    private function translatorHas(string $key, string $domain): bool
+    private function translatorHas(string $key, string $domain, ?string $locale = null): bool
     {
         if ($this->translator === null) {
             return false;
         }
 
         try {
-            return $this->translator->getCatalogue($this->locale)->has($key, $domain);
+            return $this->translator->getCatalogue($locale ?? $this->locale)->has($key, $domain);
         } catch (\Throwable) {
             $this->translator = null;
             return false;

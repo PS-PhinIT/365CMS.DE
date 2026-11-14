@@ -101,7 +101,7 @@ class PageManager
                 INDEX idx_page_id (page_id),
                 INDEX idx_author (author_id),
                 INDEX idx_created_at (created_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
             $columns = [
                 'title_en' => "ALTER TABLE {$this->prefix}page_revisions ADD COLUMN title_en VARCHAR(255) DEFAULT NULL AFTER title",

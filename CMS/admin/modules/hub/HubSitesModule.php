@@ -91,8 +91,8 @@ class HubSitesModule
 
         if ($search !== '') {
             $where = ' AND (table_name LIKE ? OR description LIKE ?)';
-            $params[] = '%' . $search . '%';
-            $params[] = '%' . $search . '%';
+            $params[] = '%' . \cms_escape_like($search) . '%';
+            $params[] = '%' . \cms_escape_like($search) . '%';
         }
 
         $rows = $this->db->get_results(

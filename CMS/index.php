@@ -10,6 +10,40 @@
 
 declare(strict_types=1);
 
+// Update-Sperre (Core-Update/FTP-Deployment): bewusst inline ohne core/, Autoloader, Datenbank und Session,
+// weil die Installation währenddessen unvollständig sein kann. cache/.update.lock enthält die Ablaufzeit
+// (Unix-Zeit); eine leere, manuell angelegte Datei gilt 60 Minuten. Höchstalter 60 Minuten ab Änderungszeit.
+(static function (): void {
+    $lockFile = __DIR__ . '/cache/.update.lock';
+    $lockMtime = is_file($lockFile) ? (int) @filemtime($lockFile) : 0;
+    if ($lockMtime <= 0) {
+        return;
+    }
+    $lockUntil = (int) trim((string) @file_get_contents($lockFile, false, null, 0, 32));
+    $lockUntil = $lockUntil > 0 ? min($lockUntil, $lockMtime + 3600) : $lockMtime + 3600;
+    if ($lockUntil <= time()) {
+        return; // abgelaufene bzw. hängen gebliebene Sperre ignorieren
+    }
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDERR, "365CMS: Update läuft, bitte später erneut versuchen.\n");
+        exit(75);
+    }
+    $retryAfter = (string) max(5, min(120, $lockUntil - time()));
+    http_response_code(503);
+    header('Retry-After: ' . $retryAfter);
+    header('Cache-Control: no-store, private');
+    header('X-Robots-Tag: noindex');
+    $lockPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?? '/');
+    if (preg_match('#^/(?:[a-z]{2}(?:-[a-z]{2})?/)?api(?:/|$)#i', $lockPath) === 1 || basename(__FILE__) === 'cron.php') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo '{"success":false,"error":"maintenance","retry_after":' . $retryAfter . '}';
+    } else {
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>Wartung</title></head><body><h1>Wartung</h1><p>Die Website wird gerade aktualisiert. Bitte in wenigen Augenblicken erneut versuchen.</p></body></html>';
+    }
+    exit;
+})();
+
 $isHttpsRequest = static function (): bool {
     if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
         return true;
@@ -167,6 +201,45 @@ $sanitizeFatalLog = static function (string $value, int $maxLength = 4000): stri
     return function_exists('mb_substr') ? mb_substr($value, 0, $maxLength, 'UTF-8') : substr($value, 0, $maxLength);
 };
 
+// Notfall-Antwort für den globalen Fehlerhandler und den Shutdown-Handler: ohne Theme, Datenbank und Autoloader.
+$isApiRequestPath = static function (): bool {
+    $path = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?? '/');
+
+    return preg_match('#^/(?:[a-z]{2}(?:-[a-z]{2})?/)?api(?:/|$)#i', $path) === 1;
+};
+$renderStaticFatalPage = static function () use ($isApiRequestPath): void {
+    $isApi = $isApiRequestPath();
+    if (!headers_sent()) {
+        http_response_code(500);
+        header_remove('Content-Length');
+        header_remove('Content-Encoding');
+        header('Cache-Control: private, no-store');
+        header('Content-Type: ' . ($isApi ? 'application/json' : 'text/html') . '; charset=utf-8');
+    }
+
+    // API-Clients erhalten JSON im Format von ApiRouter::jsonError().
+    echo $isApi
+        ? '{"success":false,"error":"Interner Fehler."}'
+        : '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>365CMS – Fehler</title></head><body><h1>Interner Fehler</h1><p>365CMS konnte die Anfrage gerade nicht verarbeiten.</p></body></html>';
+};
+
+// Echte Fatal Errors (Speicher-/Zeitlimit) sind kein Throwable: ohne diesen Handler bliebe die 500-Antwort leer.
+// Die Reserve wird im Handler freigegeben, damit nach einer Speichererschöpfung noch Platz für die Antwort bleibt.
+$cmsFatalReserve = str_repeat(' ', 262144);
+register_shutdown_function(static function () use (&$cmsFatalReserve, $renderStaticFatalPage): void {
+    $cmsFatalReserve = null;
+    $lastError = error_get_last();
+    if ($lastError === null || ($lastError['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR)) === 0 || headers_sent()) {
+        return;
+    }
+
+    // PHP verwirft offene Puffer nach den Shutdown-Funktionen; die Antwort deshalb ungepuffert ausgeben.
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+    $renderStaticFatalPage();
+});
+
 // Start session with secure settings
 // Alle ini_set MÜSSEN vor session_start() gesetzt werden (Security::startSession() prüft nur ob Session noch nicht gestartet ist)
 ini_set('session.cookie_httponly', '1');
@@ -297,6 +370,16 @@ try {
     error_log('CMS Fatal Error: ' . $sanitizeFatalLog($e->getMessage(), 800));
     error_log('Stack trace: ' . $sanitizeFatalLog($e->getTraceAsString(), 4000));
 
+    // Offene Puffer (Lazy-Session, InlineStyleRewriter) verwerfen, sonst hängt die Fehlerseite an einer halb gerenderten Seite.
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+
+    if ($isApiRequestPath()) {
+        $renderStaticFatalPage();
+        exit;
+    }
+
     if (class_exists('CMS\\CacheManager') && !headers_sent()) {
         CMS\CacheManager::instance()->sendResponseHeaders('private');
     }
@@ -331,15 +414,43 @@ try {
     $error_standalone = true;
 
     foreach ($errorTemplates as $errorTemplate) {
-        if (is_file($errorTemplate)) {
-            include $errorTemplate;
-            exit;
+        if (!is_file($errorTemplate)) {
+            continue;
         }
+
+        // Theme-Fehlerseiten sind meist Fragmente: puffern und wie im Router in ein vollständiges Dokument einbetten.
+        $errorBufferLevel = ob_get_level();
+        try {
+            ob_start();
+            include $errorTemplate;
+            $renderedErrorPage = (string) ob_get_clean();
+            if (trim($renderedErrorPage) === '') {
+                continue;
+            }
+
+            $errorThemeDir = dirname($errorTemplate);
+            $renderedErrorPage = CMS\Router::wrapStandaloneErrorDocument(
+                $renderedErrorPage,
+                '500' . (isset($errorTitle) && is_string($errorTitle) && $errorTitle !== '' ? ' – ' . $errorTitle : ''),
+                'de',
+                defined('SITE_URL') && is_file($errorThemeDir . '/style.css')
+                    ? rtrim((string) SITE_URL, '/') . '/themes/' . basename($errorThemeDir) . '/style.css'
+                    : ''
+            );
+        } catch (Throwable) {
+            while (ob_get_level() > $errorBufferLevel) {
+                ob_end_clean();
+            }
+            continue;
+        }
+
+        if (!headers_sent()) {
+            header('Content-Type: text/html; charset=utf-8');
+        }
+        echo $renderedErrorPage;
+        exit;
     }
 
-    if (!headers_sent()) {
-        header('Content-Type: text/html; charset=utf-8');
-    }
-    echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>365CMS – Fehler</title></head><body><h1>Interner Fehler</h1><p>365CMS konnte die Anfrage gerade nicht verarbeiten.</p></body></html>';
+    $renderStaticFatalPage();
     exit;
 }

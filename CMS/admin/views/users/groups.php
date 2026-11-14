@@ -293,7 +293,7 @@ $groupField = static function (mixed $group, string $key, mixed $default = ''): 
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label required" for="groupName">Name</label>
-                    <input type="text" class="form-control" id="groupName" name="name" required maxlength="120" autocomplete="organization-title">
+                    <input type="text" class="form-control" id="groupName" name="name" required maxlength="100" autocomplete="organization-title">
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="groupSlug">Slug</label>
