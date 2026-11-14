@@ -25,6 +25,7 @@ use CMS\Auth\MFA\TotpAdapter;
 use CMS\Auth\MFA\BackupCodesManager;
 use CMS\Auth\Passkey\WebAuthnAdapter;
 use CMS\Auth\LDAP\LdapAuthProvider;
+use CMS\Auth\SSO\EntraSsoService;
 use CMS\AuditLogger;
 use CMS\Database;
 use CMS\Security;
@@ -171,6 +172,13 @@ final class AuthManager
         // Ohne User Verification (PIN/Biometrie, Flag UV = 0x04) ist der Passkey nur ein Besitzfaktor:
         // aktive TOTP-MFA dann zusätzlich verlangen statt sie zu überspringen.
         $userId = (int)$credential['user_id'];
+
+        // 4.1.0 (1c): „Lokale Anmeldung“ gesperrt → auch kein Passkey an Microsoft vorbei (Offboarding über Entra).
+        $localLoginRejected = EntraSsoService::getInstance()->rejectLocalLogin($userId, 'passkey');
+        if ($localLoginRejected !== null) {
+            return $localLoginRejected;
+        }
+
         $authenticatorFlags = strlen($authenticatorData) > 32 ? ord($authenticatorData[32]) : 0;
         if (($authenticatorFlags & 0x04) !== 0 && (int) ($credential['user_verified'] ?? 0) !== 1) {
             // 4.1.0: Bestandspasskey mit UV nachträglich als vollwertigen Faktor markieren (MFA-Zwang).
@@ -232,6 +240,12 @@ final class AuthManager
         $userId = $ldap->syncLocalUser($ldapUser);
         if ($userId === null) {
             return 'Lokale Benutzersynchronisation fehlgeschlagen.';
+        }
+
+        // 4.1.0 (1c): „Lokale Anmeldung“ gilt auch für LDAP.
+        $localLoginRejected = EntraSsoService::getInstance()->rejectLocalLogin($userId, 'ldap');
+        if ($localLoginRejected !== null) {
+            return $localLoginRejected;
         }
 
         // MFA-Check

@@ -182,7 +182,7 @@ Nie: E-Mail überschreiben, Benutzernamen übernehmen, Konten reaktivieren, Roll
 | `auto_provision`, `default_role` | bool, Rolle | §3.3 |
 | `role_mapping`, `sync_roles`, `allow_admin_mapping` | JSON, bool, bool | §3.5 |
 | `mfa_from_amr` | bool (Standard an) | §3.4 |
-| `local_login` | `all` / `admins_only` / `disabled_for_linked` | Passwort-Login für verknüpfte Konten abschaltbar; Admin-Notfallzugang bleibt (`admins_only`) |
+| `local_login` | `all` / `admins_only` / `disabled_for_linked` | Lokale Anmeldung (Passwort, Passkey, LDAP) für verknüpfte Konten abschaltbar; Admin-Notfallzugang bleibt (`admins_only`) |
 
 Redirect-URI wird angezeigt (`{SITE_URL}/cms-login/sso/entra/callback`), Client-Secret-Test („Verbindung prüfen“: Discovery + Token-Endpunkt mit falschem Code → erwarteter Fehler `invalid_grant` = Secret gültig).
 
@@ -248,7 +248,7 @@ Provisioning an/aus; Rollen-Mapping mit Herab-/Hochstufung; `amr`-Auswertung; Ge
 | Rollen-Sync ohne passende Regel | Zielrolle = Standardrolle (Herabstufen), nur für provisionierte Konten mit „synchronisieren“. |
 | Gruppen-Overage | keine Graph-Abfrage; Audit `sso_groups_overage`, es zählen nur App-Rollen. |
 | `amr` | anerkannt: `mfa`, `ngcmfa`, `fido`, `rsa` (Einstellung `mfa_from_amr`). Fehlt `amr` im v2-Token, gilt das als kein Nachweis. |
-| `local_login` | `disabled_for_linked`: verknüpfte Nicht-Admins nur über Microsoft; `admins_only`: Passwort-Login nur für Admins. Wirkt nur bei fertig eingerichteter SSO-Anmeldung. |
+| `local_login` | Gilt für alle lokalen Wege: Passwort (`Auth::login`), Passkey und LDAP (`AuthManager`), geprüft nach dem jeweiligen Faktor über `EntraSsoService::rejectLocalLogin()`. `disabled_for_linked`: verknüpfte Nicht-Admins nur über Microsoft; `admins_only`: lokal nur Admins. Wirkt nur bei fertig eingerichteter SSO-Anmeldung. Audit `login_local_disabled`. |
 | Re-Auth über frische SSO-Anmeldung | `/mfa-setup` sowie `totp_start`/`passkey_register` im Mitgliederbereich; Entfernen von Faktoren, Verknüpfen und Trennen verlangen weiter das Passwort. |
 | Provisioning | verlangt den Claim `email` (sonst Ablehnung); bestätigt (`email_verified_at`) nur mit `xms_edov`. Existiert ein Konto mit der Adresse und greift die automatische Verknüpfung nicht → Ablehnung + `sso_link_conflict`, nie ein zweites Konto. |
 | Capability `security.sso` | in `RolesModule` vergebbar; die Vergabe an Standardrollen folgt mit dem Update-Schritt `capabilities_v26` (Admins haben sie über die Rolle). |
