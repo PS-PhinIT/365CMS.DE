@@ -45,6 +45,21 @@
     "blog-grid":    "partials/blog-grid-cards.php"
   },
 
+  "login_page": {
+    "colors": {
+      "background_start": "#f7f6f2",
+      "background_end": "#f2f1ec",
+      "card_background": "#ffffff",
+      "text_color": "#1a1a18",
+      "muted_color": "#6b6b65",
+      "primary_color": "#8f5f15",
+      "primary_text_color": "#ffffff",
+      "link_color": "#8f5f15",
+      "input_background": "#ffffff",
+      "input_border": "#c8c6bc"
+    }
+  },
+
   "customization": {
 
     "header": {
