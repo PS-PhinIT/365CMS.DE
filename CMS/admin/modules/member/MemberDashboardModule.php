@@ -52,6 +52,7 @@ class MemberDashboardModule
         'member_dashboard_logo',
         'member_dashboard_greeting',
         'member_dashboard_welcome_text',
+        'member_dashboard_footer_text',
         'member_dashboard_show_welcome',
         'member_widget_1_title',
         'member_widget_1_content',
@@ -372,6 +373,7 @@ class MemberDashboardModule
                 'member_dashboard_welcome_text' => strip_tags((string)($post['dashboard_welcome_text'] ?? ''), '<p><a><strong><em><br><ul><ol><li>'),
                 'member_dashboard_show_welcome' => !empty($post['show_welcome']) ? '1' : '0',
                 'member_dashboard_logo'       => $this->normalizeAssetReference((string)($post['dashboard_logo'] ?? '')),
+                'member_dashboard_footer_text' => $this->sanitizeTextSetting((string)($post['dashboard_footer_text'] ?? ''), 200),
             ];
 
             $this->persistSettings($values);
@@ -657,13 +659,21 @@ class MemberDashboardModule
             'email_verification'   => ($settings['member_email_verification'] ?? '0') === '1',
             'welcome_message'      => $settings['member_welcome_message'] ?? '',
             'default_role'         => $settings['member_default_role'] ?? 'member',
-            'widgets'              => \CMS\Json::decodeArray($settings['member_dashboard_widgets'] ?? null, []),
+            // Nie gespeichert = alle Kern-Widgets sichtbar (Stand vor 4.0.0); danach gilt die gespeicherte Allowlist.
+            'widgets'              => array_key_exists('member_dashboard_widgets', $settings)
+                ? array_values(array_intersect(
+                    array_map('strval', \CMS\Json::decodeArray($settings['member_dashboard_widgets'], [])),
+                    array_keys($this->getAvailableWidgets())
+                ))
+                : array_keys($this->getAvailableWidgets()),
             'profile_fields'       => $selectedProfileFields,
             'required_profile_fields' => $requiredProfileFields,
             'custom_profile_fields' => $customProfileFields,
             'profile_field_definitions' => $profileFieldDefinitions,
-            'dashboard_columns'    => (int)($settings['member_dashboard_columns'] ?? 3),
-            'section_order'        => $settings['member_dashboard_section_order'] ?? 'stats,widgets,plugins',
+            'dashboard_columns'    => max(1, min(4, (int)($settings['member_dashboard_columns'] ?? 3))),
+            'section_order'        => isset(self::SECTION_ORDER_OPTIONS[(string)($settings['member_dashboard_section_order'] ?? '')])
+                ? (string)$settings['member_dashboard_section_order']
+                : 'quick_start,stats,widgets,plugins',
             'custom_widget_order'  => $this->normalizeOrderedValues(
                 \CMS\Json::decodeArray($settings['member_dashboard_custom_widget_order'] ?? null, $this->getDefaultCustomWidgetOrder()),
                 $this->getDefaultCustomWidgetOrder()
@@ -671,6 +681,7 @@ class MemberDashboardModule
             'dashboard_logo'       => $settings['member_dashboard_logo'] ?? '',
             'dashboard_greeting'   => $settings['member_dashboard_greeting'] ?? 'Guten Tag, {name}!',
             'dashboard_welcome_text' => $settings['member_dashboard_welcome_text'] ?? '',
+            'dashboard_footer_text' => $settings['member_dashboard_footer_text'] ?? '',
             'show_welcome'         => ($settings['member_dashboard_show_welcome'] ?? '1') === '1',
             'subscription_visible' => ($settings['member_subscription_visible'] ?? '0') === '1',
             'custom_widgets'       => $this->mapCustomWidgets($settings),
@@ -747,37 +758,37 @@ class MemberDashboardModule
         return [
             'profile' => [
                 'label'       => 'Profil-Übersicht',
-                'description' => 'Zeigt Basisinformationen, Avatar und Kurzstatus des Mitglieds.',
+                'description' => 'Profil-Fortschritt, Kontostatus und Sicherheitsstatus (2FA, letzte Passwortänderung).',
                 'recommended' => true,
             ],
             'activity' => [
                 'label'       => 'Letzte Aktivitäten',
-                'description' => 'Bündelt jüngste Aktionen, Änderungen oder Interaktionen.',
+                'description' => 'Die jüngsten Einträge aus dem Aktivitätsprotokoll des Mitglieds.',
                 'recommended' => true,
             ],
             'messages' => [
                 'label'       => 'Nachrichten',
-                'description' => 'Reserviert Platz für direkte Kommunikation oder Systemnachrichten.',
+                'description' => 'Anzahl ungelesener Nachrichten mit Link zum Posteingang.',
                 'recommended' => false,
             ],
             'bookmarks' => [
                 'label'       => 'Lesezeichen',
-                'description' => 'Speichert relevante Inhalte oder interne Schnellmerker.',
+                'description' => 'Die zuletzt gemerkten Beiträge (Favoriten) des Mitglieds.',
                 'recommended' => false,
             ],
             'notifications' => [
                 'label'       => 'Benachrichtigungen',
-                'description' => 'Zeigt Statusmeldungen, Erinnerungen oder Workflow-Hinweise.',
+                'description' => 'Die letzten Benachrichtigungen mit Link zur Benachrichtigungsseite.',
                 'recommended' => true,
             ],
             'quick_links' => [
                 'label'       => 'Schnellzugriffe',
-                'description' => 'Nützlich für direkte Aktionen in häufig verwendete Member-Bereiche.',
+                'description' => 'Bereich „Schnellzugriff“ mit Links zu Profil, Sicherheit und Dateien.',
                 'recommended' => true,
             ],
             'statistics' => [
                 'label'       => 'Statistiken',
-                'description' => 'Kennzahlen, Zähler oder Leistungsübersichten im Dashboard.',
+                'description' => 'Kennzahlen-Karten: Logins, Sicherheitswert, ungelesene Nachrichten, aktive Sitzungen.',
                 'recommended' => false,
             ],
         ];
