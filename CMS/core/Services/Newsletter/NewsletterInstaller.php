@@ -7,7 +7,7 @@
  * Schlüssel, übernimmt den Plugin-Status `ready` als Entwurf und legt fehlende Standardwerte an.
  * Der Stand steht in der Option `cms_newsletter_version`; ohne Versionswechsel passiert nichts.
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);

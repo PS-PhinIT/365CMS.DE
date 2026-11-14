@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Newsletter – Admin-Modul (Übersicht, Abonnenten, Kampagnen, Vorlagen, Einstellungen).
  *
- * @package CMSv2\Admin\Modules
+ * @package CMS\Admin\Modules
  */
 
 if (!defined('ABSPATH')) {
@@ -27,7 +27,7 @@ final class NewsletterModule
 
     /** Felder je Einstellungs-Tab (gespeichert werden nur diese). */
     private const TAB_KEYS = [
-        'general' => ['sender_name', 'sender_email', 'reply_to_email', 'require_double_opt_in', 'confirm_expiry_days', 'default_segment', 'segments', 'show_segment_choice', 'show_name_fields'],
+        'general' => ['sender_name', 'sender_email', 'reply_to_email', 'require_double_opt_in', 'confirm_expiry_days', 'default_segment', 'segments', 'show_segment_choice', 'show_name_fields', 'member_widget_enabled'],
         'content' => ['archive_title', 'archive_title_en', 'archive_description', 'archive_description_en', 'subscribe_intro', 'subscribe_intro_en',
             'consent_text', 'consent_text_en', 'footer_note', 'footer_note_en', 'public_archive', 'show_nav_link', 'nav_label', 'nav_label_en'],
         'delivery' => ['batch_size', 'mail_footer', 'mail_footer_en'],
@@ -105,7 +105,63 @@ final class NewsletterModule
             'subscriber' => $subscriber ?? ['status' => 'active', 'segment_slug' => NewsletterSettings::get('default_segment'), 'locale' => 'de'],
             'segments' => NewsletterSettings::segments(),
             'history' => $subscriber !== null ? (NewsletterPrivacy::collect(0, (string) $subscriber['email'])[0]['issues'] ?? []) : [],
+            'account' => $subscriber !== null ? $this->linkedAccount((int) ($subscriber['user_id'] ?? 0)) : null,
+            'consent_log' => $subscriber !== null ? $this->consentLog((int) $subscriber['id']) : [],
         ];
+    }
+
+    /**
+     * Einwilligungsverlauf aus dem Audit-Log (NewsletterConsentLog), neueste zuerst.
+     *
+     * @return list<array{created_at: string, action: string, source: string, consent_text: string}>
+     */
+    private function consentLog(int $subscriberId): array
+    {
+        try {
+            $db = \CMS\Database::instance();
+            $rows = $db->get_results(
+                "SELECT created_at, action, metadata FROM {$db->getPrefix()}audit_log
+                 WHERE category = 'newsletter' AND entity_type = 'newsletter_subscriber' AND entity_id = ?
+                 ORDER BY created_at DESC, id DESC LIMIT 50",
+                [$subscriberId]
+            ) ?: [];
+        } catch (\Throwable) {
+            return [];
+        }
+        $entries = [];
+        foreach ($rows as $row) {
+            $meta = json_decode((string) ($row->metadata ?? ''), true);
+            $meta = is_array($meta) ? $meta : [];
+            $entries[] = [
+                'created_at' => (string) ($row->created_at ?? ''),
+                'action' => substr((string) ($row->action ?? ''), strlen('newsletter.')),
+                'source' => is_string($meta['source'] ?? null) ? $meta['source'] : '',
+                'consent_text' => is_string($meta['consent_text'] ?? null) ? $meta['consent_text'] : '',
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Verknüpftes Benutzerkonto eines Abonnenten (Anzeige in der Detailansicht).
+     *
+     * @return array{id: int, name: string, exists: bool}|null
+     */
+    private function linkedAccount(int $userId): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+        try {
+            $db = \CMS\Database::instance();
+            $row = $db->get_row("SELECT id, username, display_name FROM {$db->getPrefix()}users WHERE id = ? LIMIT 1", [$userId]);
+        } catch (\Throwable) {
+            $row = null;
+        }
+        $name = $row !== null ? trim((string) ($row->display_name ?? '')) ?: trim((string) ($row->username ?? '')) : '';
+
+        return ['id' => $userId, 'name' => $name, 'exists' => $row !== null];
     }
 
     /** @return array<string, mixed> */
@@ -221,13 +277,13 @@ final class NewsletterModule
         header('Cache-Control: no-store');
         $out = fopen('php://output', 'wb');
         fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['email', 'first_name', 'last_name', 'status', 'segment', 'language', 'source', 'subscribed_at', 'consent_at', 'confirmed_at', 'unsubscribed_at'], ';');
+        fputcsv($out, ['email', 'first_name', 'last_name', 'status', 'segment', 'language', 'source', 'subscribed_at', 'consent_at', 'confirmed_at', 'unsubscribed_at', 'user_id'], ';');
         // Seitenweise lesen: listSubscribers() liefert höchstens 5.000 Zeilen je Aufruf.
         $offset = 0;
         do {
             $rows = $this->repo->listSubscribers($filters, $offset, 5000);
             foreach ($rows as $row) {
-                $cells = [$row['email'], $row['first_name'], $row['last_name'], $row['status'], $row['segment_slug'], $row['locale'] ?? 'de', $row['source'], $row['created_at'], $row['consent_at'] ?? '', $row['confirmed_at'] ?? '', $row['unsubscribed_at'] ?? ''];
+                $cells = [$row['email'], $row['first_name'], $row['last_name'], $row['status'], $row['segment_slug'], $row['locale'] ?? 'de', $row['source'], $row['created_at'], $row['consent_at'] ?? '', $row['confirmed_at'] ?? '', $row['unsubscribed_at'] ?? '', (int) ($row['user_id'] ?? 0) > 0 ? (string) (int) $row['user_id'] : ''];
                 // Formel-Injection in Tabellenprogrammen verhindern.
                 $cells = array_map(static fn (mixed $v): string => preg_match('/^[=+\-@\t\r]/', (string) $v) === 1 ? "'" . $v : (string) $v, $cells);
                 fputcsv($out, $cells, ';');

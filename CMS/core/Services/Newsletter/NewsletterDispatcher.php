@@ -9,7 +9,7 @@
  *
  * Hooks: `cms_newsletter_campaign_started`, `cms_newsletter_campaign_sent` (jeweils Kampagnen-ID).
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);

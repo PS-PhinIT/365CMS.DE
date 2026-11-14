@@ -13,7 +13,7 @@
  * Die Rückmeldung nach der Anmeldung ist für neue, bestehende und abgemeldete Adressen gleich, damit sich
  * nicht ausforschen lässt, wer den Newsletter bezieht.
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);
@@ -162,6 +162,10 @@ final class NewsletterFrontendController
     {
         $locale = NewsletterI18n::requestLocale();
         $subscriber = NewsletterRepository::instance()->confirm($token);
+        if ($subscriber !== null && !empty($subscriber['confirmed_now'])) {
+            // Einwilligungsverlauf (Audit-Log): Quelle der Anmeldung, bestätigt über den Link der Mail.
+            NewsletterConsentLog::record('confirm', $subscriber, (string) ($subscriber['source'] ?? 'public'), ['channel' => 'confirm_link']);
+        }
         self::redirect($locale, $subscriber !== null ? 'confirmed' : 'expired');
     }
 
@@ -180,6 +184,12 @@ final class NewsletterFrontendController
     {
         $subscriber = NewsletterRepository::instance()->unsubscribe($token);
         $oneClick = str_contains((string) ($_POST['List-Unsubscribe'] ?? ''), 'One-Click');
+        if ($subscriber !== null && ($subscriber['status'] ?? '') !== 'unsubscribed') {
+            NewsletterConsentLog::record('unsubscribe', ['status' => 'unsubscribed'] + $subscriber, (string) ($subscriber['source'] ?? 'public'), [
+                'channel' => $oneClick ? 'one_click' : 'unsubscribe_link',
+                'previous_status' => (string) ($subscriber['status'] ?? ''),
+            ]);
+        }
         if ($oneClick) {
             http_response_code($subscriber !== null ? 200 : 404);
             header('Content-Type: text/plain; charset=utf-8');

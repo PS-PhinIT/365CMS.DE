@@ -6,7 +6,7 @@
  * {{unsubscribe_url}}, {{web_url}}, {{date}}. Jede Ausgabe erhält eine Fußzeile mit Abmelde- und Weblink sowie
  * die Kopfzeilen `List-Unsubscribe` und `List-Unsubscribe-Post` (RFC 8058, Abmeldung mit einem Klick).
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);

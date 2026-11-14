@@ -8,7 +8,7 @@
  * - `dsgvo_delete_data($userId, $email)`: Abonnement(s) samt Versandzeilen löschen.
  * - Filter `cms_member_export_data`: Abonnement in der Selbstauskunft des Mitgliederbereichs.
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);

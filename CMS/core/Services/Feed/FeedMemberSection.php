@@ -7,7 +7,7 @@
  * Wählbar sind nur aktive Quellen öffentlicher Bereiche. Speichern und Kündigen laufen per POST mit dem Core-Token
  * der Registry. Der Versand selbst liegt im `DigestMailer` (stündlicher Cron).
  *
- * @package CMSv2\Core\Services
+ * @package CMS\Services\Feed
  */
 
 declare(strict_types=1);
@@ -70,8 +70,14 @@ final class FeedMemberSection
         return ['count' => $count, 'label' => self::t('feeds.member.sources_count')];
     }
 
-    /** @param array<string, mixed> $params */
-    public static function handlePost(object $user, array $params = []): void
+    /**
+     * Verarbeitet Speichern/Kündigen vor jeder Ausgabe; die Registry zeigt die Meldung nach der
+     * 303-Weiterleitung als Flash.
+     *
+     * @param array<string, mixed> $params
+     * @return array{type: string, message: string}|null
+     */
+    public static function handlePost(object $user, array $params = []): ?array
     {
         $userId = (int) ($user->id ?? 0);
         $repo = AggregatorRepository::getInstance();
@@ -104,7 +110,7 @@ final class FeedMemberSection
                 : ['danger', self::t('feeds.member.save_failed')];
         }
 
-        self::renderForm($userId, $notice);
+        return $notice !== null ? ['type' => $notice[0], 'message' => $notice[1]] : null;
     }
 
     /** @param array<string, mixed> $params */
