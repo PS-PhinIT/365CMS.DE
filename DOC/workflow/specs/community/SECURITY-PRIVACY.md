@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Sicherheit & Datenschutz
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -41,6 +41,8 @@ retention periods, third-party captchas and consent) and the security checklist 
 7. **Ergebnis:** veröffentlichen, in die Warteschlange (`pending`) oder ablehnen; Ablehnungen in `security_log` (ohne Inhalt, mit Grund).
 
 ### 3. Captcha: Dienst und Bibliotheken
+
+> **Entscheidung E7 (14.11.2026):** `gregwar/captcha` als Asset (Bild-Captcha) plus eingebaute Rechenaufgabe als barrierefreie Alternative. **Keine Drittanbieter** – Turnstile, hCaptcha und reCAPTCHA werden nicht eingebaut (Vorgabe „nichts extern“). Die Bewertung unten bleibt als Begründung.
 
 **`CaptchaService`** (neu, `core/Services/Security/`): eine Schnittstelle `CaptchaProvider` mit `render(context)`,
 `verify(request, context)`, `requiresConsent()`, `cspSources()`. Genutzt von Community, Formularen (ersetzt die

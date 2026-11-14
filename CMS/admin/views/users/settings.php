@@ -366,11 +366,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    // Unicode-Klassen wie serverseitig (PasswordPolicyService::CLASSES, Flag u): Umlaute zählen als Buchstaben.
     var createPattern = function (source, fallback) {
         try {
-            return new RegExp(source || fallback);
+            return new RegExp(source || fallback, 'u');
         } catch (error) {
-            return new RegExp(fallback);
+            return new RegExp(fallback, 'u');
         }
     };
 
@@ -379,10 +380,10 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     var compiledPatterns = {
-        uppercase: createPattern(patterns.uppercase, '[A-Z]'),
-        lowercase: createPattern(patterns.lowercase, '[a-z]'),
-        digit: createPattern(patterns.digit, '\\d'),
-        special: createPattern(patterns.special, '[^a-zA-Z0-9]')
+        uppercase: createPattern(patterns.uppercase, '\\p{Lu}'),
+        lowercase: createPattern(patterns.lowercase, '\\p{Ll}'),
+        digit: createPattern(patterns.digit, '\\p{Nd}'),
+        special: createPattern(patterns.special, '[^\\p{L}\\p{N}]')
     };
 
     var updateRequirementEl = function (element, passed) {

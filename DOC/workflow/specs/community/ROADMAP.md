@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Roadmap & Fortschritt
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -25,8 +25,8 @@ Aufwand in Personentagen (PT), grob geschätzt einschließlich Tests und Doku; �
 
 | WP | Inhalt | Features | Abhängig von | PT |
 |---|---|---|---|---|
-| **WP-C0** | Entscheidungen E1–E11 bestätigen ([README.md](README.md) §4); Bibliotheken prüfen (CommonMark, Highlighting, `gregwar/captcha`, Proof-of-Work) inkl. Lizenz, PHP 8.4/8.5, CSP | – | – | 2 |
-| **WP-C1** | Modul-Gerüst: `CoreModuleService`-Eintrag, `CommunityHooks`, Einstellungen (`Support/Settings`) mit Typen/Grenzen, Sprachschlüssel, Admin-Katalog-Einträge (ausgeblendet bis Seiten existieren), Schema v26 mit allen Tabellen (`Installer`), Update-Schritt Capabilities + neue Rolle `moderator` | COM-ADM-03, COM-MOD-01 (Teil) | C0 | 5 |
+| **WP-C0** | Entscheidungen E1–E12 bestätigen (E11 gesetzt: 4.2/v27); Abhängigkeiten aus 4.1.0 nutzen (Hooks `user_deleted`/`user_role_changed`, Webhooks, Alerting, `CaptchaService` falls vorgezogen) ([README.md](README.md) §4); Bibliotheken prüfen (CommonMark, Highlighting, `gregwar/captcha`, Proof-of-Work) inkl. Lizenz, PHP 8.4/8.5, CSP | – | – | 2 |
+| **WP-C1** | Modul-Gerüst: `CoreModuleService`-Eintrag, `CommunityHooks`, Einstellungen (`Support/Settings`) mit Typen/Grenzen, Sprachschlüssel, Admin-Katalog-Einträge (ausgeblendet bis Seiten existieren), Schema v27 mit allen Tabellen (`Installer`), Update-Schritt Capabilities + neue Rolle `moderator` | COM-ADM-03, COM-MOD-01 (Teil) | C0 | 5 |
 | **WP-C2** | Struktur: Kategorien/Foren-Baum, Admin „Struktur“ (Drag & Drop, Tastatur), Forentypen und -status, Rechte-Matrix inkl. Vererbung, Forum-Moderatoren, `CommunityAccess` mit Tests | COM-CORE-02, COM-MOD-01, COM-MOD-02 | C1 | 8 |
 | **WP-C3** | Inhalte: Themen/Beiträge erstellen, antworten, zitieren, bearbeiten mit Verlauf, weich löschen; Zähler; Seitennavigation; Startseite, Forum, Thema, Listen „Neu/Aktiv/Unbeantwortet“; Permalinks; Gelesen-Status | COM-CORE-03…06, 09, 11, 12, COM-INT-09, 10 | C2 | 12 |
 | **WP-C4** | Editor & Rendering: Markdown-Renderer, Purifier-Profil `community`, Code-Highlighting, Vorschau-Endpunkt, Werkzeugleiste, lokale Entwürfe (Basis), BBCode-Renderer für Altbestand | COM-CORE-07, 08, COM-UX-05 (lokal) | C0, C3 | 7 |
@@ -37,9 +37,9 @@ Aufwand in Personentagen (PT), grob geschätzt einschließlich Tests und Doku; �
 | **WP-C9** | Suche & SEO: `SearchDocumentProvider`, Suche mit Filtern und Rechtefilter, ähnliche Themen, Sitemap-Provider, kanonische URLs, Weiterleitungen, Schema.org, `noindex`-Regeln | COM-CORE-10, COM-UX-03, 06 | C3 | 6 |
 | **WP-C10** | Frontend & Theme: Core-Vorlagen und Overrides, `community.css`/JS-Module, Mobile-First, Barrierefreiheit, Dark Mode; **Theme-PR `cms-phinit`** (THEME-UI §7) | COM-UX-01, 07, 09, COM-CORE-13 | C3…C9 parallel | 8 |
 | **WP-C11** | DSGVO & Löschfristen: Export-/Lösch-Hooks, Anonymisierung, Löschfristen-Regeln, Legal-Textbausteine, Papierkorb-Provider | COM-UX-04, COM-ADM-06 (Papierkorb) | C3, C8 | 4 |
-| **WP-C12** | Übernahme `cms-forum`: Migrator, Vorschau mit „Verhalten ändert sich“, Batch-Job, Weiterleitungen, Plugin-Abschaltung, Paritäts-Checkliste abhaken | COM-ADM-04 | C2…C11 | 7 |
+| ~~WP-C12~~ | **Entfällt (E6):** keine Datenübernahme aus `cms-forum` (Plugin war nirgends aktiv) | ~~COM-ADM-04~~ | – | 0 |
 | **WP-C13** | Leistung & Abnahme P1: Abfragebudget, Cache, Lasttest (10.000 Themen / 500.000 Beiträge), Lighthouse, vollständiger TEST-PLAN P1, Doku (`DOC/admin/community/`, `DOC/member/`, Hooks-Referenz, Changelog), Release | COM-UX-08 | alle P1 | 6 |
-| | **Summe P1** | | | **≈ 96 PT** |
+| | **Summe P1** (ohne WP-C12) | | | **≈ 89 PT** |
 | **WP-C14** | P2 Moderation: Vertrauensstufen, Verwarnungen mit Schwellen, Zusammenführen/Teilen, IP-/Kennungshinweise | COM-MOD-05, 08, 15, 16 | P1 | 8 |
 | **WP-C15** | P2 Interaktion: Erwähnungen, Zusammenfassungs-Mails, Umfragen, Lesezeichen, Ignorieren, Wer ist online, Server-Entwürfe, Emoji, automatisches Schließen, Feeds, Statistik, Export/Import der Struktur | COM-INT-02 (Digest), 04, 11, 12, 13, COM-UX-05, COM-PLUS-06, 07, 09, 12, COM-ADM-05, 06 | P1 | 12 |
 | **WP-C16** | P3: Reputation, Abzeichen, Tags/Präfixe, Webhooks, KI-Signale; Core: Gruppen-Nachrichten (E8), OAuth (E9, eigenes Vorhaben) | COM-PLUS-02, 03, 08, 10, 11, COM-INT-08 (Gruppen) | P2 | 15 + Core |
@@ -51,7 +51,7 @@ flowchart LR
   C5 --> C6
   C5 --> C8
   C3 & C8 --> C11
-  C2 & C4 & C6 & C7 & C8 & C9 & C10 & C11 --> C12 --> C13
+  C2 & C4 & C6 & C7 & C8 & C9 & C10 & C11 --> C13
   C13 --> C14 & C15 --> C16
 ```
 
@@ -61,14 +61,13 @@ flowchart LR
 |---|---|---|
 | M1 – Lesbar | WP-C1…C3 | Struktur anlegen, Themen lesen/schreiben unter `/forum` auf einer Testinstallation |
 | M2 – Sicher | WP-C4…C6, C8 | Sicherheits-Checkliste grün, XSS-Korpus und Rechte-Matrix bestanden |
-| M3 – Parität | WP-C7, C9…C12 | Paritäts-Checkliste vollständig, Migration mit echten Daten geprobt |
+| M3 – Funktionsumfang | WP-C7, C9…C11 | Funktions-Referenz aus MIGRATION-CMS-FORUM §2 abgedeckt |
 | M4 – Release P1 | WP-C13 | TEST-PLAN P1 grün, Lighthouse ≥ 90, Doku und Changelog, RELEASE-Paket |
 
 ### 4. Risiken
 
 | Risiko | Auswirkung | Gegenmaßnahme |
 |---|---|---|
-| Plugin-Einstellungen ohne Wirkung → nach Übernahme plötzlich wirksam | Foren verhalten sich anders (Freigabe, Gäste) | Vorschau „Verhalten ändert sich“ mit Bestätigung je Punkt (MIGRATION §4) |
 | Rechte-Fehler machen interne Foren sichtbar | Datenleck | `CommunityAccess` als einzige Stelle, Rechte-Matrix-Test über alle Routen und Nebenwege (Suche, Feeds, Zitate, Benachrichtigungen, Anhänge) |
 | XSS über Markdown-Sonderfälle | Kontoübernahme | Kein Roh-HTML, Purifier nach dem Renderer, XSS-Korpus im CI |
 | Große Foren langsam | schlechte Nutzung, Serverlast | Denormalisierte Zähler, Indizes, Keyset-Seiten, Lasttest in WP-C13 |
@@ -84,7 +83,7 @@ flowchart LR
 |---|---|---|
 | Planung (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/community/` (14.11.2026) |
 | WP-C0 Entscheidungen & Bibliotheken | ⬜ | |
-| WP-C1 Modul-Gerüst & Schema v26 | ⬜ | |
+| WP-C1 Modul-Gerüst & Schema v27 | ⬜ | |
 | WP-C2 Struktur & Rechte | ⬜ | |
 | WP-C3 Themen, Beiträge, Gelesen-Status | ⬜ | |
 | WP-C4 Editor & Rendering | ⬜ | |
@@ -95,7 +94,7 @@ flowchart LR
 | WP-C9 Suche & SEO | ⬜ | |
 | WP-C10 Frontend & Theme-PR | ⬜ | |
 | WP-C11 DSGVO & Löschfristen | ⬜ | |
-| WP-C12 Übernahme cms-forum | ⬜ | |
+| WP-C12 Übernahme cms-forum | ➖ | entfällt (E6) |
 | WP-C13 Leistung, Abnahme, Release P1 | ⬜ | |
 | WP-C14 P2 Moderation | ⬜ | |
 | WP-C15 P2 Interaktion | ⬜ | |

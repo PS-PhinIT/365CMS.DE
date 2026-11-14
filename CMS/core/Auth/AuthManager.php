@@ -172,6 +172,10 @@ final class AuthManager
         // aktive TOTP-MFA dann zusätzlich verlangen statt sie zu überspringen.
         $userId = (int)$credential['user_id'];
         $authenticatorFlags = strlen($authenticatorData) > 32 ? ord($authenticatorData[32]) : 0;
+        if (($authenticatorFlags & 0x04) !== 0 && (int) ($credential['user_verified'] ?? 0) !== 1) {
+            // 4.1.0: Bestandspasskey mit UV nachträglich als vollwertigen Faktor markieren (MFA-Zwang).
+            $adapter->markUserVerified((int) $credential['id']);
+        }
         if (($authenticatorFlags & 0x04) === 0 && $this->sessionAuth->isMfaEnabled($userId)) {
             $_SESSION['mfa_pending_user_id'] = $userId;
             $_SESSION['mfa_pending_remember'] = '0';

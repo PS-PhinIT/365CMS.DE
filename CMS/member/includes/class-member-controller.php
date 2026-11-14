@@ -21,6 +21,7 @@ use CMS\Services\MediaService;
 use CMS\Services\MemberContentService;
 use CMS\Services\MemberService;
 use CMS\Services\MessageService;
+use CMS\Services\Security\MfaEnforcementService;
 use CMS\Services\NotificationService;
 
 if (!defined('ABSPATH')) {
@@ -1702,6 +1703,17 @@ final class MemberController
             $this->redirect('/member/security');
         }
 
+        // 4.1.0: Bei MFA-Zwang darf der letzte anerkannte Faktor nicht entfernt werden.
+        if (in_array($action, ['totp_disable', 'passkey_delete'], true)) {
+            $currentUser = $this->auth->currentUser();
+            $factor = $action === 'totp_disable' ? 'totp' : 'passkey';
+            if ($currentUser !== null
+                && !MfaEnforcementService::getInstance()->canRemoveFactor($currentUser, $factor, (int) ($_POST['credential_id'] ?? 0))) {
+                $this->flash('danger', MemberI18n::t('member.security.mfa_enforced_last_factor'));
+                $this->redirect('/member/security');
+            }
+        }
+
         if ($action === 'totp_disable') {
             // Entfernt auch die Backup-Codes und schreibt den Audit-Eintrag.
             TotpAdapter::instance()->disable($userId);
@@ -1749,6 +1761,17 @@ final class MemberController
     /**
      * @return array<string,mixed>
      */
+    private function isMfaSetupPending(int $userId): bool
+    {
+        $user = $this->auth->currentUser();
+        if ($user === null) {
+            return false;
+        }
+        $service = MfaEnforcementService::getInstance();
+
+        return $service->isRequiredFor($user) && !$service->hasRecognisedFactor($userId);
+    }
+
     public function getSecurityPageData(): array
     {
         $userId = $this->getUserId();
@@ -1765,6 +1788,8 @@ final class MemberController
             'credentials' => $credentials,
             'backup_count' => $backupCount,
             'totp_enabled' => TotpAdapter::instance()->isEnabled($userId),
+            // 4.1.0: MFA-Zwang für die Rolle, aber noch kein anerkannter Faktor → Hinweis oben auf der Seite.
+            'mfa_enforced_pending' => $this->isMfaSetupPending($userId),
             'totp_setup' => is_array($setup) ? $setup : null,
             'passkey_payload' => $passkeyPayload,
         ];

@@ -11,6 +11,7 @@ use CMS\Database;
 use CMS\Auth;
 use CMS\Logger;
 use CMS\Security;
+use CMS\Services\Security\PasswordPolicyService;
 use CMS\SubscriptionManager;
 use CMS\WP_Error;
 
@@ -131,10 +132,11 @@ class UserService {
         
         // Sanitize & Hash
         $username = Security::sanitize($data['username'], 'username');
+        $passwordHash = Security::hashPassword($data['password']);
         $clean_data = [
             'username' => $username,
             'email' => Security::sanitize($data['email'], 'email'),
-            'password' => Security::hashPassword($data['password']),
+            'password' => $passwordHash,
             // users.display_name ist NOT NULL ohne Default – ohne Wert scheitert das INSERT im SQL-Strict-Mode.
             'display_name' => $this->resolveDisplayName($data, $username),
             'role' => $this->normalizeRole($data['role'] ?? 'member'),
@@ -149,6 +151,7 @@ class UserService {
         }
         
         $user_id = $this->db->insert_id();
+        PasswordPolicyService::getInstance()->recordChange((int) $user_id, $passwordHash, 'admin_create');
         
         // Meta-Daten speichern (Vorname, Nachname, etc.)
         if (!empty($data['first_name'])) {
@@ -196,8 +199,8 @@ class UserService {
             return new WP_Error('user_not_found', 'Benutzer nicht gefunden', ['status' => 404]);
         }
         
-        // Validierung
-        $validation = $this->validateUserData($data, 'update');
+        // Validierung (mit Konto-ID: Passwort-Historie)
+        $validation = $this->validateUserData($data, 'update', (int) $user_id);
         if ($validation instanceof WP_Error) {
             return $validation;
         }
@@ -293,6 +296,7 @@ class UserService {
         
         // Log
         if (isset($update_data['password'])) {
+            PasswordPolicyService::getInstance()->recordChange((int) $user_id, (string) $update_data['password'], 'admin_update');
             // Eigene Sitzung behalten; andere Sitzungen des Kontos enden mit dem neuen Passwort.
             \CMS\Auth::instance()->refreshPasswordFingerprint($user_id);
         }
@@ -532,7 +536,7 @@ class UserService {
      * @param string $context 'create' oder 'update'
      * @return bool|WP_Error true bei Erfolg, WP_Error bei Fehler
      */
-    private function validateUserData(array $data, string $context = 'create'): bool|WP_Error {
+    private function validateUserData(array $data, string $context = 'create', ?int $userId = null): bool|WP_Error {
         if ($context === 'create') {
             // Username erforderlich
             if (empty($data['username'])) {
@@ -590,7 +594,7 @@ class UserService {
             }
 
             if (isset($data['password']) && trim((string)$data['password']) !== '') {
-                $passwordValidation = $this->validatePassword((string)$data['password']);
+                $passwordValidation = $this->validatePassword((string)$data['password'], $userId);
                 if ($passwordValidation instanceof WP_Error) {
                     return $passwordValidation;
                 }
@@ -614,8 +618,8 @@ class UserService {
         return true;
     }
 
-    private function validatePassword(string $password): bool|WP_Error {
-        $policyResult = Auth::validatePasswordPolicy($password);
+    private function validatePassword(string $password, ?int $userId = null): bool|WP_Error {
+        $policyResult = Auth::validatePasswordPolicy($password, $userId);
         if ($policyResult !== true) {
             return new WP_Error('weak_password', $policyResult, ['status' => 400]);
         }
