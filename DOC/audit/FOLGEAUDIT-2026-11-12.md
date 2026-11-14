@@ -39,7 +39,7 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN, BP | PR 5 | offen |
 | 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | offen |
 | 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | offen |
-| 8 | PhinIT-Plugins `cms-m365adminsites`, `cms-365network`, `cms-m365messagecenter` (Kompatibilität mit 4.0.0) | PHI | je Plugin ein PR im Repository `365CMS.DE-PhinIT_PLUGINS` und hier | `cms-m365adminsites` erledigt (PhinIT_PLUGINS #25), `cms-365network` erledigt (PhinIT_PLUGINS #26), `cms-m365messagecenter` offen |
+| 8 | PhinIT-Plugins `cms-m365adminsites`, `cms-365network`, `cms-m365messagecenter` (Kompatibilität mit 4.0.0) | PHI | je Plugin ein PR im Repository `365CMS.DE-PhinIT_PLUGINS` und hier | `cms-m365adminsites` erledigt (PhinIT_PLUGINS #25), `cms-365network` erledigt (PhinIT_PLUGINS #26), `cms-m365messagecenter` erledigt (PhinIT_PLUGINS #27) |
 
 ### 1. Changelog 4.0.0
 
@@ -674,6 +674,25 @@ Die drei Plugins liegen im Repository `PS-PhinIT/365CMS.DE-PhinIT_PLUGINS`. Je P
 
 **Hinweis:** Je Aufruf der Landingpage bleiben 19 Abfragen an `INFORMATION_SCHEMA` für die Erkennung der Partner-Tabellen und -Spalten (Ergebnis nur im Request zwischengespeichert). Das ist kein Fehler; ein Cache über Requests hinweg wäre eine weitere Optimierung.
 
-#### 8.3 `cms-m365messagecenter`
+#### 8.3 `cms-m365messagecenter` (1.0.10 → 1.0.11)
 
-Prüfung steht aus (eigener PR).
+| ID | Fundstelle | Schwere | Beschreibung | Status |
+|---|---|---|---|---|
+| PHI-22 | `admin/class-admin-pages.php:155`, `includes/class-frontend.php:45`, `:59` | 🟠 | Der öffentliche Slug ließ jeden Pfad zu. Mit `admin`, `search` oder `member` hätte `Router::addRoute()` die Core-Route ersetzt, über `/<slug>/:messageId` und `/<slug>/fristen` zusätzlich weitere Pfade. Korrektur: `Repository::is_reserved_route_slug()` mit den ersten Pfadsegmenten aller Core-Routen; das Admin-Formular meldet `route-reserved` und speichert nicht, gespeicherte Altwerte fallen über `Repository::route_slug()` auf `m365-messagecenter` zurück. | [x] Behoben in PhinIT_PLUGINS #27 |
+| PHI-23 | `cms-m365messagecenter.php:128` | 🟠 | Kein Lifecycle-Callback für das Löschen (4.0.0: `<slug>_uninstall()`). Zurück blieben die Tabellen `m365messagecenter_messages` und `_settings` sowie das verschlüsselt im Core gespeicherte Client-Secret der Entra-App (`settings`, Option `m365messagecenter.graph_client_secret`). Korrektur: `cms_m365messagecenter_uninstall()` entfernt beide Tabellen und das Secret über `SettingsService::forget()`. | [x] Behoben in PhinIT_PLUGINS #27 |
+| PHI-24 | `includes/class-graph-client.php:180` | 🟡 | PHP 8.5 erklärt die Variable `$http_response_header` für veraltet; der Abruf ohne cURL las den HTTP-Status daraus. Korrektur: `http_get_last_response_headers()` (PHP 8.4+, 365CMS 4.0.0 setzt 8.4.1 voraus). | [x] Behoben in PhinIT_PLUGINS #27 |
+| PHI-25 | `includes/class-frontend.php:103`, `:219`, `:264`, `admin/class-admin-pages.php:218` | 🟡 | `(string)` auf GET-Parameter: `?q[]=`, `?sort[]=`, `?direction[]=`, `?service[]=`, `?category[]=`, `?typ[]=`, `?monat[]=` und `?error[]=` lösten die PHP-Warnung „Array to string conversion“ aus (gemessen: 8 Warnungen je Aufruf). Korrektur: nur skalare Werte (`Frontend::query_param()`). | [x] Behoben in PhinIT_PLUGINS #27 |
+| PHI-26 | `includes/class-repository.php:183`, `:189`, `:277` | 🟡 | `%` und `_` aus Suche und Service-Filter wirkten als LIKE-Platzhalter (`?q=_` traf alle Meldungen). Korrektur: `LIKE ? ESCAPE '!'` mit maskierter Eingabe. | [x] Behoben in PhinIT_PLUGINS #27 |
+| PHI-27 | `includes/class-repository.php:625` und `log_exception()` in sechs weiteren Dateien | 🟡 | Fehler wurden nur mit `CMS_DEBUG` protokolliert; im Betrieb blieben Datenbank-, Installations- und Abruffehler ohne Spur (Graph-Fehlercodes nur im Dashboard). Korrektur: immer ins PHP-Fehlerlog, Secrets werden wie bisher maskiert. | [x] Behoben in PhinIT_PLUGINS #27 |
+| PHI-28 | `admin/class-admin-pages.php:218`, `cms-m365messagecenter.php:24` | ⚪ | `?error=` zeigte beliebigen Text aus der URL im Admin an (escaped, aber frei formulierbar). Die Hauptklasse war nicht gegen erneutes Einbinden geschützt. Korrektur: nur Fehlercodes (`[A-Za-z0-9 _.:-]`), sonst `unknown`; `class_exists`-Schutz. | [x] Behoben in PhinIT_PLUGINS #27 |
+
+**Kein Befund nach Prüfung (`cms-m365messagecenter`)**
+
+- Graph-Client: feste Host-Allowlist je Cloud (kein SSRF über `@odata.nextLink`), nur HTTPS mit Zertifikatsprüfung, keine Weiterleitungen, Timeouts 4 s (Verbindung) bzw. 10 s, Antwortlimit 8 MiB, höchstens 10 Seiten. Leere oder ungültige Antworten und HTTP-Fehler ergeben einen Fehlercode (z. B. `token-unavailable http-400 unauthorized_client AADSTS700016`), ohne Secret; geprüft mit einem echten Abruf gegen Entra ID.
+- Cache: Ersetzen in einer Transaktion; ein Fehler lässt den bisherigen Cache unverändert.
+- Client-Secret verschlüsselt über `SettingsService` (Migration aus der Plugin-Tabelle vorhanden), nie im Formular ausgegeben.
+- Ausgabe: Meldungs-HTML über `PurifierService` (Profil `strict`), alle übrigen Werte mit `htmlspecialchars(…, ENT_QUOTES, 'UTF-8')`; ICS mit Escaping nach RFC 5545 und Faltung auf 75 Oktette.
+- SQL durchgehend mit Prepared Statements; Sortierung nur aus fester Spaltenliste, `LIMIT`/`OFFSET` als Ganzzahl. Tabellen `utf8mb4_unicode_ci` mit Unique-Index auf `graph_id`; Spaltenmigration über `DB_VERSION`.
+- Admin: Zugriff nur mit `Auth::isAdmin()`, CSRF-Token bei Speichern und Abruf, Werte nach dem Speichern neu geladen. Cron-Hooks `cms_cron_hourly`/`cms_cron_m365messagecenter`, `SEOService::setRequestMeta()`, Filter `cms_sitemap_entries` und `search_results` passen zu 4.0.0. Aktivierungs-Sicherheitsscan ohne Treffer.
+
+**Grenzen:** Der Abruf ohne cURL (`http_get_last_response_headers()`) wurde nicht ausgeführt, weil die Testumgebung PHP 8.3 mit cURL nutzt.
