@@ -1,127 +1,77 @@
+<div align="center">
+
+<!-- Falls du ein Logo im Repo hast, kannst du es hier einbinden: -->
+<!-- <img src="CMS/assets/images/LOGO_365CMS-150px.png" alt="365CMS Logo" width="110" /> -->
+
 # 365CMS
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Website:** [365cms.de](https://365cms.de/)
+**A modern, framework-less, security-first PHP 8.4+ CMS & Portal Platform.**  
+*Zero bloat. Full enterprise security. All-in-one core (Forms, Newsletter, Knowledgebase, Downloads & Feeds).*
 
-![Screenshot 365CMS Dashboard.](SCREENSHOTS/365CMS-Dashboard_1.png) 
+[![Version](https://img.shields.io/badge/Version-4.0.0%20Stable-blue?style=flat-square)](https://github.com/DEIN-USER/365CMS/releases)
+[![PHP Version](https://img.shields.io/badge/PHP-8.4.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/)
+[![Database](https://img.shields.io/badge/MySQL%20%2F%20MariaDB-PDO%20(v25)-4479A1?style=flat-square&logo=mysql&logoColor=white)](#requirements)
+[![Security](https://img.shields.io/badge/Security-CSP%20%7C%20Trusted%20Types%20%7C%20WebAuthn-success?style=flat-square)](#security--architecture)
+[![Website](https://img.shields.io/badge/Website-365cms.de-0ea5e9?style=flat-square)](https://365cms.de/)
 
-| Posting List | New Posting | Mediathek | Website Health |
-|:--:|:--:|:--:|:--:|
-| ![Screenshot 365CMS Post List.](SCREENSHOTS/365CMS-PostList_1.png) | ![Screenshot 365CMS New Posting.](SCREENSHOTS/365CMS-NewPost_1.png) | ![Screenshot 365CMS Mediathek.](SCREENSHOTS/365CMS-Medien_1.png) | ![Screenshot 365CMS Website Health.](SCREENSHOTS/365CMS-Website-Zustand_1.png) |
+[🌐 Official Website](https://365cms.de/) • [📖 Documentation](DOC/README.md) • [🚀 Quick Start](#quick-start) • [🇩🇪 Deutsche Version](#deutsch)
 
-## English
+</div>
 
-### What is 365CMS?
+---
 
-365CMS is a self-hosted, framework-less PHP CMS and portal platform for content, members, themes, plugins, SEO, privacy and day-to-day operations. The runtime is located in [`CMS/`](CMS/); the public documentation is maintained in [`DOC/`](DOC/).
+<p align="center">
+  <img src="SCREENSHOTS/365CMS-Dashboard_1.png" alt="365CMS Admin Dashboard" width="100%" />
+</p>
 
-| Key fact | Value |
-|---|---|
-| Core version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released 2026-11-12, status `stable`) |
-| PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| Database | MySQL / MariaDB via PDO, table prefix `cms_`, schema version `v25` |
-| Shipped theme / plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress importer) |
+| Posting List | Block Editor (New Post) | Media Library | Website Health |
+|:---:|:---:|:---:|:---:|
+| ![365CMS Post List](SCREENSHOTS/365CMS-PostList_1.png) | ![365CMS New Posting](SCREENSHOTS/365CMS-NewPost_1.png) | ![365CMS Mediathek](SCREENSHOTS/365CMS-Medien_1.png) | ![365CMS Website Health](SCREENSHOTS/365CMS-Website-Zustand_1.png) |
 
-### Core capabilities
+---
 
-| Area | Current runtime capability |
-|---|---|
-| Content | Pages, posts, Editor.js blocks (SunEditor as legacy option), post revisions with block diff and restore, publish checklist, focus mode, categories, tags, scheduled publishing, DE/EN content, hub sites, site tables, TOC |
-| Administration | Dashboard, users, groups, roles/capabilities, settings, media library, menus, themes, customizer, fonts, module manager; collapsible sidebar with site switcher, per-site plugin assignment and system notices (cron, backups, updates) |
-| Members | Member area under `/member`: dashboard, profile, security (MFA, passkeys, sessions), media, messages, notifications, favorites, privacy, subscriptions, plugin sections |
-| SEO & legal | Meta/OG/schema, sitemaps, redirects/404 monitor, analytics with consent, legal-text generator, cookie manager, GDPR export/deletion requests |
-| Security | CSRF tokens per action, capability checks, CSP with nonces and Trusted Types, rate limits, MFA/TOTP, WebAuthn, LDAP, audit log, hardened uploads |
-| AI (optional) | Admin-only AI services: translation of Editor.js content and SEO metadata with provider policy and quotas – no public AI routes |
-| Extensions | Plugins in `CMS/plugins/`, themes in `CMS/themes/`, marketplace with SHA-256-verified installs |
-| Operations | Cache/performance, logs, backups/restore, cron (`cron.php`), mail queue (SMTP or Microsoft Graph), monitoring, schema and core updates |
+## ✨ Why 365CMS?
 
-### Requirements
+Most traditional CMS platforms either drown in legacy plugin dependencies or require complex Node.js/Docker build pipelines just to run a website. **365CMS** bridges the gap:
 
-- PHP `8.4.1+` with `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
-- MySQL- or MariaDB-compatible database
-- Web server (Apache with `.htaccess` or nginx with equivalent rules) serving `CMS/`
-- Writable `config/`, `uploads/`, `cache/`, `logs/`, `backups/`, `private/` (or the `CMS_PRIVATE_PATH` directory)
+- ⚡ **Framework-less & Fast:** Pure, modern PHP `8.4.1+` architecture with zero external framework overhead, lazy sessions, OPcache warmup, and native ES modules without a build step.
+- 🔋 **Batteries Included (No Plugin Tax):** Essential portal features ship directly in the core—including a **Form Builder**, **Double-Opt-In Newsletter**, **Knowledgebase/Glossary**, **Download Manager**, and **RSS Feed Aggregator**.
+- 🛡️ **Security & Hardening by Default:** Strict Content Security Policy (CSP) with nonces and **Trusted Types**, authenticated encryption (`XChaCha20-Poly1305`), Passkeys (WebAuthn), TOTP MFA, LDAP, SSRF-protected HTTP client, and an integrated Security Audit suite.
+- 🇪🇺 **Privacy & GDPR Native:** Built-in consent-aware analytics, local WOFF2 font hosting, automated data retention rules, GDPR export/deletion workflows, and an accessibility statement generator.
+- 🧱 **Modern Block Editing:** Powered by a customized **Editor.js** canvas with block-level revisions/diffs, publish checklists, distraction-free focus mode, and optional admin-only AI translation & SEO assistance.
 
-### Quick start
+---
 
-```text
-1. Deploy the contents of CMS/ to the web root (or point the web root to CMS/).
-2. Open /install.php in the browser and follow the steps (environment, database, site, administrator).
-3. The installer writes CMS/config/app.php and locks itself afterwards.
-4. Log in at /cms-login, open /admin and review settings, mail and backups.
-5. Set up the cron job (php CMS/cron.php --task=all).
-```
+## 🚀 Core Capabilities
 
-Never ship installation-specific `config/`, `uploads/`, `cache/`, `logs/` or `backups/` in a release archive.
+| Domain | Highlights & Features |
+| :--- | :--- |
+| **Content & Editorial** | Pages, posts, **Editor.js** blocks (SunEditor legacy fallback), block-diff revisions & restore, enforced publish checklists, focus mode, editorial calendar, scheduled publishing, native **DE/EN** localization, hub sites & interactive data tables. |
+| **Built-in Portal Modules** | **Forms** (15 field types, spam protection, private file uploads), **Newsletter** (campaigns, segments, RFC 8058 one-click unsubscribe), **Knowledgebase** (auto-linking glossary), **Downloads** (versioned, rate-limited, private storage), and **Feed Aggregator** (OPML, digests). |
+| **Modern Admin Shell** | Customizable sidebar profiles (*Classic*, *Structured*, or drag-and-drop *Custom Layout*), MultiSites context switcher, per-site plugin assignment, tile-based configuration pages, and live system health notices. |
+| **Member Area (`/member`)** | Self-service dashboard, profile editor, security management (Passkeys, MFA, active session revocation), private media, internal messaging, favorites, subscriptions, and GDPR self-export. |
+| **SEO & Compliance** | Dynamic XML sitemaps, IndexNow integration, 301 redirects & 404 monitor, Schema.org JSON-LD, consent-gated tracking (GA4, GTM, Matomo), cookie manager, legal text generator, and automated retention cleanup. |
+| **Security & Auth** | Per-action CSRF tokens, RBAC capability matrix, CSP + Trusted Types runtime, account & IP rate limiting, TOTP MFA, WebAuthn/Passkeys, LDAP/AD auth, encrypted backups, and full audit logging. |
+| **Admin-Only AI (Optional)** | Block-by-block Editor.js translation and SEO metadata generation with strict provider policies, SSRF guards, and atomic token quotas. *Zero public AI routes.* |
+| **Operations & Dev** | Web installer (6 steps), CLI/Web cron runner, SMTP & Microsoft Graph mail queue, ZIP content import/export, SHA-256 verified marketplace, and 16 automated test suites (`TESTS/run-all.php`). |
 
-### Documentation
+---
 
-| Topic | Link |
-|---|---|
-| Documentation hub | [`DOC/README.md`](DOC/README.md) |
-| Documentation index | [`DOC/INDEX.md`](DOC/INDEX.md) |
-| Installation | [`DOC/INSTALLATION.md`](DOC/INSTALLATION.md) |
-| Architecture / core status | [`DOC/core/ARCHITECTURE.md`](DOC/core/ARCHITECTURE.md) · [`DOC/core/STATUS.md`](DOC/core/STATUS.md) |
-| Admin panel | [`DOC/admin/README.md`](DOC/admin/README.md) |
-| Plugin / theme development | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
-| Workflows | [`DOC/workflow/`](DOC/workflow/) |
-| Audit reports | [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
-| Release packages | [`RELEASE/README-4.0.0.md`](RELEASE/README-4.0.0.md) |
-| Release history | [`Changelog.md`](Changelog.md) |
-| Community rules | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
+## 📋 Requirements
 
-### Contributing and security
+- **PHP:** `8.4.1+` with extensions `pdo`, `pdo_mysql`, `mbstring`, `json`, `openssl`, `curl`, `gd`, `zip`, `fileinfo`
+- **Database:** MySQL `8.0+` or MariaDB `10.6+` (`utf8mb4`, PDO, schema `v25`)
+- **Web Server:** Apache 2.4 (`mod_rewrite` + `.htaccess`) or Nginx (`try_files` + security rules) serving `CMS/`
+- **Permissions:** Writable directories for `config/`, `uploads/`, `cache/`, `logs/`, `backups/`, and `private/` (or `CMS_PRIVATE_PATH`)
 
-Keep changes focused, document behavior changes in `DOC/` and [`Changelog.md`](Changelog.md), and validate PHP syntax (`php -l`) before opening a pull request. Report security issues privately to the maintainers instead of publishing exploit details in a public issue.
+---
 
-## Deutsch
+## ⚡ Quick Start
 
-### Was ist 365CMS?
-
-365CMS ist ein selbst gehostetes, frameworkfreies PHP-CMS und Portal-System für Inhalte, Mitglieder, Themes, Plugins, SEO, Datenschutz und den laufenden Betrieb. Die Runtime liegt unter [`CMS/`](CMS/), die öffentliche Projektdokumentation unter [`DOC/`](DOC/).
-
-| Eckdaten | Wert |
-|---|---|
-| Core-Version | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht 2026-11-12, Status `stable`) |
-| PHP | `8.4.1+` (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| Datenbank | MySQL / MariaDB über PDO, Tabellenpräfix `cms_`, Schema-Version `v25` |
-| Mitgeliefertes Theme / Plugin | `cms-default` (Meridian CMS Default) / `cms-importer` (WordPress-Import) |
-
-### Zentrale Funktionen
-
-| Bereich | Aktuelle Runtime-Funktion |
-|---|---|
-| Inhalte | Seiten, Beiträge, Editor.js-Blöcke (SunEditor als Legacy-Option), Beitragsrevisionen mit Block-Vergleich und Wiederherstellung, Veröffentlichungs-Checkliste, Fokusmodus, Kategorien, Tags, geplante Veröffentlichung, DE/EN-Inhalte, Hub-Sites, Site-Tabellen, Inhaltsverzeichnis |
-| Administration | Dashboard, Benutzer, Gruppen, Rollen/Capabilities, Einstellungen, Medienbibliothek, Menüs, Themes, Customizer, Schriften, Modul-Manager; einklappbare Seitenleiste mit Site-Umschalter, Plugin-Zuweisung je Site und Systemhinweisen (Cron, Backups, Updates) |
-| Mitglieder | Mitgliederbereich unter `/member`: Dashboard, Profil, Sicherheit (MFA, Passkeys, Sitzungen), Medien, Nachrichten, Benachrichtigungen, Favoriten, Datenschutz, Abos, Plugin-Bereiche |
-| SEO & Recht | Meta/OG/Schema, Sitemaps, Weiterleitungen/404-Monitor, Analytics mit Einwilligung, Rechtstexte-Generator, Cookie-Manager, DSGVO-Auskunft/-Löschung |
-| Sicherheit | CSRF-Token je Aktion, Capability-Prüfungen, CSP mit Nonces und Trusted Types, Rate-Limits, MFA/TOTP, WebAuthn, LDAP, Audit-Log, gehärtete Uploads |
-| KI (optional) | AI Services nur im Admin: Übersetzung von Editor.js-Inhalten und SEO-Metadaten mit Provider-Policy und Quotas – keine öffentlichen AI-Routen |
-| Erweiterungen | Plugins in `CMS/plugins/`, Themes in `CMS/themes/`, Marketplace mit SHA-256-geprüfter Installation |
-| Betrieb | Cache/Performance, Logs, Backups/Wiederherstellung, Cron (`cron.php`), Mail-Queue (SMTP oder Microsoft Graph), Monitoring, Schema- und Core-Updates |
-
-### Voraussetzungen
-
-- PHP `8.4.1+` mit `pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`
-- MySQL- oder MariaDB-kompatible Datenbank
-- Webserver (Apache mit `.htaccess` oder nginx mit gleichwertigen Regeln), der `CMS/` ausliefert
-- Schreibrechte für `config/`, `uploads/`, `cache/`, `logs/`, `backups/`, `private/` (bzw. das Verzeichnis aus `CMS_PRIVATE_PATH`)
-
-### Schnellstart
-
-```text
-1. Inhalt von CMS/ in den Webroot kopieren (oder Webroot auf CMS/ zeigen lassen).
-2. /install.php im Browser öffnen und den Schritten folgen (Umgebung, Datenbank, Website, Administrator).
-3. Der Installer schreibt CMS/config/app.php und sperrt sich danach selbst.
-4. Unter /cms-login anmelden, /admin öffnen, Einstellungen, Mailversand und Backups prüfen.
-5. Cronjob einrichten (php CMS/cron.php --task=all).
-```
-
-Installationsspezifische Verzeichnisse (`config/`, `uploads/`, `cache/`, `logs/`, `backups/`) gehören nie in ein Release-Archiv. Details: [`DOC/INSTALLATION.md`](DOC/INSTALLATION.md) und [`DOC/workflow/UPDATE-DEPLOYMENT-WORKFLOW.md`](DOC/workflow/UPDATE-DEPLOYMENT-WORKFLOW.md).
-
-### Dokumentation
-
-Einstieg ist [`DOC/README.md`](DOC/README.md), die vollständige Liste steht in [`DOC/INDEX.md`](DOC/INDEX.md). Bekannte Abweichungen zwischen Code und erwartetem Verhalten sind in [`DOC/core/STATUS.md`](DOC/core/STATUS.md) („Bekannte Lücken“) gesammelt. Audit-Berichte: [`DOC/audit/README.md`](DOC/audit/README.md) (aktuell) und [`DOC/checks/README.md`](DOC/checks/README.md) (frühere Audits); Release-Pakete: [`RELEASE/README-4.0.0.md`](RELEASE/README-4.0.0.md).
-
-### Mitwirken und Sicherheit
-
-Bitte Änderungen fokussiert halten, Verhaltensänderungen in `DOC/` und [`Changelog.md`](Changelog.md) dokumentieren und die PHP-Syntax (`php -l`) vor einem Pull Request prüfen. Es gilt der [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md); Sicherheitsprobleme bitte privat an die Maintainer melden.
+1. **Deploy:** Upload the contents of [`CMS/`](CMS/) to your web root (or point your virtual host document root to `CMS/`).
+2. **Install:** Open `https://your-domain.tld/install.php` in your browser and complete the 6-step setup wizard (system check, database, site & core modules, admin sidebar profile, administrator account).
+3. **Lockdown:** The installer writes `CMS/config/app.php` with cryptographic keys and automatically locks itself.
+4. **Configure:** Log in at `/cms-login`, open `/admin`, and verify mail delivery, backup paths (`CMS_BACKUP_PATH`), and the **Security Audit**.
+5. **Automate:** Set up a recurring cron job (at least hourly):
+   ```bash
+   php /path/to/CMS/cron.php --task=all
