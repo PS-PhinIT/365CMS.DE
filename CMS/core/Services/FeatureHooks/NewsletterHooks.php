@@ -5,10 +5,11 @@
  * - Öffentliche Seiten `/newsletter`, Anmeldung, Bestätigung, Abmeldung (inkl. RFC-8058-One-Click), Webversion.
  * - Versand in Blöcken über den Mail-Queue-Cron und stündlich (`NewsletterDispatcher::run()`).
  * - Löschfrist `newsletter.pending`: unbestätigte Anmeldungen nach `confirm_expiry_days` Tagen entfernen.
- * - DSGVO-Auskunft/-Löschung, Selbstauskunft im Mitgliederbereich, Mitgliederbereich „Newsletter“.
+ * - DSGVO-Auskunft/-Löschung, Selbstauskunft im Mitgliederbereich, Mitgliederbereich „Newsletter“ mit
+ *   Dashboard-Widget (Stylesheet `member-newsletter.css` über `member_head` nur auf Dashboard und Unterseite).
  * - Optionaler Menüpunkt (`main_nav`), Stylesheet nur auf Newsletter-Seiten bzw. bei eingebettetem Formular.
  *
- * @package CMSv2\Core\Services
+ * @package CMS\Services\FeatureHooks
  */
 
 declare(strict_types=1);
@@ -85,6 +86,15 @@ final class NewsletterHooks
                 self::guard('Mitgliederbereich', static fn () => NewsletterMemberSection::register($registry));
             }
         }, 25);
+
+        // Stylesheet des Newsletter-Widgets nur auf Dashboard und Newsletter-Unterseite des Mitgliederbereichs.
+        Hooks::addAction('member_head', static function (mixed $pageKey = ''): void {
+            if (!in_array($pageKey, ['dashboard', 'plugin_' . NewsletterMemberSection::SLUG], true)) {
+                return;
+            }
+            $href = function_exists('cms_asset_url') ? cms_asset_url('css/member-newsletter.css') : rtrim((string) SITE_URL, '/') . '/assets/css/member-newsletter.css';
+            echo '<link rel="stylesheet" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+        }, 20);
 
         Hooks::addAction('main_nav', static function (mixed $context = 'desktop'): void {
             self::guard('Menüpunkt', static fn () => NewsletterFrontendController::renderNavItem(is_string($context) ? $context : 'desktop'));

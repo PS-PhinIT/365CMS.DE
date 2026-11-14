@@ -5,43 +5,37 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+$controller = $controller ?? \CMS\MemberArea\MemberController::instance();
+$settings = $settings ?? $controller->getSettings();
+$e ??= static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $pageAssets = $pageAssets ?? [];
-$inlineJs = $inlineJs ?? '';
-$siteUrl = defined('SITE_URL') ? SITE_URL : '';
 $pageKey = $pageKey ?? 'dashboard';
+$footerSiteName = function_exists('cms_get_site_name') ? cms_get_site_name() : (defined('SITE_NAME') ? (string) SITE_NAME : '365CMS');
+$footerText = \CMS\Member\MemberSanitizer::text($settings['dashboard_footer_text'] ?? '', 200);
 ?>
             </div>
-        </div>
-        <footer class="footer footer-transparent mt-auto py-3">
+        </main>
+        <footer class="footer footer-transparent mt-auto py-3 member-footer">
             <div class="container-xl">
-                <div class="row align-items-center text-center text-md-start">
-                    <div class="col-12 col-md-auto mb-2 mb-md-0 text-secondary">
-                        <?= htmlspecialchars((string)(date('Y'))) ?> © <?= htmlspecialchars((string)(defined('SITE_NAME') ? SITE_NAME : '365CMS')) ?>
+                <div class="row align-items-center text-center text-md-start g-2">
+                    <div class="col-12 col-md-auto text-secondary">
+                        © <?= $e(date('Y')) ?> <?= $e($footerSiteName) ?>
                     </div>
-                    <div class="col text-secondary">
-                        Moderne Mitgliedsverwaltung mit Tabler, MFA, Passkeys und Plugin-Erweiterungen.
-                    </div>
+                    <?php if ($footerText !== ''): ?>
+                        <div class="col text-secondary"><?= $e($footerText) ?></div>
+                    <?php endif; ?>
                 </div>
             </div>
         </footer>
     </div>
 </div>
-<script src="<?= htmlspecialchars(cms_asset_url('tabler/js/tabler.min.js'), ENT_QUOTES) ?>" defer></script>
-<script src="<?= htmlspecialchars(cms_asset_url('js/tabler-bootstrap-bridge.js'), ENT_QUOTES) ?>" defer></script>
-<script src="<?= htmlspecialchars(cms_asset_url('js/member-dashboard.js'), ENT_QUOTES) ?>" defer></script>
-<script src="<?= htmlspecialchars(cms_asset_url('js/cms-inline-actions.js'), ENT_QUOTES) ?>" defer></script>
-<?php if (!empty($pageAssets['js'])): ?>
-    <?php foreach ((array)$pageAssets['js'] as $js): ?>
-        <script src="<?= htmlspecialchars((string)$js) ?>" defer></script>
-    <?php endforeach; ?>
-<?php endif; ?>
-<?php if ($inlineJs !== ''): ?>
-<script <?= \CMS\Security::instance()->nonceAttr() ?>>
-document.addEventListener('DOMContentLoaded', function () {
-<?= $inlineJs ?>
-});
-</script>
-<?php endif; ?>
+<script src="<?= $e(cms_asset_url('tabler/js/tabler.min.js')) ?>" defer></script>
+<script src="<?= $e(cms_asset_url('js/tabler-bootstrap-bridge.js')) ?>" defer></script>
+<script src="<?= $e(cms_asset_url('js/member-dashboard.js')) ?>" defer></script>
+<script src="<?= $e(cms_asset_url('js/cms-inline-actions.js')) ?>" defer></script>
+<?php foreach ((array) ($pageAssets['js'] ?? []) as $js): ?>
+    <script src="<?= $e((string) $js) ?>" defer></script>
+<?php endforeach; ?>
 <?php \CMS\Hooks::doAction('body_end'); ?>
 <?php \CMS\Hooks::doAction('member_body_end', $pageKey); ?>
 </body>

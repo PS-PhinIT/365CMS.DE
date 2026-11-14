@@ -193,7 +193,8 @@ $completionTitle = $completionMode === 'activity_fallback' ? 'Aktivitätsquote (
                             </div>
                             <label class="form-check form-switch">
                                 <input type="checkbox" class="form-check-input" name="onboarding_require_profile_completion" value="1" <?php echo !empty($onboarding['require_profile_completion']) ? 'checked' : ''; ?>>
-                                <span class="form-check-label">Profil-Vervollständigung hervorheben</span>
+                                <span class="form-check-label">Profil-Vervollständigung verlangen</span>
+                                <span class="form-hint d-block">Bis alle Pflichtfelder ausgefüllt sind, zeigt der Mitgliederbereich einen Hinweis und sperrt Nachrichten und Dateien.</span>
                             </label>
                         </div>
                         <div class="card-footer">

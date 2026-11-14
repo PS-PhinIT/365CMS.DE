@@ -20,7 +20,10 @@ $sectionPageConfig = [
     'view_file' => __DIR__ . '/views/themes/cms-loginpage.php',
     'page_title' => 'CMS Loginpage',
     'active_page' => 'cms-loginpage',
-    'page_assets' => [],
+    'page_assets' => [
+        // Medien-Picker für das Showcase-Bild (Auswahl aus der Mediathek, kein Upload im Tab).
+        'js' => [cms_asset_url('js/admin-media-integrations.js')],
+    ],
     'csrf_action' => 'admin_cms_loginpage',
     'module_file' => __DIR__ . '/modules/themes/CmsLoginPageModule.php',
     'module_factory' => static fn (): CmsLoginPageModule => new CmsLoginPageModule(),
@@ -28,7 +31,7 @@ $sectionPageConfig = [
     'access_checker' => static fn (): bool => cms_admin_loginpage_can_access(),
     'access_denied_route' => '/',
     'post_handler' => static function (CmsLoginPageModule $module, string $section, array $post): array {
-        return $module->saveSettings($post);
+        return $module->handlePost($post);
     },
 ];
 

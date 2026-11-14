@@ -4,12 +4,14 @@
  *
  * Abonnenten-Status: `pending` (Anmeldung nicht bestätigt), `active`, `unsubscribed`, `bounced`.
  * Kampagnen-Status: `draft`, `scheduled`, `sending`, `sent`, `cancelled`.
- * Das Token `optin_token` dient für Bestätigung und Abmeldung (wie im früheren Plugin).
+ * Das Token `optin_token` dient für Bestätigung, Abmeldung und Webansicht (wie im früheren Plugin). Beim Bestätigen
+ * (pending → active) wird es neu erzeugt: Bis dahin steckt es nur in Bestätigungsmails; Ausgaben gehen erst an
+ * aktive Abonnenten und tragen damit schon das neue Token, ihre Abmeldelinks bleiben gültig.
  *
  * Hooks: `cms_newsletter_subscribed` (Abonnent aktiv), `cms_newsletter_unsubscribed`, `cms_newsletter_subscriber_deleted`
  * – jeweils mit der Abonnenten-ID.
  *
- * @package CMSv2\Core\Services\Newsletter
+ * @package CMS\Services\Newsletter
  */
 
 declare(strict_types=1);
@@ -30,6 +32,8 @@ final class NewsletterRepository
     public const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'sent', 'cancelled'];
     public const TEMPLATE_STATUSES = ['draft', 'active'];
     public const SOURCES = ['admin', 'public', 'member', 'import', 'block'];
+    /** Bestätigungsmail höchstens alle 10 Minuten erneut senden (Schutz vor Mail-Bombing). */
+    public const CONFIRMATION_RESEND_LOCK = 600;
 
     private static ?self $instance = null;
     private Database $db;
@@ -252,9 +256,7 @@ final class NewsletterRepository
         // Ohne Double-Opt-In wird ein unbestätigter Eintrag unten wie eine Neuanmeldung aktiviert.
         if ($doubleOptIn && $existing !== null && $existing['status'] === 'pending') {
             // Bestätigungsmail höchstens alle 10 Minuten erneut senden (Schutz vor Mail-Bombing).
-            $last = strtotime((string) ($existing['optin_sent_at'] ?? '')) ?: 0;
-
-            return ['success' => true, 'id' => (int) $existing['id'], 'send_confirmation' => time() - $last > 600];
+            return ['success' => true, 'id' => (int) $existing['id'], 'send_confirmation' => self::confirmationResendWait($existing) === 0];
         }
 
         $status = $doubleOptIn ? 'pending' : 'active';
@@ -302,7 +304,23 @@ final class NewsletterRepository
         $this->db->execute("UPDATE {$this->p}newsletter_subscribers SET optin_sent_at = NOW() WHERE id = ?", [$id]);
     }
 
-    /** Bestätigt eine Anmeldung. Liefert den Abonnenten (auch wenn er schon bestätigt war) oder null. */
+    /**
+     * Sekunden bis zur nächsten erlaubten Bestätigungsmail (0 = jetzt erlaubt).
+     *
+     * @param array<string, mixed> $subscriber
+     */
+    public static function confirmationResendWait(array $subscriber, ?int $now = null): int
+    {
+        $last = strtotime((string) ($subscriber['optin_sent_at'] ?? '')) ?: 0;
+        $wait = $last + self::CONFIRMATION_RESEND_LOCK - ($now ?? time());
+
+        return $last > 0 && $wait > 0 ? $wait : 0;
+    }
+
+    /**
+     * Bestätigt eine Anmeldung. Liefert den Abonnenten (auch wenn er schon bestätigt war) oder null.
+     * Beim Übergang pending → active wird `optin_token` rotiert (Rückgabe mit neuem Token und `confirmed_now`).
+     */
     public function confirm(string $token): ?array
     {
         $subscriber = $this->subscriberByToken($token);
@@ -310,9 +328,15 @@ final class NewsletterRepository
             return null;
         }
         if ($subscriber['status'] === 'pending') {
-            $this->db->execute("UPDATE {$this->p}newsletter_subscribers SET status = 'active', confirmed_at = NOW(), unsubscribed_at = NULL WHERE id = ?", [(int) $subscriber['id']]);
+            $newToken = self::newToken();
+            $this->db->execute(
+                "UPDATE {$this->p}newsletter_subscribers SET status = 'active', confirmed_at = NOW(), unsubscribed_at = NULL, optin_token = ? WHERE id = ? AND status = 'pending'",
+                [$newToken, (int) $subscriber['id']]
+            );
             Hooks::doAction('cms_newsletter_subscribed', (int) $subscriber['id']);
             $subscriber['status'] = 'active';
+            $subscriber['optin_token'] = $newToken;
+            $subscriber['confirmed_now'] = true;
         }
 
         return $subscriber;

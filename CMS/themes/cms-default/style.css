@@ -2171,6 +2171,27 @@ footer, .site-footer { background: var(--ink); color: rgba(255,255,255,.5); marg
 .auth-switch { text-align: center; font-size: .83rem; color: var(--ink-muted); margin-top: 1.5rem; }
 .auth-switch a { color: var(--accent-text, var(--accent)); font-weight: 600; }
 
+/* Login-Showcase (Legacy-Modus, Markup aus views/auth/partials/showcase.php): einspaltig, ab 768 px zweispaltig */
+.auth-main .cms-auth-showcase { width: 100%; max-width: 1040px; display: grid; gap: 1.5rem; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--r); padding: 2rem 1.5rem; box-shadow: var(--shadow-sm); }
+.cms-auth-showcase__content { min-width: 0; }
+.cms-auth-showcase__eyebrow { margin: 0 0 .5rem; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text, var(--accent)); }
+.cms-auth-showcase__title { font-family: var(--font-serif); font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; color: var(--ink); margin: 0 0 .75rem; }
+.cms-auth-showcase__text { margin: 0 0 .75rem; font-size: .92rem; line-height: 1.65; color: var(--ink-soft); }
+.cms-auth-showcase__features { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .55rem; }
+.cms-auth-showcase__feature { display: flex; align-items: flex-start; gap: .55rem; font-size: .9rem; line-height: 1.5; color: var(--ink); }
+.cms-auth-showcase__check { flex: 0 0 auto; margin-top: .1rem; color: var(--accent-text, var(--accent)); }
+.cms-auth-showcase__cta-row { margin: 1.25rem 0 0; }
+.cms-auth-showcase__cta { display: inline-block; padding: .55rem 1.1rem; border-radius: var(--r); background: var(--ink); color: var(--surface); font-weight: 600; font-size: .88rem; text-decoration: none; }
+.cms-auth-showcase__cta:hover { text-decoration: underline; }
+.cms-auth-showcase a:focus-visible { outline: 2px solid var(--accent-text, var(--accent)); outline-offset: 3px; }
+.cms-auth-showcase__media { margin: 0; min-width: 0; }
+.cms-auth-showcase__image { display: block; width: 100%; height: auto; border: 1px solid var(--rule); border-radius: var(--r); background: var(--surface-tint); }
+@media (min-width: 768px) {
+  .auth-main .cms-auth-showcase { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 2rem; padding: 2.5rem; }
+  .auth-main .cms-auth-showcase--no-image { grid-template-columns: minmax(0, 1fr); }
+  .cms-auth-showcase--image-left .cms-auth-showcase__media { order: -1; }
+}
+
 /* === FORMS (general) === */
 .form-group { margin-bottom: 1rem; }
 .form-label { display: flex; align-items: center; justify-content: space-between; font-size: .78rem; font-weight: 600; color: var(--ink-soft); margin-bottom: .35rem; }
