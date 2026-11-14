@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Rechte & Moderation
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

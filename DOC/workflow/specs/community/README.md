@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Community-Modul (Forum)
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) | **Status:** Planung · noch kein Code | **Update:** 2026-11-14
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung · noch kein Code | **Update:** 2026-11-14
 > **Ersetzt:** [FORUM-PLUGIN-WORKFLOW.md](../../FORUM-PLUGIN-WORKFLOW.md) (Integrationsfahrplan aus 3.5.0) · **Muster:** [PLUGIN-INTEGRATION.md](../PLUGIN-INTEGRATION.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
@@ -63,7 +63,7 @@ Empfehlungen sind markiert; **offene Punkte** brauchen vor Arbeitspaket 1 eine B
 | E8 | Private Nachrichten | Vorhandenen `MessageService` nutzen (1:1); **Gruppen-Konversationen** als Erweiterung des Core-Dienstes, nicht als Forum-eigene Tabellen | Ein Postfach für alle Mitglieder statt zwei | offen |
 | E9 | OAuth / Social Login | Eigenes Core-Vorhaben (Auth), nicht Teil des Community-Moduls; Community nutzt es, sobald vorhanden | Betrifft Login für die ganze Site, nicht nur das Forum | offen |
 | E10 | Mandanten / MultiSite | Keine `site_id` (wie [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3); Hosts über die bestehende Auflösung | Verbindliche Festlegung aus 4.0.0 | gesetzt |
-| E11 | Version und Schema | Eigenes Release (Vorschlag **4.1**), **ein** neuer Schema-Stand **v26**, idempotente Migrationen | Wie in 4.0.0 | offen |
+| E11 | Version und Schema | Release **4.2**, eigener Schema-Stand **v27** (4.1.0 belegt v26 mit der Feature-Roadmap aus [../v4.1/](../v4.1/README.md)), idempotente Migrationen | Wie in 4.0.0 | gesetzt (14.11.2026) |
 | E12 | Ablage der Tests | Vor WP-C1 festlegen: eigene Suite im Repository, eigenes Test-Repository oder lokale Ausführung mit Nachweis im PR | `TESTS/` wurde am 14.11.2026 aus `main` entfernt (Commit `6edfacc`); CI prüft derzeit nur Semgrep/Trivy | offen |
 
 ### 5. Nicht-Ziele (in diesem Vorhaben)

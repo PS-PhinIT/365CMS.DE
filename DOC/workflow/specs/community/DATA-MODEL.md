@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Datenmodell
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1 (Vorschlag) · Schema **v26** | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 · Schema **v27** | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
 Database design of the Community module: 27 tables with prefix `community_`, created by
-`Community\Database\Installer` through `SchemaManager` (schema v26, idempotent, one definition shared by fresh
+`Community\Database\Installer` through `SchemaManager` (schema v27, idempotent, one definition shared by fresh
 install, update and runtime check). It lists columns, keys and indexes, denormalised counters and their maintenance,
 status values, what is reused from existing core tables (users, roles, user_groups, notifications, messages,
 favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin tables (`{prefix}cmsforum_*`).
