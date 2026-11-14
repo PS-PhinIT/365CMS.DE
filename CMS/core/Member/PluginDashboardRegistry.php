@@ -799,38 +799,20 @@ class PluginDashboardRegistry
         return Auth::hasRole($capability) || $auth->hasCapability($capability);
     }
 
+    /** Gemeinsame Prüfregeln aus {@see MemberSanitizer} (MD-14). */
     private function sanitizeWidgetColor(string $value, string $fallback = '#4f46e5'): string
     {
-        $color = trim($value);
-        return preg_match('/^#[0-9a-f]{6}$/i', $color) === 1 ? $color : $fallback;
+        return MemberSanitizer::color($value, $fallback);
     }
 
     private function sanitizeWidgetLink(string $value): ?string
     {
-        $href = trim($value);
-        if ($href === '') {
-            return null;
-        }
-
-        if (str_starts_with($href, '/')) {
-            return str_starts_with($href, '//') ? null : $href;
-        }
-
-        if (preg_match('#^https?://#i', $href) === 1) {
-            return filter_var($href, FILTER_VALIDATE_URL) ? $href : null;
-        }
-
-        return null;
+        return MemberSanitizer::nullableLink($value);
     }
 
     private function sanitizeWidgetText(string $value, int $maxLength = 160, string $fallback = ''): string
     {
-        $text = trim(strip_tags($value));
-        if ($text === '') {
-            return $fallback;
-        }
-
-        return function_exists('mb_substr') ? mb_substr($text, 0, $maxLength) : substr($text, 0, $maxLength);
+        return MemberSanitizer::text($value, $maxLength, $fallback);
     }
 
     private function logger(): Logger

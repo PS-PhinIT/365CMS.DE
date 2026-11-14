@@ -120,13 +120,32 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 
 | Hook | Typ | Argumente |
 |---|---|---|
-| `member_head` | Action | `$pageKey, $user` |
+| `member_head` | Action | `$pageKey, $user` – der Newsletter lädt hier `css/member-newsletter.css` für `dashboard` und `plugin_newsletter` |
 | `body_start` | Action | – |
 | `member_body_end` | Action | `$pageKey` |
-| `member_menu_items` | Filter | `$items` |
-| `member_dashboard_widgets` | Filter | `$widgets, $user, $settings` |
+| `member_menu_items` | Filter | `$items` – Einträge dürfen `priority` und `parent_slug` tragen; das Ergebnis wird nach Kategorie (`core`, `content`, `account`, `plugins`, `admin`) und Priorität sortiert, Unterpunkte stehen in `children` (seit 4.0.0) |
+| `member_dashboard_widgets` | Filter | `$widgets, $user, $settings` – Einträge dürfen `html` (fertig escaptes Markup, unverändert ausgegeben) und `anchor` (`[a-z0-9_-]`) tragen (seit 4.0.0) |
 | `member_dashboard_init` | Action | `PluginDashboardRegistry $registry` |
 | `member_plugin_section_head` | Action | `$section, $user, $params` |
+| `cms_member_notification_created` | Action | `int $id, int $userId, string $type` – nach dem Anlegen durch `NotificationService::create()` (seit 4.0.0) |
+
+**`PluginDashboardRegistry::register()` (seit 4.0.0):**
+
+- `dashboard_widget.render_callback` (`fn(object $user, array $context): string`, Kontext `slug`, `plugin`, `action_url`, `csrf_field`, `return_to`, `anchor`) liefert fertig escaptes Markup statt der Zählerkachel; `getDashboardWidgets()` setzt dann `html` und `anchor`. Wirft der Callback oder liefert er `''`, erscheint die Kachel. `dashboard_widget.anchor` (string) ist die HTML-id.
+- `post_callback(object $user, array $params)` läuft vor jeder Ausgabe und gibt `['type', 'message', 'redirect'?, 'payload'?]` oder einen lokalen Pfad zurück; der Core setzt daraus eine Flash-Meldung und leitet mit 303 weiter (Post/Redirect/Get). Ausgaben ohne Rückgabewert werden einmal im Rahmen angezeigt.
+- `csrf`: Standard `'core'` (Token-Aktion `member_plugin_<slug>`, ein Token je Bereich und Seitenaufruf); `'plugin'` nur ausdrücklich, mit Hinweis im Debug-Log.
+- Routenparameter `:action`/`:id` kommen als `$params` an `render_callback` und `post_callback`, nicht mehr über `$_GET`.
+
+**Theme-Vorlagen (seit 4.0.0):**
+
+| Datei im Theme | Ersetzt | Variablen |
+|---|---|---|
+| `member/widgets/newsletter.php` | `views/member/widgets/newsletter.php` | `$status` (aus `NewsletterMemberService::statusFor()`), `$csrfField`, `$actionUrl`, `$segments`, `$locales`, `$consentText`, `$notice`, `$returnTo` |
+| `member/partials/plugin-not-found.php` | `member/partials/plugin-not-found.php` | `$pluginErrorStatus` (403/404) |
+| `auth/showcase.php` | `views/auth/partials/showcase.php` | `$showcase` (aus `CmsAuthPageService::getShowcase()`, Rohwerte), `$pageType` (`login`/`register`), `$showcaseMode` (`cms`/`legacy`); im Modus `cms` lädt die Loginseite kein Theme-CSS, Stile daher als `<style nonce>` mitliefern |
+| `login.php`, `register.php` (Modus `legacy`) | – | zusätzlich `$showcase` |
+
+`theme.json` kann unter `login_page.colors` Farben (`#rrggbb`) für die Core-Loginseite vorschlagen (Schlüssel wie `CmsAuthPageService::COLOR_SETTING_KEYS`); übernommen werden sie nur per Schaltfläche unter `/admin/cms-loginpage`.
 
 ### Formulare, Downloads, Knowledgebase, Newsletter, Medien (seit 4.0.0)
 

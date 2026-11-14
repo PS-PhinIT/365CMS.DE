@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/includes/bootstrap.php';
+require __DIR__ . '/includes/bootstrap.php';
 
 if (class_exists('\CMS\Services\CoreModuleService')
     && !\CMS\Services\CoreModuleService::getInstance()->isModuleEnabled('subscription_member_area')) {

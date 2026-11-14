@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/includes/bootstrap.php';
+require __DIR__ . '/includes/bootstrap.php';
 
 // Ohne Dashboard direkt auf die Startseite, bevor Daten geladen werden (MD-03).
 if (empty($settings['dashboard_enabled'])) {

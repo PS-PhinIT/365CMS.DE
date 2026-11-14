@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/includes/bootstrap.php';
+require __DIR__ . '/includes/bootstrap.php';
 
 $controller->enforceProfileCompletion('messages');
 $controller->handleMessagesRequest();

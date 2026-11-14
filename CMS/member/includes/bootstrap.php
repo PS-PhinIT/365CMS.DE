@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Gemeinsamer Einstieg der Member-Vorlagen. Wird mit `require` (nicht `require_once`) eingebunden, damit
+ * `$controller`, `$settings`, `$t` und `$e` auch dann im Scope der Vorlage stehen, wenn eine Fehler- oder
+ * Plugin-Seite nach einer anderen Vorlage im selben Request gerendert wird. Mehrfaches Ausführen ist unkritisch.
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
