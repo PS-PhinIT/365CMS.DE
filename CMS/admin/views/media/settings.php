@@ -139,6 +139,34 @@ $s = is_array($settings) ? $settings : [];
                                     </label>
                                 </div>
                             </div>
+                            <?php $avifSupported = !empty($data['avif_supported']); ?>
+                            <div class="row mb-3" id="avif-settings">
+                                <div class="col-sm-6">
+                                    <label class="form-check form-switch mb-1">
+                                        <input type="checkbox" class="form-check-input" name="auto_avif" value="1" aria-describedby="avifSupportHint" <?php echo !empty($s['auto_avif']) ? 'checked' : ''; ?>>
+                                        <span class="form-check-label">AVIF zusätzlich erzeugen</span>
+                                    </label>
+                                    <div class="form-hint" id="avifSupportHint">
+                                        <?php if ($avifSupported): ?>
+                                            <span class="badge bg-green-lt text-green">AVIF wird unterstützt</span>
+                                            Je Bildgröße eine AVIF-Fassung, behalten nur, wenn sie kleiner als die WebP-Fassung ist. Bestehende Bilder: Medien-Werkzeuge → „AVIF nachgenerieren“.
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary-lt text-secondary">AVIF nicht verfügbar</span>
+                                            Die Bildbibliothek (GD) dieses Servers kann kein AVIF kodieren – die Prüfung läuft bei jedem Speichern erneut. Ohne Unterstützung wird nichts erzeugt.
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label" for="avifQuality">AVIF-Qualität</label>
+                                    <input type="number" class="form-control" id="avifQuality" name="avif_quality" value="<?php echo (int) ($s['avif_quality'] ?? 50); ?>" min="1" max="100" inputmode="numeric">
+                                    <div class="form-hint">1–100, Standard 50</div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label" for="avifSpeed">AVIF-Geschwindigkeit</label>
+                                    <input type="number" class="form-control" id="avifSpeed" name="avif_speed" value="<?php echo (int) ($s['avif_speed'] ?? 6); ?>" min="0" max="10" inputmode="numeric">
+                                    <div class="form-hint">0 = langsam/klein, 10 = schnell; Standard 6</div>
+                                </div>
+                            </div>
                             <div class="row">
                                 <div class="col-sm-4 mb-3">
                                     <label class="form-label" for="jpegQuality">JPEG-Qualität (%)</label>

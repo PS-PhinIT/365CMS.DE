@@ -96,6 +96,9 @@ class MediaModule
         'unique_filenames' => true,
         'lowercase_filenames' => false,
         'auto_webp' => true,
+        'auto_avif' => false,
+        'avif_quality' => 50,
+        'avif_speed' => 6,
         'strip_exif' => true,
         'jpeg_quality' => 85,
         'max_width' => 2560,
@@ -1554,6 +1557,8 @@ class MediaModule
             'diskUsage' => $this->service->getDiskUsage(),
             'options' => $this->buildSettingsOptions(),
             'processing_job' => $this->getMediaProcessingJobViewData(),
+            // 4.1.0 (2a): Ergebnis der Probe-Kodierung (beim Speichern aufgefrischt)
+            'avif_supported' => \CMS\Services\Media\AvifDerivativeService::getInstance()->isSupported(),
             'constraints' => [
                 'min_upload_size_mb' => self::MIN_UPLOAD_SIZE_MB,
                 'max_upload_size_mb' => self::MAX_UPLOAD_SIZE_MB,
@@ -1790,6 +1795,8 @@ class MediaModule
         // Integers
         foreach ([
             'jpeg_quality' => 'jpeg_quality',
+            'avif_quality' => 'avif_quality',
+            'avif_speed' => 'avif_speed',
             'max_width' => 'max_width',
             'max_height' => 'max_height',
             'thumbnail_small_w' => 'thumb_small_w',
@@ -1805,6 +1812,8 @@ class MediaModule
                 $value = (int)$input[$inputKey];
                 $settings[$settingsKey] = match ($settingsKey) {
                     'jpeg_quality' => max(60, min(100, $value)),
+                    'avif_quality' => max(1, min(100, $value)),
+                    'avif_speed' => max(0, min(10, $value)),
                     'max_width', 'max_height' => max(1, min(8000, $value)),
                     'thumb_large_w', 'thumb_large_h', 'thumb_banner_w', 'thumb_banner_h' => max(50, min(6000, $value)),
                     default => max(50, min(4000, $value)),
@@ -1815,6 +1824,7 @@ class MediaModule
         // Booleans
         foreach ([
             'auto_webp' => 'auto_webp',
+            'auto_avif' => 'auto_avif',
             'strip_exif' => 'strip_exif',
             'organize_month_year' => 'organize_month_year',
             'sanitize_filename' => 'sanitize_filenames',
@@ -1856,6 +1866,13 @@ class MediaModule
         }
 
         $result = $this->service->saveSettings($settings);
+        if ($result === true) {
+            // 4.1.0 (2a): AVIF-Unterstützung bei jedem Speichern neu prüfen (Probe-Kodierung → media_capabilities).
+            try {
+                \CMS\Services\Media\AvifDerivativeService::getInstance()->refreshCapabilities();
+            } catch (\Throwable) {
+            }
+        }
         if ($result instanceof WP_Error) {
             return $this->buildGenericFailureFromWpError($result, [
                 'title' => 'Medien-Einstellungen konnten nicht gespeichert werden',

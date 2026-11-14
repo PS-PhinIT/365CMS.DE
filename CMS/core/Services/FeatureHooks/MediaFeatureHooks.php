@@ -46,6 +46,14 @@ final class MediaFeatureHooks
                 Logger::instance()->withChannel('media')->warning('Vorschaubilder konnten im Cron nicht weiter erzeugt werden.', ['exception' => $e->getMessage()]);
             }
         }, 60);
+        // 4.1.0 (2a): „AVIF nachgenerieren“ läuft ebenso im Cron weiter.
+        Hooks::addAction('cms_cron_hourly', static function (): void {
+            try {
+                \CMS\Services\Media\AvifRegenerationService::getInstance()->continueInCron();
+            } catch (\Throwable $e) {
+                Logger::instance()->withChannel('media')->warning('AVIF-Fassungen konnten im Cron nicht weiter erzeugt werden.', ['exception' => $e->getMessage()]);
+            }
+        }, 61);
 
         if (defined('CMS_MODE') && CMS_MODE === 'web') {
             Hooks::addAction('body_end', [self::class, 'printSchema'], 20);

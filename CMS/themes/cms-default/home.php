@@ -144,7 +144,7 @@ $numRecent        = count($recentSidebar);
     $heroImageReference = (string) ($heroPost->featured_image ?? '');
     $heroImage = function_exists('meridian_get_picture_sources')
         ? meridian_get_picture_sources($heroImageReference, null, 1600, 900)
-        : ['url' => '', 'webp_url' => '', 'width' => 1600, 'height' => 900];
+        : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 1600, 'height' => 900];
     $heroImageDimensions = function_exists('meridian_image_dimension_attributes')
         ? meridian_image_dimension_attributes($heroImageReference, 1600, 900)
         : 'width="1600" height="900"';
@@ -153,6 +153,9 @@ $numRecent        = count($recentSidebar);
     <div class="hero-image">
         <?php if ($heroImage['url'] !== ''): ?>
         <picture>
+            <?php if (($heroImage['avif_url'] ?? '') !== ''): ?>
+            <source srcset="<?php echo htmlspecialchars($heroImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+            <?php endif; ?>
             <?php if ($heroImage['webp_url'] !== ''): ?>
             <source srcset="<?php echo htmlspecialchars($heroImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
             <?php endif; ?>
@@ -211,7 +214,7 @@ $numRecent        = count($recentSidebar);
         $articleImageReference = (string) ($post->featured_image ?? '');
         $articleImage = function_exists('meridian_get_picture_sources')
             ? meridian_get_picture_sources($articleImageReference, null, 320, 218)
-            : ['url' => '', 'webp_url' => '', 'width' => 320, 'height' => 218];
+            : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 320, 'height' => 218];
         $articleImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($articleImageReference, 320, 218)
             : 'width="320" height="218"';
@@ -220,6 +223,9 @@ $numRecent        = count($recentSidebar);
         <div class="art-thumb">
             <?php if ($articleImage['url'] !== ''): ?>
             <picture>
+                <?php if (($articleImage['avif_url'] ?? '') !== ''): ?>
+                <source srcset="<?php echo htmlspecialchars($articleImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php endif; ?>
                 <?php if ($articleImage['webp_url'] !== ''): ?>
                 <source srcset="<?php echo htmlspecialchars($articleImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
                 <?php endif; ?>
@@ -266,7 +272,7 @@ $numRecent        = count($recentSidebar);
         $cardImageReference = (string) ($post->featured_image ?? '');
         $cardImage = function_exists('meridian_get_picture_sources')
             ? meridian_get_picture_sources($cardImageReference, null, 960, 560)
-            : ['url' => '', 'webp_url' => '', 'width' => 960, 'height' => 560];
+            : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 960, 'height' => 560];
         $cardImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($cardImageReference, 960, 560)
             : 'width="960" height="560"';
@@ -275,6 +281,9 @@ $numRecent        = count($recentSidebar);
         <div class="card-thumb" style="background:<?php echo meridian_cat_gradient($post->category_name ?? ''); ?>">
             <?php if ($cardImage['url'] !== ''): ?>
             <picture>
+                <?php if (($cardImage['avif_url'] ?? '') !== ''): ?>
+                <source srcset="<?php echo htmlspecialchars($cardImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php endif; ?>
                 <?php if ($cardImage['webp_url'] !== ''): ?>
                 <source srcset="<?php echo htmlspecialchars($cardImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
                 <?php endif; ?>

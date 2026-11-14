@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 2: Medien & Performance
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** Spezifikation | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 2a umgesetzt ([PROGRESS.md](PROGRESS.md)), 2b Spezifikation | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -33,6 +33,17 @@ nirgends aufgerufen wird. WebP-Varianten erzeugt der Upload-Weg bereits.
 
 **Tests (`TESTS/media-avif/run.php`):** Erkennung mit/ohne Unterstützung (injizierbar), „nur wenn kleiner“, Pixel-Budget,
 `<picture>`-Markup mit und ohne AVIF, Löschen entfernt Derivate, Batch-Schritte idempotent.
+
+**Umsetzung (14.11.2026) – Präzisierungen:**
+
+| Punkt | Umsetzung |
+|---|---|
+| Pixel-Budget | Für WebP gab es keins; AVIF bekommt ein eigenes von 25 Megapixeln (`AvifDerivativeService::MAX_PIXELS`). |
+| „je Bildgröße“ / Vergleich | WebP entsteht nur für das Original; je Größe wird daher mit der WebP-Fassung derselben Größe verglichen, sonst mit dem Ausgangsbild. Erst in eine temporäre Datei, dann umbenannt. |
+| Löschen | Die bisherige Lösch-Logik entfernte keine Derivate (auch kein WebP). `MediaService::deleteItem()` entfernt jetzt Größen, WebP und AVIF; eigenständig hochgeladene Dateien gleichen Namens (eigene Metadaten) und ältere Dateien bleiben. |
+| Auslieferung | `pictureSources()`/`pictureHtml()` statt Änderung von `MediaDeliveryService` (Bilder unter `UPLOAD_URL` liefert der Webserver direkt aus). Neben AVIF bekommen Editor.js-Bilder damit erstmals auch die vorhandene WebP-Quelle. |
+| Theme | `meridian_get_picture_sources()` liefert zusätzlich `avif_url` (nur vorhandene Dateien, keine Erzeugung zur Laufzeit). |
+| Erkennung | Ohne gespeicherte Probe (frische Installation) gilt AVIF als nicht unterstützt, bis die Medien-Einstellungen einmal gespeichert werden. |
 
 ### 2b. Verwendungsnachweis für Medien
 

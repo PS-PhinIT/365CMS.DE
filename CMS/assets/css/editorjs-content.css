@@ -1330,3 +1330,10 @@
         max-width: 100%;
     }
 }
+
+/* 4.1.0 (2a): AVIF/WebP-Quellen – <picture> beeinflusst das Layout der Bilder nicht. */
+.editorjs-image picture,
+.editorjs-gallery picture,
+.editorjs-media-text__media picture {
+    display: contents;
+}

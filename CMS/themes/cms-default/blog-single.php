@@ -38,7 +38,7 @@ $pTags = $post->tags ?? [];
 $pFeaturedImageReference = (string) ($post->featured_image ?? '');
 $pFeaturedImage = function_exists('meridian_get_picture_sources')
   ? meridian_get_picture_sources($pFeaturedImageReference, null, 1600, 900)
-  : ['url' => '', 'webp_url' => '', 'width' => 1600, 'height' => 900];
+  : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 1600, 'height' => 900];
 $pFeaturedImageDimensions = function_exists('meridian_image_dimension_attributes')
   ? meridian_image_dimension_attributes($pFeaturedImageReference, 1600, 900)
   : 'width="1600" height="900"';
@@ -184,6 +184,9 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
     <?php if ($pFeaturedImage['url'] !== ''): ?>
     <figure class="post-featured-figure">
       <picture>
+        <?php if (($pFeaturedImage['avif_url'] ?? '') !== ''): ?>
+        <source srcset="<?php echo htmlspecialchars($pFeaturedImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+        <?php endif; ?>
         <?php if ($pFeaturedImage['webp_url'] !== ''): ?>
         <source srcset="<?php echo htmlspecialchars($pFeaturedImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
         <?php endif; ?>
@@ -243,7 +246,7 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
             $rImageRef = (string) ($rp['featured_image'] ?? '');
             $rPicture = function_exists('meridian_get_picture_sources')
                 ? meridian_get_picture_sources($rImageRef, null, 720, 405)
-                : ['url' => '', 'webp_url' => '', 'width' => 720, 'height' => 405];
+                : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 720, 'height' => 405];
             $rImageDimensions = function_exists('meridian_image_dimension_attributes')
                 ? meridian_image_dimension_attributes($rImageRef, 720, 405)
                 : 'width="720" height="405"';
@@ -252,6 +255,9 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
           <?php if ($rPicture['url'] !== ''): ?>
           <a href="<?php echo htmlspecialchars($rLink, ENT_QUOTES, 'UTF-8'); ?>" class="related-card__media">
             <picture>
+              <?php if (($rPicture['avif_url'] ?? '') !== ''): ?>
+              <source srcset="<?php echo htmlspecialchars($rPicture['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+              <?php endif; ?>
               <?php if ($rPicture['webp_url'] !== ''): ?>
               <source srcset="<?php echo htmlspecialchars($rPicture['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
               <?php endif; ?>

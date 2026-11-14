@@ -19,6 +19,8 @@ use CMS\Auth;
 use CMS\Security;
 use CMS\Services\BatchJobService;
 use CMS\Services\Media\MediaLicenseService;
+use CMS\Services\Media\AvifDerivativeService;
+use CMS\Services\Media\AvifRegenerationService;
 use CMS\Services\Media\ThumbnailRegenerationService;
 
 const CMS_ADMIN_MEDIA_TOOLS_CAPABILITY = 'manage_media';
@@ -50,6 +52,14 @@ function cms_admin_media_tools_load_data(): array
         'latest_job' => $public($latest),
         'latest_webp' => !empty($latest['state']['webp']),
         'image_library' => \CMS\Services\ImageService::getInstance()->isAvailable(),
+        // 4.1.0 (2a): AVIF nachgenerieren
+        'avif' => [
+            'supported' => AvifDerivativeService::getInstance()->isSupported(),
+            'enabled' => AvifDerivativeService::getInstance()->settings()['enabled'],
+            'image_count' => AvifRegenerationService::getInstance()->countImages(),
+            'active_job' => $public(AvifRegenerationService::getInstance()->activeJob()),
+            'latest_job' => $public(AvifRegenerationService::getInstance()->latestJob()),
+        ],
         'license' => MediaLicenseService::getInstance()->getSettings(),
         'api' => [
             'endpoint' => '/admin/media-tools-api',

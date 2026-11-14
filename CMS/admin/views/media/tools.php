@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Medien-Werkzeuge: Vorschaubilder neu erzeugen (#13) und Ausgabe der Urheberangaben (#11).
  *
- * @var array<string, mixed> $data sizes, image_count, max_images, active_job, latest_job, latest_webp, image_library, license, api
+ * @var array<string, mixed> $data sizes, image_count, max_images, active_job, latest_job, latest_webp, image_library, avif, license, api
  * @var string $csrfToken
  */
 
@@ -145,6 +145,64 @@ $mtSizeLabels = ['small' => 'media_tools.size.small', 'medium' => 'media_tools.s
                                         <?php endforeach; ?>
                                     </ul>
                                 </details>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php
+                // 4.1.0 (2a): AVIF nachgenerieren – eigener Auftrag (job=avif), gleiche Runner-Logik.
+                $mtAvif = is_array($data['avif'] ?? null) ? $data['avif'] : [];
+                $mtAvifActive = is_array($mtAvif['active_job'] ?? null) ? $mtAvif['active_job'] : null;
+                $mtAvifLatest = is_array($mtAvif['latest_job'] ?? null) ? $mtAvif['latest_job'] : null;
+                $mtAvifCount = (int) ($mtAvif['image_count'] ?? 0);
+                $mtAvifConfig = $mtConfig;
+                $mtAvifConfig['job'] = 'avif';
+                $mtAvifConfig['activeJob'] = $mtAvifActive;
+                $mtAvifConfig['labels']['done'] = (string) __('media_tools.avif.done');
+                $mtAvifConfig['runnerLabels']['cancelTitle'] = (string) __('media_tools.avif.cancel_title');
+                $mtAvifConfig['runnerLabels']['cancelMessage'] = (string) __('media_tools.avif.cancel_message');
+                $mtAvifConfig['labels']['cancelTitle'] = $mtAvifConfig['runnerLabels']['cancelTitle'];
+                $mtAvifConfig['labels']['cancelMessage'] = $mtAvifConfig['runnerLabels']['cancelMessage'];
+                ?>
+                <div class="card mt-3" id="avif" data-media-tools="<?php echo $mtE(json_encode($mtAvifConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>">
+                    <div class="card-header"><h3 class="card-title"><?php echo $mtT('media_tools.avif.title'); ?></h3></div>
+                    <div class="card-body">
+                        <p class="text-secondary"><?php echo $mtT('media_tools.avif.intro'); ?></p>
+                        <?php if (empty($mtAvif['supported'])): ?>
+                            <div class="alert alert-warning mb-0" role="status"><?php echo $mtT('media_tools.avif.unsupported'); ?></div>
+                        <?php else: ?>
+                            <?php if (empty($mtAvif['enabled'])): ?>
+                                <p class="small text-secondary"><?php echo $mtT('media_tools.avif.disabled_hint'); ?> <a href="/admin/media?tab=settings"><?php echo $mtT('media_tools.thumbs.sizes_link'); ?></a></p>
+                            <?php endif; ?>
+                            <?php if ($mtAvifActive !== null): ?>
+                                <div class="alert alert-warning" role="status" data-media-tools-notice>
+                                    <?php echo $mtT('media_tools.thumbs.interrupted', $mtNumber((int) $mtAvifActive['processed']), $mtNumber((int) $mtAvifActive['total']), $mtDate((string) $mtAvifActive['created_at'])); ?>
+                                </div>
+                            <?php else: ?>
+                                <p data-media-tools-notice><?php echo $mtT('media_tools.thumbs.count', $mtNumber($mtAvifCount)); ?></p>
+                            <?php endif; ?>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <button type="button" class="btn btn-primary" data-media-tools-start<?php echo $mtAvifActive === null && $mtAvifCount === 0 ? ' disabled' : ''; ?>>
+                                    <?php echo $mtT($mtAvifActive !== null ? 'media_tools.thumbs.resume' : 'media_tools.avif.start'); ?>
+                                </button>
+                                <?php if ($mtAvifActive !== null): ?>
+                                    <button type="button" class="btn btn-outline-danger" data-media-tools-cancel><?php echo $mtT('search_index.runner_cancel'); ?></button>
+                                <?php endif; ?>
+                            </div>
+                            <p class="small text-secondary mt-2 mb-0"><?php echo $mtT('media_tools.thumbs.cron_hint'); ?></p>
+                            <div class="mt-3" data-media-tools-progress hidden></div>
+                            <?php if ($mtAvifLatest !== null && $mtAvifActive === null): ?>
+                                <p class="small text-secondary mt-3 mb-0" data-media-tools-latest>
+                                    <?php echo $mtT(
+                                        'media_tools.thumbs.last_run',
+                                        (string) __($mtStatusKeys[(string) $mtAvifLatest['status']] ?? 'search_index.job_status_pending'),
+                                        $mtDate((string) ($mtAvifLatest['finished_at'] !== '' ? $mtAvifLatest['finished_at'] : $mtAvifLatest['created_at'])),
+                                        $mtNumber((int) $mtAvifLatest['processed']),
+                                        $mtNumber((int) $mtAvifLatest['total'])
+                                    ); ?>
+                                    <?php if ((string) $mtAvifLatest['message'] !== ''): ?> · <?php echo $mtE($mtAvifLatest['message']); ?><?php endif; ?>
+                                </p>
                             <?php endif; ?>
                         <?php endif; ?>
                     </div>

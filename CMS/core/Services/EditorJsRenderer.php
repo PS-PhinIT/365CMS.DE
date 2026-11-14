@@ -737,7 +737,7 @@ final class EditorJsRenderer
         $altText = $isGeneratedCaption ? '' : $caption;
 
         $html = '<figure class="' . implode(' ', $classes) . '"' . $dataAttributes . $styleAttr . '>';
-        $html .= '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $imageStyleAttr . $this->getLazyLoadingAttribute() . '>';
+        $html .= $this->wrapPicture($imageUrl, '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $imageStyleAttr . $this->getLazyLoadingAttribute() . '>');
         $html .= $this->renderImageFigcaption(
             !$isGeneratedCaption ? $caption : '',
             $imageUrl,
@@ -1054,7 +1054,7 @@ final class EditorJsRenderer
         $html = '<div class="' . implode(' ', $galleryClasses) . '" data-columns="' . $columns . '" data-border="' . htmlspecialchars($borderStyle, ENT_QUOTES, 'UTF-8') . '">';
         foreach ($images as $image) {
             $html .= '<figure class="editorjs-gallery__item">';
-            $html .= '<img src="' . htmlspecialchars($image['url'], ENT_QUOTES, 'UTF-8') . '" alt="' . $image['alt'] . '"' . $this->getLazyLoadingAttribute() . '>';
+            $html .= $this->wrapPicture((string) $image['url'], '<img src="' . htmlspecialchars($image['url'], ENT_QUOTES, 'UTF-8') . '" alt="' . $image['alt'] . '"' . $this->getLazyLoadingAttribute() . '>');
             $html .= $this->renderImageFigcaption(!$image['is_generated_caption'] ? $image['caption'] : '', $image['url'], 'gallery');
             $html .= '</figure>';
         }
@@ -1120,7 +1120,7 @@ final class EditorJsRenderer
         }
         if ($imageUrl !== '') {
             $html .= '<figure class="editorjs-media-text__media" style="' . htmlspecialchars($mediaStyle, ENT_QUOTES, 'UTF-8') . '">';
-            $html .= '<img class="editorjs-media-text__image" src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . $alt . '"' . $this->getLazyLoadingAttribute() . '>';
+            $html .= $this->wrapPicture($imageUrl, '<img class="editorjs-media-text__image" src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . $alt . '"' . $this->getLazyLoadingAttribute() . '>');
             $html .= '</figure>';
         }
 
@@ -1548,6 +1548,19 @@ final class EditorJsRenderer
         $html .= '</div>';
 
         return $html;
+    }
+
+    /**
+     * 4.1.0 (2a): `<picture>` mit AVIF/WebP-Quellen, sofern für die Upload-URL Fassungen existieren
+     * (AvifDerivativeService::pictureHtml()); sonst bleibt das `<img>` unverändert.
+     */
+    private function wrapPicture(string $url, string $imgHtml): string
+    {
+        try {
+            return \CMS\Services\Media\AvifDerivativeService::getInstance()->pictureHtml($url, $imgHtml);
+        } catch (\Throwable) {
+            return $imgHtml;
+        }
     }
 
     private function getLazyLoadingAttribute(): string

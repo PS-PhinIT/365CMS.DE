@@ -41,6 +41,8 @@ const CMS_ADMIN_MEDIA_ROUTE_PATH = '/admin/media';
 
 const CMS_ADMIN_MEDIA_SETTINGS_INT_FIELDS = [
     'jpeg_quality',
+    'avif_quality',
+    'avif_speed',
     'max_width',
     'max_height',
     'thumbnail_small_w',
@@ -60,6 +62,7 @@ const CMS_ADMIN_MEDIA_SETTINGS_SIZE_FIELDS = [
 
 const CMS_ADMIN_MEDIA_SETTINGS_BOOLEAN_FIELDS = [
     'auto_webp',
+    'auto_avif',
     'strip_exif',
     'organize_month_year',
     'sanitize_filename',
@@ -289,6 +292,8 @@ function cms_admin_media_normalize_settings_payload(array $post): array
 
         $normalizedSettings[$field] = match ($field) {
             'jpeg_quality' => cms_admin_media_normalize_int($post[$field] ?? 85, 60, 100, 85),
+            'avif_quality' => cms_admin_media_normalize_int($post[$field] ?? 50, 1, 100, 50),
+            'avif_speed' => cms_admin_media_normalize_int($post[$field] ?? 6, 0, 10, 6),
             'max_width', 'max_height' => cms_admin_media_normalize_int($post[$field] ?? 2560, 1, 8000, 2560),
             'thumbnail_large_w', 'thumbnail_large_h', 'thumbnail_banner_w', 'thumbnail_banner_h' => cms_admin_media_normalize_int($post[$field] ?? 1024, 50, 6000, 1024),
             default => cms_admin_media_normalize_int($post[$field] ?? 150, 50, 4000, 150),
