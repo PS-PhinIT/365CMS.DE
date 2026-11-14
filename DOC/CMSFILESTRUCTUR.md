@@ -59,7 +59,7 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/install/` | 10 |
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
-| `CMS/assets/css/` | 32 stylesheets |
+| `CMS/assets/css/` | 33 stylesheets |
 | `CMS/assets/js/` | 58 scripts + 18 ES modules (`admin-shell/`, `editor-blocks/`, `post-editor/`) |
 
 ---
@@ -346,6 +346,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `knowledgebase-tooltip.css`
 - `main.css`
 - `member-dashboard.css`
+- `member-newsletter.css`
 - `newsletter-public.css`
 
 ### JavaScript (`CMS/assets/js/`)
