@@ -56,11 +56,13 @@ Medien
   ├─ Medien-Werkzeuge *WP4                       /admin/media-tools
   └─ Einstellungen                               /admin/media?tab=settings
 Seiten
-  ├─ Alle Seiten                                 /admin/pages
+  └─ Alle Seiten                                 /admin/pages
+Bausteine              (für Seiten und Beiträge, 4.1.0)
+  ├─ EditorJS Block Vorlagen                     /admin/reusable-blocks
+  ├─ Knowledgebase *B                            /admin/knowledgebase
   ├─ Hub-Sites                                   /admin/hub-sites
   ├─ Tabellen                                    /admin/site-tables
-  ├─ Inhaltsverzeichnis                          /admin/table-of-contents
-  └─ Knowledgebase *B                            /admin/knowledgebase
+  └─ Inhaltsverzeichnis                          /admin/table-of-contents
 Kommentare             (Badge: offene Kommentare) /admin/comments
 Formulare *B
   ├─ Formulare                                   /admin/forms
