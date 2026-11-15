@@ -20,7 +20,7 @@ const CMS_ADMIN_REUSABLE_BLOCKS_CAPABILITY = 'blocks.reusable';
 
 function cms_admin_reusable_blocks_can_access(): bool
 {
-    return Auth::instance()->isAdmin() && Auth::instance()->hasCapability(CMS_ADMIN_REUSABLE_BLOCKS_CAPABILITY);
+    return Auth::instance()->hasCapability(CMS_ADMIN_REUSABLE_BLOCKS_CAPABILITY) && \CMS\Services\AdminMenu\DelegatedAdminAccess::canAccess('reusable-blocks', CMS_ADMIN_REUSABLE_BLOCKS_CAPABILITY);
 }
 
 if (!cms_admin_reusable_blocks_can_access()) {

@@ -18,7 +18,7 @@ use CMS\Services\Webhooks\WebhookService;
 
 function cms_admin_webhooks_can_access(): bool
 {
-    return Auth::instance()->isAdmin() && Auth::instance()->hasCapability('webhooks.manage');
+    return Auth::instance()->hasCapability('webhooks.manage') && \CMS\Services\AdminMenu\DelegatedAdminAccess::canAccess('webhooks', 'webhooks.manage');
 }
 
 if (!cms_admin_webhooks_can_access()) {

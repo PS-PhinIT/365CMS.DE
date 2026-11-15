@@ -183,10 +183,28 @@ final class UploadHandler
 
         if (is_file($targetFullPath)) {
             @chmod($targetFullPath, $this->resolveUploadFileMode($targetPath));
+            $this->moveCompanionFiles($sourceFullPath, $targetFullPath);
         }
 
         $this->repository->renameMetaPath($sourcePath, $targetPath);
         return true;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-17): Erzeugte Größen sowie WebP- und AVIF-Fassungen wandern mit dem Original.
+     * Bisher blieben sie unter dem alten Namen liegen (verwaist, öffentlich erreichbar).
+     */
+    private function moveCompanionFiles(string $sourceFullPath, string $targetFullPath): void
+    {
+        [$sourceBase] = \CMS\Services\Trash\MediaTrashProvider::splitFilename($sourceFullPath);
+        [$targetBase] = \CMS\Services\Trash\MediaTrashProvider::splitFilename($targetFullPath);
+        foreach (\CMS\Services\Trash\MediaTrashProvider::companionSuffixes(basename($sourceFullPath)) as $suffix) {
+            $from = $sourceBase . $suffix;
+            $to = $targetBase . $suffix;
+            if (is_file($from) && !file_exists($to) && !@rename($from, $to)) {
+                $this->logFilesystemFailure('rename', 'Bildfassung konnte nicht mitverschoben werden', ['source' => $from, 'target' => $to]);
+            }
+        }
     }
 
     public function deleteItem(string $path): bool|WP_Error
@@ -251,6 +269,9 @@ final class UploadHandler
         }
 
         $newRelativePath = ($parentRelativePath !== '' ? $parentRelativePath . '/' : '') . $normalizedTargetName;
+        if (is_file($targetPath)) {
+            $this->moveCompanionFiles($fullPath, $targetPath);
+        }
         $this->repository->renameMetaPath($path, $newRelativePath);
 
         return true;

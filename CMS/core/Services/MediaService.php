@@ -1172,10 +1172,59 @@ class MediaService {
         if (empty($settings['auto_avif']) || !is_file($absolutePath)) {
             return;
         }
+        // Release-Prüfung 4.1.0 (PERF-410-48): Die AVIF-Kodierung aller Größen ist der teuerste Schritt des Uploads.
+        // Wo die Antwort vorab beendet werden kann (FPM, LiteSpeed), läuft sie danach; sonst wie bisher sofort.
+        if (PHP_SAPI !== 'cli' && (function_exists('fastcgi_finish_request') || function_exists('litespeed_finish_request'))) {
+            self::$deferredAvifPaths[$absolutePath] = true;
+            if (!self::$deferredAvifRegistered) {
+                self::$deferredAvifRegistered = true;
+                register_shutdown_function(function (): void {
+                    $this->runDeferredAvifGeneration();
+                });
+            }
+
+            return;
+        }
+        $this->generateAvifNow($absolutePath);
+    }
+
+    /** @var array<string, true> */
+    private static array $deferredAvifPaths = [];
+    private static bool $deferredAvifRegistered = false;
+
+    private function runDeferredAvifGeneration(): void
+    {
+        if (self::$deferredAvifPaths === []) {
+            return;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        }
+        @ignore_user_abort(true);
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(max(120, (int) ini_get('max_execution_time')));
+        }
+        foreach (array_keys(self::$deferredAvifPaths) as $path) {
+            $this->generateAvifNow($path);
+        }
+        self::$deferredAvifPaths = [];
+    }
+
+    private function generateAvifNow(string $absolutePath): void
+    {
+        if (!is_file($absolutePath)) {
+            return;
+        }
         try {
             $avif = \CMS\Services\Media\AvifDerivativeService::getInstance();
             if ($avif->isSupported()) {
                 $avif->generateForImage($absolutePath);
+                $this->applyGeneratedImageFileModes($absolutePath);
             }
         } catch (\Throwable $e) {
             $this->logger->warning('AVIF-Fassungen konnten nach dem Upload nicht erzeugt werden.', [

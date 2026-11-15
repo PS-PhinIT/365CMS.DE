@@ -587,6 +587,8 @@ class ThemeCustomizer
             
             $this->db->execute($sql, $params);
             $this->loadCustomizations($userId);
+            // Release-Prüfung 4.1.0 (FUN-410-19): Zurücksetzen indiziert die Theme-Medien neu (wie das Speichern).
+            Hooks::doAction('cms_theme_customizer_saved', $this->currentTheme, 'reset', '');
             return true;
             
         } catch (\Throwable $e) {
@@ -620,6 +622,8 @@ class ThemeCustomizer
             
             $this->db->execute($sql, $params);
             $this->loadCustomizations($userId);
+            // Release-Prüfung 4.1.0 (FUN-410-19): Zurücksetzen indiziert die Theme-Medien neu (wie das Speichern).
+            Hooks::doAction('cms_theme_customizer_saved', $this->currentTheme, 'reset', '');
             return true;
             
         } catch (\Throwable $e) {

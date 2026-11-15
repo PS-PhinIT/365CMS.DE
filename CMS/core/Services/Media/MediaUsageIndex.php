@@ -116,6 +116,8 @@ final class MediaUsageIndex
                     new Usage\DownloadReferenceExtractor(),
                     new Usage\FormReferenceExtractor(),
                     new Usage\ThemeReferenceExtractor(),
+                    // Release-Prüfung 4.1.0 (FUN-410-19): Wissensdatenbank-Einträge.
+                    new Usage\KnowledgebaseReferenceExtractor(),
                 ] as $core) {
                     $this->extractors[$core->contentType()] ??= $core;
                 }

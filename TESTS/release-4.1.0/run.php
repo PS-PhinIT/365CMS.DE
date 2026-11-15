@@ -157,4 +157,6 @@ foreach (['admin', 'core', 'cache', 'blocking', 'frontend', 'batch'] as $perfClu
     }
 }
 
+require __DIR__ . '/final-410.php';
+
 T::finish();

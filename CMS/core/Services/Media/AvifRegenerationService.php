@@ -157,14 +157,31 @@ final class AvifRegenerationService
         $failed = 0;
         $errors = [];
         $last = '';
+        // Release-Prüfung 4.1.0 (FUN-410-18): Ein Fatal Error (Speicher, Zeitlimit) beendete den Lauf, bevor der Cursor
+        // gespeichert war; jeder Folgelauf blieb am selben Bild hängen. Die Absturzmarke nennt das Bild in Arbeit.
+        $jobId = (int) ($job['id'] ?? 0);
+        $crashed = $this->readCrashMarker($jobId);
+        if ($crashed !== null && $crashed === $cursor && $cursor < count($paths)) {
+            $counts['failed']++;
+            $failed++;
+            $errors[] = $paths[$cursor] . ': ' . self::translate('media_tools.avif.aborted');
+            $cursor++;
+        }
         while ($cursor < count($paths) && $processed < self::STEP_ITEMS && ($processed === 0 || microtime(true) - $started < $seconds)) {
             $path = $paths[$cursor];
+            $this->writeCrashMarker($jobId, $cursor);
             $cursor++;
             $processed++;
             $last = $path;
             try {
-                $result = $process($path);
-                $status = (string) ($result['status'] ?? 'failed');
+                $tooLarge = self::exceedsMemoryBudget($path);
+                if ($tooLarge !== null) {
+                    $result = ['detail' => $tooLarge];
+                    $status = 'failed';
+                } else {
+                    $result = $process($path);
+                    $status = (string) ($result['status'] ?? 'failed');
+                }
             } catch (\Throwable $e) {
                 $result = ['detail' => $e->getMessage()];
                 $status = 'failed';
@@ -180,6 +197,7 @@ final class AvifRegenerationService
             }
         }
 
+        $this->clearCrashMarker();
         $state['cursor'] = $cursor;
         $state['counts'] = $counts;
         $done = $cursor >= count($paths);
@@ -197,6 +215,75 @@ final class AvifRegenerationService
                 ? sprintf(self::translate('media_tools.avif.summary'), $counts['done'], $counts['skipped'], $counts['failed'])
                 : ($last !== '' ? sprintf(self::translate('media_tools.thumbs.progress'), $last) : ''),
         ];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-18): Bilder, deren entpackte Pixel (4 Byte je Pixel, Faktor 2 für Quelle und
+     * Ziel) den freien Speicher übersteigen, werden übersprungen statt den Lauf per Fatal Error zu beenden.
+     */
+    public static function exceedsMemoryBudget(string $path, ?int $limitBytes = null): ?string
+    {
+        $file = str_starts_with($path, '/') || preg_match('#^[A-Za-z]:[\\\\/]#', $path) === 1 ? $path : ABSPATH . 'uploads/' . ltrim($path, '/');
+        $info = is_file($file) ? @getimagesize($file) : false;
+        if (!is_array($info) || empty($info[0]) || empty($info[1])) {
+            return null;
+        }
+        $limit = $limitBytes ?? self::memoryLimitBytes();
+        if ($limit <= 0) {
+            return null;
+        }
+        $needed = (int) $info[0] * (int) $info[1] * 4 * 2;
+        $free = $limit - memory_get_usage(true);
+
+        return $needed > $free
+            ? sprintf('%d x %d Pixel brauchen etwa %d MB, frei sind %d MB (memory_limit)', (int) $info[0], (int) $info[1], (int) ceil($needed / 1048576), (int) max(0, floor($free / 1048576)))
+            : null;
+    }
+
+    private static function memoryLimitBytes(): int
+    {
+        $raw = trim((string) ini_get('memory_limit'));
+        if ($raw === '' || $raw === '-1') {
+            return 0;
+        }
+        $value = (int) $raw;
+        $unit = strtolower(substr($raw, -1));
+
+        return match ($unit) {
+            'g' => $value * 1073741824,
+            'm' => $value * 1048576,
+            'k' => $value * 1024,
+            default => $value,
+        };
+    }
+
+    private static function crashMarkerFile(): string
+    {
+        return ABSPATH . 'cache/avif-regeneration.current';
+    }
+
+    private function writeCrashMarker(int $jobId, int $index): void
+    {
+        if ($jobId > 0 && $this->processor === null) {
+            @file_put_contents(self::crashMarkerFile(), $jobId . ':' . $index, LOCK_EX);
+        }
+    }
+
+    private function readCrashMarker(int $jobId): ?int
+    {
+        $raw = is_file(self::crashMarkerFile()) ? (string) @file_get_contents(self::crashMarkerFile()) : '';
+        if (preg_match('/^(\d+):(\d+)$/', trim($raw), $m) !== 1 || (int) $m[1] !== $jobId) {
+            return null;
+        }
+
+        return (int) $m[2];
+    }
+
+    private function clearCrashMarker(): void
+    {
+        if (is_file(self::crashMarkerFile())) {
+            @unlink(self::crashMarkerFile());
+        }
     }
 
     /** @return list<string> */

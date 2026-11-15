@@ -85,6 +85,9 @@ final class MediaFeatureHooks
             'cms_form_deleted' => ['form', true],
             'cms_reusable_block_saved' => ['reusable_block', false],
             'cms_reusable_block_deleted' => ['reusable_block', true],
+            // Release-Prüfung 4.1.0 (FUN-410-19): Wissensdatenbank (Papierkorb behält die Verwendung bis zum Löschen).
+            'cms_knowledgebase_entry_saved' => ['kb_entry', false],
+            'cms_knowledgebase_entry_deleted' => ['kb_entry', true],
         ];
         foreach ($hooks as $hook => [$type, $deleted]) {
             Hooks::addAction($hook, static function (mixed $id = 0) use ($type, $deleted): void {
