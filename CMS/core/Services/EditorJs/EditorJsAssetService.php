@@ -78,6 +78,7 @@ final class EditorJsAssetService
             : '';
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
         $holderIdJs = (string) json_encode($holderId, $jsonFlags);
+        $wrapIdJs = (string) json_encode($holderId . '_wrap', $jsonFlags);
         $hiddenIdJs = (string) json_encode($hiddenId, $jsonFlags);
         $countIdJs = (string) json_encode($holderId . '_count', $jsonFlags);
         $mediaUploadUrlJs = (string) json_encode(rtrim((string) $siteUrl, '/') . '/api/media', $jsonFlags);
@@ -103,7 +104,9 @@ final class EditorJsAssetService
 
         <div class="editorjs-wrap editorjs-wrap--<?php echo htmlspecialchars($contextClass, ENT_QUOTES); ?>"
              id="<?php echo htmlspecialchars($holderId, ENT_QUOTES); ?>_wrap"
-             style="--editorjs-content-width:<?php echo $contentWidth; ?>px; --editorjs-content-width-expanded:<?php echo $expandedContentWidth; ?>px; --editorjs-content-padding-x:<?php echo $contentPaddingX; ?>px;">
+             data-editorjs-content-width="<?php echo $contentWidth; ?>"
+             data-editorjs-content-width-expanded="<?php echo $expandedContentWidth; ?>"
+             data-editorjs-content-padding-x="<?php echo $contentPaddingX; ?>">
             <div class="editorjs-toolbar" id="<?php echo htmlspecialchars($holderId, ENT_QUOTES); ?>_toolbar" role="toolbar" aria-label="EditorJS Schnellwerkzeuge">
                 <button type="button" data-block="header" data-level="2" title="Überschrift H2" aria-label="Überschrift H2 einfügen">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16"/><path d="M7 12h10"/><path d="M17 4v16"/></svg>
@@ -198,7 +201,7 @@ final class EditorJsAssetService
                   role="region"
                   aria-label="<?php echo htmlspecialchars($editorLabel, ENT_QUOTES); ?>"
                   aria-busy="true"
-                 style="min-height:<?php echo $minHeight; ?>px;"></div>
+                  data-editorjs-min-height="<?php echo $minHeight; ?>"></div>
 
               <div class="editorjs-statusbar" role="status" aria-live="polite">
                 <span class="editorjs-statusbar__hint">Tippe <kbd>/</kbd> oder nutze das <strong>+</strong>-Menü für alle Plugins</span>
@@ -208,6 +211,34 @@ final class EditorJsAssetService
 
         <script <?= \CMS\Security::instance()->nonceAttr() ?>>
         (function() {
+            // Maße kommen als data-Attribute und werden per CSSOM gesetzt: Die Produktiv-CSP
+            // (style-src ohne 'unsafe-inline') blockiert style="…"-Attribute (style-src-attr).
+            // Läuft sofort beim Parsen (nicht erst bei DOMContentLoaded), damit sich das Layout nicht verschiebt.
+            (function applyEditorJsLayout() {
+                var wrapEl = document.getElementById(<?php echo $wrapIdJs; ?>);
+                var layoutHolderEl = document.getElementById(<?php echo $holderIdJs; ?>);
+                var px = function(el, attribute) {
+                    var value = el ? parseInt(el.getAttribute(attribute) || '', 10) : NaN;
+                    return isFinite(value) ? value + 'px' : '';
+                };
+                if (wrapEl && wrapEl.style) {
+                    [
+                        ['--editorjs-content-width', 'data-editorjs-content-width'],
+                        ['--editorjs-content-width-expanded', 'data-editorjs-content-width-expanded'],
+                        ['--editorjs-content-padding-x', 'data-editorjs-content-padding-x']
+                    ].forEach(function(entry) {
+                        var value = px(wrapEl, entry[1]);
+                        if (value !== '') {
+                            wrapEl.style.setProperty(entry[0], value);
+                        }
+                    });
+                }
+                var minHeight = px(layoutHolderEl, 'data-editorjs-min-height');
+                if (layoutHolderEl && layoutHolderEl.style && minHeight !== '') {
+                    layoutHolderEl.style.setProperty('min-height', minHeight);
+                }
+            })();
+
             function initEditorJs<?php echo $editorNum; ?>() {
                 var holderEl = document.getElementById(<?php echo $holderIdJs; ?>);
                 var hiddenEl = document.getElementById(<?php echo $hiddenIdJs; ?>);

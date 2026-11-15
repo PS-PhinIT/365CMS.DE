@@ -5099,7 +5099,56 @@
             throw new Error('EditorJS tool missing: ' + toolName + ' (' + String(globalNames.join('|') || 'unknown') + ')');
         }
 
+        if (toolName === 'embed') {
+            patchEmbedServiceTemplates(toolClass);
+        }
+
         return toolClass;
+    }
+
+    /**
+     * Die HTML-Vorlagen von @editorjs/embed enthalten style="…" (z. B. width:100%). Das Plugin setzt sie per
+     * innerHTML ein; die Produktiv-CSP blockiert solche Attribute (style-src-attr). Nach prepare() werden die
+     * Attribute deshalb entfernt und die bekannten Deklarationen auf Klassen in admin.css abgebildet.
+     */
+    function embedTemplateWithoutInlineStyle(html) {
+        var classes = [];
+        var stripped = String(html || '').replace(/\sstyle\s*=\s*(["'])([^"']*)\1/gi, function (match, quote, declarations) {
+            var normalized = String(declarations).replace(/\s+/g, '').toLowerCase();
+            if (/(^|;)width:100%(;|$)/.test(normalized)) {
+                classes.push('cms-embed-frame--full-width');
+            }
+            if (/(^|;)margin:0auto(;|$)/.test(normalized)) {
+                classes.push('cms-embed-frame--centered');
+            }
+            return '';
+        });
+
+        if (classes.length) {
+            stripped = stripped.replace(/^(\s*<iframe)\b/i, '$1 class="' + classes.join(' ') + '"');
+        }
+
+        return stripped;
+    }
+
+    function patchEmbedServiceTemplates(embedClass) {
+        if (!embedClass || embedClass.__cmsTemplatesPatched || typeof embedClass.prepare !== 'function') {
+            return;
+        }
+
+        var originalPrepare = embedClass.prepare;
+        embedClass.prepare = function () {
+            var result = originalPrepare.apply(this, arguments);
+            var services = embedClass.services && typeof embedClass.services === 'object' ? embedClass.services : {};
+            Object.keys(services).forEach(function (key) {
+                if (services[key] && typeof services[key].html === 'string') {
+                    services[key].html = embedTemplateWithoutInlineStyle(services[key].html);
+                }
+            });
+
+            return result;
+        };
+        embedClass.__cmsTemplatesPatched = true;
     }
 
     function tryResolveToolClass(toolName) {

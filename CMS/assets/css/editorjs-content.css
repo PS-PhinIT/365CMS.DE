@@ -1337,3 +1337,95 @@
 .editorjs-media-text__media picture {
     display: contents;
 }
+
+/*
+ * 4.1.0: Ersatz für die früheren style-Attribute des Renderers. Die Produktiv-CSP (style-src ohne
+ * 'unsafe-inline') blockiert style="…" (style-src-attr); Werte kommen deshalb aus Klassen bzw. data-Attributen.
+ */
+
+/* Einzug (Block-Tune indentTune, Stufe 1–8 à 1,5rem) */
+.editorjs-indent.editorjs-indent--1 { margin-left: 1.5rem; }
+.editorjs-indent.editorjs-indent--2 { margin-left: 3rem; }
+.editorjs-indent.editorjs-indent--3 { margin-left: 4.5rem; }
+.editorjs-indent.editorjs-indent--4 { margin-left: 6rem; }
+.editorjs-indent.editorjs-indent--5 { margin-left: 7.5rem; }
+.editorjs-indent.editorjs-indent--6 { margin-left: 9rem; }
+.editorjs-indent.editorjs-indent--7 { margin-left: 10.5rem; }
+.editorjs-indent.editorjs-indent--8 { margin-left: 12rem; }
+
+/* Bild: object-fit als Variable, z. B. für Themes */
+.editorjs-image--fit-contain { --cms-editorjs-image-fit: contain; }
+.editorjs-image--fit-cover { --cms-editorjs-image-fit: cover; }
+.editorjs-image--fit-fill { --cms-editorjs-image-fit: fill; }
+.editorjs-image--fit-none { --cms-editorjs-image-fit: none; }
+.editorjs-image--fit-scale-down { --cms-editorjs-image-fit: scale-down; }
+
+/* Spacer mit freier Höhe 0–200 px außerhalb der Presets: Höhe = Hunderter + Zehner + Einer */
+.editorjs-spacer.editorjs-spacer--custom {
+    --cms-editorjs-spacer-height: calc(var(--cms-editorjs-spacer-h100, 0px) + var(--cms-editorjs-spacer-h10, 0px) + var(--cms-editorjs-spacer-h1, 0px));
+}
+.editorjs-spacer--h100-1 { --cms-editorjs-spacer-h100: 100px; }
+.editorjs-spacer--h100-2 { --cms-editorjs-spacer-h100: 200px; }
+.editorjs-spacer--h10-1 { --cms-editorjs-spacer-h10: 10px; }
+.editorjs-spacer--h10-2 { --cms-editorjs-spacer-h10: 20px; }
+.editorjs-spacer--h10-3 { --cms-editorjs-spacer-h10: 30px; }
+.editorjs-spacer--h10-4 { --cms-editorjs-spacer-h10: 40px; }
+.editorjs-spacer--h10-5 { --cms-editorjs-spacer-h10: 50px; }
+.editorjs-spacer--h10-6 { --cms-editorjs-spacer-h10: 60px; }
+.editorjs-spacer--h10-7 { --cms-editorjs-spacer-h10: 70px; }
+.editorjs-spacer--h10-8 { --cms-editorjs-spacer-h10: 80px; }
+.editorjs-spacer--h10-9 { --cms-editorjs-spacer-h10: 90px; }
+.editorjs-spacer--h1-1 { --cms-editorjs-spacer-h1: 1px; }
+.editorjs-spacer--h1-2 { --cms-editorjs-spacer-h1: 2px; }
+.editorjs-spacer--h1-3 { --cms-editorjs-spacer-h1: 3px; }
+.editorjs-spacer--h1-4 { --cms-editorjs-spacer-h1: 4px; }
+.editorjs-spacer--h1-5 { --cms-editorjs-spacer-h1: 5px; }
+.editorjs-spacer--h1-6 { --cms-editorjs-spacer-h1: 6px; }
+.editorjs-spacer--h1-7 { --cms-editorjs-spacer-h1: 7px; }
+.editorjs-spacer--h1-8 { --cms-editorjs-spacer-h1: 8px; }
+.editorjs-spacer--h1-9 { --cms-editorjs-spacer-h1: 9px; }
+
+/* Embed: Seitenverhältnis aus <canvas width height> statt padding-top per style-Attribut */
+.editorjs-embed__frame.editorjs-embed__frame--sized {
+    padding-top: 0;
+}
+
+.editorjs-embed__sizer {
+    display: block;
+    width: 100%;
+    height: auto;
+    visibility: hidden;
+}
+
+
+/*
+ * Bild + Text: Werte wie bisher im style-Attribut (px), mit höherer Spezifität. Damit bleibt das Layout
+ * unverändert – auch unter 768px, wo die bisherigen Inline-Werte (Bildbreite, Abstand) die Regeln der
+ * Media-Query überstimmt haben.
+ */
+.editorjs-block.editorjs-media-text {
+    gap: 24px;
+}
+
+.editorjs-block.editorjs-media-text.editorjs-media-text--bordered {
+    padding: 16px;
+}
+
+.editorjs-block.editorjs-media-text.editorjs-media-text--bordered.editorjs-media-text--has-heading {
+    padding-top: 0;
+}
+
+.editorjs-media-text > .editorjs-media-text__media {
+    width: var(--cms-editorjs-media-text-image-width);
+    max-width: var(--cms-editorjs-media-text-image-width);
+}
+
+.editorjs-media-text > .editorjs-media-text__heading {
+    margin: 0 0 8px;
+}
+
+.editorjs-media-text--bordered > .editorjs-media-text__heading {
+    flex-basis: calc(100% + 32px);
+    margin: 0 -16px 8px;
+    padding: 9px 16px;
+}

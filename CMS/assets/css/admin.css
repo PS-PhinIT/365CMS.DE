@@ -4597,6 +4597,50 @@ input:checked + .slider:before { transform: translateX(22px); }
     word-break: break-word;
 }
 
+/* Ersatz für frühere style="…"-Attribute (CSP style-src-attr). Breiten/Anzeige ändert JS per CSSOM. */
+.cms-seo-preview-card__serp {
+    max-width: 26rem;
+}
+
+.cms-seo-preview-card__social-image {
+    display: block;
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+}
+
+.cms-seo-preview-card__social-image[hidden] {
+    display: none;
+}
+
+.progress-bar[data-cms-progress-start="0"] {
+    width: 0%;
+}
+
+.cms-featured-image-preview {
+    max-height: 120px;
+    object-fit: cover;
+    width: 100%;
+}
+
+summary.cms-summary-plain {
+    cursor: pointer;
+    list-style: none;
+}
+
+.editorjs-holder.editorjs-holder--page {
+    min-height: 320px;
+}
+
+/* Editor.js-Embed: Ersatz für style="…" in den Vorlagen von @editorjs/embed (editor-init.js) */
+.cms-embed-frame--full-width {
+    width: 100%;
+}
+
+.cms-embed-frame--centered {
+    margin: 0 auto;
+}
+
 .cms-content-editor-layout .cms-edit-card .card-body,
 .cms-content-editor-layout .cms-edit-card .card-header,
 .cms-content-editor-layout .cms-edit-card .card-footer {

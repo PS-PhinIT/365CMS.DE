@@ -33,7 +33,7 @@ $hintBadgeContainerId = trim((string) ($seoScorePanel['hintBadgeContainerId'] ??
         </div>
     </summary>
     <div class="card-body cms-seo-score-panel__body">
-        <div class="progress progress-sm mb-3"><div class="progress-bar bg-danger" id="<?php echo htmlspecialchars((string)($seoScorePanel['scoreBarId'] ?? '')); ?>" style="width:0%"></div></div>
+        <div class="progress progress-sm mb-3"><div class="progress-bar bg-danger" id="<?php echo htmlspecialchars((string)($seoScorePanel['scoreBarId'] ?? '')); ?>" data-cms-progress-start="0"></div></div>
         <div class="row g-3 mb-3 cms-seo-score-panel__summary">
             <?php $summaryIndex = 0; ?>
             <?php foreach ($summaryCards as $card): ?>

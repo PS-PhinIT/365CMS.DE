@@ -415,7 +415,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                     <div class="small text-secondary mb-2">Erscheint links vom Seitentitel im Content-Header.</div>
                                     <div id="featuredImagePreview">
                                         <?php if ($pageFeaturedImageValue !== ''): ?>
-                                            <img src="<?= htmlspecialchars(\CMS\Services\MediaDeliveryService::getInstance()->normalizeUrl($pageFeaturedImageValue, true)) ?>" alt="" class="img-fluid rounded" style="max-height:120px;object-fit:cover;width:100%;">
+                                            <img src="<?= htmlspecialchars(\CMS\Services\MediaDeliveryService::getInstance()->normalizeUrl($pageFeaturedImageValue, true)) ?>" alt="" class="img-fluid rounded cms-featured-image-preview">
                                         <?php endif; ?>
                                     </div>
                                     <input type="hidden" name="featured_image" id="featuredImageInput" value="<?= htmlspecialchars($pageFeaturedImageValue) ?>">
@@ -546,8 +546,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 <div class="editorjs-wrap mb-3" id="<?= htmlspecialchars($isEnglishEditorView ? 'editorjsEn_wrap' : 'editorjs_wrap') ?>" data-editor-state="loading">
                                     <div
                                         id="<?= htmlspecialchars($isEnglishEditorView ? 'editorjsEn' : 'editorjs') ?>"
-                                        class="editorjs-holder"
-                                        style="min-height:320px;"
+                                        class="editorjs-holder editorjs-holder--page"
                                     ></div>
                                 </div>
                                 <div class="d-none" aria-hidden="true">
@@ -688,7 +687,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                         <?php if (!$isNew): ?>
                         <div class="cms-editor-sidebar-slot cms-editor-sidebar-slot--seo">
                             <details class="card cms-edit-card">
-                                <summary class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap" style="cursor:pointer; list-style:none;">
+                                <summary class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap cms-summary-plain">
                                     <div>
                                         <h3 class="card-title mb-0">Revisionen & Vergleich</h3>
                                         <div class="text-secondary small mt-1">Gespeicherte Snapshots zeigen Unterschiede zwischen aktuellem Stand und früheren Versionen der Seite – inklusive DE/EN-Titel, Slugs und Inhalte.</div>
@@ -709,7 +708,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                                 $revisionFieldDiffs = is_array($revision['field_diffs'] ?? null) ? $revision['field_diffs'] : [];
                                                 ?>
                                                 <details class="border rounded-3 p-3">
-                                                    <summary class="d-flex flex-wrap align-items-center gap-2" style="cursor:pointer; list-style:none;">
+                                                    <summary class="d-flex flex-wrap align-items-center gap-2 cms-summary-plain">
                                                         <strong><?= htmlspecialchars((string) ($revision['created_at_label'] ?? 'Unbekanntes Datum')) ?></strong>
                                                         <span class="text-secondary">von <?= htmlspecialchars((string) ($revision['author_label'] ?? 'Unbekannt')) ?></span>
                                                         <?php if ($revisionChangedFields !== []): ?>
