@@ -191,10 +191,6 @@ $numRecent        = count($recentSidebar);
             <?php endif; ?>
             <time class="meta-date"><?php echo meridian_format_date($heroPost->published_at ?? $heroPost->created_at); ?></time>
             <?php echo meridian_post_update_badge($heroPost); ?>
-            <?php if (meridian_setting('blog', 'show_reading_time', true)): ?>
-            <span class="meta-sep">·</span>
-            <span class="meta-read"><?php echo meridian_reading_time((string) ($heroPost->content ?? '')); ?> Min. Lesezeit</span>
-            <?php endif; ?>
         </div>
     </div>
     <?php if ($ctaText && $ctaUrl): ?>
@@ -251,10 +247,6 @@ $numRecent        = count($recentSidebar);
             <?php endif; ?>
             <div class="art-meta">
                 <time><?php echo meridian_format_date($post->published_at ?? $post->created_at); ?></time>
-                <?php if (meridian_setting('blog', 'show_reading_time', true)): ?>
-                <span class="dot"></span>
-                <span class="read-t"><?php echo meridian_reading_time((string) ($post->content ?? '')); ?></span>
-                <?php endif; ?>
                 <?php echo meridian_post_update_badge($post); ?>
             </div>
         </div>

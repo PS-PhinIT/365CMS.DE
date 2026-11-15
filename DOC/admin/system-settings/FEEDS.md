@@ -20,7 +20,7 @@ Frühere Aufrufe von `/admin/feeds` leiten dorthin um.
 | Mitglieder-Abos | Abos aus dem Mitgliederbereich ansehen und löschen |
 | Abrufprotokoll | Aufträge der Abruf-Queue mit Auslöser, neuen Artikeln und Fehler; erneut einreihen, offene verwerfen, aufräumen |
 | Katalog & OPML | 10 kuratierte Vorlagen (rund 300 Quellen) ganz oder teilweise übernehmen; OPML-Import (Gruppen werden Bereiche) und -Export |
-| Einstellungen | Allgemein (Einschalten, Einwilligung, Titel/Beschreibung DE/EN, Adresse der Übersicht, Anzeige, Filter, Aufbewahrung, Quellen je Cron-Lauf), Design (Farben, Radius, Spalten), Digest (Absender, Betreff, Umfang) |
+| Einstellungen | Allgemein (Einschalten, Einwilligung, Titel/Beschreibung DE/EN, Adresse der Übersicht, Anzeige, Filter, Aufbewahrung, Quellen je Cron-Lauf), Design (Farben inkl. Text und Hintergrund, Radius, Spalten, seit 4.1.0 auch Schrift – wie Theme, System oder Serifen –, Kartenstil – Schatten, Rahmen, flach –, Bildformat 16:9/3:2/4:3/1:1 und Kopfbereich – Verlauf, einfarbig, ohne), Digest (Absender, Betreff, Umfang) |
 | RSS-Ausgang | Einstellungen von `/feed` (siehe unten) |
 
 **Öffentliche Seiten** (nur bei eingeschaltetem Aggregator, jeweils auch unter `/en/…`):

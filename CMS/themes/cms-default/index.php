@@ -47,7 +47,6 @@ if (function_exists('meridian_get_posts')) {
             $hDate    = meridian_format_date((string) ($heroPost['published_at'] ?? $heroPost['created_at'] ?? ''));
             $hCat     = $heroPost['category_name'] ?? 'Allgemein';
             $hAuthor  = $heroPost['author_name'] ?? 'Redaktion';
-            $hRead    = isset($heroPost['read_time']) ? $heroPost['read_time'] . ' Min.' : '5 Min.';
             ?>
             <div class="hero-post">
                 <div class="hero-image">
@@ -69,8 +68,6 @@ if (function_exists('meridian_get_posts')) {
                         <span class="meta-sep">·</span>
                         <?php endif; ?>
                         <time class="meta-date"><?php echo $hDate; ?></time>
-                        <span class="meta-sep">·</span>
-                        <span class="meta-read"><?php echo $hRead; ?></span>
                     </div>
                 </div>
             </div>
@@ -87,7 +84,6 @@ if (function_exists('meridian_get_posts')) {
                     $pExcerpt= htmlspecialchars($post['excerpt'] ?? '');
                     $pDate   = meridian_format_date((string) ($post['published_at'] ?? $post['created_at'] ?? ''));
                     $pCat    = $post['category_name'] ?? 'Blog';
-                    $pRead   = isset($post['read_time']) ? $post['read_time'] . ' Min.' : '3 Min.';
                 ?>
                 <div class="article-row">
                     <div class="art-thumb">
@@ -99,8 +95,6 @@ if (function_exists('meridian_get_posts')) {
                         <div class="art-excerpt"><?php echo $pExcerpt; ?></div>
                         <div class="art-meta">
                             <time><?php echo $pDate; ?></time>
-                            <span class="dot"></span>
-                            <span class="read-t"><?php echo $pRead; ?></span>
                         </div>
                     </div>
                 </div>

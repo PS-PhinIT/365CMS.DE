@@ -62,6 +62,7 @@ Verified top-level entries of this repository:
 | `TESTS/content-workflow/` | directory | four-eyes review (4.1.0): publish right, save enforcement, transitions, recipients, preview links, capability migration: `php TESTS/content-workflow/run.php [-v]` |
 | `TESTS/csp-style-rewriter/` | directory | `InlineStyleRewriter`: `style` attributes to nonce CSS classes: `php TESTS/csp-style-rewriter/run.php` |
 | `TESTS/editorjs-blocks/` | directory | Editor.js block tests: `php TESTS/editorjs-blocks/run.php`, browser part `node TESTS/editorjs-blocks/browser/run.js` |
+| `TESTS/feeds-design/` | directory | feed design tokens, no reading time on overviews: `php TESTS/feeds-design/run.php [-v]` |
 | `TESTS/functions/` | directory | function tests without database: `php TESTS/functions/run.php` |
 | `TESTS/login-showcase/` | directory | login showcase and theme colour import: settings validation, getShowcase() shape, partial escaping, core login view, theme override: `php TESTS/login-showcase/run.php [-v]` |
 | `TESTS/member-area/` | directory | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup: `php TESTS/member-area/run.php [-v]` |
@@ -86,7 +87,7 @@ Verified top-level entries of this repository:
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 28 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 29 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `feeds-design`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -113,6 +114,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/content-workflow/` | Verzeichnis | Vier-Augen-Prinzip (4.1.0): Freigaberecht, Durchsetzung beim Speichern, Übergänge, Empfänger, Vorschau-Links, Rechte-Migration: `php TESTS/content-workflow/run.php [-v]` |
 | `TESTS/csp-style-rewriter/` | Verzeichnis | `InlineStyleRewriter`: `style`-Attribute zu Nonce-CSS-Klassen: `php TESTS/csp-style-rewriter/run.php` |
 | `TESTS/editorjs-blocks/` | Verzeichnis | Tests der Editor.js-Blöcke: `php TESTS/editorjs-blocks/run.php`, Browser-Teil `node TESTS/editorjs-blocks/browser/run.js` |
+| `TESTS/feeds-design/` | Verzeichnis | Design-Variablen der Feed-Seiten, keine Lesezeit auf Übersichten: `php TESTS/feeds-design/run.php [-v]` |
 | `TESTS/functions/` | Verzeichnis | Funktionstests ohne Datenbank: `php TESTS/functions/run.php` |
 | `TESTS/login-showcase/` | Verzeichnis | Login-Showcase und Theme-Farbimport: Validierung der Einstellungen, Datenform von getShowcase(), Escaping des Partials, Core-Loginseite, Theme-Override: `php TESTS/login-showcase/run.php [-v]` |
 | `TESTS/member-area/` | Verzeichnis | Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit: `php TESTS/member-area/run.php [-v]` |
@@ -137,7 +139,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 28 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 29 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `feeds-design`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 
