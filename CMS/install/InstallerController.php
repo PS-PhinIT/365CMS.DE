@@ -352,6 +352,10 @@ final class InstallerController
                 $this->errors[] = 'Passwörter stimmen nicht überein';
             } elseif (mb_strlen($adminPassword) < 12) {
                 $this->errors[] = 'Passwort muss mindestens 12 Zeichen lang sein';
+            } elseif (preg_match('/\p{Lu}/u', $adminPassword) !== 1 || preg_match('/\p{Ll}/u', $adminPassword) !== 1
+                || preg_match('/\p{Nd}/u', $adminPassword) !== 1 || preg_match('/[^\p{L}\p{N}]/u', $adminPassword) !== 1) {
+                // SEC-410-23: Standard-Richtlinie (PasswordPolicyService) schon bei der Installation.
+                $this->errors[] = 'Passwort braucht Groß- und Kleinbuchstaben, eine Ziffer und ein Sonderzeichen';
             } else {
                 $dbConfig = $_SESSION['db_config'];
                 $siteConfig = $_SESSION['site_config'];

@@ -798,15 +798,21 @@ final class DownloadService
     private function computeAccessState(array $item, ?object $user): string
     {
         $level = (string) ($item['access_level'] ?? 'public');
-        if ($level === 'public' || !in_array($level, DownloadSettings::ACCESS_LEVELS, true)) {
+        // SEC-410-20: Unbekannte Stufe (defekte/importierte Zeile) sperrt statt freizugeben – nur Admins und Redaktion
+        // kommen dann noch heran (siehe unten), alle anderen sehen „keine Berechtigung“.
+        if ($level === 'public') {
             return self::ACCESS_GRANTED;
         }
+        $knownLevel = in_array($level, DownloadSettings::ACCESS_LEVELS, true);
         if ($user === null || (int) ($user->id ?? 0) <= 0) {
             return self::ACCESS_LOGIN;
         }
         $role = (string) ($user->role ?? '');
         if ($role === 'admin' || $this->isStaffUser($user)) {
             return self::ACCESS_GRANTED;
+        }
+        if (!$knownLevel) {
+            return self::ACCESS_ROLE;
         }
 
         return match ($level) {

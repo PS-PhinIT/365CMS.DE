@@ -595,7 +595,9 @@ class UserService {
                 return new WP_Error('invalid_email', 'Die E-Mail-Adresse darf höchstens ' . EmailChangeService::EMAIL_MAX_LENGTH . ' Zeichen lang sein', ['status' => 400]);
             }
 
-            if (isset($data['password']) && trim((string)$data['password']) !== '') {
+            // SEC-410-16: kein trim() – ein Passwort nur aus Leerzeichen würde sonst ungeprüft gesetzt (updateUser
+            // setzt jedes nicht leere Passwort).
+            if (isset($data['password']) && (string)$data['password'] !== '') {
                 $passwordValidation = $this->validatePassword((string)$data['password'], $userId);
                 if ($passwordValidation instanceof WP_Error) {
                     return $passwordValidation;

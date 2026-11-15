@@ -330,12 +330,21 @@ final class OffsiteBackupService
         if (!$listing['success']) {
             return ['success' => false, 'deleted' => [], 'error' => $listing['error'] ?? 'Auflisten fehlgeschlagen.'];
         }
+        // SEC-410-07: Nur Backups löschen, die diese Installation selbst hochgeladen hat (Statustabelle). Unter einem
+        // leeren oder geteilten Präfix lägen sonst fremde Objekte, die zufällig wie ein Backup-Name aussehen.
+        $known = [];
+        foreach ($this->db->get_results(
+            "SELECT backup_name FROM {$this->prefix}backup_offsite_uploads WHERE target = ? AND status IN ('uploaded', 'failed', 'pending')",
+            [self::TARGET]
+        ) ?: [] as $row) {
+            $known[(string) $row->backup_name] = true;
+        }
         $groups = [];
         $keysByBackup = [];
         foreach ($listing['keys'] as $object) {
             $relative = substr($object['key'], strlen($config->prefix));
             $name = (string) strtok($relative, '/');
-            if ($name === '' || preg_match(self::NAME_PATTERN, $name) !== 1) {
+            if ($name === '' || preg_match(self::NAME_PATTERN, $name) !== 1 || !isset($known[$name]) || !str_contains($relative, '/')) {
                 continue;
             }
             $timestamp = strtotime($object['modified']) ?: 0;

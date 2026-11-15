@@ -47,6 +47,18 @@ $make = static function (array $roles, array $totp = [], array $passkeys = []): 
 };
 $user = static fn(int $id, string $role): object => (object) ['id' => $id, 'role' => $role];
 
+T::run('Audit 4.1.0: decisionForUser für Router und Einstiegsdateien', static function () use ($make, $user): void {
+    $mfa = $make(['admin']);
+    $_SESSION = [];
+    $block = $mfa->decisionForUser($user(1, 'admin'), '/update.php', 'GET', false);
+    T::same(['mfa', 'redirect', '/mfa-setup'], [$block['gate'] ?? '', $block['type'] ?? '', $block['target'] ?? ''], 'SEC-410-08: Admin ohne Faktor → /update.php nur nach Einrichtung');
+    T::same(null, $make(['admin'], [1 => true])->decisionForUser($user(1, 'admin'), '/update.php', 'GET', false), 'mit TOTP: Zugriff');
+    $_SESSION = ['password_change_required' => true];
+    T::same('password', $mfa->decisionForUser($user(2, 'member'), '/order', 'POST', false)['gate'] ?? '', 'abgelaufenes Passwort sperrt auch den Checkout');
+    $_SESSION = [];
+    T::same(null, $mfa->decisionForUser(null, '/update.php', 'GET', false), 'nicht angemeldet: Einstiegsdatei entscheidet selbst');
+});
+
 T::run('Einstellungen: Rollenliste bereinigen', static function () use ($make): void {
     T::same(['admin', 'editor'], $make(['Admin', ' editor ', 'admin', '<script>', ''])->enforcedRoles(), 'klein, getrimmt, ohne Duplikate und ohne ungültige Namen');
     T::same([], $make([])->enforcedRoles(), 'Standard: kein Zwang');
@@ -186,7 +198,11 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
     $gate = strpos($router, '$this->enforceAccountGates($routingUri, $method)');
     $csrf = strpos($router, '$csrfBypassPrefixes = ');
     T::check($maintenance !== false && $gate !== false && $csrf !== false && $maintenance < $gate && $gate < $csrf, 'Router: Weiche nach Wartungsmodus und vor dem CSRF-Block');
-    T::check(str_contains($router, 'MfaEnforcementService::decide('), 'Router entscheidet über decide()');
+    T::check(str_contains($router, 'MfaEnforcementService::getInstance()->decisionForUser('), 'Router entscheidet über decisionForUser() → decide()');
+    // SEC-410-08: direkt ausgelieferte Einstiegsdateien laufen nicht durch den Router.
+    foreach (['update.php' => "enforceOnEntryPoint('/update.php')", 'orders.php' => "enforceOnEntryPoint('/order')"] as $entry => $call) {
+        T::check(str_contains((string) file_get_contents($root . $entry), $call), "SEC-410-08: {$entry} prüft die Konto-Weiche selbst");
+    }
     T::check(str_contains($router, "'mfa_enforcement_redirect'"), 'Router: Audit-Eintrag');
 
     $public = (string) file_get_contents($root . 'core/Routing/PublicRouter.php');

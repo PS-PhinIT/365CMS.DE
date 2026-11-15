@@ -68,6 +68,11 @@ $sectionPageConfig = [
         if ($action === 'set_encryption') {
             // Gleicher Weg wie /admin/backups (Rechteprüfung, Audit-Eintrag).
             require_once __DIR__ . '/modules/system/BackupsModule.php';
+            // SEC-410-12: Die Shell hat das Token dieser Seite (`admin_backup_settings`) bereits eingelöst; ohne diese
+            // Markierung verlangt BackupsModule sein eigenes Token und lehnt die Umstellung immer ab.
+            if (function_exists('cms_admin_section_shell_was_csrf_verified') && cms_admin_section_shell_was_csrf_verified('admin_backup_settings')) {
+                cms_admin_section_shell_mark_csrf_verified('admin_backups');
+            }
 
             return (new BackupsModule())->setEncryption((string) ($post['backup_encryption'] ?? '0') === '1');
         }

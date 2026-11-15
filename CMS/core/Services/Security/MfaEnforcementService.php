@@ -221,6 +221,78 @@ final class MfaEnforcementService
      * } $context
      * @return array{gate:string, type:string, target?:string, status?:int, error?:string}|null null = durchlassen
      */
+    /**
+     * Entscheidung für ein angemeldetes Sitzungskonto (Router und direkt ausgelieferte Einstiegsdateien).
+     * Einstellungen nicht lesbar: nicht aussperren, aber protokollieren.
+     *
+     * @return array{gate:string, type:string, target?:string, status?:int, error?:string}|null
+     */
+    public function decisionForUser(?object $user, string $path, string $method, bool $api, string $action = ''): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+        $userId = (int) ($user->id ?? 0);
+        $passwordChange = !empty($_SESSION[self::SESSION_PASSWORD_CHANGE]);
+        try {
+            $mfaRequired = !$passwordChange && $this->isRequiredFor($user);
+            $hasFactor = $mfaRequired && $this->hasRecognisedFactor($userId);
+        } catch (\Throwable $e) {
+            error_log('365CMS MFA-Weiche: ' . $e->getMessage());
+            $mfaRequired = false;
+            $hasFactor = true;
+        }
+
+        return self::decide([
+            'logged_in' => true,
+            'path' => $path,
+            'method' => $method,
+            'action' => $action,
+            'api' => $api,
+            'password_change_required' => $passwordChange,
+            'mfa_required' => $mfaRequired,
+            'has_factor' => $hasFactor,
+        ]);
+    }
+
+    /**
+     * SEC-410-08: Konto-Weiche für PHP-Dateien, die der Webserver direkt ausliefert (`update.php`, `orders.php`) und
+     * die deshalb nicht durch `Router::dispatch()` laufen. Leitet wie der Router auf Einrichtung bzw.
+     * Passwortänderung um und beendet die Anfrage.
+     */
+    public static function enforceOnEntryPoint(string $path): void
+    {
+        if (PHP_SAPI === 'cli') {
+            return;
+        }
+        $auth = \CMS\Auth::instance();
+        if ($auth->isBearerAuthenticated()) {
+            return;
+        }
+        $decision = self::getInstance()->decisionForUser(
+            $auth->currentUser(),
+            $path,
+            strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')),
+            false,
+            is_string($_POST['action'] ?? null) ? (string) $_POST['action'] : ''
+        );
+        if ($decision === null) {
+            return;
+        }
+        if ($decision['gate'] === 'password') {
+            $_SESSION['member_alert'] ??= [
+                'type' => 'warning',
+                'message' => 'Dein Passwort ist abgelaufen. Bitte vergib ein neues Passwort, um fortzufahren.',
+                'payload' => [],
+            ];
+        }
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+            header('Location: ' . (string) ($decision['target'] ?? '/'), true, 303);
+        }
+        exit;
+    }
+
     public static function decide(array $context): ?array
     {
         if (empty($context['logged_in']) || !empty($context['bearer'])) {

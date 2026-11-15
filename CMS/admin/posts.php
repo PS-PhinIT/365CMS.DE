@@ -277,6 +277,11 @@ function cms_admin_posts_normalize_bulk_ids(mixed $ids): array
 
 function cms_admin_posts_can_run_action(string $action): bool
 {
+    // SEC-410-24: Kategorien wirken auf alle Beiträge – dafür reicht „eigene Beiträge bearbeiten“ nicht.
+    if (in_array($action, ['save_category', 'delete_category'], true)) {
+        return Auth::instance()->hasCapability(CMS_ADMIN_POSTS_WRITE_CAPABILITY) || Auth::instance()->hasCapability('manage_settings');
+    }
+
     return $action !== ''
         && (
             Auth::instance()->hasCapability(CMS_ADMIN_POSTS_WRITE_CAPABILITY)

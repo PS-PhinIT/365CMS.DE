@@ -152,28 +152,13 @@ class Router
         }
 
         $userId = (int) ($user->id ?? 0);
-        $service = Services\Security\MfaEnforcementService::getInstance();
-        $passwordChange = !empty($_SESSION[Services\Security\MfaEnforcementService::SESSION_PASSWORD_CHANGE]);
-        try {
-            $mfaRequired = !$passwordChange && $service->isRequiredFor($user);
-            $hasFactor = $mfaRequired && $service->hasRecognisedFactor($userId);
-        } catch (\Throwable $e) {
-            // Einstellungen nicht lesbar: lieber nicht aussperren, aber protokollieren.
-            error_log('365CMS MFA-Weiche: ' . $e->getMessage());
-            $mfaRequired = false;
-            $hasFactor = true;
-        }
-
-        $decision = Services\Security\MfaEnforcementService::decide([
-            'logged_in' => true,
-            'path' => $routingUri,
-            'method' => $method,
-            'action' => is_string($_POST['action'] ?? null) ? (string) $_POST['action'] : '',
-            'api' => $this->isApiRequest($routingUri),
-            'password_change_required' => $passwordChange,
-            'mfa_required' => $mfaRequired,
-            'has_factor' => $hasFactor,
-        ]);
+        $decision = Services\Security\MfaEnforcementService::getInstance()->decisionForUser(
+            $user,
+            $routingUri,
+            $method,
+            $this->isApiRequest($routingUri),
+            is_string($_POST['action'] ?? null) ? (string) $_POST['action'] : ''
+        );
         if ($decision === null) {
             return false;
         }

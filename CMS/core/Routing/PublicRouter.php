@@ -149,6 +149,7 @@ final class PublicRouter
             if ($authManager->isPasskeyAvailable()) {
                 $options = $authManager->getPasskeyLoginOptions();
                 $_SESSION['login_passkey_challenge'] = (string)($options['challenge'] ?? '');
+                $_SESSION['login_passkey_challenge_at'] = time();
                 $passkeyPayload = [
                     'available' => true,
                     'options_json' => json_encode(
@@ -187,9 +188,11 @@ final class PublicRouter
 
         if ($action === 'passkey_login') {
             $challenge = (string)($_SESSION['login_passkey_challenge'] ?? '');
-            unset($_SESSION['login_passkey_challenge']);
+            $challengeAt = (int)($_SESSION['login_passkey_challenge_at'] ?? 0);
+            unset($_SESSION['login_passkey_challenge'], $_SESSION['login_passkey_challenge_at']);
 
-            if ($challenge === '') {
+            // SEC-410-18: Challenge höchstens 5 Minuten gültig (einmalig war sie schon).
+            if ($challenge === '' || $challengeAt < time() - 300) {
                 $_SESSION['error'] = 'Die Passkey-Challenge ist abgelaufen. Bitte erneut versuchen.';
                 $this->router->redirect($this->appendLoginErrorCode($loginPagePath, 'passkey'));
                 return;
