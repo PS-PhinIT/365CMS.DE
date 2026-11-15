@@ -199,6 +199,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_backup_created` | Action | `string $backupName`; nach jedem erfolgreichen vollen oder Datenbank-Backup (seit 4.1.0) |
 | `cms_backup_offsite_uploaded` | Action | `string $backupName, int $bytes`; Offsite-Kopie erfolgreich (seit 4.1.0) |
 | `cms_backup_offsite_failed` | Action | `string $backupName, string $error`; Offsite-Kopie fehlgeschlagen, Fehler ohne Zugangsdaten (seit 4.1.0) |
+| `cms_content_status_changed` | Action | `string $type, int $id, string $from, string $to, int $userId`; jeder Statuswechsel von Beiträgen/Seiten beim Speichern, in der Freigabe und in Sammelaktionen (seit 4.1.0) |
+| `cms_webhook_event` | Filter | `array<string,string> $events`; weitere Webhook-Ereignisse `bereich.aktion => Bezeichnung` (seit 4.1.0) |
+| `cms_webhook_endpoint_disabled` | Action | `int $endpointId, string $reason`; Empfänger automatisch deaktiviert (410 oder 20 Fehlschläge, seit 4.1.0) |
 | `cms_cron_feeds` / `cms_cron_<name>` | Action | – (über `cron.php --task=…`) |
 
 ### Beispiele

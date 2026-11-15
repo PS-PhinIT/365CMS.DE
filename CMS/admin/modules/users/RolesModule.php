@@ -43,6 +43,7 @@ class RolesModule
         'system'   => ['manage_search_index', 'manage_feeds', 'manage_admin_menu'],
         'security' => ['security.sso'],
         'backups'  => ['backups.offsite'],
+        'webhooks' => ['webhooks.manage'],
     ];
 
     public function __construct()
