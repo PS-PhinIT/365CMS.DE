@@ -708,7 +708,7 @@ final class EditorialCalendarService
 
             return $this->db->get_row(
                 "SELECT p.id, p.title, p.title_en, p.status, p.author_id, p.published_at, p.planned_at,
-                        p.featured_image, p.meta_description, p.category_id, {$relationSelect} AS rel_category_id,
+                        p.featured_image, p.meta_description, p.category_id, p.content, p.content_en, {$relationSelect} AS rel_category_id,
                         COALESCE(NULLIF(u.display_name, ''), u.username) AS author_name, c.name AS category_name
                  FROM {$this->prefix}posts p
                  LEFT JOIN {$this->prefix}users u ON u.id = p.author_id
@@ -753,6 +753,7 @@ final class EditorialCalendarService
             'featured_image' => (string) ($row->featured_image ?? ''),
             'meta_description' => (string) ($row->meta_description ?? ''),
             'category_id' => $categoryId,
+            'content' => [(string) ($row->content ?? ''), (string) ($row->content_en ?? '')], // FUN-410-42
         ]);
         if ($result['passed']) {
             return null;

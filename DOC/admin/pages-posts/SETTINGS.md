@@ -17,7 +17,7 @@ The sidebar entry *Pages & Posts → Settings* opens the `content` tab of the ge
 | Standardstatus Seiten | `setting_page_default_status` | `draft` (Standard), `published`, `private` |
 | Standardstatus Beiträge | `setting_post_default_status` | `draft` (Standard), `published` |
 | Veröffentlichung braucht eine zweite Person | `setting_content_review_second_person` | `0` (Standard) / `1`: eigene oder selbst eingereichte Beiträge und Seiten nur einreichen, freigeben muss ein anderes Konto ([REVIEW.md](REVIEW.md)) |
-| Editorbreite Seiten / Beiträge | `setting_page_editor_width`, `setting_post_editor_width` | 320–1600 px, Schrittweite 10 |
+| Editorbreite Seiten / Beiträge | `setting_page_editor_width`, `setting_post_editor_width` | 320–1600 px, Schrittweite 10. Die Breite für Seiten wirkt seit 4.1.0 (vorher ohne Ausgabe) |
 | Beitrags-Permalinks | `setting_post_permalink_structure`, `setting_post_permalink_custom` | Presets `blog` (`/blog/%postname%`), `slug`, `year`, `dated`, `custom` |
 | Kategorie-Archiv DE / EN | `routing.category_base_de`, `routing.category_base_en` | `kategorie` / `category` |
 | Tag-Archiv DE / EN | `routing.tag_base_de`, `routing.tag_base_en` | `tag` / `tag` |

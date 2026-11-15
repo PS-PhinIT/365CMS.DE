@@ -17,7 +17,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 | #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) | Sicherheit, Kryptografie & Zugriffskontrolle | abgeschlossen: 23 Befunde behoben, 2 bewusst akzeptiert, 1 verworfen, 1 an PR #3 übergeben |
 | #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | abgeschlossen: 3 Befunde behoben, 1 dokumentiert, 1 verworfen (DB-410-01) |
 | #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) | Features & Workflows seit 3.5.0 (Funktionsprüfung) | abgeschlossen: 24 Befunde behoben, 12 offen (Funktionslücken, Entscheidung in PR #6), 2 akzeptiert, 1 verworfen |
-| #4 | Regressionen, Altlasten, PHP 8.4.1+/8.5 | ausstehend |
+| #4 ([#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) | Regressionen, Altlasten, PHP 8.4.1+/8.5 | abgeschlossen: CI-Wächter für 8.4/8.5, 24 Befunde behoben (2 SEC, 22 FUN inkl. FUN-410-36 aus PR #3), 0 verworfen |
 | #5 | Performance, Caching, Core Web Vitals | ausstehend |
 | #6 | Tests, Dokumentation, Release-Fertigstellung | ausstehend |
 
@@ -275,42 +275,42 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 
 | ID | Schwere | Bereich | Datei:Zeile | Kurzbeschreibung | Status |
 |----|---------|---------|-------------|------------------|--------|
-| FUN-410-01 | MEDIUM | Updates / Doku-Sync | `CMS/core/Services/UpdateService.php:112`, `CMS/admin/modules/system/DocumentationModule.php:104` | Update-Rückfall (GitHub-API), Doku-Sync (codeload-Zip) und Changelog-URL zeigten auf `PS-easyIT/365CMS.DE`; das Projekt liegt unter `PS-PhinIT`. `Http\Client` folgt keinen Weiterleitungen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-02 | MEDIUM | Vier-Augen-Prinzip | `CMS/admin/modules/settings/SettingsModule.php:485` | Mit weniger als zwei Freigabeberechtigten (z. B. ein einziger Admin) kann nichts Neues mehr veröffentlicht werden; kein Hinweis beim Einschalten | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), Warnung beim Speichern) |
-| FUN-410-03 | MEDIUM | Freigabe | `CMS/admin/modules/posts/PostsModule.php:1513` | „Freigeben“ veröffentlichte ohne Veröffentlichungs-Checkliste (Beitragsbild, Meta-Beschreibung, Kategorie) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-04 | LOW | Freigabe / Sammelaktion | `CMS/core/Services/Content/ContentWorkflow.php:300` | Sammelaktion „Entwurf“ setzt eingereichte Inhalte ohne Begründung zurück und erschien als begründete Rückgabe | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), Vermerk im Verlauf) |
-| FUN-410-05 | MEDIUM | Block-Vorlagen | `CMS/core/Services/ReusableBlocks/ReusableBlockService.php:483` | Verschachtelungsgrenze (3) nur beim Rendern: tiefere Ebenen fehlten im Frontend still | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-06 | MEDIUM | Block-Vorlagen | `CMS/core/Services/ReusableBlocks/ReusableBlockService.php:564` | Löschen einer Vorlage aktualisierte nur direkte Verwendungen, nicht mittelbare (Beitrag → B → A) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-01 | MEDIUM | Updates / Doku-Sync | `CMS/core/Services/UpdateService.php:112`, `CMS/admin/modules/system/DocumentationModule.php:104` | Update-Rückfall (GitHub-API), Doku-Sync (codeload-Zip) und Changelog-URL zeigten auf `PS-easyIT/365CMS.DE`; das Projekt liegt unter `PS-PhinIT`. `Http\Client` folgt keinen Weiterleitungen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-02 | MEDIUM | Vier-Augen-Prinzip | `CMS/admin/modules/settings/SettingsModule.php:485` | Mit weniger als zwei Freigabeberechtigten (z. B. ein einziger Admin) kann nichts Neues mehr veröffentlicht werden; kein Hinweis beim Einschalten | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163), Warnung beim Speichern) |
+| FUN-410-03 | MEDIUM | Freigabe | `CMS/admin/modules/posts/PostsModule.php:1513` | „Freigeben“ veröffentlichte ohne Veröffentlichungs-Checkliste (Beitragsbild, Meta-Beschreibung, Kategorie) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-04 | LOW | Freigabe / Sammelaktion | `CMS/core/Services/Content/ContentWorkflow.php:300` | Sammelaktion „Entwurf“ setzt eingereichte Inhalte ohne Begründung zurück und erschien als begründete Rückgabe | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163), Vermerk im Verlauf) |
+| FUN-410-05 | MEDIUM | Block-Vorlagen | `CMS/core/Services/ReusableBlocks/ReusableBlockService.php:483` | Verschachtelungsgrenze (3) nur beim Rendern: tiefere Ebenen fehlten im Frontend still | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-06 | MEDIUM | Block-Vorlagen | `CMS/core/Services/ReusableBlocks/ReusableBlockService.php:564` | Löschen einer Vorlage aktualisierte nur direkte Verwendungen, nicht mittelbare (Beitrag → B → A) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-07 | MEDIUM | Block-Vorlagen | `CMS/core/Services/EditorJs/EditorJsAssetService.php:89`, `CMS/assets/js/editor-init.js:27` | Werkzeug „Vorlagen“ steht in jedem Editor.js-Editor (auch Wissensdatenbank, Hub-Sites); dort wird keine Verwendung erfasst (keine Löschwarnung, kein Neuindizieren) | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-08 | MEDIUM | Ablaufdaten | `CMS/core/Services/Content/ContentExpiryService.php:177` | Abgelaufen, zurückgestuft und mit gleichem Datum wieder veröffentlicht → lief nie wieder ab | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-09 | MEDIUM | Ablaufdaten / Wissensdatenbank | `CMS/core/Services/Content/ContentExpiryService.php:154`, `CMS/core/Services/Knowledgebase/Http/PublicController.php:245` | Einstellung 410 griff für Wissensdatenbank-Einträge nie | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-08 | MEDIUM | Ablaufdaten | `CMS/core/Services/Content/ContentExpiryService.php:177` | Abgelaufen, zurückgestuft und mit gleichem Datum wieder veröffentlicht → lief nie wieder ab | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-09 | MEDIUM | Ablaufdaten / Wissensdatenbank | `CMS/core/Services/Content/ContentExpiryService.php:154`, `CMS/core/Services/Knowledgebase/Http/PublicController.php:245` | Einstellung 410 griff für Wissensdatenbank-Einträge nie | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-10 | LOW | Freigabe | `CMS/core/Services/Content/ContentWorkflow.php:350` | „Zurückgezogen“ löst keinen eigenen Hook aus; Prüfende werden nicht benachrichtigt | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-11 | LOW | Freigabe | `CMS/core/Services/Content/ContentWorkflow.php:461` | `submit()` prüfte den Zustandswechsel nicht (Verlauf und Benachrichtigung trotz parallelem Statuswechsel) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-12 | LOW | Vorschau-Links | `CMS/core/Services/Content/ContentWorkflow.php:618` | Vorschau-Links auch für bereits öffentliche Inhalte (nur die Oberfläche verhinderte es) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-13 | LOW | Ablaufdaten | `CMS/core/Services/Content/ContentExpiryService.php:240` | Zurückstufen durch Ablauf meldete `cms_content_status_changed` nicht (Webhooks, Verlauf) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-14 | HIGH | Medien / AVIF | `CMS/core/Services/Trash/MediaTrashProvider.php:539`, `CMS/core/Services/Media/AvifDerivativeService.php:389` | Papierkorb ließ `.avif`-Fassungen öffentlich liegen; nach erneutem Upload gleichen Namens oder Ersetzen lieferte `<picture>` das alte Bild | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-15 | MEDIUM | Medien / AVIF | `CMS/core/Services/Media/AvifDerivativeService.php:201`, `:377` | Animierte GIFs bekamen eine statische AVIF-/WebP-Quelle, die Animation ging verloren | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-16 | MEDIUM | Medien / AVIF | `CMS/core/Services/Media/AvifDerivativeService.php:130` | AVIF-Unterstützung wurde erst nach dem Speichern der Medien-Einstellungen erkannt; bis dahin keine Fassungen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-11 | LOW | Freigabe | `CMS/core/Services/Content/ContentWorkflow.php:461` | `submit()` prüfte den Zustandswechsel nicht (Verlauf und Benachrichtigung trotz parallelem Statuswechsel) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-12 | LOW | Vorschau-Links | `CMS/core/Services/Content/ContentWorkflow.php:618` | Vorschau-Links auch für bereits öffentliche Inhalte (nur die Oberfläche verhinderte es) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-13 | LOW | Ablaufdaten | `CMS/core/Services/Content/ContentExpiryService.php:240` | Zurückstufen durch Ablauf meldete `cms_content_status_changed` nicht (Webhooks, Verlauf) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-14 | HIGH | Medien / AVIF | `CMS/core/Services/Trash/MediaTrashProvider.php:539`, `CMS/core/Services/Media/AvifDerivativeService.php:389` | Papierkorb ließ `.avif`-Fassungen öffentlich liegen; nach erneutem Upload gleichen Namens oder Ersetzen lieferte `<picture>` das alte Bild | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-15 | MEDIUM | Medien / AVIF | `CMS/core/Services/Media/AvifDerivativeService.php:201`, `:377` | Animierte GIFs bekamen eine statische AVIF-/WebP-Quelle, die Animation ging verloren | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-16 | MEDIUM | Medien / AVIF | `CMS/core/Services/Media/AvifDerivativeService.php:130` | AVIF-Unterstützung wurde erst nach dem Speichern der Medien-Einstellungen erkannt; bis dahin keine Fassungen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-17 | MEDIUM | Medien | `CMS/core/Services/Media/UploadHandler.php:150`, `:212` | Umbenennen/Verschieben lässt Fassungen und Verweise in Inhalten zurück (404, Verwendungsindex veraltet) | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-18 | MEDIUM | Medien / Batch | `CMS/core/Services/Media/AvifRegenerationService.php:160` | Ein Bild, das den Speicher sprengt, hält den AVIF-Neuaufbau dauerhaft an derselben Stelle fest | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-19 | MEDIUM | Medien / Verwendung | `CMS/core/Services/Media/MediaUsageIndex.php:112`, `CMS/core/Services/ThemeCustomizer.php:574` | Wissensdatenbank-Inhalte werden nicht indiziert; Theme-Reset und Theme-Wechsel indizieren nicht neu | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-20 | HIGH | Zahlungen / Abo | `CMS/core/Services/Payments/PaymentService.php:512` | Verlängerung reaktivierte ein gekündigtes bzw. durch Tarifwechsel ersetztes Abo (zwei aktive Abos) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-20 | HIGH | Zahlungen / Abo | `CMS/core/Services/Payments/PaymentService.php:512` | Verlängerung reaktivierte ein gekündigtes bzw. durch Tarifwechsel ersetztes Abo (zwei aktive Abos) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-21 | HIGH | Zahlungen / Abo | `CMS/core/SubscriptionManager.php:702` | Tarifwechsel kündigt das Abo beim Anbieter nicht (Doppelabbuchung möglich); keine Kündigung durch Mitglieder | [ ] Offen → Entscheidung PR #6 (Funktionslücke) |
-| FUN-410-22 | MEDIUM | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:384` | Fehlgeschlagenes Testereignis wurde bis zu fünfmal wiederholt und zählte zur Abschaltung | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-23 | LOW | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:499` | Offene Zustellungen eines abgeschalteten Empfängers gingen beim Wiedereinschalten alle auf einmal hinaus | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-24 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:218` | Upload ohne `set_time_limit`/`ignore_user_abort`: großer Upload brach am Zeitlimit ab | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), der Abbruch eines Multipart-Uploads nach einem Fatal Error bleibt offen) |
-| FUN-410-25 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/S3Client.php:82`, `:114` | Ein kurzer Fehler eines Teils brach den ganzen Multipart-Upload ab; keine Grenze von 10 000 Teilen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-26 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:282` | Backups, die bei unvollständiger Konfiguration entstanden, wurden nach der Korrektur nie hochgeladen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-22 | MEDIUM | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:384` | Fehlgeschlagenes Testereignis wurde bis zu fünfmal wiederholt und zählte zur Abschaltung | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-23 | LOW | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:499` | Offene Zustellungen eines abgeschalteten Empfängers gingen beim Wiedereinschalten alle auf einmal hinaus | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-24 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:218` | Upload ohne `set_time_limit`/`ignore_user_abort`: großer Upload brach am Zeitlimit ab | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163), der Abbruch eines Multipart-Uploads nach einem Fatal Error bleibt offen) |
+| FUN-410-25 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/S3Client.php:82`, `:114` | Ein kurzer Fehler eines Teils brach den ganzen Multipart-Upload ab; keine Grenze von 10 000 Teilen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-26 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:282` | Backups, die bei unvollständiger Konfiguration entstanden, wurden nach der Korrektur nie hochgeladen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-27 | HIGH | Zahlungen | `CMS/core/Services/Payments/StripeGateway.php:160`, `MollieGateway.php:122` | Erstattungen und Rückbuchungen erreichen nie den Status `refunded` (kein Abo-Ende, keine Stornorechnung) | [ ] Offen → Entscheidung PR #6 (Funktionslücke) |
 | FUN-410-28 | MEDIUM | Zahlungen / Mitglieder | `CMS/core/SubscriptionManager.php:184`, `:396` | Keine Kulanzzeit bis zum Eingang der Verlängerung; `current_period_end` wird nicht angezeigt; „Nächste Verlängerung“ auch für Rechnungs-Abos | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-29 | MEDIUM | Papierkorb / Medien | `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php:79` | Endgültig gelöschte Hub-Sites blieben im Verwendungsindex der Medien | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-30 | MEDIUM | Papierkorb / Recht | `CMS/core/Services/Trash/PageTrashProvider.php:31` | Seite der Barrierefreiheitserklärung war nicht gegen endgültiges Löschen geschützt | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-31 | LOW | Papierkorb | `CMS/core/Services/Trash/PostTrashProvider.php:85`, `PageTrashProvider.php:125` | Freigabeverlauf und Vorschau-Links blieben nach dem Löschen stehen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-32 | MEDIUM | Tabellen / Hub-Sites | `CMS/admin/modules/tables/TablesModule.php:25` | Seite „Tabellen“ lud, löschte und duplizierte über die ID auch Hub-Sites (endgültig, am Papierkorb vorbei); Liste filterte erst nach `LIMIT 200` | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)), [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-29 | MEDIUM | Papierkorb / Medien | `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php:79` | Endgültig gelöschte Hub-Sites blieben im Verwendungsindex der Medien | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-30 | MEDIUM | Papierkorb / Recht | `CMS/core/Services/Trash/PageTrashProvider.php:31` | Seite der Barrierefreiheitserklärung war nicht gegen endgültiges Löschen geschützt | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-31 | LOW | Papierkorb | `CMS/core/Services/Trash/PostTrashProvider.php:85`, `PageTrashProvider.php:125` | Freigabeverlauf und Vorschau-Links blieben nach dem Löschen stehen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
+| FUN-410-32 | MEDIUM | Tabellen / Hub-Sites | `CMS/admin/modules/tables/TablesModule.php:25` | Seite „Tabellen“ lud, löschte und duplizierte über die ID auch Hub-Sites (endgültig, am Papierkorb vorbei); Liste filterte erst nach `LIMIT 200` | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-33 | MEDIUM | Plugin cms-importer | `CMS/plugins/cms-importer/includes/trait-admin-cleanup.php:99` | „Zurücksetzen“ löscht Beiträge/Seiten ohne Lösch-Hooks (Verwendungsindizes veraltet) | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-34 | LOW | Wissensdatenbank | `CMS/core/Services/Knowledgebase/Repository/EntryRepository.php:1217` | CSV-Import aktualisiert Einträge im Papierkorb | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-35 | LOW | Feeds | `CMS/core/Services/Feed/AggregatorSettings.php:288` | Aufbewahrung unter 7 Tagen leert wöchentliche Digests | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-36 | LOW | Altlast | `CMS/core/PageManager.php:218` | `PageManager::deletePage()` ohne Papierkorb und Hooks, ohne Aufrufer | Akzeptiert (öffentliche API für Plugins; Entfernen in PR #4 prüfen) |
+| FUN-410-36 | LOW | Altlast | `CMS/core/PageManager.php:218` | `PageManager::deletePage()` ohne Papierkorb und Hooks, ohne Aufrufer | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM), verschiebt in den Papierkorb) |
 | FUN-410-37 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:427` | Mollie-Abo wird innerhalb der Transaktion angelegt; ein Rollback danach kann zu einem zweiten Abo führen | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-38 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:592` | `renewalFailed` meldet `order.failed` mit `order_id: 0`; ohne bezahlte Vorlage entsteht keine Folgebestellung/Rechnung | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-39 | – | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:316` | Doppelzustellung bei überlappendem Cron | Verworfen (wie SEC-410-06: `CronRunnerService` hält `flock`) |
@@ -379,3 +379,106 @@ Diese Punkte sind keine Regressionen, sondern unvollständige Funktionen. Sie br
 - `php TESTS/run-all.php`: 34 Suiten, 0 fehlgeschlagen.
 - Neu: `TESTS/release-4.1.0` (Regressionen der Release-Prüfung ohne Datenbank). Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`.
 - Laufzeit-Crawl nach den Fixes: 117 Admin- und Mitgliederseiten mit 200, keine PHP-Fehler. Die Vier-Augen-Warnung wurde über das echte Formular gespeichert.
+
+---
+
+## PR #4: Regressionen, Altlasten, PHP 8.4.1+/8.5
+
+PR #4 kam in zwei Schritten: [#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164) (Zwischenstand: CI-Wächter) und [#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM) (Befunde).
+
+### Vorgehen
+
+1. **CI-Wächter ([#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164)):**
+   - `security.yml`, Job *PHP Syntax Check* (Matrix 8.4 und 8.5): `php -l` läuft mit `error_reporting=-1`. Compile-Deprecations und Warnings aus eigenem Code lassen den Lint scheitern. Meldungen aus `CMS/vendor/` und `CMS/assets/` erscheinen als Warnung. Bisher meldete `php -l` nur Syntaxfehler.
+   - `TESTS/lib/TestRunner.php`: Deprecated, Warning und Notice aus eigenem Code zählen in jeder Suite als Fehler, aus Fremdbibliotheken als Hinweis. Mit `@` unterdrückte Meldungen bleiben unterdrückt.
+   - Ergebnis auf GitHub (PHP 8.4 und 8.5): Lint und alle Suiten grün. Eigener Code erzeugt unter beiden Versionen keine Deprecation.
+2. **Deterministischer Scan** (895 PHP-Dateien, Tokenizer):
+   - Aufrufe entfernter oder umbenannter Methoden und undefinierter Funktionen, Klassen und statischer Methoden.
+   - Implizit nullable Parameter (8.4), veraltete Funktionen und Konstanten (8.4/8.5), CSV-Aufrufe ohne `$escape`.
+   - Ergebnis: ohne Befund. Falsch-Positive (`new self`, Methoden namens `list()`, Interface- und Trait-Methoden) wurden aussortiert.
+3. **Altlasten im Laufzeitbetrieb** (MariaDB 10.11, PHP-Entwicklungsserver, angemeldet als Admin):
+   - Die 23 Admin-Weiterleitungen der integrierten Plugins antworten mit 301. Jedes Ziel antwortet mit 200.
+   - Nach den Fixes: alle betroffenen Admin-Seiten mit 200 und ohne PHP-Meldung. Dazu 15 Funktionsprüfungen über HTTP mit umgeschalteten Einstellungen: Beiträge pro Seite, Editor-Breite, Marketplace aus/an, Canonical, Schema-Autor, entfernte Felder.
+   - `deletePage()` und die DSGVO-Löschung der Feed-Digests wurden im App-Kontext gegen die Datenbank geprüft.
+4. **Statische Durchsicht** in vier Strängen, jeder Treffer adversarial verifiziert (22 bestätigt, 0 verworfen):
+   - Beitrags- und Seiten-Editor (DE/EN, Autosave, Checkliste, Revisionen).
+   - PHP 8.4/8.5 im eigenen Code und in den erreichbaren Bibliotheken.
+   - Formulare, SEO, Sitemaps, OPcache.
+   - Einstellungen ohne Wirkung, tote Verweise und Routen.
+
+### Befundübersicht
+
+| ID | Schwere | Bereich | Datei:Zeile | Kurzbeschreibung | Status |
+|----|---------|---------|-------------|------------------|--------|
+| SEC-410-27 | MEDIUM | Beiträge / Zugriff | `CMS/admin/modules/posts/PostsModule.php:1264`, `CMS/admin/posts.php:278` | „DE → EN kopieren“ prüfte den Besitz nicht. Ein Autor mit `edit_own_posts` (sogar ein Konto mit `posts.view`) konnte die EN-Fassung fremder Beiträge überschreiben | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| SEC-410-28 | LOW | Beiträge / Freigabe | `CMS/admin/modules/posts/PostsModule.php:1001` | Ohne Veröffentlichungsrecht ließ sich ein geplanter Beitrag über „Veröffentlichen“ oder ein neues Datum sofort live schalten oder umplanen (Restlücke neben SEC-410-14) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-40 | LOW | PHP 8.5 / Bibliotheken | `CMS/assets/melbahja-seo/src/Utils/HttpClient.php:81`, `CMS/assets/webauthn/WebAuthn.php:544` | `curl_close()` ohne Versionsprüfung (seit PHP 8.5 veraltet), erreichbar über die Google Indexing API und Passkey-Metadaten | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-41 | LOW | Seiten-Editor | `CMS/admin/views/pages/edit.php:77` | Einstellung „Editorbreite Seiten“ wurde berechnet, aber nie ausgegeben | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-42 | LOW | Checkliste | `CMS/admin/modules/posts/PostsModule.php:2911`, `CMS/core/Services/EditorialCalendarService.php` | Prüfpunkt „Downloads“ galt nur beim Speichern, nicht bei Sammel-Veröffentlichung, Wiederherstellen und Kalender (Checkliste ohne Inhalt) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-43 | LOW | Weiterleitungen | `CMS/admin/modules/posts/PostsModule.php:1170` | Autosave (seit 4.0) legte 301-Regeln für nie veröffentlichte Beiträge und halb getippte Slugs an | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-44 | LOW | Schlagwörter / Schema | `CMS/core/Services/PostRevisionService.php:979`, `CMS/core/SchemaManager.php:481`, `:525` | Revisionen schnitten Schlagwörter bei 500 Zeichen ab; Wiederherstellen legte ein kaputtes Schlagwort an und verlor den Rest. `posts.tags` und `post_revisions.tags` sind jetzt `TEXT` (Neuinstallation und Upgrade) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-45 | LOW | Seiten / Revisionen | `CMS/admin/modules/pages/PagesModule.php:1236` | Revisionsvergleich führte „Seitenvorlage“ und „Vorlagen-Zusatzfelder“ doppelt | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-46 | LOW | SEO / Schalter | `CMS/admin/modules/seo/SeoSuiteModule.php:34`, `:52`, `:386` | Schalter ohne Wirkung: „Self-referencing Canonical“ und „Person / Author“ wirken jetzt; FAQ/HowTo/Review/Event, Pinterest Rich Pins, „Breadcrumbs aktiv“ (Doppel) und „Bild-Alt-Texte verpflichtend“ sind entfernt | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-47 | MEDIUM | SEO / Technik | `CMS/core/Services/SEO/SeoHeadRenderer.php:262`, `PostsModule.php:4230`, `PagesModule.php:1607` | „Archive/Tags noindex“, „Pagination-SEO“ und „Weiterleitung bei Slug-Änderung“ wurden gespeichert, aber nie ausgewertet (widersprach `REDIRECTS.md`) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-48 | MEDIUM | Formulare | `CMS/core/Services/Forms/FormSpamGuard.php:83` | Mit Lazy Sessions wurde die Captcha-Lösung nie gespeichert. Die erste Absendung jedes neuen Besuchers scheiterte | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-49 | MEDIUM | Sitemap | `CMS/core/Services/SEO/SeoSitemapService.php:450` | `en-pages.xml` und `en-posts.xml` ignorierten `noindex` und fremde Canonicals | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-50 | LOW | Einstellungen | `CMS/core/Routing/ThemeRouter.php:737`, `:795`, `:907`, `:1117` | „Beiträge pro Seite“ wurde gespeichert, aber nie gelesen | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-51 | LOW | Bild-Sitemap | `CMS/core/Services/SEO/SeoSitemapService.php:576` | Beitragsbilder fehlten, wenn kein eigenes OG-Bild gesetzt war (leerer String statt NULL) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-52 | LOW | Sitemap | `CMS/admin/modules/seo/SeoSuiteModule.php:876` | Sitemap-Einstellungen und SEO-Audit-Änderungen verwarfen das gespeicherte Bundle nicht | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-53 | LOW | Sitemap | `CMS/core/Bootstrap.php:918` | Geplante Beiträge erschienen erst nach dem nächsten Tages-Cron in der gespeicherten Sitemap | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-54 | LOW | OPcache | `CMS/core/Services/OpcacheWarmupService.php:483` | Ausschlüsse wurden am absoluten Pfad geprüft. Eine Installation unter `/…/test/…` oder `/…/cache/…` wärmte nichts vor | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-55 | LOW | DSGVO / Feeds | `CMS/core/Services/FeatureHooks/FeedHooks.php` | Ein DSGVO-Löschantrag ließ E-Mail-Digests an die Adresse und das Feed-Abo bestehen (`deleteDigestsByEmail()` ohne Aufrufer) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-56 | LOW | Einstellungen | `CMS/admin/views/settings/general.php:444` | Altfeld „Google Analytics / Tag Manager ID“ wurde gespeichert, aber nie ausgegeben; die Analytics-Übersicht las es trotzdem | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-57 | LOW | Themes | `CMS/admin/views/themes/list.php:68` | Button „Design-Einstellungen“ führte zu den allgemeinen Einstellungen statt zum Theme-Editor | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-58 | LOW | Marketplace | `CMS/admin/plugin-marketplace.php`, `CMS/admin/theme-marketplace.php` | „Marketplace anzeigen“ aus blendete nur das Menü aus; Katalogabruf und Installation blieben per URL und über Buttons erreichbar | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-59 | LOW | Zahlungen / Module | `CMS/admin/payments.php:20`, `CMS/admin/invoices.php:22` | `/admin/payments` und `/admin/invoices` prüften das Kernmodul nicht (anders als Bestellungen und Pakete) | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+| FUN-410-60 | LOW | Importer | `CMS/admin/modules/settings/SettingsModule.php:1343` | Rückfallpfad zum Plugin `cms-importer` lag außerhalb von `CMS/`. Die Slug-Reparatur fand bei inaktivem Importer keinen Parser | [x] Behoben in PR #4 ([#PRNUM](https://github.com/PS-PhinIT/365CMS.DE/pull/PRNUM)) |
+
+FUN-410-36 aus PR #3 (`PageManager::deletePage()`) ist ebenfalls in PR #4 behoben, siehe Tabelle PR #3.
+
+### Details
+
+- **SEC-410-27:** `copyGermanToEnglish()` ruft `canAccessPost()` vor dem Schreiben auf. Die Aktion `copy_de_to_en` verlangt `edit_all_posts` oder `edit_own_posts`. Der Aufruf aus `admin/translations.php` liegt ohnehin hinter `edit_all_posts`.
+- **SEC-410-28:** Ist der gespeicherte Beitrag geplant und fehlt das Veröffentlichungsrecht (`ContentWorkflow::canPublishWith`), bleiben Termin und Status erhalten. Die Absicht „Veröffentlichen“ und „als neu behandeln“ werden verworfen.
+- **FUN-410-42:** Die Checkliste erhält `content` und `content_en`, auch im Redaktionskalender.
+- **FUN-410-43:** Slug-Weiterleitungen entstehen nur, wenn der gespeicherte Beitrag öffentlich war (`PostPublishChecklistService::isLive`), und nie beim Autosave.
+- **FUN-410-44:** `SchemaManager::ensureTagsTextColumns()` stellt bestehende Spalten per `MODIFY` auf `TEXT` um. Die Suite `schema-upgrade` (30/30) bestätigt Neuinstallation und alle Upgrade-Pfade. Auf `tags` liegt kein Index.
+- **FUN-410-46/47:**
+  - Der Canonical-Schalter entfernt nur den automatisch gebildeten Canonical der Anfrage. Redaktionell gesetzte Canonicals bleiben.
+  - „Archive/Tags noindex“ gilt für alle Archiv-Basen und Sprachen (`cms_get_archive_base`).
+  - „Pagination-SEO“ aus = Canonical ohne Seitenparameter.
+  - Die automatische Weiterleitung wird an den Aufrufstellen geprüft, nicht in `RedirectService`, weil die Import-Slug-Reparatur dieselbe Methode nutzt.
+- **FUN-410-48:** Die Lösung wird gespeichert, wenn die Sitzung aktiv oder verzögert ist (`Security::isSessionDeferred()`); der Shutdown-Handler startet sie dann.
+- **FUN-410-50:** Ohne gespeicherten Wert bleibt die bisherige Vorgabe (Blog 9, Archive 10). Ein gespeicherter Wert (1–100) gilt für Blog, Kategorie, Schlagwort und Autor.
+- **FUN-410-53:** Der stündliche Cron (Priorität 46) verwirft das Bundle, wenn seit dem letzten Lauf ein geplanter Beitrag live gegangen ist (`sitemap_scheduled_check_at`).
+- **FUN-410-58:** Beide Marketplace-Seiten leiten mit 303 auf die Plugin- bzw. Theme-Liste um; die Buttons sind ausgeblendet.
+- **FUN-410-36:** `PageManager::deletePage()` bleibt als Plugin-API erhalten und verschiebt über `PageTrashProvider` in den Papierkorb, mit Lösch-Hooks, Slug-Parken und Aufräumen der Verwendungsindizes. Endgültiges Löschen läuft über den Papierkorb.
+- **Gebündelte Bibliotheken:** Die lokalen Anpassungen (`melbahja/seo` `HttpClient.php`, `lbuchs/webauthn` `WebAuthn.php`) sind in `DOC/assets/README.md` und `DOC/assets/ASSET.md` vermerkt, damit ein Update sie nicht überschreibt.
+
+### Geprüft ohne Befund
+
+- **PHP 8.4/8.5 im eigenen Code:**
+  - Keine entfernten Sitzungs-INI-Werte und keine `session_set_save_handler`-, `trigger_error(E_USER_ERROR)`-, `lcg_value`-, `mysqli_*`- oder `mhash`-Aufrufe.
+  - Kein `$http_response_header`, keine Backticks, keine `(unset)`-Casts, kein `__sleep`/`__wakeup`.
+  - `ord()`/`chr()` nur auf Einzelbytes. Keine Kollision eigener Funktionen mit neuen Built-ins (`array_find`, `array_first`, `mb_trim` …).
+  - PDO-Treiberkonstanten über `Pdo\Mysql`/`Pdo\Sqlite`. Keine eigenen Implementierungen interner Interfaces (keine Probleme mit vorläufigen Rückgabetypen).
+  - Versionsprüfung: Mindestversion 8.4.1 ohne Obergrenze, die 8.5 sperren würde.
+- **Erreichbare Bibliotheken:** HTMLPurifier wandelt `E_USER_ERROR` in eine Exception. dompdf 3.1.6 schützt `curl_close`/`imagedestroy` per Versionsprüfung. Die TNTSearch-Konstante `PDO::MYSQL_ATTR_USE_BUFFERED_QUERY` liegt nur in Methoden ohne Aufrufer.
+- **Editor:**
+  - DE/EN-Rundlauf beim Speichern. Autosave ändert öffentliche, geplante und private Beiträge nicht, nur ihre Revision. Die Checkliste wird zweimal geprüft (vor und nach dem Filter).
+  - Wiederherstellen und Vergleich von Revisionen, Slug-Parken im Papierkorb.
+  - KI-Übersetzung: CSRF, Limits und Chunk-Sitzungen. Editor-API mit Besitzprüfung.
+- **Lazy Sessions und Ausgabe:** Reihenfolge der Shutdown-Handler (Sitzung vor IndexNow), keine Sitzungsschreibzugriffe auf Pfaden, die den Puffer verwerfen.
+- **TrustedProxyService, OPcache-Vorwärmen** (Klassen-Erkennung, Absturzschutz), **Schriftenverwaltung, DE-Sitemaps, IndexNow.**
+- **Routen und Verweise:**
+  - Alle 136 Admin-Einstiegsdateien sind im Katalog oder dokumentierte Aliase/Endpunkte, alle Alias- und Legacy-Ziele existieren.
+  - Alle fest verdrahteten `/admin/…`-, `/member/…`- und `/api/v1/…`-Verweise in PHP und JS haben eine Datei oder Route. Weiterleitungen in `ThemeRouter` und Downloads stimmen.
+- **Verwaiste Einstellungen:** Benachrichtigungseinstellungen im Mitgliederbereich sind als „noch nicht angebunden“ gekennzeichnet. Die Medien-Performance-Schalter sind angebunden.
+- **Hinweis:** `CMS/core/Services/ContentLanguageCopyService.php` hat keinen Aufrufer (toter Code, Verhalten wie 3.5.0); Entfernen mit PR #6 prüfen.
+
+### Verifikation PR #4
+
+- `php -l` über alle geänderten PHP-Dateien ohne Fehler (mit `error_reporting=-1`).
+- `php TESTS/run-all.php` mit MariaDB: 35 Suiten, 0 fehlgeschlagen (`schema-upgrade` 30/30, `release-4.1.0` 165/165).
+- Erweitert: `TESTS/release-4.1.0` um fünf Blöcke für alle Befunde aus PR #4.
+- Laufzeit: betroffene Admin-Seiten und Frontend mit 200 ohne PHP-Meldung; 15/15 HTTP-Funktionsprüfungen; `deletePage()` und DSGVO-Löschung im App-Kontext.

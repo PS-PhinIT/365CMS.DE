@@ -14,6 +14,9 @@ final class SeoHeadRenderer
     /** @var array<string,mixed> */
     private array $requestMeta = [];
 
+    /** Automatisch gebildeter (selbstreferenzierender) Canonical der aktuellen Anfrage. */
+    private string $selfCanonicalUrl = '';
+
     public function __construct(
         private readonly SeoMetaRepository $repository,
         private readonly SeoSettingsStore $settings,
@@ -131,6 +134,7 @@ final class SeoHeadRenderer
             $uri = substr($uri, strlen($sitePath)) ?: '/';
         }
         $canonicalUrl = SITE_URL . ($uri === '/' ? '/' : $uri) . $this->buildPaginationQuery();
+        $this->selfCanonicalUrl = $canonicalUrl;
 
         if ($this->requestMeta !== []) {
             return $this->applyRequestRobotsPolicy($this->buildRequestMetaPayload($socialDefaults, $canonicalUrl));
@@ -264,7 +268,39 @@ final class SeoHeadRenderer
             $payload['robots_index'] = false;
         }
 
+        // FUN-410-46: SEO → Meta „Self-referencing Canonical automatisch setzen“ aus = nur redaktionell gesetzte Canonicals.
+        if ($this->settings->getSetting('self_referencing_canonical', '1') === '0'
+            && $this->selfCanonicalUrl !== ''
+            && (string) ($payload['canonical_url'] ?? '') === $this->selfCanonicalUrl) {
+            $payload['canonical_url'] = '';
+        }
+
+        // FUN-410-47: SEO → Technik „Kategorie-/Schlagwort-Archive auf noindex“ (bisher gespeichert, aber ohne Wirkung).
+        foreach (['category' => 'technical_noindex_archives', 'tag' => 'technical_noindex_tags'] as $archiveType => $settingKey) {
+            if ($this->settings->getSetting($settingKey, '0') === '1' && $this->isArchivePath($path, $archiveType)) {
+                $payload['robots_index'] = false;
+            }
+        }
+
         return $payload;
+    }
+
+    /** Liegt $path (ohne Sprachpräfix) unter einer Archiv-Basis des Typs (z. B. /kategorie/…, /tag/…)? */
+    private function isArchivePath(string $path, string $type): bool
+    {
+        if (!function_exists('cms_get_archive_locales') || !function_exists('cms_get_archive_base')) {
+            return false;
+        }
+        foreach (\cms_get_archive_locales() as $locale) {
+            foreach (array_unique([(string) \cms_get_archive_base($type, $locale), (string) \cms_get_default_archive_base($type, $locale)]) as $base) {
+                $base = '/' . trim($base, '/');
+                if ($base !== '/' && ($path === $base || str_starts_with($path, $base . '/'))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -272,6 +308,10 @@ final class SeoHeadRenderer
      */
     private function buildPaginationQuery(): string
     {
+        // FUN-410-47: Schalter „Pagination-SEO aktiv“ (SEO → Technik); aus = Canonical ohne Seitenparameter.
+        if ($this->settings->getSetting('technical_pagination_rel', '1') === '0') {
+            return '';
+        }
         foreach (['p', 'page'] as $param) {
             $value = $_GET[$param] ?? null;
             if (is_string($value) && ctype_digit($value) && (int) $value > 1) {

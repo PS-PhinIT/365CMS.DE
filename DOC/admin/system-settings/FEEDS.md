@@ -48,7 +48,8 @@ den eingestellten Fristen entfernt.
 **E-Mails:** Digests und Mitglieder-Abos werden stündlich geprüft und über die Mail-Queue versendet. Mitglieder
 verwalten ihr Abo im Mitgliederbereich unter *Feed-Abo* (`/member/plugin/feeds`): Quellen öffentlicher Bereiche,
 täglich um 9 und/oder 15 Uhr oder wöchentlich an einem Wochentag, Sprache der E-Mails. Empfänger ist die Adresse
-des Kontos. Abos gelöschter Konten werden täglich entfernt.
+des Kontos. Abos gelöschter Konten werden täglich entfernt. Ein DSGVO-Löschantrag (`dsgvo_delete_data`) entfernt
+seit 4.1.0 sofort das Abo des Kontos und alle E-Mail-Digests an seine Adresse (bisher liefen Digests weiter).
 
 **Datenübernahme aus cms-feed:** Beim Update wird das Plugin deaktiviert; Bereiche, Kanäle, Artikel, Digests,
 Mitglieder-Abos (auch aus der älteren Tabelle `feed_subscriptions`) und Einstellungen werden automatisch und

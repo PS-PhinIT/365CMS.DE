@@ -37,7 +37,7 @@ Analysen (`/admin/analytics`), Weiterleitungen und 404-Monitor: siehe [ANALYTICS
 | Startseiten-Titel / -Beschreibung | `homepage_title`, `homepage_description` |
 | Standard-Meta-Beschreibung | Fallback für Inhalte ohne eigene Beschreibung |
 | Standard-Robots | `default_robots_index`, `default_robots_follow` |
-| Selbstreferenzierender Canonical | `self_referencing_canonical` |
+| Selbstreferenzierender Canonical | `self_referencing_canonical` (Standard an); aus = nur redaktionell gesetzte Canonicals (Editor-Feld `canonical_url`). Wirkt seit 4.1.0 |
 | Lesbarkeitsanalyse | Mindestwörter (`analysis_min_words`), max. Wörter je Satz/Absatz |
 
 **Template-Variablen** (Yoast `%%var%%` und Rank Math `%var%`): `title`, `sitename`, `sep`, `page`, `excerpt`, `category`, `currentyear` u. a. Unbekannte Variablen werden samt verwaister Trenner entfernt. Gilt für Meta-Titel, Meta-Beschreibung sowie OG-/Twitter-Titel und -Beschreibung, wichtig nach WordPress-Importen.
@@ -61,7 +61,7 @@ Die Karte *SEO-Metadaten der Beiträge per CSV* (bzw. der Button *Beitrags-Metad
 
 ### Social (`/admin/seo-social`)
 
-Standard-OG-Typ (`default_og_type`), Standard-Twitter-Card (`default_twitter_card`), Standardbild (`default_image`), Facebook-Seite, Twitter-/X-Profil, Pinterest Rich Pins.
+Standard-OG-Typ (`default_og_type`), Standard-Twitter-Card (`default_twitter_card`), Standardbild (`default_image`), Facebook-Seite, Twitter-/X-Profil. Der Schalter „Pinterest Rich Pins“ hatte keine Wirkung und ist seit 4.1.0 entfernt (Pinterest liest die OG-Tags).
 
 ### Strukturierte Daten (`/admin/seo-schema`)
 
@@ -71,7 +71,9 @@ Standard-OG-Typ (`default_og_type`), Standard-Twitter-Card (`default_twitter_car
 - **BreadcrumbList:** wenn `breadcrumb_enabled` aktiv ist,
 - **Inhaltstyp je Seite/Beitrag:** wählbar im Editor: Beiträge `Article` (Standard), `BlogPosting`, `NewsArticle`; Seiten `WebPage` (Standard), `Article`, `Organization`. Gespeicherte Altwerte (`FAQPage`, `HowTo`, `Person`, `Event` …) fallen seit 3.4.04 auf den Standard des Inhaltstyps zurück (`SeoSchemaRenderer::effectiveTypeFor()`).
 
-Die Schalter für FAQ, HowTo, Person, Event und Review (`faq_enabled`, `howto_enabled`, `person_enabled`, `event_enabled`, `review_enabled`) werden gespeichert, erzeugen aber ohne passende Inhaltsstruktur kein Markup. FAQ- und HowTo-Rich-Results werden bewusst nicht angeboten.
+- **Person / Author** (`person_enabled`, Standard an): Autorenangabe (`author` vom Typ `Person`) in Beiträgen; aus = ohne Autorenangabe.
+
+FAQ-, HowTo-, Review- und Event-Markup wird bewusst nicht angeboten. Die gleichnamigen Schalter wurden gespeichert, hatten aber keine Wirkung; sie sind seit 4.1.0 entfernt. Die Übersicht „Unterstützte Typen“ nennt nur noch die ausgegebenen Typen.
 
 ### Sitemap (`/admin/seo-sitemap`)
 
@@ -112,7 +114,13 @@ Seit 3.5.6 sind alle suchmaschinenbezogenen Einstellungen hier gebündelt (vorhe
 
 ### Technisches SEO (`/admin/seo-technical`)
 
-`noindex` für Archive und Tag-Seiten, `rel="prev/next"` für Paginierung, Breadcrumbs, Hreflang (DE/EN), Pflicht-Alt-Texte für Bilder, automatische Weiterleitung bei Slug-Änderung (`auto_redirect_slug`), Broken-Link-Scan (`SeoBrokenLinkService`) mit Ignorierliste. IndexNow und Webmaster-Verifizierung: siehe *Suchmaschinen*.
+- **Archive noindex** (`noindex_archives`) und **Tags noindex** (`noindex_tags`): Kategorie- bzw. Schlagwort-Archive (alle Archiv-Basen und Sprachen) erhalten `noindex`.
+- **Pagination-SEO** (`pagination_rel`, Standard an): Folgeseiten (`?p=2`, `?page=2`) erhalten einen eigenen Canonical mit Seitenparameter; aus = Canonical der ersten Seite. `rel="prev/next"` wird nicht ausgegeben (von Google nicht mehr ausgewertet).
+- **Hreflang** (`hreflang_enabled`): DE/EN-Gruppen.
+- **Automatische Weiterleitung bei Slug-Änderung** (`auto_redirect_slug`, Standard an): 301-Regel vom alten auf den neuen Pfad, für Beiträge nur, wenn der Beitrag öffentlich war, und nie beim Autosave.
+- **Broken-Link-Scan** (`SeoBrokenLinkService`) mit Ignorierliste.
+
+Alle Schalter wirken seit 4.1.0; bis dahin wurden „Archive/Tags noindex“, „Pagination-SEO“ und „Weiterleitung bei Slug-Änderung“ gespeichert, aber nicht ausgewertet. Die Schalter „Breadcrumbs aktiv“ (doppelt zu *Strukturierte Daten → BreadcrumbList*) und „Bild-Alt-Texte verpflichtend“ (keine Prüfung vorhanden) sind entfernt. IndexNow und Webmaster-Verifizierung: siehe *Suchmaschinen*.
 
 ### SEO-Felder im Editor
 

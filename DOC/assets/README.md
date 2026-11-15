@@ -24,12 +24,12 @@
 | Auth | `ldaprecord` | `4.0.8` | LDAP / AD | Auth |
 | Auth | `twofactorauth` | `3.0.3` | TOTP | Auth |
 | Auth | `bacon-qr-code` + `dasprid-enum` | `3.1.1` / `1.0.7` | lokale TOTP-QR-Codes als SVG (kein externer QR-Dienst, kein GD) | Auth / Member |
-| Auth | `webauthn` | `2.2.0` | Passkeys | Auth |
+| Auth | `webauthn` | `2.2.0` (1 Datei lokal angepasst) | Passkeys | Auth |
 | Mail | `mailer` | `8.1.7` | Mail-Versand | System |
 | Mail | `mime` | `8.1.10` | MIME-Objekte / Anhänge | System |
 | Mail | `egulias-email-validator` + `doctrine-lexer` | `4.0.4` / `3.0.3` | RFC-Adressvalidierung (Pflicht für `Mime\Address` / SMTP) | System |
 | Search | `tntsearch` | `5.3.0` | Volltextsuche | Suche |
-| SEO | `melbahja-seo` | `3.0.3` (4 Dateien lokal angepasst) | SEO-Helfer | SEO |
+| SEO | `melbahja-seo` | `3.0.3` (5 Dateien lokal angepasst) | SEO-Helfer | SEO |
 | Security | `htmlpurifier` | `4.19.0` | XSS-Schutz | System |
 | Security | `dompurify` + `js/cms-csp-runtime.js` | `3.4.17` | Trusted-Types-`default`-Policy, Style-Nonce für dynamische `<style>` | Admin / Member / Frontend |
 | i18n | `translation` | `8.1.5` | Übersetzungen | System |
@@ -61,7 +61,7 @@ Hinweise zum Abgleich:
 - Die Symfony-Contracts werden aus dem Sammel-Repo `symfony/contracts` übernommen (Unterordner `Deprecation`, `EventDispatcher`, `HttpClient`, `Service`, `Translation`).
 - `psr/simple-cache` wird nur von `ldaprecord` benötigt und fehlte bisher in den Listen.
 - `symfony/polyfill-ctype` und `symfony/property-access` haben keinen eigenen Split-Tag für jeden Monorepo-Stand: maßgeblich ist der letzte Tag, in dem sich die Komponente geändert hat (`1.37.0` bzw. `8.1.4`), auch wenn die Dateien aus `polyfill-1.43.0.zip` bzw. `symfony-8.1.8.zip` stammen.
-- `melbahja/seo` ist Stand `3.0.3` mit vier lokal angepassten Dateien (`src/Utils/Utils.php`, `src/Sitemap/LinksBuilder.php`, `src/Sitemap/IndexBuilder.php`, `src/Interfaces/SitemapBuilderInterface.php`); `poliander/cron` 3.3.1 ist ebenfalls lokal angepasst (`CronExpression.php`).
+- `melbahja/seo` ist Stand `3.0.3` mit fünf lokal angepassten Dateien (`src/Utils/Utils.php`, `src/Utils/HttpClient.php` – ohne `curl_close()`, seit PHP 8.5 veraltet –, `src/Sitemap/LinksBuilder.php`, `src/Sitemap/IndexBuilder.php`, `src/Interfaces/SitemapBuilderInterface.php`); `lbuchs/webauthn` 2.2.0 ist in `WebAuthn.php` lokal angepasst (`_checkOrigin()` nur exakte RP-ID oder Subdomain, ohne `curl_close()`; Release-Prüfung 4.1.0, SEC-410-17/FUN-410-40); `poliander/cron` 3.3.1 ist ebenfalls lokal angepasst (`CronExpression.php`).
 - `@tabler/core` 1.6.1 enthält in `tabler.min.js` Bootstrap `5.3.8` und `@popperjs/core` `2.11.8`; beide werden in `.github/deps/package.json` mitgeführt.
 
 ### PHP- und JS-Bundles unter `CMS/assets/`
@@ -78,7 +78,7 @@ Hinweise zum Abgleich:
 | Auth | `robthree/twofactorauth` | `CMS/assets/twofactorauth/` | 3.0.3 | 3.0.3 | MIT | [robthree.github.io/TwoFactorAuth](https://robthree.github.io/TwoFactorAuth/) | [RobThree/TwoFactorAuth](https://github.com/RobThree/TwoFactorAuth) |
 | Auth | `bacon/bacon-qr-code` | `CMS/assets/bacon-qr-code/` | 3.1.1 | 3.1.1 | BSD-2-Clause | [packagist.org/packages/bacon/bacon-qr-code](https://packagist.org/packages/bacon/bacon-qr-code) | [Bacon/BaconQrCode](https://github.com/Bacon/BaconQrCode) |
 | Auth | `dasprid/enum` | `CMS/assets/dasprid-enum/` | 1.0.7 | 1.0.7 | BSD-2-Clause | [packagist.org/packages/dasprid/enum](https://packagist.org/packages/dasprid/enum) | [DASPRiD/Enum](https://github.com/DASPRiD/Enum) |
-| Auth | `lbuchs/webauthn` | `CMS/assets/webauthn/` | 2.2.0 | 2.2.0 | MIT | [packagist.org/packages/lbuchs/webauthn](https://packagist.org/packages/lbuchs/webauthn) | [lbuchs/WebAuthn](https://github.com/lbuchs/WebAuthn) |
+| Auth | `lbuchs/webauthn` | `CMS/assets/webauthn/` | 2.2.0 (lokal angepasst) | 2.2.0 | MIT | [packagist.org/packages/lbuchs/webauthn](https://packagist.org/packages/lbuchs/webauthn) | [lbuchs/WebAuthn](https://github.com/lbuchs/WebAuthn) |
 | Mail | `symfony/mailer` | `CMS/assets/mailer/` | 8.1.7 | 8.1.10 | MIT | [symfony.com/components/Mailer](https://symfony.com/components/Mailer) | [symfony/mailer](https://github.com/symfony/mailer) |
 | Mail | `symfony/mime` | `CMS/assets/mime/` | 8.1.10 | 8.1.10 | MIT | [symfony.com/components/Mime](https://symfony.com/components/Mime) | [symfony/mime](https://github.com/symfony/mime) |
 | Mail | `egulias/email-validator` | `CMS/assets/egulias-email-validator/` | 4.0.4 | 4.0.4 | MIT | [packagist.org/packages/egulias/email-validator](https://packagist.org/packages/egulias/email-validator) | [egulias/EmailValidator](https://github.com/egulias/EmailValidator) |

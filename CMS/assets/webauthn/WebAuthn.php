@@ -541,7 +541,7 @@ class WebAuthn {
             \curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             \curl_setopt($ch, CURLOPT_USERAGENT, 'github.com/lbuchs/WebAuthn - A simple PHP WebAuthn server library');
             $raw = \curl_exec($ch);
-            \curl_close($ch);
+            unset($ch); // 365CMS (FUN-410-40): curl_close() ist seit PHP 8.5 veraltet.
         } else {
             $raw = \file_get_contents($url);
         }

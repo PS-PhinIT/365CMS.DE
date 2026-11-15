@@ -281,6 +281,10 @@ function cms_admin_posts_can_run_action(string $action): bool
     if (in_array($action, ['save_category', 'delete_category'], true)) {
         return Auth::instance()->hasCapability(CMS_ADMIN_POSTS_WRITE_CAPABILITY) || Auth::instance()->hasCapability('manage_settings');
     }
+    // SEC-410-27: Schreibaktionen nicht mit reinem Leserecht (posts.view).
+    if ($action === 'copy_de_to_en') {
+        return Auth::instance()->hasCapability(CMS_ADMIN_POSTS_WRITE_CAPABILITY) || Auth::instance()->hasCapability('edit_own_posts');
+    }
 
     return $action !== ''
         && (

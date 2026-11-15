@@ -78,7 +78,9 @@ class HttpClient
 		$response = curl_exec($ch);
 		$this->lastStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-		curl_close($ch);
+		// 365CMS (FUN-410-40): curl_close() ist seit PHP 8.0 wirkungslos und seit 8.5 veraltet; das Handle wird
+		// beim Verlassen des Gültigkeitsbereichs freigegeben.
+		unset($ch);
 
 		return $response !== false ? $response : null;
 	}

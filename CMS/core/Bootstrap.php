@@ -913,6 +913,26 @@ class Bootstrap
         Hooks::addAction('cms_cron_hourly', static function (): void {
             Services\IndexingService::getInstance()->runScheduledIndexNowFlush();
         }, 45);
+        // FUN-410-53: Geplante Beiträge, die seit dem letzten Lauf live gingen, gehören in die Sitemap – ohne
+        // Speicher-Hook verwarf bisher nur der Tages-Cron das gespeicherte Bundle.
+        Hooks::addAction('cms_cron_hourly', static function (): void {
+            try {
+                $now = date('Y-m-d H:i:s');
+                $last = (string) get_option('sitemap_scheduled_check_at', '');
+                if ($last !== '') {
+                    $db = Database::instance();
+                    $live = $db->get_var(
+                        "SELECT 1 FROM {$db->getPrefix()}posts WHERE status = 'published' AND published_at > ? AND published_at <= ? LIMIT 1",
+                        [$last, $now]
+                    );
+                    if ($live !== null && $live !== false) {
+                        Services\SEOService::getInstance()->invalidateSavedSitemaps();
+                    }
+                }
+                update_option('sitemap_scheduled_check_at', $now);
+            } catch (\Throwable) {
+            }
+        }, 46);
         // Sitemaps nach Inhaltsänderungen verwerfen: die nächste Anfrage auf /sitemap.xml erzeugt
         // das Bundle neu, statt bis zum nächsten Tages-Cron veraltete URLs auszuliefern.
         foreach (['cms_after_post_save', 'cms_after_page_save', 'post_deleted', 'page_deleted'] as $sitemapInvalidationHook) {

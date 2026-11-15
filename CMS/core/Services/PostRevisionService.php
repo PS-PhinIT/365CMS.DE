@@ -976,7 +976,7 @@ final class PostRevisionService
                     $this->truncate((string) $snapshot['status'], 20),
                     (int) $snapshot['category_id'] > 0 ? (int) $snapshot['category_id'] : null,
                     $this->truncate((string) $snapshot['category_name'], 150),
-                    $this->truncate((string) $snapshot['tags'], 500),
+                    (string) $snapshot['tags'], // FUN-410-44: TEXT, nicht mehr abschneiden
                     $this->truncate((string) $snapshot['featured_image'], 500),
                     $this->truncate((string) $snapshot['meta_title'], 255),
                     (string) $snapshot['meta_description'],

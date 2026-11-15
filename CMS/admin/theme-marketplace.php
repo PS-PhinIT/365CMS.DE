@@ -148,6 +148,13 @@ function cms_admin_theme_marketplace_view_data(ThemeMarketplaceModule $module): 
     return $module->getData();
 }
 
+// Release-Prüfung 4.1.0 (FUN-410-58): „Marketplace anzeigen“ aus = Seite gesperrt (bisher nur aus dem Menü entfernt,
+// Katalogabruf und Installation blieben per URL erreichbar).
+if (!\CMS\Services\AdminMenu\AdminMenuService::getInstance()->isMarketplaceEnabled()) {
+    header('Location: /admin/themes', true, 303);
+    exit;
+}
+
 $sectionPageConfig = [
     'route_path' => CMS_ADMIN_THEME_MARKETPLACE_ROUTE_PATH,
     'view_file' => __DIR__ . '/views/themes/marketplace.php',

@@ -1004,6 +1004,15 @@ class PostsModule
         if ($submittedForReview) {
             $publishIntent = '';
         }
+        // SEC-410-28: Ein freigegebener, geplanter Beitrag behält seinen Termin, wenn das Konto nicht veröffentlichen
+        // darf – sonst ließe er sich im Editor (wie bis SEC-410-14 im Kalender) sofort veröffentlichen oder umplanen.
+        if ($existing !== null && $status === ContentStatus::PUBLISHED
+            && PostPublishChecklistService::getInstance()->isScheduled(['status' => (string) $existing->status, 'published_at' => $existing->published_at])
+            && !ContentWorkflow::canPublishWith(ContentWorkflow::TYPE_POST, $userId, $workflowAuthorId, static fn (string $cap): bool => Auth::instance()->hasCapability($cap), false)) {
+            $publishedAtInput['value'] = (string) $existing->published_at;
+            $publishIntent = '';
+            $treatUpdateAsNew = false;
+        }
         $workflowComment = ContentWorkflow::cleanComment(is_scalar($post['workflow_comment'] ?? null) ? (string) $post['workflow_comment'] : '');
         $treatAsNewPublishedAt = $id > 0 && $treatUpdateAsNew ? $contentUpdatedAtInput['value'] : null;
 
@@ -1157,18 +1166,22 @@ class PostsModule
                 SEOService::getInstance()->saveContentMeta('post', $id, $post);
                 $this->syncPostTags($id, $rawTags);
                 $this->syncPostCategories($id, $assignedCategoryIds !== [] ? $assignedCategoryIds : ($savePayload['category_id'] !== null ? [(int) $savePayload['category_id']] : []));
-                $this->createSlugRedirectIfNeeded(
-                    (string)($existing->slug ?? ''),
-                    $slug,
-                    (string)($existing->slug_en ?? ''),
-                    (string)($savePayload['slug_en'] ?? ''),
-                    [
-                        'published_at' => (string)($existing->published_at ?? ''),
-                        'created_at' => (string)($existing->created_at ?? ''),
-                            'target_published_at' => $resolvedPublishedAt,
-                            'target_created_at' => (string)($existing->created_at ?? ''),
-                    ]
-                );
+                // FUN-410-43: nur für Beiträge, die öffentlich waren, und nie beim Autosave (halb getippte Slugs).
+                $wasLive = $existing !== null && PostPublishChecklistService::getInstance()->isLive(['status' => (string) $existing->status, 'published_at' => $existing->published_at]);
+                if (!$isAutosave && $wasLive) {
+                    $this->createSlugRedirectIfNeeded(
+                        (string)($existing->slug ?? ''),
+                        $slug,
+                        (string)($existing->slug_en ?? ''),
+                        (string)($savePayload['slug_en'] ?? ''),
+                        [
+                            'published_at' => (string)($existing->published_at ?? ''),
+                            'created_at' => (string)($existing->created_at ?? ''),
+                                'target_published_at' => $resolvedPublishedAt,
+                                'target_created_at' => (string)($existing->created_at ?? ''),
+                        ]
+                    );
+                }
                 Hooks::doAction('cms_after_post_save', $id, $savePayload, $post);
                 $revision = $this->recordPostRevision($id, $revisionType, $userId);
                 $workflowAction = $workflow->recordTransition(ContentWorkflow::TYPE_POST, $id, $currentStatus, (string) $savePayload['status'], $userId, $workflowComment);
@@ -1265,6 +1278,10 @@ class PostsModule
     {
         if ($id <= 0) {
             return ['success' => false, 'error' => 'Ungültige Beitrags-ID.'];
+        }
+        // SEC-410-27: wie Speichern, Autosave und Wiederherstellen nur für eigene Beiträge (ohne edit_all_posts).
+        if (!$this->canAccessPost($id)) {
+            return ['success' => false, 'error' => 'Sie dürfen nur Ihre eigenen Beiträge bearbeiten.'];
         }
 
         if ($this->isPostTrashed($id)) {
@@ -2620,6 +2637,8 @@ class PostsModule
                 'featured_image' => $restored['featured_image'],
                 'meta_description' => $restored['meta_description'],
                 'category_id' => $restored['category_id'],
+                // FUN-410-42: auch der Prüfpunkt „Downloads“ (nicht verfügbare Downloads im Inhalt).
+                'content' => [(string) ($restored['content'] ?? ''), (string) ($restored['content_en'] ?? '')],
             ]);
             if (!$checklistResult['passed']) {
                 return [
@@ -2919,7 +2938,7 @@ class PostsModule
             ? "(SELECT MIN(r.category_id) FROM {$this->prefix}post_category_rel r WHERE r.post_id = p.id)"
             : 'NULL';
         $rows = $this->db->get_results(
-            "SELECT p.id, p.title, p.title_en, p.status, p.featured_image, p.meta_description, p.category_id,
+            "SELECT p.id, p.title, p.title_en, p.status, p.featured_image, p.meta_description, p.category_id, p.content, p.content_en,
                     {$relationSelect} AS rel_category_id
              FROM {$this->prefix}posts p
              WHERE p.id IN ({$placeholders})",
@@ -2945,6 +2964,7 @@ class PostsModule
                 'featured_image' => (string) ($row->featured_image ?? ''),
                 'meta_description' => (string) ($row->meta_description ?? ''),
                 'category_id' => $categoryId,
+                'content' => [(string) ($row->content ?? ''), (string) ($row->content_en ?? '')], // FUN-410-42
             ]);
             if ($result['passed']) {
                 $publishIds[] = $postId;
@@ -4210,8 +4230,17 @@ class PostsModule
     /**
      * @param array<string, string> $postDates
      */
+    /** FUN-410-47: Schalter „Weiterleitung bei Slug-Änderung automatisch“ (SEO → Technik); Standard an. */
+    private static function autoSlugRedirectEnabled(): bool
+    {
+        return !function_exists('get_option') || (string) get_option('seo_technical_auto_redirect_slug', '1') !== '0';
+    }
+
     private function createSlugRedirectIfNeeded(string $oldSlug, string $newSlug, string $oldLocalizedSlug = '', string $newLocalizedSlug = '', array $postDates = []): void
     {
+        if (!self::autoSlugRedirectEnabled()) {
+            return;
+        }
         $oldSlug = trim($oldSlug);
         $newSlug = trim($newSlug);
         $oldLocalizedSlug = trim($oldLocalizedSlug);

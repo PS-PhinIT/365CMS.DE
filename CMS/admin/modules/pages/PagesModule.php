@@ -1230,11 +1230,9 @@ class PagesModule
         $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Status', $currentPage['status'] ?? '', $revision['status'] ?? '');
         $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Seitenvorlage', $currentPage['page_template'] ?? '', $revision['page_template'] ?? '');
         $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Vorlagen-Zusatzfelder', $currentPage['page_meta_json'] ?? '', $revision['page_meta_json'] ?? '');
-            $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Aktualisierungsdatum', $currentPage['content_updated_at'] ?? '', $revision['content_updated_at'] ?? '');
+        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Aktualisierungsdatum', $currentPage['content_updated_at'] ?? '', $revision['content_updated_at'] ?? '');
         $this->appendRevisionContentDiff($changedFields, $fieldDiffs, 'Inhalt (DE)', $currentPage['content'] ?? '', $revision['content'] ?? '');
         $this->appendRevisionContentDiff($changedFields, $fieldDiffs, 'Inhalt (EN)', $currentPage['content_en'] ?? '', $revision['content_en'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Seitenvorlage', $currentPage['page_template'] ?? '', $revision['page_template'] ?? '');
-        $this->appendRevisionTextDiff($changedFields, $fieldDiffs, 'Vorlagen-Zusatzfelder', $currentPage['page_meta_json'] ?? '', $revision['page_meta_json'] ?? '');
 
         return [
             'changed_fields' => array_values(array_unique($changedFields)),
@@ -1593,8 +1591,17 @@ class PagesModule
         return $flat;
     }
 
+    /** FUN-410-47: Schalter „Weiterleitung bei Slug-Änderung automatisch“ (SEO → Technik); Standard an. */
+    private static function autoSlugRedirectEnabled(): bool
+    {
+        return !function_exists('get_option') || (string) get_option('seo_technical_auto_redirect_slug', '1') !== '0';
+    }
+
     private function createSlugRedirectIfNeeded(string $oldSlug, string $newSlug, string $oldLocalizedSlug = '', string $newLocalizedSlug = ''): void
     {
+        if (!self::autoSlugRedirectEnabled()) {
+            return;
+        }
         $oldSlug = trim($oldSlug);
         $newSlug = trim($newSlug);
         $oldLocalizedSlug = trim($oldLocalizedSlug);

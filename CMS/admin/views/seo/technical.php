@@ -109,18 +109,6 @@ $brokenLinkNotes = is_array($brokenLinkReport['notes'] ?? null) ? $brokenLinkRep
                         </div>
                         <div class="col-12">
                             <label class="form-check">
-                                <input class="form-check-input" type="checkbox" name="breadcrumbs_enabled" value="1" <?= !empty($settings['seo_technical_breadcrumbs_enabled']) ? 'checked' : '' ?>>
-                                <span class="form-check-label">Breadcrumbs aktiv</span>
-                            </label>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-check">
-                                <input class="form-check-input" type="checkbox" name="image_alt_required" value="1" <?= !empty($settings['seo_technical_image_alt_required']) ? 'checked' : '' ?>>
-                                <span class="form-check-label">Bild-Alt-Texte verpflichtend</span>
-                            </label>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-check">
                                 <input class="form-check-input" type="checkbox" name="noindex_archives" value="1" <?= !empty($settings['seo_technical_noindex_archives']) ? 'checked' : '' ?>>
                                 <span class="form-check-label">Archive noindex</span>
                             </label>

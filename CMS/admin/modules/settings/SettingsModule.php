@@ -72,7 +72,7 @@ class SettingsModule
         'language', 'timezone', 'date_format', 'time_format',
         'posts_per_page', 'comments_enabled',
         'maintenance_mode', 'maintenance_message',
-        'google_analytics', 'robots_txt', 'marketplace_enabled',
+        'robots_txt', 'marketplace_enabled',
         'plugin_registry_url', 'theme_marketplace_url', 'core_update_url',
         'theme_registry_url', 'plugin_marketplace_base_url',
         'marketplace_public_url', 'marketplace_submit_url',
@@ -196,7 +196,6 @@ class SettingsModule
                 'comments_enabled'     => ($settings['comments_enabled'] ?? '1') === '1',
                 'maintenance_mode'     => ($settings['maintenance_mode'] ?? '0') === '1',
                 'maintenance_message'  => $settings['maintenance_message'] ?? 'Die Website wird gerade gewartet.',
-                'google_analytics'     => $settings['google_analytics'] ?? '',
                 'robots_txt'           => $settings['robots_txt'] ?? '',
                 'marketplace_enabled'  => ($settings['marketplace_enabled'] ?? '1') === '1',
                 'marketplace_public_url' => $marketplaceEndpoints['marketplace_public_url'],
@@ -363,7 +362,6 @@ class SettingsModule
                 'comments_enabled'     => !empty($post['comments_enabled']) ? '1' : '0',
                 'maintenance_mode'     => !empty($post['maintenance_mode']) ? '1' : '0',
                 'maintenance_message'  => trim(strip_tags($post['maintenance_message'] ?? '', '<p><strong><em><br>')),
-                'google_analytics'     => preg_match('/^(G-|UA-)[A-Za-z0-9-]+$/', $post['google_analytics'] ?? '') ? $post['google_analytics'] : '',
                 'robots_txt'           => strip_tags($post['robots_txt'] ?? ''),
                 'marketplace_enabled'  => !empty($post['marketplace_enabled']) ? '1' : '0',
                 'marketplace_public_url' => $marketplaceEndpoints['marketplace_public_url'],
@@ -1340,6 +1338,8 @@ PHP;
             $candidates[] = (string) CMS_IMPORTER_PLUGIN_DIR;
         }
 
+        // Release-Prüfung 4.1.0 (FUN-410-60): Plugins liegen unter CMS/plugins/ (ABSPATH), nicht neben CMS/.
+        $candidates[] = (defined('PLUGIN_PATH') ? rtrim((string) PLUGIN_PATH, '/\\') . '/' : ABSPATH . 'plugins/') . 'cms-importer/';
         $candidates[] = dirname(ABSPATH) . '/plugins/cms-importer/';
         $candidates[] = dirname(dirname(ABSPATH)) . '/365CMS.DE-PLUGINS/cms-importer/';
 

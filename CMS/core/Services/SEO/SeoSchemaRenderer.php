@@ -203,7 +203,8 @@ final class SeoSchemaRenderer
         ];
 
         $authorName = trim((string) ($payload['author_name'] ?? ''));
-        if ($authorName !== '') {
+        // FUN-410-46: SEO → Schema „Person / Author“ steuert die Autorenangabe.
+        if ($authorName !== '' && $this->settings->getSetting('schema_person_enabled', '1') !== '0') {
             $props['author'] = new Thing(type: 'Person', props: ['name' => $authorName]);
         }
 

@@ -109,6 +109,24 @@ Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends 
 | **4.1.0** | 🔴 fix | Papierkorb, Tabellen (FUN-410-29 … -32) | Endgültig gelöschte Hub-Sites verlassen den Verwendungsindex der Medien. Die Seite der Barrierefreiheitserklärung ist gegen endgültiges Löschen geschützt. Freigabeverlauf und Vorschau-Links werden mitgelöscht. Die Seite *Tabellen* kann keine Hub-Sites mehr laden, löschen oder umwandeln; ihre Liste filtert in SQL. |
 | **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/release-4.1.0`. Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`. |
 
+#### 🧰 Release-Prüfung 4.1.0: Regressionen, Altlasten, PHP 8.4/8.5 (PR #4, #164, #PRNUM)
+
+CI-Wächter für PHP 8.4/8.5, deterministischer Scan aller 895 PHP-Dateien ohne Befund, Laufzeitprüfung gegen MariaDB. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.0** | 🛡️ security | Beiträge / Zugriff (SEC-410-27, -28) | „DE → EN kopieren“ prüft den Besitz des Beitrags und verlangt Schreibrecht. Ohne Veröffentlichungsrecht bleiben Termin und Status eines geplanten Beitrags beim Speichern unverändert. |
+| **4.1.0** | ⬜ chore | CI / PHP 8.4 und 8.5 (#164) | Der Lint scheitert an Deprecations und Warnings aus eigenem Code (bisher nur Syntaxfehler). In allen Test-Suiten zählen PHP-Meldungen aus eigenem Code als Fehler. |
+| **4.1.0** | 🔴 fix | PHP 8.5 / Bibliotheken (FUN-410-40) | Kein `curl_close()` mehr in `melbahja/seo` und `lbuchs/webauthn` (seit PHP 8.5 veraltet); lokale Anpassung in `DOC/assets` vermerkt. |
+| **4.1.0** | 🔴 fix | Editor (FUN-410-41 … -45) | Die Editorbreite für Seiten wirkt. Der Prüfpunkt „Downloads“ gilt auch bei Sammel-Veröffentlichung, Wiederherstellen und im Kalender. Autosave legt keine Slug-Weiterleitungen mehr an, und nie öffentliche Beiträge erhalten keine. Schlagwörter in Beiträgen und Revisionen sind `TEXT` (bisher bei 500 Zeichen abgeschnitten). Der Revisionsvergleich von Seiten führt Vorlage und Zusatzfelder einmal. |
+| **4.1.0** | 🔴 fix | SEO-Schalter (FUN-410-46, -47) | „Archive/Tags noindex“, „Pagination-SEO“, „Weiterleitung bei Slug-Änderung“, „Self-referencing Canonical“ und „Person / Author“ wirken. Entfernt, weil ohne Funktion: FAQ/HowTo/Review/Event, Pinterest Rich Pins, „Breadcrumbs aktiv“ (doppelt) und „Bild-Alt-Texte verpflichtend“. |
+| **4.1.0** | 🔴 fix | Formulare (FUN-410-48) | Das Rechen-Captcha funktioniert mit verzögertem Sitzungsstart; bisher scheiterte die erste Absendung jedes neuen Besuchers. |
+| **4.1.0** | 🔴 fix | Sitemaps (FUN-410-49, -51 … -53) | Die EN-Sitemaps beachten `noindex` und fremde Canonicals. Die Bild-Sitemap nimmt das Beitragsbild, wenn kein OG-Bild gesetzt ist. Sitemap-Einstellungen und live gegangene geplante Beiträge verwerfen das gespeicherte Bundle. |
+| **4.1.0** | 🔴 fix | Einstellungen ohne Wirkung (FUN-410-50, -56) | „Beiträge pro Seite“ gilt für Blog, Kategorie-, Schlagwort- und Autorenarchiv. Das nie ausgegebene Feld „Google Analytics / Tag Manager ID“ ist entfernt; Tracking-IDs liegen unter *SEO › Analytics*. |
+| **4.1.0** | 🔴 fix | Admin / Module (FUN-410-57 … -60) | „Marketplace anzeigen“ aus sperrt auch die Marketplace-Seiten und blendet die Buttons aus. `/admin/payments` und `/admin/invoices` prüfen das Kernmodul. „Design-Einstellungen“ führt zum Theme-Editor. Die Import-Slug-Reparatur findet den Parser unter `CMS/plugins/`. |
+| **4.1.0** | 🔴 fix | DSGVO, OPcache, Plugin-API (FUN-410-36, -54, -55) | Ein DSGVO-Löschantrag entfernt Feed-Digests an die Adresse und das Feed-Abo. OPcache-Ausschlüsse gelten relativ zur Installation (bisher wärmte eine Installation unter `/…/test/…` nichts vor). `PageManager::deletePage()` verschiebt in den Papierkorb statt direkt zu löschen. |
+| **4.1.0** | ⬜ chore | Tests | `TESTS/release-4.1.0` um die Befunde aus PR #4 erweitert. |
+
 #### 🔴 Fehlerbehebungen
 
 | Version | Typ | Bereich | Beschreibung |

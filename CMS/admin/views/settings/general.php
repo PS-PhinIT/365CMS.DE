@@ -439,10 +439,7 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                         <div class="card mb-4">
                             <div class="card-header"><h3 class="card-title">Erweitert</h3></div>
                             <div class="card-body">
-                                <div class="mb-3">
-                                    <label for="fld-google_analytics" class="form-label">Google Analytics / Tag Manager ID</label>
-                                    <input id="fld-google_analytics" type="text" name="google_analytics" class="form-control" value="<?php echo htmlspecialchars($s['google_analytics']); ?>" placeholder="G-XXXXXXXXXX oder UA-XXXXXX-X">
-                                </div>
+                                <p class="text-secondary small mb-3">Google Analytics, Tag Manager und Pixel werden unter <a href="/admin/analytics">SEO › Analytics</a> gepflegt.</p>
                                 <div>
                                     <label for="fld-robots_txt" class="form-label">robots.txt</label>
                                     <textarea id="fld-robots_txt" name="robots_txt" class="form-control" rows="5" style="font-family: monospace; font-size: 13px;" placeholder="User-agent: *&#10;Allow: /"><?php echo htmlspecialchars($s['robots_txt']); ?></textarea>

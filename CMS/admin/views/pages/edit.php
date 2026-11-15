@@ -543,7 +543,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 ><?= htmlspecialchars($activePageContentPlainTextValue) ?></textarea>
                             </div>
                             <?php if (!empty($useEditorJs)): ?>
-                                <div class="editorjs-wrap mb-3" id="<?= htmlspecialchars($isEnglishEditorView ? 'editorjsEn_wrap' : 'editorjs_wrap') ?>" data-editor-state="loading">
+                                <div class="editorjs-wrap mb-3" id="<?= htmlspecialchars($isEnglishEditorView ? 'editorjsEn_wrap' : 'editorjs_wrap') ?>" data-editor-state="loading" style="max-width: <?= (int) $pageEditorWidth ?>px;">
                                     <div
                                         id="<?= htmlspecialchars($isEnglishEditorView ? 'editorjsEn' : 'editorjs') ?>"
                                         class="editorjs-holder editorjs-holder--page"
