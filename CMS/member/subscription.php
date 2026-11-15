@@ -92,7 +92,10 @@ include __DIR__ . '/partials/header.php';
 
     <div class="col-12 col-xl-8">
         <section class="card" aria-labelledby="member-subscription-orders-title">
-            <div class="card-header"><h2 class="card-title" id="member-subscription-orders-title"><?= $e($t('member.subscription.orders')) ?></h2></div>
+            <div class="card-header">
+                <h2 class="card-title" id="member-subscription-orders-title"><?= $e($t('member.subscription.orders')) ?></h2>
+                <div class="card-actions"><a href="/member/subscription/invoices" class="btn btn-sm btn-outline-primary"><?= $e($t('member.subscription.invoices_link')) ?></a></div>
+            </div>
             <div class="table-responsive">
                 <table class="table card-table table-vcenter">
                     <caption class="visually-hidden"><?= $e($t('member.subscription.orders')) ?></caption>

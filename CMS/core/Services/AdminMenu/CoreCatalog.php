@@ -231,6 +231,7 @@ final class CoreCatalog
             // ── Abos (Modul subscriptions) ──────────────────────────────────────────
             ['id' => 'subscriptions.packages', 'label' => 'Pakete', 'route' => '/admin/packages', 'icon' => 'package', 'caps' => self::SETTINGS, 'file' => 'admin/packages.php', 'page' => 'packages'],
             ['id' => 'subscriptions.orders', 'label' => 'Bestellungen', 'route' => '/admin/orders', 'icon' => 'receipt', 'caps' => self::SETTINGS, 'file' => 'admin/orders.php', 'page' => 'orders'],
+            ['id' => 'subscriptions.invoices', 'label' => 'Rechnungen', 'route' => '/admin/invoices', 'icon' => 'file-invoice', 'caps' => ['invoices.view'], 'file' => 'admin/invoices.php', 'page' => 'invoices'],
             ['id' => 'subscriptions.payments', 'label' => 'Zahlungen', 'route' => '/admin/payments', 'icon' => 'cash', 'caps' => ['payments.manage'], 'file' => 'admin/payments.php', 'page' => 'payments'],
             ['id' => 'subscriptions.settings', 'label' => 'Abo-Einstellungen', 'route' => '/admin/subscription-settings', 'icon' => 'settings-2', 'caps' => self::SETTINGS, 'file' => 'admin/subscription-settings.php', 'page' => 'subscription-settings'],
 

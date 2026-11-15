@@ -171,7 +171,7 @@ final class CoreModuleService
             'default_enabled' => true,
             'toggleable' => false,
             'dependencies' => ['subscriptions'],
-            'admin_pages' => ['orders', 'payments'],
+            'admin_pages' => ['orders', 'payments', 'invoices'],
             'admin_labels' => ['Bestellungen & Zuweisung'],
             'sidebar_group' => 'subscriptions',
             'legacy_setting' => null,

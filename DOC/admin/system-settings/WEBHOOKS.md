@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Webhooks
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** in Entwicklung (Bereich 4b)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/webhooks` | **Capability:** `webhooks.manage` | **CSRF-Aktion:** `admin_webhooks`
 
 ## English (summary)
@@ -26,6 +26,7 @@ Menü *Einstellungen → Webhooks* (Kacheln) bzw. `/admin/webhooks`:
 | `content.published` | Beitrag/Seite wechselt nach „veröffentlicht“ (Speichern, Freigabe, Sammelaktion; bei Datum in der Zukunft schon beim Planen) | `type`, `id` |
 | `content.submitted` | Beitrag/Seite zur Prüfung eingereicht | `type`, `id`, `user_id` |
 | `user.registered` | Registrierung | `user_id` |
+| `invoice.created` | Rechnung oder Storno-Rechnung erstellt (Bereich 5b) | `invoice_id`, `type`, `order_id` |
 | `order.paid`, `order.failed`, `subscription.renewed` | Zahlung bestätigt, fehlgeschlagen, Abo verlängert (Bereich 5a) | `order_id`, `provider` bzw. `subscription_id`, `order_id`, `period_end` |
 
 Weitere Ereignisse liefern Plugins über den Filter `cms_webhook_event` (`['bereich.aktion' => 'Bezeichnung']`) und lösen sie mit `WebhookService::getInstance()->dispatch('bereich.aktion', [...])` aus.
