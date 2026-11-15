@@ -259,8 +259,10 @@ function cms_get_default_role_definitions(): array {
 /**
  * Stellt sicher, dass die Rollen-Tabelle für persistente Caps existiert.
  */
-function cms_ensure_role_permissions_table(): void {
-    $db = \CMS\Database::instance();
+function cms_ensure_role_permissions_table(?\CMS\Database $db = null): void {
+    // DB-410-02: SchemaManager/MigrationManager laufen im Konstruktor von Database – dort die eigene Verbindung
+    // übergeben, sonst baut Database::instance() rekursiv neue Verbindungen auf (bis „Too many connections“).
+    $db ??= \CMS\Database::instance();
     $db->getPdo()->exec("CREATE TABLE IF NOT EXISTS {$db->prefix()}role_permissions (
         id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         role       VARCHAR(50) NOT NULL,

@@ -35,7 +35,9 @@ release340Assert(str_contains($databaseRunner, 'DATABASE_SCHEMA_OPTION'), 'Datab
 release340Assert(str_contains($databaseRunner, 'writeSetting(self::DATABASE_SCHEMA_OPTION'), 'DatabaseUpdateRunner schreibt db_schema_version nicht.');
 release340Assert(str_contains($databaseRunner, 'schema_downgrade_detected'), 'DatabaseUpdateRunner blockiert kein Schema-Downgrade.');
 release340Assert(str_contains($databaseRunner, 'resolveHighestSchemaVersion'), 'DatabaseUpdateRunner schützt bei abweichenden Schema-Markern nicht den höheren Wert.');
-release340Assert(str_contains($databaseRunner, 'isTargetSchemaReady'), 'DatabaseUpdateRunner prüft die Schemaobjekte nicht vor dem Marker-Write.');
+$schemaCheckPos = strpos($databaseRunner, '$missing = $this->missingSchemaElements();');
+$markerWritePos = strpos($databaseRunner, 'writeSetting(self::DATABASE_SCHEMA_OPTION');
+release340Assert($schemaCheckPos !== false && $markerWritePos !== false && $schemaCheckPos < $markerWritePos, 'DatabaseUpdateRunner prüft die Schemaobjekte nicht vor dem Marker-Write.');
 release340Assert(str_contains($installerService, 'getInstalledDatabaseUpdateStatus'), 'Installer zeigt keinen Datenbank-Update-Status.');
 release340Assert(str_contains($updatesModule, 'runDatabaseUpdate'), 'Admin-Updates-Modul kann kein Schema-Update ausführen.');
 release340Assert(str_contains($updatesModule, "'database_status' => \$databaseStatus"), 'Updates-Modul berücksichtigt den Datenbankstatus nicht einheitlich.');

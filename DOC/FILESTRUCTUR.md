@@ -78,6 +78,7 @@ Verified top-level entries of this repository:
 | `TESTS/payments/` | directory | payments: `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | directory | outgoing webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | directory | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check: `php TESTS/schema-v26/run.php [-v]` |
+| `TESTS/schema-upgrade/` | directory | schema upgrade against a real MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): fresh install v26 and updates from 4.0.0 (v25) and 3.5.x (v23) yield identical structure, keep data, are idempotent, one connection on first request: `php TESTS/schema-upgrade/run.php [-v]` |
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
 | `TESTS/sso-entra/` | directory | Entra ID sign-in via OpenID Connect: ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping: `php TESTS/sso-entra/run.php [-v]` |
 | `TESTS/theme-contract/` | directory | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments: `php TESTS/theme-contract/run.php [theme roots …]` |
@@ -90,7 +91,7 @@ Verified top-level entries of this repository:
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 30 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `feeds-design`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`, `webhooks`), all run by `php TESTS/run-all.php` in CI.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 33 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `feeds-design`, `functions`, `invoices`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `payments`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-upgrade`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`, `webhooks`), all run by `php TESTS/run-all.php` in CI.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -133,6 +134,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/payments/` | Verzeichnis | Zahlungen: `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | Verzeichnis | ausgehende Webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | Verzeichnis | Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung: `php TESTS/schema-v26/run.php [-v]` |
+| `TESTS/schema-upgrade/` | Verzeichnis | Upgrade-Pfad gegen echte MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): Neuinstallation v26 und Updates von 4.0.0 (v25) und 3.5.x (v23) ergeben dieselbe Struktur, erhalten Daten, laufen idempotent, eine Verbindung beim ersten Request: `php TESTS/schema-upgrade/run.php [-v]` |
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
 | `TESTS/sso-entra/` | Verzeichnis | Entra-ID-Anmeldung über OpenID Connect: ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping: `php TESTS/sso-entra/run.php [-v]` |
 | `TESTS/theme-contract/` | Verzeichnis | Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente: `php TESTS/theme-contract/run.php [Theme-Wurzeln …]` |
@@ -145,7 +147,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 30 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `feeds-design`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`, `webhooks`), die `php TESTS/run-all.php` in der CI ausführt.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 33 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `feeds-design`, `functions`, `invoices`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `payments`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-upgrade`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`, `webhooks`), die `php TESTS/run-all.php` in der CI ausführt.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 
