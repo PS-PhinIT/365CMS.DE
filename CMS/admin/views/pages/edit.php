@@ -472,6 +472,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 </div>
                                 <div class="form-hint" id="pagePlannedAtHint"><?= htmlspecialchars(trim(__('calendar.planned_at.hint') . ' ' . $pagePlannedAtField['timezone_hint'])) ?></div>
                             </fieldset>
+                            <?php $expiryFields = ['prefix' => 'page', 'expires_at' => $isNew ? null : ($page->expires_at ?? null), 'review_due_at' => $isNew ? null : ($page->review_due_at ?? null)]; require __DIR__ . '/../partials/content-expiry-fields.php'; ?>
                             <div class="mb-0">
                                 <label class="form-label" for="pageContentUpdatedDate">Aktualisierungsdatum (öffentlich sichtbar)</label>
                                 <div class="row g-2">

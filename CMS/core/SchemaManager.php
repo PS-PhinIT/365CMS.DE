@@ -205,6 +205,10 @@ class SchemaManager
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
                 planned_at DATETIME DEFAULT NULL,
+                expires_at DATETIME DEFAULT NULL,
+                review_due_at DATETIME DEFAULT NULL,
+                expiry_notified_at DATETIME DEFAULT NULL,
+                review_notified_at DATETIME DEFAULT NULL,
                 previous_status VARCHAR(20) DEFAULT NULL,
                 trash_slug VARCHAR(200) DEFAULT NULL,
                 trash_slug_en VARCHAR(200) DEFAULT NULL,
@@ -215,7 +219,9 @@ class SchemaManager
                 INDEX idx_author (author_id),
                 INDEX idx_category (category_id),
                 INDEX idx_trashed_at (trashed_at),
-                INDEX idx_planned_at (planned_at)
+                INDEX idx_planned_at (planned_at),
+                INDEX idx_expires (status, expires_at),
+                INDEX idx_review_due (review_due_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'page_revisions' => "CREATE TABLE IF NOT EXISTS {$p}page_revisions (
@@ -457,6 +463,10 @@ class SchemaManager
                 published_at TIMESTAMP NULL,
                 content_updated_at DATETIME DEFAULT NULL,
                 planned_at DATETIME DEFAULT NULL,
+                expires_at DATETIME DEFAULT NULL,
+                review_due_at DATETIME DEFAULT NULL,
+                expiry_notified_at DATETIME DEFAULT NULL,
+                review_notified_at DATETIME DEFAULT NULL,
                 previous_status VARCHAR(20) DEFAULT NULL,
                 trash_slug VARCHAR(255) DEFAULT NULL,
                 trash_slug_en VARCHAR(255) DEFAULT NULL,
@@ -468,7 +478,9 @@ class SchemaManager
                 INDEX idx_published (published_at),
                 INDEX idx_status_published (status, published_at),
                 INDEX idx_trashed_at (trashed_at),
-                INDEX idx_planned_at (planned_at)
+                INDEX idx_planned_at (planned_at),
+                INDEX idx_expires (status, expires_at),
+                INDEX idx_review_due (review_due_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'post_revisions' => "CREATE TABLE IF NOT EXISTS {$p}post_revisions (
@@ -2420,6 +2432,27 @@ class SchemaManager
             'created_by',
             "ALTER TABLE {$this->prefix}page_revisions ADD COLUMN created_by INT UNSIGNED DEFAULT NULL AFTER page_meta_json"
         );
+
+        // v26: Ablauf- und Prüfdaten (ContentExpiryService, Bereich 3c).
+        foreach (['posts', 'pages'] as $table) {
+            foreach (['expires_at', 'review_due_at', 'expiry_notified_at', 'review_notified_at'] as $column) {
+                $this->ensureColumnExists(
+                    $this->prefix . $table,
+                    $column,
+                    "ALTER TABLE {$this->prefix}{$table} ADD COLUMN {$column} DATETIME DEFAULT NULL"
+                );
+            }
+            $indexes = $this->loadIndexes($this->prefix . $table);
+            foreach (['idx_expires' => '(status, expires_at)', 'idx_review_due' => '(review_due_at)'] as $name => $columns) {
+                if (!isset($indexes[$name])) {
+                    try {
+                        $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX {$name} {$columns}");
+                    } catch (\Throwable $e) {
+                        error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.%s) failed: %s', $table, $name, $this->sanitizeDiagnosticText($e->getMessage())));
+                    }
+                }
+            }
+        }
 
         foreach (['posts', 'pages'] as $table) {
             $this->ensureColumnExists(

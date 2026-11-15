@@ -76,6 +76,8 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_reusable_block_saved` | Action | `int $blockId`; EditorJS Block Vorlage angelegt oder geändert (seit 4.1.0, [BLOCK-TEMPLATES.md](../admin/pages-posts/BLOCK-TEMPLATES.md)) |
 | `cms_reusable_block_deleted` | Action | `int $blockId`; Vorlage gelöscht (seit 4.1.0) |
 | `cms_reusable_block_changed` | Action | `int $blockId, list<array{type,id}> $linked`; nach Änderung/Löschen, nachdem Cache geleert und die Speicher-Hooks der verknüpften Beiträge/Seiten ausgelöst wurden (seit 4.1.0) |
+| `cms_content_expired` | Action | `string $type, int $id, string $action` (`draft`/`mark`); Inhalt abgelaufen (seit 4.1.0, Cron stündlich) |
+| `cms_content_review_due` | Action | `string $type, int $id`; Wiedervorlage fällig, einmal je Termin (seit 4.1.0, Cron täglich) |
 | `cms_content_returned` | Action | `string $type, int $id, int $userId, string $comment`; eingereichter Inhalt mit Begründung zurückgegeben (seit 4.1.0) |
 
 ### Lokalisierung, Hub-Sites, Tabellen

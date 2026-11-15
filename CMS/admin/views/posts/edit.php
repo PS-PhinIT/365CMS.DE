@@ -859,6 +859,7 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                                 </div>
                                 <div class="form-hint" id="plannedAtHint"><?php echo htmlspecialchars(trim(__('calendar.planned_at.hint') . ' ' . $plannedAtField['timezone_hint'])); ?></div>
                             </fieldset>
+                            <?php $expiryFields = ['prefix' => 'post', 'expires_at' => $isNew ? null : ($post['expires_at'] ?? null), 'review_due_at' => $isNew ? null : ($post['review_due_at'] ?? null)]; require __DIR__ . '/../partials/content-expiry-fields.php'; ?>
                             <fieldset class="cms-editor-panel__group">
                                 <legend class="form-label">Aktualisierungsdatum (öffentlich sichtbar)</legend>
                                 <div class="row g-2">

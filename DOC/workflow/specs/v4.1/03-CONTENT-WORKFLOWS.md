@@ -93,6 +93,8 @@ gelöschter Block, Sanitizing der Block-Daten (nur `id`), Nutzungsindex nach Spe
 | Frontend | abgelaufene, nur markierte Inhalte bleiben sichtbar; zurückgestufte liefern 404 bzw. 410 (Einstellung) |
 | SEO | Sitemap entfernt zurückgestufte Inhalte sofort (Cache-Invalidierung) |
 
+**Umsetzung, erster Lauf (15.11.2026)** – Beiträge und Seiten, `Content\ContentExpiryService`, `FeatureHooks\ContentExpiryHooks`, Editor-Felder „Gültigkeit“, Einstellungen *Bei Ablauf* und *Wiedervorlage nach „Geprüft“*, Tests `TESTS/content-expiry`. Abweichungen: zusätzliche Spalten `expiry_notified_at`/`review_notified_at` gegen Mehrfachmeldungen (statt `previous_status`, das der Papierkorb nutzt); Hinweise In-App statt Mail. Offen für den zweiten Lauf: Wissensdatenbank, Kalender-Markierung, Widget „Fällige Prüfungen“, Option 410 statt 404.
+
 ```sql
 ALTER TABLE {p}posts ADD COLUMN expires_at DATETIME NULL, ADD COLUMN review_due_at DATETIME NULL,
   ADD INDEX idx_expires (status, expires_at), ADD INDEX idx_review_due (review_due_at);
