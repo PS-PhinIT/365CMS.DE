@@ -30,8 +30,11 @@ class UpdateService
      * Installationsspezifische Laufzeitpfade im CMS-Verzeichnis: bleiben beim Core-Update unangetastet und dürfen
      * nicht im Paket stehen. `private` ist der private Speicher (Formular-Anhänge, geschützte Downloads,
      * Medien-Papierkorb, Exporte), solange `CMS_PRIVATE_PATH` nicht auf einen Ort außerhalb zeigt.
+     * `marketplace` enthält auf Marketplace-Hosts (365cms.de) die vom Plugin cms-marketplace geschriebenen Feeds
+     * (`plugins/index.json`, `themes/index.json`, `core/365cms/update.json`) und alle veröffentlichten Pakete;
+     * ohne diesen Eintrag schöbe ein Core-Update den Ordner ins Rollback-Verzeichnis und löschte ihn mit ihm.
      */
-    private const RUNTIME_CORE_ENTRIES = ['backups', 'cache', 'config', 'config.php', 'logs', 'private', 'uploads'];
+    private const RUNTIME_CORE_ENTRIES = ['backups', 'cache', 'config', 'config.php', 'logs', 'marketplace', 'private', 'uploads'];
 
     private const UPDATE_MIN_FREE_DISK_BYTES = 1073741824;
     private const UPDATE_WARN_FREE_DISK_BYTES = 2147483648;
