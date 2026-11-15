@@ -123,6 +123,22 @@ final class Client
      * } $options
      * @return array{success: bool, status: int, body: string, headers: array<string,string>, contentType: string, error?: string}
      */
+    /**
+     * DELETE mit denselben Schutzmechanismen (seit 4.1.0, Offsite-Backups).
+     */
+    public function delete(string $url, array $options = []): array
+    {
+        return $this->request('DELETE', $url, $options);
+    }
+
+    /**
+     * HEAD: nur Status und Header, kein Body (seit 4.1.0, Offsite-Backups).
+     */
+    public function head(string $url, array $options = []): array
+    {
+        return $this->request('HEAD', $url, $options);
+    }
+
     private function request(string $method, string $url, array $options = []): array
     {
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
@@ -225,6 +241,10 @@ final class Client
         }
 
         $normalizedMethod = strtoupper($method);
+
+        if ($normalizedMethod === 'HEAD') {
+            $curlOptions[CURLOPT_NOBODY] = true;
+        }
 
         if ($normalizedMethod === 'POST') {
             $curlOptions[CURLOPT_POST] = true;

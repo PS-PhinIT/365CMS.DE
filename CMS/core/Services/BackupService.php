@@ -178,6 +178,7 @@ class BackupService
             
             // Log backup
             $this->logBackup('full', $backupName, $manifest['size']);
+            $this->notifyBackupCreated($backupName);
             
             return [
                 'success' => true,
@@ -263,6 +264,7 @@ class BackupService
             }
 
             $this->logBackup('database', $backupName, (int) $manifest['size']);
+            $this->notifyBackupCreated($backupName);
 
             return [
                 'success' => true,
@@ -2483,6 +2485,19 @@ class BackupService
         }
 
         return false;
+    }
+
+    /**
+     * Hook `cms_backup_created` (seit 4.1.0): Offsite-Kopie, Webhooks, Alerting. Fehler der Empfänger brechen das
+     * Backup nicht ab.
+     */
+    private function notifyBackupCreated(string $backupName): void
+    {
+        try {
+            \CMS\Hooks::doAction('cms_backup_created', $backupName);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('backup')->warning('Folgeaktion nach Backup fehlgeschlagen.', ['backup' => $backupName, 'exception' => $e->getMessage()]);
+        }
     }
 
     public function isEncryptionEnabled(): bool

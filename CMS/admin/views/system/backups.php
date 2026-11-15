@@ -89,6 +89,7 @@ if (!function_exists('cms_admin_backups_render_status_badge')) {
             <div class="card-header">
                 <h3 class="card-title">Speicherort &amp; Verschlüsselung</h3>
                 <div class="card-actions d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="/admin/backup-settings"><i class="ti ti-cloud-upload me-1" aria-hidden="true"></i>Backup-Einstellungen</a>
                     <?php if (!empty($storage['inside_webroot'])): ?>
                         <span class="badge bg-warning-lt text-warning">Im Webroot</span>
                     <?php else: ?>

@@ -89,9 +89,21 @@ Die Übersicht zeigt bis zu 25 Backups und die letzten 15 Backup-Vorgänge (Hist
 
 Vor 4.0.0 lagen die Grenzen bei 5000 Einträgen und 512 MB; größere Archive, die das CMS selbst erstellt hatte, ließen sich nicht zurückspielen.
 
-### Externe Ziele (Service-API)
+### Backup-Einstellungen und Offsite-Ziel (seit 4.1.0)
 
-`BackupService` bietet zusätzlich `emailDatabaseBackup($email)` (SQL per E-Mail) und `uploadToS3($pfad, $s3Config)` (AWS-SDK oder REST, max. 25 MB per REST). Diese Funktionen sind nicht in der Oberfläche verdrahtet und können von Plugins oder eigenen Cron-Hooks genutzt werden.
+Seite **Backup-Einstellungen** (`/admin/backup-settings`, Menü *Einstellungen*; Link auch auf `/admin/backups`):
+
+- **Verschlüsselung** neuer Backups (derselbe Schalter wie auf der Backup-Seite, mit Audit-Eintrag).
+- **Offsite-Ziel (S3-kompatibel):** AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO u. a. Felder: Endpunkt (nur Host), Region, Bucket, Präfix, Zugangsschlüssel, geheimer Schlüssel (verschlüsselt gespeichert, nur schreibbar – leer lassen behält ihn), Path-Style, Teilgröße (5–64 MB), Speicherklasse, Aufbewahrung offsite („letzte N“ und/oder „nicht älter als D Tage“, 0 = aus). Für MinIO im eigenen Netz lassen sich genau dieser private Host und – nur dann – HTTP freigeben.
+- **Verbindung prüfen:** schreibt, liest (HEAD) und löscht ein Testobjekt.
+- **Offsite-Status** je Backup (gesichert, läuft, fehlgeschlagen mit Grund, entfernt) und „Jetzt offsite kopieren“.
+- Recht: Lesen mit `manage_settings`/`manage_system`, Ändern, Prüfen und Hochladen zusätzlich `backups.offsite` (Admins haben es).
+
+Ablauf: Nach jedem erfolgreichen Backup (Hook `cms_backup_created`) werden die **verschlüsselten** Dateien nach `{präfix}{backup-name}/{datei}` kopiert, `manifest.json` zuletzt, danach HEAD-Prüfung; Dateien über der Teilgröße laufen als Multipart-Upload (bei Fehler Abbruch). Unverschlüsselte Backups werden nie offsite kopiert. Fehlgeschlagene Uploads holt der tägliche Cron nach (höchstens 3 Versuche), danach greift die Aufbewahrung; das zuletzt erfolgreich hochgeladene Backup wird nie gelöscht. Technik: `Backup\OffsiteBackupService`, `Backup\S3Client`, `Backup\SigV4Signer` (ohne SDK), Tabelle `cms_backup_offsite_uploads`, Hooks `cms_backup_offsite_uploaded`/`cms_backup_offsite_failed`.
+
+### Externe Ziele (Service-API, älter)
+
+`BackupService` bietet weiterhin `emailDatabaseBackup($email)` (SQL per E-Mail) und `uploadToS3($pfad, $s3Config)` (AWS-SDK oder REST, max. 25 MB). Für Offsite-Kopien ist ab 4.1.0 der oben beschriebene Weg vorgesehen.
 
 ### Empfehlungen
 
