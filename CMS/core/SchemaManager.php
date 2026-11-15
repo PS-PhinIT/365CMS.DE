@@ -75,7 +75,7 @@ class SchemaManager
         'content_workflow_events', 'content_preview_links',
         'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions',
         'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
-        'payment_events',
+        'payment_events', 'invoice_sequences', 'invoices',
     ];
 
     private Database $db;
@@ -1626,6 +1626,43 @@ class SchemaManager
                 INDEX idx_payment_events_order (order_id),
                 INDEX idx_payment_events_received (received_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Ereignisse der Zahlungsanbieter'",
+            // v26: Rechnungs-Nummernkreise (InvoiceService, lückenlos, nie rückwärts).
+            'invoice_sequences' => "CREATE TABLE IF NOT EXISTS {$p}invoice_sequences (
+                sequence_key VARCHAR(30) NOT NULL PRIMARY KEY,
+                next_number INT UNSIGNED NOT NULL,
+                updated_at DATETIME NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Rechnungs-Nummernkreise (lückenlos, nie rückwärts)'",
+
+            // v26: Rechnungen und Storno-Rechnungen (unveränderlich, 10 Jahre; kein FK auf users).
+            'invoices' => "CREATE TABLE IF NOT EXISTS {$p}invoices (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                invoice_number VARCHAR(40) NOT NULL,
+                sequence_key VARCHAR(30) NOT NULL,
+                sequence_number INT UNSIGNED NOT NULL,
+                type VARCHAR(12) NOT NULL DEFAULT 'invoice',
+                order_id BIGINT UNSIGNED NULL,
+                user_id INT UNSIGNED NULL,
+                cancels_invoice_id BIGINT UNSIGNED NULL,
+                issued_at DATETIME NOT NULL,
+                service_period_start DATE NULL,
+                service_period_end DATE NULL,
+                currency CHAR(3) NOT NULL,
+                net_total DECIMAL(12,2) NOT NULL,
+                tax_total DECIMAL(12,2) NOT NULL,
+                gross_total DECIMAL(12,2) NOT NULL,
+                tax_mode VARCHAR(20) NOT NULL DEFAULT 'standard',
+                snapshot_json LONGTEXT NOT NULL,
+                pdf_path VARCHAR(255) NOT NULL,
+                pdf_sha256 CHAR(64) NOT NULL,
+                created_by INT UNSIGNED NULL,
+                restricted_at DATETIME NULL,
+                created_at DATETIME NOT NULL,
+                UNIQUE KEY uq_invoices_number (invoice_number),
+                UNIQUE KEY uq_invoices_sequence (sequence_key, sequence_number),
+                UNIQUE KEY uq_invoices_cancels (cancels_invoice_id),
+                KEY idx_invoices_user (user_id, issued_at),
+                KEY idx_invoices_order (order_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Rechnungen und Storno-Rechnungen (unveränderlich, 10 Jahre)'",
         ];
     }
 

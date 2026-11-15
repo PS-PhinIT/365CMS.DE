@@ -41,6 +41,7 @@ final class Registry
         ContentExpiryHooks::class,
         BackupOffsiteHooks::class,
         WebhookHooks::class,
+        InvoiceHooks::class,
     ];
 
     private static bool $registered = false;

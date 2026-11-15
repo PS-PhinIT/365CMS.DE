@@ -34,7 +34,7 @@ T::run('Versionsstand', static function () use ($migrationSource, $root): void {
 });
 
 T::run('Neue Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
-    $expected = ['password_history', 'user_identities', 'media_usage', 'content_workflow_events', 'content_preview_links', 'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions', 'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries', 'payment_events'];
+    $expected = ['password_history', 'user_identities', 'media_usage', 'content_workflow_events', 'content_preview_links', 'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions', 'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries', 'payment_events', 'invoice_sequences', 'invoices'];
     T::same($expected, \CMS\SchemaManager::FEATURE_TABLES_V26, 'FEATURE_TABLES_V26 enthält genau die v26-Tabellen');
     foreach ($expected as $table) {
         T::check(isset($queries[$table]), "Definition für {$table} vorhanden (Neuinstallation)");
