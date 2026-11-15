@@ -89,13 +89,22 @@ jobs:
           php-version: ${{ matrix.php-version }}
 
       - name: PHP Lint
+        # Release-Prüfung 4.1.0 (PR #4): Compile-Deprecations und Warnings aus eigenem Code lassen den Lint scheitern
+        # (php -l allein meldet nur Syntaxfehler); aus gebündelten Bibliotheken (vendor/, assets/) nur als Warnung.
         run: |
+          set -o pipefail
           if [[ "${{ matrix.php-version }}" == "8.4" ]]; then
             find CMS -type f -name "*.php" ! -name "bootstrap85.php" -print0
           else
             find CMS -type f -name "*.php" -print0
           fi | \
-          xargs -0 -n1 php -l
+          xargs -0 -n1 php -d error_reporting=-1 -d display_errors=1 -l > lint.log 2>&1 || { cat lint.log; exit 1; }
+          grep -E "(Deprecated|Warning):" lint.log | grep -E "/CMS/(vendor|assets)/" | sed 's/^/::warning::/' || true
+          if grep -E "(Deprecated|Warning):" lint.log | grep -vE "/CMS/(vendor|assets)/"; then
+            echo "::error::PHP ${{ matrix.php-version }}: Deprecation/Warning im eigenen Code (siehe oben)"
+            exit 1
+          fi
+          echo "$(grep -c 'No syntax errors' lint.log) Dateien ohne Syntaxfehler"
 
       - name: Test-Suiten (statisch, ohne Datenbank)
         run: php TESTS/run-all.php
