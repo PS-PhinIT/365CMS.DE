@@ -294,7 +294,14 @@ final class AggregatorSettings
             return $default;
         }
 
-        return max($min, min($max, (int) $value));
+        $value = max($min, min($max, (int) $value));
+        // Release-Prüfung 4.1.0 (FUN-410-35): Artikel unter 7 Tagen Aufbewahrung fehlen im wöchentlichen Digest.
+        // 0 bleibt „nie löschen“, 1–6 werden auf 7 Tage angehoben.
+        if ($key === 'item_retention_days' && $value > 0 && $value < 7) {
+            $value = 7;
+        }
+
+        return $value;
     }
 
     private static function text(string $key, mixed $value, string $default): string

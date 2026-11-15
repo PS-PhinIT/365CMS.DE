@@ -61,3 +61,13 @@ T::run('DOC-410-01: Anzahl der Test-Suiten im Changelog', static function () use
     $suites = count(glob(dirname($root) . '/TESTS/*/run.php') ?: []);
     T::check(str_contains($changelog, "`php TESTS/run-all.php` führt {$suites} Suiten aus: zu den 32 aus 4.1.0"), "4.1.5 nennt die tatsächliche Zahl ({$suites})");
 });
+
+T::run('FUN-410-34/35: Wissensdatenbank-Import, Feed-Aufbewahrung', static function () use ($src): void {
+    $repo = $src('core/Services/Knowledgebase/Repository/EntryRepository.php');
+    $import = strpos($repo, 'public function importPresetEntries(');
+    T::check($import !== false && strpos($repo, "if (!empty(\$existingEntry['trashed_at'])) {", $import) !== false, 'Import (einzeln und alle Pakete) überspringt Einträge im Papierkorb');
+    $settings = $src('core/Services/Feed/AggregatorSettings.php');
+    T::check(str_contains($settings, "if (\$key === 'item_retention_days' && \$value > 0 && \$value < 7) {"), 'Aufbewahrung 1–6 Tage wird auf 7 angehoben (0 = nie löschen)');
+    $method = new \ReflectionMethod(\CMS\Services\Feed\AggregatorSettings::class, 'intInRange');
+    T::same([0, 7, 7, 30], [$method->invoke(null, 'item_retention_days', 0, 30), $method->invoke(null, 'item_retention_days', 1, 30), $method->invoke(null, 'item_retention_days', 6, 30), $method->invoke(null, 'item_retention_days', 30, 30)], 'Werte 0, 1, 6, 30 ergeben 0, 7, 7, 30');
+});

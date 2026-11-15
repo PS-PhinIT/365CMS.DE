@@ -14,6 +14,16 @@
 
 ---
 
+### v4.1.8 — 15.11.2026 - Patch Release
+
+**Feeds, Wissensdatenbank** · Release-Prüfung 4.1.0, FUN-410-34 und FUN-410-35 (#PRNUM). Kumulatives Paket 4.1.1 bis 4.1.8, Schema bleibt `v26`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.8** | 🔴 fix | Feeds / Aufbewahrung (FUN-410-35) | Eine Aufbewahrung von 1–6 Tagen wird auf 7 Tage angehoben, sonst fehlten Artikel im wöchentlichen Digest. 0 bleibt „nie löschen“. |
+| **4.1.8** | ⬜ chore | Wissensdatenbank / Import (FUN-410-34) | Nachprüfung: Der Paket-Import (einzeln und „alle“) überspringt Einträge im Papierkorb bereits (`EntryRepository::importPresetEntries()`); der Befund trifft nicht zu. Regressionstest ergänzt. |
+| **4.1.8** | ⬜ chore | Release | `Version::CURRENT` 4.1.8; Manifeste 4.1.8 (`critical` wegen der Sicherheitskorrekturen seit 4.1.1); Pakete `RELEASE/365CMS-4.1.8-*` mit `README-4.1.8.md`. |
+
 ### v4.1.7 — 15.11.2026 - Patch Release
 
 **Zahlungen: Erstattung, Rückbuchung, Kündigung** · Release-Prüfung 4.1.0, Funktionslücken FUN-410-21 und FUN-410-27 ([#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168)).

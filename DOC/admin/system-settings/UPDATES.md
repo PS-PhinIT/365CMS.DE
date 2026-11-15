@@ -43,11 +43,11 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
 {
   "slug": "365cms-core",
   "type": "core",
-  "version": "4.1.7",
+  "version": "4.1.8",
   "min_php": "8.4.1",
   "released": "2026-11-15",
   "schema_version": "v26",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.1.7-update.zip",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.1.8-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-PhinIT/365CMS.DE/main/Changelog.md",
   "checksum_sha256": "<64 Hex-Zeichen>",
   "notes": "…",
