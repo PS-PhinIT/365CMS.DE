@@ -17,6 +17,9 @@ use CMS\CacheManager;
 use CMS\AuditLogger;
 use CMS\Logger;
 use CMS\PageManager;
+use CMS\Services\Content\ContentStatus;
+use CMS\Services\Content\ContentWorkflow;
+use CMS\Services\ContentEditPermission;
 use CMS\Services\RedirectService;
 use CMS\Services\ContentMediaPlacementService;
 use CMS\Services\ContentLocalizationService;
@@ -65,7 +68,7 @@ class PagesModule
     ];
 
     /** @var string[] */
-    private const ALLOWED_LIST_STATUSES = ['published', 'draft', 'private', 'trash'];
+    private const ALLOWED_LIST_STATUSES = ['published', 'pending', 'draft', 'private', 'trash'];
 
     /** @var string[] Papierkorb-Aktionen; „delete“ verschiebt (wie „trash“) in den Papierkorb. */
     private const TRASH_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently'];
@@ -246,6 +249,7 @@ class PagesModule
         $trash     = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'trash'");
         $published = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'published'");
         $drafts    = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'draft'");
+        $pending   = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'pending'");
         $private   = (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}pages WHERE status = 'private'");
 
         // Filter
@@ -327,7 +331,7 @@ class PagesModule
                 return $page;
             }, $pages),
             'categories' => $this->buildOrderedCategoryOptions(array_map(fn($category) => (array) $category, $categories)),
-            'counts'    => compact('total', 'published', 'drafts', 'private', 'trash'),
+            'counts'    => compact('total', 'published', 'pending', 'drafts', 'private', 'trash'),
             'filter'    => $statusFilter,
             'catFilter' => $categoryFilter,
             'search'    => $search,
@@ -400,9 +404,27 @@ class PagesModule
             $defaultStatus = 'draft';
         }
 
-        $status = in_array((string)($post['status'] ?? ''), ['published', 'draft', 'private'], true)
+        $status = in_array((string)($post['status'] ?? ''), ['published', 'draft', 'private', 'pending'], true)
             ? (string)$post['status']
             : $defaultStatus;
+        if (is_scalar($post['publish_intent'] ?? null) && (string) $post['publish_intent'] === 'submit') {
+            $status = 'pending';
+        }
+        // Vier-Augen-Prinzip (4.1.0, 3a): ohne Freigaberecht wird aus „Veröffentlichen“/„Privat“ eine Einreichung.
+        $workflow = ContentWorkflow::instance();
+        $currentStatus = (string) ($existingPage['status'] ?? '');
+        $workflowAuthorId = $id > 0 ? (int) ($existingPage['author_id'] ?? 0) : $userId;
+        $canPublishPage = $workflow->canPublish(
+            ContentWorkflow::TYPE_PAGE,
+            $userId,
+            $workflowAuthorId,
+            null,
+            $currentStatus === ContentStatus::PENDING ? $workflow->lastSubmitterId(ContentWorkflow::TYPE_PAGE, $id) : 0
+        );
+        $statusDecision = ContentWorkflow::resolveSaveStatus($status, $currentStatus, $canPublishPage);
+        $status = $statusDecision['status'];
+        $submittedForReview = $statusDecision['downgraded'];
+        $workflowComment = ContentWorkflow::cleanComment(is_scalar($post['workflow_comment'] ?? null) ? (string) $post['workflow_comment'] : '');
         $content    = $this->preserveOriginalEditorContentIfUnchanged($post['content'] ?? '', $post['content_original'] ?? '');
         $titleEn    = $this->sanitizePlainText((string)($post['title_en'] ?? ''), 255);
         $contentEn  = $this->preserveOriginalEditorContentIfUnchanged($post['content_en'] ?? '', $post['content_en_original'] ?? '');
@@ -517,6 +539,14 @@ class PagesModule
         if (is_array($filteredPayload)) {
             $savePayload = array_merge($savePayload, $filteredPayload);
         }
+        // Auch ein Filter darf das Freigaberecht nicht umgehen.
+        $filteredStatus = (string) ($savePayload['status'] ?? $status);
+        if (!ContentStatus::isEditable($filteredStatus)) {
+            $filteredStatus = $status;
+        }
+        $filteredDecision = ContentWorkflow::resolveSaveStatus($filteredStatus, $currentStatus, $canPublishPage);
+        $savePayload['status'] = $filteredDecision['status'];
+        $submittedForReview = $submittedForReview || $filteredDecision['downgraded'];
 
         try {
             if ($id > 0) {
@@ -534,8 +564,9 @@ class PagesModule
                     (string)($savePayload['slug_en'] ?? '')
                 );
                 Hooks::doAction('cms_after_page_save', $id, $savePayload, $post);
+                $workflowAction = $workflow->recordTransition(ContentWorkflow::TYPE_PAGE, $id, $currentStatus, (string) $savePayload['status'], $userId, $workflowComment);
                 $this->clearContentCacheIfEnabled('page_update', $id);
-                return ['success' => true, 'id' => $id, 'message' => 'Seite aktualisiert.'];
+                return ['success' => true, 'id' => $id, 'status' => (string) $savePayload['status'], 'workflow_action' => $workflowAction, 'message' => $this->appendWorkflowNotice('Seite aktualisiert.', $submittedForReview, $workflowAction)];
             } else {
                 // Create
                 $newId = $this->pageManager->createPage((string)$savePayload['title'], (string)$savePayload['content'], (string)$savePayload['status'], $userId, (int)$savePayload['hide_title']);
@@ -563,8 +594,9 @@ class PagesModule
                     );
                     SEOService::getInstance()->saveContentMeta('page', $newId, $post);
                     Hooks::doAction('cms_after_page_save', $newId, $savePayload, $post);
+                    $workflowAction = $workflow->recordTransition(ContentWorkflow::TYPE_PAGE, $newId, '', (string) $savePayload['status'], $userId, $workflowComment);
                     $this->clearContentCacheIfEnabled('page_create', $newId);
-                    return ['success' => true, 'id' => $newId, 'message' => 'Seite erstellt.'];
+                    return ['success' => true, 'id' => $newId, 'status' => (string) $savePayload['status'], 'workflow_action' => $workflowAction, 'message' => $this->appendWorkflowNotice('Seite erstellt.', $submittedForReview, $workflowAction)];
                 }
                 return ['success' => false, 'error' => 'Seite konnte nicht erstellt werden.'];
             }
@@ -778,6 +810,63 @@ class PagesModule
         }
     }
 
+    private function appendWorkflowNotice(string $message, bool $submittedForReview, ?string $workflowAction): string
+    {
+        if ($submittedForReview) {
+            return $message . ' ' . (ContentWorkflow::instance()->isSecondPersonRequired()
+                ? 'Zur Prüfung eingereicht – eine zweite Person muss die Seite freigeben.'
+                : 'Zur Prüfung eingereicht – Ihnen fehlt das Recht zum Veröffentlichen.');
+        }
+
+        return match ($workflowAction) {
+            ContentWorkflow::ACTION_SUBMITTED => $message . ' Zur Prüfung eingereicht.',
+            ContentWorkflow::ACTION_APPROVED => $message . ' Freigegeben.',
+            ContentWorkflow::ACTION_RETURNED => $message . ' Zurückgegeben.',
+            default => $message,
+        };
+    }
+
+    /**
+     * Freigeben/Zurückgeben/Kommentieren/Vorschau-Link aus Editor oder Liste.
+     *
+     * @return array<string, mixed>
+     */
+    public function workflowAction(string $action, int $id, string $comment): array
+    {
+        if ($id <= 0 || !ContentEditPermission::currentUserCanEdit(ContentEditPermission::TYPE_PAGE, 0)) {
+            return ['success' => false, 'error' => 'Sie dürfen diese Seite nicht bearbeiten.'];
+        }
+        $workflow = ContentWorkflow::instance();
+        $userId = $this->currentUserId();
+        $result = match ($action) {
+            'approve' => $workflow->approve(ContentWorkflow::TYPE_PAGE, $id, $userId, $comment),
+            'return' => $workflow->returnToAuthor(ContentWorkflow::TYPE_PAGE, $id, $userId, $comment),
+            'submit' => $workflow->submit(ContentWorkflow::TYPE_PAGE, $id, $userId, $comment),
+            'comment' => $workflow->addComment(ContentWorkflow::TYPE_PAGE, $id, $userId, $comment),
+            'preview_link' => $workflow->createPreviewLink(ContentWorkflow::TYPE_PAGE, $id, $userId),
+            'preview_revoke' => ['success' => true, 'message' => $workflow->revokePreviewLinks(ContentWorkflow::TYPE_PAGE, $id, $userId) . ' Vorschau-Link(s) widerrufen.'],
+            default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
+        };
+        if (!empty($result['success']) && in_array($action, ['approve', 'return', 'submit'], true)) {
+            $this->clearContentCacheIfEnabled('page_workflow_' . $action, $id);
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_CONTENT,
+                'page.workflow.' . $action,
+                sprintf('Seite #%d: %s', $id, ContentWorkflow::actionLabel(match ($action) {
+                    'approve' => ContentWorkflow::ACTION_APPROVED,
+                    'return' => ContentWorkflow::ACTION_RETURNED,
+                    default => ContentWorkflow::ACTION_SUBMITTED,
+                })),
+                'pages',
+                $id,
+                [],
+                'info'
+            );
+        }
+
+        return $result;
+    }
+
     /**
      * Bulk-Aktion ausführen
      */
@@ -826,22 +915,37 @@ class PagesModule
         try {
             switch ($action) {
                 case 'publish':
+                    // Vier-Augen-Prinzip: Seiten, die dieses Konto nicht freigeben darf, werden eingereicht statt veröffentlicht.
+                    $workflow = ContentWorkflow::instance();
+                    $workflowUserId = $this->currentUserId();
+                    [$ids, $submitIds] = $workflow->partitionByPublishRight(ContentWorkflow::TYPE_PAGE, $ids, $workflowUserId);
+                    $submittedCount = $workflow->submitMany(ContentWorkflow::TYPE_PAGE, $submitIds, $workflowUserId);
+                    if ($ids === []) {
+                        return $submittedCount > 0
+                            ? ['success' => true, 'message' => $submittedCount . ' Seite(n) zur Prüfung eingereicht – eine zweite Person muss freigeben.']
+                            : ['success' => false, 'error' => 'Keine Seiten veröffentlicht – Ihnen fehlt für die Auswahl das Freigaberecht.'];
+                    }
+                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
                     $changedIds = $this->pageIdsWithOtherStatus($ids, 'published');
+                    $previousStatuses = $workflow->statusMap(ContentWorkflow::TYPE_PAGE, $changedIds);
                     $this->db->execute(
                         "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published' WHERE id IN ({$placeholders})",
                         $ids
                     );
                     $this->afterBulkStatusChange($changedIds, 'published', 'publish');
+                    $workflow->recordBulkTransitions(ContentWorkflow::TYPE_PAGE, $previousStatuses, 'published', $workflowUserId);
                     $this->clearContentCacheIfEnabled('page_bulk_publish', (int) $ids[0]);
-                    return ['success' => true, 'message' => count($ids) . ' Seite(n) veröffentlicht.'];
+                    return ['success' => true, 'message' => count($ids) . ' Seite(n) veröffentlicht.' . ($submittedCount > 0 ? ' ' . $submittedCount . ' weitere zur Prüfung eingereicht.' : '')];
 
                 case 'draft':
                     $changedIds = $this->pageIdsWithOtherStatus($ids, 'draft');
+                    $previousStatuses = ContentWorkflow::instance()->statusMap(ContentWorkflow::TYPE_PAGE, $changedIds);
                     $this->db->execute(
                         "UPDATE {$this->prefix}pages SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})",
                         $ids
                     );
                     $this->afterBulkStatusChange($changedIds, 'draft', 'draft');
+                    ContentWorkflow::instance()->recordBulkTransitions(ContentWorkflow::TYPE_PAGE, $previousStatuses, 'draft', $this->currentUserId());
                     $this->clearContentCacheIfEnabled('page_bulk_draft', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Seite(n) als Entwurf gespeichert.'];
 

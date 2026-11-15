@@ -79,6 +79,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/ai-seo-metadata/` | AI SEO metadata pipeline (normalizing, schema type, robots) / AI-SEO-Metadaten-Pipeline (Normalisierung, Schema-Typ, Robots) (`php TESTS/ai-seo-metadata/run.php`) |
 | `TESTS/analytics-consent/` | analytics output and CSP only with configured provider and consent / Analytics-Ausgabe und CSP nur mit konfiguriertem Anbieter und Einwilligung (`php TESTS/analytics-consent/run.php`) |
 | `TESTS/content-types/` | content type provider registry test / Test der Inhaltstyp-Provider (`php TESTS/content-types/run.php [-v]`) |
+| `TESTS/content-workflow/` | four-eyes review (4.1.0): publish right incl. second person, save enforcement, transitions, recipients, history, preview links, capability migration / Vier-Augen-Prinzip (4.1.0): Freigaberecht inkl. zweiter Person, Durchsetzung beim Speichern, Übergänge, Empfänger, Verlauf, Vorschau-Links, Rechte-Migration (`php TESTS/content-workflow/run.php [-v]`) |
 | `TESTS/csp-style-rewriter/` | `InlineStyleRewriter`: `style` attributes to nonce CSS classes / `InlineStyleRewriter`: `style`-Attribute zu Nonce-CSS-Klassen (`php TESTS/csp-style-rewriter/run.php`) |
 | `TESTS/editorjs-blocks/` | Editor.js block tests / Tests der Editor.js-Blöcke (`php TESTS/editorjs-blocks/run.php`, browser part / Browser-Teil `node TESTS/editorjs-blocks/browser/run.js`) |
 | `TESTS/functions/` | function tests without database / Funktionstests ohne Datenbank (`php TESTS/functions/run.php`) |

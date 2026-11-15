@@ -25,6 +25,7 @@ $listStatusValue = $filter;
 $statusLabels = [
     'published' => ['Veröffentlicht', 'bg-green-lt text-green'],
     'scheduled' => ['Geplant', 'bg-azure-lt text-azure'],
+    'pending'   => ['Zur Prüfung', 'bg-orange-lt text-orange'],
     'draft'     => ['Entwurf', 'bg-yellow-lt text-yellow'],
     'private'   => ['Privat', 'bg-purple-lt text-purple'],
     'trash'     => [\CMS\Services\Trash\TrashSupport::t('trash.list.status_label'), 'bg-red-lt text-red'],
@@ -54,6 +55,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                     <span><?php echo (int)($counts['total'] ?? 0); ?> Einträge</span>
                     <span>Veröffentlicht: <?php echo (int)($counts['published'] ?? 0); ?></span>
                     <span>Geplant: <?php echo (int)($counts['scheduled'] ?? 0); ?></span>
+                    <span><a href="/admin/posts?status=pending" class="<?php echo $filter === 'pending' ? 'fw-semibold' : 'text-reset'; ?>">Zur Prüfung: <?php echo (int)($counts['pending'] ?? 0); ?></a></span>
                     <span>Entwurf: <?php echo (int)($counts['drafts'] ?? 0); ?></span>
                     <span>Privat: <?php echo (int)($counts['private'] ?? 0); ?></span>
                     <span><a href="/admin/posts?status=trash" class="<?php echo $isTrashView ? 'fw-semibold' : 'text-reset'; ?>"><?php echo $tt('trash.list.status_label'); ?>: <?php echo $trashCount; ?></a></span>
@@ -98,6 +100,7 @@ $postsHasMultipleAuthors = count($postsAuthorKeys) > 1;
                             <option value="">Alle Status</option>
                             <option value="published" <?php if ($filter === 'published') echo 'selected'; ?>>Veröffentlicht</option>
                             <option value="scheduled" <?php if ($filter === 'scheduled') echo 'selected'; ?>>Geplant</option>
+                            <option value="pending" <?php if ($filter === 'pending') echo 'selected'; ?>>Zur Prüfung</option>
                             <option value="draft" <?php if ($filter === 'draft') echo 'selected'; ?>>Entwurf</option>
                             <option value="private" <?php if ($filter === 'private') echo 'selected'; ?>>Privat</option>
                             <option value="trash" <?php if ($isTrashView) echo 'selected'; ?>><?php echo $tt('trash.list.filter_option', $trashCount); ?></option>

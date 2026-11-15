@@ -21,8 +21,9 @@ use CMS\Services\AI\AiSettingsService;
 use CMS\Services\CoreModuleService;
 use CMS\Services\EditorJsService;
 
-const CMS_ADMIN_PAGES_ALLOWED_ACTIONS = ['save', 'delete', 'trash', 'restore', 'delete_permanently', 'empty_trash', 'bulk', 'switch_locale', 'copy_de_to_en'];
-const CMS_ADMIN_PAGES_LIST_STATUSES = ['published', 'draft', 'private', 'trash'];
+const CMS_ADMIN_PAGES_ALLOWED_ACTIONS = ['save', 'delete', 'trash', 'restore', 'delete_permanently', 'empty_trash', 'bulk', 'switch_locale', 'copy_de_to_en', 'workflow'];
+const CMS_ADMIN_PAGES_LIST_STATUSES = ['published', 'pending', 'draft', 'private', 'trash'];
+const CMS_ADMIN_PAGES_WORKFLOW_ACTIONS = ['approve', 'return', 'submit', 'comment', 'preview_link', 'preview_revoke'];
 const CMS_ADMIN_PAGES_ALLOWED_VIEWS = ['list', 'edit'];
 const CMS_ADMIN_PAGES_ALLOWED_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently', 'publish', 'draft', 'set_category', 'clear_category'];
 const CMS_ADMIN_PAGES_WRITE_CAPABILITY = 'manage_pages';
@@ -606,6 +607,23 @@ $sectionPageConfig = [
                 if (!empty($result['success']) || in_array($bulkAction, ['delete', 'trash', 'restore', 'delete_permanently'], true)) {
                     $result['redirect_path'] = cms_admin_pages_list_url($post['list_status'] ?? '');
                 }
+
+                return $result;
+
+            case 'workflow':
+                // Vier-Augen-Prinzip (4.1.0, 3a): Freigeben, Zurückgeben, Einreichen, Kommentar, Vorschau-Link.
+                $id = cms_admin_pages_normalize_positive_id($post['id'] ?? 0);
+                $workflowAction = cms_admin_pages_scalar_string($post['workflow_action'] ?? '');
+                if ($id < 1 || !in_array($workflowAction, CMS_ADMIN_PAGES_WORKFLOW_ACTIONS, true)) {
+                    return ['success' => false, 'error' => 'Ungültige Freigabe-Aktion.'];
+                }
+                $result = $module->workflowAction($workflowAction, $id, cms_admin_pages_scalar_string($post['workflow_comment'] ?? ''));
+                if (!empty($result['success']) && $workflowAction === 'preview_link') {
+                    $result['message'] = 'Vorschau-Link (gültig bis ' . (string) ($result['expires_at'] ?? '') . ', wird nur jetzt angezeigt): ' . (string) ($result['url'] ?? '');
+                }
+                $result['redirect_path'] = cms_admin_pages_scalar_string($post['return_to'] ?? '') === 'list'
+                    ? cms_admin_pages_list_url($post['list_status'] ?? '')
+                    : cms_admin_pages_target_url($id, $editorLocale);
 
                 return $result;
 

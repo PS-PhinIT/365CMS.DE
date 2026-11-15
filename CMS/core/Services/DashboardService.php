@@ -659,12 +659,13 @@ class DashboardService {
      * Redaktions-Widgets „Meine Entwürfe“ (zuletzt bearbeitete eigene Entwürfe) und „Demnächst geplant“
      * (geplante Inhalte der nächsten 7 Tage; ohne Kalenderrecht nur eigene Inhalte).
      *
-     * @return array{drafts:list<array<string,mixed>>,upcoming:list<array<string,mixed>>,calendar_url:string}
+     * @return array{drafts:list<array<string,mixed>>,upcoming:list<array<string,mixed>>,pending_reviews:list<array<string,mixed>>,calendar_url:string}
      */
     public function getEditorialWidgets(int $userId, bool $canViewCalendar): array {
         $widgets = [
             'drafts' => [],
             'upcoming' => [],
+            'pending_reviews' => [],
             'calendar_url' => $canViewCalendar ? '/admin/editorial-calendar' : '',
         ];
 
@@ -674,6 +675,15 @@ class DashboardService {
             $widgets['upcoming'] = $calendar->getUpcoming($userId, $canViewCalendar, 7, 10);
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('dashboard')->warning('Editorial widgets could not be loaded.', [
+                'exception' => $e,
+            ]);
+        }
+
+        // Vier-Augen-Prinzip (4.1.0, 3a): „Ausstehende Prüfungen“ – nur Inhalte, die dieses Konto freigeben dürfte.
+        try {
+            $widgets['pending_reviews'] = \CMS\Services\Content\ContentWorkflow::instance()->pendingItems(8, $userId);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('dashboard')->warning('Pending reviews could not be loaded.', [
                 'exception' => $e,
             ]);
         }

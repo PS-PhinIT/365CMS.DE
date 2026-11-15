@@ -216,6 +216,30 @@ $isEnglishEditorView = $editorLocale === 'en';
             $pageSlugValue = (string)($page->slug ?? '');
             $pageSlugEnValue = (string)($page->slug_en ?? '');
             $pageStatusValue = (string)($page->status ?? $pageDefaultStatus);
+            // Vier-Augen-Prinzip (4.1.0, 3a): Darf dieses Konto die Seite selbst veröffentlichen?
+            $pageWorkflowService = \CMS\Services\Content\ContentWorkflow::instance();
+            $pageWorkflowUserId = \CMS\Services\ContentEditPermission::currentUserId();
+            $pageStoredStatus = $isNew ? '' : (string) ($page->status ?? '');
+            $pageWorkflowAuthorId = $isNew ? $pageWorkflowUserId : (int) ($page->author_id ?? 0);
+            $pageWorkflowCanPublish = \CMS\Services\Content\ContentStatus::isPublishing($pageStoredStatus)
+                || $pageWorkflowService->canPublish(
+                    \CMS\Services\Content\ContentWorkflow::TYPE_PAGE,
+                    $pageWorkflowUserId,
+                    $pageWorkflowAuthorId,
+                    null,
+                    $pageStoredStatus === 'pending' ? $pageWorkflowService->lastSubmitterId(\CMS\Services\Content\ContentWorkflow::TYPE_PAGE, (int) ($page->id ?? 0)) : 0
+                );
+            $pageWorkflowPanel = [
+                'type' => \CMS\Services\Content\ContentWorkflow::TYPE_PAGE,
+                'id' => $isNew ? 0 : (int) ($page->id ?? 0),
+                'status' => $pageStoredStatus,
+                'author_id' => $pageWorkflowAuthorId,
+                'is_public' => $pageStoredStatus === 'published',
+                'form_id' => 'pageWorkflowForm',
+                'editor_form_id' => 'pageForm',
+                'editor_locale' => $editorLocale,
+                'variant' => 'section',
+            ];
             $pageContentValue = (string)($page->content ?? '');
             $pageTitleEnValue = (string)($page->title_en ?? '');
             $pageContentEnValue = (string)($page->content_en ?? '');
@@ -417,9 +441,13 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 <label for="pageStatusSelect" class="form-label">Status</label>
                                 <select name="status" class="form-select" id="pageStatusSelect">
                                     <option value="draft"<?= $pageStatusValue === 'draft' ? ' selected' : '' ?>>Entwurf</option>
-                                    <option value="published"<?= $pageStatusValue === 'published' ? ' selected' : '' ?>>Veröffentlicht</option>
-                                    <option value="private"<?= $pageStatusValue === 'private' ? ' selected' : '' ?>>Privat (nur Mitglieder)</option>
+                                    <option value="pending"<?= $pageStatusValue === 'pending' ? ' selected' : '' ?>>Zur Prüfung</option>
+                                    <option value="published"<?= $pageStatusValue === 'published' ? ' selected' : '' ?><?= $pageWorkflowCanPublish ? '' : ' disabled' ?>>Veröffentlicht</option>
+                                    <option value="private"<?= $pageStatusValue === 'private' ? ' selected' : '' ?><?= $pageWorkflowCanPublish ? '' : ' disabled' ?>>Privat (nur Mitglieder)</option>
                                 </select>
+                                <?php if (!$pageWorkflowCanPublish): ?>
+                                    <div class="form-hint mt-1">Veröffentlichen muss eine zweite Person – „Zur Prüfung“ reicht die Seite beim Speichern ein.</div>
+                                <?php endif; ?>
                                 <div class="form-hint mt-2">Private Seiten sind nicht öffentlich erreichbar und nur für eingeloggte Mitglieder bzw. Administratoren sichtbar.</div>
                             </div>
                             <div class="mb-3">
@@ -456,6 +484,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                                 </div>
                                 <div class="form-hint">Optional. Leer lassen = kein „Zuletzt aktualisiert“-Hinweis auf der Seite.</div>
                             </div>
+                            <?php $workflowPanel = $pageWorkflowPanel; require __DIR__ . '/../partials/content-workflow-panel.php'; ?>
                         </div>
                     </div>
                 </div>
@@ -789,6 +818,7 @@ $isEnglishEditorView = $editorLocale === 'en';
                 </div>
             </div>
         </form>
+        <?php $workflowPanel = $pageWorkflowPanel; $workflowFormAction = $pageAdminBaseUrl; $workflowFormCsrfToken = $csrfToken; require __DIR__ . '/../partials/content-workflow-form.php'; ?>
 
         <?php
         $pickerModalId = 'pageFeaturedImageModal';
@@ -823,11 +853,7 @@ $isEnglishEditorView = $editorLocale === 'en';
             'templateMetaPanelSelector' => '[data-page-template-meta-panel]',
             'templateMetaPanelAttribute' => 'data-page-template-meta-panel',
             'templateMetaEmptySelector' => '[data-page-template-meta-empty]',
-            'statusMap' => [
-                'draft' => ['label' => 'Entwurf', 'className' => 'badge bg-yellow-lt text-yellow'],
-                'published' => ['label' => 'Veröffentlicht', 'className' => 'badge bg-green-lt text-green'],
-                'private' => ['label' => 'Privat', 'className' => 'badge bg-purple-lt text-purple'],
-            ],
+            'statusMap' => \CMS\Services\Content\ContentStatus::badgeMap(),
             'countBindings' => [
                 ['sourceId' => $activePageTitleInputId, 'targetId' => 'pageTitleCount'],
                 ['sourceId' => $activePageSlugInputId, 'targetId' => 'pageSlugCount'],

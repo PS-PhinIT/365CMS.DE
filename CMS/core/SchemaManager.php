@@ -72,6 +72,7 @@ class SchemaManager
     public const FEATURE_TABLES_V26 = [
         'password_history', 'user_identities',
         'media_usage',
+        'content_workflow_events', 'content_preview_links',
         'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
     ];
 
@@ -1464,6 +1465,36 @@ class SchemaManager
                 KEY idx_media_usage_updated (updated_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Verwendungsnachweis für Medien'",
 
+            // v26: Freigabe-Verlauf je Inhalt (ContentWorkflow, Bereich 3a): Einreichen, Freigeben, Zurückgeben, Kommentare.
+            'content_workflow_events' => "CREATE TABLE IF NOT EXISTS {$p}content_workflow_events (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                content_type VARCHAR(40) NOT NULL,
+                content_id INT UNSIGNED NOT NULL,
+                locale VARCHAR(10) NOT NULL DEFAULT '',
+                action VARCHAR(30) NOT NULL,
+                from_status VARCHAR(20) DEFAULT NULL,
+                to_status VARCHAR(20) DEFAULT NULL,
+                user_id INT UNSIGNED DEFAULT NULL,
+                comment TEXT NULL,
+                created_at DATETIME NOT NULL,
+                KEY idx_content_workflow_content (content_type, content_id, created_at),
+                KEY idx_content_workflow_action (action, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Freigabe-Verlauf (Vier-Augen-Prinzip)'",
+
+            // v26: Vorschau-Links für Entwürfe (ContentWorkflow). Gespeichert wird nur der SHA-256-Hash des Tokens.
+            'content_preview_links' => "CREATE TABLE IF NOT EXISTS {$p}content_preview_links (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                content_type VARCHAR(40) NOT NULL,
+                content_id INT UNSIGNED NOT NULL,
+                token_hash CHAR(64) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_by INT UNSIGNED DEFAULT NULL,
+                created_at DATETIME NOT NULL,
+                UNIQUE KEY uq_content_preview_token (token_hash),
+                KEY idx_content_preview_content (content_type, content_id),
+                KEY idx_content_preview_expires (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Vorschau-Links für Entwürfe'",
+
             // v26: Offsite-Status je Backup (OffsiteBackupService, S3-kompatibel).
             'backup_offsite_uploads' => "CREATE TABLE IF NOT EXISTS {$p}backup_offsite_uploads (
                 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -2336,6 +2367,16 @@ class SchemaManager
             'user_verified',
             "ALTER TABLE {$this->prefix}passkey_credentials ADD COLUMN user_verified TINYINT(1) NULL DEFAULT NULL"
         );
+
+        // v26: posts.publish/pages.publish werden ab 4.1.0 geprüft – Rollen, die heute veröffentlichen, behalten das Recht.
+        try {
+            if (function_exists('cms_ensure_role_permissions_table')) {
+                cms_ensure_role_permissions_table();
+            }
+            \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
+        } catch (\Throwable $e) {
+            error_log(sprintf('SchemaManager::ensureFeatureSchema(capabilities) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
+        }
 
         // v25: Wer hat eine Seitenrevision ausgelöst? (Übersicht „Letzte Änderungen“)
         $this->ensureColumnExists(

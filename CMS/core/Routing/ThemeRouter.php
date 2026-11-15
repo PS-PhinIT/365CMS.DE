@@ -104,6 +104,8 @@ final class ThemeRouter
         $this->registerArchiveRoutes('tag', [$this, 'renderTagArchive'], [$this, 'renderTagArchiveIndex']);
         $this->router->addRoute('GET', '/site-table/export/:id/:format', [$this, 'streamSiteTableExport']);
         $this->router->addRoute('GET', '/blog', [$this, 'renderBlogIndex']);
+        // Vorschau-Link für Entwürfe und eingereichte Inhalte (4.1.0, 3a): signierter Token statt Login.
+        $this->router->addRoute('GET', '/preview/:token', [$this, 'renderPreview']);
         // Beitragsmuster erst nach den Routen der Funktionsbereiche und Plugins (`register_routes`) eintragen:
         // Muster wie /:year/:slug fingen sonst /download/<slug>, /kb/<slug> oder /feed/<bereich> ab (erster Treffer gewinnt).
         $registerPostRoutes = function () use ($currentPostRoutePattern): void {
@@ -1340,6 +1342,63 @@ final class ThemeRouter
             'post' => $post,
             'contentLocale' => $locale,
         ]);
+    }
+
+    /**
+     * Vorschau-Link `/preview/<token>` (4.1.0, 3a): zeigt einen Beitrag oder eine Seite in jedem Status außer
+     * Papierkorb über dieselben Theme-Vorlagen wie die normale Ansicht – ohne Login, mit noindex und ohne Cache.
+     * Ungültige, abgelaufene oder widerrufene Tokens liefern 404 (kein Hinweis, ob der Token je existierte).
+     */
+    public function renderPreview(string $token): void
+    {
+        $link = Services\Content\ContentWorkflow::instance()->resolvePreviewToken(rawurldecode($token));
+        if ($link === null) {
+            $this->router->render404();
+            return;
+        }
+
+        $this->sendDraftPreviewHeaders();
+        if (!headers_sent()) {
+            header('Referrer-Policy: no-referrer', true);
+        }
+        $locale = $this->router->getRequestLocale();
+
+        if ($link['type'] === Services\Content\ContentWorkflow::TYPE_POST) {
+            $db = Database::instance();
+            $prefix = $db->getPrefix();
+            $postRow = $db->get_row(
+                "SELECT p.*, COALESCE(NULLIF(p.author_display_name, ''), NULLIF(u.display_name, ''), NULLIF(u.username, ''), 'Autor') AS author_name, c.name AS category_name, " . $this->categorySlugSelectExpression($locale) . "
+                 FROM {$prefix}posts p
+                 LEFT JOIN {$prefix}users u ON u.id = p.author_id
+                 LEFT JOIN {$prefix}post_categories c ON c.id = p.category_id
+                 WHERE p.id = ? AND p.status <> 'trash'
+                 LIMIT 1",
+                [$link['id']]
+            );
+            if (!$postRow) {
+                $this->router->render404();
+                return;
+            }
+            $post = (object) $this->attachLegacyCompatibleTagsToPost(
+                Services\ContentLocalizationService::getInstance()->localizePost((array) $postRow, $locale)
+            );
+            if (!empty($post->content)) {
+                $post->content = $this->router->prepareRenderableContent((string) $post->content, 'post', (int) ($post->id ?? 0));
+            }
+            ThemeManager::instance()->render('blog-single', ['post' => $post, 'contentLocale' => $locale, 'isPreview' => true]);
+            return;
+        }
+
+        $page = PageManager::instance()->getPage((int) $link['id']);
+        if ($page === null || (string) ($page['status'] ?? '') === 'trash') {
+            $this->router->render404();
+            return;
+        }
+        $page = Services\ContentLocalizationService::getInstance()->localizePage($page, $locale);
+        if (!empty($page['content'])) {
+            $page['content'] = $this->router->prepareRenderableContent((string) $page['content'], 'page', (int) ($page['id'] ?? 0));
+        }
+        ThemeManager::instance()->render('page', ['page' => $page, 'contentLocale' => $locale, 'isPreview' => true]);
     }
 
     public function renderLegacyBlogSingle(string $slug): void

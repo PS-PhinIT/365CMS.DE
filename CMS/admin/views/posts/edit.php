@@ -305,6 +305,30 @@ $publishChecklistService = \CMS\Services\PostPublishChecklistService::getInstanc
 $isLivePost = !$isNew && $publishChecklistService->isLive($storedPublishState);
 $storedPublishedAtTimestamp = $storedPublishState !== null ? strtotime((string) ($storedPublishState['published_at'] ?? '')) : false;
 $storedPublishedAtIso = $storedPublishedAtTimestamp !== false ? date('c', $storedPublishedAtTimestamp) : '';
+// Vier-Augen-Prinzip (4.1.0, 3a): Darf dieses Konto den Beitrag selbst veröffentlichen?
+$postWorkflowService = \CMS\Services\Content\ContentWorkflow::instance();
+$postWorkflowUserId = \CMS\Services\ContentEditPermission::currentUserId();
+$postStoredStatus = $isNew ? '' : (string) ($post['status'] ?? '');
+$postWorkflowAuthorId = $isNew ? $postWorkflowUserId : (int) ($post['author_id'] ?? 0);
+$postWorkflowCanPublish = \CMS\Services\Content\ContentStatus::isPublishing($postStoredStatus)
+    || $postWorkflowService->canPublish(
+        \CMS\Services\Content\ContentWorkflow::TYPE_POST,
+        $postWorkflowUserId,
+        $postWorkflowAuthorId,
+        null,
+        $postStoredStatus === 'pending' ? $postWorkflowService->lastSubmitterId(\CMS\Services\Content\ContentWorkflow::TYPE_POST, (int) ($post['id'] ?? 0)) : 0
+    );
+$postWorkflowPanel = [
+    'type' => \CMS\Services\Content\ContentWorkflow::TYPE_POST,
+    'id' => $isNew ? 0 : (int) ($post['id'] ?? 0),
+    'status' => $postStoredStatus,
+    'author_id' => $postWorkflowAuthorId,
+    'is_public' => $isLivePost,
+    'form_id' => 'postWorkflowForm',
+    'editor_form_id' => 'postForm',
+    'editor_locale' => $editorLocale ?? 'de',
+    'variant' => 'panel',
+];
 $checklistCategoryId = $categoryId > 0 ? $categoryId : (int) ($additionalCategoryIds[0] ?? 0);
 $publishChecklist = $publishChecklistService->evaluate([
     'featured_image' => $postFeaturedImageValue,
@@ -388,6 +412,7 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                         <i class="ti ti-device-floppy" aria-hidden="true"></i>
                         <span class="cms-editor-header__label">Speichern</span>
                     </button>
+                    <?php if ($postWorkflowCanPublish): ?>
                     <button type="submit" form="postForm" name="publish_intent" value="schedule" class="btn btn-outline-primary cms-editor-header__btn" id="postScheduleButton" data-checklist-gate="always">
                         <i class="ti ti-calendar-time" aria-hidden="true"></i>
                         <span class="cms-editor-header__label">Planen</span>
@@ -396,6 +421,13 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                         <i class="ti ti-send" aria-hidden="true"></i>
                         <span class="cms-editor-header__label">Veröffentlichen</span>
                     </button>
+                    <?php else: ?>
+                    <button type="submit" form="postForm" name="publish_intent" value="submit" class="btn btn-primary cms-editor-header__btn" id="postSubmitReviewButton" aria-describedby="postSubmitReviewHint">
+                        <i class="ti ti-send" aria-hidden="true"></i>
+                        <span class="cms-editor-header__label"><?php echo $postStoredStatus === 'pending' ? 'Erneut einreichen' : 'Zur Prüfung einreichen'; ?></span>
+                    </button>
+                    <span class="visually-hidden" id="postSubmitReviewHint">Veröffentlichen muss eine zweite Person; ein eingetragenes Datum wird bei der Freigabe übernommen.</span>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <span class="visually-hidden" id="postChecklistGateHint">Nicht verfügbar, solange die Veröffentlichungs-Checkliste unvollständig ist.</span>
             </div>
@@ -798,8 +830,9 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                                 <label class="form-label" for="status">Status</label>
                                 <select class="form-select" id="status" name="status" aria-describedby="statusHint">
                                     <option value="draft" <?php if ($postStatusValue === 'draft') echo 'selected'; ?>>Entwurf</option>
-                                    <option value="published" <?php if ($postStatusValue === 'published') echo 'selected'; ?>>Veröffentlicht</option>
-                                    <option value="private" <?php if ($postStatusValue === 'private') echo 'selected'; ?>>Privat (nur Mitglieder)</option>
+                                    <option value="pending" <?php if ($postStatusValue === 'pending') echo 'selected'; ?>>Zur Prüfung</option>
+                                    <option value="published" <?php if ($postStatusValue === 'published') echo 'selected'; ?><?php echo $postWorkflowCanPublish ? '' : ' disabled'; ?>>Veröffentlicht</option>
+                                    <option value="private" <?php if ($postStatusValue === 'private') echo 'selected'; ?><?php echo $postWorkflowCanPublish ? '' : ' disabled'; ?>>Privat (nur Mitglieder)</option>
                                 </select>
                                 <div class="form-hint" id="statusHint">„Veröffentlicht“ mit Datum in der Zukunft plant den Beitrag. „Privat“ ist nur für eingeloggte Mitglieder sichtbar.</div>
                             </div>
@@ -845,6 +878,8 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                             </fieldset>
                         </div>
                     </details>
+
+                    <?php $workflowPanel = $postWorkflowPanel; require __DIR__ . '/../partials/content-workflow-panel.php'; ?>
 
                     <details class="cms-editor-panel" id="postPanelCategory" open>
                         <summary class="cms-editor-panel__summary">
@@ -1026,6 +1061,7 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
                 </aside>
             </div>
         </form>
+        <?php $workflowPanel = $postWorkflowPanel; $workflowFormAction = '/admin/posts'; $workflowFormCsrfToken = $csrfToken; require __DIR__ . '/../partials/content-workflow-form.php'; ?>
 
         <dialog class="cms-editor-dialog" id="postChecklistDialog" aria-labelledby="postChecklistDialogTitle" aria-describedby="postChecklistDialogText">
             <div class="cms-editor-dialog__header">
@@ -1115,12 +1151,7 @@ $postEditorPostId = $isNew ? 0 : (int) ($post['id'] ?? 0);
             'templateSelectId' => 'postTemplate',
             'templateMetaPanelSelector' => '[data-post-template-meta-panel]',
             'templateMetaEmptySelector' => '[data-post-template-meta-empty]',
-            'statusMap' => [
-                'draft' => ['label' => 'Entwurf', 'className' => 'badge bg-yellow-lt text-yellow'],
-                'published' => ['label' => 'Veröffentlicht', 'className' => 'badge bg-green-lt text-green'],
-                'private' => ['label' => 'Privat', 'className' => 'badge bg-purple-lt text-purple'],
-                'scheduled' => ['label' => 'Geplant', 'className' => 'badge bg-azure-lt text-azure'],
-            ],
+            'statusMap' => \CMS\Services\Content\ContentStatus::badgeMap(),
             'countBindings' => [
                 ['sourceId' => $activeTitleInputId, 'targetId' => 'postTitleCount'],
                 ['sourceId' => $activeSlugInputId, 'targetId' => 'postSlugCount'],

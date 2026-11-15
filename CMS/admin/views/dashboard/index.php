@@ -446,11 +446,46 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
         $editorialDrafts = is_array($editorialWidgets['drafts'] ?? null) ? $editorialWidgets['drafts'] : [];
         $editorialUpcoming = is_array($editorialWidgets['upcoming'] ?? null) ? $editorialWidgets['upcoming'] : [];
         $editorialCalendarUrl = (string) ($editorialWidgets['calendar_url'] ?? '');
+        $editorialPendingReviews = is_array($editorialWidgets['pending_reviews'] ?? null) ? $editorialWidgets['pending_reviews'] : [];
         $editorialEsc = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         ?>
-        <?php if ($editorialDrafts !== [] || $editorialUpcoming !== []): ?>
+        <?php if ($editorialDrafts !== [] || $editorialUpcoming !== [] || $editorialPendingReviews !== []): ?>
         <section class="dashboard-section dashboard-section--editorial" aria-label="<?= $editorialEsc(__('calendar.widget.section_label')) ?>">
         <div class="dashboard-overview-grid">
+            <?php if ($editorialPendingReviews !== []): ?>
+            <div class="card dashboard-compact-card" id="dashboard-pending-reviews">
+                <div class="card-header">
+                    <h3 class="card-title">Ausstehende Prüfungen</h3>
+                    <span class="badge bg-orange-lt text-orange ms-2"><?= count($editorialPendingReviews) ?></span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <?php foreach ($editorialPendingReviews as $review): ?>
+                        <?php
+                        $reviewIsPage = ($review['type'] ?? '') === 'page';
+                        $reviewSubmittedAt = strtotime((string) ($review['submitted_at'] ?? ''));
+                        ?>
+                        <a href="<?= $editorialEsc(dashboardUrl((string) ($review['edit_url'] ?? ''), '/admin')) ?>" class="list-group-item list-group-item-action">
+                            <span class="d-flex align-items-start gap-2">
+                                <i class="ti <?= $reviewIsPage ? 'ti-file' : 'ti-article' ?> text-secondary mt-1" aria-hidden="true"></i>
+                                <span class="flex-fill text-truncate">
+                                    <span class="d-block text-truncate fw-medium"><?= $editorialEsc($review['title'] ?? '') ?></span>
+                                    <span class="d-block text-secondary small text-truncate">
+                                        <?= $editorialEsc(__($reviewIsPage ? 'calendar.type.page' : 'calendar.type.post')) ?>
+                                        <?php if (($review['author_name'] ?? '') !== ''): ?> · <?= $editorialEsc($review['author_name']) ?><?php endif; ?>
+                                        <?php if ($reviewSubmittedAt !== false): ?> · eingereicht am <?= $editorialEsc(date('d.m.Y H:i', $reviewSubmittedAt)) ?><?php endif; ?>
+                                    </span>
+                                </span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+                <div class="card-footer d-flex gap-2 flex-wrap">
+                    <a href="<?= $editorialEsc(dashboardUrl('/admin/posts?status=pending', '/admin')) ?>" class="btn btn-sm btn-outline-primary">Beiträge zur Prüfung</a>
+                    <a href="<?= $editorialEsc(dashboardUrl('/admin/pages?status=pending', '/admin')) ?>" class="btn btn-sm btn-outline-secondary">Seiten zur Prüfung</a>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php if ($editorialDrafts !== []): ?>
             <div class="card dashboard-compact-card" id="dashboard-my-drafts">
                 <div class="card-header">

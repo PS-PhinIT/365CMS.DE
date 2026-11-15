@@ -61,7 +61,7 @@ T::$verbose = in_array('-v', $argv ?? [], true);
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Badge-Schlüssel, die die Sidebar frisch (ungecacht) auswertet. */
-const KNOWN_BADGES = ['updates', 'comments', 'form_submissions', 'privacy_requests', 'logs'];
+const KNOWN_BADGES = ['updates', 'comments', 'form_submissions', 'privacy_requests', 'logs', 'content_pending_posts', 'content_pending_pages'];
 
 /**
  * Optionale Module (KLARSTELLUNGEN §7): eigene Hauptpunkte erlaubt, aber nur bei aktivem Modul sichtbar.

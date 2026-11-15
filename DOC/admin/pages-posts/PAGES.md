@@ -107,4 +107,4 @@ Bei `ThemeManager::render('page', …)` löst der neue `PageTemplateService` die
 
 ### Verwandte Dokumente
 
-[POSTS.md](POSTS.md) · [SETTINGS.md](SETTINGS.md) · [TOC.md](TOC.md) · [TABLES.md](TABLES.md) · [../seo/SEO.md](../seo/SEO.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)
+[POSTS.md](POSTS.md) · [REVIEW.md](REVIEW.md) · [SETTINGS.md](SETTINGS.md) · [TOC.md](TOC.md) · [TABLES.md](TABLES.md) · [../seo/SEO.md](../seo/SEO.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)

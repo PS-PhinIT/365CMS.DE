@@ -36,6 +36,7 @@ final class Registry
         SearchIndexHooks::class,
         ContentExchangeHooks::class,
         MediaFeatureHooks::class,
+        ContentWorkflowHooks::class,
     ];
 
     private static bool $registered = false;

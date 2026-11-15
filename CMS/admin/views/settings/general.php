@@ -518,6 +518,13 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             </select>
                             <small id="settingsPageDefaultStatusHint" class="form-hint">Der Status gilt für neue Seiten und Site-nahe Inhaltseinträge.</small>
                         </div>
+                        <div class="mt-3">
+                            <label class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="content_review_second_person" id="settingsContentReviewSecondPerson" value="1" aria-describedby="settingsContentReviewSecondPersonHint" <?php echo !empty($s['content_review_second_person']) ? 'checked' : ''; ?>>
+                                <span class="form-check-label">Veröffentlichung braucht eine zweite Person</span>
+                            </label>
+                            <small id="settingsContentReviewSecondPersonHint" class="form-hint">Wer einen Beitrag oder eine Seite verfasst oder eingereicht hat, kann ihn nur zur Prüfung einreichen – freigeben muss ein anderes Konto mit Veröffentlichungsrecht. Gilt auch für Admins. Bereits veröffentlichte Inhalte bleiben beim Bearbeiten veröffentlicht.</small>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Zähler für die Badges im Admin-Menü (Updates, Kommentare, Eingänge, DSGVO-Anfragen, Protokolle).
+ * Zähler für die Badges im Admin-Menü (Updates, Kommentare, Eingänge, DSGVO-Anfragen, Protokolle, Prüfungen).
  *
  * Badges werden nie gecacht (KLARSTELLUNGEN §7): Der Menübaum kommt aus dem Cache, die Zahlen
  * werden danach bei jedem Aufruf frisch ermittelt – und nur für Schlüssel, die im sichtbaren Baum
@@ -36,9 +36,15 @@ final class BadgeProvider
     public const FORM_SUBMISSIONS = 'form_submissions';
     public const PRIVACY_REQUESTS = 'privacy_requests';
     public const LOGS = 'logs';
+    /** Zur Prüfung eingereichte Beiträge/Seiten, die das Konto freigeben dürfte (Vier-Augen-Prinzip, 4.1.0). */
+    public const CONTENT_PENDING_POSTS = 'content_pending_posts';
+    public const CONTENT_PENDING_PAGES = 'content_pending_pages';
 
     /** Badge-Schlüssel, die Katalogeinträge tragen dürfen. */
-    public const KEYS = [self::UPDATES, self::COMMENTS, self::FORM_SUBMISSIONS, self::PRIVACY_REQUESTS, self::LOGS];
+    public const KEYS = [
+        self::UPDATES, self::COMMENTS, self::FORM_SUBMISSIONS, self::PRIVACY_REQUESTS, self::LOGS,
+        self::CONTENT_PENDING_POSTS, self::CONTENT_PENDING_PAGES,
+    ];
 
     /** Schlüssel mit eingebauter Quelle; register() kann sie nicht überschreiben. */
     private const BUILT_IN = [self::UPDATES, self::COMMENTS, self::PRIVACY_REQUESTS, self::LOGS];
@@ -53,6 +59,8 @@ final class BadgeProvider
         self::FORM_SUBMISSIONS => ['1 neuer Eingang', '%d neue Eingänge'],
         self::PRIVACY_REQUESTS => ['1 offene DSGVO-Anfrage', '%d offene DSGVO-Anfragen'],
         self::LOGS => ['1 ungelesener Hinweis', '%d ungelesene Hinweise'],
+        self::CONTENT_PENDING_POSTS => ['1 Beitrag wartet auf Prüfung', '%d Beiträge warten auf Prüfung'],
+        self::CONTENT_PENDING_PAGES => ['1 Seite wartet auf Prüfung', '%d Seiten warten auf Prüfung'],
     ];
 
     /** @var array<string, \Closure(array<string, mixed>): int> */
