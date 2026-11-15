@@ -1,7 +1,7 @@
 <?php
 /**
  * Hooks für Ablauf- und Prüfdaten (4.1.0, Bereich 3c): Editor-Felder `expires_date`/`expires_time` und
- * `review_due_date` nach dem Speichern von Beiträgen und Seiten übernehmen (geprüft haben die Module), Checkbox
+ * `review_due_date` nach dem Speichern von Beiträgen und Seiten übernehmen (Wissensdatenbank: direkt aus dem Modul) (geprüft haben die Module), Checkbox
  * „Als geprüft markieren“, stündlich abgelaufene Inhalte verarbeiten, täglich fällige Wiedervorlagen melden.
  * Ohne die Felder im Formular (Sammelaktionen, Papierkorb, Freigabe) bleiben gespeicherte Werte unverändert.
  *
@@ -36,6 +36,26 @@ final class ContentExpiryHooks
         Hooks::addAction('cms_cron_daily', static function (): void {
             self::guard(static fn () => ContentExpiryService::instance()->processDueReviews());
         });
+    }
+
+    /**
+     * Fehlermeldung zu ungültigen Editor-Feldern oder null.
+     *
+     * @param array<string, mixed> $post
+     */
+    public static function validate(array $post): ?string
+    {
+        $text = static fn (string $key): string => is_scalar($post[$key] ?? null) ? (string) $post[$key] : '';
+        foreach ([
+            ContentExpiryService::normalizeInput($text('expires_date'), $text('expires_time'), 'Ablaufdatum'),
+            ContentExpiryService::normalizeInput($text('review_due_date'), '', 'Wiedervorlage'),
+        ] as $input) {
+            if ($input['error'] !== null) {
+                return (string) $input['error'];
+            }
+        }
+
+        return null;
     }
 
     /**

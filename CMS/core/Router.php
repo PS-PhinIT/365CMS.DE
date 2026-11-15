@@ -569,6 +569,12 @@ class Router
             if ($this->redirectLegacyEnglishPostSlug($routingUri)) {
                 return;
             }
+
+            // Abgelaufen und zurückgestuft (4.1.0, 3c): auf Wunsch 410 Gone statt 404.
+            if ($page !== null && Services\Content\ContentExpiryService::instance()->frontendStatusFor($page) === 410) {
+                $this->renderError(410);
+                return;
+            }
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('router')->warning('Dynamic page lookup failed.', [
                 'slug' => $slug ?? $uri,

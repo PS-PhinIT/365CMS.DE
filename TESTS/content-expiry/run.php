@@ -48,6 +48,8 @@ function exDatabase(): Database
                 $this->sqlite->exec("CREATE TABLE cms_{$table} (id INTEGER PRIMARY KEY, title TEXT, status TEXT, author_id INTEGER, updated_at TEXT,
                     expires_at TEXT, review_due_at TEXT, expiry_notified_at TEXT, review_notified_at TEXT)");
             }
+            $this->sqlite->exec("CREATE TABLE cms_kb_entries (id INTEGER PRIMARY KEY, title TEXT, is_active INTEGER, trashed_at TEXT, updated_at TEXT,
+                expires_at TEXT, review_due_at TEXT, expiry_notified_at TEXT, review_notified_at TEXT)");
         }
 
         public function execute(string $sql, array $params = []): \PDOStatement
@@ -90,6 +92,10 @@ function exFixture(): array
         (4, 'Ohne Ablauf', 'published', 7, NULL, '2026-11-15 00:00:00'),
         (5, 'Papierkorb', 'trash', 7, NULL, '2026-11-01 00:00:00')");
     $db->execute("INSERT INTO cms_pages (id, title, status, author_id, expires_at) VALUES (9, 'Seite', 'published', 0, '2026-11-15 10:00:00')");
+    $db->execute("INSERT INTO cms_kb_entries (id, title, is_active, trashed_at, expires_at, review_due_at) VALUES
+        (30, 'KB abgelaufen', 1, NULL, '2026-11-10 00:00:00', NULL),
+        (31, 'KB inaktiv', 0, NULL, '2026-11-10 00:00:00', NULL),
+        (32, 'KB Papierkorb', 1, '2026-11-01 00:00:00', '2026-11-10 00:00:00', '2026-11-01 00:00:00')");
     $sent = new \ArrayObject();
     $settings = new \ArrayObject([E::SETTING_ACTION => 'draft', E::SETTING_REVIEW_INTERVAL => '12']);
     $service = new E(
@@ -125,7 +131,10 @@ T::run('Eingaben und Regeln', static function (): void {
 T::run('Ablauf: zurückstufen', static function (): void {
     $f = exFixture();
     $result = $f['service']->processExpired();
-    T::same(['expired' => 2, 'marked' => 0], $result, 'Beitrag 1 und Seite 9 zurückgestuft');
+    T::same(['expired' => 3, 'marked' => 0], $result, 'Beitrag 1, Seite 9 und KB-Eintrag 30 zurückgestuft');
+    T::same(0, (int) $f['db']->get_var('SELECT is_active FROM cms_kb_entries WHERE id = 30'), 'abgelaufener KB-Eintrag ist inaktiv');
+    T::same(1, (int) $f['db']->get_var('SELECT is_active FROM cms_kb_entries WHERE id = 32'), 'KB-Eintrag im Papierkorb bleibt unberührt');
+    T::same(null, $f['db']->get_var('SELECT expiry_notified_at FROM cms_kb_entries WHERE id = 31'), 'inaktiver KB-Eintrag wird nicht gemeldet');
     T::same('draft', (string) $f['db']->get_var('SELECT status FROM cms_posts WHERE id = 1'), 'abgelaufener Beitrag ist Entwurf');
     T::same('published', (string) $f['db']->get_var('SELECT status FROM cms_posts WHERE id = 2'), 'noch gültiger Beitrag bleibt');
     T::same('draft', (string) $f['db']->get_var('SELECT status FROM cms_pages WHERE id = 9'), 'abgelaufene Seite ist Entwurf');
@@ -138,7 +147,7 @@ T::run('Ablauf: zurückstufen', static function (): void {
 T::run('Ablauf: nur markieren', static function (): void {
     $f = exFixture();
     $f['settings'][E::SETTING_ACTION] = 'mark';
-    T::same(['expired' => 0, 'marked' => 2], $f['service']->processExpired(), 'Einstellung „nur markieren“');
+    T::same(['expired' => 0, 'marked' => 3], $f['service']->processExpired(), 'Einstellung „nur markieren“');
     T::same('published', (string) $f['db']->get_var('SELECT status FROM cms_posts WHERE id = 1'), 'Inhalt bleibt sichtbar');
     T::same(['expired' => 0, 'marked' => 0], $f['service']->processExpired(), 'markierte Inhalte melden sich nur einmal');
     $f['service']->saveDates('post', 1, '2026-11-15 09:30:00', null);
@@ -154,9 +163,20 @@ T::run('Batch-Grenze', static function (): void {
         $f['db']->execute("INSERT INTO cms_posts (id, title, status, author_id, expires_at) VALUES (?, 'x', 'published', 0, '2026-11-01 00:00:00')", [$i]);
     }
     $first = $f['service']->processExpired();
-    T::same(E::BATCH + 1, $first['expired'], 'je Lauf höchstens 100 Beiträge (+ 1 Seite)');
+    T::same(E::BATCH + 2, $first['expired'], 'je Lauf höchstens 100 Beiträge (+ 1 Seite, 1 KB-Eintrag)');
     $second = $f['service']->processExpired();
     T::same(31, $second['expired'], 'der Rest im nächsten Lauf');
+});
+
+T::run('Antwort 404 oder 410', static function (): void {
+    $f = exFixture();
+    $f['service']->processExpired();
+    $row = (object) ['status' => 'draft', 'expiry_notified_at' => '2026-11-15 10:00:00'];
+    T::same(404, $f['service']->frontendStatusFor($row), 'Standard: 404');
+    $f['settings'][E::SETTING_RESPONSE] = '410';
+    T::same(410, $f['service']->frontendStatusFor($row), 'Einstellung 410: abgelaufene Inhalte melden „Gone“');
+    T::same(404, $f['service']->frontendStatusFor(['status' => 'draft', 'expiry_notified_at' => null]), 'normaler Entwurf bleibt 404');
+    T::same(404, $f['service']->frontendStatusFor(['status' => 'published', 'expiry_notified_at' => '2026-11-15 10:00:00']), 'nur markierte (sichtbare) Inhalte: kein 410');
 });
 
 T::run('Wiedervorlage', static function (): void {
@@ -195,6 +215,15 @@ T::run('Einbindung (Quelltext)', static function (): void {
         T::check(str_contains(exSource($view), 'partials/content-expiry-fields.php'), basename(dirname($view)) . '-Editor zeigt die Felder');
     }
     T::check(!preg_match('/<script|\son[a-z]+=/i', exSource('admin/views/partials/content-expiry-fields.php')), 'Felder ohne Inline-Skripte (CSP)');
+    $calendar = exSource('core/Services/EditorialCalendarService.php');
+    T::check(str_contains($calendar, "case self::KIND_REVIEW:") && str_contains($calendar, 'review_due_at'), 'Redaktionskalender zeigt Wiedervorlagen');
+    T::check(str_contains($calendar, '[self::KIND_PUBLISHED, self::KIND_REVIEW]'), 'Wiedervorlagen sind im Kalender nicht verschiebbar');
+    T::check(str_contains(exSource('assets/js/admin-editorial-calendar.js'), "'review'"), 'Kalender-Skript kennt die Art „review“');
+    T::check(str_contains(exSource('core/Services/DashboardService.php'), "dueReviews(8)") && str_contains(exSource('admin/views/dashboard/index.php'), 'Fällige Prüfungen'), 'Dashboard-Karte „Fällige Prüfungen“');
+    T::check(str_contains(exSource('core/Routing/ThemeRouter.php'), 'frontendStatusFor($postRow) === 410') && str_contains(exSource('core/Router.php'), 'frontendStatusFor($page) === 410'), '410 für Beiträge und Seiten');
+    T::check(str_contains(exSource('admin/modules/knowledgebase/KnowledgebaseModule.php'), "ContentExpiryHooks::persist('kb'"), 'Wissensdatenbank speichert die Felder');
+    T::check(str_contains(exSource('admin/views/knowledgebase/edit.php'), 'partials/content-expiry-fields.php'), 'Wissensdatenbank-Editor zeigt die Felder');
+    T::check(str_contains((string) \CMS\SchemaManager::getSchemaQueries('cms_', 'utf8mb4')['kb_entries'], 'KEY idx_kb_expires (is_active, expires_at)'), 'kb_entries: Spalten und Index');
     T::check(str_contains(exSource('core/Services/Content/ContentExpiryService.php'), "'cms_content_expired'") && str_contains(exSource('core/Services/Content/ContentExpiryService.php'), "'cms_content_review_due'"), 'Hooks cms_content_expired und cms_content_review_due');
 });
 

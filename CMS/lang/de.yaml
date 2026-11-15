@@ -353,6 +353,7 @@ default:
   "calendar.type.pages": "Seiten"
   "calendar.kind.scheduled": "Geplante Veröffentlichung"
   "calendar.kind.planned": "Entwurf mit geplantem Datum"
+  "calendar.kind.review": "Wiedervorlage"
   "calendar.kind.published": "Veröffentlicht"
   "calendar.legend.label": "Legende"
   "calendar.legend.move_hint": "Einträge per Drag & Drop oder über „Verschieben“ auf einen anderen Tag legen."

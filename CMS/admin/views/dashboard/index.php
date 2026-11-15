@@ -447,9 +447,10 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
         $editorialUpcoming = is_array($editorialWidgets['upcoming'] ?? null) ? $editorialWidgets['upcoming'] : [];
         $editorialCalendarUrl = (string) ($editorialWidgets['calendar_url'] ?? '');
         $editorialPendingReviews = is_array($editorialWidgets['pending_reviews'] ?? null) ? $editorialWidgets['pending_reviews'] : [];
+        $editorialDueReviews = is_array($editorialWidgets['due_reviews'] ?? null) ? $editorialWidgets['due_reviews'] : [];
         $editorialEsc = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         ?>
-        <?php if ($editorialDrafts !== [] || $editorialUpcoming !== [] || $editorialPendingReviews !== []): ?>
+        <?php if ($editorialDrafts !== [] || $editorialUpcoming !== [] || $editorialPendingReviews !== [] || $editorialDueReviews !== []): ?>
         <section class="dashboard-section dashboard-section--editorial" aria-label="<?= $editorialEsc(__('calendar.widget.section_label')) ?>">
         <div class="dashboard-overview-grid">
             <?php if ($editorialPendingReviews !== []): ?>
@@ -482,6 +483,26 @@ foreach ($workOverviewWidgets as $widgetKey => $widget) {
                 <div class="card-footer d-flex gap-2 flex-wrap">
                     <a href="<?= $editorialEsc(dashboardUrl('/admin/posts?status=pending', '/admin')) ?>" class="btn btn-sm btn-outline-primary">Beiträge zur Prüfung</a>
                     <a href="<?= $editorialEsc(dashboardUrl('/admin/pages?status=pending', '/admin')) ?>" class="btn btn-sm btn-outline-secondary">Seiten zur Prüfung</a>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($editorialDueReviews !== []): ?>
+            <div class="card dashboard-compact-card" id="dashboard-due-reviews">
+                <div class="card-header">
+                    <h3 class="card-title">Fällige Prüfungen</h3>
+                    <span class="badge bg-purple-lt text-purple ms-2"><?= count($editorialDueReviews) ?></span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <?php foreach ($editorialDueReviews as $dueReview): ?>
+                        <?php $dueReviewAt = strtotime((string) ($dueReview['review_due_at'] ?? '')); ?>
+                        <a href="<?= $editorialEsc(dashboardUrl((string) ($dueReview['edit_url'] ?? ''), '/admin')) ?>" class="list-group-item list-group-item-action">
+                            <span class="d-block text-truncate fw-medium"><?= $editorialEsc($dueReview['title'] ?? '') ?></span>
+                            <span class="d-block text-secondary small text-truncate">
+                                <?= $editorialEsc($dueReview['label'] ?? '') ?><?php if ($dueReviewAt !== false): ?> · fällig seit <?= $editorialEsc(date('d.m.Y', $dueReviewAt)) ?><?php endif; ?>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
                 </div>
             </div>
             <?php endif; ?>

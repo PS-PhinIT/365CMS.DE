@@ -407,6 +407,9 @@
         if (kind === 'planned') {
             return t.kindPlanned || kind;
         }
+        if (kind === 'review') {
+            return t.kindReview || kind;
+        }
         return t.kindPublished || kind;
     }
 
@@ -422,7 +425,7 @@
     }
 
     function renderEvent(event, withMeta) {
-        const kind = ['scheduled', 'planned', 'published'].indexOf(event.kind) !== -1 ? event.kind : 'published';
+        const kind = ['scheduled', 'planned', 'published', 'review'].indexOf(event.kind) !== -1 ? event.kind : 'published';
         const type = event.type === 'page' ? 'page' : 'post';
         const item = element('li', 'cms-ecal__event cms-ecal__event--' + kind + ' cms-ecal__event--' + type);
         item.dataset.uid = event.uid;
