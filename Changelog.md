@@ -16,7 +16,7 @@
 
 ### v4.1.6 — 15.11.2026 - Patch Release
 
-**Entscheidungen aus der Release-Prüfung** · Prüfbereich 3 und 5 (Medien, Rechte, Upload, Importer), Changelog-Korrektur.
+**Entscheidungen aus der Release-Prüfung** · Prüfbereich 3 und 5 (Medien, Rechte, Upload, Importer), Changelog-Korrektur ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)).
 
 Kumulatives Paket 4.1.1 bis 4.1.6; Hinweise zum Update von 4.1.0 wie bei 4.1.5. Schema bleibt `v26`.
 
