@@ -156,7 +156,10 @@ if (!function_exists('cms_admin_updates_render_preflight_badge')) {
                 <div class="col-md-8 text-secondary small">
                     Core: <code><?php echo htmlspecialchars((string) ($databaseStatus['installed_version'] ?? '—')); ?></code> → <code><?php echo htmlspecialchars((string) ($databaseStatus['target_version'] ?? '—')); ?></code><br>
                     Schema: <code><?php echo htmlspecialchars((string) ($databaseStatus['installed_schema_version'] ?? '—')); ?></code> → <code><?php echo htmlspecialchars((string) ($databaseStatus['target_schema_version'] ?? '—')); ?></code><br>
-                    Das Schema-Update ergänzt fehlende Tabellen wie <code>ai_quota_usage</code> idempotent und verändert keine redaktionellen Inhalte.
+                    <?php if (!empty($databaseStatus['schema_missing']) && is_array($databaseStatus['schema_missing'])): ?>
+                        Fehlt im Zielschema: <code><?php echo htmlspecialchars(implode(', ', array_slice(array_map('strval', $databaseStatus['schema_missing']), 0, 12)), ENT_QUOTES, 'UTF-8'); ?></code><?php echo count($databaseStatus['schema_missing']) > 12 ? ' …' : ''; ?><br>
+                    <?php endif; ?>
+                    Das Schema-Update ergänzt fehlende Tabellen und Spalten idempotent und verändert keine redaktionellen Inhalte.
                 </div>
                 <div class="col-md-4 text-md-end">
                     <?php if (empty($databaseStatus['downgrade_detected']) && (!empty($databaseStatus['schema_update_required']) || !empty($databaseStatus['version_update_required']))): ?>

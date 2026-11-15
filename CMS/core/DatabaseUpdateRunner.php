@@ -37,7 +37,8 @@ final class DatabaseUpdateRunner
      *     schema_update_required:bool,
     *     downgrade_detected:bool,
     *     schema_downgrade_detected:bool,
-    *     schema_integrity_ok:bool
+    *     schema_integrity_ok:bool,
+    *     schema_missing:list<string>
      * }
      */
     public function getStatus(): array
@@ -53,7 +54,8 @@ final class DatabaseUpdateRunner
             && version_compare($installedVersion, $targetVersion, '>');
         $schemaDowngradeDetected = $installedSchemaVersion !== ''
             && $this->compareSchemaVersions($installedSchemaVersion, $targetSchemaVersion) > 0;
-        $schemaIntegrityOk = !$schemaDowngradeDetected && $this->isTargetSchemaReady();
+        $schemaMissing = $schemaDowngradeDetected ? [] : $this->missingSchemaElements();
+        $schemaIntegrityOk = !$schemaDowngradeDetected && $schemaMissing === [];
 
         return [
             'installed_version' => $installedVersion,
@@ -70,6 +72,7 @@ final class DatabaseUpdateRunner
             'downgrade_detected' => $coreDowngradeDetected || $schemaDowngradeDetected,
             'schema_downgrade_detected' => $schemaDowngradeDetected,
             'schema_integrity_ok' => $schemaIntegrityOk,
+            'schema_missing' => $schemaMissing,
         ];
     }
 
@@ -93,8 +96,9 @@ final class DatabaseUpdateRunner
             // repairTables() löscht nur die Schema-Flag-Datei und führt die zentralen,
             // idempotenten CREATE-/ALTER-Migrationen erneut aus. Es löscht keine Daten.
             $this->db->repairTables();
-            if (!$this->isTargetSchemaReady()) {
-                throw new \RuntimeException('Das Zielschema ist nach der Migration nicht vollständig verfügbar.');
+            $missing = $this->missingSchemaElements();
+            if ($missing !== []) {
+                throw new \RuntimeException('Das Zielschema ist nach der Migration nicht vollständig verfügbar: ' . implode(', ', array_slice($missing, 0, 20)));
             }
 
             $this->writeSetting(self::INSTALLED_VERSION_OPTION, Version::CURRENT);
@@ -191,20 +195,56 @@ final class DatabaseUpdateRunner
             : $installedSchemaVersion;
     }
 
-    private function isTargetSchemaReady(): bool
+    /**
+     * DB-410-04: Fehlende Teile des Zielschemas – alle Feature-Tabellen (v25/v26), die Pflichtspalten aus
+     * SchemaManager::REQUIRED_COLUMNS und `posts.status` als VARCHAR. Bisher prüfte das Update nur `ai_quota_usage`
+     * und meldete Erfolg, auch wenn v26-Tabellen fehlten. Zwei Abfragen auf information_schema.
+     *
+     * @return list<string> z. B. `table:webhook_deliveries`, `column:users.password_changed_at`
+     */
+    public function missingSchemaElements(): array
     {
-        $quotaTable = $this->db->getPrefix() . 'ai_quota_usage';
-        if (!$this->db->tableExists($quotaTable)) {
-            return false;
+        $prefix = $this->db->getPrefix();
+        try {
+            $tables = array_map('strval', $this->db->get_col(
+                'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE ?',
+                [str_replace(['\\', '_', '%'], ['\\\\', '\\_', '\\%'], $prefix) . '%']
+            ));
+            $columns = [];
+            foreach ($this->db->get_results(
+                'SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('
+                . implode(', ', array_fill(0, count(SchemaManager::REQUIRED_COLUMNS), '?')) . ')',
+                array_map(static fn (string $table): string => $prefix . $table, array_keys(SchemaManager::REQUIRED_COLUMNS))
+            ) as $row) {
+                $columns[(string) $row->TABLE_NAME][(string) $row->COLUMN_NAME] = (string) $row->COLUMN_TYPE;
+            }
+        } catch (\Throwable) {
+            return ['schema:unreadable'];
         }
 
-        foreach (['scope_name', 'period_key', 'user_id', 'provider_id', 'request_count', 'character_count'] as $column) {
-            if (!$this->db->columnExists($quotaTable, $column)) {
-                return false;
+        $known = array_flip($tables);
+        $missing = [];
+        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, array_keys(SchemaManager::REQUIRED_COLUMNS)) as $table) {
+            if (!isset($known[$prefix . $table])) {
+                $missing[] = 'table:' . $table;
             }
         }
+        foreach (SchemaManager::REQUIRED_COLUMNS as $table => $required) {
+            if (!isset($known[$prefix . $table])) {
+                continue;
+            }
+            foreach ($required as $column) {
+                if (!isset($columns[$prefix . $table][$column])) {
+                    $missing[] = 'column:' . $table . '.' . $column;
+                }
+            }
+        }
+        $statusType = $columns[$prefix . 'posts']['status'] ?? '';
+        if ($statusType === '' || SchemaManager::postStatusColumnNeedsWidening($statusType)) {
+            $missing[] = 'column:posts.status (VARCHAR(20))';
+        }
 
-        return true;
+        return array_values(array_unique($missing));
     }
 
     private function sanitizeDiagnosticText(string $value): string

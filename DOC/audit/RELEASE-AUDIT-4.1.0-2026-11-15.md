@@ -15,7 +15,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 | PR | Prüfbereich | Status |
 |----|-------------|--------|
 | #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) | Sicherheit, Kryptografie & Zugriffskontrolle | abgeschlossen – 23 Befunde behoben, 2 bewusst akzeptiert, 1 verworfen, 1 an PR #3 übergeben |
-| #2 | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | ausstehend |
+| #2 | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | abgeschlossen – 3 Befunde behoben, 1 dokumentiert, 1 verworfen (DB-410-01) |
 | #3 | Features & Workflows seit 3.5.0 (Funktionsprüfung) | ausstehend |
 | #4 | Regressionen, Altlasten, PHP 8.4.1+/8.5 | ausstehend |
 | #5 | Performance, Caching, Core Web Vitals | ausstehend |
@@ -69,8 +69,9 @@ Querverweise in andere Prüfbereiche:
 
 | ID | Schwere | Datei:Zeile | Kurzbeschreibung | Status |
 |----|---------|-------------|------------------|--------|
-| DB-410-01 | LOW | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish` (Bestandsverhalten), Neuinstallation nicht – Abweichung Neuinstallation/Upgrade | [ ] Offen → PR #2 |
-| DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 aus | [ ] Offen → PR #6 |
+| DB-410-01 | – | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish`, Neuinstallation angeblich nicht | Verworfen in PR #2 (Laufzeittest: beide Wege identisch, siehe unten) |
+| DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [ ] Offen → PR #6 |
+| DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 (mit PR #2: 33) aus; `DOC/FILESTRUCTUR.md` in PR #2 bereits korrigiert | [ ] Offen → PR #6 |
 
 ### Details
 
@@ -177,3 +178,78 @@ Querverweise in andere Prüfbereiche:
 - `php TESTS/run-all.php`: 32 Suiten, 0 fehlgeschlagen.
 - Neue bzw. erweiterte Tests: `TESTS/security/audit-410.php` (neu), `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`.
 - Laufzeit-Stichprobe der gepatchten Passkey-Herkunftsprüfung: `example.com`, `a.example.com` und `EXAMPLE.com` erlaubt; `evilexample.com` und `http://example.com` abgelehnt.
+
+---
+
+## PR #2 – Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`)
+
+### Vorgehen
+
+Laufzeitprüfung gegen **MariaDB 10.11** (Strict Mode `STRICT_TRANS_TABLES`, zusätzlich der MySQL-8-Standard mit `ONLY_FULL_GROUP_BY`, `NO_ZERO_DATE`, `NO_ZERO_IN_DATE`):
+
+1. **Neuinstallation v26** wie `install.php`: alle `SchemaManager::getSchemaQueries()`, Schema-Marke v26, danach erster Request (`Database::instance()` → Laufzeitprüfung).
+2. **Ausgangsstände:** ausgeliefertes Paket `RELEASE/365CMS-4.0.0-full.zip` (4.0.0, v25, 76 Tabellen) und Git-Tag `V3.5.00` (3.5.4, v23, 44 Tabellen), jeweils mit Testdaten (veröffentlicht ohne `published_at`, Papierkorb, entzogenes Recht).
+3. **Upgrade** mit dem 4.1.0-Code: erster Request (automatische Migration), danach *Datenbank-Update* (`DatabaseUpdateRunner::run()`), danach zwei weitere Läufe (Idempotenz).
+4. **Vergleich** über `information_schema`: Tabellen und Engine, Spalten mit Typ, NULL, Default und Extra, Indizes mit Spalten, Präfixlänge und Eindeutigkeit, Fremdschlüssel.
+
+**Ergebnis:** Neuinstallation und beide Upgrade-Pfade ergeben **strukturell dasselbe Schema** (91 Tabellen), auch im MySQL-8-Modus. Bestandsdaten bleiben erhalten, `published_at` wird nachgezogen, `posts.status` ist VARCHAR(20) und nimmt `private` an. Weitere Läufe ändern nichts. Abweichend ist nur die Kollation alter Tabellen (DB-410-03).
+
+Der Ablauf ist als Test-Suite `TESTS/schema-upgrade` festgehalten. Sie ist optional und läuft nur mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst mit Hinweis übersprungen. Gegenprobe: Ohne den Fix für DB-410-02 schlägt sie fünfmal an.
+
+### Befundübersicht
+
+| ID | Schwere | Bereich | Datei:Zeile | Kurzbeschreibung | Status |
+|----|---------|---------|-------------|------------------|--------|
+| DB-410-02 | HIGH | Erster Request / Verbindungen | `CMS/includes/functions/roles.php:262`, `CMS/core/SchemaManager.php:2511`, `CMS/core/MigrationManager.php:303` | Rekursion im Konstruktor von `Database`: 152 Verbindungen und 7,4 s beim ersten Request nach Installation, Update oder Reparatur, bis „Too many connections“ | [x] Behoben in PR #2 |
+| DB-410-03 | LOW | Kollation | `CMS/core/SchemaManager.php:117` | Mit 3.5.x oder älter angelegte Tabellen tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci` | Dokumentiert (kein aktiver Fehler, siehe unten) |
+| DB-410-04 | MEDIUM | Datenbank-Update | `CMS/core/DatabaseUpdateRunner.php:205` | Integritätsprüfung vor dem Schreiben der Schema-Marke prüfte nur `ai_quota_usage`; fehlende v25/v26-Tabellen und -Spalten meldeten trotzdem „erfolgreich aktualisiert“ | [x] Behoben in PR #2 |
+| DB-410-05 | MEDIUM | Reparatur | `CMS/core/MigrationManager.php:64`, `:74` | Spalten, die nur der `MigrationManager` anlegt (`login_attempts.action`, `mail_queue.locked_at`, `post_revisions.fingerprint`, `roles.sort_order` …), wurden nach gespeicherter Marke v26 nie mehr ergänzt – auch nicht über *Datenbank-Update* oder *Tabellen reparieren* | [x] Behoben in PR #2 |
+
+### Details
+
+#### DB-410-02 (HIGH) – Verbindungsrekursion beim ersten Request
+
+- **Ursache:** `Database::__construct()` ruft `SchemaManager::createTables()` auf; ohne Flag-Datei laufen `MigrationManager::run()` und `ensureFeatureSchema()`. Beide rufen seit 4.1.0 (Bereich 3a, PR #147) `cms_ensure_role_permissions_table()` auf, das `Database::instance()` nutzt. Weil die Instanz erst nach dem Konstruktor gesetzt wird, baut jeder Aufruf eine neue Verbindung und startet die Schemaprüfung erneut – bis der Server `Too many connections` meldet.
+- **Gemessen:** 152 Verbindungen und 7,4 s für einen Request (`max_connections = 151`). Betroffen ist jeder erste Request nach Neuinstallation, Core-Update (neue Flag-Datei) und „Tabellen reparieren“. Auf Shared Hosting mit `max_user_connections` von 10–25 scheitern dabei auch gleichzeitige Besucher. Das ausgelieferte 4.0.0 ist nicht betroffen; die bereits gepackten 4.1.0-Pakete schon (DOC-410-02, Neupacken in PR #6).
+- **Behebung:** `cms_ensure_role_permissions_table(?Database $db = null)`; `SchemaManager` und `MigrationManager` übergeben ihre Verbindung. Danach: 1 Verbindung, 0,09 s.
+
+#### DB-410-04 (MEDIUM) – Integritätsprüfung des Datenbank-Updates
+
+- `DatabaseUpdateRunner::missingSchemaElements()` prüft mit zwei Abfragen auf `information_schema` alle Tabellen aus `FEATURE_TABLES` und `FEATURE_TABLES_V26`, die Pflichtspalten aus `SchemaManager::REQUIRED_COLUMNS` und `posts.status` als VARCHAR.
+- Fehlt etwas, schreibt das Update keine Marke, meldet die fehlenden Elemente im Log, und `getStatus()['schema_missing']` nennt sie auf *Admin → Updates*.
+- Getestet: gelöschte Tabelle `webhook_deliveries`, gelöschte Spalten und ein zurückgesetztes ENUM werden erkannt und durch das Update repariert.
+
+#### DB-410-05 (MEDIUM) – Reparatur bei gespeicherter Zielversion
+
+- `MigrationManager::repairTables()` führt nach `createTables()` `run(true)` aus: Die idempotenten Migrationen laufen auch bei Marke v26.
+- Eine höhere Marke wird weiterhin nie überschrieben. Normale Requests laufen weiter ohne ALTER-Statements.
+
+#### DB-410-03 (LOW, dokumentiert) – Gemischte Kollation nach Upgrade von 3.5.x
+
+- Bis 3.5.x legte `getSchemaQueries()` Tabellen mit `DEFAULT CHARSET=utf8mb4` ohne Kollation an; der Server-Standard griff. Seit 4.0.0 gilt fest `utf8mb4_unicode_ci`. Nach dem Upgrade von 3.5.x: 44 Tabellen `general_ci`, 47 `unicode_ci` (MariaDB).
+- **Risiko:** „Illegal mix of collations“ nur bei JOIN/UNION/Vergleich von Textspalten über alte und neue Tabellen. Im Core gibt es keine solche Abfrage (alle JOINs zwischen alten und neuen Tabellen laufen über Integer-IDs; die UNIONs in `ContentChangesService`, `EditorialCalendarService` und `SearchTermStatsService` verbinden nur Tabellen gleicher Herkunft).
+- **Entscheidung:** keine automatische Konvertierung (`ALTER TABLE … CONVERT TO` baut große Tabellen im Web-Request neu auf und sperrt sie). Hinweis für eigene Plugins: Textvergleiche zwischen Core-Tabellen mit `COLLATE utf8mb4_unicode_ci` formulieren oder Tabellen im Wartungsfenster konvertieren.
+
+#### DB-410-01 (verworfen)
+
+Die Laufzeitprüfung zeigt: `ContentWorkflow::migrateCapabilities()` läuft auch in `ensureFeatureSchema()` und damit bei der Neuinstallation. `editor` erhält `posts.publish`/`pages.publish`, `author` erhält `posts.publish` – bei Neuinstallation und Upgrade gleich. Ein ausdrücklich entzogenes Recht (`granted = 0`) bleibt entzogen.
+
+### Geprüft ohne Befund
+
+- **Versionsmarken:** `SchemaManager::SCHEMA_VERSION` und `MigrationManager::SCHEMA_VERSION` = v26; der Installer setzt `db_schema_version` und `installed_cms_schema_version`; eine höhere oder unbekannte Marke wird nie überschrieben, ein Downgrade blockiert.
+- **v26-Tabellen und -Spalten:** alle 14 Tabellen aus `FEATURE_TABLES_V26` sowie `users.password_changed_at`, `passkey_credentials.user_verified`, `expires_at`/`review_due_at`/`*_notified_at` (Beiträge, Seiten, Wissensdatenbank), `posts.status` VARCHAR(20), `trash_slug`, `has_locale_*`, `planned_at`, `content_updated_at`, `author_display_url`, Zahlungsspalten an `orders`/`user_subscriptions` – identisch bei Neuinstallation und beiden Upgrade-Pfaden.
+- **Strict Mode:** keine Fehler unter MariaDB-Standard und MySQL-8-Standard-`sql_mode` (Installation, Migration, Backfill, Laufzeitprüfung).
+- **Papierkorb aus 3.5.x:** Beiträge mit Status `trash` ohne `trashed_at` erhalten beim ersten Fristlauf einen Zeitstempel (`AbstractContentTrashProvider::expiredIds()`).
+- **Core-Update-Tausch:** `UpdateService::RUNTIME_CORE_ENTRIES` enthält `marketplace`; Pakete mit `marketplace/` werden abgelehnt (`TESTS/update-swap`).
+
+### Grenzen
+
+MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet die Standardkollation alter Tabellen `utf8mb4_0900_ai_ci` (DB-410-03 gilt gleich).
+
+### Verifikation PR #2
+
+- `php -l` über alle geänderten PHP-Dateien ohne Fehler.
+- `php TESTS/run-all.php`: 33 Suiten, 0 fehlgeschlagen (ohne Datenbank: `schema-upgrade` mit Hinweis übersprungen).
+- `CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-upgrade/run.php`: 30 bestanden, auch mit `CMS_TEST_SQL_MODE` = MySQL-8-Standard.
+- Erweitert: `TESTS/schema-v26` (Rekursion, Pflichtspalten, Integritätsprüfung, Reparatur), `TESTS/release-3.4.0` (Prüfung vor dem Schreiben der Marke).
+

@@ -70,4 +70,32 @@ T::run('Neue Spalten', static function () use ($queries, $migrationSource, $sche
     }
 });
 
+T::run('Audit 4.1.0: Konstruktor ohne Rekursion, Integritätsprüfung, Reparatur (DB-410-02/04/05)', static function () use ($root, $queries, $migrationSource, $schemaSource): void {
+    // DB-410-02: Im Konstruktor von Database (SchemaManager/MigrationManager) nie Database::instance() aufrufen.
+    $roles = (string) file_get_contents($root . 'includes/functions/roles.php');
+    T::check(str_contains($roles, 'function cms_ensure_role_permissions_table(?\CMS\Database $db = null): void {') && str_contains($roles, '$db ??= \CMS\Database::instance();'), 'cms_ensure_role_permissions_table() nimmt die Verbindung entgegen');
+    foreach (['SchemaManager' => $schemaSource, 'MigrationManager' => $migrationSource] as $name => $source) {
+        T::check(!str_contains($source, 'cms_ensure_role_permissions_table();') && str_contains($source, 'cms_ensure_role_permissions_table($this->db);'), "{$name} übergibt die eigene Verbindung");
+        T::check(!preg_match('/Database::instance\(\)|Database::get_instance\(\)/', $source), "{$name} ruft Database::instance() nicht auf");
+    }
+
+    // DB-410-04: Pflichtspalten gehören zu Tabellen, die Neuinstallation oder Laufzeitprüfung anlegen.
+    $runtimeOnly = ['has_locale_de', 'has_locale_en'];
+    foreach (\CMS\SchemaManager::REQUIRED_COLUMNS as $table => $columns) {
+        T::check(isset($queries[$table]), "Pflichttabelle {$table} hat eine CREATE-Definition");
+        foreach ($columns as $column) {
+            $inCreate = preg_match('/\n\s+' . preg_quote($column, '/') . '\s/', (string) ($queries[$table] ?? '')) === 1;
+            T::check($inCreate || in_array($column, $runtimeOnly, true), "{$table}.{$column} in der Neuinstallation");
+        }
+    }
+    $runner = (string) file_get_contents($root . 'core/DatabaseUpdateRunner.php');
+    T::check(str_contains($runner, 'public function missingSchemaElements(): array') && !str_contains($runner, 'isTargetSchemaReady'), 'Datenbank-Update prüft das ganze Zielschema (nicht nur ai_quota_usage)');
+    T::check(str_contains($runner, "'schema_missing' => \$schemaMissing"), 'Status nennt fehlende Elemente');
+    T::check(str_contains($runner, 'SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, array_keys(SchemaManager::REQUIRED_COLUMNS)'), 'alle Feature-Tabellen v25/v26 geprüft');
+
+    // DB-410-05: Reparatur läuft auch bei gespeicherter Zielversion.
+    T::check(str_contains($migrationSource, 'public function run(bool $force = false): void') && str_contains($migrationSource, '$this->run(true);'), 'repairTables() erzwingt die idempotenten Migrationen');
+    T::check(str_contains($migrationSource, 'if ($comparison > 0 || ($comparison === 0 && !$force)) {'), 'höhere Schema-Marke wird nie überschrieben, gleiche nur bei Reparatur');
+});
+
 T::finish();

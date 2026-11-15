@@ -81,6 +81,17 @@ Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 | **4.1.0** | 🛡️ security | Downloads, Admin-JSON (SEC-410-20, -21, -25) | Unbekannte Zugriffsstufen eines Downloads sperren statt freizugeben. Der CSV-Export der Download-Statistik entschärft Formeln. Die JSON-Konfiguration von Cookie-Manager, Datenanfragen und Plugin-Marketplace wird mit `JSON_HEX_TAG` ausgegeben. |
 | **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/security/audit-410.php`; erweitert: `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`. |
 
+#### 🗄️ Release-Prüfung 4.1.0 – Datenbank und Upgrade-Pfad (PR #2)
+
+Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen MariaDB 10.11 abgeglichen (auch mit dem `sql_mode` von MySQL 8): gleiche Tabellen, Spalten, Typen, Defaults, Indizes und Fremdschlüssel, Daten erhalten, wiederholte Läufe ohne Änderung. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.0** | 🔴 fix | Datenbank / erster Request (DB-410-02) | Der erste Request nach Installation, Core-Update oder „Tabellen reparieren“ öffnete bis zu 152 Datenbankverbindungen und brauchte rund 7 s, bis der Server „Too many connections“ meldete: Die Schemaprüfung im Konstruktor von `Database` rief über `cms_ensure_role_permissions_table()` erneut `Database::instance()` auf. Die Funktion nimmt jetzt die Verbindung entgegen; der Request öffnet eine Verbindung. Eingeführt in der 4.1.0-Entwicklung (auch in den bis dahin gepackten 4.1.0-Paketen), 4.0.0 ist nicht betroffen. |
+| **4.1.0** | 🔴 fix | Updates / Datenbank-Update (DB-410-04, DB-410-05) | Das Datenbank-Update prüft vor dem Schreiben der Schema-Marke alle Feature-Tabellen (v25/v26) und die Pflichtspalten (`SchemaManager::REQUIRED_COLUMNS`, `posts.status` als VARCHAR); fehlende Elemente stehen auf *Admin → Updates*. Bisher genügte die Tabelle `ai_quota_usage`. „Datenbank-Update“ und „Tabellen reparieren“ führen die idempotenten Migrationen auch bei gespeicherter Marke v26 aus und ergänzen damit Spalten wie `login_attempts.action` oder `mail_queue.locked_at` wieder. |
+| **4.1.0** | 🔵 docs | Datenbank / Kollation (DB-410-03) | Hinweis: Tabellen aus Installationen bis 3.5.x tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci`. Der Core vergleicht keine Textspalten über diese Grenze; eigene Plugins sollten bei solchen JOINs `COLLATE utf8mb4_unicode_ci` angeben. Keine automatische Konvertierung. |
+| **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/schema-upgrade` (optional mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst übersprungen) – Neuinstallation und Upgrades gegen eine echte MySQL/MariaDB. Erweitert: `TESTS/schema-v26`, `TESTS/release-3.4.0`. |
+
 #### 🔴 Fehlerbehebungen
 
 | Version | Typ | Bereich | Beschreibung |
