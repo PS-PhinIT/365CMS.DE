@@ -330,7 +330,7 @@ T::run('Verweise: Funktionsbereiche, Hooks, Dokumente und Icons zeigen auf vorha
 T::run('Verweise: Editor-Blocklisten decken die registrierten Tools ab', static function (): void {
     preg_match('/var BLOCK_TOOL_NAMES = \[(.*?)\];/s', referenceTestSource('CMS/assets/js/editor-init.js'), $toolMatch);
     preg_match_all("/'([A-Za-z]+)'/", $toolMatch[1] ?? '', $tools);
-    $registered = array_merge($tools[1], ['download', 'form']);
+    $registered = array_merge($tools[1], ['download', 'form', 'reusableBlock']);
 
     preg_match('/function getEditorBlockGroups\(\) \{(.*?)\n        \}/s', referenceTestSource('CMS/assets/js/admin-content-editor.js'), $groupMatch);
     preg_match_all("/block: '([A-Za-z]+)'/", $groupMatch[1] ?? '', $listed);

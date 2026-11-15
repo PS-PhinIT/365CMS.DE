@@ -108,11 +108,14 @@ final class ProfileLayouts
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check',
-                    'media.downloads', 'media.tools', 'media.settings',
+                    'media.downloads', 'media.tools', 'content.reusable-blocks', 'media.settings',
                 ]),
                 self::group('pages', 'Seiten', 'file', [
-                    'content.pages', 'content.hub-sites', 'content.site-tables', 'content.toc', 'content.knowledgebase',
-                    'content.reusable-blocks',
+                    'content.pages', 'content.knowledgebase',
+                ]),
+                // Für Seiten und Beiträge gemeinsam (Shortcodes, Inhaltsverzeichnis) – eigener Menüpunkt.
+                self::group('building-blocks', 'Bausteine', 'puzzle', [
+                    'content.hub-sites', 'content.site-tables', 'content.toc',
                 ]),
                 self::item('content.comments'),
                 self::group('forms', 'Formulare', 'forms', ['content.forms', 'content.form-submissions', 'content.newsletter']),
@@ -184,9 +187,10 @@ final class ProfileLayouts
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check', 'media.downloads', 'media.tools',
+                    'content.reusable-blocks',
                 ]),
                 self::group('editorial', 'Redaktion', 'calendar-event', [
-                    'content.editorial-calendar', 'content.changes', 'content.translations', 'content.reusable-blocks',
+                    'content.editorial-calendar', 'content.changes', 'content.translations',
                 ]),
                 self::group('ai', 'KI-Dienste', 'sparkles', [
                     'ai.dashboard', 'ai.translation', 'ai.content-creator', 'ai.seo-creator',

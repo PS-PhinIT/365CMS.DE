@@ -29,8 +29,8 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 
 | # | Wunsch | Status |
 |---|---|---|
-| N1 | Block „Vorlagen“ (EditorJS Block Vorlagen) auch im **Beitragseditor** sichtbar machen – derzeit nur im Seiteneditor zu sehen | ⬜ |
-| N2 | Einstellungen der EditorJS Block Vorlagen eher unter *Medien* (o. ä.) einordnen | ⬜ |
-| N3 | Hub-Sites, Tabellen und Inhaltsverzeichnis unter einen **eigenen Menüpunkt** – sie gelten für Seiten und Beiträge, nicht nur für Seiten | ⬜ |
+| N1 | Block „Vorlagen“ (EditorJS Block Vorlagen) auch im **Beitragseditor** sichtbar machen – derzeit nur im Seiteneditor zu sehen | ✅ Block-Auswahl des Beitragseditors (`admin-content-editor.js`, *Layout & Spezial*); Test prüft jetzt alle Registry-Blöcke |
+| N2 | Einstellungen der EditorJS Block Vorlagen eher unter *Medien* (o. ä.) einordnen | ✅ Menüpunkt in der Gruppe *Medien* (beide Profile) |
+| N3 | Hub-Sites, Tabellen und Inhaltsverzeichnis unter einen **eigenen Menüpunkt** – sie gelten für Seiten und Beiträge, nicht nur für Seiten | ✅ neue Gruppe *Bausteine* im Profil „Klassisch“ (im Profil „Strukturiert“ liegen sie bereits gemeinsam unter *Struktur*) |
 | N4 | Eigene Seite **Backup-Einstellungen** für die Backup-Bereiche | ⬜ |
 | N5 | RSS-Feeds (Eingang, `/feeds`): Design kaum anpassbar (nur Farben greifen), keine Lesezeit auf Übersichtsseiten, Gestaltung überarbeiten – Beispiele: `https://phinit.de/site-feeds/`, `https://phinit.de/site-feeds/security` | ⬜ |
