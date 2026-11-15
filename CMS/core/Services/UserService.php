@@ -341,6 +341,8 @@ class UserService {
             
             // Meta-Daten werden durch CASCADE gelöscht
             $this->logAction('user_deleted', $user_id, ['hard_delete' => true]);
+            // 4.1.0: z. B. Rechnungen erhalten einen Sperrvermerk statt gelöscht zu werden (Aufbewahrungspflicht).
+            \CMS\Hooks::doAction('cms_user_deleted', $user_id);
         } else {
             // Soft-Delete (auf inaktiv setzen)
             $result = $this->db->update('users', ['status' => 'inactive'], ['id' => $user_id]);
