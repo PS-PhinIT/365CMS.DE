@@ -43,6 +43,16 @@ final class WebhookHooks
                 self::dispatch('content.published', ['type' => (string) $type, 'id' => (int) $id]);
             }
         });
+        // 4.1.0 (5a): Zahlungen – nur IDs und Anbieter, keine Kundendaten.
+        Hooks::addAction('cms_payment_succeeded', static function (mixed $orderId = 0, mixed $provider = ''): void {
+            self::dispatch('order.paid', ['order_id' => (int) $orderId, 'provider' => (string) $provider]);
+        });
+        Hooks::addAction('cms_payment_failed', static function (mixed $orderId = 0, mixed $provider = ''): void {
+            self::dispatch('order.failed', ['order_id' => (int) $orderId, 'provider' => (string) $provider]);
+        });
+        Hooks::addAction('cms_subscription_renewed', static function (mixed $subscriptionId = 0, mixed $userId = 0, mixed $orderId = 0, mixed $periodEnd = 0): void {
+            self::dispatch('subscription.renewed', ['subscription_id' => (int) $subscriptionId, 'order_id' => (int) $orderId, 'period_end' => gmdate('c', (int) $periodEnd)]);
+        });
         Hooks::addAction('user_registered', static function (mixed $userId = 0): void {
             self::dispatch('user.registered', ['user_id' => (int) $userId]);
         });

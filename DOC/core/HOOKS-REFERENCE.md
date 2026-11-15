@@ -201,6 +201,10 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_backup_offsite_failed` | Action | `string $backupName, string $error`; Offsite-Kopie fehlgeschlagen, Fehler ohne Zugangsdaten (seit 4.1.0) |
 | `cms_content_status_changed` | Action | `string $type, int $id, string $from, string $to, int $userId`; jeder Statuswechsel von Beiträgen/Seiten beim Speichern, in der Freigabe und in Sammelaktionen (seit 4.1.0) |
 | `cms_webhook_event` | Filter | `array<string,string> $events`; weitere Webhook-Ereignisse `bereich.aktion => Bezeichnung` (seit 4.1.0) |
+| `cms_payment_succeeded` | Aktion | `int $orderId, string $provider, array $event`; Bestellung per Anbieter-Webhook bezahlt (seit 4.1.0) |
+| `cms_payment_failed` | Aktion | `int $orderId` (0 bei Abo-Folgezahlung), `string $provider, array $event` (seit 4.1.0) |
+| `cms_subscription_renewed` | Aktion | `int $subscriptionRowId, int $userId, int $renewalOrderId, int $periodEnd` (seit 4.1.0) |
+| `cms_subscription_ended` | Aktion | `int $subscriptionRowId, int $userId, string $provider`; Abo beim Anbieter beendet (seit 4.1.0) |
 | `cms_webhook_endpoint_disabled` | Action | `int $endpointId, string $reason`; Empfänger automatisch deaktiviert (410 oder 20 Fehlschläge, seit 4.1.0) |
 | `cms_cron_feeds` / `cms_cron_<name>` | Action | – (über `cron.php --task=…`) |
 

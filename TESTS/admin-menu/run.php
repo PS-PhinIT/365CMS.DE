@@ -934,7 +934,7 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     $classic = $menus[ProfileLayouts::CLASSIC];
     $classicTop = am_top_ids($classic);
     $classicPositions = am_item_positions($classic);
-    T::same(['dashboard', 'system.updates', 'posts', 'media', 'pages', 'building-blocks', 'content.comments', 'forms', 'ai', 'design', 'plugins', 'seo', 'users', 'members', 'subscriptions', 'tools', 'settings', 'health'],
+    T::same(['dashboard', 'system.updates', 'posts', 'media', 'building-blocks', 'content.comments', 'forms', 'ai', 'design', 'plugins', 'seo', 'users', 'members', 'subscriptions', 'tools', 'settings', 'health'],
         $classicTop, 'classic: Hauptpunkte mit allen Modulen');
     T::same(['sep.work', 'sep.design', 'sep.manage'], array_column($classic['sections'], 'id'), 'classic: Abschnitte Arbeit, Gestaltung, Verwaltung');
     T::same(['Arbeit', 'Gestaltung', 'Verwaltung'], array_column($classic['sections'], 'label'), 'classic: Abschnittsbeschriftungen');
@@ -946,12 +946,14 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     T::same(['content.reusable-blocks', 'content.knowledgebase', 'content.hub-sites', 'content.site-tables', 'content.toc'],
         am_group_items($classic, 'building-blocks'), 'classic: Bausteine mit Vorlagen, Knowledgebase, Hub-Sites, Tabellen, Inhaltsverzeichnis');
     T::same('Bausteine', am_node($classic, 'building-blocks')['label'] ?? null, 'classic: Gruppe heißt „Bausteine“');
-    T::same(['content.pages'], am_group_items($classic, 'pages'), 'classic: Seiten ohne Knowledgebase');
+    T::same(['content.posts', 'content.pages', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar'],
+        am_group_items($classic, 'posts'), 'classic: Seiten unter Beiträge (keine eigene Gruppe „Seiten“)');
+    T::same('Inhalte', am_node($classic, 'posts')['label'] ?? null, 'classic: Gruppe „Beiträge“ heißt „Inhalte“');
     T::check(!in_array('content.reusable-blocks', am_group_items($classic, 'media'), true), 'classic: Vorlagen nicht mehr unter Medien');
 
     $classicLean = $withoutOptional->build($registry, ProfileLayouts::get(ProfileLayouts::CLASSIC), ProfileLayouts::CLASSIC);
-    T::same(['dashboard', 'system.updates', 'posts', 'media', 'pages', 'building-blocks', 'content.comments', 'forms', 'design', 'plugins', 'users', 'tools', 'settings', 'health'],
-        am_top_ids($classicLean), 'classic ohne optionale Module: 14 Hauptpunkte');
+    T::same(['dashboard', 'system.updates', 'posts', 'media', 'building-blocks', 'content.comments', 'forms', 'design', 'plugins', 'users', 'tools', 'settings', 'health'],
+        am_top_ids($classicLean), 'classic ohne optionale Module: 13 Hauptpunkte');
     $leanPositions = am_item_positions($classicLean);
     T::check(!isset($leanPositions['seo.redirects']) && !isset($leanPositions['seo.not-found']) && !isset($leanPositions['ai.settings']),
         'classic ohne optionale Module: Weiterleitungen, 404-Monitor und KI-Einstellungen ausgeblendet');

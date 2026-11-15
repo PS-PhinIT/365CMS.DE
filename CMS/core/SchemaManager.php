@@ -75,6 +75,7 @@ class SchemaManager
         'content_workflow_events', 'content_preview_links',
         'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions',
         'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
+        'payment_events',
     ];
 
     private Database $db;
@@ -381,12 +382,16 @@ class SchemaManager
                 end_date DATETIME,
                 next_billing_date DATETIME,
                 cancelled_at DATETIME,
+                provider VARCHAR(20) DEFAULT NULL,
+                provider_subscription_id VARCHAR(255) DEFAULT NULL,
+                current_period_end DATETIME DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_user_id (user_id),
                 INDEX idx_plan_id (plan_id),
                 INDEX idx_status (status),
-                INDEX idx_dates (start_date, end_date)
+                INDEX idx_dates (start_date, end_date),
+                INDEX idx_provider_sub (provider, provider_subscription_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'user_groups' => "CREATE TABLE IF NOT EXISTS {$p}user_groups (
@@ -541,12 +546,16 @@ class SchemaManager
                 zip VARCHAR(20) DEFAULT NULL,
                 city VARCHAR(100) DEFAULT NULL,
                 country VARCHAR(100) DEFAULT NULL,
+                provider VARCHAR(20) DEFAULT NULL,
+                provider_checkout_id VARCHAR(255) DEFAULT NULL,
+                paid_at DATETIME DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_user_id (user_id),
                 INDEX idx_plan_id (plan_id),
                 INDEX idx_status (status),
-                INDEX idx_created_at (created_at)
+                INDEX idx_created_at (created_at),
+                INDEX idx_provider_checkout (provider, provider_checkout_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'blocked_ips' => "CREATE TABLE IF NOT EXISTS {$p}blocked_ips (
@@ -1600,6 +1609,23 @@ class SchemaManager
                 INDEX idx_webhook_deliveries_due (status, next_attempt_at),
                 INDEX idx_webhook_deliveries_endpoint (endpoint_id, created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Zustellungen ausgehender Webhooks'",
+
+            // v26: Eingehende Ereignisse der Zahlungsanbieter (PaymentService). Jedes Ereignis genau einmal.
+            'payment_events' => "CREATE TABLE IF NOT EXISTS {$p}payment_events (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                provider VARCHAR(20) NOT NULL,
+                provider_event_id VARCHAR(255) NOT NULL,
+                type VARCHAR(80) NOT NULL,
+                order_id BIGINT UNSIGNED NULL,
+                status VARCHAR(12) NOT NULL DEFAULT 'received',
+                payload_hash CHAR(64) NOT NULL,
+                error VARCHAR(500) NULL,
+                received_at DATETIME NOT NULL,
+                processed_at DATETIME NULL,
+                UNIQUE KEY uq_payment_events_event (provider, provider_event_id),
+                INDEX idx_payment_events_order (order_id),
+                INDEX idx_payment_events_received (received_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Ereignisse der Zahlungsanbieter'",
         ];
     }
 
@@ -2430,6 +2456,26 @@ class SchemaManager
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {
             error_log(sprintf('SchemaManager::ensureFeatureSchema(capabilities) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
+        }
+
+        // v26: Zahlungsanbieter (PaymentService, Bereich 5a).
+        $paymentColumns = [
+            'orders' => ['provider' => 'VARCHAR(20) DEFAULT NULL', 'provider_checkout_id' => 'VARCHAR(255) DEFAULT NULL', 'paid_at' => 'DATETIME DEFAULT NULL'],
+            'user_subscriptions' => ['provider' => 'VARCHAR(20) DEFAULT NULL', 'provider_subscription_id' => 'VARCHAR(255) DEFAULT NULL', 'current_period_end' => 'DATETIME DEFAULT NULL'],
+        ];
+        $paymentIndexes = ['orders' => ['idx_provider_checkout', '(provider, provider_checkout_id)'], 'user_subscriptions' => ['idx_provider_sub', '(provider, provider_subscription_id)']];
+        foreach ($paymentColumns as $table => $columns) {
+            foreach ($columns as $column => $definition) {
+                $this->ensureColumnExists($this->prefix . $table, $column, "ALTER TABLE {$this->prefix}{$table} ADD COLUMN {$column} {$definition}");
+            }
+            [$indexName, $indexColumns] = $paymentIndexes[$table];
+            if (!isset($this->loadIndexes($this->prefix . $table)[$indexName])) {
+                try {
+                    $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX {$indexName} {$indexColumns}");
+                } catch (\Throwable $e) {
+                    error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.%s) failed: %s', $table, $indexName, $this->sanitizeDiagnosticText($e->getMessage())));
+                }
+            }
         }
 
         // v25: Wer hat eine Seitenrevision ausgelöst? (Übersicht „Letzte Änderungen“)
