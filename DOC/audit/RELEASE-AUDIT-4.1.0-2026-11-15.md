@@ -12,7 +12,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 
 ## Versionen
 
-Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.5-*`).
+Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.6-*`).
 
 | Version | Prüfbereich | Pull Requests |
 |---------|-------------|---------------|
@@ -21,7 +21,8 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 | 4.1.3 | PR #3: Features & Workflows seit 3.5.0 | [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163) |
 | 4.1.4 | PR #4: Regressionen, Altlasten, PHP 8.4.1+/8.5 | [#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165) |
 | 4.1.5 | PR #5: Performance, Caching, Core Web Vitals (Zwischenstand) | [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166) |
-| 4.1.6 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
+| 4.1.6 | Entscheidungen: FUN-410-17/18/19, SEC-410-26, PERF-410-46 … -49, DOC-410-01 | #PRNUM |
+| 4.1.7 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
 
 ## Prüfbereiche und Status
 
@@ -76,7 +77,7 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 | SEC-410-23 | LOW | Installer | `CMS/install/InstallerController.php:357`, `CMS/install/InstallerService.php:1135` | Erstes Admin-Passwort ohne Zeichenklassen, ohne Historie und `password_changed_at` | [x] Behoben in PR #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) |
 | SEC-410-24 | LOW | Beiträge / Kategorien | `CMS/admin/posts.php:280` | Kategorie speichern/löschen schon mit `edit_own_posts`/`posts.view` | [x] Behoben in PR #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) |
 | SEC-410-25 | LOW | XSS / JSON-Konfiguration | `CMS/admin/views/legal/cookies.php:599`, `CMS/admin/views/legal/data-requests.php:339`, `CMS/admin/views/plugins/marketplace.php:348` | JSON in `<script type="application/json">` ohne `JSON_HEX_TAG` (Marketplace-Daten kommen von außen) | [x] Behoben in PR #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) |
-| SEC-410-26 | LOW | RBAC / Admin-Zugang | `CMS/core/Routing/AdminRouter.php:82` | Neue Capabilities (`payments.manage`, `blocks.reusable`, …) lassen sich nicht an Nicht-Admin-Rollen delegieren: jede Admin-Seite verlangt zusätzlich `isAdmin()` | [x] Behoben in Prüfbereich 5 / 4.1.5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): delegierbare Seiten Zahlungen, Rechnungen, Block-Vorlagen, Webhooks (Capability genügt); übrige Admin-Seiten weiter nur für Admins |
+| SEC-410-26 | LOW | RBAC / Admin-Zugang | `CMS/core/Routing/AdminRouter.php:82` | Neue Capabilities (`payments.manage`, `blocks.reusable`, …) lassen sich nicht an Nicht-Admin-Rollen delegieren: jede Admin-Seite verlangt zusätzlich `isAdmin()` | [x] Behoben in 4.1.6 (#PRNUM): delegierbare Seiten Zahlungen, Rechnungen, Block-Vorlagen, Webhooks (Capability genügt); übrige Admin-Seiten weiter nur für Admins |
 
 Querverweise in andere Prüfbereiche:
 
@@ -84,7 +85,7 @@ Querverweise in andere Prüfbereiche:
 |----|---------|-------------|------------------|--------|
 | DB-410-01 | – | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish`, Neuinstallation angeblich nicht | Verworfen in PR #2 (Laufzeittest: beide Wege identisch, siehe unten) |
 | DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): neue Pakete 4.1.5 mit Manifest und Prüfsummen; die 4.1.0-Pakete bleiben zur Nachvollziehbarkeit liegen |
-| DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 (mit PR #2: 33) aus; `DOC/FILESTRUCTUR.md` in PR #2 bereits korrigiert | [x] Behoben in Prüfbereich 5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): 4.1.0-Eintrag auf 32 korrigiert, 4.1.5 nennt 35 |
+| DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 (mit PR #2: 33) aus; `DOC/FILESTRUCTUR.md` in PR #2 bereits korrigiert | [x] Behoben in 4.1.6 (#PRNUM): 4.1.0-Eintrag auf 32 korrigiert, 4.1.5 nennt 35 |
 
 ### Details
 
@@ -304,9 +305,9 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 | FUN-410-14 | HIGH | Medien / AVIF | `CMS/core/Services/Trash/MediaTrashProvider.php:539`, `CMS/core/Services/Media/AvifDerivativeService.php:389` | Papierkorb ließ `.avif`-Fassungen öffentlich liegen; nach erneutem Upload gleichen Namens oder Ersetzen lieferte `<picture>` das alte Bild | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-15 | MEDIUM | Medien / AVIF | `CMS/core/Services/Media/AvifDerivativeService.php:201`, `:377` | Animierte GIFs bekamen eine statische AVIF-/WebP-Quelle, die Animation ging verloren | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-16 | MEDIUM | Medien / AVIF | `CMS/core/Services/Media/AvifDerivativeService.php:130` | AVIF-Unterstützung wurde erst nach dem Speichern der Medien-Einstellungen erkannt; bis dahin keine Fassungen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-17 | MEDIUM | Medien | `CMS/core/Services/Media/UploadHandler.php:150`, `:212` | Umbenennen/Verschieben lässt Fassungen und Verweise in Inhalten zurück (404, Verwendungsindex veraltet) | [x] Behoben in Prüfbereich 5 / 4.1.5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): Fassungen wandern mit; verwendete Dateien lassen sich nicht umbenennen oder verschieben (Verweise würden ins Leere zeigen) |
-| FUN-410-18 | MEDIUM | Medien / Batch | `CMS/core/Services/Media/AvifRegenerationService.php:160` | Ein Bild, das den Speicher sprengt, hält den AVIF-Neuaufbau dauerhaft an derselben Stelle fest | [x] Behoben in Prüfbereich 5 / 4.1.5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): Speicher-Vorprüfung und Absturzmarke, das Bild wird übersprungen und als fehlgeschlagen gezählt |
-| FUN-410-19 | MEDIUM | Medien / Verwendung | `CMS/core/Services/Media/MediaUsageIndex.php:112`, `CMS/core/Services/ThemeCustomizer.php:574` | Wissensdatenbank-Inhalte werden nicht indiziert; Theme-Reset und Theme-Wechsel indizieren nicht neu | [x] Behoben in Prüfbereich 5 / 4.1.5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): Extraktor `kb_entry`, Neuindizieren nach Theme-Reset und -Wechsel |
+| FUN-410-17 | MEDIUM | Medien | `CMS/core/Services/Media/UploadHandler.php:150`, `:212` | Umbenennen/Verschieben lässt Fassungen und Verweise in Inhalten zurück (404, Verwendungsindex veraltet) | [x] Behoben in 4.1.6 (#PRNUM): Fassungen wandern mit; verwendete Dateien lassen sich nicht umbenennen oder verschieben (Verweise würden ins Leere zeigen) |
+| FUN-410-18 | MEDIUM | Medien / Batch | `CMS/core/Services/Media/AvifRegenerationService.php:160` | Ein Bild, das den Speicher sprengt, hält den AVIF-Neuaufbau dauerhaft an derselben Stelle fest | [x] Behoben in 4.1.6 (#PRNUM): Speicher-Vorprüfung und Absturzmarke, das Bild wird übersprungen und als fehlgeschlagen gezählt |
+| FUN-410-19 | MEDIUM | Medien / Verwendung | `CMS/core/Services/Media/MediaUsageIndex.php:112`, `CMS/core/Services/ThemeCustomizer.php:574` | Wissensdatenbank-Inhalte werden nicht indiziert; Theme-Reset und Theme-Wechsel indizieren nicht neu | [x] Behoben in 4.1.6 (#PRNUM): Extraktor `kb_entry`, Neuindizieren nach Theme-Reset und -Wechsel |
 | FUN-410-20 | HIGH | Zahlungen / Abo | `CMS/core/Services/Payments/PaymentService.php:512` | Verlängerung reaktivierte ein gekündigtes bzw. durch Tarifwechsel ersetztes Abo (zwei aktive Abos) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-21 | HIGH | Zahlungen / Abo | `CMS/core/SubscriptionManager.php:702` | Tarifwechsel kündigt das Abo beim Anbieter nicht (Doppelabbuchung möglich); keine Kündigung durch Mitglieder | [ ] Offen → Entscheidung PR #6 (Funktionslücke) |
 | FUN-410-22 | MEDIUM | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:384` | Fehlgeschlagenes Testereignis wurde bis zu fünfmal wiederholt und zählte zur Abschaltung | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
@@ -565,8 +566,8 @@ Zwischen-PR [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166). Der abschli
 | PERF-410-44 | LOW | Cron/Batch | `CMS/core/PageManager.php:176` | `page_revisions` ohne Obergrenze je Seite (Beiträge: 30) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
 | PERF-410-45 | LOW | Cron/Batch | `CMS/core/Services/FeatureUsageService.php:312` | Wachsende Tabellen ohne Löschfrist (`feature_usage`); DDL bei jeder Instanziierung | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
 | PERF-410-46 | LOW | Blockierende Arbeit | `CMS/admin/modules/feeds/FeedAggregatorModule.php:247` | Feed-Aggregator: Admin-Aktionen holen bis zu 25 Feeds nacheinander im POST-Request | Akzeptiert (Entscheidung 15.11.2026: höchstens 25 Feeds je Admin-Aktion sind vertretbar) |
-| PERF-410-47 | LOW | Blockierende Arbeit | `CMS/plugins/cms-importer/includes/class-importer.php:1138` | Importer lädt jedes entfernte Bild nacheinander im Import-POST (20 s Timeout je Bild, ohne Zeitbudget) | [x] Behoben in Prüfbereich 5 / 4.1.5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): 10 s je Bild, Zeitbudget 120 s je Lauf (Filter `cms_importer_image_budget_seconds`), gestörte Hosts übersprungen; übrige Bilder bleiben extern verlinkt und werden gemeldet |
-| PERF-410-48 | LOW | Blockierende Arbeit | `CMS/core/Services/MediaService.php:1129` | Bild-Upload erzeugt Thumbnails, WebP und AVIF aller Größen synchron im Upload-Request | [x] Behoben in Prüfbereich 5 / 4.1.5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): AVIF-Kodierung nach der Antwort (FPM/LiteSpeed), Thumbnails und WebP weiter sofort |
+| PERF-410-47 | LOW | Blockierende Arbeit | `CMS/plugins/cms-importer/includes/class-importer.php:1138` | Importer lädt jedes entfernte Bild nacheinander im Import-POST (20 s Timeout je Bild, ohne Zeitbudget) | [x] Behoben in 4.1.6 (#PRNUM): 10 s je Bild, Zeitbudget 120 s je Lauf (Filter `cms_importer_image_budget_seconds`), gestörte Hosts übersprungen; übrige Bilder bleiben extern verlinkt und werden gemeldet |
+| PERF-410-48 | LOW | Blockierende Arbeit | `CMS/core/Services/MediaService.php:1129` | Bild-Upload erzeugt Thumbnails, WebP und AVIF aller Größen synchron im Upload-Request | [x] Behoben in 4.1.6 (#PRNUM): AVIF-Kodierung nach der Antwort (FPM/LiteSpeed), Thumbnails und WebP weiter sofort |
 | PERF-410-49 | MEDIUM | Cron/Batch | `plugins/cms-importer/includes/class-admin.php:794` | WXR-Import komplett in einem Web-Request (ganzes DOM, Bilddownloads, ohne Zeitbudget und Fortsetzung) | [ ] Offen, eigener Punkt (Entscheidung 15.11.2026: WXR-Import getrennt betrachten) |
 
 ### Messung vorher/nachher
@@ -601,7 +602,7 @@ Die Antwortzeiten des Frontends liegen unverändert bei 70–110 ms. Die Streuun
 - **PERF-410-06:** Das Backup streamt jede Tabelle ungepuffert. Das Dump-Format ist unverändert, `s3-backup` und `update-swap` sind grün.
 - **PERF-410-25:** getrennte Sperren `.cron-run.lock` (Hooks, stündlich, täglich, Feeds) und `.cron-mail.lock` (Mail-Queue).
 
-### Entscheidungen vom 15.11.2026 (umgesetzt in 4.1.5)
+### Entscheidungen vom 15.11.2026 (umgesetzt in 4.1.6)
 
 - **PERF-410-46** (Feed-Abruf im Admin): akzeptiert.
 - **PERF-410-47** (Importer-Bilder) und **PERF-410-48** (Upload): umgesetzt wie in der Tabelle.

@@ -44,8 +44,6 @@ Einzelheiten je Version stehen im `Changelog.md`, Befunde und Nachweise im Audit
   - Bilder unter `uploads/` werden nicht mehr ein Jahr `immutable` ausgeliefert (1 Tag, danach Revalidierung).
   - Anonyme Beitragsseiten sind wieder `public` cachebar.
   - Wer Nginx nutzt, übernimmt die neuen Regeln aus `DOC/INSTALLATION.md`.
-- **Rechte ohne Admin-Status:** *Zahlungen*, *Rechnungen*, *EditorJS Block Vorlagen* und *Webhooks* sind über ihre Capability an andere Rollen vergebbar (*Benutzer → Rollen*). Die Rolle *editor* hat `blocks.reusable` seit 4.1.0 und sieht die Block-Vorlagen jetzt. Alle übrigen Admin-Seiten bleiben Admins vorbehalten.
-- **Medien:** Dateien, die in Inhalten verwendet werden, lassen sich nicht mehr umbenennen oder verschieben. AVIF-Fassungen neuer Uploads entstehen nach der Antwort (FPM, LiteSpeed).
 - **Entfernte Schalter ohne Wirkung:** FAQ/HowTo/Review/Event, Pinterest Rich Pins, „Breadcrumbs aktiv“, „Bild-Alt-Texte verpflichtend“ sowie das Feld „Google Analytics / Tag Manager ID“. Die Tracking-IDs werden unter *SEO › Analytics* gepflegt.
 
 ### Dateien

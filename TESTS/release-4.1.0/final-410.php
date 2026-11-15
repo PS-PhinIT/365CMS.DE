@@ -1,6 +1,6 @@
 <?php
 /**
- * Release-Prüfung 4.1.0, abschließende Punkte in 4.1.5: DOC-410-01, FUN-410-17/18/19, SEC-410-26, PERF-410-47/48.
+ * Release-Prüfung 4.1.0, Entscheidungen in 4.1.6: DOC-410-01, FUN-410-17/18/19, SEC-410-26, PERF-410-47/48.
  * Wird von run.php eingebunden ($src, $root, ABSPATH, Autoloader).
  */
 
@@ -57,7 +57,7 @@ T::run('PERF-410-47/48: Importer-Bilder, AVIF nach der Antwort', static function
 
 T::run('DOC-410-01: Anzahl der Test-Suiten im Changelog', static function () use ($root): void {
     $changelog = (string) file_get_contents(dirname($root) . '/Changelog.md');
-    T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 32 Suiten aus (bis 4.1.5 korrigiert'), '4.1.0 nennt 32 Suiten');
+    T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 32 Suiten aus (in 4.1.6 korrigiert'), '4.1.0 nennt 32 Suiten');
     $suites = count(glob(dirname($root) . '/TESTS/*/run.php') ?: []);
     T::check(str_contains($changelog, "`php TESTS/run-all.php` führt {$suites} Suiten aus: zu den 32 aus 4.1.0"), "4.1.5 nennt die tatsächliche Zahl ({$suites})");
 });
