@@ -6,6 +6,8 @@
 
 A theme is a directory `CMS/themes/<slug>/` with at least `style.css` (header comment) and `index.php` or `functions.php`; `theme.json` declares templates, partials, menu locations and customizer sections, `update.json` the version metadata. `ThemeManager::render($template, $data)` includes `header.php`, `<template>.php` (fallback `index.php`) and `footer.php`; templates receive their data as local variables. Themes must be CSP-compatible (nonce on every inline `<script>`/`<style>`, no inline handlers), fire `head` and `body_end`, escape all output and respect the privacy settings (local fonts, external consent banner).
 
+Since 4.1.0: content images may be wrapped in `<picture>` (AVIF/WebP `<source>` before the original `<img>`; `display: contents`, so child selectors like `figure > img` no longer match – use `figure img`); posts and pages have the extra status `pending` (never public – treat as "not public" in own status lists); plugin admin pages use the workspace partial `admin/partials/plugin-workspace.php` (`CMS_PLUGIN_WORKSPACE_VERSION`) – see [section 9](#9-änderungen-für-themes-in-410).
+
 ## Deutsch
 
 ### 1. Mindestaufbau
@@ -127,6 +129,14 @@ Health-Check beim Aktivieren (`ThemeManager::healthCheckTheme()`): `style.css` v
 - `theme.json`, `update.json` (`min_cms_version` ≥ `3.4.00`), `style.css` und die Versionskonstante in `functions.php` (bei `cms-default`: `MERIDIAN_THEME_VERSION`) tragen dieselbe Version.
 - Auslieferung als ZIP mit dem Theme-Ordner auf oberster Ebene; für den Marketplace mit SHA-256-Prüfsumme ([../admin/themes-design/MARKETPLACE.md](../admin/themes-design/MARKETPLACE.md)).
 - Ein statischer Vertragsprüfer (`TESTS/theme-contract/run.php`) wird in früheren Release-Notizen erwähnt, ist in diesem Repository aber nicht enthalten.
+
+### 9. Änderungen für Themes in 4.1.0
+
+- **`<picture>`-Ausgabe.** Editor.js-Bild, Galerie und Medien-Text geben `<picture>` aus, sobald eine AVIF- oder WebP-Fassung existiert (`<source type="image/avif">`, dann `<source type="image/webp">`, danach das ursprüngliche `<img>`). Der Core setzt dafür `display: contents` (`editorjs-content.css`, Selektoren `.editorjs-image picture`, `.editorjs-gallery picture`, `.editorjs-media-text__media picture`), damit das Layout unverändert bleibt. **Eigene Regeln mit Kindselektor `figure > img` greifen nicht mehr** – `<img>` ist jetzt ein Kind von `<picture>`; Nachfahren-Selektoren (`figure img`) wirken weiter. Das gilt auch für bestehende WebP-Fassungen (`auto_webp` ist standardmäßig an). Eigene Vorlagen gehen wie `cms-default` vor: `<source type="image/avif">` nur, wenn die AVIF-Datei existiert (`avif_url` aus `meridian_get_picture_sources()` in `cms-default/functions.php`), dann WebP, dann `<img>` mit `width`/`height`/`alt`; auf `<picture>` selbst keine Layout-Regeln setzen.
+- **Status `pending`.** Beiträge und Seiten kennen den Status `pending` („Zur Prüfung“, [Vier-Augen-Prinzip](../admin/pages-posts/REVIEW.md)). Er ist nie öffentlich; das Frontend liefert weiter nur `status = 'published'` aus. Themes, die eigene Statuslisten, Badges oder Abfragen führen, behandeln `pending` als „nicht öffentlich“. Vorschau-Links (`/preview/<token>`) rendern Entwürfe und eingereichte Inhalte mit den normalen Theme-Vorlagen – ein Theme braucht dafür keinen Sonderfall.
+- **Abgelaufene Inhalte.** Zurückgestufte Beiträge und Seiten liefern 404 oder (Einstellung) 410 über die normale Fehlerseite des Themes (`error.php`/`404.php`).
+- **EditorJS Block Vorlagen.** Der Block „Vorlagen“ wird serverseitig zu normalem Block-HTML aufgelöst; Themes stylen keine eigene Wrapper-Klasse, sondern die enthaltenen Blöcke.
+- **Plugin-Adminseiten** nutzen den Layout-Vertrag aus `admin/partials/plugin-workspace.php` (`CMS_PLUGIN_WORKSPACE_VERSION`, Container `.cms-plugin-admin-content`, Kurzadresse `/admin/plugins/<plugin>`); das betrifft das Admin-Layout, nicht das Frontend-Theme – Details in [../plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md#plugin-layout-vertrag-400).
 
 ### Verwandte Dokumente
 

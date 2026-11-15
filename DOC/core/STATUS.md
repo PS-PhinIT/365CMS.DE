@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Snapshot of the runtime state verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation.
+Snapshot of the runtime state verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation. Release 4.1.0 closes the gaps listed in "In 4.1.0 geschlossene Lücken"; the code's version and schema constants are still `4.0.0` / `v25` until the release preparation, CLI and alerting move to 4.3.0, the community module is planned for 4.2.0 (schema `v27`).
 
 ## Deutsch
 
@@ -12,13 +12,13 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 
 | Merkmal | Wert | Quelle |
 |---|---|---|
-| Core-Version | `4.0.0`, Release `2026-11-12`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
-| Schema | `v25` | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` |
+| Core-Version | dokumentiert: **`4.1.0`**. Im Code zeigt `Version::CURRENT` noch `4.0.0` (Release `2026-11-12`), die Marke wird mit der Release-Vorbereitung 4.1.0 gehoben | `CMS/core/Version.php`, `CMS/update.json` |
+| Schema | dokumentiert: **`v26`** (88 Tabellen, 12 neu seit v25). Die Konstanten `SchemaManager::SCHEMA_VERSION` / `MigrationManager::SCHEMA_VERSION` stehen bis zur Release-Vorbereitung auf `v25`; die v26-Tabellen und -Spalten legt `SchemaManager::ensureFeatureSchema()` bereits an | `SchemaManager::FEATURE_TABLES_V26`, [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.1.0 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
+| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026), Abschnitt `4.1.0` (Feature Release, Bereiche 1–5 umgesetzt) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
 
 ### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
 
@@ -47,18 +47,24 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Admin-Oberfläche (Seitenleiste, Site-Umschalter, Plugin-Zuweisung je Site, Systemhinweise) | produktiv (seit 4.0.0) | [../admin/README.md](../admin/README.md) |
 | Editor.js / SunEditor | produktiv | [../assets/editorjs/README.md](../assets/editorjs/README.md) |
 | Medien (Bibliothek, WebP, Thumbnails) | produktiv | [../admin/media/MEDIA.md](../admin/media/MEDIA.md) |
+| Medien: AVIF-Fassungen, `<picture>`-Ausgabe, Verwendungsnachweis | produktiv (seit 4.1.0) | [../admin/media/MEDIA-TOOLS.md](../admin/media/MEDIA-TOOLS.md) |
+| Vier-Augen-Prinzip, Vorschau-Links, EditorJS Block Vorlagen, Ablauf und Wiedervorlage | produktiv (seit 4.1.0) | [../admin/pages-posts/REVIEW.md](../admin/pages-posts/REVIEW.md), [../admin/pages-posts/BLOCK-TEMPLATES.md](../admin/pages-posts/BLOCK-TEMPLATES.md), [../admin/pages-posts/EDITORIAL-CALENDAR.md](../admin/pages-posts/EDITORIAL-CALENDAR.md) |
 | Benutzer, Rollen, Gruppen | produktiv | [../admin/users-groups/](../admin/users-groups/README.md) |
 | Anmeldung (Passwort, TOTP, Passkeys, LDAP) | produktiv | [SECURITY.md](SECURITY.md) |
+| Passwort-Richtlinie, MFA-Zwang je Rolle, Microsoft Entra ID (SSO) | produktiv (seit 4.1.0) | [../admin/security/LOGIN-THRESHOLDS.md](../admin/security/LOGIN-THRESHOLDS.md), [../admin/security/SSO-ENTRA.md](../admin/security/SSO-ENTRA.md) |
 | Mitgliederbereich | produktiv | [../member/README.md](../member/README.md) |
-| Aboverwaltung | produktiv, ohne Zahlungs-Gateway | [../admin/subscription/](../admin/subscription/README.md) |
+| Aboverwaltung | produktiv; seit 4.1.0 mit Online-Zahlung (Stripe, Mollie) | [../admin/subscription/](../admin/subscription/README.md), [../admin/subscription/PAYMENTS.md](../admin/subscription/PAYMENTS.md) |
 | SEO-Suite, Sitemaps, Weiterleitungen | produktiv | [../admin/seo/](../admin/seo/README.md) |
 | Rechtstexte, Cookie-Consent, DSGVO-Anfragen | produktiv | [../admin/legal/](../admin/legal/README.md) |
 | Firewall, Anti-Spam, Audit | produktiv | [../admin/security/](../admin/security/README.md) |
 | KI-Dienste | produktiv (nur Admin, keine Auto-Veröffentlichung) | [../ai/AI-SERVICES.md](../ai/AI-SERVICES.md) |
-| Backups, Updates, Monitoring, Cron | produktiv | [../admin/system-settings/](../admin/system-settings/README.md) |
+| Backups, Updates, Monitoring, Cron | produktiv; seit 4.1.0 mit S3-Offsite-Kopien | [../admin/system-settings/](../admin/system-settings/README.md) |
+| Ausgehende Webhooks | produktiv (seit 4.1.0) | [../admin/system-settings/WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md) |
+| Zentrale CLI (`CMS/cli.php`), Echtzeit-Alerting (`alert.raised`) | **geplant für 4.3.0** (Bereich 6, nicht Teil von 4.1.0) | [../workflow/specs/v4.1/06-CLI-ALERTING.md](../workflow/specs/v4.1/06-CLI-ALERTING.md) |
+| Community-Modul (Forum, Gruppen, Moderation) | **geplant für 4.2.0**, Schema `v27`, noch kein Code | [../workflow/specs/community/README.md](../workflow/specs/community/README.md) |
 | JSON-API | lesend + Admin-Listen, Session oder optional Bearer-Token (`JWT_SECRET`) | [API-REFERENCE.md](API-REFERENCE.md) |
 
-### Bekannte Lücken und Inkonsistenzen (Stand 2026-11-09)
+### Bekannte Lücken und Inkonsistenzen (Stand 2026-11-15)
 
 Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)), ergänzt in den Folgeaudits vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)) und 2026-11-09 ([../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
 
@@ -94,9 +100,26 @@ Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)
 
 Die Härtungspunkte OFFEN-20 bis OFFEN-26 aus dem Folgeaudit vom 2026-11-08 (AEAD-Verschlüsselung gespeicherter Geheimnisse, bestätigte E-Mail-Änderung, Sitzungs-Widerruf, neutrale Registrierung, Anmeldeverzögerung je Konto, Backup-Ablage außerhalb des Webroots) sind in 4.0.0 umgesetzt. Offen ist nur OFFEN-27 (signierte Update-Pakete); Details in [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md).
 
+#### In 4.1.0 geschlossene Lücken
+
+| # | Befund (bis 4.0.0) | Behoben in 4.1.0 durch |
+|---|---|---|
+| 28 | Aboverwaltung ohne Zahlungs-Gateway (Bestellungen nur manuell/Rechnung) | Stripe Checkout und Mollie, Webhook-Verifizierung, Idempotenz über `payment_events` ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
+| 29 | Passwortrichtlinie fest verdrahtet (12 Zeichen, vier Klassen), keine Historie, kein Höchstalter, ASCII-Zeichenklassen | `PasswordPolicyService` (konfigurierbar, Unicode, Historie, Höchstalter) |
+| 30 | Kein MFA-Zwang je Rolle, Passkeys ohne Nachweis der User Verification | `MfaEnforcementService`, `Router::enforceAccountGates()`, `passkey_credentials.user_verified` |
+| 31 | Kein Single Sign-on | Microsoft Entra ID (OIDC/PKCE), Zuordnung über `tid`+`oid`, Sperre der lokalen Anmeldung |
+| 32 | `posts.publish`/`pages.publish` wurden nicht geprüft, kein Vier-Augen-Prinzip | Status `pending`, `ContentWorkflow`, Update-Schritt für Rollenrechte ([RBAC.md](../admin/users-groups/RBAC.md)) |
+| 33 | Löschen in der Mediathek ließ erzeugte Größen/WebP-Fassungen liegen; Verwendungsnachweis nur für Beiträge und Seiten | Löschen entfernt Fassungen; `media_usage`-Index über alle Inhaltsarten |
+| 34 | Backups nur lokal bzw. per E-Mail/SDK (`uploadToS3`, max. 25 MB) | `OffsiteBackupService` (S3-kompatibel, nur `CMSENC2`-verschlüsselt) |
+| 35 | Core-Update ersetzte `CMS/marketplace/` auf Marketplace-Hosts | `UpdateService::RUNTIME_CORE_ENTRIES` enthält `marketplace` (Hinweis zum Update von 4.0.0 im Changelog) |
+| 36 | Keine ausgehenden Ereignisse für Fremdsysteme | `WebhookService` (signierte Webhooks, Wiederholungen) |
+| 37 | Inhalte ohne Ablauf- und Prüfdatum | `ContentExpiryService`, Spalten `expires_at`, `review_due_at` |
+
+Weiterhin offen: OFFEN-27 (signierte Update-Pakete, siehe oben); Release-Vorbereitung 4.1.0 (Versions- und Schemamarken im Code, `CMS/update.json`, Release-Pakete); Bereich 6 (CLI, Alerting) in 4.3.0; Community-Modul in 4.2.0.
+
 ### Grundsatz dieser Dokumentation
 
-Dokumentiert wird nur, was im ausgelieferten Code nachvollziehbar ist. Pfade, Klassen und Routen in `DOC/` wurden am 2026-10-02 gegen `CMS/` abgeglichen, im Audit vom 2026-10-03 erneut geprüft und für 4.0.0 am 2026-11-09 nachgezogen.
+Dokumentiert wird nur, was im ausgelieferten Code nachvollziehbar ist. Pfade, Klassen und Routen in `DOC/` wurden am 2026-10-02 gegen `CMS/` abgeglichen, im Audit vom 2026-10-03 erneut geprüft und für 4.0.0 am 2026-11-09 und für 4.1.0 am 2026-11-15 nachgezogen.
 
 ### Verwandte Dokumente
 
