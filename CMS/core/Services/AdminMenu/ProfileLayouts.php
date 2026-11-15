@@ -103,15 +103,13 @@ final class ProfileLayouts
                 self::separator('sep.work', 'Arbeit'),
                 self::item('dashboard'),
                 self::item('system.updates'),
+                // Seiten hatten nur noch „Alle Seiten“ – deshalb hier eingegliedert.
                 self::group('posts', 'Beiträge', 'article', [
-                    'content.posts', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar',
+                    'content.posts', 'content.pages', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar',
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check',
                     'media.downloads', 'media.tools', 'media.settings',
-                ]),
-                self::group('pages', 'Seiten', 'file', [
-                    'content.pages',
                 ]),
                 // Für Seiten und Beiträge gemeinsam (Vorlagen, Knowledgebase, Shortcodes, Inhaltsverzeichnis) – eigener Menüpunkt.
                 self::group('building-blocks', 'Bausteine', 'puzzle', [
@@ -139,7 +137,7 @@ final class ProfileLayouts
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
                 self::group('subscriptions', 'Abos', 'credit-card', [
-                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.settings',
+                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
                 self::group('tools', 'Werkzeuge', 'tool', [
                     'system.content-exchange', 'content.trash', 'content.changes', 'content.translations',
@@ -213,7 +211,7 @@ final class ProfileLayouts
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
                 self::group('subscriptions', 'Abos', 'credit-card', [
-                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.settings',
+                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
                 self::group('configuration', 'Konfiguration', 'settings', [
                     ...self::settingsGeneralItems(),

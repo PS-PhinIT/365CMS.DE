@@ -43,6 +43,7 @@ Dashboard 🔒                                     /admin
 Updates                (Badge: Updates)          /admin/updates
 Beiträge
   ├─ Alle Beiträge                               /admin/posts
+  ├─ Alle Seiten                                 /admin/pages
   ├─ Kategorien                                  /admin/post-categories
   ├─ Tags                                        /admin/post-tags
   └─ Redaktionskalender *WP2                     /admin/editorial-calendar
@@ -55,8 +56,6 @@ Medien
   │                                              /admin/downloads
   ├─ Medien-Werkzeuge *WP4                       /admin/media-tools
   └─ Einstellungen                               /admin/media?tab=settings
-Seiten
-  └─ Alle Seiten                                 /admin/pages
 Bausteine              (für Seiten und Beiträge, 4.1.0)
   ├─ EditorJS Block Vorlagen                     /admin/reusable-blocks
   ├─ Knowledgebase *B                            /admin/knowledgebase
