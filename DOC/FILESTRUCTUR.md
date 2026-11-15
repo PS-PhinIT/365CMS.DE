@@ -74,6 +74,7 @@ Verified top-level entries of this repository:
 | `TESTS/release-3.4.0/` | directory | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-3.4.0/run.php` |
 | `TESTS/reusable-blocks/` | directory | EditorJS block templates (4.1.0): block data, usage index, rendering, recursion, history: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | directory | offsite backups (4.1.0): SigV4, S3 client, multipart, retention: `php TESTS/s3-backup/run.php [-v]` |
+| `TESTS/payments/` | directory | payments (4.1.0): `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | directory | outgoing webhooks (4.1.0): `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | directory | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check: `php TESTS/schema-v26/run.php [-v]` |
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
@@ -127,6 +128,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/release-3.4.0/` | Verzeichnis | Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-3.4.0/run.php` |
 | `TESTS/reusable-blocks/` | Verzeichnis | EditorJS Block Vorlagen (4.1.0): Blockdaten, Nutzungsindex, Rendern, Rekursion, Verlauf: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | Verzeichnis | Offsite-Backups (4.1.0): SigV4, S3-Client, Multipart, Aufbewahrung: `php TESTS/s3-backup/run.php [-v]` |
+| `TESTS/payments/` | Verzeichnis | Zahlungen (4.1.0): `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | Verzeichnis | ausgehende Webhooks (4.1.0): `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | Verzeichnis | Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung: `php TESTS/schema-v26/run.php [-v]` |
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |

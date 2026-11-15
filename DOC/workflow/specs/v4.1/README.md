@@ -24,7 +24,7 @@ security gates and tests. Implementation starts with areas 1 and 4.
 | [03-CONTENT-WORKFLOWS.md](03-CONTENT-WORKFLOWS.md) | Vier-Augen-Prinzip (`pending`), wiederverwendbare Blöcke, Ablauf- und Prüfdaten |
 | [04-BACKUP-WEBHOOKS.md](04-BACKUP-WEBHOOKS.md) | S3-kompatible Offsite-Backups, ausgehende Webhooks |
 | [05-PAYMENTS.md](05-PAYMENTS.md) | Stripe, Mollie/PayPal, Webhooks, PDF-Rechnungen mit Nummernkreis |
-| [06-CLI-ALERTING.md](06-CLI-ALERTING.md) | `CMS/cli.php`, Echtzeit-Alerting mit Cooldown |
+| [06-CLI-ALERTING.md](06-CLI-ALERTING.md) | `CMS/cli.php`, Echtzeit-Alerting mit Cooldown – **verschoben auf 4.3.0** |
 | [SCHEMA-v26.md](SCHEMA-v26.md) | Alle Tabellen und Spalten des Schema-Stands v26 |
 | [REFERENCES.md](REFERENCES.md) | Bewertung der im Auftrag verlinkten Repositories und der Sicherheitsmeldung GHSA-6hhv-gc4g-f4r7 |
 | [PROGRESS.md](PROGRESS.md) | Fortschritt je Arbeitspaket mit Nachweisen |
@@ -110,8 +110,8 @@ Schreibweise wie `comments.moderate` (Gruppe in `RolesModule::CAPABILITY_GROUPS`
 | `cms_backup_offsite_uploaded` / `_failed` | Aktion | 4 |
 | `cms_webhook_event` | Filter (Ereignis-Liste) | 4 |
 | `cms_payment_succeeded` / `_failed` / `cms_subscription_renewed` / `cms_invoice_created` | Aktion | 5 |
-| `cms_alert_raised` | Aktion | 6 |
-| `cms_cli_commands` | Filter (Plugin-Befehle) | 6 |
+| `cms_alert_raised` | Aktion | 6 (4.3.0) |
+| `cms_cli_commands` | Filter (Plugin-Befehle) | 6 (4.3.0) |
 
 `user_deleted` und `user_role_changed` (Bedarf des Community-Moduls in 4.2) werden in 4.1.0 in Bereich 1 mit eingeführt.
 

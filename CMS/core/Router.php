@@ -94,6 +94,10 @@ class Router
         if (str_starts_with($this->requestUri, '/cms-login/sso/')) {
             $this->loadRouteModule('SsoRouter');
         }
+        // 4.1.0 (5a): Webhooks und Rücksprung der Zahlungsanbieter.
+        if (str_starts_with($this->requestUri, '/payments/')) {
+            $this->loadRouteModule('PaymentRouter');
+        }
         $this->loadRouteModule('ThemeRouter');
     }
 
@@ -292,7 +296,8 @@ class Router
         // geschützt, und die One-Click-Abmeldung (RFC 8058) senden Postfachanbieter grundsätzlich ohne Token.
         // `/cms-verify-email`, `/cms-confirm-email-change`: Die Bestätigungsseite wird aus dem Mailprogramm ohne Sitzung
         // geöffnet (Sitzungs-Cookie ist SameSite=Strict); geschützt ist der POST über den geheimen Bestätigungs-Token.
-        $csrfBypassPrefixes = ['/contact/', '/newsletter/'];
+        // `/payments/webhook/`: Aufrufe der Zahlungsanbieter ohne Sitzung; geprüft wird die Signatur bzw. der Abruf beim Anbieter.
+        $csrfBypassPrefixes = ['/contact/', '/newsletter/', '/payments/webhook/'];
         $csrfBypassExact = ['/login', '/register', '/forgot-password', '/cms-login', '/cms-register', '/cms-password-forgot', '/cms-verify-email', '/cms-confirm-email-change', '/logout', '/contact', '/kontakt', '/comments/post', '/mfa-challenge', '/mfa-setup', '/mfa-disable'];
             $isThemeFavoriteToggle = $method === 'POST'
                 && (string) ($_POST['phinit_toggle_favorite'] ?? '') === '1'
@@ -409,7 +414,8 @@ class Router
         }
 
         $exempt = ['/login', '/logout', '/cms-login', '/cms-login/sso/entra/start', '/cms-login/sso/entra/callback', '/cms-password-forgot', '/forgot-password', '/cms-verify-email', '/cms-confirm-email-change', '/mfa-challenge', '/mfa-setup', '/mfa-disable', '/health'];
-        if (in_array($routingUri, $exempt, true)) {
+        // Zahlungs-Webhooks auch im Wartungsmodus annehmen (sonst gehen Zahlungseingänge verloren).
+        if (in_array($routingUri, $exempt, true) || str_starts_with($routingUri, '/payments/webhook/')) {
             return false;
         }
 

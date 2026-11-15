@@ -212,7 +212,7 @@ class SubscriptionSettingsModule
             'auto_renewal' => isset($post['auto_renewal']) ? '1' : '0',
             'grace_period_days' => $this->sanitizeIntRange($post['grace_period_days'] ?? self::PACKAGE_SETTINGS_KEYS['grace_period_days'], 0, 365),
             'cancellation_period_days' => $this->sanitizeIntRange($post['cancellation_period_days'] ?? self::PACKAGE_SETTINGS_KEYS['cancellation_period_days'], 0, 365),
-            'payment_methods' => $this->sanitizeAllowedValue((string)($post['payment_methods'] ?? self::PACKAGE_SETTINGS_KEYS['payment_methods']), ['invoice', 'stripe', 'paypal', 'all'], self::PACKAGE_SETTINGS_KEYS['payment_methods']),
+            'payment_methods' => $this->sanitizeAllowedValue((string)($post['payment_methods'] ?? self::PACKAGE_SETTINGS_KEYS['payment_methods']), ['invoice', 'stripe', 'mollie', 'paypal', 'all'], self::PACKAGE_SETTINGS_KEYS['payment_methods']),
             'invoice_prefix' => $this->sanitizeText((string)($post['invoice_prefix'] ?? self::PACKAGE_SETTINGS_KEYS['invoice_prefix']), self::MAX_PREFIX_LENGTH, self::PACKAGE_SETTINGS_KEYS['invoice_prefix']),
             'invoice_next_number' => $this->sanitizeIntRange($post['invoice_next_number'] ?? self::PACKAGE_SETTINGS_KEYS['invoice_next_number'], 1, 99999999),
             'tax_rate' => $this->sanitizeIntRange($post['tax_rate'] ?? self::PACKAGE_SETTINGS_KEYS['tax_rate'], 0, 100),

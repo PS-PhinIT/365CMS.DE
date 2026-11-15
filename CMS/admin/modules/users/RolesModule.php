@@ -44,6 +44,7 @@ class RolesModule
         'security' => ['security.sso'],
         'backups'  => ['backups.offsite'],
         'webhooks' => ['webhooks.manage'],
+        'payments' => ['payments.manage'],
     ];
 
     public function __construct()
