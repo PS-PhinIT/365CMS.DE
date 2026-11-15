@@ -161,11 +161,12 @@ Die Beitrags-URL folgt der Struktur aus *Einstellungen → Inhalte* (`setting_po
 
 ### Gültigkeit: Ablauf und Wiedervorlage (seit 4.1.0)
 
-Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit“):
+Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit“) und Wissensdatenbank-Einträge (Seitenspalte des Editors; dort heißt Zurückstufen „inaktiv“):
 
 - **Ablaufdatum** (Datum, optional Uhrzeit): Ist es erreicht, stuft der stündliche Cron einen veröffentlichten Inhalt auf *Entwurf* zurück (Frontend 404, Sitemap und Suche ohne Eintrag, Cache wird geleert). Mit der Einstellung *Beiträge & Sites → Bei Ablauf: „Sichtbar lassen, nur Hinweis“* bleibt er sichtbar. Der Autor erhält einen Hinweis, Hook `cms_content_expired`. Je Lauf werden höchstens 100 Inhalte je Typ verarbeitet; wer einen zurückgestuften Inhalt wieder veröffentlicht, ohne das Ablaufdatum zu ändern, behält ihn veröffentlicht.
 - **Wiedervorlage** (Datum): keine Statusänderung. Am Stichtag meldet der tägliche Cron den Inhalt einmal (Hinweis an den Autor, Hook `cms_content_review_due`). „Als geprüft markieren“ setzt die nächste Wiedervorlage auf heute + Intervall (*Beiträge & Sites → Wiedervorlage nach „Geprüft“*, Standard 12 Monate).
-- Noch nicht in diesem Lauf: Markierung im Redaktionskalender, Dashboard-Widget „Fällige Prüfungen“, Wissensdatenbank.
+- **Antwort im Frontend:** Zurückgestufte, abgelaufene Beiträge und Seiten liefern 404 oder – Einstellung *Antwort für zurückgestufte Inhalte* – **410 Gone** (Suchmaschinen entfernen sie schneller). Für die Wissensdatenbank bleibt es bei 404.
+- **Übersicht:** Wiedervorlagen erscheinen im Redaktionskalender (eigene Farbe, nicht verschiebbar), das Dashboard zeigt die Karte **„Fällige Prüfungen“**.
 
 ### Hinweise
 

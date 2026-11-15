@@ -1283,12 +1283,18 @@ class SchemaManager
                 trashed_at DATETIME NULL DEFAULT NULL,
                 trashed_by INT UNSIGNED NULL DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME DEFAULT NULL,
+                review_due_at DATETIME DEFAULT NULL,
+                expiry_notified_at DATETIME DEFAULT NULL,
+                review_notified_at DATETIME DEFAULT NULL,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY uniq_slug (slug),
                 KEY idx_keyword (keyword),
                 KEY idx_active_priority (is_active, priority),
                 KEY idx_category (category),
-                KEY idx_kb_trashed (trashed_at)
+                KEY idx_kb_trashed (trashed_at),
+                KEY idx_kb_expires (is_active, expires_at),
+                KEY idx_kb_review_due (review_due_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Knowledgebase: Einträge'",
 
             'kb_categories' => "CREATE TABLE IF NOT EXISTS {$p}kb_categories (
@@ -2434,7 +2440,7 @@ class SchemaManager
         );
 
         // v26: Ablauf- und Prüfdaten (ContentExpiryService, Bereich 3c).
-        foreach (['posts', 'pages'] as $table) {
+        foreach (['posts' => 'status', 'pages' => 'status', 'kb_entries' => 'is_active'] as $table => $liveColumn) {
             foreach (['expires_at', 'review_due_at', 'expiry_notified_at', 'review_notified_at'] as $column) {
                 $this->ensureColumnExists(
                     $this->prefix . $table,
@@ -2443,7 +2449,8 @@ class SchemaManager
                 );
             }
             $indexes = $this->loadIndexes($this->prefix . $table);
-            foreach (['idx_expires' => '(status, expires_at)', 'idx_review_due' => '(review_due_at)'] as $name => $columns) {
+            $indexNames = $table === 'kb_entries' ? ['idx_kb_expires', 'idx_kb_review_due'] : ['idx_expires', 'idx_review_due'];
+            foreach ([$indexNames[0] => "({$liveColumn}, expires_at)", $indexNames[1] => '(review_due_at)'] as $name => $columns) {
                 if (!isset($indexes[$name])) {
                     try {
                         $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX {$name} {$columns}");

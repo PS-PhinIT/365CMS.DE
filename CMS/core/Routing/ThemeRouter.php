@@ -1292,6 +1292,11 @@ final class ThemeRouter
         } elseif (!\cms_post_is_publicly_visible($postRow)) {
             // Auch Anonyme erhalten 404 (kein Login-Redirect): sonst verrät die Antwort, dass der Slug existiert.
             if (!$this->canCurrentViewerAccessUnpublishedContent($postRow, 'edit_all_posts')) {
+                // Abgelaufen und zurückgestuft (4.1.0, 3c): auf Wunsch 410 Gone statt 404.
+                if (Services\Content\ContentExpiryService::instance()->frontendStatusFor($postRow) === 410) {
+                    $this->router->renderError(410);
+                    return;
+                }
                 $this->router->render404();
                 return;
             }

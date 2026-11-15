@@ -124,6 +124,7 @@ $calendarSelected = static fn (bool $selected): string => $selected ? ' selected
                 <span class="cms-ecal__legend-item"><span class="cms-ecal__swatch cms-ecal__swatch--scheduled" aria-hidden="true"></span><?php echo $calendarEsc(__('calendar.kind.scheduled')); ?></span>
                 <span class="cms-ecal__legend-item"><span class="cms-ecal__swatch cms-ecal__swatch--planned" aria-hidden="true"></span><?php echo $calendarEsc(__('calendar.kind.planned')); ?></span>
                 <span class="cms-ecal__legend-item"><span class="cms-ecal__swatch cms-ecal__swatch--published" aria-hidden="true"></span><?php echo $calendarEsc(__('calendar.kind.published')); ?></span>
+                <span class="cms-ecal__legend-item"><span class="cms-ecal__swatch cms-ecal__swatch--review" aria-hidden="true"></span><?php echo $calendarEsc(__('calendar.kind.review')); ?></span>
                 <span class="cms-ecal__legend-item"><i class="ti ti-article" aria-hidden="true"></i><?php echo $calendarEsc(__('calendar.type.post')); ?></span>
                 <span class="cms-ecal__legend-item"><i class="ti ti-file" aria-hidden="true"></i><?php echo $calendarEsc(__('calendar.type.page')); ?></span>
                 <span class="cms-ecal__legend-hint text-secondary"><?php echo $calendarEsc(__('calendar.legend.move_hint')); ?></span>

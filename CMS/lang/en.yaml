@@ -353,6 +353,7 @@ default:
   "calendar.type.pages": "Pages"
   "calendar.kind.scheduled": "Scheduled"
   "calendar.kind.planned": "Draft with planned date"
+  "calendar.kind.review": "Review due"
   "calendar.kind.published": "Published"
   "calendar.legend.label": "Legend"
   "calendar.legend.move_hint": "Move entries to another day by drag and drop or with “Move”."
