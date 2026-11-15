@@ -234,6 +234,23 @@ $invSenderFields = [
                     </div>
                     <div class="card-footer"><button type="submit" class="btn btn-primary">Speichern</button></div>
                 </form>
+
+                <div class="card mt-4">
+                    <div class="card-header"><h3 class="card-title">DSGVO-Auskünfte (Rechnungen)</h3></div>
+                    <div class="card-body small">
+                        <p class="text-secondary">Entstehen beim Abschließen einer Auskunftsanfrage unter <a href="/admin/data-requests">Auskunft &amp; Löschen</a>; werden nach 30 Tagen gelöscht. Rechnungen selbst werden wegen der Aufbewahrungspflicht nicht gelöscht, sondern gesperrt.</p>
+                        <?php $invExports = (array) ($data['privacy_exports'] ?? []); ?>
+                        <?php if ($invExports === []): ?>
+                            <p class="mb-0 text-secondary">Keine Exporte vorhanden.</p>
+                        <?php else: ?>
+                            <ul class="list-unstyled mb-0">
+                                <?php foreach ($invExports as $invExport): ?>
+                                    <li><a href="/admin/invoices?privacy_export=<?= rawurlencode((string) $invExport['name']) ?>"><?= $invE($invExport['name']) ?></a> <span class="text-secondary">(<?= $invE($invExport['created_at']) ?>)</span></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

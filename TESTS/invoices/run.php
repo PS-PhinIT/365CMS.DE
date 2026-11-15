@@ -523,6 +523,37 @@ T::run('Download-Rechte, Sperrvermerk, Integrität', static function (): void {
     T::check(!I::canAccess(['user_id' => 0, 'restricted_at' => ''], 0, false), 'Rechnung ohne Konto: nur mit invoices.view');
 });
 
+T::run('DSGVO-Auskunft, Datenschutztext, Webhook invoice.created', static function (): void {
+    $f = invFixture();
+    $s = $f['service'];
+    $mine = $s->createForOrder(invOrder($f['db'], ['user_id' => 7]))['invoice'];
+    $guest = $s->createForOrder(invOrder($f['db'], ['user_id' => null, 'email' => 'Gast@Kunde.example']))['invoice'];
+    $s->createForOrder(invOrder($f['db'], ['user_id' => 8, 'email' => 'fremd@kunde.example']));
+    $s->restrictForUser(7);
+    $export = $s->exportForPrivacy(7, '');
+    T::same([(string) $mine['invoice_number']], array_column($export, 'invoice_number'), 'Auskunft enthält auch gesperrte Rechnungen des Kontos');
+    T::check(isset($export[0]['snapshot']['customer']) && !isset($export[0]['pdf_path']), 'Auskunft mit Rechnungsdaten, ohne Speicherpfad');
+    T::same([(string) $guest['invoice_number']], array_column($s->exportForPrivacy(0, 'gast@kunde.example'), 'invoice_number'), 'Gastbestellung über die E-Mail (ohne Groß-/Kleinschreibung)');
+    T::same([], $s->exportForPrivacy(0, ''), 'ohne Konto und E-Mail: nichts');
+    T::same([], $s->exportForPrivacy(9, 'niemand@kunde.example'), 'keine fremden Rechnungen');
+    $doc = \CMS\Services\Payments\InvoicePrivacy::document(7, '', $export);
+    T::check(str_contains((string) $doc['retention_notice'], '§ 147 AO'), 'Auskunft nennt die Aufbewahrungspflicht');
+    foreach (['../x.json', 'invoices-20261115-120000-abc.json', 'invoices-20261115-120000-0123456789ab.json/../../x'] as $bad) {
+        T::same(null, \CMS\Services\Payments\InvoicePrivacy::exportPath($bad), 'Export-Download: unsicherer Name abgelehnt (' . $bad . ')');
+    }
+    $exportDir = \CMS\Services\PrivateStorageService::getInstance()->path(\CMS\Services\Payments\InvoicePrivacy::EXPORT_AREA);
+    file_put_contents($exportDir . 'notiz.json', '{}');
+    file_put_contents($exportDir . 'invoices-20261115-120000-0123456789ab.json', '{}');
+    T::same(null, \CMS\Services\Payments\InvoicePrivacy::exportPath('notiz.json'), 'Export-Download: nur Dateien nach dem Namensmuster');
+    T::check(\CMS\Services\Payments\InvoicePrivacy::exportPath('invoices-20261115-120000-0123456789ab.json') !== null, 'Export-Download: gültiger Name');
+    T::same(['invoices-20261115-120000-0123456789ab.json'], array_column(\CMS\Services\Payments\InvoicePrivacy::listExports(), 'name'), 'Liste zeigt nur Exporte');
+    $hooks = invSource('core/Services/FeatureHooks/InvoiceHooks.php');
+    T::check(str_contains($hooks, "addAction('dsgvo_export_data'") && str_contains($hooks, "addFilter('cms_member_export_data'"), 'Auskunft an DSGVO-Anfrage und Selbstauskunft angebunden');
+    T::check(str_contains(invSource('admin/modules/legal/LegalSitesModule.php'), '§ 147 AO, § 14b UStG, § 257 HGB'), 'Datenschutz-Vorlage nennt die Aufbewahrung der Rechnungen');
+    T::check(str_contains(invSource('core/Services/Webhooks/WebhookService.php'), "'invoice.created' => 'Rechnung erstellt'")
+        && str_contains(invSource('core/Services/FeatureHooks/WebhookHooks.php'), "self::dispatch('invoice.created'"), 'Webhook-Ereignis invoice.created');
+});
+
 T::run('Hooks aus Bereich 5a, Menü, Aufbewahrung', static function (): void {
     $f = invFixture();
     I::setInstance($f['service']);

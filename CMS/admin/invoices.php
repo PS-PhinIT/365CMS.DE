@@ -29,6 +29,21 @@ if (!cms_admin_invoices_can_access()) {
     exit;
 }
 
+// DSGVO-Auskunft: Export-Datei (Name streng geprüft, liegt im privaten Speicher).
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && isset($_GET['privacy_export'])) {
+    $cmsInvoiceExport = is_string($_GET['privacy_export']) ? \CMS\Services\Payments\InvoicePrivacy::exportPath($_GET['privacy_export']) : null;
+    if ($cmsInvoiceExport !== null) {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . basename($cmsInvoiceExport) . '"');
+        header('Cache-Control: no-store, private');
+        header('X-Content-Type-Options: nosniff');
+        readfile($cmsInvoiceExport);
+        exit;
+    }
+    header('Location: /admin/invoices', true, 303);
+    exit;
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && isset($_GET['download'])) {
     $cmsInvoiceDownloadId = is_string($_GET['download']) && ctype_digit($_GET['download']) ? (int) $_GET['download'] : 0;
     $cmsInvoiceFile = $cmsInvoiceDownloadId > 0
@@ -84,6 +99,7 @@ $sectionPageConfig = [
             'tax_id_missing' => $seller['data']['tax_number'] === '' && $seller['data']['vat_id'] === '',
             'next_numbers' => $service->nextNumbers(),
             'query' => $query,
+            'privacy_exports' => \CMS\Services\Payments\InvoicePrivacy::listExports(),
         ];
     },
     'access_checker' => static fn (): bool => cms_admin_invoices_can_access(),

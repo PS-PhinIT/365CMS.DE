@@ -1202,6 +1202,8 @@ class LegalSitesModule
                 $html .= ' Eingesetzte Zahlungsdienstleister: ' . $this->escape($paymentProviders) . '.';
             }
             $html .= '</p>';
+            // 4.1.0 (5b): Rechnungen unterliegen der Aufbewahrungspflicht; Löschanfragen führen zur Sperrung.
+            $html .= '<p>Rechnungen und die zugehörigen Bestelldaten bewahren wir aufgrund handels- und steuerrechtlicher Pflichten (§ 147 AO, § 14b UStG, § 257 HGB) zehn Jahre ab Ende des Kalenderjahres der Ausstellung auf (Art. 6 Abs. 1 lit. c DSGVO). Bis zum Ablauf dieser Frist können wir sie nicht löschen; auf Ihren Antrag schränken wir die Verarbeitung ein (Sperrung), sodass die Daten nur noch zur Erfüllung der Aufbewahrungspflicht genutzt werden. Eine Auskunft umfasst auch Ihre Rechnungen.</p>';
         }
 
         $html .= '<h3>12. Rechtsgrundlagen</h3><p>Die Verarbeitung personenbezogener Daten erfolgt je nach Sachverhalt auf Grundlage Ihrer Einwilligung, zur Vertragserfüllung, zur Erfüllung rechtlicher Verpflichtungen oder auf Grundlage berechtigter Interessen, sofern diese den Schutz Ihrer Rechte und Freiheiten nicht überwiegen.</p>';

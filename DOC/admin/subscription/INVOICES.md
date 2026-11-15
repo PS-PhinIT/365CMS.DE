@@ -74,7 +74,9 @@ Nach dem Erstellen geht eine Mail mit dem PDF als Anhang an die E-Mail der Beste
 
 - Rechnungen werden **nie gelöscht** – weder vom Dienst noch durch die Datenaufbewahrung (Regel `invoices.archive`, Frist 0 = keine automatische Löschung; Aufbewahrung 10 Jahre ab Ende des Ausstellungsjahres, § 147 AO, § 14b UStG).
 - **DSGVO-Löschantrag** (`dsgvo_delete_data`) und **Löschen eines Kontos** (`cms_user_deleted`): Rechnungen und PDFs bleiben, erhalten aber einen **Sperrvermerk** (`restricted_at`, Art. 18 i. V. m. Art. 17 Abs. 3 lit. b DSGVO). Gesperrte Rechnungen erscheinen nicht mehr im Mitgliederbereich, nur noch für Admins mit `invoices.view` (Kennzeichnung *Gesperrt*). Die Tabellen haben keinen Fremdschlüssel auf `users`, nichts wird kaskadierend gelöscht.
-- Hinweis für die Datenschutzerklärung: Rechnungsdaten werden aufgrund gesetzlicher Aufbewahrungspflichten 10 Jahre gespeichert (Art. 6 Abs. 1 lit. c DSGVO).
+- **DSGVO-Auskunft** (`dsgvo_export_data`, *Rechtliches → Auskunft & Löschen* → abschließen): alle Rechnungen der Person, auch gesperrte, zugeordnet über das Konto oder die E-Mail der Bestellung, als JSON mit Rechnungsdaten (`InvoicePrivacy`, privater Speicher `invoices/privacy-exports/`, Download unter *Abos → Rechnungen*, Löschung nach 30 Tagen). Die Selbstauskunft im Mitgliederbereich enthält den Schlüssel `invoices`.
+- **Datenschutzerklärung:** Die Vorlage unter *Rechtstexte* nennt im Abschnitt „Vertrags- und Zahlungsabwicklung“ die zehnjährige Aufbewahrung (§ 147 AO, § 14b UStG, § 257 HGB) und die Sperrung statt Löschung; bestehende Texte neu erzeugen.
+- **Webhook** `invoice.created` (`invoice_id`, `type`, `order_id`) für ausgehende Webhooks (*Einstellungen → Webhooks*).
 
 ### Einstellungen (`invoices.*`)
 

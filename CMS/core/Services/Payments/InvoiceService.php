@@ -807,6 +807,34 @@ final class InvoiceService
     }
 
     /**
+     * DSGVO-Auskunft (Art. 15): alle gespeicherten Rechnungen der Person – auch gesperrte –, zugeordnet über das
+     * Konto oder die E-Mail-Adresse der Bestellung. Mit den Rechnungsdaten (Snapshot), ohne Speicherpfad.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function exportForPrivacy(int $userId, string $email): array
+    {
+        $email = strtolower(trim($email));
+        if ($userId <= 0 && $email === '') {
+            return [];
+        }
+        $rows = $this->db->get_results(
+            "SELECT * FROM {$this->prefix}invoices
+             WHERE (user_id = ? AND user_id > 0)
+                OR (? <> '' AND order_id IN (SELECT id FROM {$this->prefix}orders WHERE LOWER(email) = ? OR LOWER(customer_email) = ?))
+             ORDER BY issued_at ASC, id ASC LIMIT 2000",
+            [$userId, $email, $email, $email]
+        ) ?: [];
+
+        return array_map(function (object $row): array {
+            $invoice = $this->mapInvoice($row, true);
+            unset($invoice['pdf_path']);
+
+            return $invoice;
+        }, $rows);
+    }
+
+    /**
      * Darf das Konto die Rechnung sehen? Eigentümer (nicht gesperrt) oder Recht `invoices.view`.
      *
      * @param array<string, mixed> $invoice

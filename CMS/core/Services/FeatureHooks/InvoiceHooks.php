@@ -65,6 +65,26 @@ final class InvoiceHooks
             self::guard(static fn () => InvoiceService::getInstance()->restrictForUser(is_numeric($userId) ? (int) $userId : 0));
         });
 
+        // DSGVO-Auskunft (Art. 15): Rechnungen als JSON-Datei; Selbstauskunft im Mitgliederbereich.
+        Hooks::addAction('dsgvo_export_data', static function (mixed $userId = null, mixed $email = null): void {
+            self::guard(static fn () => \CMS\Services\Payments\InvoicePrivacy::handleExport($userId, $email));
+        }, 10);
+        Hooks::addFilter('cms_member_export_data', static function (mixed $export = [], mixed $userId = 0, mixed $email = ''): mixed {
+            if (!is_array($export)) {
+                return $export;
+            }
+            try {
+                $invoices = InvoiceService::getInstance()->exportForPrivacy((int) $userId, is_string($email) ? $email : '');
+                if ($invoices !== []) {
+                    $export['invoices'] = \CMS\Services\Payments\InvoicePrivacy::document((int) $userId, (string) $email, $invoices);
+                }
+            } catch (\Throwable $e) {
+                error_log('365CMS Rechnungen (Selbstauskunft): ' . $e->getMessage());
+            }
+
+            return $export;
+        }, 20);
+
         Hooks::addAction('cms_init', [self::class, 'registerRetentionRule'], 20);
     }
 
