@@ -48,7 +48,7 @@ Verified top-level entries of this repository:
 | `CMS/` | directory | **productive runtime** (web root in typical deployments) |
 | `CMS_ASSETS/` | directory | source archives of the bundled third-party libraries |
 | `DOC/` | directory | public project documentation |
-| `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 4.0.0, 4.1.0, 4.1.5, 4.1.6) |
+| `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7) |
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/ai-admin-contract/` | directory | static contract of the AI admin integration (routes, CSRF, quota, SSRF guard, sanitizing): `php TESTS/ai-admin-contract/run.php` |
@@ -106,7 +106,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CMS/` | Verzeichnis | **produktive Runtime** (in typischen Deployments das Webroot) |
 | `CMS_ASSETS/` | Verzeichnis | Quellarchive der gebündelten Drittbibliotheken |
 | `DOC/` | Verzeichnis | öffentliche Projektdokumentation |
-| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 4.0.0, 4.1.0, 4.1.5, 4.1.6) |
+| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/ai-admin-contract/` | Verzeichnis | statischer Vertrag der AI-Admin-Integration (Routen, CSRF, Quota, SSRF-Schutz, Bereinigung): `php TESTS/ai-admin-contract/run.php` |

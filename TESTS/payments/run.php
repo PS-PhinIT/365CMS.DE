@@ -478,4 +478,64 @@ T::run('Einbindung', static function (): void {
     T::check(!preg_match('/value="<\?= \$pyE\(\$pySecrets/', $view) && str_contains($view, 'type="password"'), 'Admin: Schlüssel werden nie ausgegeben');
 });
 
+T::run('Release-Prüfung 4.1.0: Erstattung, Rückbuchung, Kündigung beim Anbieter (FUN-410-21, FUN-410-27)', static function (): void {
+    // Abbildung der Ereignisse
+    $full = StripeGateway::mapEvent(['id' => 'evt_rf', 'type' => 'charge.refunded', 'data' => ['object' => ['refunded' => true, 'amount_refunded' => 1199, 'payment_intent' => 'pi_1', 'currency' => 'eur']]]);
+    $partial = StripeGateway::mapEvent(['id' => 'evt_rp', 'type' => 'charge.refunded', 'data' => ['object' => ['refunded' => false, 'amount_refunded' => 500, 'payment_intent' => 'pi_1']]]);
+    $dispute = StripeGateway::mapEvent(['id' => 'evt_dp', 'type' => 'charge.dispute.created', 'data' => ['object' => ['amount' => 1199, 'payment_intent' => 'pi_1']]]);
+    T::same(['refunded', 'ignored', 'refunded', 'chargeback'], [$full['kind'], $partial['kind'], $dispute['kind'], $dispute['reason'] ?? ''], 'Stripe: volle Erstattung und Dispute → refunded, Teilerstattung ignoriert');
+    $mPaid = MollieGateway::mapPayment(['id' => 'tr_abcd1', 'status' => 'paid', 'amount' => ['value' => '11.99', 'currency' => 'EUR']]);
+    $mRefund = MollieGateway::mapPayment(['id' => 'tr_abcd1', 'status' => 'paid', 'amount' => ['value' => '11.99', 'currency' => 'EUR'], 'amountRefunded' => ['value' => '11.99', 'currency' => 'EUR']]);
+    $mBack = MollieGateway::mapPayment(['id' => 'tr_abcd1', 'status' => 'paid', 'amount' => ['value' => '11.99', 'currency' => 'EUR'], 'amountChargedBack' => ['value' => '11.99', 'currency' => 'EUR']]);
+    T::same(['paid', 'refunded', 'refunded'], [$mPaid['kind'], $mRefund['kind'], $mBack['kind']], 'Mollie: amountRefunded/amountChargedBack → refunded');
+    T::check($mPaid['event_id'] !== $mRefund['event_id'] && $mRefund['event_id'] !== $mBack['event_id'], 'Mollie: eigene Ereignis-IDs, keine Verwechslung mit dem Zahlungseingang');
+
+    // Erstattung über den Webhook: Bestellung refunded, Abo beendet, Anbieter-Abo gelöscht
+    $f = pyFixture();
+    $id = pyOrder($f['db'], ['provider' => 'stripe', 'provider_checkout_id' => 'cs_r']);
+    $paid = pyStripeBody('evt_pr', 'checkout.session.completed', ['id' => 'cs_r', 'payment_status' => 'paid', 'amount_total' => 1199, 'currency' => 'eur', 'metadata' => ['order_id' => (string) $id], 'subscription' => 'sub_rfund1', 'payment_intent' => 'pi_r1']);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($paid), $paid);
+    T::same('paid', pyOrderRow($f['db'], $id)['status'], 'Ausgangslage: bezahlt');
+    $refunded = new \ArrayObject();
+    Hooks::addAction('cms_payment_refunded', static function (int $orderId) use ($refunded): void {
+        $refunded[] = $orderId;
+    });
+    $f['responses']['DELETE https://api.stripe.com/v1/subscriptions/sub_rfund1'] = ['status' => 200, 'body' => '{"id":"sub_rfund1","status":"canceled"}'];
+    $rf = pyStripeBody('evt_rf1', 'charge.refunded', ['refunded' => true, 'amount_refunded' => 1199, 'payment_intent' => 'pi_r1', 'currency' => 'eur']);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($rf), $rf);
+    T::same('refunded', pyOrderRow($f['db'], $id)['status'], 'Erstattung → Bestellung refunded');
+    $sub = (array) $f['db']->get_row('SELECT * FROM cms_user_subscriptions WHERE user_id = 7 ORDER BY id DESC LIMIT 1');
+    T::same('cancelled', $sub['status'] ?? '', 'Erstattung beendet das Abo');
+    $deletes = array_values(array_filter($f['calls']->getArrayCopy(), static fn (array $c): bool => $c['method'] === 'DELETE'));
+    T::same(['https://api.stripe.com/v1/subscriptions/sub_rfund1'], array_column($deletes, 'url'), 'Anbieter-Abo wird gelöscht (keine weitere Abbuchung)');
+    T::same([$id], $refunded->getArrayCopy(), 'Hook cms_payment_refunded');
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($rf), $rf);
+    T::same(1, count(array_filter($f['calls']->getArrayCopy(), static fn (array $c): bool => $c['method'] === 'DELETE')), 'Wiederholtes Ereignis wirkt nicht doppelt');
+
+    // Kündigung durch das Mitglied: Stripe zum Periodenende, Mollie über die Kunden-ID aus der Zahlung
+    $g = pyFixture();
+    $g['db']->insert('user_subscriptions', ['user_id' => 9, 'plan_id' => 3, 'status' => 'active', 'end_date' => '2099-01-01 00:00:00', 'provider' => 'stripe', 'provider_subscription_id' => 'sub_mem1']);
+    $g['responses']['POST https://api.stripe.com/v1/subscriptions/sub_mem1'] = ['status' => 200, 'body' => '{"id":"sub_mem1","cancel_at_period_end":true}'];
+    $result = $g['service']->cancelMemberSubscription(9);
+    $row = (array) $g['db']->get_row('SELECT * FROM cms_user_subscriptions WHERE user_id = 9');
+    T::check(!empty($result['success']) && !empty($row['cancelled_at']) && $row['status'] === 'active', 'Mitglied kündigt: bleibt bis end_date aktiv, cancelled_at gesetzt');
+    $last = $g['calls'][count($g['calls']) - 1];
+    T::same(['POST', 'cancel_at_period_end=true'], [$last['method'], $last['body']], 'Stripe: cancel_at_period_end');
+    T::same('Das Abo ist bereits gekündigt.', (string) ($g['service']->cancelMemberSubscription(9)['message'] ?? ''), 'zweite Kündigung ohne erneuten Anbieteraufruf');
+
+    $g['db']->insert('user_subscriptions', ['user_id' => 11, 'plan_id' => 3, 'status' => 'active', 'end_date' => '2099-01-01 00:00:00', 'provider' => 'mollie', 'provider_subscription_id' => 'sub_moll1']);
+    pyOrder($g['db'], ['order_number' => 'BST-M1', 'user_id' => 11, 'provider' => 'mollie', 'status' => 'paid', 'payment_ref' => 'tr_pay11']);
+    $g['responses']['GET https://api.mollie.com/v2/payments/tr_pay11'] = ['status' => 200, 'body' => '{"id":"tr_pay11","customerId":"cst_kunde1"}'];
+    $g['responses']['DELETE https://api.mollie.com/v2/customers/cst_kunde1/subscriptions/sub_moll1'] = ['status' => 200, 'body' => '{"id":"sub_moll1","status":"canceled"}'];
+    T::check(!empty($g['service']->cancelMemberSubscription(11)['success']), 'Mollie: Kündigung über die Kunden-ID der letzten Zahlung');
+    $failed = new MollieGateway(pySettings(), static fn (): array => ['status' => 500, 'body' => '{"detail":"Fehler"}']);
+    T::check(empty($failed->cancelRecurring('sub_moll1', ['customer_id' => 'cst_kunde1'])['success']), 'Fehler beim Anbieter wird gemeldet');
+    T::check(!empty((new StripeGateway(pySettings(), static fn (): array => ['status' => 404, 'body' => '{}'], static fn (): int => PY_NOW))->cancelRecurring('sub_weg1')['success']), 'bereits gelöschtes Stripe-Abo gilt als beendet');
+
+    $src = (string) file_get_contents(dirname(__DIR__, 2) . '/CMS/core/SubscriptionManager.php');
+    T::check(str_contains($src, 'PaymentService::getInstance()->cancelRecurring($row, false);') && str_contains($src, 'PaymentService::$assigningProviderSubscriptionId'), 'Tarifwechsel beendet das alte Anbieter-Abo, nicht das neue');
+    $member = (string) file_get_contents(dirname(__DIR__, 2) . '/CMS/member/subscription.php');
+    T::check(str_contains($member, "verifyCsrf('subscription_cancel')") && str_contains($member, 'name="confirm_cancel"') && !str_contains($member, 'onsubmit='), 'Mitglieder-Kündigung: CSRF, Bestätigung, ohne Inline-Skript (CSP)');
+});
+
 T::finish();

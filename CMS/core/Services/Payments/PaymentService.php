@@ -45,6 +45,9 @@ final class PaymentService
 
     private static ?self $instance = null;
 
+    /** Release-Prüfung 4.1.0 (FUN-410-21): Anbieter-Abo, das gerade zugewiesen wird (nicht beenden). */
+    public static string $assigningProviderSubscriptionId = '';
+
     private Database $db;
     private string $prefix;
     private PaymentSettings $settings;
@@ -332,6 +335,7 @@ final class PaymentService
             'renewed' => $this->renew($provider, $event),
             'renewal_failed' => $this->renewalFailed($provider, $event),
             'subscription_ended' => $this->endSubscription($provider, $event),
+            'refunded' => $this->refund($provider, $event),
             default => ['status' => 'ignored'],
         };
     }
@@ -416,7 +420,14 @@ final class PaymentService
             return '';
         }
         $cycle = (string) ($order['billing_cycle'] ?? 'monthly');
-        if (!($this->assigner)($userId, $planId, $cycle)) {
+        // FUN-410-21: Beim Zuweisen beendet SubscriptionManager die Anbieter-Abos des alten Pakets, nicht dieses.
+        self::$assigningProviderSubscriptionId = (string) ($event['subscription_id'] ?? '');
+        try {
+            $assigned = ($this->assigner)($userId, $planId, $cycle);
+        } finally {
+            self::$assigningProviderSubscriptionId = '';
+        }
+        if (!$assigned) {
             return 'Abo konnte nicht zugewiesen werden.';
         }
         $periodEnd = self::periodEnd($now, $cycle);
@@ -616,6 +627,136 @@ final class PaymentService
         Hooks::doAction('cms_subscription_ended', (int) $subscription['id'], (int) $subscription['user_id'], $provider);
 
         return ['status' => 'processed'];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-27): vollständige Erstattung oder Rückbuchung. Bestellung → `refunded`,
+     * Rechnung → Stornorechnung, zugehöriges Abo endet sofort (auch beim Anbieter, damit nicht weiter abgebucht wird).
+     *
+     * @param array<string, mixed> $event
+     * @return array{status: string, error?: string, order_id?: int}
+     */
+    private function refund(string $provider, array $event): array
+    {
+        $order = null;
+        $paymentRef = (string) ($event['payment_ref'] ?? '');
+        if ($paymentRef !== '') {
+            $order = $this->findOrder('provider = ? AND (payment_ref = ? OR provider_checkout_id = ?)', [$provider, $paymentRef, $paymentRef]);
+        }
+        if ($order === null) {
+            $found = $this->orderForEvent($provider, $event);
+            $order = $found['order'];
+            if ($order === null) {
+                return ['status' => 'failed', 'error' => (string) ($found['error'] ?? 'Bestellung unbekannt.')];
+            }
+        }
+        $orderId = (int) $order['id'];
+        if (!self::canTransition((string) $order['status'], 'refunded')) {
+            return ['status' => 'ignored', 'order_id' => $orderId];
+        }
+        $this->db->update('orders', ['status' => 'refunded'], ['id' => $orderId]);
+
+        $reason = ($event['reason'] ?? '') === 'chargeback' ? 'Rückbuchung beim Zahlungsanbieter' : 'Erstattung beim Zahlungsanbieter';
+        try {
+            InvoiceService::getInstance()->cancelForOrder($orderId, $reason);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('payments')->warning('Stornorechnung nach Erstattung fehlgeschlagen.', ['order_id' => $orderId, 'exception' => $e->getMessage()]);
+        }
+
+        $userId = (int) ($order['user_id'] ?? 0);
+        $subscription = $userId > 0 ? $this->db->get_row(
+            "SELECT * FROM {$this->prefix}user_subscriptions WHERE user_id = ? AND status = 'active' AND plan_id = ? ORDER BY id DESC LIMIT 1",
+            [$userId, (int) ($order['plan_id'] ?? 0)]
+        ) : null;
+        if ($subscription !== null) {
+            $subscription = (array) $subscription;
+            if ((string) ($subscription['provider_subscription_id'] ?? '') !== '') {
+                $this->cancelRecurring($subscription, false);
+            }
+            $this->db->update('user_subscriptions', [
+                'status' => 'cancelled',
+                'cancelled_at' => $this->now(),
+                'end_date' => $this->now(),
+                'next_billing_date' => null,
+            ], ['id' => (int) $subscription['id']]);
+            Hooks::doAction('cms_subscription_ended', (int) $subscription['id'], $userId, $provider);
+        }
+        Hooks::doAction('cms_payment_refunded', $orderId, $provider, $event);
+
+        return ['status' => 'processed', 'order_id' => $orderId];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-21): wiederkehrendes Abo beim Anbieter beenden (Tarifwechsel, Kündigung,
+     * Erstattung). Ohne Anbieter-Abo gibt es nichts zu tun.
+     *
+     * @param array<string, mixed> $subscription Zeile aus user_subscriptions
+     * @return array{success: bool, error?: string}
+     */
+    public function cancelRecurring(array $subscription, bool $atPeriodEnd): array
+    {
+        $provider = (string) ($subscription['provider'] ?? '');
+        $providerId = (string) ($subscription['provider_subscription_id'] ?? '');
+        if ($provider === '' || $providerId === '') {
+            return ['success' => true];
+        }
+        $gateway = $this->gateway($provider);
+        if ($gateway === null || !method_exists($gateway, 'cancelRecurring')) {
+            return ['success' => false, 'error' => 'Zahlungsanbieter nicht konfiguriert.'];
+        }
+        $context = ['at_period_end' => $atPeriodEnd];
+        // Mollie braucht die Kunden-ID; sie steckt in der letzten Zahlung des Kontos bei diesem Anbieter.
+        $paymentId = $this->db->get_var(
+            "SELECT COALESCE(NULLIF(payment_ref, ''), provider_checkout_id) FROM {$this->prefix}orders
+              WHERE user_id = ? AND provider = ? AND status IN ('paid', 'refunded') ORDER BY id DESC LIMIT 1",
+            [(int) ($subscription['user_id'] ?? 0), $provider]
+        );
+        if (is_string($paymentId) && $paymentId !== '') {
+            $context['payment_id'] = $paymentId;
+        }
+        $result = $gateway->cancelRecurring($providerId, $context);
+        if (empty($result['success'])) {
+            Logger::instance()->withChannel('payments')->warning('Abo beim Anbieter nicht beendet.', [
+                'subscription_id' => (int) ($subscription['id'] ?? 0), 'provider' => $provider, 'error' => (string) ($result['error'] ?? ''),
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-21): Kündigung durch das Mitglied zum Ende der bezahlten Periode. Das Abo
+     * bleibt bis `end_date` aktiv; beim Anbieter wird nicht mehr verlängert.
+     *
+     * @return array{success: bool, message?: string, error?: string}
+     */
+    public function cancelMemberSubscription(int $userId): array
+    {
+        $row = $this->db->get_row(
+            "SELECT * FROM {$this->prefix}user_subscriptions WHERE user_id = ? AND status = 'active' AND (end_date IS NULL OR end_date > ?) ORDER BY id DESC LIMIT 1",
+            [$userId, $this->now()]
+        );
+        if ($row === null) {
+            return ['success' => false, 'error' => 'Kein aktives Abo.'];
+        }
+        $subscription = (array) $row;
+        if (!empty($subscription['cancelled_at'])) {
+            return ['success' => true, 'message' => 'Das Abo ist bereits gekündigt.'];
+        }
+        if (empty($subscription['end_date'])) {
+            return ['success' => false, 'error' => 'Dieses Paket hat keine Laufzeit und muss nicht gekündigt werden.'];
+        }
+        $result = $this->cancelRecurring($subscription, true);
+        if (empty($result['success'])) {
+            return ['success' => false, 'error' => 'Die Kündigung beim Zahlungsanbieter ist fehlgeschlagen. Bitte versuche es später erneut oder wende dich an uns.'];
+        }
+        $this->db->update('user_subscriptions', [
+            'cancelled_at' => $this->now(),
+            'next_billing_date' => null,
+        ], ['id' => (int) $subscription['id']]);
+        Hooks::doAction('cms_subscription_cancelled_by_member', (int) $subscription['id'], $userId);
+
+        return ['success' => true, 'message' => 'Das Abo ist gekündigt und läuft bis zum Ende der bezahlten Periode.'];
     }
 
     // ── Admin ───────────────────────────────────────────────────────────────────────────────────────────────────

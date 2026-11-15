@@ -12,7 +12,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 
 ## Versionen
 
-Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.6-*`).
+Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.7-*`).
 
 | Version | Prüfbereich | Pull Requests |
 |---------|-------------|---------------|
@@ -22,7 +22,8 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 | 4.1.4 | PR #4: Regressionen, Altlasten, PHP 8.4.1+/8.5 | [#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165) |
 | 4.1.5 | PR #5: Performance, Caching, Core Web Vitals (Zwischenstand) | [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166) |
 | 4.1.6 | Entscheidungen: FUN-410-17/18/19, SEC-410-26, PERF-410-46 … -49, DOC-410-01 | [#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167) |
-| 4.1.7 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
+| 4.1.7 | Zahlungen: FUN-410-21, FUN-410-27 | [#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168) |
+| 4.1.8 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
 
 ## Prüfbereiche und Status
 
@@ -309,13 +310,13 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 | FUN-410-18 | MEDIUM | Medien / Batch | `CMS/core/Services/Media/AvifRegenerationService.php:160` | Ein Bild, das den Speicher sprengt, hält den AVIF-Neuaufbau dauerhaft an derselben Stelle fest | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)): Speicher-Vorprüfung und Absturzmarke, das Bild wird übersprungen und als fehlgeschlagen gezählt |
 | FUN-410-19 | MEDIUM | Medien / Verwendung | `CMS/core/Services/Media/MediaUsageIndex.php:112`, `CMS/core/Services/ThemeCustomizer.php:574` | Wissensdatenbank-Inhalte werden nicht indiziert; Theme-Reset und Theme-Wechsel indizieren nicht neu | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)): Extraktor `kb_entry`, Neuindizieren nach Theme-Reset und -Wechsel |
 | FUN-410-20 | HIGH | Zahlungen / Abo | `CMS/core/Services/Payments/PaymentService.php:512` | Verlängerung reaktivierte ein gekündigtes bzw. durch Tarifwechsel ersetztes Abo (zwei aktive Abos) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-21 | HIGH | Zahlungen / Abo | `CMS/core/SubscriptionManager.php:702` | Tarifwechsel kündigt das Abo beim Anbieter nicht (Doppelabbuchung möglich); keine Kündigung durch Mitglieder | [ ] Offen → Entscheidung PR #6 (Funktionslücke) |
+| FUN-410-21 | HIGH | Zahlungen / Abo | `CMS/core/SubscriptionManager.php:702` | Tarifwechsel kündigt das Abo beim Anbieter nicht (Doppelabbuchung möglich); keine Kündigung durch Mitglieder | [x] Behoben in 4.1.7 ([#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168)): Kündigung beim Anbieter bei Tarifwechsel, Erstattung und durch Mitglieder (zum Periodenende) |
 | FUN-410-22 | MEDIUM | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:384` | Fehlgeschlagenes Testereignis wurde bis zu fünfmal wiederholt und zählte zur Abschaltung | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-23 | LOW | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:499` | Offene Zustellungen eines abgeschalteten Empfängers gingen beim Wiedereinschalten alle auf einmal hinaus | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-24 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:218` | Upload ohne `set_time_limit`/`ignore_user_abort`: großer Upload brach am Zeitlimit ab | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163), der Abbruch eines Multipart-Uploads nach einem Fatal Error bleibt offen) |
 | FUN-410-25 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/S3Client.php:82`, `:114` | Ein kurzer Fehler eines Teils brach den ganzen Multipart-Upload ab; keine Grenze von 10 000 Teilen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-26 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:282` | Backups, die bei unvollständiger Konfiguration entstanden, wurden nach der Korrektur nie hochgeladen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-27 | HIGH | Zahlungen | `CMS/core/Services/Payments/StripeGateway.php:160`, `MollieGateway.php:122` | Erstattungen und Rückbuchungen erreichen nie den Status `refunded` (kein Abo-Ende, keine Stornorechnung) | [ ] Offen → Entscheidung PR #6 (Funktionslücke) |
+| FUN-410-27 | HIGH | Zahlungen | `CMS/core/Services/Payments/StripeGateway.php:160`, `MollieGateway.php:122` | Erstattungen und Rückbuchungen erreichen nie den Status `refunded` (kein Abo-Ende, keine Stornorechnung) | [x] Behoben in 4.1.7 ([#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168)): Stripe `charge.refunded`/`charge.dispute.created`, Mollie `amountRefunded`/`amountChargedBack` → `refunded`, Stornorechnung, Abo-Ende |
 | FUN-410-28 | MEDIUM | Zahlungen / Mitglieder | `CMS/core/SubscriptionManager.php:184`, `:396` | Keine Kulanzzeit bis zum Eingang der Verlängerung; `current_period_end` wird nicht angezeigt; „Nächste Verlängerung“ auch für Rechnungs-Abos | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-29 | MEDIUM | Papierkorb / Medien | `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php:79` | Endgültig gelöschte Hub-Sites blieben im Verwendungsindex der Medien | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-30 | MEDIUM | Papierkorb / Recht | `CMS/core/Services/Trash/PageTrashProvider.php:31` | Seite der Barrierefreiheitserklärung war nicht gegen endgültiges Löschen geschützt | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |

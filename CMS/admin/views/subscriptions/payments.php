@@ -84,7 +84,7 @@ $pyCheck = static function (string $key, string $label, string $hint = '') use (
                             <?= $pySecret('stripe_webhook_secret_live', 'Webhook-Geheimnis (Live, whsec_…)') ?>
                             <label class="form-label" for="pyStripeHook">Webhook-URL</label>
                             <input type="text" class="form-control" id="pyStripeHook" readonly value="<?= $pyE($pyBase . 'stripe') ?>">
-                            <div class="form-hint">Ereignisse: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired, invoice.paid, invoice.payment_failed, customer.subscription.deleted.</div>
+                            <div class="form-hint">Ereignisse: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired, invoice.paid, invoice.payment_failed, customer.subscription.deleted, charge.refunded, charge.dispute.created.</div>
                         </div>
                     </div>
                 </div>
