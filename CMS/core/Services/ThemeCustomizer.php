@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\Database;
+use CMS\Hooks;
 use CMS\Json;
 use CMS\Logger;
 use PDO;
@@ -527,6 +528,9 @@ class ThemeCustomizer
             
             // Reload customizations
             $this->loadCustomizations($userId);
+
+            // 4.1.0 (2b): u. a. Verwendungsindex der Medien (Quelle „Design“) aktualisieren
+            Hooks::doAction('cms_theme_customizer_saved', $this->currentTheme, $category, $key);
             
             return true;
             

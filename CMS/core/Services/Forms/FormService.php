@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace CMS\Services\Forms;
 
 use CMS\Database;
+use CMS\Hooks;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -224,6 +225,9 @@ final class FormService
             return ['success' => false, 'error' => __('forms.admin.error_save')];
         }
 
+        // 4.1.0 (2b): u. a. Verwendungsindex der Medien aktualisieren
+        Hooks::doAction('cms_after_form_save', (int) $id);
+
         return ['success' => true, 'id' => (int) $id, 'form_key' => $key];
     }
 
@@ -274,6 +278,9 @@ final class FormService
         $row['updated_at'] = date('Y-m-d H:i:s');
         $ok = $this->db->update('form_forms', $row, ['id' => $id]);
         unset($this->cache[$id]);
+        if ($ok !== false) {
+            Hooks::doAction('cms_after_form_save', $id);
+        }
 
         return $ok !== false ? ['success' => true] : ['success' => false, 'error' => __('forms.admin.error_save')];
     }
@@ -350,6 +357,9 @@ final class FormService
         FormSubmissionService::getInstance()->deleteAllForForm($id);
         $ok = $this->db->delete('form_forms', ['id' => $id]);
         unset($this->cache[$id]);
+        if ($ok !== false) {
+            Hooks::doAction('cms_form_deleted', $id);
+        }
 
         return $ok !== false;
     }

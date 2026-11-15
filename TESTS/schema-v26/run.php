@@ -34,7 +34,7 @@ T::run('Versionsstand', static function () use ($migrationSource, $root): void {
 });
 
 T::run('Neue Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
-    $expected = ['password_history', 'user_identities', 'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries'];
+    $expected = ['password_history', 'user_identities', 'media_usage', 'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries'];
     T::same($expected, \CMS\SchemaManager::FEATURE_TABLES_V26, 'FEATURE_TABLES_V26 enthält genau die v26-Tabellen');
     foreach ($expected as $table) {
         T::check(isset($queries[$table]), "Definition für {$table} vorhanden (Neuinstallation)");
@@ -50,6 +50,9 @@ T::run('Sicherheitsrelevante Schlüssel', static function () use ($queries): voi
     T::check(str_contains($identities, 'UNIQUE KEY uq_user_identities_subject (provider, tenant_id, subject)'), 'SSO-Bindung eindeutig über provider + tenant_id + subject (GHSA-6hhv-gc4g-f4r7)');
     T::check(str_contains($identities, 'UNIQUE KEY uq_user_identities_user_provider (user_id, provider)'), 'höchstens eine Bindung je Konto und Anbieter');
     T::check(!preg_match('/token/i', $identities), 'user_identities speichert keine Tokens');
+    $usage = (string) $queries['media_usage'];
+    T::check(str_contains($usage, 'PRIMARY KEY (media_path(191), content_type, content_id, context)'), 'media_usage: eine Zeile je Medium, Inhalt und Kontext');
+    T::check(str_contains($usage, 'KEY idx_media_usage_content (content_type, content_id)'), 'media_usage: Index je Inhalt (Neuindizieren/Löschen)');
     T::check(str_contains((string) $queries['webhook_endpoints'], 'secret_encrypted TEXT NOT NULL'), 'Webhook-Geheimnis nur verschlüsselt');
     T::check(str_contains((string) $queries['webhook_deliveries'], 'UNIQUE KEY uq_webhook_deliveries_uuid (delivery_uuid)'), 'Zustellung eindeutig je UUID');
     T::check(str_contains((string) $queries['password_history'], 'password_hash VARCHAR(255) NOT NULL'), 'Passwort-Historie speichert Hashes');

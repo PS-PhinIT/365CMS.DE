@@ -301,7 +301,7 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
     T::check(str_contains($settingsView, 'name="auto_avif"') && str_contains($settingsView, 'name="avif_quality"') && str_contains($settingsView, 'name="avif_speed"'), 'Einstellungen: Schalter, Qualität, Geschwindigkeit');
 
     $api = $read('admin/media-tools-api.php');
-    T::check(str_contains($api, "(\$storedJob['type'] ?? '') === AvifRegenerationService::JOB_TYPE"), 'API: Schritte nach gespeichertem Auftragstyp');
+    T::check(str_contains($api, "\$jobKinds = [AvifRegenerationService::JOB_TYPE => 'avif'") && str_contains($api, "\$kind = \$jobKinds[(string) (\$storedJob['type'] ?? '')] ?? 'thumbnails';"), 'API: Schritte nach gespeichertem Auftragstyp');
     T::check(str_contains($api, "AvifDerivativeService::getInstance()->isSupported()"), 'API: Start nur mit Unterstützung');
     T::check(str_contains($read('core/Services/FeatureHooks/MediaFeatureHooks.php'), 'AvifRegenerationService::getInstance()->continueInCron()'), 'Cron setzt den Auftrag fort');
     $toolsView = $read('admin/views/media/tools.php');

@@ -21,6 +21,8 @@ use CMS\Services\BatchJobService;
 use CMS\Services\Media\MediaLicenseService;
 use CMS\Services\Media\AvifDerivativeService;
 use CMS\Services\Media\AvifRegenerationService;
+use CMS\Services\Media\MediaUsageIndex;
+use CMS\Services\Media\MediaUsageRebuildService;
 use CMS\Services\Media\ThumbnailRegenerationService;
 
 const CMS_ADMIN_MEDIA_TOOLS_CAPABILITY = 'manage_media';
@@ -59,6 +61,12 @@ function cms_admin_media_tools_load_data(): array
             'image_count' => AvifRegenerationService::getInstance()->countImages(),
             'active_job' => $public(AvifRegenerationService::getInstance()->activeJob()),
             'latest_job' => $public(AvifRegenerationService::getInstance()->latestJob()),
+        ],
+        // 4.1.0 (2b): Verwendungsindex neu aufbauen
+        'usage' => [
+            'built_at' => MediaUsageIndex::getInstance()->builtAt(),
+            'active_job' => $public(MediaUsageRebuildService::getInstance()->activeJob()),
+            'latest_job' => $public(MediaUsageRebuildService::getInstance()->latestJob()),
         ],
         'license' => MediaLicenseService::getInstance()->getSettings(),
         'api' => [

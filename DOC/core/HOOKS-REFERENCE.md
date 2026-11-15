@@ -172,6 +172,10 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_newsletter_campaign_started` | Action | `int $campaignId` | Kampagnenversand gestartet |
 | `cms_newsletter_campaign_sent` | Action | `int $campaignId` | alle Mails einer Kampagne verarbeitet |
 | `cms_member_export_data` | Filter | `array $export`, `int $userId`, `string $email` | Selbstauskunft im Mitgliederbereich ergänzen (Formulare: `form_submissions`, Newsletter: `newsletter`) |
+| `cms_register_media_reference_extractors` | Action | `MediaUsageIndex $index` → `$index->register(MediaReferenceExtractor)`; weitere Inhaltsarten für den Verwendungsnachweis (seit 4.1.0) | Verwendungsindex |
+| `cms_after_form_save` | Action | `int $formId`; nach Anlegen oder Ändern eines Formulars (seit 4.1.0) | Formulare |
+| `cms_form_deleted` | Action | `int $formId`; nach endgültigem Löschen (seit 4.1.0) | Formulare |
+| `cms_theme_customizer_saved` | Action | `string $theme, string $category, string $key`; nach jedem gespeicherten Theme-Wert (seit 4.1.0) | Theme |
 | `cms_media_derivative_created` | Action | `string $path` (absolut), `string $format` (`'avif'`), `int $bytes`; nach jeder behaltenen AVIF-Fassung (seit 4.1.0) | Erzeugte Bildfassung |
 | `cms_image_figcaption_credit` | Filter | `string $html`, `string $imageUrl`, `array $context` (`context` = image/gallery/carousel, `original_url`) | Credit-Zeile in Bildunterschriften; der Core hängt hier die Urheberangaben der Mediathek an |
 | `cms_media_credit_line_enabled` | Filter | `bool $enabled`, `string $imageUrl`, `array $context` | Credit-Zeile je Bild ab- oder einschalten (z. B. im Theme) |

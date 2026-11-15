@@ -34,6 +34,13 @@ die Funktion gesperrt (siehe *Systeminfo → PHP-Erweiterungen*). Die ältere St
 JSON-Endpunkt: `/admin/media-tools-api` (POST, Token `admin_media_tools_api`): `start` (`webp=0|1`; `job=avif` für AVIF),
 `step`, `cancel`, `status` (`job=avif`). Schritte und Abbruch ordnet der Server über den Typ des gespeicherten Auftrags zu.
 
+### Verwendungsindex neu aufbauen (seit 4.1.0)
+
+Karte „Verwendungsindex“: baut den dauerhaften Index (`media_usage`) über alle Inhaltsarten neu auf – Auftrag
+`media_usage`, je Schritt 50 Inhalte, Abbruch, Fortsetzung im stündlichen Cron. Am Ende entfernt der Lauf Einträge von
+Inhalten, die es nicht mehr gibt, und setzt den Merker `media_usage_index_built_at`. Erst danach nutzen Mediathek und
+Papierkorb den Index (siehe [MEDIA.md](MEDIA.md)). API: `start`/`status` mit `job=usage`.
+
 ### AVIF-Fassungen (seit 4.1.0)
 
 **Einstellungen** (*Medien → Einstellungen → Bild-Verarbeitung*): „AVIF zusätzlich erzeugen“ (Standard aus), Qualität
@@ -82,5 +89,6 @@ Fortsetzung eines offenen Laufs im Cron.
 
 `CMS/admin/media-tools.php`, `CMS/admin/media-tools-api.php`, `CMS/admin/views/media/tools.php`,
 `CMS/assets/js/admin-media-tools.js`, `CMS/core/Services/Media/ThumbnailRegenerationService.php`,
-`CMS/core/Services/Media/AvifDerivativeService.php`, `CMS/core/Services/Media/AvifRegenerationService.php` (4.1.0),
+`CMS/core/Services/Media/AvifDerivativeService.php`, `CMS/core/Services/Media/AvifRegenerationService.php`,
+`CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php` (4.1.0),
 `CMS/core/Services/Media/MediaLicenseService.php`, `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php`

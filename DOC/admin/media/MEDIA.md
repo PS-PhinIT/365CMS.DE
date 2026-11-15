@@ -36,6 +36,17 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 - **Einzelaktionen:** Upload, Ersetzen (gleicher Dateiname, Verweise bleiben gültig), Umbenennen, Verschieben, Löschen, Kategorie zuweisen.
 - **Sammelaktionen (`bulk_items`):** `delete`, `move`, `assign_category`, `tag_add`, `tag_replace`, `tag_remove`, `tag_clear` (max. 20 Tags à 40 Zeichen), `alt_text_update` (max. 255 Zeichen je Datei).
 
+### Verwendungsnachweis (seit 4.1.0)
+
+Spalte „Verwendet in“, Filter `usage_filter` und die Löschwarnung im Papierkorb lesen aus dem dauerhaften
+Verwendungsindex (Tabelle `media_usage`), sobald er einmal vollständig aufgebaut ist (*Medien-Werkzeuge →
+Verwendungsindex neu aufbauen*). Erfasst werden Beiträge und Seiten (Beitragsbild, Inhalt DE/EN, Auszug; bei Editor.js
+getrennt nach Galerie- und Anhang-Blöcken), Hub-Sites (Einstellungen, Karten), Downloads (Titelbild, Beschreibungen),
+Formulare (Felder, Einstellungen) und die Einstellungen des aktiven Themes („Design“). Erzeugte Größen und WebP/AVIF-
+Fassungen zählen für ihr Original. Bis zum ersten Aufbau sucht die Mediathek wie bisher nur in Beiträgen und Seiten und
+weist beim Filtern darauf hin. Danach hält jedes Speichern den Index aktuell. Weitere Inhaltsarten melden Plugins über
+die Action `cms_register_media_reference_extractors` an (Schnittstelle `Media\MediaReferenceExtractor`).
+
 ### Tab „Beitrags- & Site-Medien“ (`featured`)
 
 Listet alle Dateien, die als Beitragsbild von Seiten oder Beiträgen genutzt werden, mit Anzahl der Verwendungen und fehlenden Dateien. Filter `usage_scope` = `all` | `posts` | `pages`. Von hier aus kann ein Bild für alle Verwendungen ersetzt werden; nach dem Ersetzen wird die Datei hervorgehoben (`?highlight=…&replaced=1`).

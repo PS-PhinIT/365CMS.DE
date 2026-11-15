@@ -388,6 +388,8 @@ class MediaModule
             'view'       => $view,
             'search'     => $search,
             'usage_filter' => $usageFilter,
+            // 4.1.0 (2b): Verwendungsindex aufgebaut? Sonst nur Laufzeitsuche in Beiträgen und Seiten.
+            'usage_index_built' => \CMS\Services\Media\MediaUsageIndex::getInstance()->isBuilt(),
             'file_type_filter' => $advancedFilters['file_type'],
             'extension_filter' => $advancedFilters['extension'],
             'size_filter' => $advancedFilters['size'],
