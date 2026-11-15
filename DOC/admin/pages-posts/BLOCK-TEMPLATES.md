@@ -15,7 +15,7 @@ Inhalte, die an vielen Stellen gleich aussehen sollen – Kontakt-Box, Hinweis z
 
 ### Verwalten (`/admin/reusable-blocks`)
 
-Menü: *Seiten → EditorJS Block Vorlagen* (Profil „Klassisch“) bzw. *Redaktion → EditorJS Block Vorlagen* (Profil „Strukturiert“).
+Menü: *Medien → EditorJS Block Vorlagen* (Profile „Klassisch“ und „Strukturiert“).
 
 | Bereich | Inhalt |
 |---|---|
@@ -28,7 +28,7 @@ Menü: *Seiten → EditorJS Block Vorlagen* (Profil „Klassisch“) bzw. *Redak
 
 ### Einbinden im Beitrag oder auf der Seite
 
-1. Im Editor den Block **„Vorlagen“** einfügen (Plus-Menü oder Schnellleiste).
+1. Im Editor den Block **„Vorlagen“** einfügen – im Beitragseditor über die Block-Auswahl (*Layout & Spezial*), im Seiteneditor über Plus-Menü oder Schnellleiste.
 2. Vorlage aus der Liste wählen – darunter erscheint die Vorschau mit dem aktuellen Inhalt.
 3. Speichern. Im Beitrag steht nur der Verweis `{ "id": … }`.
 
