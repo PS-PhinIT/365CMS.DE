@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Freigabe (Vier-Augen-Prinzip)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** in Entwicklung (Bereich 3a)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Routen:** `/admin/posts`, `/admin/pages` (Aktion `workflow`), `/preview/<token>` (öffentlich) | **Einstellung:** *Einstellungen → Beiträge & Sites → Standard beim Speichern*
 
 ## English (summary)

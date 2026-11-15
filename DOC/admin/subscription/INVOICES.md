@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Rechnungen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** in Entwicklung (Bereich 5b)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/invoices` | **Capability:** `invoices.view` | **CSRF-Aktion:** `admin_invoices`
 
 ## English (summary)

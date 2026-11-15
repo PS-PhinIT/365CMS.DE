@@ -7,9 +7,9 @@
 **A modern, framework-less, security-first PHP 8.4+ CMS & Portal Platform.**  
 *Zero bloat. Full enterprise security. All-in-one core (Forms, Newsletter, Knowledgebase, Downloads & Feeds).*
 
-[![Version](https://img.shields.io/badge/Version-4.0.0%20Stable-blue?style=flat-square)](https://github.com/DEIN-USER/365CMS/releases)
+[![Version](https://img.shields.io/badge/Version-4.1.0%20Stable-blue?style=flat-square)](https://github.com/DEIN-USER/365CMS/releases)
 [![PHP Version](https://img.shields.io/badge/PHP-8.4.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/)
-[![Database](https://img.shields.io/badge/MySQL%20%2F%20MariaDB-PDO%20(v25)-4479A1?style=flat-square&logo=mysql&logoColor=white)](#requirements)
+[![Database](https://img.shields.io/badge/MySQL%20%2F%20MariaDB-PDO%20(v26)-4479A1?style=flat-square&logo=mysql&logoColor=white)](#requirements)
 [![Security](https://img.shields.io/badge/Security-CSP%20%7C%20Trusted%20Types%20%7C%20WebAuthn-success?style=flat-square)](#core-capabilities)
 [![Website](https://img.shields.io/badge/Website-365cms.de-0ea5e9?style=flat-square)](https://365cms.de/)
 
@@ -47,9 +47,9 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 
 | Key Fact | Details |
 | :--- | :--- |
-| **Core Version** | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released `2026-11-12`, status `stable`) |
+| **Core Version** | `4.1.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released `2026-11-15`, status `stable`) |
 | **PHP Requirement** | `8.4.1+` enforced (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| **Database** | MySQL `8.0+` / MariaDB `10.6+` via PDO (`utf8mb4`), table prefix `cms_`, schema `v25` |
+| **Database** | MySQL `8.0+` / MariaDB `10.6+` via PDO (`utf8mb4`), table prefix `cms_`, schema `v26` |
 | **Architecture** | Modular DI container (`CMS\Container`), specialized routers (`Web`, `Admin`, `Member`, `API`, `CLI`), event-driven hooks |
 | **Frontend & Admin UI** | Tabler-based responsive admin shell, zero-build ES modules (`admin-shell/`, `post-editor/`, `editor-blocks/`), local WOFF2 fonts |
 | **Shipped Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML Importer*) |
@@ -85,7 +85,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 
 1. **Deploy Runtime:** Upload the contents of [`CMS/`](CMS/) to your web root (or configure your virtual host document root to point directly to `CMS/`).
 2. **Run Web Installer:** Open `https://your-domain.tld/install.php` in your browser and complete the 6-step wizard (system check, database connection, site & core modules, admin sidebar profile, administrator account, completion).
-3. **Automatic Lockdown:** The installer generates cryptographic keys (`AUTH_KEY`, `CMS_ENCRYPTION_KEY`), writes `CMS/config/app.php`, initializes schema `v25`, and locks itself automatically.
+3. **Automatic Lockdown:** The installer generates cryptographic keys (`AUTH_KEY`, `CMS_ENCRYPTION_KEY`), writes `CMS/config/app.php`, initializes schema `v26`, and locks itself automatically.
 4. **Initial Setup:** Log in at `/cms-login`, open `/admin`, and configure mail delivery (SMTP / Microsoft Graph), backup storage (`CMS_BACKUP_PATH`), and run the **Security Audit** (`/admin/security-audit`).
 5. **Schedule Cron:** Set up a recurring cron job (recommended: every 5–15 minutes or hourly) for mail queues, digests, search indexing, and data retention:
    ```bash
@@ -104,7 +104,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 │   ├── admin/            # Backend entry points, domain modules, views & settings tabs
 │   ├── assets/           # CSS, zero-build ES modules, local WOFF2 fonts & vendor libraries
 │   ├── config/           # Configuration template (app.php) & media settings
-│   ├── core/             # Bootstrap, DI container, routers, services, auth & schema (v25)
+│   ├── core/             # Bootstrap, DI container, routers, services, auth & schema (v26)
 │   ├── includes/         # Global helpers & WordPress compatibility layer
 │   ├── install/          # 6-step web installer & CLI/Web database updater
 │   ├── lang/             # UI localization catalogs (de.yaml, en.yaml)
@@ -131,7 +131,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Plugin & Theme Development** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operational Workflows** | [`DOC/workflow/`](DOC/workflow/) |
 | **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
-| **Releases & Changelog** | [`RELEASE/README-4.0.0.md`](RELEASE/README-4.0.0.md) · [`Changelog.md`](Changelog.md) |
+| **Releases & Changelog** | [`RELEASE/README-4.1.0.md`](RELEASE/README-4.1.0.md) · [`Changelog.md`](Changelog.md) |
 | **Community Guidelines** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
 
 ---
@@ -164,9 +164,9 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 
 | Eckdaten | Details |
 | :--- | :--- |
-| **Core-Version** | `4.0.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht `2026-11-12`, Status `stable`) |
+| **Core-Version** | `4.1.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht `2026-11-15`, Status `stable`) |
 | **PHP-Voraussetzung** | `8.4.1+` erzwungen (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| **Datenbank** | MySQL `8.0+` / MariaDB `10.6+` über PDO (`utf8mb4`), Tabellenpräfix `cms_`, Schema `v25` |
+| **Datenbank** | MySQL `8.0+` / MariaDB `10.6+` über PDO (`utf8mb4`), Tabellenpräfix `cms_`, Schema `v26` |
 | **Architektur** | Modularer DI-Container (`CMS\Container`), spezialisierte Router (`Web`, `Admin`, `Member`, `API`, `CLI`), Event-Hooks |
 | **Admin- & Frontend-UI** | Responsive Tabler-Admin-Shell, ES-Module ohne Build-Schritt (`admin-shell/`, `post-editor/`, `editor-blocks/`), lokale WOFF2-Schriften |
 | **Standard-Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML-Importer*) |
@@ -202,7 +202,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 
 1. **Runtime bereitstellen:** Den Inhalt von [`CMS/`](CMS/) in den Webroot kopieren (oder das Document-Root des Virtual Hosts direkt auf `CMS/` zeigen lassen).
 2. **Web-Installer starten:** `https://ihre-domain.tld/install.php` im Browser öffnen und den 6-stufigen Assistenten durchlaufen (Systemprüfung, Datenbank, Website & Core-Module, Admin-Layout, Administrator-Konto, Abschluss).
-3. **Automatische Absicherung:** Der Installer erzeugt kryptografische Schlüssel (`AUTH_KEY`, `CMS_ENCRYPTION_KEY`), schreibt `CMS/config/app.php`, richtet Schema `v25` ein und sperrt sich anschließend selbst.
+3. **Automatische Absicherung:** Der Installer erzeugt kryptografische Schlüssel (`AUTH_KEY`, `CMS_ENCRYPTION_KEY`), schreibt `CMS/config/app.php`, richtet Schema `v26` ein und sperrt sich anschließend selbst.
 4. **Ersteinrichtung:** Unter `/cms-login` anmelden, `/admin` öffnen, Mailversand (SMTP / Microsoft Graph) und Backup-Pfad (`CMS_BACKUP_PATH`) konfigurieren sowie das **Sicherheits-Audit** (`/admin/security-audit`) ausführen.
 5. **Cronjob einrichten:** Einen regelmäßigen Cronjob (empfohlen: alle 5–15 Minuten oder stündlich) für Mail-Queue, Digests, Suchindex und Löschfristen anlegen:
    ```bash
@@ -221,7 +221,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 │   ├── admin/            # Backend-Einstiege, Fachmodule, Views & Einstellungs-Tabs
 │   ├── assets/           # CSS, ES-Module ohne Build-Schritt, lokale WOFF2-Fonts & Libraries
 │   ├── config/           # Konfigurationsvorlage (app.php) & Medien-Einstellungen
-│   ├── core/             # Bootstrap, DI-Container, Router, Services, Auth & Schema (v25)
+│   ├── core/             # Bootstrap, DI-Container, Router, Services, Auth & Schema (v26)
 │   ├── includes/         # Globale Helfer & WordPress-Kompatibilitätsschicht
 │   ├── install/          # 6-stufiger Web-Installer & CLI-/Web-Datenbank-Updater
 │   ├── lang/             # Sprachkataloge für die Oberfläche (de.yaml, en.yaml)
@@ -248,7 +248,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Plugin- & Theme-Entwicklung** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operative Workflows** | [`DOC/workflow/`](DOC/workflow/) |
 | **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
-| **Release-Pakete & Changelog** | [`RELEASE/README-4.0.0.md`](RELEASE/README-4.0.0.md) · [`Changelog.md`](Changelog.md) |
+| **Release-Pakete & Changelog** | [`RELEASE/README-4.1.0.md`](RELEASE/README-4.1.0.md) · [`Changelog.md`](Changelog.md) |
 | **Verhaltenskodex** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
 
 ---

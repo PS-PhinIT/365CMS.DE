@@ -30,7 +30,7 @@ class MigrationManager
      * Aktuelle Schema-Version – erhöhen wenn neue Migrations hinzukommen.
      * Wird in cms_settings (option_name = 'db_schema_version') gespeichert.
      */
-    public const SCHEMA_VERSION = 'v25'; // v26 mit der Release-Vorbereitung 4.1.0 (siehe SchemaManager::SCHEMA_VERSION)
+    public const SCHEMA_VERSION = 'v26'; // Release 4.1.0 (siehe SchemaManager::SCHEMA_VERSION)
 
     public function __construct(Database $db)
     {
@@ -235,6 +235,27 @@ class MigrationManager
             "ALTER TABLE `{$p}passkey_credentials` ADD COLUMN `user_verified` TINYINT(1) NULL DEFAULT NULL",
         ];
 
+        // v26 (4.1.0, Bereich 3c): Ablauf- und Prüfdaten für Beiträge, Seiten und Wissensdatenbank.
+        foreach (['posts' => ['status', 'idx_expires', 'idx_review_due'], 'pages' => ['status', 'idx_expires', 'idx_review_due'], 'kb_entries' => ['is_active', 'idx_kb_expires', 'idx_kb_review_due']] as $table => [$liveColumn, $expiresIndex, $reviewIndex]) {
+            foreach (['expires_at', 'review_due_at', 'expiry_notified_at', 'review_notified_at'] as $column) {
+                $migrations[] = "ALTER TABLE `{$p}{$table}` ADD COLUMN `{$column}` DATETIME DEFAULT NULL";
+            }
+            $migrations[] = "ALTER TABLE `{$p}{$table}` ADD INDEX `{$expiresIndex}` (`{$liveColumn}`, `expires_at`)";
+            $migrations[] = "ALTER TABLE `{$p}{$table}` ADD INDEX `{$reviewIndex}` (`review_due_at`)";
+        }
+        // v26 (4.1.0, Bereich 5a): Zahlungsanbieter an Bestellungen und Abos.
+        array_push(
+            $migrations,
+            "ALTER TABLE `{$p}orders` ADD COLUMN `provider` VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE `{$p}orders` ADD COLUMN `provider_checkout_id` VARCHAR(255) DEFAULT NULL",
+            "ALTER TABLE `{$p}orders` ADD COLUMN `paid_at` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}orders` ADD INDEX `idx_provider_checkout` (`provider`, `provider_checkout_id`)",
+            "ALTER TABLE `{$p}user_subscriptions` ADD COLUMN `provider` VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE `{$p}user_subscriptions` ADD COLUMN `provider_subscription_id` VARCHAR(255) DEFAULT NULL",
+            "ALTER TABLE `{$p}user_subscriptions` ADD COLUMN `current_period_end` DATETIME DEFAULT NULL",
+            "ALTER TABLE `{$p}user_subscriptions` ADD INDEX `idx_provider_sub` (`provider`, `provider_subscription_id`)"
+        );
+
         // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –
         // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge.
         $schemaQueries = SchemaManager::getSchemaQueries($p, $charset);
@@ -263,6 +284,19 @@ class MigrationManager
                     error_log('MigrationManager: ' . $msg);
                 }
             }
+        }
+
+        // v26 (capabilities_v26): posts.publish/pages.publish werden ab 4.1.0 geprüft – Rollen, die bisher
+        // veröffentlichen durften, behalten das Recht. Die übrigen neuen Rechte (security.sso, blocks.reusable,
+        // backups.offsite, webhooks.manage, payments.manage, invoices.view) hat nur „admin“ (alle Rechte);
+        // anderen Rollen werden sie bewusst nicht automatisch erteilt.
+        try {
+            if (function_exists('cms_ensure_role_permissions_table')) {
+                cms_ensure_role_permissions_table();
+            }
+            \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
+        } catch (\Throwable $e) {
+            error_log('MigrationManager: capabilities_v26: ' . $e->getMessage());
         }
 
         // Version nach erfolgreichem Durchlauf persistieren

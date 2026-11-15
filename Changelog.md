@@ -14,9 +14,9 @@
 
 ---
 
-### v4.1.0 — in Entwicklung - Feature Release
+### v4.1.0 — 15.11.2026 - Feature Release
 
-Version 4.1.0 setzt die Roadmap aus `DOC/workflow/specs/v4.1/` um (Fortschritt: `PROGRESS.md`). Bisher umgesetzt: Bereich 1 – Identität (konfigurierbare Passwort-Richtlinie, rollenbasierter MFA-Zwang, Anmeldung mit Microsoft Entra ID) – Bereich 2 (AVIF-Fassungen, Verwendungsnachweis für Medien) und aus Bereich 3 das Vier-Augen-Prinzip für Beiträge und Seiten sowie die EditorJS Block Vorlagen und Ablauf- und Prüfdaten, aus Bereich 4 Offsite-Backups und ausgehende Webhooks. Offen sind 5 und 6; die Einträge werden mit jedem Arbeitspaket ergänzt. Vergleichsstand ist 4.0.0.
+Version 4.1.0 setzt die Roadmap aus `DOC/workflow/specs/v4.1/` um (Nachweise: `PROGRESS.md`): Bereich 1 – Identität (konfigurierbare Passwort-Richtlinie, rollenbasierter MFA-Zwang, Anmeldung mit Microsoft Entra ID), Bereich 2 (AVIF-Fassungen, Verwendungsnachweis für Medien), Bereich 3 (Vier-Augen-Prinzip, EditorJS Block Vorlagen, Ablauf- und Prüfdaten), Bereich 4 (Offsite-Backups, ausgehende Webhooks) und Bereich 5 (Zahlungen über Stripe/Mollie, Rechnungen nach § 14 UStG). Bereich 6 (CLI, Alerting) folgt mit 4.3.0. **Datenbankschema v26:** nach dem Update unter *Admin → Updates* das Datenbank-Update ausführen; den Cron mindestens stündlich laufen lassen. Vergleichsstand ist 4.0.0.
 
 #### Hinweise zum Update von 4.0.0
 

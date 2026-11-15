@@ -33,13 +33,11 @@ class SchemaManager
     /**
      * Flag-Datei-Version – erhöhen wenn Schema geändert wird.
      *
-     * Die Tabellen und Spalten von v26 (FEATURE_TABLES_V26, Release 4.1.0) sind bereits definiert: Neuinstallationen
-     * legen sie über getSchemaQueries() an, bestehende Installationen über ensureFeatureSchema() (Laufzeitprüfung,
-     * läuft nach jeder Änderung dieser Datei einmal). Die Marke selbst wird erst mit der Release-Vorbereitung von 4.1.0
-     * gehoben – zusammen mit MigrationManager::SCHEMA_VERSION, Version::CURRENT und dem Marketplace-Manifest
-     * (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
+     * v26 (Release 4.1.0): Tabellen FEATURE_TABLES_V26 und die Spalten der Bereiche 1–5. Neuinstallationen legen sie
+     * über getSchemaQueries() an, Updates über MigrationManager (Schritt v26) und zusätzlich die Laufzeitprüfung
+     * ensureFeatureSchema() (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
      */
-    public const SCHEMA_VERSION = 'v25';
+    public const SCHEMA_VERSION = 'v26';
 
     /**
      * Tabellen der Core-Funktionen seit v25 (Formulare, Downloads, Feed-Aggregator) in Abhängigkeitsreihenfolge.

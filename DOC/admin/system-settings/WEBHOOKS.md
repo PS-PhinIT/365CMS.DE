@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Webhooks
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** in Entwicklung (Bereich 4b)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/webhooks` | **Capability:** `webhooks.manage` | **CSRF-Aktion:** `admin_webhooks`
 
 ## English (summary)
