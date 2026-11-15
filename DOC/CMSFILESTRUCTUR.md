@@ -25,13 +25,13 @@
 
 **English**
 
-This file is the **CMS runtime inventory** for `CMS/`, counts updated on 2026-11-15 (release 4.1.0). It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
+This file is the **CMS runtime inventory** for `CMS/`, with file counts per area.
 
 Out of scope for a full file listing: deep vendor trees (`CMS/vendor/dompdf/`, large library trees under `CMS/assets/` such as `htmlpurifier`, `tabler`, `editorjs`). Those directories exist and are loaded at runtime; listing every vendor file is not useful for GitHub readers.
 
 **Deutsch**
 
-Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, Zählung aktualisiert am 2026-11-15 (Release 4.1.0). Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
+Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, mit Dateizahlen je Bereich.
 
 Nicht vollständig ausgerollt: tiefe Vendor-Bäume (`CMS/vendor/dompdf/`, große Bibliotheksbäume unter `CMS/assets/` wie `htmlpurifier`, `tabler`, `editorjs`). Diese Verzeichnisse existieren und werden zur Laufzeit geladen; jede Vendor-Datei aufzulisten ist für GitHub-Leser nicht sinnvoll.
 

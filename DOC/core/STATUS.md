@@ -18,26 +18,8 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.1.0 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026), Release `4.1.0` (15.11.2026) | `Changelog.md`: 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
+| Änderungshistorie | alle Releases | [../../Changelog.md](../../Changelog.md) |
 
-### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
-
-| Version | Schwerpunkt |
-|---|---|
-| 3.4.13 | Offene Audit-Punkte und Laufzeittests: Rate-Limits bei abweichender MySQL-Zeitzone, Kontaktformular-POST, Sprachspalten `posts` bei Neuinstallation, Options-Cache `OptionStore`, Schema v23 (Index `posts(status, published_at)`), JWT-API opt-in, Doku-Sync-UI, WP-Asset-Funktionen, CSRF für Plugin-Member-Bereiche, Kontakt-Rate-Limit, Google Fonts standardmäßig aus, toter Code entfernt |
-| 3.4.12 | Audit 2026-10-03: Wartungsmodus, `/order`, `/health`, Config-Speichern, Upload-/Proxy-/Registrierungs-Härtung, Theme-Abfragen, Doku-Links |
-| 3.4.11 | PageSpeed: DOMPurify per `defer`, OPcache-Deploy-Prüfung gedrosselt |
-| 3.4.10 | Editor.js: Zitate/Media-Text im Purifier, klassenbasiertes CSS |
-| 3.4.09 | Dokumentation vollständig gegen 3.4-Code abgeglichen |
-| 3.4.08 | SEO: Template-Variablen in gespeicherten Meta-Titeln/-Beschreibungen werden aufgelöst |
-| 3.4.07 | Admin-Sidebar: Plugin-Menüs nach Schema „Familie \| Name“, umbrechende Titel, Tooltip |
-| 3.4.06 | Suche: nur Treffer mit allen Begriffen, sichtbarer Text statt Editor.js-JSON, strikte Typ-Filter, Sortierung nach Relevanz/Datum, Plugin-Treffer mit `date` |
-| 3.4.05 | Theme: Logout per POST mit CSRF-Token, mobiles Menü bis 720 px |
-| 3.4.04 | SEO: externe Links nicht mehr pauschal `nofollow`, Schema-Typen auf ausgegebene Typen begrenzt, Plugin-Seiten in der Sitemap (`cms_sitemap_entries`), Plugin-Treffer in `/search`, TNTSearch-Verbindungsfix |
-| 3.4.03 | Theme: Tag-/Kategorie-Archive ohne HTTP 500, OPcache-Warmup bricht Admin-Seiten nicht mehr ab, Plugin-Unterseiten erhalten `$_GET['page']` |
-| 3.4.02 | OPcache-Warmup nach Deploy ohne „Cannot redeclare class“ |
-| 3.4.01 | Rollen & Rechte: Rechte-Matrix ohne doppelte Einträge |
-| ältere | siehe [../../Changelog.md](../../Changelog.md) |
 
 ### Funktionsbereiche
 
@@ -64,63 +46,20 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Community-Modul (Forum, Gruppen, Moderation) | **geplant für 4.2.0**, Schema `v27`, noch kein Code | [../workflow/specs/community/README.md](../workflow/specs/community/README.md) |
 | JSON-API | lesend + Admin-Listen, Session oder optional Bearer-Token (`JWT_SECRET`) | [API-REFERENCE.md](API-REFERENCE.md) |
 
-### Bekannte Lücken und Inkonsistenzen (Stand 2026-11-15)
+### Offene Punkte
 
-Nachgeprüft im Audit vom 2026-10-03, ergänzt in den Folgeaudits vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)) und 2026-11-09 ([../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
-
-| # | Befund | Auswirkung | Fundstelle | Status |
-|---|---|---|---|---|
-| 1 | Speichern unter `/admin/settings` erzeugte `config/app.php` aus einer Vorlage neu | manuell gesetzte Konstanten gingen verloren | `SettingsModule::saveSettings()` | ✅ 3.4.12: nur verwaltete Konstanten werden ersetzt |
-| 2 | Option `maintenance_mode` wurde nicht ausgewertet | Wartungsmodus ohne Wirkung | `SettingsModule`, Router | ✅ 3.4.12 – 503-Seite in `Router::dispatch()` |
-| 3 | Route `/order` erwartete fehlendes `CMS/member/order_public.php` | 404 | `PublicRouter::renderOrder()` | ✅ 3.4.12: Weiterleitung auf `/orders.php` |
-| 4 | Sicherheits-Audit bewertete PHP ≥ 8.2 als „ok“ | Abweichung zur Mindestanforderung 8.4 | `SecurityAuditModule` | ✅ 3.4.12: nutzt `CMS_MIN_PHP_VERSION` |
-| 5 | `checkLimit('storage')` suchte `limit_storage`; Free-Fallback unsortiert | Speicherlimit nicht prüfbar | `SubscriptionManager` | ✅ 3.4.12 |
-| 6 | `DesignSettingsModule` und `views/themes/settings.php` wurden nicht eingebunden | toter Code | `CMS/admin/modules/themes/` | ✅ 3.4.13: entfernt |
-| 7 | Dokumentations-Sync-Klassen waren nicht an `/admin/documentation` angebunden | kein Abgleich per Oberfläche | `DocumentationSync*` | ✅ 3.4.13: Karte „Doku-Sync“ |
-| 8 | Sammelaktion `delete` löschte wie `hard_delete` | kein weiches Löschen | `UserService::bulkAction()` | ✅ 3.4.12: `delete` = Soft-Delete |
-| 9 | Health-Endpunkt ohne Core-Route | Prüfung schlug fehl | `SystemInfoModule` | ✅ 3.4.12: `GET /health` (Standardpfad) |
-| 10 | `JwtService` war nicht in API-Routen verdrahtet | API nur mit Session | `ApiRouter`, `Api` | ✅ 3.4.13: Bearer-Anmeldung opt-in über `JWT_SECRET` |
-| 11 | Beispiel-Manifeste unter `CMS/marketplace/` mit veralteten Versionen | Anzeige veraltet | `CMS/marketplace/*/index.json` | ✅ 3.4.12 |
-| 12 | Member-Upload sendete Token `member_media_action`, `/api/upload` prüft `media_action` | erster Upload scheiterte (403) | `CMS/member/media.php` | ✅ 3.4.12 |
-| 13 | Plugin-Member-Bereiche (`post_callback`) ohne zentrale CSRF-Prüfung | Plugins mussten CSRF selbst prüfen | `PluginDashboardRegistry` | ✅ 3.4.13: Herkunftsprüfung, optional Core-Token (`'csrf' => 'core'`) |
-| 14 | `wp_enqueue_*`/`wp_dequeue_*` waren leere Stubs | WP-nahe Plugins luden keine Assets | `includes/functions/wordpress-compat.php` | ✅ 3.4.13: Asset-Registry |
-| 16 | DB-Rate-Limits zählten nie, wenn MySQL-Zeitzone ≠ PHP-Zeitzone | Login-/Reset-/API-Schutz wirkungslos | `Security::checkDbRateLimit()` | ✅ 3.4.13: Sitzungszeitzone in `Database` |
-| 17 | `POST /contact` ohne Route | Kontaktformular immer 404 | `ThemeRouter` | ✅ 3.4.13 |
-| 18 | `posts.title_en/content_en/excerpt_en` nur über `/admin/posts` ergänzt | frische Installation: `/blog` 500 | `SchemaManager`, `PostsModule` | ✅ 3.4.13: Schema v23 |
-| 15 | `Version::CURRENT` blieb `3.4.00` trotz ausgelieferter Fixes | Installationen nicht unterscheidbar | `CMS/core/Version.php` | ✅ 3.5.0: `Version::CURRENT = 3.5.0` (Audit FUN-12) |
-| 19 | Option `member_email_verification` wurde nicht ausgewertet | neue Konten ohne bestätigte E-Mail-Adresse sofort aktiv | `Auth::register()`, Benutzer-Einstellungen | ✅ 4.0.0: `EmailVerificationService`, Status `unverified`, Link `/cms-verify-email` (Audit FUN-36) |
-| 20 | `UserService::createUser()` setzte `display_name` nicht (`NOT NULL` ohne Standardwert) | „Benutzer anlegen“ unter `/admin/users` scheiterte auf MySQL/MariaDB im Strict-Mode | `UserService` | ✅ 4.0.0: Anzeigename aus Vor-/Nachname bzw. Benutzername (Audit FUN-37) |
-| 21 | Feld `critical` im Core-Update-Manifest wurde nicht ausgewertet | Sicherheitsupdates unter *System → Updates* nicht von normalen Updates zu unterscheiden | `UpdateService::checkCoreUpdates()`, Update-Ansicht | ✅ 4.0.0: roter Hinweis „Kritisches Update verfügbar“ (Audit FUN-38) |
-| 22 | `cms_mail()` ignorierte `Content-Type: text/plain` | Klartext-Mails gingen über SMTP und die Mail-Queue als HTML ohne Zeilenumbrüche hinaus | `includes/functions/mail.php` | ✅ 4.0.0: Versand bzw. Queue über `sendPlain()`/`enqueuePlain()` (Audit FUN-55) |
-| 23 | `mail()`-Fallback ohne RFC-2047-Kodierung | Umlaute in Betreff und Absendername kamen ohne SMTP verstümmelt an | `MailService` | ✅ 4.0.0: Betreff und Absendername als `=?UTF-8?B?…?=` (Audit FUN-56) |
-| 24 | Dashboard verlinkte Seiten deaktivierter Core-Module | Klick führte auf die Startseite | `DashboardModule` | ✅ 4.0.0: Ersatzziel oder Link entfernt (Audit FUN-57) |
-| 25 | `mail()`-Fallback ohne `Content-Transfer-Encoding` | UTF-8-Mails ohne SMTP als 7bit deklariert, HTML-Zeilen über 998 Zeichen konnten von MTAs umbrochen werden | `MailService::sendMessageFallback()` | ✅ 4.0.0: Body als `quoted-printable` mit CRLF (Audit FUN-61) |
-| 26 | Theme-Helfer gaben Exception-Texte aus; `theme_register_user()` meldete vergebene E-Mail-Adressen | interne Fehlermeldungen sichtbar, Umgehung der neutralen Registrierung | `themes/cms-default/functions.php` (`theme_login_user()`, `theme_register_user()`) | ✅ 4.0.0: nur `Auth::register()`, Fehler im Log, neutrale Meldung (Audit SEC-48) |
-| 27 | `/member/plugin-section` war direkt aufrufbar | PHP-Warnungen (Variablen fehlen), Hook `member_plugin_section_head` mit `null` statt Bereich | `MemberRouter::renderMemberPage()` | ✅ 4.0.0: interne Vorlage liefert 404 (Audit FUN-62) |
-
-Die Härtungspunkte OFFEN-20 bis OFFEN-26 aus dem Folgeaudit vom 2026-11-08 (AEAD-Verschlüsselung gespeicherter Geheimnisse, bestätigte E-Mail-Änderung, Sitzungs-Widerruf, neutrale Registrierung, Anmeldeverzögerung je Konto, Backup-Ablage außerhalb des Webroots) sind in 4.0.0 umgesetzt. Offen ist nur OFFEN-27 (signierte Update-Pakete); Details in [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md).
-
-#### In 4.1.0 geschlossene Lücken
-
-| # | Befund (bis 4.0.0) | Behoben in 4.1.0 durch |
+| Punkt | Stand | Weiterführend |
 |---|---|---|
-| 28 | Aboverwaltung ohne Zahlungs-Gateway (Bestellungen nur manuell) | Stripe Checkout und Mollie, Webhook-Verifizierung, Idempotenz über `payment_events` ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
-| 28a | Keine Rechnungen mit Nummernkreis | `Payments\InvoiceService`: lückenlose Nummern, unveränderlicher Snapshot, PDF, Storno, DSGVO-Sperrvermerk, Recht `invoices.view` ([INVOICES.md](../admin/subscription/INVOICES.md)) |
-| 29 | Passwortrichtlinie fest verdrahtet (12 Zeichen, vier Klassen), keine Historie, kein Höchstalter, ASCII-Zeichenklassen | `PasswordPolicyService` (konfigurierbar, Unicode, Historie, Höchstalter) |
-| 30 | Kein MFA-Zwang je Rolle, Passkeys ohne Nachweis der User Verification | `MfaEnforcementService`, `Router::enforceAccountGates()`, `passkey_credentials.user_verified` |
-| 31 | Kein Single Sign-on | Microsoft Entra ID (OIDC/PKCE), Zuordnung über `tid`+`oid`, Sperre der lokalen Anmeldung |
-| 32 | `posts.publish`/`pages.publish` wurden nicht geprüft, kein Vier-Augen-Prinzip | Status `pending`, `ContentWorkflow`, Update-Schritt für Rollenrechte ([RBAC.md](../admin/users-groups/RBAC.md)) |
-| 33 | Löschen in der Mediathek ließ erzeugte Größen/WebP-Fassungen liegen; Verwendungsnachweis nur für Beiträge und Seiten | Löschen entfernt Fassungen; `media_usage`-Index über alle Inhaltsarten |
-| 34 | Backups nur lokal bzw. per E-Mail/SDK (`uploadToS3`, max. 25 MB) | `OffsiteBackupService` (S3-kompatibel, nur `CMSENC2`-verschlüsselt) |
-| 35 | Core-Update ersetzte `CMS/marketplace/` auf Marketplace-Hosts | `UpdateService::RUNTIME_CORE_ENTRIES` enthält `marketplace` (Hinweis zum Update von 4.0.0 im Changelog) |
-| 36 | Keine ausgehenden Ereignisse für Fremdsysteme | `WebhookService` (signierte Webhooks, Wiederholungen) |
-| 37 | Inhalte ohne Ablauf- und Prüfdatum | `ContentExpiryService`, Spalten `expires_at`, `review_due_at` |
+| Signierte Update-Pakete (OFFEN-27) | offen; Prüfsumme (SHA-256) wird bereits erzwungen | [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md) |
+| Zentrale CLI und Echtzeit-Alerting | Release 4.3.0 | [../workflow/specs/v4.1/06-CLI-ALERTING.md](../workflow/specs/v4.1/06-CLI-ALERTING.md) |
+| Community-Modul (Forum) | Release 4.2.0, Schema `v27` | [../workflow/specs/community/IMPLEMENTATION-PLAN.md](../workflow/specs/community/IMPLEMENTATION-PLAN.md) |
+| E-Rechnung (ZUGFeRD/XRechnung) | nicht enthalten | [../admin/subscription/INVOICES.md](../admin/subscription/INVOICES.md) |
 
-Weiterhin offen: OFFEN-27 (signierte Update-Pakete, siehe oben); Bereich 6 (CLI, Alerting) in 4.3.0; Community-Modul in 4.2.0. Das Release-Audit 4.1.0 steht in [../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
+Behobene Befunde früherer Prüfungen stehen im [Changelog](../../Changelog.md) und in den Berichten unter [../audit/](../audit/README.md); das Prüfprotokoll des aktuellen Releases ist [../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
 
 ### Grundsatz dieser Dokumentation
 
-Dokumentiert wird nur, was im ausgelieferten Code nachvollziehbar ist. Pfade, Klassen und Routen in `DOC/` wurden am 2026-10-02 gegen `CMS/` abgeglichen, im Audit vom 2026-10-03 erneut geprüft und für 4.0.0 am 2026-11-09 und für 4.1.0 am 2026-11-15 nachgezogen.
+Dokumentiert wird, was im ausgelieferten Code nachvollziehbar ist: Pfade, Klassen, Routen, Tabellen und Hooks lassen sich in `CMS/` finden. Wo Code und Doku abweichen, gilt der Code.
 
 ### Verwandte Dokumente
 

@@ -81,9 +81,6 @@ Größen und WebP-Fassungen.
 | Schema.org-Angaben | ein JSON-LD-Block je Seite mit `ImageObject` (creator, license, copyrightNotice, creditText), nur im öffentlichen Frontend |
 | Vorbelegung beim Hochladen | übernimmt Urheber und Copyright aus IPTC/XMP/EXIF |
 
-Geprüft (4.0.0, Laufzeit): Angaben an einem Bild gesetzt → Beitrag zeigt Credit-Zeile mit Links (Quelle, Lizenz) und
-JSON-LD; beide Schalter aus → keine Ausgabe, wieder an → Ausgabe. Vorschaubilder: Lauf im Browser (16 Bilder) und
-Fortsetzung eines offenen Laufs im Cron.
 
 ### Dateien
 

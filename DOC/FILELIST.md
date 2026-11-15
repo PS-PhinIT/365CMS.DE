@@ -163,7 +163,7 @@ Do not use the old 467-file / 28.03.2026 numbers. Current counts and file lists 
 
 **Deutsch**
 
-Die alten Zahlen (467 Dateien, 28.03.2026) nicht mehr verwenden. Aktuelle Zählungen und Dateilisten stehen in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md). `DOC/_cms_inventory_current.txt` existiert nicht.
+Zählungen und Dateilisten stehen in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md).
 
 ---
 

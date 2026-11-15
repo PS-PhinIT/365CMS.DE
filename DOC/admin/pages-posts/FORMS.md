@@ -42,9 +42,6 @@ stehen unter *Formulare → Einstellungen*.
 Der Browser prüft Typ, Größe und Anzahl schon vor dem Absenden; der Server prüft unabhängig davon erneut. Fehler
 erscheinen am Feld und in der Zusammenfassung oberhalb des Formulars.
 
-Geprüft (4.0.0, Laufzeit): gültiges PNG wird gespeichert und ist im Admin abrufbar (identischer Inhalt); getarnte
-PHP-Datei, zu große Datei, falscher Typ, SVG und zu viele Dateien werden abgelehnt, im Browser und ohne JavaScript
-direkt am Server; Abruf ohne Anmeldung leitet zum Login, direkter Pfad liefert 404.
 
 ### Eingänge
 
