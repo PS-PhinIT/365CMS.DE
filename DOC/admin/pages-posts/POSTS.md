@@ -167,4 +167,4 @@ Die Beitrags-URL folgt der Struktur aus *Einstellungen → Inhalte* (`setting_po
 
 ### Verwandte Dokumente
 
-[PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [COMMENTS.md](COMMENTS.md) · [SETTINGS.md](SETTINGS.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)
+[PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md) · [COMMENTS.md](COMMENTS.md) · [SETTINGS.md](SETTINGS.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)

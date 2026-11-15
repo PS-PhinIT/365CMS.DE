@@ -73,6 +73,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_after_hub_save` | Action | `$id, $settings, $cards, $post` |
 | `cms_content_submitted` | Action | `string $type, int $id, int $userId, string $comment`; Beitrag/Seite zur Prüfung eingereicht (seit 4.1.0, [REVIEW.md](../admin/pages-posts/REVIEW.md)) |
 | `cms_content_approved` | Action | `string $type, int $id, int $userId, string $comment`; eingereichter Inhalt freigegeben (seit 4.1.0) |
+| `cms_reusable_block_saved` | Action | `int $blockId`; EditorJS Block Vorlage angelegt oder geändert (seit 4.1.0, [BLOCK-TEMPLATES.md](../admin/pages-posts/BLOCK-TEMPLATES.md)) |
+| `cms_reusable_block_deleted` | Action | `int $blockId`; Vorlage gelöscht (seit 4.1.0) |
+| `cms_reusable_block_changed` | Action | `int $blockId, list<array{type,id}> $linked`; nach Änderung/Löschen, nachdem Cache geleert und die Speicher-Hooks der verknüpften Beiträge/Seiten ausgelöst wurden (seit 4.1.0) |
 | `cms_content_returned` | Action | `string $type, int $id, int $userId, string $comment`; eingereichter Inhalt mit Begründung zurückgegeben (seit 4.1.0) |
 
 ### Lokalisierung, Hub-Sites, Tabellen

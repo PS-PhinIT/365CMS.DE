@@ -961,7 +961,7 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     T::same('comments', am_node($structured, 'content.comments')['badge'] ?? null, 'structured: Kommentare mit Badge');
     T::same([], array_values(array_diff(['media.library', 'media.categories', 'media.check', 'media.downloads', 'media.tools'], am_group_items($structured, 'media'))),
         'structured: Medien mit Mediathek, Medienkategorien, Medien-Check, Downloads, Medien-Werkzeuge');
-    T::same(['content.editorial-calendar', 'content.changes', 'content.translations'], am_group_items($structured, 'editorial'), 'structured: Redaktion');
+    T::same(['content.editorial-calendar', 'content.changes', 'content.translations', 'content.reusable-blocks'], am_group_items($structured, 'editorial'), 'structured: Redaktion');
     T::same(array_search('editorial', $structuredTop, true) + 1, array_search('ai', $structuredTop, true), 'structured: KI-Dienste direkt nach Redaktion');
     T::same(['design.menus', 'content.post-categories', 'content.post-tags', 'content.hub-sites', 'content.site-tables', 'content.toc', 'seo.redirects', 'seo.not-found'],
         am_group_items($structured, 'structure'), 'structured: Struktur');

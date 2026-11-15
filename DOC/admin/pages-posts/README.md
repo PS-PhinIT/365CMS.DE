@@ -14,6 +14,7 @@ This folder documents the sidebar entry **Pages & Posts** (*Seiten & Beiträge*,
 |---|---|---|---|
 | Seiten | `/admin/pages` | `manage_pages` | [PAGES.md](PAGES.md) |
 | Beiträge | `/admin/posts` | `edit_all_posts` / `edit_own_posts` / `posts.view` | [POSTS.md](POSTS.md) |
+| EditorJS Block Vorlagen (seit 4.1.0) | `/admin/reusable-blocks` | `blocks.reusable` | [BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md) |
 | Freigabe (Vier-Augen-Prinzip, seit 4.1.0) | `/admin/posts`, `/admin/pages`, `/preview/<token>` | `posts.publish` / `pages.publish` | [REVIEW.md](REVIEW.md) |
 | Kategorien | `/admin/post-categories` | `edit_all_posts` | [POSTS.md](POSTS.md#kategorien-adminpost-categories) |
 | Tags | `/admin/post-tags` | `edit_all_posts` | [POSTS.md](POSTS.md#tags-adminpost-tags) |

@@ -81,6 +81,8 @@ final class MediaFeatureHooks
             'download_deleted' => ['download', true],
             'cms_after_form_save' => ['form', false],
             'cms_form_deleted' => ['form', true],
+            'cms_reusable_block_saved' => ['reusable_block', false],
+            'cms_reusable_block_deleted' => ['reusable_block', true],
         ];
         foreach ($hooks as $hook => [$type, $deleted]) {
             Hooks::addAction($hook, static function (mixed $id = 0) use ($type, $deleted): void {

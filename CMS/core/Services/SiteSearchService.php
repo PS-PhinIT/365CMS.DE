@@ -181,8 +181,22 @@ final class SiteSearchService
     //  Text und Abgleich
     // ──────────────────────────────────────────────────────────
 
-    /** Sichtbarer Text aus Editor.js-JSON oder HTML. */
-    public static function plainText(string $content): string
+    /** @var array<string, \Closure(array<string, mixed>, string): string> Text verweisender Blöcke (z. B. „Vorlagen“) */
+    private static array $blockTextResolvers = [];
+
+    /**
+     * Für Blöcke, die Inhalt nur per Verweis enthalten (z. B. `reusableBlock` → `{ "id": 12 }`): liefert den
+     * sichtbaren Text des Ziels, damit Suchindex und Suche ihn mitfinden (seit 4.1.0).
+     *
+     * @param callable(array<string, mixed>, string): string $resolver Blockdaten, Sprache → Text oder Editor.js-JSON
+     */
+    public static function registerBlockTextResolver(string $blockType, callable $resolver): void
+    {
+        self::$blockTextResolvers[$blockType] = \Closure::fromCallable($resolver);
+    }
+
+    /** Sichtbarer Text aus Editor.js-JSON oder HTML; `$locale` wählt bei verweisenden Blöcken die Sprache. */
+    public static function plainText(string $content, string $locale = 'de'): string
     {
         $content = trim($content);
         if ($content === '') {
@@ -196,9 +210,22 @@ final class SiteSearchService
                 $blocks = $decoded['blocks'] ?? null;
                 if (is_array($blocks)) {
                     foreach ($blocks as $block) {
-                        if (is_array($block) && isset($block['data'])) {
-                            self::collectText($block['data'], $parts);
+                        if (!is_array($block) || !isset($block['data'])) {
+                            continue;
                         }
+                        $resolver = self::$blockTextResolvers[(string) ($block['type'] ?? '')] ?? null;
+                        if ($resolver !== null && is_array($block['data'])) {
+                            try {
+                                $resolved = self::plainText((string) $resolver($block['data'], $locale), $locale);
+                            } catch (\Throwable) {
+                                $resolved = '';
+                            }
+                            if ($resolved !== '') {
+                                $parts[] = htmlspecialchars($resolved, ENT_NOQUOTES, 'UTF-8');
+                            }
+                            continue;
+                        }
+                        self::collectText($block['data'], $parts);
                     }
                 } else {
                     self::collectText($decoded, $parts);

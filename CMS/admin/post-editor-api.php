@@ -16,6 +16,9 @@ if (!defined('ABSPATH')) {
  * POST action=block_preview, type, data, tunes      Server-Vorschau eines registrierten Core-Blocks
  *                                                  (EditorJsBlockRegistry, Kontext „preview“); data/tunes als JSON
  * GET  ?action=form_choices                        aktive Formulare für den Block „Formular“ (Schlüssel, Titel)
+ * GET  ?action=reusable_block_choices              Vorlagen für den Block „Vorlagen“ (ID, Titel; seit 4.1.0)
+ * GET  ?action=reusable_block_content&id=…&locale=de|en
+ *                                                  Blöcke einer Vorlage für „In normale Blöcke umwandeln“
  * GET  ?action=download_search[&q&category&type&ids] Downloads für den Block „Download“ (upload_downloads)
  * POST action=download_upload, file[, title, summary, category_id, version, properties[<schlüssel>], new_properties]
  *                                                  Datei hochladen und als Download anlegen (upload_downloads);
@@ -60,9 +63,9 @@ $canRead = $canWrite || $auth->hasCapability('posts.view');
 // Seiteneditor: nur Token-Erneuerung und Block-Vorschau.
 $canEditPages = $auth->hasCapability('manage_pages');
 
-$readActions = ['revisions', 'compare', 'token', 'form_choices', 'download_search'];
+$readActions = ['revisions', 'compare', 'token', 'form_choices', 'download_search', 'reusable_block_choices', 'reusable_block_content'];
 $writeActions = ['autosave', 'restore', 'block_preview', 'download_upload'];
-$pageEditorActions = ['token', 'block_preview', 'form_choices', 'download_search', 'download_upload'];
+$pageEditorActions = ['token', 'block_preview', 'form_choices', 'download_search', 'download_upload', 'reusable_block_choices', 'reusable_block_content'];
 // Download-Block: Auswählen und Hochladen erfordern zusätzlich upload_downloads (oder manage_downloads).
 $canUseDownloads = $auth->hasCapability('upload_downloads') || $auth->hasCapability('manage_downloads');
 if (in_array($action, ['download_search', 'download_upload'], true) && !$canUseDownloads) {
@@ -117,6 +120,25 @@ if ($action === 'form_choices') {
         'success' => true,
         'forms' => $formChoices,
         'manage_url' => $auth->hasCapability('manage_forms') && is_file(ABSPATH . 'admin/forms.php') ? '/admin/forms' : '',
+    ]);
+}
+
+if ($action === 'reusable_block_choices' || $action === 'reusable_block_content') {
+    $reusableBlocks = \CMS\Services\ReusableBlocks\ReusableBlockService::getInstance();
+    if ($action === 'reusable_block_choices') {
+        $cmsPostEditorApiRespond(200, [
+            'success' => true,
+            'blocks' => $reusableBlocks->choices(),
+            'manage_url' => $auth->hasCapability('blocks.reusable') ? '/admin/reusable-blocks' : '',
+        ]);
+    }
+    $reusableBlockId = \CMS\Services\ReusableBlocks\ReusableBlockService::normalizeId($_GET['id'] ?? 0);
+    if ($reusableBlocks->find($reusableBlockId) === null) {
+        $cmsPostEditorApiRespond(404, ['success' => false, 'error' => 'Diese Vorlage gibt es nicht mehr.']);
+    }
+    $cmsPostEditorApiRespond(200, [
+        'success' => true,
+        'blocks' => $reusableBlocks->blocksForConversion($reusableBlockId, ($_GET['locale'] ?? '') === 'en' ? 'en' : 'de'),
     ]);
 }
 
