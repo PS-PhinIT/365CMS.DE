@@ -108,9 +108,9 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 
 | Classic | Bezeichnung | | Structured | Bezeichnung |
 |---|---|---|---|---|
-| `posts` | Beiträge | | `content` | Inhalt |
+| `posts` | **Inhalte** (seit 4.1.0, vorher *Beiträge*; enthält *Beiträge*, *Seiten*, Kategorien, Schlagwörter, Redaktionskalender) | | `content` | Inhalt |
 | `media` | Medien | | `media` | Medien |
-| `pages` | Seiten | | `editorial` | Redaktion |
+| `building-blocks` | **Bausteine** (seit 4.1.0) | | `editorial` | Redaktion |
 | `forms` | Formulare | | `ai` | KI-Dienste ¹ |
 | `ai` | KI-Dienste ¹ | | `structure` | Struktur |
 | `design` | Design | | `design` | Design |
@@ -124,6 +124,14 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 | `health` | Website-Zustand (Kacheln) | | | |
 
 ¹ Gruppe eines optionalen Core-Moduls. Ohne aktives Modul ist sie leer und damit ausgeblendet.
+
+**Änderungen der Menügruppen seit 4.1.0:**
+
+- Profil *Klassisch*: Die frühere Gruppe *Seiten* (nur noch „Alle Seiten“) ist in *Beiträge* aufgegangen; die Gruppe `posts` heißt jetzt **„Inhalte“** (Unterpunkte *Beiträge*, *Seiten*, *Kategorien*, *Schlagwörter*, *Redaktionskalender*).
+- Profil *Klassisch*: Neue Gruppe `building-blocks` **„Bausteine“** (Symbol Puzzle) mit *EditorJS Block Vorlagen* (`content.reusable-blocks`, `/admin/reusable-blocks`), *Knowledgebase*, *Hub-Sites*, *Tabellen* und *Inhaltsverzeichnis*. Diese Punkte gelten für Seiten und Beiträge gemeinsam und standen vorher unter *Seiten* bzw. *Medien*.
+- Profil *Strukturiert*: „EditorJS Block Vorlagen“ steht in der Gruppe *Medien*.
+- Neue Katalog-Einträge: `subscriptions.payments` (*Zahlungen*), `settings.sso` (*SSO (Entra ID)*), `system.webhooks` (*Webhooks*), dazu die Seite *Backup-Einstellungen*.
+- **Eigene, gespeicherte Layouts bleiben unverändert**; neue Einträge landen dort in der Auffanggruppe (siehe Reihenfolge oben).
 
 Platziert ein eigenes Layout Plugin-Seiten in einer Kachelgruppe, erscheinen sie dort als Kacheln in einer Kategorie mit dem Menütitel des Plugins.
 
