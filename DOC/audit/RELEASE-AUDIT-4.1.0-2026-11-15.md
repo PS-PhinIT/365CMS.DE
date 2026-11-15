@@ -12,7 +12,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 
 ## Versionen
 
-Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.7-*`).
+Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.8-*`).
 
 | Version | Prüfbereich | Pull Requests |
 |---------|-------------|---------------|
@@ -23,7 +23,8 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 | 4.1.5 | PR #5: Performance, Caching, Core Web Vitals (Zwischenstand) | [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166) |
 | 4.1.6 | Entscheidungen: FUN-410-17/18/19, SEC-410-26, PERF-410-46 … -49, DOC-410-01 | [#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167) |
 | 4.1.7 | Zahlungen: FUN-410-21, FUN-410-27 | [#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168) |
-| 4.1.8 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
+| 4.1.8 | FUN-410-34 (verworfen), FUN-410-35 | [#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169) |
+| 4.1.9 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
 
 ## Prüfbereiche und Status
 
@@ -323,8 +324,8 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 | FUN-410-31 | LOW | Papierkorb | `CMS/core/Services/Trash/PostTrashProvider.php:85`, `PageTrashProvider.php:125` | Freigabeverlauf und Vorschau-Links blieben nach dem Löschen stehen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-32 | MEDIUM | Tabellen / Hub-Sites | `CMS/admin/modules/tables/TablesModule.php:25` | Seite „Tabellen“ lud, löschte und duplizierte über die ID auch Hub-Sites (endgültig, am Papierkorb vorbei); Liste filterte erst nach `LIMIT 200` | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-33 | MEDIUM | Plugin cms-importer | `CMS/plugins/cms-importer/includes/trait-admin-cleanup.php:99` | „Zurücksetzen“ löscht Beiträge/Seiten ohne Lösch-Hooks (Verwendungsindizes veraltet) | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-34 | LOW | Wissensdatenbank | `CMS/core/Services/Knowledgebase/Repository/EntryRepository.php:1217` | CSV-Import aktualisiert Einträge im Papierkorb | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-35 | LOW | Feeds | `CMS/core/Services/Feed/AggregatorSettings.php:288` | Aufbewahrung unter 7 Tagen leert wöchentliche Digests | [ ] Offen → Entscheidung PR #6 |
+| FUN-410-34 | LOW | Wissensdatenbank | `CMS/core/Services/Knowledgebase/Repository/EntryRepository.php:1217` | CSV-Import aktualisiert Einträge im Papierkorb | Verworfen bei Nachprüfung in 4.1.8 ([#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169)): `importPresetEntries()` überspringt Einträge im Papierkorb (`EntryRepository.php:909`, schon vor Prüfbeginn); Regressionstest ergänzt |
+| FUN-410-35 | LOW | Feeds | `CMS/core/Services/Feed/AggregatorSettings.php:288` | Aufbewahrung unter 7 Tagen leert wöchentliche Digests | [x] Behoben in 4.1.8 ([#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169)): 1–6 Tage werden auf 7 angehoben, 0 = nie löschen |
 | FUN-410-36 | LOW | Altlast | `CMS/core/PageManager.php:218` | `PageManager::deletePage()` ohne Papierkorb und Hooks, ohne Aufrufer | [x] Behoben in PR #4 ([#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165), verschiebt in den Papierkorb) |
 | FUN-410-37 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:427` | Mollie-Abo wird innerhalb der Transaktion angelegt; ein Rollback danach kann zu einem zweiten Abo führen | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-38 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:592` | `renewalFailed` meldet `order.failed` mit `order_id: 0`; ohne bezahlte Vorlage entsteht keine Folgebestellung/Rechnung | [ ] Offen → Entscheidung PR #6 |
