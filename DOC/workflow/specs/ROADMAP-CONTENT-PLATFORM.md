@@ -97,7 +97,7 @@ Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes E
 
 ### A.8 Offene Entscheidungen
 
-- Dürfen Autoren nach der Freigabe noch ändern (neue Prüfung nötig?) – Vorschlag: Änderungen an veröffentlichten Inhalten ohne Recht landen als **Revision „zur Prüfung“**, der Live-Stand bleibt bis zur Freigabe.
+- ~~Dürfen Autoren nach der Freigabe noch ändern (neue Prüfung nötig?)~~ – **entschieden (15.11.2026, 4.1.0):** ja, ohne neue Prüfung; veröffentlichte Inhalte bleiben beim Bearbeiten veröffentlicht. Eine „Revision zur Prüfung“ wird nicht gebaut.
 - Gilt der Ablauf auch für Downloads, Knowledgebase, Newsletter-Kampagnen? Vorschlag: zunächst nur Beiträge, Seiten und eigene Inhaltstypen.
 
 ---
