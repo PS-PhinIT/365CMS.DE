@@ -948,6 +948,7 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     T::same('Bausteine', am_node($classic, 'building-blocks')['label'] ?? null, 'classic: Gruppe heißt „Bausteine“');
     T::same(['content.posts', 'content.pages', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar'],
         am_group_items($classic, 'posts'), 'classic: Seiten unter Beiträge (keine eigene Gruppe „Seiten“)');
+    T::same('Inhalte', am_node($classic, 'posts')['label'] ?? null, 'classic: Gruppe „Beiträge“ heißt „Inhalte“');
     T::check(!in_array('content.reusable-blocks', am_group_items($classic, 'media'), true), 'classic: Vorlagen nicht mehr unter Medien');
 
     $classicLean = $withoutOptional->build($registry, ProfileLayouts::get(ProfileLayouts::CLASSIC), ProfileLayouts::CLASSIC);

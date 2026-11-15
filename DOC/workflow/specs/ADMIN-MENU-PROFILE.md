@@ -41,7 +41,7 @@ Badges sind in jedem Profil gleich. Eine Gruppe bzw. Kachelseite zeigt an ihrem 
 ── Arbeit ─────────────────────────────────────────────────────────────────────
 Dashboard 🔒                                     /admin
 Updates                (Badge: Updates)          /admin/updates
-Beiträge
+Inhalte
   ├─ Alle Beiträge                               /admin/posts
   ├─ Alle Seiten                                 /admin/pages
   ├─ Kategorien                                  /admin/post-categories

@@ -104,7 +104,7 @@ final class ProfileLayouts
                 self::item('dashboard'),
                 self::item('system.updates'),
                 // Seiten hatten nur noch „Alle Seiten“ – deshalb hier eingegliedert.
-                self::group('posts', 'Beiträge', 'article', [
+                self::group('posts', 'Inhalte', 'article', [
                     'content.posts', 'content.pages', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar',
                 ]),
                 self::group('media', 'Medien', 'photo', [
