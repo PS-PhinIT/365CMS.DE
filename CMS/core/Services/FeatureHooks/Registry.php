@@ -40,6 +40,7 @@ final class Registry
         ReusableBlockHooks::class,
         ContentExpiryHooks::class,
         BackupOffsiteHooks::class,
+        WebhookHooks::class,
     ];
 
     private static bool $registered = false;
