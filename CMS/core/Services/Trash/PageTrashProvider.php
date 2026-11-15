@@ -86,7 +86,7 @@ final class PageTrashProvider extends AbstractContentTrashProvider
 
     protected function restorableStatuses(): array
     {
-        return ['draft', 'published', 'private'];
+        return ['draft', 'pending', 'published', 'private'];
     }
 
     protected function saveHook(): string

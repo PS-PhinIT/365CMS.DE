@@ -79,7 +79,7 @@ class SettingsModule
         'setting_editor_type', 'setting_page_default_status',
         'setting_post_default_status', 'setting_page_editor_width',
         'setting_post_editor_width', 'setting_post_permalink_structure',
-        'setting_post_permalink_custom',
+        'setting_post_permalink_custom', 'setting_content_review_second_person',
         'routing.category_base_de', 'routing.category_base_en',
         'routing.tag_base_de', 'routing.tag_base_en',
     ];
@@ -92,6 +92,7 @@ class SettingsModule
         'setting_post_editor_width',
         'setting_post_permalink_structure',
         'setting_post_permalink_custom',
+        'setting_content_review_second_person',
         'routing.category_base_de',
         'routing.category_base_en',
         'routing.tag_base_de',
@@ -204,6 +205,7 @@ class SettingsModule
                 'editor_type'          => $editorType,
                 'page_default_status'  => $pageDefaultStatus,
                 'post_default_status'  => $postDefaultStatus,
+                'content_review_second_person' => ($settings['setting_content_review_second_person'] ?? '0') === '1',
                 'page_editor_width'    => (string)max(320, min(1600, (int)($settings['setting_page_editor_width'] ?? 1050))),
                 'post_editor_width'    => (string)max(320, min(1600, (int)($settings['setting_post_editor_width'] ?? 750))),
                 'post_permalink_structure' => $postPermalinkStructure,
@@ -367,6 +369,10 @@ class SettingsModule
                 'setting_editor_type' => $editorType,
                 'setting_page_default_status' => $pageDefaultStatus,
                 'setting_post_default_status' => $postDefaultStatus,
+                // Nur das Inhalts-Formular trägt den Schalter; andere Formulare behalten den gespeicherten Wert.
+                'setting_content_review_second_person' => $isContentSettingsSave
+                    ? (!empty($post['content_review_second_person']) ? '1' : '0')
+                    : (($settings['setting_content_review_second_person'] ?? '0') === '1' ? '1' : '0'),
                 'setting_page_editor_width' => (string)max(320, min(1600, (int)($post['page_editor_width'] ?? 1050))),
                 'setting_post_editor_width' => (string)max(320, min(1600, (int)($post['post_editor_width'] ?? 750))),
                 'setting_post_permalink_structure' => $permalinkStructure,

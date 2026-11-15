@@ -19,6 +19,8 @@ use CMS\CacheManager;
 use CMS\Database;
 use CMS\Hooks;
 use CMS\Logger;
+use CMS\Services\Content\ContentStatus;
+use CMS\Services\Content\ContentWorkflow;
 use CMS\Services\ContentLocalizationService;
 use CMS\Services\ContentMediaPlacementService;
 use CMS\Services\PermalinkService;
@@ -130,7 +132,7 @@ class PostsModule
     ];
 
     /** @var string[] */
-    private const ALLOWED_LIST_STATUSES = ['published', 'scheduled', 'draft', 'private', 'trash'];
+    private const ALLOWED_LIST_STATUSES = ['published', 'scheduled', 'pending', 'draft', 'private', 'trash'];
 
     /** @var string[] Papierkorb-Aktionen; „delete“ verschiebt (wie „trash“) in den Papierkorb. */
     private const TRASH_BULK_ACTIONS = ['delete', 'trash', 'restore', 'delete_permanently'];
@@ -509,6 +511,11 @@ class PostsModule
             "SELECT COUNT(*) FROM {$this->prefix}posts p WHERE " . implode(' AND ', $draftsWhere),
             $visibilityParams
         );
+        $pendingWhere = array_merge($visibilityWhere, ["p.status = 'pending'"]);
+        $pending = (int) $this->db->get_var(
+            "SELECT COUNT(*) FROM {$this->prefix}posts p WHERE " . implode(' AND ', $pendingWhere),
+            $visibilityParams
+        );
         $privateWhere = array_merge($visibilityWhere, ["p.status = 'private'"]);
         $private = (int) $this->db->get_var(
             "SELECT COUNT(*) FROM {$this->prefix}posts p WHERE " . implode(' AND ', $privateWhere),
@@ -532,7 +539,7 @@ class PostsModule
             } elseif ($statusFilter === 'scheduled') {
                 $where[] = "p.status = 'published' AND p.published_at IS NOT NULL AND p.published_at > ?";
                 $params[] = $currentDateTime;
-            } elseif ($statusFilter === 'draft') {
+            } elseif ($statusFilter === 'draft' || $statusFilter === 'pending') {
                 $where[]  = 'p.status = ?';
                 $params[] = $statusFilter;
             } elseif ($statusFilter === 'private') {
@@ -591,7 +598,7 @@ class PostsModule
         return [
             'posts'      => array_map(fn($p) => (array)$p, $posts),
             'categories' => $categories,
-            'counts'     => compact('total', 'published', 'scheduled', 'drafts', 'private', 'trash'),
+            'counts'     => compact('total', 'published', 'scheduled', 'pending', 'drafts', 'private', 'trash'),
             'filter'     => $statusFilter,
             'catFilter'  => $categoryFilter,
             'search'     => $search,
@@ -850,13 +857,17 @@ class PostsModule
             $defaultStatus = 'draft';
         }
 
-        $status     = in_array((string)($post['status'] ?? ''), ['published', 'draft', 'private'], true) ? (string)$post['status'] : $defaultStatus;
+        $status     = in_array((string)($post['status'] ?? ''), ['published', 'draft', 'private', 'pending'], true) ? (string)$post['status'] : $defaultStatus;
         // „Veröffentlichen“/„Planen“ in der Editor-Kopfleiste setzen den Zielstatus unabhängig vom Statusfeld.
         $publishIntent = strtolower(trim(is_scalar($post['publish_intent'] ?? null) ? (string) $post['publish_intent'] : ''));
-        if (!in_array($publishIntent, ['publish', 'schedule'], true)) {
+        if (!in_array($publishIntent, ['publish', 'schedule', 'submit'], true)) {
             $publishIntent = '';
         }
-        if ($publishIntent !== '') {
+        if ($publishIntent === 'submit') {
+            // „Zur Prüfung einreichen“ (Vier-Augen-Prinzip): speichern und einreichen; ein Datum bleibt für die Freigabe stehen.
+            $status = 'pending';
+            $publishIntent = '';
+        } elseif ($publishIntent !== '') {
             $status = 'published';
         }
         $content    = $this->preserveOriginalEditorContentIfUnchanged($post['content'] ?? '', $post['content_original'] ?? '');
@@ -964,6 +975,26 @@ class PostsModule
         $existing = $id > 0
             ? $this->db->get_row("SELECT slug, slug_en, status, published_at, created_at FROM {$this->prefix}posts WHERE id = ? LIMIT 1", [$id])
             : null;
+
+        // Vier-Augen-Prinzip (4.1.0, 3a): ohne Veröffentlichungsrecht – oder bei eigenen Inhalten, wenn eine zweite
+        // Person freigeben muss – wird aus „Veröffentlichen“/„Planen“/„Privat“ eine Einreichung zur Prüfung.
+        $workflow = ContentWorkflow::instance();
+        $currentStatus = (string) ($existing->status ?? '');
+        $workflowAuthorId = $id > 0 ? (int) ($existingPost['author_id'] ?? 0) : $userId;
+        $canPublishPost = $workflow->canPublish(
+            ContentWorkflow::TYPE_POST,
+            $userId,
+            $workflowAuthorId,
+            null,
+            $currentStatus === ContentStatus::PENDING ? $workflow->lastSubmitterId(ContentWorkflow::TYPE_POST, $id) : 0
+        );
+        $statusDecision = ContentWorkflow::resolveSaveStatus($status, $currentStatus, $canPublishPost);
+        $status = $statusDecision['status'];
+        $submittedForReview = $statusDecision['downgraded'];
+        if ($submittedForReview) {
+            $publishIntent = '';
+        }
+        $workflowComment = ContentWorkflow::cleanComment(is_scalar($post['workflow_comment'] ?? null) ? (string) $post['workflow_comment'] : '');
         $treatAsNewPublishedAt = $id > 0 && $treatUpdateAsNew ? $contentUpdatedAtInput['value'] : null;
 
         $checklistError = $this->checkPublishChecklist(
@@ -1031,6 +1062,14 @@ class PostsModule
         if (is_array($filteredPayload)) {
             $savePayload = array_merge($savePayload, $filteredPayload);
         }
+        // Auch ein Filter darf das Freigaberecht nicht umgehen.
+        $filteredStatus = (string) ($savePayload['status'] ?? $status);
+        if (!ContentStatus::isEditable($filteredStatus)) {
+            $filteredStatus = $status;
+        }
+        $filteredDecision = ContentWorkflow::resolveSaveStatus($filteredStatus, $currentStatus, $canPublishPost);
+        $savePayload['status'] = $filteredDecision['status'];
+        $submittedForReview = $submittedForReview || $filteredDecision['downgraded'];
 
         try {
             if ($id > 0) {
@@ -1122,11 +1161,12 @@ class PostsModule
                 );
                 Hooks::doAction('cms_after_post_save', $id, $savePayload, $post);
                 $revision = $this->recordPostRevision($id, $revisionType, $userId);
+                $workflowAction = $workflow->recordTransition(ContentWorkflow::TYPE_POST, $id, $currentStatus, (string) $savePayload['status'], $userId, $workflowComment);
                 // Autosave betrifft nur Entwürfe (nicht öffentlich) – kein minütliches Leeren des gesamten Caches.
                 if (!$isAutosave) {
                     $this->clearContentCacheIfEnabled('post_update', $id);
                 }
-                return ['success' => true, 'id' => $id, 'message' => $this->appendRevisionWarning($this->buildSaveMessage('Beitrag aktualisiert.', $publishIntent, $resolvedPublishedAt), $revision), 'revision' => $revision];
+                return ['success' => true, 'id' => $id, 'status' => (string) $savePayload['status'], 'workflow_action' => $workflowAction, 'message' => $this->appendRevisionWarning($this->appendWorkflowNotice($this->buildSaveMessage('Beitrag aktualisiert.', $publishIntent, $resolvedPublishedAt), $submittedForReview, $workflowAction), $revision), 'revision' => $revision];
             } else {
                 $resolvedPublishedAt = $this->resolveTargetPublishedAt((string) $savePayload['status'], $savePayload['published_at'], null, $publishIntent, null);
                 $checklistError = $this->checkPublishChecklist(
@@ -1175,8 +1215,9 @@ class PostsModule
                 $this->syncPostCategories($newId, $assignedCategoryIds !== [] ? $assignedCategoryIds : ($savePayload['category_id'] !== null ? [(int) $savePayload['category_id']] : []));
                 Hooks::doAction('cms_after_post_save', $newId, $savePayload, $post);
                 $revision = $this->recordPostRevision($newId, $revisionType, $userId);
+                $workflowAction = $workflow->recordTransition(ContentWorkflow::TYPE_POST, $newId, '', (string) $savePayload['status'], $userId, $workflowComment);
                 $this->clearContentCacheIfEnabled('post_create', $newId);
-                return ['success' => true, 'id' => $newId, 'message' => $this->appendRevisionWarning($this->buildSaveMessage('Beitrag erstellt.', $publishIntent, $resolvedPublishedAt), $revision), 'revision' => $revision];
+                return ['success' => true, 'id' => $newId, 'status' => (string) $savePayload['status'], 'workflow_action' => $workflowAction, 'message' => $this->appendRevisionWarning($this->appendWorkflowNotice($this->buildSaveMessage('Beitrag erstellt.', $publishIntent, $resolvedPublishedAt), $submittedForReview, $workflowAction), $revision), 'revision' => $revision];
             }
         } catch (\Throwable $e) {
             return $this->failResult(
@@ -1186,6 +1227,22 @@ class PostsModule
                 ['post_id' => $id, 'status' => $status, 'category_id' => $categoryId, 'user_id' => $userId]
             );
         }
+    }
+
+    private function appendWorkflowNotice(string $message, bool $submittedForReview, ?string $workflowAction): string
+    {
+        if ($submittedForReview) {
+            return $message . ' ' . (ContentWorkflow::instance()->isSecondPersonRequired()
+                ? 'Zur Prüfung eingereicht – eine zweite Person muss den Beitrag freigeben.'
+                : 'Zur Prüfung eingereicht – Ihnen fehlt das Recht zum Veröffentlichen.');
+        }
+
+        return match ($workflowAction) {
+            ContentWorkflow::ACTION_SUBMITTED => $message . ' Zur Prüfung eingereicht.',
+            ContentWorkflow::ACTION_APPROVED => $message . ' Freigegeben.',
+            ContentWorkflow::ACTION_RETURNED => $message . ' Zurückgegeben.',
+            default => $message,
+        };
     }
 
     /**
@@ -1432,6 +1489,50 @@ class PostsModule
     }
 
     /**
+     * Freigeben/Zurückgeben/Kommentieren aus Editor oder Liste.
+     *
+     * @return array<string, mixed>
+     */
+    public function workflowAction(string $action, int $id, string $comment): array
+    {
+        if ($id <= 0 || !$this->canAccessPost($id)) {
+            return ['success' => false, 'error' => 'Sie dürfen diesen Beitrag nicht bearbeiten.'];
+        }
+        $workflow = ContentWorkflow::instance();
+        $userId = $this->currentUserId();
+        $result = match ($action) {
+            'approve' => $workflow->approve(ContentWorkflow::TYPE_POST, $id, $userId, $comment),
+            'return' => $workflow->returnToAuthor(ContentWorkflow::TYPE_POST, $id, $userId, $comment),
+            'submit' => $workflow->submit(ContentWorkflow::TYPE_POST, $id, $userId, $comment),
+            'comment' => $workflow->addComment(ContentWorkflow::TYPE_POST, $id, $userId, $comment),
+            'preview_link' => $workflow->createPreviewLink(ContentWorkflow::TYPE_POST, $id, $userId),
+            'preview_revoke' => ['success' => true, 'message' => $workflow->revokePreviewLinks(ContentWorkflow::TYPE_POST, $id, $userId) . ' Vorschau-Link(s) widerrufen.'],
+            default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
+        };
+        if (!empty($result['success']) && in_array($action, ['approve', 'return', 'submit'], true)) {
+            if ($action !== 'submit') {
+                $this->recordPostRevision($id, PostRevisionService::TYPE_MANUAL, $userId);
+            }
+            $this->clearContentCacheIfEnabled('post_workflow_' . $action, $id);
+            AuditLogger::instance()->log(
+                AuditLogger::CAT_CONTENT,
+                'post.workflow.' . $action,
+                sprintf('Beitrag #%d: %s', $id, ContentWorkflow::actionLabel(match ($action) {
+                    'approve' => ContentWorkflow::ACTION_APPROVED,
+                    'return' => ContentWorkflow::ACTION_RETURNED,
+                    default => ContentWorkflow::ACTION_SUBMITTED,
+                })),
+                'posts',
+                $id,
+                [],
+                'info'
+            );
+        }
+
+        return $result;
+    }
+
+    /**
      * Bulk-Aktion
      */
     public function bulkAction(string $action, array $ids, array $payload = []): array
@@ -1487,6 +1588,17 @@ class PostsModule
         try {
             switch ($action) {
                 case 'publish':
+                    // Vier-Augen-Prinzip: Beiträge, die dieses Konto nicht freigeben darf, werden eingereicht statt veröffentlicht.
+                    $workflow = ContentWorkflow::instance();
+                    $workflowUserId = $this->currentUserId();
+                    [$ids, $submitIds] = $workflow->partitionByPublishRight(ContentWorkflow::TYPE_POST, $ids, $workflowUserId);
+                    $submittedCount = $workflow->submitMany(ContentWorkflow::TYPE_POST, $submitIds, $workflowUserId);
+                    if ($ids === []) {
+                        return $submittedCount > 0
+                            ? ['success' => true, 'message' => $submittedCount . ' Beitrag/Beiträge zur Prüfung eingereicht – eine zweite Person muss freigeben.']
+                            : ['success' => false, 'error' => 'Keine Beiträge veröffentlicht – Ihnen fehlt für die Auswahl das Freigaberecht.'];
+                    }
+
                     // Veröffentlichungs-Checkliste wie im Editor: Entwürfe/private Beiträge ohne Beitragsbild,
                     // passende Meta-Beschreibung oder Kategorie bleiben unverändert.
                     [$publishIds, $skippedTitles] = $this->partitionPostsByPublishChecklist($ids);
@@ -1499,20 +1611,27 @@ class PostsModule
 
                     $publishPlaceholders = implode(',', array_fill(0, count($publishIds), '?'));
                     $changedIds = $this->postIdsWithOtherStatus($publishIds, 'published');
+                    $previousStatuses = $workflow->statusMap(ContentWorkflow::TYPE_POST, $changedIds);
                     $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'published', updated_at, NOW()), status = 'published', published_at = COALESCE(published_at, NOW()) WHERE id IN ({$publishPlaceholders})", $publishIds);
                     $this->afterBulkStatusChange($changedIds, 'published', 'publish');
+                    $workflow->recordBulkTransitions(ContentWorkflow::TYPE_POST, $previousStatuses, 'published', $workflowUserId);
                     $this->clearContentCacheIfEnabled('post_bulk_publish', (int) $publishIds[0]);
                     $message = count($publishIds) . ' Beitrag/Beiträge veröffentlicht.';
                     if ($skippedTitles !== []) {
                         $message .= ' Nicht veröffentlicht, weil die Checkliste unvollständig ist: ' . $this->formatTitleList($skippedTitles) . '.';
+                    }
+                    if ($submittedCount > 0) {
+                        $message .= ' ' . $submittedCount . ' weitere(r) zur Prüfung eingereicht.';
                     }
 
                     return ['success' => true, 'message' => $message];
 
                 case 'draft':
                     $changedIds = $this->postIdsWithOtherStatus($ids, 'draft');
+                    $previousStatuses = ContentWorkflow::instance()->statusMap(ContentWorkflow::TYPE_POST, $changedIds);
                     $this->db->execute("UPDATE {$this->prefix}posts SET updated_at = IF(status <=> 'draft', updated_at, NOW()), status = 'draft' WHERE id IN ({$placeholders})", $ids);
                     $this->afterBulkStatusChange($changedIds, 'draft', 'draft');
+                    ContentWorkflow::instance()->recordBulkTransitions(ContentWorkflow::TYPE_POST, $previousStatuses, 'draft', $this->currentUserId());
                     $this->clearContentCacheIfEnabled('post_bulk_draft', (int) $ids[0]);
                     return ['success' => true, 'message' => count($ids) . ' Beitrag/Beiträge als Entwurf gesetzt.'];
 
@@ -2338,8 +2457,9 @@ class PostsModule
             return ['success' => false, 'error' => TrashSupport::t('trash.edit.blocked')];
         }
 
-        if ($status === 'draft') {
-            $post['status'] = 'draft';
+        if ($status === 'draft' || $status === ContentStatus::PENDING) {
+            // Entwürfe und eingereichte Beiträge sind nicht öffentlich: direkt speichern, Status bleibt.
+            $post['status'] = $status;
             unset($post['publish_intent'], $post['treat_update_as_new']);
             $result = $this->save($post, $userId, PostRevisionService::TYPE_AUTOSAVE);
             $result['mode'] = 'saved';

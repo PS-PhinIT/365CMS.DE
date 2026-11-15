@@ -430,7 +430,7 @@ final class ApiRouter
 
         $where = [];
         $params = [];
-        if ($status !== '' && in_array($status, ['published', 'draft', 'private'], true)) {
+        if ($status !== '' && in_array($status, ['published', 'pending', 'draft', 'private'], true)) {
             $where[] = 'p.status = ?';
             $params[] = $status;
         }

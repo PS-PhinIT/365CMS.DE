@@ -147,10 +147,10 @@ final class CoreCatalog
             ['id' => 'system.updates', 'label' => 'Updates', 'route' => '/admin/updates', 'icon' => 'refresh', 'caps' => self::SETTINGS, 'file' => 'admin/updates.php', 'page' => 'updates', 'badge' => 'updates'],
 
             // ── Inhalte ─────────────────────────────────────────────────────────────
-            ['id' => 'content.posts', 'label' => 'Beiträge', 'route' => '/admin/posts', 'icon' => 'article', 'caps' => ['edit_all_posts', 'edit_own_posts', 'posts.view'], 'file' => 'admin/posts.php', 'page' => 'posts'],
+            ['id' => 'content.posts', 'label' => 'Beiträge', 'route' => '/admin/posts', 'icon' => 'article', 'caps' => ['edit_all_posts', 'edit_own_posts', 'posts.view'], 'file' => 'admin/posts.php', 'page' => 'posts', 'badge' => 'content_pending_posts'],
             ['id' => 'content.post-categories', 'label' => 'Kategorien', 'route' => '/admin/post-categories', 'icon' => 'category', 'caps' => ['edit_all_posts'], 'file' => 'admin/post-categories.php', 'page' => 'post-categories'],
             ['id' => 'content.post-tags', 'label' => 'Tags', 'route' => '/admin/post-tags', 'icon' => 'tags', 'caps' => ['edit_all_posts'], 'file' => 'admin/post-tags.php', 'page' => 'post-tags'],
-            ['id' => 'content.pages', 'label' => 'Seiten', 'route' => '/admin/pages', 'icon' => 'file', 'caps' => ['manage_pages'], 'file' => 'admin/pages.php', 'page' => 'pages'],
+            ['id' => 'content.pages', 'label' => 'Seiten', 'route' => '/admin/pages', 'icon' => 'file', 'caps' => ['manage_pages'], 'file' => 'admin/pages.php', 'page' => 'pages', 'badge' => 'content_pending_pages'],
             ['id' => 'content.hub-sites', 'label' => 'Hub-Sites', 'route' => '/admin/hub-sites', 'icon' => 'world', 'caps' => self::SETTINGS, 'file' => 'admin/hub-sites.php', 'page' => 'hub-sites'],
             ['id' => 'content.site-tables', 'label' => 'Tabellen', 'route' => '/admin/site-tables', 'icon' => 'table', 'caps' => self::SETTINGS, 'file' => 'admin/site-tables.php', 'page' => 'site-tables'],
             ['id' => 'content.toc', 'label' => 'Inhaltsverzeichnis', 'route' => '/admin/table-of-contents', 'icon' => 'list-numbers', 'caps' => self::SETTINGS, 'file' => 'admin/table-of-contents.php', 'page' => 'table-of-contents'],

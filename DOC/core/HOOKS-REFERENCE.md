@@ -71,6 +71,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_prepare_hub_settings_payload` | Filter | `$settings, $post, $id` |
 | `cms_prepare_hub_cards_payload` | Filter | `$cards, $post, $id` |
 | `cms_after_hub_save` | Action | `$id, $settings, $cards, $post` |
+| `cms_content_submitted` | Action | `string $type, int $id, int $userId, string $comment`; Beitrag/Seite zur Prüfung eingereicht (seit 4.1.0, [REVIEW.md](../admin/pages-posts/REVIEW.md)) |
+| `cms_content_approved` | Action | `string $type, int $id, int $userId, string $comment`; eingereichter Inhalt freigegeben (seit 4.1.0) |
+| `cms_content_returned` | Action | `string $type, int $id, int $userId, string $comment`; eingereichter Inhalt mit Begründung zurückgegeben (seit 4.1.0) |
 
 ### Lokalisierung, Hub-Sites, Tabellen
 

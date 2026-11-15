@@ -204,7 +204,8 @@ final class EditorialCalendarService
      */
     public static function classify(string $type, string $status, ?string $publishedAt, ?string $plannedAt, string $nowServer): ?string
     {
-        if ($status === 'draft') {
+        // Eingereichte Inhalte (Vier-Augen-Prinzip) sind wie Entwürfe noch nicht veröffentlicht.
+        if ($status === 'draft' || $status === 'pending') {
             $plannedAt = trim((string) $plannedAt);
 
             return $plannedAt !== '' && !str_starts_with($plannedAt, '0000-00-00') ? self::KIND_PLANNED : null;
@@ -462,8 +463,8 @@ final class EditorialCalendarService
                 break;
             case self::KIND_PLANNED:
                 $dateExpr = "{$alias}.planned_at";
-                $where = ["{$alias}.status = ?"];
-                $params = ['draft'];
+                $where = ["{$alias}.status IN (?, ?)"];
+                $params = ['draft', 'pending'];
                 break;
             default:
                 $dateExpr = "COALESCE({$alias}.published_at, {$alias}.created_at)";
@@ -620,7 +621,7 @@ final class EditorialCalendarService
             }
         }
 
-        $expectedStatus = $decision === self::MOVE_REPLAN ? 'draft' : 'published';
+        $expectedStatus = $decision === self::MOVE_REPLAN ? (string) $row->status : 'published';
 
         try {
             if ($decision === self::MOVE_REPLAN) {
@@ -900,12 +901,12 @@ final class EditorialCalendarService
              ['published', $now, $from, $until]],
             ["SELECT 'post' AS content_type, 'planned' AS kind, x.id, x.title, x.title_en, x.planned_at AS event_at
               FROM {$this->prefix}posts x
-              WHERE x.status = ? AND x.trashed_at IS NULL AND x.planned_at >= ? AND x.planned_at < ?{$authorSql}",
-             ['draft', $from, $until]],
+              WHERE x.status IN (?, ?) AND x.trashed_at IS NULL AND x.planned_at >= ? AND x.planned_at < ?{$authorSql}",
+             ['draft', 'pending', $from, $until]],
             ["SELECT 'page' AS content_type, 'planned' AS kind, x.id, x.title, x.title_en, x.planned_at AS event_at
               FROM {$this->prefix}pages x
-              WHERE x.status = ? AND x.trashed_at IS NULL AND x.planned_at >= ? AND x.planned_at < ?{$authorSql}",
-             ['draft', $from, $until]],
+              WHERE x.status IN (?, ?) AND x.trashed_at IS NULL AND x.planned_at >= ? AND x.planned_at < ?{$authorSql}",
+             ['draft', 'pending', $from, $until]],
         ];
 
         $sql = [];

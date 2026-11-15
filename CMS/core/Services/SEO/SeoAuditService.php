@@ -35,7 +35,7 @@ final class SeoAuditService
                     sm.hreflang_group
              FROM {$this->prefix}pages p
              LEFT JOIN {$this->prefix}seo_meta sm ON sm.content_type = 'page' AND sm.content_id = p.id
-             WHERE p.status IN ('published', 'draft', 'private')
+             WHERE p.status IN ('published', 'draft', 'pending', 'private')
              ORDER BY p.updated_at DESC
              LIMIT {$limit}"
         ) ?: [];

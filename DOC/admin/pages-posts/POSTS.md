@@ -8,7 +8,8 @@
 Blog posts are managed at `/admin/posts` (`CMS/admin/posts.php` → `CMS/admin/modules/posts/PostsModule.php`, views under `CMS/admin/views/posts/`). Categories (`/admin/post-categories`) and tags (`/admin/post-tags`) reuse the same module.
 
 - Access: `edit_all_posts` (all posts), `edit_own_posts` (own posts only), or `posts.view` (read). Categories and tags require `edit_all_posts`.
-- List filters: `status=published|scheduled|draft|private`, `category`, `q`.
+- List filters: `status=published|scheduled|pending|draft|private`, `category`, `q`.
+- Four-eyes review (4.1.0): status `pending`, "Zur Prüfung einreichen", approve/return with history, preview links – see [REVIEW.md](REVIEW.md).
 - POST actions: `save`, `delete`, `bulk`, `save_category`, `delete_category`, `switch_locale`, `copy_de_to_en`.
 - Bulk actions: `delete`, `publish`, `draft`, `set_category`, `clear_category`, `set_author_display_name`, `clear_author_display_name`.
 - Scheduling: a published post with `published_at` in the future is listed as *scheduled* and stays hidden from the frontend, archives, search and sitemap until that time (`cms_post_publication_where()`).
@@ -46,7 +47,7 @@ Der Zugriff setzt zusätzlich `isAdmin()` voraus (Admin-Bereich).
 
 ### Beitragsliste
 
-- **Statuskacheln:** Gesamt, veröffentlicht, **geplant**, Entwürfe, privat.
+- **Statuskacheln:** Gesamt, veröffentlicht, **geplant**, **zur Prüfung** (seit 4.1.0, [REVIEW.md](REVIEW.md)), Entwürfe, privat.
 - **Filter:** `?status=` (`published`, `scheduled`, `draft`, `private`), `?category=<id>`, `?q=` (Titel/Slug).
 - „Geplant“ = Status `published` **und** `published_at` liegt in der Zukunft.
 - **Sammelaktionen:** `publish`, `draft`, `set_category`, `clear_category`, `set_author_display_name`, `clear_author_display_name`, `delete`.
@@ -166,4 +167,4 @@ Die Beitrags-URL folgt der Struktur aus *Einstellungen → Inhalte* (`setting_po
 
 ### Verwandte Dokumente
 
-[PAGES.md](PAGES.md) · [COMMENTS.md](COMMENTS.md) · [SETTINGS.md](SETTINGS.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)
+[PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [COMMENTS.md](COMMENTS.md) · [SETTINGS.md](SETTINGS.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)

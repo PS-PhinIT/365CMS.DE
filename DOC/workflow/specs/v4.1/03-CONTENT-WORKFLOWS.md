@@ -26,6 +26,17 @@ Rechte). Festlegungen für 4.1.0:
 - **Webhook-Ereignis** `content.submitted` (Bereich 4b).
 - Tests: `TESTS/content-workflow/run.php` – Durchsetzung im Speichern (auch über `post-editor-api.php`), Statusübergänge, Rechte-Migration, Benachrichtigungsempfänger, Vorschau-Link (signiert, Ablauf, widerrufbar).
 
+**Umsetzung (15.11.2026)** – Handbuch [REVIEW.md](../../../admin/pages-posts/REVIEW.md), Tests `TESTS/content-workflow`:
+
+- Befund bei der Umsetzung: `/admin` ist nur für die Rolle `admin` erreichbar, und Admins haben alle Rechte. Die rechtebasierte Sperre allein hätte deshalb nie gegriffen. Entscheidung: zusätzliche Einstellung **„Veröffentlichung braucht eine zweite Person“** (`setting_content_review_second_person`) – Autor und einreichende Person können nicht selbst freigeben, auch als Admin. Der Weg über `posts.publish`/`pages.publish` ist trotzdem vollständig umgesetzt und greift, sobald andere Rollen Admin-Zugang erhalten.
+- Statt „Autoren brauchen eine Freigabe“ als eigene Einstellung: Das Recht wird unter *Rollen & Rechte* entzogen. Die Rechte-Migration (in `SchemaManager::ensureFeatureSchema()`, idempotent, nur ohne gespeicherten Eintrag) vergibt `posts.publish`/`pages.publish` an `editor` und `posts.publish` an `author`.
+- Bereits veröffentlichte oder private Inhalte bleiben beim Bearbeiten veröffentlicht (keine „Revision zur Prüfung“) – **offene Entscheidung** aus A.8, bewusst auf später verschoben.
+- Badges je Typ: `content_pending_posts`, `content_pending_pages` (statt eines gemeinsamen `content_pending`), gezählt wird nur, was das angemeldete Konto freigeben dürfte.
+- Durchsetzung zusätzlich nach den Filtern `cms_prepare_post_save_payload`/`cms_prepare_page_save_payload`, im Autosave (über `PostsModule::autosave()` → `save()`) und in der Sammelaktion „Veröffentlichen“ (eigene Entwürfe werden eingereicht).
+- Vorschau-Links: 64-stelliger Hex-Token, gespeichert als SHA-256, 7 Tage, `Referrer-Policy: no-referrer`; Ausgabe über `ThemeRouter::renderPreview()` mit den Vorlagen `blog-single`/`page`.
+- Webhook-Ereignis `content.submitted` folgt mit Bereich 4b (Hook `cms_content_submitted` ist vorhanden).
+- Import (*Inhalte & Daten*) übernimmt den Status der Datei; Redaktionskalender zeigt eingereichte Inhalte mit „Geplantem Datum“.
+
 ### 3b. Wiederverwendbare Editor.js-Blöcke (Synced Snippets)
 
 | Punkt | Festlegung |

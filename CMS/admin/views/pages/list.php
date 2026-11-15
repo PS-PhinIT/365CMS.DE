@@ -32,6 +32,7 @@ $trashCount = (int)($counts['trash'] ?? 0);
 
 $statusLabels = [
     'published' => ['Veröffentlicht', 'bg-green-lt text-green'],
+    'pending'   => ['Zur Prüfung', 'bg-orange-lt text-orange'],
     'draft'     => ['Entwurf',        'bg-yellow-lt text-yellow'],
     'private'   => ['Privat',         'bg-purple-lt text-purple'],
     'trash'     => [\CMS\Services\Trash\TrashSupport::t('trash.list.status_label'), 'bg-red-lt text-red'],
@@ -58,6 +59,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                 <div class="content-listing-header__meta">
                     <span><?php echo (int)($counts['total'] ?? 0); ?> Einträge</span>
                     <span>Veröffentlicht: <?php echo (int)($counts['published'] ?? 0); ?></span>
+                    <span><a href="/admin/pages?status=pending" class="<?php echo $filter === 'pending' ? 'fw-semibold' : 'text-reset'; ?>">Zur Prüfung: <?php echo (int)($counts['pending'] ?? 0); ?></a></span>
                     <span>Entwurf: <?php echo (int)($counts['drafts'] ?? 0); ?></span>
                     <span>Privat: <?php echo (int)($counts['private'] ?? 0); ?></span>
                     <span><a href="<?= $pagesAdminBaseUrl ?>?status=trash" class="<?= $isTrashView ? 'fw-semibold' : 'text-reset' ?>"><?= $tt('trash.list.status_label') ?>: <?= $trashCount ?></a></span>
@@ -103,6 +105,7 @@ $pagesHasMultipleAuthors = count($pagesAuthorKeys) > 1;
                         <select id="pagesStatusFilter" name="status" form="pagesFilterForm" class="form-select form-select-sm js-pages-filter-submit">
                             <option value="">Alle Status</option>
                             <option value="published"<?= $filter === 'published' ? ' selected' : '' ?>>Veröffentlicht</option>
+                            <option value="pending"<?= $filter === 'pending' ? ' selected' : '' ?>>Zur Prüfung</option>
                             <option value="draft"<?= $filter === 'draft' ? ' selected' : '' ?>>Entwurf</option>
                             <option value="private"<?= $filter === 'private' ? ' selected' : '' ?>>Privat</option>
                             <option value="trash"<?= $isTrashView ? ' selected' : '' ?>><?= $tt('trash.list.filter_option', $trashCount) ?></option>
