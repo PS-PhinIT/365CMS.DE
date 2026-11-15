@@ -209,6 +209,9 @@ final class WebhookService
             "UPDATE {$this->prefix}webhook_endpoints SET name = ?, url = ?, events_json = ?, is_active = ?{$reset}, updated_at = ? WHERE id = ?",
             [$name, trim($url), json_encode($events), $active ? 1 : 0, $this->now(), $id]
         );
+        if (!$active) {
+            $this->abandonPending($id, 'Empfänger von Hand deaktiviert.');
+        }
 
         return ['success' => true];
     }
@@ -378,6 +381,15 @@ final class WebhookService
             return $this->finish($delivery, $endpoint, $status, 'Empfänger meldet 410 Gone – deaktiviert.', true);
         }
         $error = $status > 0 ? 'HTTP ' . $status : self::cleanError((string) ($response['error'] ?? 'Keine Antwort.'));
+        // FUN-410-22: Ein fehlgeschlagenes Testereignis wird nicht wiederholt und zählt nicht zur Abschaltung.
+        if ((string) $delivery->event === self::TEST_EVENT) {
+            $this->db->execute(
+                "UPDATE {$this->prefix}webhook_deliveries SET status = 'dead', attempts = attempts + 1, response_status = ?, last_error = ?, next_attempt_at = NULL WHERE id = ?",
+                [$status ?: null, mb_substr($error, 0, 500), (int) $delivery->id]
+            );
+
+            return 'dead';
+        }
 
         return $this->finish($delivery, $endpoint, $status, $error, false);
     }
@@ -484,10 +496,21 @@ final class WebhookService
             "UPDATE {$this->prefix}webhook_endpoints SET is_active = 0, disabled_reason = ?, updated_at = ? WHERE id = ? AND is_active = 1",
             [$reason, $this->now(), $id]
         );
+        // FUN-410-23: Offene Zustellungen eines abgeschalteten Empfängers aufgeben – sonst gingen sie beim
+        // Wiedereinschalten (ggf. Tage später) alle auf einmal hinaus.
+        $this->abandonPending($id, 'Empfänger deaktiviert: ' . mb_substr($reason, 0, 200));
         try {
             Hooks::doAction('cms_webhook_endpoint_disabled', $id, $reason);
         } catch (\Throwable) {
         }
+    }
+
+    private function abandonPending(int $endpointId, string $reason): void
+    {
+        $this->db->execute(
+            "UPDATE {$this->prefix}webhook_deliveries SET status = 'dead', last_error = COALESCE(last_error, ?), next_attempt_at = NULL WHERE endpoint_id = ? AND status = 'pending'",
+            [$reason, $endpointId]
+        );
     }
 
     private function storeNewSecret(int $id): string

@@ -219,7 +219,13 @@ T::run('Rekursionsschutz', static function (): void {
     $a2 = (int) $s->save(0, 'A2', rbDoc(['Ebene4']), null, 1)['id'];
     $b2 = (int) $s->save(0, 'B2', rbDoc(['Ebene3', $a2]), null, 1)['id'];
     $c = (int) $s->save(0, 'C', rbDoc(['Ebene2', $b2]), null, 1)['id'];
-    $d = (int) $s->save(0, 'D', rbDoc(['Ebene1', $c]), null, 1)['id'];
+    // FUN-410-05: eine vierte Ebene wird schon beim Speichern abgelehnt …
+    $tooDeep = $s->save(0, 'D', rbDoc(['Ebene1', $c]), null, 1);
+    T::check(empty($tooDeep['success']) && str_contains((string) ($tooDeep['error'] ?? ''), 'zu tief verschachtelt'), 'vierte Ebene wird beim Speichern abgelehnt');
+    T::check(empty($s->save($a2, 'A2', rbDoc(['Ebene4', $a]), null, 1)['success']), 'auch, wenn eine eingebundene Vorlage nachträglich tiefer würde');
+    // … ein Import an der Prüfung vorbei wird beim Rendern trotzdem abgeschnitten.
+    $f['db']->execute('INSERT INTO cms_reusable_blocks (title, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', ['D', rbDoc(['Ebene1', $c]), 'active', '2026-11-15 10:00:00', '2026-11-15 10:00:00']);
+    $d = (int) $f['db']->get_var('SELECT MAX(id) FROM cms_reusable_blocks');
     $deep = $s->render($d, 'de');
     T::check(str_contains($deep, 'Ebene3') && !str_contains($deep, 'Ebene4'), 'mehr als ' . S::MAX_DEPTH . ' Ebenen werden abgeschnitten');
     T::same('', $s->render($a, 'de') === '' ? 'x' : '', 'nach einem Rekursionsabbruch ist der Stapel wieder leer (Folge-Rendern klappt)');

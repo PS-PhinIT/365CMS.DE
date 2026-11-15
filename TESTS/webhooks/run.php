@@ -214,6 +214,13 @@ T::run('Wiederholungen und Deaktivieren', static function (): void {
     T::same(0, $g['service']->endpoint((int) $e2['id'])['consecutive_failures'], 'Reaktivieren setzt den Fehlerzähler zurück');
     T::check($g['service']->sendTest((int) $e2['id'])['success'], 'Test-Ereignis wird sofort zugestellt');
     T::same('webhook.test', $g['sent'][count($g['sent']) - 1]['headers']['X-365CMS-Event'], 'Test-Ereignis');
+    T::same(0, (int) $g['db']->get_var("SELECT COUNT(*) FROM cms_webhook_deliveries WHERE endpoint_id = ? AND status = 'pending' AND event <> 'webhook.test'", [(int) $e2['id']]), 'FUN-410-23: offene Zustellungen eines abgeschalteten Empfängers wurden aufgegeben (kein Schwall beim Reaktivieren)');
+
+    // FUN-410-22: fehlgeschlagener Test wird nicht wiederholt und zählt nicht zur Abschaltung.
+    $g['responses']['status'] = 500;
+    T::check(empty($g['service']->sendTest((int) $e2['id'])['success']), 'fehlgeschlagener Test meldet den Fehler');
+    T::same('dead', (string) $g['db']->get_var("SELECT status FROM cms_webhook_deliveries WHERE event = 'webhook.test' ORDER BY id DESC LIMIT 1"), 'Test-Zustellung wird nicht erneut versucht');
+    T::same(0, $g['service']->endpoint((int) $e2['id'])['consecutive_failures'], 'Test zählt nicht zum Fehlerzähler');
 });
 
 T::run('Löschfrist', static function (): void {

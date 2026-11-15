@@ -93,6 +93,21 @@ Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen
 | **4.1.0** | 🔵 docs | Datenbank / Kollation (DB-410-03) | Hinweis: Tabellen aus Installationen bis 3.5.x tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci`. Der Core vergleicht keine Textspalten über diese Grenze; eigene Plugins sollten bei solchen JOINs `COLLATE utf8mb4_unicode_ci` angeben. Keine automatische Konvertierung. |
 | **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/schema-upgrade` (optional mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst übersprungen): Neuinstallation und Upgrades gegen eine echte MySQL/MariaDB. Erweitert: `TESTS/schema-v26`, `TESTS/release-3.4.0`. |
 
+#### 🧩 Release-Prüfung 4.1.0: Funktionen (PR #3)
+
+Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends gegen MariaDB ohne PHP-Fehler; dazu eine statische Prüfung aller 4.1.0-Funktionen. Nachweise und offene Funktionslücken: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.0** | 🔴 fix | Updates / Repository (FUN-410-01) | Update-Prüfung (Rückfall über GitHub), Doku-Sync und Changelog-Link zeigen auf `PS-PhinIT/365CMS.DE` statt auf die alte Adresse `PS-easyIT/365CMS.DE`. `Http\Client` folgt keinen Weiterleitungen, deshalb schlugen diese Abrufe fehl. Ein gespeicherter Altwert wird umgestellt. |
+| **4.1.0** | 🔴 fix | Redaktion / Freigabe (FUN-410-02 … -04, -11 … -13) | „Freigeben“ prüft die Veröffentlichungs-Checkliste. Beim Einschalten von „Veröffentlichung braucht eine zweite Person“ warnt das CMS, wenn weniger als zwei Konten veröffentlichen dürfen. Die Sammelaktion „Entwurf“ für eingereichte Inhalte ist im Verlauf erkennbar. Einreichen prüft den Zustandswechsel. Vorschau-Links gibt es nur für noch nicht öffentliche Inhalte. Das Zurückstufen durch Ablauf meldet den Statuswechsel. |
+| **4.1.0** | 🔴 fix | Redaktion / Block-Vorlagen (FUN-410-05, -06) | Mehr als drei Ebenen werden schon beim Speichern abgelehnt (bisher fehlten sie still im Frontend). Das Löschen einer Vorlage aktualisiert auch mittelbar verknüpfte Inhalte. |
+| **4.1.0** | 🔴 fix | Redaktion / Ablaufdaten (FUN-410-08, -09) | Ein abgelaufener, wieder veröffentlichter Inhalt läuft erneut ab (bisher nie). Die Einstellung „410 Gone“ gilt auch für Wissensdatenbank-Einträge. |
+| **4.1.0** | 🔴 fix | Medien / AVIF (FUN-410-14 … -16) | Der Papierkorb nimmt AVIF-Fassungen mit (bisher blieben sie öffentlich liegen). `<picture>` gibt keine Fassung aus, die älter als das Original ist. GIFs behalten ihre Animation (keine statische AVIF-/WebP-Quelle). Die AVIF-Unterstützung wird ohne gespeichertes Ergebnis einmal geprüft, statt bis zum Speichern der Medien-Einstellungen auszufallen. |
+| **4.1.0** | 🔴 fix | Zahlungen, Webhooks, Offsite (FUN-410-20, -22 … -26) | Eine Verlängerung reaktiviert kein gekündigtes Abo mehr. Ein fehlgeschlagenes Webhook-Testereignis wird nicht wiederholt. Offene Zustellungen eines abgeschalteten Empfängers werden aufgegeben. Offsite-Uploads laufen ohne Zeitlimit, versuchen jedes Teil bis zu dreimal, halten die Grenze von 10 000 Teilen ein und holen Backups nach, die bei unvollständiger Konfiguration entstanden. |
+| **4.1.0** | 🔴 fix | Papierkorb, Tabellen (FUN-410-29 … -32) | Endgültig gelöschte Hub-Sites verlassen den Verwendungsindex der Medien. Die Seite der Barrierefreiheitserklärung ist gegen endgültiges Löschen geschützt. Freigabeverlauf und Vorschau-Links werden mitgelöscht. Die Seite *Tabellen* kann keine Hub-Sites mehr laden, löschen oder umwandeln; ihre Liste filtert in SQL. |
+| **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/release-4.1.0`. Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`. |
+
 #### 🔴 Fehlerbehebungen
 
 | Version | Typ | Bereich | Beschreibung |

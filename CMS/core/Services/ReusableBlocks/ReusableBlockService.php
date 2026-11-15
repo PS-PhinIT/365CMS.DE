@@ -190,6 +190,25 @@ final class ReusableBlockService
         return false;
     }
 
+    /**
+     * Längste Kette eingebundener Vorlagen ab $ids (jede Vorlage zählt eine Ebene). Zyklen sind vorher ausgeschlossen;
+     * $guard begrenzt die Rekursion trotzdem.
+     *
+     * @param list<int> $ids
+     */
+    public static function chainDepth(array $ids, callable $contentOf, int $guard = 10): int
+    {
+        $max = 0;
+        foreach (array_unique($ids) as $id) {
+            if ((int) $id <= 0 || $guard <= 0) {
+                continue;
+            }
+            $max = max($max, 1 + self::chainDepth(self::extractBlockIds($contentOf((int) $id)), $contentOf, $guard - 1));
+        }
+
+        return $max;
+    }
+
     public static function hasBlocks(?string $json): bool
     {
         $json = trim((string) $json);
@@ -461,6 +480,11 @@ final class ReusableBlockService
         if ($id > 0 && self::createsCycle($id, $included, fn (int $other): string => $this->combinedContent($other))) {
             return ['success' => false, 'error' => 'Die Vorlage würde sich über eine eingebundene Vorlage selbst einbinden.'];
         }
+        // FUN-410-05: Die Tiefe wird schon beim Speichern geprüft – sonst fehlen tiefere Ebenen im Frontend still.
+        $depth = ($id > 0 ? $this->ancestorDepth($id) : 0) + 1 + self::chainDepth($included, fn (int $other): string => $this->combinedContent($other));
+        if ($depth > self::MAX_DEPTH) {
+            return ['success' => false, 'error' => sprintf('Die Vorlage wäre zu tief verschachtelt (%d Ebenen, höchstens %d). Bitte eine Ebene entfernen.', $depth, self::MAX_DEPTH)];
+        }
 
         $now = $this->now();
         try {
@@ -537,6 +561,8 @@ final class ReusableBlockService
                 'error' => sprintf('Die Vorlage wird an %d Stelle(n) verwendet. Bitte das Löschen bestätigen – dort erscheint danach nichts mehr.', count($usages)),
             ];
         }
+        // FUN-410-06: auch mittelbar verknüpfte Inhalte (Beitrag → Vorlage B → diese Vorlage) neu indizieren.
+        $linked = $this->linkedContent($id);
         try {
             $this->db->execute("DELETE FROM {$this->prefix}reusable_block_revisions WHERE block_id = ?", [$id]);
             $this->db->execute("DELETE FROM {$this->prefix}reusable_blocks WHERE id = ?", [$id]);
@@ -550,7 +576,7 @@ final class ReusableBlockService
         }
         $this->fireHook('cms_reusable_block_deleted', $id);
         try {
-            ($this->onChanged)($id, array_map(static fn (array $u): array => ['type' => $u['type'], 'id' => $u['id']], $usages));
+            ($this->onChanged)($id, $linked);
         } catch (\Throwable $e) {
             $this->logWarning('Verknüpfte Inhalte konnten nach dem Löschen nicht aktualisiert werden.', ['block_id' => $id, 'exception' => $e->getMessage()]);
         }
@@ -670,6 +696,32 @@ final class ReusableBlockService
      *
      * @return list<array{type:string,id:int}>
      */
+    /**
+     * Wie viele Vorlagen-Ebenen liegen über $blockId (Vorlagen, die ihn – auch mittelbar – einbinden)?
+     */
+    private function ancestorDepth(int $blockId, int $guard = 10): int
+    {
+        if ($guard <= 0) {
+            return 0;
+        }
+        try {
+            $parents = array_map('intval', $this->db->get_col(
+                "SELECT DISTINCT content_id FROM {$this->prefix}reusable_block_usage WHERE content_type = ? AND block_id = ?",
+                [self::CONTENT_TYPE, $blockId]
+            ) ?: []);
+        } catch (\Throwable) {
+            return 0;
+        }
+        $max = 0;
+        foreach ($parents as $parent) {
+            if ($parent > 0 && $parent !== $blockId) {
+                $max = max($max, 1 + $this->ancestorDepth($parent, $guard - 1));
+            }
+        }
+
+        return $max;
+    }
+
     public function linkedContent(int $blockId): array
     {
         $result = [];

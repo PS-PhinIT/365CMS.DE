@@ -3,7 +3,7 @@
  * Update Service
  * 
  * Manages system, plugin and theme updates via GitHub API
- * Repository: https://github.com/PS-easyIT/365CMS.DE
+ * Repository: https://github.com/PS-PhinIT/365CMS.DE
  * 
  * @package CMSv2\Core\Services
  */
@@ -65,7 +65,8 @@ class UpdateService
     private HttpClient $httpClient;
     
     /** Fallback-Werte – werden von DB-Setting überschrieben, wenn vorhanden */
-    private const DEFAULT_GITHUB_REPO = 'PS-easyIT/365CMS.DE';
+    private const DEFAULT_GITHUB_REPO = 'PS-PhinIT/365CMS.DE';
+    private const LEGACY_GITHUB_REPO = 'PS-easyIT/365CMS.DE';
     private const DEFAULT_GITHUB_API = 'https://api.github.com';
     private const DEFAULT_CORE_UPDATE_URL = MarketplaceEndpoints::CORE_UPDATE_URL;
     private const CACHE_DURATION = 3600; // 1 hour
@@ -108,6 +109,11 @@ class UpdateService
                 "SELECT option_value FROM {$this->db->getPrefix()}settings WHERE option_name = 'update_github_repo'"
             );
             $this->githubRepo = (!empty($row['option_value'])) ? $row['option_value'] : self::DEFAULT_GITHUB_REPO;
+            // FUN-410-01: Das Projekt liegt unter PS-PhinIT; der alte Standard wird umgeleitet, und Http\Client folgt
+            // keinen Weiterleitungen – gespeicherte Altwerte deshalb auf das aktuelle Repository abbilden.
+            if (strcasecmp($this->githubRepo, self::LEGACY_GITHUB_REPO) === 0) {
+                $this->githubRepo = self::DEFAULT_GITHUB_REPO;
+            }
 
             $row2 = $this->db->fetchOne(
                 "SELECT option_value FROM {$this->db->getPrefix()}settings WHERE option_name = 'update_github_api'"

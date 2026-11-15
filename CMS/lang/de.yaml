@@ -1530,6 +1530,7 @@ default:
   "trash.assignment.terms": "AGB"
   "trash.assignment.revocation": "Widerrufsbelehrung"
   "trash.assignment.cancellation": "Kündigungsseite"
+  "trash.assignment.accessibility": "Erklärung zur Barrierefreiheit"
   "trash.confirm.bulk_delete_title": "Endgültig löschen?"
   "trash.confirm.bulk_delete_message": "Die ausgewählten Einträge werden endgültig gelöscht, samt Revisionen. Das lässt sich nicht rückgängig machen."
   "trash.confirm.bulk_move_title": "In den Papierkorb verschieben?"

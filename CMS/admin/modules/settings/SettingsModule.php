@@ -482,6 +482,12 @@ class SettingsModule
                 'warning'
             );
 
+            // FUN-410-02: Vier-Augen-Prinzip mit weniger als zwei Personen, die veröffentlichen dürfen, sperrt jede
+            // neue Veröffentlichung (niemand darf eigene Inhalte freigeben).
+            if ($isContentSettingsSave && $values['setting_content_review_second_person'] === '1' && $this->countPublishers() < 2) {
+                $message .= ' Hinweis: Für „Veröffentlichung braucht eine zweite Person“ gibt es weniger als zwei aktive Konten mit Freigaberecht – neue Inhalte können dann nicht veröffentlicht werden.';
+            }
+
             return ['success' => true, 'message' => $message];
         } catch (\Throwable $e) {
             AuditLogger::instance()->log(
@@ -1865,6 +1871,20 @@ PHP;
         return $transport + [
             'test_recipient' => $fallbackRecipient,
         ];
+    }
+
+    /** Aktive Konten, die Beiträge veröffentlichen dürfen (Admins oder Rolle mit `posts.publish`). */
+    private function countPublishers(): int
+    {
+        try {
+            return (int) $this->db->get_var(
+                "SELECT COUNT(*) FROM {$this->prefix}users u
+                 WHERE u.status = 'active' AND (u.role = 'admin' OR u.role IN (
+                     SELECT rp.role FROM {$this->prefix}role_permissions rp WHERE rp.capability = 'posts.publish' AND rp.granted = 1))"
+            );
+        } catch (\Throwable) {
+            return 2;
+        }
     }
 
     private function summarizeMigrationSummary(?array $summary): ?array

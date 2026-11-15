@@ -28,6 +28,8 @@ final class PageTrashProvider extends AbstractContentTrashProvider
         'terms_page_id' => 'trash.assignment.terms',
         'revocation_page_id' => 'trash.assignment.revocation',
         'cancellation_page_id' => 'trash.assignment.cancellation',
+        // FUN-410-30: Erklärung zur Barrierefreiheit (AccessibilityStatementService::PAGE_ID_OPTION).
+        'accessibility_page_id' => 'trash.assignment.accessibility',
     ];
 
     public function type(): string
@@ -120,6 +122,9 @@ final class PageTrashProvider extends AbstractContentTrashProvider
             'page_revisions' => $this->deleteFrom('page_revisions', 'page_id = ?', [$id]),
             'seo_meta' => $this->deleteFrom('seo_meta', 'content_type = ? AND content_id = ?', ['page', $id]),
             'translation_sync' => $this->deleteFrom('translation_sync', 'content_type = ? AND content_id = ?', ['page', $id]),
+            // FUN-410-31: Freigabeverlauf und Vorschau-Links (4.1.0) gehören zum Inhalt.
+            'content_workflow_events' => $this->deleteFrom('content_workflow_events', 'content_type = ? AND content_id = ?', ['page', $id]),
+            'content_preview_links' => $this->deleteFrom('content_preview_links', 'content_type = ? AND content_id = ?', ['page', $id]),
             'page_views' => $this->deleteFrom('page_views', 'page_id = ?', [$id]),
             'page_assignments' => $this->clearPageAssignments($id),
         ];

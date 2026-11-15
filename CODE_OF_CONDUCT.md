@@ -26,7 +26,7 @@ The following behavior is not acceptable:
 
 This code applies to the repository, issues, pull requests, discussions, documentation, wikis, project channels and public appearances made on behalf of 365CMS.
 
-Report abusive or harassing behavior through the [project issue tracker](https://github.com/PS-easyIT/365CMS.DE/issues). Maintainers will review reports fairly and with respect for the reporter's privacy. They may edit, remove, reject or moderate contributions that violate this code.
+Report abusive or harassing behavior through the [project issue tracker](https://github.com/PS-PhinIT/365CMS.DE/issues). Maintainers will review reports fairly and with respect for the reporter's privacy. They may edit, remove, reject or moderate contributions that violate this code.
 
 Enforcement may include correction, a formal warning, a temporary suspension or a permanent ban, depending on severity and repetition.
 
@@ -55,7 +55,7 @@ Nicht akzeptabel sind sexualisierte Sprache oder Darstellungen, unerwünschte An
 
 Dieser Kodex gilt für Repository, Issues, Pull Requests, Diskussionen, Dokumentation, Wikis, projektbezogene Kanäle und öffentliche Auftritte im Namen von 365CMS.
 
-Missbräuchliches oder belästigendes Verhalten kann über den [GitHub-Issue-Tracker](https://github.com/PS-easyIT/365CMS.DE/issues) gemeldet werden. Die Maintainer prüfen Meldungen fair und vertraulich. Je nach Schwere und Wiederholung sind Korrektur, Verwarnung, temporärer Ausschluss oder dauerhafter Ausschluss möglich.
+Missbräuchliches oder belästigendes Verhalten kann über den [GitHub-Issue-Tracker](https://github.com/PS-PhinIT/365CMS.DE/issues) gemeldet werden. Die Maintainer prüfen Meldungen fair und vertraulich. Je nach Schwere und Wiederholung sind Korrektur, Verwarnung, temporärer Ausschluss oder dauerhafter Ausschluss möglich.
 
 ### Quellen
 

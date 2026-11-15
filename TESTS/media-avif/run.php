@@ -86,7 +86,8 @@ $make = static function (array $overrides = []) use ($uploads): Avif {
 T::run('Erkennung mit und ohne Unterstützung', static function () use ($make): void {
     $state = new ArrayObject(['option' => null]);
     $with = $make(['state' => $state, 'probe' => static fn (): bool => true]);
-    T::check(!$with->isSupported(), 'ohne gespeicherte Probe: nicht unterstützt');
+    // FUN-410-16: ohne gespeicherte Probe wird einmal geprobt (statt bis zum nächsten Speichern „nicht unterstützt“).
+    T::check($with->isSupported() && is_string($state['option']), 'ohne gespeicherte Probe: Probe läuft einmal und wird gespeichert');
     $caps = $with->refreshCapabilities();
     T::same(true, $caps['avif'], 'Probe erfolgreich');
     T::check($with->isSupported(), 'Ergebnis in media_capabilities gespeichert');
@@ -102,7 +103,13 @@ T::run('Erkennung mit und ohne Unterstützung', static function () use ($make): 
         throw new RuntimeException('GD-Fehler');
     }]);
     T::same(false, $throwing->refreshCapabilities()['avif'], 'Ausnahme in der Probe → nicht unterstützt');
-    T::check(!$make(['state' => new ArrayObject(['option' => '{kaputt'])])->isSupported(), 'beschädigte Option → nicht unterstützt');
+    T::check(!$make(['state' => new ArrayObject(['option' => '{kaputt']), 'probe' => static fn (): bool => false])->isSupported(), 'beschädigte Option → neue Probe (hier: nicht unterstützt)');
+    $animated = sys_get_temp_dir() . '/cms-avif-anim-' . getmypid() . '.gif';
+    file_put_contents($animated, "GIF89a" . str_repeat("\x00\x21\xF9\x04\x00\x00\x00\x00\x00", 2));
+    T::check(\CMS\Services\Media\AvifDerivativeService::isAnimatedGif($animated), 'FUN-410-15: animiertes GIF erkannt (keine AVIF-Fassung)');
+    file_put_contents($animated, "GIF89a\x00\x21\xF9\x04\x00");
+    T::check(!\CMS\Services\Media\AvifDerivativeService::isAnimatedGif($animated), 'einzelnes Bild: nicht animiert');
+    @unlink($animated);
     T::check(!$make(['state' => new ArrayObject(['option' => '{"avif":"1"}'])])->isSupported(), 'nur echtes true zählt');
 
     $off = $make(['state' => new ArrayObject(['option' => '{"avif":true}']), 'settings' => static fn (): array => []]);

@@ -536,6 +536,16 @@ final class MediaTrashProvider implements TrashProvider
             $suffixes[] = '.webp';
         }
 
+        // FUN-410-14: AVIF-Fassungen (4.1.0) des Originals und der Größen wandern mit in den Papierkorb.
+        if (in_array($extension, \CMS\Services\Media\AvifDerivativeService::SOURCE_EXTENSIONS, true)) {
+            $suffixes[] = '.avif';
+            if (in_array($extension, self::THUMBNAIL_EXTENSIONS, true)) {
+                foreach (self::THUMBNAIL_SUFFIXES as $size) {
+                    $suffixes[] = '-' . $size . '.avif';
+                }
+            }
+        }
+
         return $suffixes;
     }
 
