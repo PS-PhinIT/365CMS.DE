@@ -1,8 +1,9 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 3.5.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-10-02
+# 365CMS Projektdokumentation | KI-Assets
+
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** User and technical reference for the AI-related JavaScript, the bundled Symfony AI Platform library, autoloading, licensing, and asset maintenance boundaries.
 
-# 365CMS AI – Assets and Platform Library
+# 365CMS AI: Assets and Platform Library
 
 ## English
 
@@ -80,7 +81,7 @@ Die relevanten Integrationspunkte sind:
 | `CMS/admin/ai-page.php` | Admin-Routes, Actions, Capabilities und CSRF |
 | `CMS/core/VendorRegistry.php` | Inventareintrag „Symfony AI Platform“ (Diagnose unter `/admin/monitor-assets`) |
 
-**Aktuelle Nutzung (3.5.0):** Die CMS-Provider-Adapter in `CMS/core/Services/AI/` implementieren ein eigenes `AiProviderInterface` und sprechen die Provider über `CMS\Http\Client` an; sie importieren keine `Symfony\AI\Platform`-Klassen direkt. Die gebündelte Plattform ist registriert und inventarisiert – als Grundlage für künftige Adapter und für Plugins, die sie nutzen möchten.
+**Aktuelle Nutzung (3.5.0):** Die CMS-Provider-Adapter in `CMS/core/Services/AI/` implementieren ein eigenes `AiProviderInterface` und sprechen die Provider über `CMS\Http\Client` an; sie importieren keine `Symfony\AI\Platform`-Klassen direkt. Die gebündelte Plattform ist registriert und inventarisiert, als Grundlage für künftige Adapter und für Plugins, die sie nutzen möchten.
 
 ### Wartungs- und Sicherheitsregeln
 

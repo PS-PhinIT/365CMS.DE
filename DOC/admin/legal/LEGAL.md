@@ -1,11 +1,11 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Rechtsseiten
+# 365CMS Projektdokumentation | Admin: Rechtsseiten
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/legal-sites` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_legal_sites` | **Core-Modul:** `legal`
 
 ## English (summary)
 
-`/admin/legal-sites` (`CMS/admin/legal-sites.php` → `CMS/admin/modules/legal/LegalSitesModule.php` → `CMS/admin/views/legal/sites.php`) manages four legal texts – imprint, privacy policy, terms and revocation – based on a **legal profile** (company data, contacts, services in use) and DACH templates (template version `2026.07.27`). Texts can be stored as settings and published as CMS pages. Actions: `save`, `save_profile`, `generate`, `create_page`, `create_all_pages`.
+`/admin/legal-sites` (`CMS/admin/legal-sites.php` → `CMS/admin/modules/legal/LegalSitesModule.php` → `CMS/admin/views/legal/sites.php`) manages four legal texts, imprint, privacy policy, terms and revocation, based on a **legal profile** (company data, contacts, services in use) and DACH templates (template version `2026.07.27`). Texts can be stored as settings and published as CMS pages. Actions: `save`, `save_profile`, `generate`, `create_page`, `create_all_pages`.
 
 ## Deutsch
 

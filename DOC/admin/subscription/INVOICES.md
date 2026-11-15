@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Rechnungen
+# 365CMS Projektdokumentation | Admin: Rechnungen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/invoices` | **Capability:** `invoices.view` | **CSRF-Aktion:** `admin_invoices`
@@ -14,11 +14,11 @@ Legally compliant invoices for German VAT law (§ 14 UStG). An invoice is create
 | Anlass | Auslöser | Leistungszeitraum |
 |---|---|---|
 | Zahlungseingang einer Erstbestellung | Hook `cms_payment_succeeded(int $orderId, string $provider, array $event)` aus Bereich 5a | ab Zahlungsdatum (`paid_at`), ein Abrechnungszeitraum (`billing_cycle`; einmalig = Leistungsdatum) |
-| Abo-Verlängerung | Hook `cms_subscription_renewed(int $subscriptionRowId, int $userId, int $renewalOrderId, int $periodEndTimestamp)` – eigene bezahlte Zeile in `orders` | Periodenende minus Abrechnungszeitraum bis Periodenende |
+| Abo-Verlängerung | Hook `cms_subscription_renewed(int $subscriptionRowId, int $userId, int $renewalOrderId, int $periodEndTimestamp)`: eigene bezahlte Zeile in `orders` | Periodenende minus Abrechnungszeitraum bis Periodenende |
 | Manuell (z. B. Rechnungskauf) | *Abos → Rechnungen → Rechnung für Bestellung erstellen* | wie Erstbestellung |
 
 - Nur für **bezahlte** Bestellungen (`paid`, `confirmed`, `completed`).
-- **Idempotent:** Hat eine Bestellung schon eine nicht stornierte Rechnung, entsteht keine zweite – auch nicht bei doppelt zugestellten Zahlungsereignissen oder zwei gleichzeitigen Anfragen (Prüfung nach der Sperre des Nummernkreises).
+- **Idempotent:** Hat eine Bestellung schon eine nicht stornierte Rechnung, entsteht keine zweite, auch nicht bei doppelt zugestellten Zahlungsereignissen oder zwei gleichzeitigen Anfragen (Prüfung nach der Sperre des Nummernkreises).
 - Beträge stammen aus der eigenen Bestellung (`amount` = netto, `tax_amount`, `total_amount`, `currency`), nie aus dem Zahlungsereignis. Netto + Steuer ≠ Brutto → keine Rechnung.
 - Schalter *Automatik* in den Einstellungen: aus = nur manuell.
 
@@ -41,7 +41,7 @@ Vor der Vergabe prüft `InvoiceService::missingMandatoryFields()`; fehlt etwas, 
 | Steuernummer **oder** USt-IdNr. des Leistenden | Einstellung *Steuernummer* bzw. *USt-IdNr.* (sonst `legal_profile_vat_id`) |
 | Name und Anschrift des Empfängers | Bestellung (`company`, `forename`/`lastname`, `street`, `zip`, `city`, `country`) |
 | Ausstellungsdatum, Rechnungsnummer | Vergabe |
-| Menge und Art der Leistung | „Abonnement „Paket“ – monatlich/jährlich/einmalig“, Menge 1 |
+| Menge und Art der Leistung | „Abonnement „Paket“: monatlich/jährlich/einmalig“, Menge 1 |
 | Leistungszeitpunkt/-zeitraum | siehe oben |
 | Entgelt nach Steuersätzen, Steuersatz, Steuerbetrag | Bestellung |
 | Hinweis bei Steuerbefreiung | *Kleinunternehmer:* fester Text „Gemäß § 19 UStG wird keine Umsatzsteuer berechnet …“; *Reverse Charge:* „Steuerschuldnerschaft des Leistungsempfängers …“ + USt-IdNr. des Empfängers (Pflicht); *Regelbesteuerung mit 0 %:* Einstellung *Hinweis bei 0 %* (Pflicht) |
@@ -54,7 +54,7 @@ Vor der Vergabe prüft `InvoiceService::missingMandatoryFields()`; fehlt etwas, 
 
 - Beim Erstellen werden alle Angaben als **Snapshot** (`snapshot_json`, Version 1) und als PDF festgeschrieben; spätere Änderungen an Bestellung, Paket oder Absender wirken nicht zurück.
 - PDF: `PdfService::generateFromHtml()` (Dompdf, ohne Remote-Zugriff und ohne Skripte), Schrift DejaVu Sans. Ablage `PrivateStorageService` → `invoices/{yyyy}/<Nummer>-<zufällig>.pdf` (gesperrt per `.htaccess`, empfohlen außerhalb des Webroots über `CMS_PRIVATE_PATH`). Dateien werden exklusiv angelegt, nie überschrieben.
-- **SHA-256** in `pdf_sha256`; jeder Download vergleicht die Datei – verändert → kein Download, Fehler im Protokoll `invoices`.
+- **SHA-256** in `pdf_sha256`; jeder Download vergleicht die Datei, verändert → kein Download, Fehler im Protokoll `invoices`.
 - **Korrektur nur per Storno-Rechnung:** *Stornieren …* in der Liste (Grund erscheint auf dem PDF). Die Storno-Rechnung hat eine eigene Nummer, verweist auf Nummer und Datum der Rechnung (`cancels_invoice_id`, Text im PDF), trägt die negativen Beträge und gehört demselben Konto. Je Rechnung genau ein Storno, keine Storno-Rechnung einer Storno-Rechnung. Danach kann für die Bestellung eine neue Rechnung erstellt werden.
 
 ### Rechte
@@ -68,11 +68,11 @@ Jedes POST-Formular trägt das CSRF-Token `admin_invoices`; keine Inline-Skripte
 
 ### Mail
 
-Nach dem Erstellen geht eine Mail mit dem PDF als Anhang an die E-Mail der Bestellung – über die Mail-Warteschlange (`MailService::queueWithAttachment()`), bei abgeschalteter Warteschlange direkt. Abschaltbar in den Einstellungen und je manueller Aktion; *Mail* in der Liste sendet erneut.
+Nach dem Erstellen geht eine Mail mit dem PDF als Anhang an die E-Mail der Bestellung, über die Mail-Warteschlange (`MailService::queueWithAttachment()`), bei abgeschalteter Warteschlange direkt. Abschaltbar in den Einstellungen und je manueller Aktion; *Mail* in der Liste sendet erneut.
 
 ### Aufbewahrung und Datenschutz
 
-- Rechnungen werden **nie gelöscht** – weder vom Dienst noch durch die Datenaufbewahrung (Regel `invoices.archive`, Frist 0 = keine automatische Löschung; Aufbewahrung 10 Jahre ab Ende des Ausstellungsjahres, § 147 AO, § 14b UStG).
+- Rechnungen werden **nie gelöscht**: weder vom Dienst noch durch die Datenaufbewahrung (Regel `invoices.archive`, Frist 0 = keine automatische Löschung; Aufbewahrung 10 Jahre ab Ende des Ausstellungsjahres, § 147 AO, § 14b UStG).
 - **DSGVO-Löschantrag** (`dsgvo_delete_data`) und **Löschen eines Kontos** (`cms_user_deleted`): Rechnungen und PDFs bleiben, erhalten aber einen **Sperrvermerk** (`restricted_at`, Art. 18 i. V. m. Art. 17 Abs. 3 lit. b DSGVO). Gesperrte Rechnungen erscheinen nicht mehr im Mitgliederbereich, nur noch für Admins mit `invoices.view` (Kennzeichnung *Gesperrt*). Die Tabellen haben keinen Fremdschlüssel auf `users`, nichts wird kaskadierend gelöscht.
 - **DSGVO-Auskunft** (`dsgvo_export_data`, *Rechtliches → Auskunft & Löschen* → abschließen): alle Rechnungen der Person, auch gesperrte, zugeordnet über das Konto oder die E-Mail der Bestellung, als JSON mit Rechnungsdaten (`InvoicePrivacy`, privater Speicher `invoices/privacy-exports/`, Download unter *Abos → Rechnungen*, Löschung nach 30 Tagen). Die Selbstauskunft im Mitgliederbereich enthält den Schlüssel `invoices`.
 - **Datenschutzerklärung:** Die Vorlage unter *Rechtstexte* nennt im Abschnitt „Vertrags- und Zahlungsabwicklung“ die zehnjährige Aufbewahrung (§ 147 AO, § 14b UStG, § 257 HGB) und die Sperrung statt Löschung; bestehende Texte neu erzeugen.
@@ -86,13 +86,13 @@ Nach dem Erstellen geht eine Mail mit dem PDF als Anhang an die E-Mail der Beste
 
 ### Technik
 
-- `CMS\Services\Payments\InvoiceService` – Nummernkreis, Snapshot, PDF, Ablage, Storno, Rechte, Einstellungen; Datenbank, Uhr, Ablage, PDF-Erzeuger, Mailversand und Einstellungen per Konstruktor ersetzbar. `InvoiceService::schemaQueries()` liefert die CREATE-Statements.
-- `CMS\Services\FeatureHooks\InvoiceHooks` – Hooks aus Bereich 5a, Routen, Menüpunkt, Sperrvermerk, Aufbewahrungsregel.
+- `CMS\Services\Payments\InvoiceService`: Nummernkreis, Snapshot, PDF, Ablage, Storno, Rechte, Einstellungen; Datenbank, Uhr, Ablage, PDF-Erzeuger, Mailversand und Einstellungen per Konstruktor ersetzbar. `InvoiceService::schemaQueries()` liefert die CREATE-Statements.
+- `CMS\Services\FeatureHooks\InvoiceHooks`: Hooks aus Bereich 5a, Routen, Menüpunkt, Sperrvermerk, Aufbewahrungsregel.
 - Tabellen `cms_invoice_sequences` (`sequence_key`, `next_number`, `updated_at`) und `cms_invoices` (Nummer, Kreis, laufende Nummer, Typ, Bestellung, Konto, Storno-Verweis, Datum, Leistungszeitraum, Beträge, Steuermodus, Snapshot, PDF-Pfad, SHA-256, Ersteller, Sperrvermerk).
 - Hook `cms_invoice_created(int $invoiceId, string $type, int $orderId, int $userId)` nach dem Erstellen (`type` = `invoice` | `cancellation`).
 - Seiten: `CMS/admin/invoices.php` → `CMS/admin/views/subscriptions/invoices.php`, `CMS/member/invoices.php`.
 - Tests: `php TESTS/invoices/run.php [-v]`.
-- Nicht in 4.1.0: E-Rechnung (ZUGFeRD/XRechnung).
+- Nicht enthalten: E-Rechnung (ZUGFeRD/XRechnung).
 
 ### Verwandte Dokumente
 

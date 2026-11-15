@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: DEVLIST
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+# 365CMS Projektdokumentation | DEVLIST
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -30,6 +30,7 @@
 - [28. Pitfalls](#28-pitfalls--stolperfallen)
 - [29. Checklist](#29-checklist--checkliste-vor-änderungen)
 - [30. Closing](#30-closing--abschlussbild)
+- [31. Roadmap 4.2.0 / 4.3.0](#31-roadmap-420--430--planung)
 
 Audience: developers, integrators, auditors, operators. Companion docs: [INDEX.md](INDEX.md), [FILELIST.md](FILELIST.md), [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md).
 
@@ -284,7 +285,7 @@ Login-Branding / öffentliche Auth-Seiten: Admin-Route `/admin/cms-loginpage` un
 - Wrapper: `CMS/core/Database.php` (PDO, singleton, `get_instance()` alias for plugins)
 - Prefix: `DB_PREFIX` (default `cms_`)
 - Charset: `DB_CHARSET` (default `utf8mb4`)
-- Schema create: `SchemaManager` (`SCHEMA_VERSION = 'v25'`)
+- Schema create: `SchemaManager` (Schema `v26`, `SCHEMA_VERSION = 'v26'`)
 - Incremental: `MigrationManager`, `DatabaseUpdateRunner`
 
 Installer and admin updater show installed vs. target core and schema versions. Schema markers must not be rolled back through the admin updater. Table `ai_quota_usage` belongs to `v22`.
@@ -298,7 +299,7 @@ Authoritative table docs: [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md).
 - Wrapper: `CMS/core/Database.php` (PDO, Singleton, Alias `get_instance()` für Plugins)
 - Präfix: `DB_PREFIX` (Standard `cms_`)
 - Zeichensatz: `DB_CHARSET` (Standard `utf8mb4`)
-- Schema-Anlage: `SchemaManager` (`SCHEMA_VERSION = 'v25'`)
+- Schema-Anlage: `SchemaManager` (Schema `v26`, `SCHEMA_VERSION = 'v26'`)
 - Inkrementell: `MigrationManager`, `DatabaseUpdateRunner`
 
 Installer und Admin-Updater zeigen installierte und Ziel-Versionen. Schema-Marker dürfen über den Admin-Updater nicht zurückgesetzt werden. Tabelle `ai_quota_usage` gehört zu `v22`.
@@ -313,7 +314,7 @@ Maßgeblich: [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md).
 
 **English**
 
-Pages and posts use EditorJS JSON, sanitized server-side and rendered by `EditorJsRenderer` / related services — not raw HTML.
+Pages and posts use EditorJS JSON, sanitized server-side and rendered by `EditorJsRenderer` / related services, not raw HTML.
 
 Language files: `CMS/lang/de.yaml`, `CMS/lang/en.yaml`. `TranslationService` provides fallbacks when Symfony Translation returns unknown keys unchanged.
 
@@ -321,7 +322,7 @@ DE/EN content paths often need to be updated together. Search indexing must list
 
 **Deutsch**
 
-Seiten und Beiträge nutzen EditorJS-JSON, serverseitig sanitisiert und gerendert durch `EditorJsRenderer` / verwandte Services — nicht als rohes HTML.
+Seiten und Beiträge nutzen EditorJS-JSON, serverseitig sanitisiert und gerendert durch `EditorJsRenderer` / verwandte Services, nicht als rohes HTML.
 
 Sprachdateien: `CMS/lang/de.yaml`, `CMS/lang/en.yaml`. `TranslationService` liefert Fallbacks, wenn Symfony Translation unbekannte Keys unverändert zurückgibt.
 
@@ -393,7 +394,7 @@ Admin UI: `CMS/admin/seo*.php`, `CMS/admin/modules/seo/`, `CMS/assets/js/admin-s
 
 Docs: [admin/seo/SEO.md](admin/seo/SEO.md), [admin/seo/REDIRECTS.md](admin/seo/REDIRECTS.md).
 
-Redirect and 404 dialogs share JavaScript — fix the shared script, not only one view.
+Redirect and 404 dialogs share JavaScript, fix the shared script, not only one view.
 
 **Deutsch**
 
@@ -403,7 +404,7 @@ Admin-UI: `CMS/admin/seo*.php`, `CMS/admin/modules/seo/`, `CMS/assets/js/admin-s
 
 Doku: [admin/seo/SEO.md](admin/seo/SEO.md), [admin/seo/REDIRECTS.md](admin/seo/REDIRECTS.md).
 
-Redirect- und 404-Dialoge teilen sich JavaScript — den gemeinsamen Scriptpfad fixen, nicht nur eine View.
+Redirect- und 404-Dialoge teilen sich JavaScript, den gemeinsamen Scriptpfad fixen, nicht nur eine View.
 
 ---
 
@@ -635,7 +636,7 @@ Known gaps: [`core/STATUS.md`](core/STATUS.md). Changelog: [`../Changelog.md`](.
 - Search hooked to the wrong event
 - Home menu path not normalized as root
 - Generic foreign-key names
-- Live errors that are cache, rewrite, proxy, or data — not code
+- Live errors that are cache, rewrite, proxy, or data, not code
 - Hard bugs sit on **boundaries**: entry↔module, module↔view, view↔asset, save↔follow-up, source↔runtime, docs↔operations
 
 **Deutsch**
@@ -646,7 +647,7 @@ Known gaps: [`core/STATUS.md`](core/STATUS.md). Changelog: [`../Changelog.md`](.
 - Suche am falschen Event
 - Home-Menüpfad nicht als Root normalisiert
 - generische Foreign-Key-Namen
-- Live-Fehler durch Cache, Rewrite, Proxy oder Daten — nicht Code
+- Live-Fehler durch Cache, Rewrite, Proxy oder Daten, nicht Code
 - Harte Bugs sitzen an **Übergängen**: Entry↔Modul, Modul↔View, View↔Asset, Save↔Folgeprozess, Quelle↔Runtime, Doku↔Betrieb
 
 ---
@@ -695,7 +696,7 @@ Working model for this project:
 
 **Repo ↔ runtime file under `CMS/` ↔ deploy ↔ live check**
 
-Version source of truth: `CMS/core/Version.php` (`4.0.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version. Every PR gets its own version: new `Changelog.md` heading `### vX.Y.Z — DD.MM.YYYY` (no "unreleased" sections or `–` placeholders in the version column), `Version::CURRENT`, both `update.json` files and the release packages `RELEASE/365CMS-X.Y.Z-{update,full}.zip` with SHA-256 are updated in the same PR.
+Version source of truth: `CMS/core/Version.php` (`4.1.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version. Every PR gets its own version: new `Changelog.md` heading `### vX.Y.Z — DD.MM.YYYY` (no "unreleased" sections or `–` placeholders in the version column), `Version::CURRENT`, both `update.json` files and the release packages `RELEASE/365CMS-X.Y.Z-{update,full}.zip` with SHA-256 are updated in the same PR.
 
 **Deutsch**
 
@@ -707,4 +708,22 @@ Arbeitsmodell dieses Projekts:
 
 **Repo ↔ Runtime-Datei unter `CMS/` ↔ Deploy ↔ Live-Prüfung**
 
-Versionsquelle: `CMS/core/Version.php` (`4.0.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.
+Versionsquelle: `CMS/core/Version.php` (`4.1.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.
+
+---
+
+## 31. Roadmap 4.2.0 / 4.3.0 | Planung
+
+**English**
+
+- **4.1.0** (schema `v26`, 90 tables) is released (2026-11-15) with areas 1–5, including invoices ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)).
+- **4.2.0: Community module** (schema `v27`, +27 `community_*` tables → 117): core module `community` under `core/Services/Community/`, routes under `/forum`, capabilities `community.*`, role `moderator`, Markdown renderer with Purifier profile, local captcha, privacy rules and 14 test suites. Executable plan with work packages WP-C0 … WP-C13 (≈ 89 person-days): [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); details in the other files of [workflow/specs/community/](workflow/specs/community/README.md).
+- **4.3.0: CLI and alerting:** central CLI `CMS/cli.php`, real-time alerting with cooldown, webhook event `alert.raised`, hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Contracts for new modules stay as in sections 17 (hooks), 11 (services) and 8 (database): one table definition in `SchemaManager::getSchemaQueries()` used by install, update and runtime check; hooks via `FeatureHooks\Registry`; tests under `TESTS/<suite>/run.php`.
+
+**Deutsch**
+
+- **4.1.0** (Schema `v26`, 90 Tabellen) ist veröffentlicht (2026-11-15) mit den Bereichen 1–5 einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)).
+- **4.2.0: Community-Modul** (Schema `v27`, +27 `community_*`-Tabellen → 117): Core-Modul `community` unter `core/Services/Community/`, Routen unter `/forum`, Capabilities `community.*`, Rolle `moderator`, Markdown-Renderer mit Purifier-Profil, lokales Captcha, Datenschutzregeln und 14 Test-Suiten. Umsetzungsfahrplan mit Arbeitspaketen WP-C0 … WP-C13 (≈ 89 Personentage): [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Details in den übrigen Dateien unter [workflow/specs/community/](workflow/specs/community/README.md).
+- **4.3.0: CLI und Alerting:** zentrale CLI `CMS/cli.php`, Echtzeit-Alerting mit Cooldown, Webhook-Ereignis `alert.raised`, Hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Verträge für neue Module bleiben wie in den Abschnitten 17 (Hooks), 11 (Services) und 8 (Datenbank): eine Tabellendefinition in `SchemaManager::getSchemaQueries()` für Installation, Update und Laufzeitprüfung; Hooks über `FeatureHooks\Registry`; Tests unter `TESTS/<suite>/run.php`.

@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Theme-Explorer (Dateieditor)
+# 365CMS Projektdokumentation | Admin: Theme-Explorer (Dateieditor)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/theme-explorer` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_theme_explorer`
 
 ## English (summary)

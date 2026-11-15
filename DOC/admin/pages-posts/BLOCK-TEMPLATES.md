@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – EditorJS Block Vorlagen
+# 365CMS Projektdokumentation | Admin: EditorJS Block Vorlagen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/reusable-blocks` | **Capability:** `blocks.reusable` | **CSRF-Aktion:** `admin_reusable_blocks` | **Editor.js-Block:** „Vorlagen“ (`reusableBlock`)
@@ -11,7 +11,7 @@
 
 ### Wozu?
 
-Inhalte, die an vielen Stellen gleich aussehen sollen – Kontakt-Box, Hinweis zur Barrierefreiheit, Aktionsbanner, Autorenbox – pflegst du **einmal** als Vorlage und bindest sie überall über den Editor.js-Block **„Vorlagen“** ein. Änderst du die Vorlage, zeigen alle Beiträge und Seiten sofort den neuen Inhalt.
+Inhalte, die an vielen Stellen gleich aussehen sollen, Kontakt-Box, Hinweis zur Barrierefreiheit, Aktionsbanner, Autorenbox, pflegst du **einmal** als Vorlage und bindest sie überall über den Editor.js-Block **„Vorlagen“** ein. Änderst du die Vorlage, zeigen alle Beiträge und Seiten sofort den neuen Inhalt.
 
 ### Verwalten (`/admin/reusable-blocks`)
 
@@ -20,7 +20,7 @@ Menü: *Bausteine → EditorJS Block Vorlagen* (Profil „Klassisch“) bzw. *Me
 | Bereich | Inhalt |
 |---|---|
 | Liste | Titel, Sprachen (DE bzw. DE, EN), „Verwendet in“ (Anzahl), Änderungsdatum, Duplizieren; Suche nach Titel |
-| Bearbeiten | Titel (nur intern), Inhalt **Deutsch** und optional **English** im normalen Block-Editor – ohne englische Fassung erscheint auf englischen Seiten die deutsche |
+| Bearbeiten | Titel (nur intern), Inhalt **Deutsch** und optional **English** im normalen Block-Editor: ohne englische Fassung erscheint auf englischen Seiten die deutsche |
 | Verwendet in | Beiträge, Seiten und andere Vorlagen, die diese Vorlage einbinden, mit Link in den Editor |
 | Verlauf | Bei jedem Speichern wird der vorherige Stand gesichert, die letzten 20 Fassungen bleiben; „Wiederherstellen“ macht den aktuellen Stand selbst wieder zur Fassung |
 | Duplizieren | Kopie mit dem Titel „… (Kopie)“, ohne Verlauf und ohne Verwendungen |
@@ -28,24 +28,24 @@ Menü: *Bausteine → EditorJS Block Vorlagen* (Profil „Klassisch“) bzw. *Me
 
 ### Einbinden im Beitrag oder auf der Seite
 
-1. Im Editor den Block **„Vorlagen“** einfügen – im Beitragseditor über die Block-Auswahl (*Layout & Spezial*), im Seiteneditor über Plus-Menü oder Schnellleiste.
-2. Vorlage aus der Liste wählen – darunter erscheint die Vorschau mit dem aktuellen Inhalt.
+1. Im Editor den Block **„Vorlagen“** einfügen: im Beitragseditor über die Block-Auswahl (*Layout & Spezial*), im Seiteneditor über Plus-Menü oder Schnellleiste.
+2. Vorlage aus der Liste wählen: darunter erscheint die Vorschau mit dem aktuellen Inhalt.
 3. Speichern. Im Beitrag steht nur der Verweis `{ "id": … }`.
 
 Im Block gibt es außerdem:
 
-- **Vorlage bearbeiten** – öffnet die Vorlage in einem neuen Tab (mit `blocks.reusable`).
-- **In normale Blöcke umwandeln** – ersetzt den Verweis durch eine Kopie der Blöcke in der Sprache des Editors. Die Verknüpfung endet; spätere Änderungen an der Vorlage erscheinen hier nicht mehr.
+- **Vorlage bearbeiten**: öffnet die Vorlage in einem neuen Tab (mit `blocks.reusable`).
+- **In normale Blöcke umwandeln**: ersetzt den Verweis durch eine Kopie der Blöcke in der Sprache des Editors. Die Verknüpfung endet; spätere Änderungen an der Vorlage erscheinen hier nicht mehr.
 
 ### Was nach einer Änderung passiert
 
 - Der Seiten-Cache wird geleert.
-- Für jeden Beitrag und jede Seite, die die Vorlage – auch über eine andere Vorlage – einbinden, laufen die normalen Speicher-Hooks (`cms_after_post_save`/`cms_after_page_save`): Suchindex, Sitemap und weitere Folgeaktionen sehen den neuen Inhalt. Die Inhalte selbst und ihre Revisionen bleiben unverändert.
+- Für jeden Beitrag und jede Seite, die die Vorlage, auch über eine andere Vorlage, einbinden, laufen die normalen Speicher-Hooks (`cms_after_post_save`/`cms_after_page_save`): Suchindex, Sitemap und weitere Folgeaktionen sehen den neuen Inhalt. Die Inhalte selbst und ihre Revisionen bleiben unverändert.
 - Suche und Feeds lösen die Vorlage auf (`SiteSearchService::registerBlockTextResolver()`), der Verwendungsnachweis der Medien zählt Bilder in Vorlagen bei der Vorlage.
 
-### Schutz vor Endlosschleifen
+### Schutz vor Endlosschleifen (Zyklenprüfung)
 
-- Speichern wird abgelehnt, wenn eine Vorlage sich selbst einbindet – direkt oder über andere Vorlagen, in beiden Sprachfassungen.
+- Speichern wird abgelehnt, wenn eine Vorlage sich selbst einbindet, direkt oder über andere Vorlagen, in beiden Sprachfassungen.
 - Beim Rendern bricht der Dienst zusätzlich ab, wenn eine Vorlage erneut vorkommt oder mehr als 3 Ebenen verschachtelt sind (z. B. nach einem Import): Frontend nichts, Editor-Vorschau ein Hinweis, Protokoll-Eintrag im Kanal `content.reusable_blocks`.
 
 ### Rechte

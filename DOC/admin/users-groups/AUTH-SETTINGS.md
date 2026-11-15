@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer- & Auth-Einstellungen
+# 365CMS Projektdokumentation | Admin: Benutzer- & Auth-Einstellungen
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/user-settings` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_user_settings`
 
 ## English (summary)
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | Globale Benutzerregistrierung | `registration_enabled` | an | Öffentliche Registrierung (Standardpfad `/cms-register`, `/register` leitet weiter; Pfade konfigurierbar unter CMS-Loginseite) |
 | Registrierung im Member-Bereich | `member_registration_enabled` | an | Registrierungseinstieg im Member-Kontext |
-| E-Mail-Verifizierung erzwingen | `member_email_verification` | aus | Neue Registrierungen müssen den Bestätigungslink aus der Mail öffnen, bevor sie sich anmelden können (seit 4.0.0 durchgesetzt, vorher ohne Wirkung). Bestehende Konten bleiben unverändert; siehe [E-Mail-Verifizierung](#e-mail-verifizierung-seit-400) |
+| E-Mail-Verifizierung erzwingen | `member_email_verification` | aus | Neue Registrierungen müssen den Bestätigungslink aus der Mail öffnen, bevor sie sich anmelden können (seit 4.0.0 durchgesetzt, vorher ohne Wirkung). Bestehende Konten bleiben unverändert; siehe [E-Mail-Verifizierung](#e-mail-verifizierung) |
 | Standardrolle neuer Mitglieder | `member_default_role` | `member` | Nur Rollen ohne Adminrechte wählbar (`UserService::resolveRegistrationRole()`) |
 
-### E-Mail-Verifizierung (seit 4.0.0)
+### E-Mail-Verifizierung
 
 Umgesetzt in `CMS/core/Services/EmailVerificationService.php`.
 
@@ -41,7 +41,7 @@ Unbestätigte Konten erscheinen in der Benutzerliste mit dem Status „E-Mail un
 
 Voraussetzung ist ein funktionierender Mailversand. Bei aktiver Mail-Warteschlange muss der Cron laufen.
 
-### Registrierung mit bereits verwendeter E-Mail-Adresse (seit 4.0.0)
+### Registrierung mit bereits verwendeter E-Mail-Adresse
 
 Die Registrierung verrät nicht mehr, ob eine Adresse schon ein Konto hat. Ist die Adresse vergeben, zeigt sie dieselbe Erfolgsmeldung wie bei einer neuen Registrierung, legt aber kein Konto an. Der Inhaber der Adresse erhält stattdessen eine Hinweis-Mail mit Links zur Anmeldung und zu „Passwort vergessen“ (höchstens 3 Hinweise je Adresse und Stunde, Aktion `register_existing`; Audit-Eintrag `register_existing_email`). Ein bereits vergebener **Benutzername** wird weiterhin gemeldet.
 
@@ -53,7 +53,7 @@ Den vollen Schutz gegen das Ausprobieren von Adressen gibt es nur mit aktiver E-
 |---|---|---|
 | Max. Fehlversuche | `MAX_LOGIN_ATTEMPTS` in `config/app.php` | 5 |
 | Sperrdauer | `LOGIN_TIMEOUT` | 300 s |
-| Verzögerung je Konto (seit 4.0.0) | `Auth::accountFailureDelaySeconds()` (Aktion `login_account`) | nach 5 Fehlversuchen in 15 min: 1, 2, 4, 8, 16, max. 30 s je weiterem Versuch, unabhängig von der IP; ein richtiges Passwort setzt den Zähler zurück |
+| Verzögerung je Konto | `Auth::accountFailureDelaySeconds()` (Aktion `login_account`) | nach 5 Fehlversuchen in 15 min: 1, 2, 4, 8, 16, max. 30 s je weiterem Versuch, unabhängig von der IP; ein richtiges Passwort setzt den Zähler zurück |
 | Passwort-Mindestlänge | `Auth::PASSWORD_POLICY_MIN_LENGTH` | 12 |
 | Zeichenklassen | `Auth::getPasswordPolicyDefinition()` | Groß-, Kleinbuchstabe, Ziffer, Sonderzeichen |
 | Session Admin | Option `perf_session_timeout_admin` | 8 Stunden |

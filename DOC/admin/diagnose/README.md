@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Diagnose & Protokolle
+# 365CMS Projektdokumentation | Admin: Diagnose & Protokolle
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -31,7 +31,7 @@ Der alte Link `/admin/cms-logs` leitet auf `/admin/logs` um.
 
 | Kachel | Route | Dokument |
 |---|---|---|
-| Asset-Monitor | `/admin/monitor-assets` | [DIAGNOSE.md](DIAGNOSE.md#diagnose--assets-adminmonitor-assets) |
+| Asset-Monitor | `/admin/monitor-assets` | [DIAGNOSE.md](DIAGNOSE.md#diagnose-assets-adminmonitor-assets) |
 | Antwortzeit-Monitor | `/admin/monitor-response-time` | [../system-settings/MONITORING.md](../system-settings/MONITORING.md) |
 | Cron-Job-Status | `/admin/monitor-cron-status` | [../system-settings/MONITORING.md](../system-settings/MONITORING.md#cron) |
 | Speichernutzung | `/admin/monitor-disk-usage` | [../system-settings/MONITORING.md](../system-settings/MONITORING.md) |
@@ -51,8 +51,8 @@ Der alte Link `/admin/cms-logs` leitet auf `/admin/logs` um.
 
 ### Vorgehen bei Problemen
 
-1. `/admin/info` – Übersicht und Warnungen prüfen.
-2. `/admin/monitor-health-check` – Systemprüfung ausführen.
-3. `/admin/logs` – aktuelle Fehler und Warnungen ansehen.
+1. `/admin/info`: Übersicht und Warnungen prüfen.
+2. `/admin/monitor-health-check`: Systemprüfung ausführen.
+3. `/admin/logs`: aktuelle Fehler und Warnungen ansehen.
 4. Bei Datenbankfehlern `/admin/diagnose` → fehlende Tabellen anlegen bzw. reparieren (vorher Backup).
 5. Für den Support `export_diagnostic_report` nutzen.

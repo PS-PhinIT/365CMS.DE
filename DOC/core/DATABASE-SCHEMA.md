@@ -1,10 +1,10 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Datenbank & Schema
+# 365CMS Projektdokumentation | Core: Datenbank & Schema
 
-> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Schema:** `v25` | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** `v26` | **Status:** Stable
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (90 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v26'`, flag file `CMS/cache/db_schema_v26.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds 32 tables: `cms_admin_menu_layouts` (custom admin sidebar layouts), `cms_batch_jobs` (long-running admin tasks processed in steps) and the 30 feature tables listed in `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`. Release 4.1.0 (schema `v26`) adds fourteen further tables in `SchemaManager::FEATURE_TABLES_V26` – `cms_password_history`, `cms_user_identities`, `cms_media_usage`, `cms_content_workflow_events`, `cms_content_preview_links`, `cms_reusable_blocks`, `cms_reusable_block_usage`, `cms_reusable_block_revisions`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries`, `cms_payment_events`, `cms_invoice_sequences`, `cms_invoices` – plus the columns `cms_users.password_changed_at` and `cms_passkey_credentials.user_verified`; existing installations receive them through the runtime check `SchemaManager::ensureFeatureSchema()`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). This document describes **release 4.1.0 with schema `v26`**. The base schema (90 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`: 76 tables up to `v25` plus 14 new in `v26`. `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version. Schema history: `v24` adds revision columns to `cms_post_revisions`; `v25` adds `cms_admin_menu_layouts`, `cms_batch_jobs` and the 30 feature tables of `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash); **`v26`** adds the fourteen tables of `SchemaManager::FEATURE_TABLES_V26`, `cms_password_history`, `cms_user_identities`, `cms_media_usage`, `cms_content_workflow_events`, `cms_content_preview_links`, `cms_reusable_blocks`, `cms_reusable_block_usage`, `cms_reusable_block_revisions`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries`, `cms_payment_events`, `cms_invoice_sequences`, `cms_invoices`, and the columns `cms_users.password_changed_at`, `cms_passkey_credentials.user_verified`, `expires_at`/`review_due_at`/`expiry_notified_at`/`review_notified_at` on `cms_posts`, `cms_pages` and `cms_kb_entries`, plus payment columns on `cms_orders` and `cms_user_subscriptions`. Existing installations receive all of it through the runtime check `SchemaManager::ensureFeatureSchema()`. Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
 
 ## Deutsch
 
@@ -39,11 +39,11 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 
 | Tabelle | Spalten |
 |---|---|
-| `users` | id, username, email, password, display_name, role, status, created_at, updated_at, last_login |
-| `user_meta` | id, user_id → users (CASCADE), meta_key, meta_value – sicherheitsrelevante Schlüssel siehe unten |
+| `users` | id, username, email, password, display_name, role, status, created_at, updated_at, last_login, `password_changed_at` (seit v26) |
+| `user_meta` | id, user_id → users (CASCADE), meta_key, meta_value: sicherheitsrelevante Schlüssel siehe unten |
 | `roles` | id, name, display_name, description, capabilities, member_dashboard_access, sort_order, … |
-| `sessions` | id (SHA-256 der Session-ID, nie die ID selbst), user_id, ip_address, user_agent, payload, last_activity, expires_at – ab 3.4.20 von `Auth` bei Anmeldung angelegt, höchstens alle 5 Minuten aktualisiert und bei Abmeldung/Passwortwechsel entfernt |
-| `passkey_credentials` | id, user_id, credential_id, public_key, sign_count, aaguid, attestation_fmt, name, created_at, last_used_at |
+| `sessions` | id (SHA-256 der Session-ID, nie die ID selbst), user_id, ip_address, user_agent, payload, last_activity, expires_at: ab 3.4.20 von `Auth` bei Anmeldung angelegt, höchstens alle 5 Minuten aktualisiert und bei Abmeldung/Passwortwechsel entfernt |
+| `passkey_credentials` | id, user_id, credential_id, public_key, sign_count, aaguid, attestation_fmt, name, `user_verified` (seit v26), created_at, last_used_at |
 | `password_resets` | id, email, token, expires_at, created_at |
 | `login_attempts`, `failed_logins` | Anmeldeversuche (Rate-Limit, Sicherheitsalarme). `action` VARCHAR(30), `username` VARCHAR(60): `Security::normalizeRateLimitAction()`/`normalizeRateLimitIdentifier()` kürzen bzw. hashen längere Werte (ab 3.4.20). Seit 4.0.0 zusätzlich die Aktionen `login_account` (Verzögerung je Konto), `register_existing`, `email_change`, `email_change_confirm` und `email_change_notice` |
 | `blocked_ips` | id, ip_address, reason, expires_at, permanent, … |
@@ -54,9 +54,9 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 
 | Tabelle | Spalten |
 |---|---|
-| `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.4.21, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`) |
+| `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.4.21, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`), seit v25 `previous_status`, `trashed_*`, `planned_at`, seit v26 `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at`; `status` kennt seit 4.1.0 auch `pending` |
 | `page_revisions` | id, page_id, title, title_en, slug, slug_en, content, content_en, excerpt, status, author_id, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT), created_at |
-| `posts` | id, title (+ title_en), slug, slug_en, content (+ content_en), excerpt (+ excerpt_en), featured_image, status, author_id, author_display_name, author_display_url, post_template, post_meta_json, category_id, tags, views, allow_comments, meta_title, meta_description, created_at, updated_at, published_at, content_updated_at |
+| `posts` | id, title (+ title_en), slug, slug_en, content (+ content_en), excerpt (+ excerpt_en), featured_image, status, author_id, author_display_name, author_display_url, post_template, post_meta_json, category_id, tags, views, allow_comments, meta_title, meta_description, created_at, updated_at, published_at, content_updated_at, seit v25 `previous_status`, `trashed_*`, `planned_at`, seit v26 `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at`; `status` kennt seit 4.1.0 auch `pending` |
 | `post_revisions` | Snapshot je Speichern (Titel, Slugs, Inhalte DE/EN, Status, Kategorie, Tags, Autor-Anzeige, Datumswerte); seit v24 zusätzlich `revision_type` (`manual`, `autosave`, `restore`, `baseline`, Bestandszeilen `legacy`), `created_by`, `featured_image`, `meta_title`, `meta_description` und `fingerprint` (SHA-1 des Inhaltsstands gegen doppelte Revisionen). `PostRevisionService` behält je Beitrag die letzten 30 |
 | `post_categories` | id, name, slug, slug_en, description, parent_id, sort_order, replacement_category_id, created_at |
 | `post_tags` | id, name, slug, slug_en, description, post_count, created_at |
@@ -80,15 +80,15 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | Tabelle | Spalten |
 |---|---|
 | `subscription_plans` | Preise, Limits (`limit_*`), Plugin-Freigaben (`plugin_*`), Features (`feature_*`), is_active, sort_order |
-| `user_subscriptions` | user_id, plan_id, status, billing_cycle, start_date, end_date, next_billing_date, cancelled_at |
+| `user_subscriptions` | user_id, plan_id, status, billing_cycle, start_date, end_date, next_billing_date, cancelled_at, seit v26 `provider`, `provider_subscription_id`, `current_period_end` |
 | `subscription_usage` | user_id, resource_type, current_count, last_updated |
-| `orders` | order_number, user_id, plan_id, Beträge, currency, status, payment_method, billing_cycle, Adressdaten, contact_data |
+| `orders` | order_number, user_id, plan_id, Beträge, currency, status, payment_method, billing_cycle, Adressdaten, contact_data, seit v26 `provider`, `provider_checkout_id`, `paid_at` |
 
 **System, Plugins, Themes**
 
 | Tabelle | Spalten |
 |---|---|
-| `settings` | id, option_name (eindeutig), option_value, autoload – gelesen über den Request-Cache `CMS\Services\OptionStore` (alle `autoload = 1` in einer Abfrage); seit v23 ohne den redundanten Index `idx_key` |
+| `settings` | id, option_name (eindeutig), option_value, autoload: gelesen über den Request-Cache `CMS\Services\OptionStore` (alle `autoload = 1` in einer Abfrage); seit v23 ohne den redundanten Index `idx_key` |
 | `plugins`, `plugin_meta` | Plugin-Registry und Metadaten (aktive Plugins zusätzlich in Option `active_plugins`) |
 | `theme_customizations` | theme_slug, setting_category, setting_key, setting_value, user_id |
 | `cache` | cache_key, cache_value, expires_at |
@@ -100,10 +100,10 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `mail_log` | recipient, subject, status, transport, provider, message_id, error_message, meta, source |
 | `mail_queue` | recipient, subject, body, headers, status, attempts, max_attempts, available_at, sent_at, locked_at, attachment_*, error_category, last_error |
 | `ai_quota_usage` | scope_name, period_key, user_id, provider_id, request_count, character_count |
-| `admin_menu_layouts` | id, site_key (eindeutig; `''` = global, sonst Site-Schlüssel aus *Einstellungen › MultiSites*), layout_json (MEDIUMTEXT, nur validierte Layouts; `NULL` = zurückgesetzt), version (steigt bei jedem Speichern und Zurücksetzen), updated_by, created_at, updated_at – seit v25, eigene Sidebar-Layouts ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
-| `batch_jobs` | id, job_type, scope_key, status (`pending`, `running`, `done`, `failed`, `cancelled`), total, processed, failed, state_json (Cursor und Optionen), errors_json, message, lock_token, locked_until, created_by, created_at, updated_at, finished_at – seit v25, lange Admin-Aufgaben in Schritten (`BatchJobService`) |
+| `admin_menu_layouts` | id, site_key (eindeutig; `''` = global, sonst Site-Schlüssel aus *Einstellungen › MultiSites*), layout_json (MEDIUMTEXT, nur validierte Layouts; `NULL` = zurückgesetzt), version (steigt bei jedem Speichern und Zurücksetzen), updated_by, created_at, updated_at: seit v25, eigene Sidebar-Layouts ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
+| `batch_jobs` | id, job_type, scope_key, status (`pending`, `running`, `done`, `failed`, `cancelled`), total, processed, failed, state_json (Cursor und Optionen), errors_json, message, lock_token, locked_until, created_by, created_at, updated_at, finished_at: seit v25, lange Admin-Aufgaben in Schritten (`BatchJobService`) |
 
-### Schema v25 (4.0.0)
+### Schema v25
 
 | Änderung | Zweck |
 |---|---|
@@ -119,7 +119,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | Tabelle | Spalten | Zweck |
 |---|---|---|
 | `form_forms` | id, form_key (eindeutig), title, status, is_builtin, fields_json, settings_json, legacy_id, previous_status, trashed_at, trashed_by, created_by, created_at, updated_at | Formulare mit Feldern und Einstellungen ([FORMS.md](../admin/pages-posts/FORMS.md)) |
-| `form_submissions` | id, form_id, status (`new`, `read`, `done`, `trash`), previous_status, trashed_at, trashed_by, user_id, sender_name, sender_email, subject, data_json, meta_json, locale, source_url, consent_at, read_at, done_at, legacy_id, created_at, updated_at | Eingänge – ohne IP-Adresse und User-Agent |
+| `form_submissions` | id, form_id, status (`new`, `read`, `done`, `trash`), previous_status, trashed_at, trashed_by, user_id, sender_name, sender_email, subject, data_json, meta_json, locale, source_url, consent_at, read_at, done_at, legacy_id, created_at, updated_at | Eingänge: ohne IP-Adresse und User-Agent |
 | `form_submission_files` | id, submission_id, field_name, original_name, stored_name, mime_type, size_bytes, created_at | hochgeladene Dateien (privater Speicher `forms/uploads/`) |
 | `downloads_items` | id, title, slug, summary, description, category_id, cover_media, file_type, author_name, license, requirements, external_links, is_signed, signature_info, access_level, access_roles, access_plans, status, previous_status, trashed_at, trashed_by, is_featured, sort_order, seo_*, download_count, download_count_base, legacy_id, created_by, updated_by, published_at, created_at, updated_at | Downloads ([DOWNLOADS.md](../admin/media/DOWNLOADS.md)) |
 | `downloads_versions` | id, download_id, version, status, current_flag, file_area, file_path, file_name, file_ext, mime_type, file_size, sha256, external_url, release_date, changelog, download_count, legacy_id, legacy_path, created_by, created_at | Versionen und Dateien je Download |
@@ -128,7 +128,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `downloads_usage` | download_id, content_type, content_id | Verwendung in Inhalten (Editor-Block) |
 | `downloads_events`, `downloads_stats_daily` | id, download_id, version_id, source_type, source_id, dedupe_hash, aggregated, created_at · stat_date, download_id, version_id, source_type, source_id, hits | Abrufe ohne Personendaten, täglich verdichtet (Löschregel `downloads.events`) |
 | `downloads_rate_limits` | key_hash, request_count, window_started_at | Grenzwert für Abrufe |
-| `kb_entries` | id, title, keyword, slug, excerpt, content, content_details, content_benefits, content_practice, content_notes, content_license, content_conclusion, content_links, tooltip_text, synonyms, category, priority, is_active, is_case_sensitive, is_whole_word, max_links_per_page, trashed_at, trashed_by, created_at, updated_at | Knowledgebase-Einträge ([KNOWLEDGEBASE.md](../admin/pages-posts/KNOWLEDGEBASE.md)); Tabellen wie im früheren Plugin, Schema-Version in Option `cms_knowledgebase_version` |
+| `kb_entries` | id, title, keyword, slug, excerpt, content, content_details, content_benefits, content_practice, content_notes, content_license, content_conclusion, content_links, tooltip_text, synonyms, category, priority, is_active, is_case_sensitive, is_whole_word, max_links_per_page, trashed_at, trashed_by, seit v26 expires_at, review_due_at, expiry_notified_at, review_notified_at, created_at, updated_at | Knowledgebase-Einträge ([KNOWLEDGEBASE.md](../admin/pages-posts/KNOWLEDGEBASE.md)); Tabellen wie im früheren Plugin, Schema-Version in Option `cms_knowledgebase_version` |
 | `kb_categories`, `kb_settings` | Kategorien (name, slug, sort_order) · Einstellungen (setting_key, setting_value) | Knowledgebase |
 | `newsletter_subscribers` | id, email, first_name, last_name, status, source, segment_slug, locale, user_id, optin_token, optin_sent_at, consent_at, consent_text, confirmed_at, unsubscribed_at, last_sent_at, created_at, updated_at | Newsletter-Abonnenten ([NEWSLETTER.md](../admin/pages-posts/NEWSLETTER.md)); Schema-Version in Option `cms_newsletter_version` |
 | `newsletter_templates`, `newsletter_campaigns` | Vorlagen (name, subject, content_html/_text, status) · Kampagnen (template_id, subject, preview_text, content_html/_text, segment_slug, locale, status, is_public, scheduled_at, started_at, sent_at, recipient/sent/failed_count, created_by) | Newsletter |
@@ -137,40 +137,42 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `feeds_digests`, `feeds_subscriptions` | E-Mail-Digests (Empfänger, Bereiche, Rhythmus) · Mitglieder-Abos (Quellen, Rhythmus, Sprache) | Versand von Zusammenfassungen |
 | `feeds_fetch_queue` | id, source_id, status, trigger_type, attempts, items_new, error, claim_token, created_at, started_at, processed_at | Abruf-Warteschlange des Cron |
 | `translation_sync` | content_type, content_id, locale (Primärschlüssel), source_hash, target_hash, method, synced_by, synced_at | Übersetzungsstatus ([TRANSLATIONS.md](../admin/pages-posts/TRANSLATIONS.md)) |
-| `search_queries` | id, term, locale, result_count, created_at | Suchbegriffe der Frontend-Suche – ohne IP, Benutzer, Session; täglich verdichtet und gelöscht |
+| `search_queries` | id, term, locale, result_count, created_at | Suchbegriffe der Frontend-Suche: ohne IP, Benutzer, Session; täglich verdichtet und gelöscht |
 | `search_term_daily` | day, locale, term, searches, zero_hits, result_sum | Tageswerte der Suchbegriffe (Löschregel `search_terms`) |
 | `trash_media` | id, original_path, storage_name, title, filetype, filesize, payload_json, trashed_at, trashed_by | Medien im Papierkorb (Datei im privaten Speicher `trash/media/`) |
 
-#### Tabellen aus `FEATURE_TABLES_V26` (Vorbereitung Release 4.1.0)
 
-Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA-v26.md). Die Versionsmarke bleibt bis zum Release `v25`; Neuinstallationen erhalten die Tabellen über `getSchemaQueries()`, bestehende Installationen über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()`, die ALTER-Schritte im `MigrationManager` greifen ab der Marke `v26`.
+Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Die Papierkorb-Spalten stehen in den `CREATE TABLE`-Anweisungen, als `ALTER TABLE` in den v25-Migrationen und in der Laufzeitprüfung `SchemaManager::ensureTrashColumns()`, die Spalten und Index auch bei Installationen nachträgt, die v25 schon erreicht hatten. Das gewählte Profil steht in der Option `admin_menu_profile`.
+
+### Schema v26
+
+#### Tabellen aus `FEATURE_TABLES_V26`
+
+Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA-v26.md). Gesamtstand von Release 4.1.0: **90 Tabellendefinitionen** in `SchemaManager::getSchemaQueries()` (76 bis `v25`, 14 neu in `v26`, darunter `invoice_sequences` und `invoices`). Neuinstallationen erhalten sie über `getSchemaQueries()`, Updates über den `MigrationManager` (Schritt `v26`) und zusätzlich über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()` (idempotent, `CREATE TABLE IF NOT EXISTS`). Die Konstanten `SchemaManager::SCHEMA_VERSION` und `MigrationManager::SCHEMA_VERSION` stehen auf `v26`.
 
 | Tabelle / Spalte | Spalten | Zweck |
 |---|---|---|
 | `password_history` | id, user_id, password_hash, created_at | frühere bcrypt-Hashes für die Wiederverwendungssperre der Passwort-Richtlinie |
-| `user_identities` | id, user_id, provider, tenant_id, subject, email_at_link, provisioned, linked_at, last_login_at | SSO-Bindungen (Entra ID) – eindeutig über provider + tenant_id + subject (`oid`), nie über Benutzername/E-Mail; keine Tokens |
-| `media_usage` | media_path, content_type, content_id, context, updated_at | Verwendungsnachweis für Medien (seit 4.1.0, Bereich 2b): eine Zeile je Originaldatei, Inhalt und Kontext (`content`, `content_en`, `featured`, `gallery`, `attachment`, `setting`); Primärschlüssel mit Präfix `media_path(191)` |
-| `content_workflow_events` | id, content_type, content_id, locale, action, from_status, to_status, user_id, comment, created_at | Freigabe-Verlauf (seit 4.1.0, Bereich 3a): `submitted`, `approved`, `returned`, `withdrawn`, `comment`, `preview_created`, `preview_revoked`; Index je Inhalt und Zeit |
+| `user_identities` | id, user_id, provider, tenant_id, subject, email_at_link, provisioned, linked_at, last_login_at | SSO-Bindungen (Entra ID): eindeutig über provider + tenant_id + subject (`oid`), nie über Benutzername/E-Mail; keine Tokens |
+| `media_usage` | media_path, content_type, content_id, context, updated_at | Verwendungsnachweis für Medien (Bereich 2b): eine Zeile je Originaldatei, Inhalt und Kontext (`content`, `content_en`, `featured`, `gallery`, `attachment`, `setting`); Primärschlüssel mit Präfix `media_path(191)` |
+| `content_workflow_events` | id, content_type, content_id, locale, action, from_status, to_status, user_id, comment, created_at | Freigabe-Verlauf (Bereich 3a): `submitted`, `approved`, `returned`, `withdrawn`, `comment`, `preview_created`, `preview_revoked`; Index je Inhalt und Zeit |
 | `content_preview_links` | id, content_type, content_id, token_hash, expires_at, created_by, created_at | Vorschau-Links `/preview/<token>` für Entwürfe und eingereichte Inhalte: nur der SHA-256-Hash des Tokens (eindeutig), Ablauf 7 Tage, widerrufbar; abgelaufene Einträge entfernt `cms_cron_daily` |
-| `reusable_blocks` | id, title, content, content_en, status, created_by, updated_by, created_at, updated_at | EditorJS Block Vorlagen (seit 4.1.0, Bereich 3b): Editor.js-JSON je Sprache; eingebunden über den Block „Vorlagen“ (`reusableBlock`, Daten nur `{ "id" }`) |
+| `reusable_blocks` | id, title, content, content_en, status, created_by, updated_by, created_at, updated_at | EditorJS Block Vorlagen (Bereich 3b): Editor.js-JSON je Sprache; eingebunden über den Block „Vorlagen“ (`reusableBlock`, Daten nur `{ "id" }`) |
 | `reusable_block_usage` | block_id, content_type, content_id | Wo ist eine Vorlage eingebunden (`post`, `page`, `reusable_block`)? Für „Verwendet in“, Löschwarnung und das Aktualisieren verknüpfter Inhalte |
 | `reusable_block_revisions` | id, block_id, title, content, content_en, created_by, created_at | Verlauf je Vorlage, die letzten 20 Fassungen |
 | `backup_offsite_uploads` | id, backup_name, target, object_prefix, status, bytes, files, attempts, last_error, uploaded_at, created_at, updated_at | Offsite-Status je Backup (S3-kompatibel) |
 | `webhook_endpoints` | id, name, url, events_json, secret_encrypted, is_active, consecutive_failures, disabled_reason, created_by, created_at, updated_at | Empfänger ausgehender Webhooks; Geheimnis über `CryptoService` |
 | `webhook_deliveries` | id, endpoint_id, delivery_uuid, event, payload_json, status, attempts, next_attempt_at, response_status, last_error, created_at, delivered_at | Zustell-Warteschlange mit Wiederholungen |
-| `payment_events` | id, provider, provider_event_id, type, order_id, status, payload_hash, error, received_at, processed_at | Eingehende Ereignisse der Zahlungsanbieter, eindeutig je (provider, provider_event_id); dazu Spalten `orders.provider/provider_checkout_id/paid_at`, `user_subscriptions.provider/provider_subscription_id/current_period_end` |
+| `payment_events` | id, provider, provider_event_id, type, order_id, status, payload_hash, error, received_at, processed_at | Eingehende Ereignisse der Zahlungsanbieter (Idempotenz), eindeutig je (provider, provider_event_id) |
+| `orders`, `user_subscriptions`: Zahlungsspalten | `orders.provider`, `provider_checkout_id`, `paid_at` (Index `idx_provider_checkout`) · `user_subscriptions.provider`, `provider_subscription_id`, `current_period_end` (Index `idx_provider_sub`) | Zuordnung zu Stripe/Mollie und Laufzeitende bei Verlängerungen |
 | `invoice_sequences` | sequence_key, next_number, updated_at | Rechnungs-Nummernkreise (nie rückwärts) |
 | `invoices` | id, invoice_number, sequence_key, sequence_number, type, order_id, user_id, cancels_invoice_id, issued_at, service_period_start, service_period_end, currency, net_total, tax_total, gross_total, tax_mode, snapshot_json, pdf_path, pdf_sha256, created_by, restricted_at, created_at | Rechnungen/Storno-Rechnungen, unveränderlich, 10 Jahre |
-| `posts`, `pages`, `kb_entries`: `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` (DATETIME NULL), Indizes `idx_expires (status, expires_at)`, `idx_review_due` (Wissensdatenbank: `idx_kb_expires (is_active, expires_at)`, `idx_kb_review_due`) | Ablauf- und Prüfdaten (seit 4.1.0, Bereich 3c, `ContentExpiryService`); die `*_notified_at`-Spalten verhindern Mehrfachmeldungen |
-| `posts.status`, `pages.status` | neuer Wert `pending` | „Zur Prüfung“ (Vier-Augen-Prinzip) – kein Schemawechsel (`VARCHAR(20)`); nie öffentlich, Frontend-Abfragen bleiben bei `status = 'published'` |
+| `posts`, `pages`, `kb_entries`: `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` (DATETIME NULL), Indizes `idx_expires (status, expires_at)`, `idx_review_due` (Wissensdatenbank: `idx_kb_expires (is_active, expires_at)`, `idx_kb_review_due`) | Ablauf- und Prüfdaten (Bereich 3c, `ContentExpiryService`); die `*_notified_at`-Spalten verhindern Mehrfachmeldungen |
+| `posts.status`, `pages.status` | neuer Wert `pending` | „Zur Prüfung“ (Vier-Augen-Prinzip): kein Schemawechsel (`VARCHAR(20)`); nie öffentlich, Frontend-Abfragen bleiben bei `status = 'published'` |
 | `users.password_changed_at` | DATETIME NULL | Passwort-Alter für das optionale Höchstalter; Bestand `NULL` (rechnet ab `created_at`) |
 | `passkey_credentials.user_verified` | TINYINT(1) NULL | UV-Flag der Registrierung; zählt beim MFA-Zwang nur mit `1` |
 
-Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und Update von v24 (Feature-Tabellen, `batch_jobs`, `admin_menu_layouts`, `planned_at` und `page_revisions.created_by` entfernt, Version auf v24) ergeben dieselben 68 Tabellen und Spalten; die Version steht danach auf v25. Die Zahl 68 ist der Stand dieses Tests; das aktuelle Schema enthält 76 Tabellendefinitionen (`SchemaManager::getSchemaQueries()`, einschließlich `kb_*` und `newsletter_*`), der Vergleich wurde damit nicht wiederholt.
-
-Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Die Papierkorb-Spalten stehen in den `CREATE TABLE`-Anweisungen, als `ALTER TABLE` in den v25-Migrationen und in der Laufzeitprüfung `SchemaManager::ensureTrashColumns()`, die Spalten und Index auch bei Installationen nachträgt, die v25 schon erreicht hatten. Das gewählte Profil steht in der Option `admin_menu_profile`.
-
-### Schema v24 (4.0.0)
+### Schema v24
 
 | Änderung | Zweck |
 |---|---|
@@ -216,11 +218,11 @@ Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 | Schlüssel | Inhalt |
 |---|---|
 | `mfa_enabled`, `mfa_secret`, `mfa_pending_secret` | TOTP-Status und -Secrets; die Secrets seit 4.0.0 verschlüsselt (`enc:v2:…`, Kontext Benutzer + Feld), Klartext aus älteren Versionen wird beim Lesen bzw. beim Start migriert |
-| `auth_token_version` | Zähler für „Überall abmelden“ (seit 4.0.0): fließt in den Sitzungs-Fingerabdruck und den `pwf`-Claim der API-Tokens ein |
+| `auth_token_version` | Zähler für „Überall abmelden“: fließt in den Sitzungs-Fingerabdruck und den `pwf`-Claim der API-Tokens ein |
 | `email_verification_token`, `email_verification_expires`, `email_verified_at` | Bestätigung neuer Konten (Token als SHA-256-Hash) bzw. Zeitpunkt der letzten Bestätigung |
 | `pending_email`, `pending_email_token`, `pending_email_expires` | ausstehende E-Mail-Änderung (seit 4.0.0; Token als SHA-256-Hash, 48 Stunden gültig) |
 
-Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.0.0, `AdminUiPreferenceService`) speichert als JSON den eingeklappten Zustand der Seitenleiste (`sidebar_collapsed`), manuell auf- oder zugeklappte Gruppen und Plugin-Einträge (`groups`, höchstens 200 Schlüssel) und den gewählten Site-Kontext (`site`).
+Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (`AdminUiPreferenceService`) speichert als JSON den eingeklappten Zustand der Seitenleiste (`sidebar_collapsed`), manuell auf- oder zugeklappte Gruppen und Plugin-Einträge (`groups`, höchstens 200 Schlüssel) und den gewählten Site-Kontext (`site`).
 
 ### Wichtige Optionen in `cms_settings`
 
@@ -229,9 +231,9 @@ Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.
 | `db_schema_version`, `installed_cms_version`, `installed_cms_schema_version` | Versionsstände |
 | `active_plugins` | JSON-Liste aktiver Plugin-Slugs |
 | `active_theme` | aktives Theme |
-| `admin_plugin_site_assignments` | Plugin-Zuweisung je Site (seit 4.0.0): JSON `{"<plugin-slug>": ["<site-key>", …]}`; Plugins ohne Eintrag gelten für alle Sites ([../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)) |
-| `admin_menu_profile` | Profil der Admin-Seitenleiste (seit 4.0.0): `classic` (Standard), `structured` oder `custom`; gesetzt im Installer oder unter *Einstellungen › Admin-Menü* ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
-| `admin_sites` | Site-Liste der Admin-Oberfläche (seit 4.0.0, *Einstellungen › MultiSites*): JSON-Liste mit `key`, `label`, `url`, `accent`, `accent_soft`, `accent_strong`, `hosts`; ohne Option gilt die Haupt-URL der Installation (`SITE_URL`) als einzige Site ([../admin/system-settings/MULTISITES.md](../admin/system-settings/MULTISITES.md)) |
+| `admin_plugin_site_assignments` | Plugin-Zuweisung je Site: JSON `{"<plugin-slug>": ["<site-key>", …]}`; Plugins ohne Eintrag gelten für alle Sites ([../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)) |
+| `admin_menu_profile` | Profil der Admin-Seitenleiste: `classic` (Standard), `structured` oder `custom`; gesetzt im Installer oder unter *Einstellungen › Admin-Menü* ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
+| `admin_sites` | Site-Liste der Admin-Oberfläche (*Einstellungen › MultiSites*): JSON-Liste mit `key`, `label`, `url`, `accent`, `accent_soft`, `accent_strong`, `hosts`; ohne Option gilt die Haupt-URL der Installation (`SITE_URL`) als einzige Site ([../admin/system-settings/MULTISITES.md](../admin/system-settings/MULTISITES.md)) |
 | `site_name`, `site_url`, `language`, … | allgemeine Einstellungen ([../admin/system-settings/SYSTEM.md](../admin/system-settings/SYSTEM.md)) |
 | `seo_*`, `perf_*`, `firewall_*`, `antispam_*`, `cookie_*`, `member_*`, `legal_*`, `cms_loginpage_*` | Einstellungen der jeweiligen Bereiche |
 | Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`json:`; Secrets seit 4.0.0 `enc:v2:<alg>:<Schlüssel-ID>:<Daten>` über `CryptoService`, Altwerte `enc:` werden automatisch neu verschlüsselt). Die Gruppe `cron` enthält seit 4.0.0 außerdem `last_run_at`, `last_run_status` (`ok`/`failed`), `last_run_task` und `last_error` des letzten Laufs (Systemhinweise im Admin) |
@@ -241,7 +243,7 @@ Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.
 - Tabellennamen immer über `getPrefix()` bilden, nie hart codieren.
 - Eigene Plugin-Tabellen idempotent mit `CREATE TABLE IF NOT EXISTS` beim Aktivieren anlegen und bei `dsgvo_delete_data` personenbezogene Daten löschen.
 - Für Spaltenergänzungen `columnExists()` prüfen und `ALTER TABLE … ADD COLUMN` nur bei Bedarf ausführen.
-- Keine Werte in SQL interpolieren – Platzhalter `?` verwenden.
+- Keine Werte in SQL interpolieren: Platzhalter `?` verwenden.
 
 ### Verwandte Dokumente
 

@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 5: Zahlungen, Abos & Rechnungen
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** Spezifikation | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Spec 4.1.0: Bereich 5: Zahlungen, Abos & Rechnungen
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ 5a (Zahlungen) und 5b (Rechnungen) umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -15,7 +15,7 @@ storage. Lightweight REST clients over `Http\Client` instead of vendor SDKs.
 
 Tabelle `orders` (u. a. `order_number`, `user_id`, `plan_id`, Beträge, `status`, `payment_method`, `payment_ref`),
 `user_subscriptions`, `subscription_plans`, `SubscriptionManager`; Abo-Einstellungen kennen die Zahlarten `invoice`,
-`stripe`, `paypal`, `all` – ohne Gateway-Anbindung. `PdfService` (Dompdf) vorhanden.
+`stripe`, `paypal`, `all`, ohne Gateway-Anbindung. `PdfService` (Dompdf) vorhanden.
 
 ### 2. Grundsätze
 
@@ -43,7 +43,7 @@ Tabelle `orders` (u. a. `order_number`, `user_id`, `plan_id`, Beträge, `status`
 - Pflichtangaben (§ 14 UStG): Name/Anschrift Leistender und Empfänger, Steuernummer oder USt-IdNr., Ausstellungsdatum, Rechnungsnummer, Menge/Art der Leistung, Leistungszeitraum, Entgelt nach Steuersätzen, Steuerbetrag, Hinweis bei Steuerbefreiung/Kleinunternehmer (§ 19 UStG) bzw. Reverse Charge.
 - **Unveränderlich:** PDF und Rechnungsdaten werden beim Erstellen festgeschrieben (Snapshot), SHA-256 gespeichert; Korrektur nur über Storno-Rechnung (eigene Nummer, Verweis).
 - Aufbewahrung 10 Jahre (keine Löschung über DSGVO-Löschantrag; Hinweis im Datenschutztext; Sperrvermerk statt Löschung).
-- Optional später: E-Rechnung (ZUGFeRD/XRechnung) – nicht in 4.1.0.
+- Optional später: E-Rechnung (ZUGFeRD/XRechnung): nicht in 4.1.0.
 
 ### 5. Datenmodell (v26)
 

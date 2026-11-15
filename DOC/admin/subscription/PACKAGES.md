@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Abo-Pakete
+# 365CMS Projektdokumentation | Admin: Abo-Pakete
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/packages` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_packages`
 
 ## English (summary)
@@ -17,7 +17,7 @@ Die Seite zeigt alle Pakete mit Preisen, Limits, Status (aktiv/inaktiv), Hervorh
 |---|---|
 | `save` | Paket anlegen/ändern (Name Pflicht, Slug eindeutig) |
 | `toggle` | Aktiv/inaktiv umschalten |
-| `delete` | Paket löschen – **abgelehnt**, solange aktive Benutzer zugewiesen sind |
+| `delete` | Paket löschen: **abgelehnt**, solange aktive Benutzer zugewiesen sind |
 | `seed_defaults` | Legt die sechs Standardpakete an bzw. ergänzt fehlende; „Professional“ wird als empfohlen markiert |
 | `save_package_settings` | Abrechnungseinstellungen speichern (siehe unten) |
 
@@ -56,7 +56,7 @@ Die Seite zeigt alle Pakete mit Preisen, Limits, Status (aktiv/inaktiv), Hervorh
 | Rechnungspräfix / nächste Nummer | `invoice_prefix`, `invoice_next_number` | `INV-` / 1001 |
 | Steuersatz / inkl. MwSt. | `tax_rate`, `tax_included` | 19 % / ja |
 | Erinnerung vor Ablauf (Tage) / E-Mail | `notification_before_expiry`, `notification_email` | 7 / leer |
-| AGB-Seite / Widerrufsseite | `terms_page_id`, `cancellation_page_id` | – (Seiten-ID aus `cms_pages`) |
+| AGB-Seite / Widerrufsseite | `terms_page_id`, `cancellation_page_id` |: (Seiten-ID aus `cms_pages`) |
 
 > **Hinweis:** Stripe und PayPal werden im Checkout als Zahlungsart angeboten, eine Zahlungsabwicklung (Gateway-Anbindung) ist im Core nicht enthalten. Bestellungen werden mit Status `pending` angelegt und in `/admin/orders` manuell auf `paid` gesetzt.
 

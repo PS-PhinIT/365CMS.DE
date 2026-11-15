@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Theme-Customizer
+# 365CMS Projektdokumentation | Admin: Theme-Customizer
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/theme-editor` (Menü „Theme-Editor“) | **Capability:** `manage_settings` | **CSRF-Aktion (Theme):** `theme_customizer`
 
 ## English (summary)
@@ -25,15 +25,15 @@ Konfiguration: `CMS/themes/cms-default/admin/customizer/config.php`, Hilfsfunkti
 
 | Tab | Inhalt (Auszug) |
 |---|---|
-| `header` – Header & Logo | Logo-Typ (Bild/Text), Logo-Bild, -Höhe, -Text, Tagline, Titel neben Logo, Such-, Anmelde- und Registrieren-Button, Farbstreifen |
+| `header`: Header & Logo | Logo-Typ (Bild/Text), Logo-Bild, -Höhe, -Text, Tagline, Titel neben Logo, Such-, Anmelde- und Registrieren-Button, Farbstreifen |
 | `navigation` | Leiste unter dem Header, Hamburger-Menü, Schriftgröße, Großbuchstaben, Buchstabenabstand |
-| `layout` – Layout & Design | Maximale Seitenbreite, Sticky Header, Inhaltslayout, Textspaltenbreite, Eckradius, Kartenabstand, „Nach oben“-Button |
-| `colors` – Farben | Akzent/Hover, Textfarben (primär, weich, gedämpft), Hintergrund, Surface, Trennlinien, Header, Links, Kategorie-Leiste u. a. |
+| `layout`: Layout & Design | Maximale Seitenbreite, Sticky Header, Inhaltslayout, Textspaltenbreite, Eckradius, Kartenabstand, „Nach oben“-Button |
+| `colors`: Farben | Akzent/Hover, Textfarben (primär, weich, gedämpft), Hintergrund, Surface, Trennlinien, Header, Links, Kategorie-Leiste u. a. |
 | `typography` | Schriften und Größen (lokale Schriften aus der [Schriftverwaltung](FONTS.md)) |
 | `footer` | Spalten, Texte, Farben, Legal-Leiste |
-| `blog` – Blog & Artikel | Darstellung von Archiven und Einzelbeiträgen |
-| `homepage` – Startseite | Aufbau der Startseite |
-| `advanced` – Erweitert | Zusätzliches CSS und Expertenoptionen |
+| `blog`: Blog & Artikel | Darstellung von Archiven und Einzelbeiträgen |
+| `homepage`: Startseite | Aufbau der Startseite |
+| `advanced`: Erweitert | Zusätzliches CSS und Expertenoptionen |
 
 ### Speicherung
 
@@ -48,4 +48,4 @@ Ein Theme stellt seinen Customizer bereit, indem es `admin/customizer.php` mitli
 
 ### Verwandte Dokumente
 
-[EDITOR.md](EDITOR.md) · [FONTS.md](FONTS.md) · [DESIGN-SETTINGS.md](DESIGN-SETTINGS.md) · [../../theme/DESIGN-SYSTEM.md](../../theme/DESIGN-SYSTEM.md)
+[EDITOR.md](EDITOR.md) · [FONTS.md](FONTS.md) · [../../theme/DESIGN-SYSTEM.md](../../theme/DESIGN-SYSTEM.md)

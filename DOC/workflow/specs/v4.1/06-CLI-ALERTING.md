@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 6: CLI & Echtzeit-Alerting
-> **Stand:** 2026-11-15 | **Ziel-Version:** ~~4.1.0~~ → **4.3.0** (verschoben am 15.11.2026) | **Status:** Spezifikation | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Spec 4.1.0: Bereich 6: CLI & Echtzeit-Alerting
+> **Stand:** 2026-11-15 | **Ziel-Version:** ~~4.1.0~~ → **4.3.0** (verschoben am 15.11.2026) | **Status:** Spezifikation, **Umsetzung in 4.3.0** (CLI und Alerting; Webhook-Ereignis `alert.raised`, Hook `cms_alert_raised`) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -58,5 +58,5 @@ Tests (`TESTS/alerting/run.php`): Cooldown und Zusammenfassung, Schwellen je Kan
 Direktversand, Entwarnung, keine Geheimnisse im Kontext, Webhook-Ereignis erzeugt.
 
 **Referenzen:** CLI-Bibliotheken (`php-school/cli-menu`, `splitbrain/php-cli`, `adhocore/php-cli`) und
-Notification-Pakete werden nicht eingeführt – der Umfang ist mit eigenem Code kleiner als eine neue Abhängigkeit
+Notification-Pakete werden nicht eingeführt, der Umfang ist mit eigenem Code kleiner als eine neue Abhängigkeit
 ([REFERENCES.md](REFERENCES.md)).

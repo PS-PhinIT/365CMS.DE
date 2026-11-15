@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: FILELIST
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-13
+# 365CMS Projektdokumentation | FILELIST
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -27,13 +27,13 @@
 
 This file is the **readable structure map**. It answers: where does something live, what does the running CMS load, and which paths matter when you change code.
 
-Product version in code: `4.0.0`. PHP: 8.4.1+. Schema: `v25`.
+Product version in code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 **Deutsch**
 
 Diese Datei ist die **lesbare Strukturkarte**. Sie beantwortet: wo liegt etwas, was lädt das laufende CMS, und welche Pfade zählen bei Änderungen.
 
-Produktversion im Code: `4.0.0`. PHP: 8.4.1+. Schema: `v25`.
+Produktversion im Code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 ### 1.1 Workspace context | Workspace-Kontext
 
@@ -41,9 +41,9 @@ Produktversion im Code: `4.0.0`. PHP: 8.4.1+. Schema: `v25`.
 
 Relevant repositories in the workspace:
 
-- `365CMS.DE-MAIN` — this repository, **productive runtime base**
-- `365CMS.DE-THEME` — separate theme source repository
-- `365CMS.DE-PLUGINS` — separate plugin source repository
+- `365CMS.DE-MAIN`, this repository, **productive runtime base**
+- `365CMS.DE-THEME`, separate theme source repository
+- `365CMS.DE-PLUGINS`, separate plugin source repository
 
 The CMS loads themes and plugins only from `CMS/themes/` and `CMS/plugins/`.
 
@@ -51,9 +51,9 @@ The CMS loads themes and plugins only from `CMS/themes/` and `CMS/plugins/`.
 
 Relevante Repositories im Workspace:
 
-- `365CMS.DE-MAIN` — dieses Repository, **produktive Laufzeitbasis**
-- `365CMS.DE-THEME` — separates Theme-Quellrepository
-- `365CMS.DE-PLUGINS` — separates Plugin-Quellrepository
+- `365CMS.DE-MAIN`, dieses Repository, **produktive Laufzeitbasis**
+- `365CMS.DE-THEME`, separates Theme-Quellrepository
+- `365CMS.DE-PLUGINS`, separates Plugin-Quellrepository
 
 Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 
@@ -65,10 +65,10 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `DOC/` | documentation |
 | `RELEASE/` | release zips and checksums |
 | `SCREENSHOTS/` | screenshots |
-| `TESTS/mfa-enforcement/` | Role-based MFA enforcement and account gate (4.1.0) / Rollenbasierter MFA-Zwang und Konto-Weiche (4.1.0) (`php TESTS/mfa-enforcement/run.php`) |
+| `TESTS/mfa-enforcement/` | Role-based MFA enforcement and account gate / Rollenbasierter MFA-Zwang und Konto-Weiche (`php TESTS/mfa-enforcement/run.php`) |
 | `TESTS/password-policy/` | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration / Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung (`php TESTS/password-policy/run.php [-v]`) |
-| `TESTS/media-avif/` | AVIF derivatives (4.1.0): detection, keep-only-if-smaller, pixel budget, `<picture>` markup, deletion, batch steps / AVIF-Derivate (4.1.0): Erkennung, „nur wenn kleiner“, Pixel-Budget, `<picture>`-Markup, Löschen, Batch-Schritte (`php TESTS/media-avif/run.php [-v]`) |
-| `TESTS/sso-entra/` | Entra ID sign-in via OpenID Connect (4.1.0): ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping / Entra-ID-Anmeldung über OpenID Connect (4.1.0): ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping (`php TESTS/sso-entra/run.php [-v]`) |
+| `TESTS/media-avif/` | AVIF derivatives: detection, keep-only-if-smaller, pixel budget, `<picture>` markup, deletion, batch steps / AVIF-Derivate: Erkennung, „nur wenn kleiner“, Pixel-Budget, `<picture>`-Markup, Löschen, Batch-Schritte (`php TESTS/media-avif/run.php [-v]`) |
+| `TESTS/sso-entra/` | Entra ID sign-in via OpenID Connect: ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping / Entra-ID-Anmeldung über OpenID Connect: ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping (`php TESTS/sso-entra/run.php [-v]`) |
 | `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
@@ -78,23 +78,23 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/ai-policy/` | AI provider policy gates (external data sharing, beta providers, scopes) / Freigaben der AI-Provider-Richtlinie (externe Datenweitergabe, Beta-Provider, Scopes) (`php TESTS/ai-policy/run.php`) |
 | `TESTS/ai-seo-metadata/` | AI SEO metadata pipeline (normalizing, schema type, robots) / AI-SEO-Metadaten-Pipeline (Normalisierung, Schema-Typ, Robots) (`php TESTS/ai-seo-metadata/run.php`) |
 | `TESTS/analytics-consent/` | analytics output and CSP only with configured provider and consent / Analytics-Ausgabe und CSP nur mit konfiguriertem Anbieter und Einwilligung (`php TESTS/analytics-consent/run.php`) |
-| `TESTS/content-expiry/` | expiry and review dates (4.1.0): inputs, expiry (draft/mark, batch, idempotent), review reminders / Ablauf- und Prüfdaten (4.1.0): Eingaben, Ablauf (Entwurf/Markieren, Batch, idempotent), Wiedervorlage (`php TESTS/content-expiry/run.php [-v]`) |
+| `TESTS/content-expiry/` | expiry and review dates: inputs, expiry (draft/mark, batch, idempotent), review reminders / Ablauf- und Prüfdaten: Eingaben, Ablauf (Entwurf/Markieren, Batch, idempotent), Wiedervorlage (`php TESTS/content-expiry/run.php [-v]`) |
 | `TESTS/content-types/` | content type provider registry test / Test der Inhaltstyp-Provider (`php TESTS/content-types/run.php [-v]`) |
-| `TESTS/content-workflow/` | four-eyes review (4.1.0): publish right incl. second person, save enforcement, transitions, recipients, history, preview links, capability migration / Vier-Augen-Prinzip (4.1.0): Freigaberecht inkl. zweiter Person, Durchsetzung beim Speichern, Übergänge, Empfänger, Verlauf, Vorschau-Links, Rechte-Migration (`php TESTS/content-workflow/run.php [-v]`) |
+| `TESTS/content-workflow/` | four-eyes review: publish right incl. second person, save enforcement, transitions, recipients, history, preview links, capability migration / Vier-Augen-Prinzip: Freigaberecht inkl. zweiter Person, Durchsetzung beim Speichern, Übergänge, Empfänger, Verlauf, Vorschau-Links, Rechte-Migration (`php TESTS/content-workflow/run.php [-v]`) |
 | `TESTS/csp-style-rewriter/` | `InlineStyleRewriter`: `style` attributes to nonce CSS classes / `InlineStyleRewriter`: `style`-Attribute zu Nonce-CSS-Klassen (`php TESTS/csp-style-rewriter/run.php`) |
 | `TESTS/editorjs-blocks/` | Editor.js block tests / Tests der Editor.js-Blöcke (`php TESTS/editorjs-blocks/run.php`, browser part / Browser-Teil `node TESTS/editorjs-blocks/browser/run.js`) |
 | `TESTS/feeds-design/` | feed page design tokens, no reading time on overview pages / Design-Variablen der Feed-Seiten, keine Lesezeit auf Übersichten (`php TESTS/feeds-design/run.php [-v]`) |
 | `TESTS/functions/` | function tests without database / Funktionstests ohne Datenbank (`php TESTS/functions/run.php`) |
 | `TESTS/login-showcase/` | login showcase and theme colour import: settings validation, getShowcase() shape, partial escaping, core login view, theme override / Login-Showcase und Theme-Farbimport: Validierung der Einstellungen, Datenform von getShowcase(), Escaping des Partials, Core-Loginseite, Theme-Override (`php TESTS/login-showcase/run.php [-v]`) |
-| `TESTS/media-usage/` | media usage index (4.1.0): extraction (URLs, srcset, derivatives, foreign domains), contexts, reindex, unused, rebuild / Verwendungsnachweis für Medien (4.1.0): Extraktion (URLs, srcset, Derivate, fremde Domains), Kontexte, Neuindizieren, ungenutzt, Neuaufbau (`php TESTS/media-usage/run.php [-v]`) |
+| `TESTS/media-usage/` | media usage index: extraction (URLs, srcset, derivatives, foreign domains), contexts, reindex, unused, rebuild / Verwendungsnachweis für Medien: Extraktion (URLs, srcset, Derivate, fremde Domains), Kontexte, Neuindizieren, ungenutzt, Neuaufbau (`php TESTS/media-usage/run.php [-v]`) |
 | `TESTS/member-area/` | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup / Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit (`php TESTS/member-area/run.php [-v]`) |
 | `TESTS/newsletter-member/` | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping / Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping (`php TESTS/newsletter-member/run.php [-v]`) |
 | `TESTS/release-3.4.0/` | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release) / Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases) (`php TESTS/release-3.4.0/run.php`) |
-| `TESTS/reusable-blocks/` | EditorJS block templates (4.1.0): block data, usage index, rendering and language, recursion, history, delete warning, search text / EditorJS Block Vorlagen (4.1.0): Blockdaten, Nutzungsindex, Rendern und Sprache, Rekursion, Verlauf, Löschwarnung, Suchtext (`php TESTS/reusable-blocks/run.php [-v]`) |
-| `TESTS/s3-backup/` | offsite backups (4.1.0): SigV4 vectors, S3 client with fake storage, multipart, retention, encryption gate / Offsite-Backups (4.1.0): SigV4-Testvektoren, S3-Client mit Fake-Speicher, Multipart, Aufbewahrung, Verschlüsselungspflicht (`php TESTS/s3-backup/run.php [-v]`) |
-| `TESTS/invoices/` | invoices (4.1.0): numbering, cancellation, mandatory fields, download rights / Rechnungen (4.1.0): Nummernkreis lückenlos (auch parallel), Storno, Pflichtangaben, Download-Rechte, DSGVO-Sperrvermerk (`php TESTS/invoices/run.php [-v]`) |
-| `TESTS/payments/` | payments (4.1.0): Stripe signature, Stripe/Mollie events, checkout amounts, idempotency, renewals / Zahlungen (4.1.0): Stripe-Signatur, Ereignisse, Beträge, Idempotenz, Verlängerung (`php TESTS/payments/run.php [-v]`) |
-| `TESTS/webhooks/` | outgoing webhooks (4.1.0): signature, queue, retries, auto-disable, SSRF targets, retention / ausgehende Webhooks (4.1.0): Signatur, Warteschlange, Wiederholungen, Deaktivieren, Ziele, Löschfrist (`php TESTS/webhooks/run.php [-v]`) |
+| `TESTS/reusable-blocks/` | EditorJS block templates: block data, usage index, rendering and language, recursion, history, delete warning, search text / EditorJS Block Vorlagen: Blockdaten, Nutzungsindex, Rendern und Sprache, Rekursion, Verlauf, Löschwarnung, Suchtext (`php TESTS/reusable-blocks/run.php [-v]`) |
+| `TESTS/s3-backup/` | offsite backups: SigV4 vectors, S3 client with fake storage, multipart, retention, encryption gate / Offsite-Backups: SigV4-Testvektoren, S3-Client mit Fake-Speicher, Multipart, Aufbewahrung, Verschlüsselungspflicht (`php TESTS/s3-backup/run.php [-v]`) |
+| `TESTS/invoices/` | invoices: numbering, cancellation, mandatory fields, download rights / Rechnungen: Nummernkreis lückenlos (auch parallel), Storno, Pflichtangaben, Download-Rechte, DSGVO-Sperrvermerk (`php TESTS/invoices/run.php [-v]`) |
+| `TESTS/payments/` | payments: Stripe signature, Stripe/Mollie events, checkout amounts, idempotency, renewals / Zahlungen: Stripe-Signatur, Ereignisse, Beträge, Idempotenz, Verlängerung (`php TESTS/payments/run.php [-v]`) |
+| `TESTS/webhooks/` | outgoing webhooks: signature, queue, retries, auto-disable, SSRF targets, retention / ausgehende Webhooks: Signatur, Warteschlange, Wiederholungen, Deaktivieren, Ziele, Löschfrist (`php TESTS/webhooks/run.php [-v]`) |
 | `TESTS/schema-v26/` | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check / Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung (`php TESTS/schema-v26/run.php [-v]`) |
 | `TESTS/schema-upgrade/` | schema upgrade against a real MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): fresh install v26 and updates from 4.0.0 (v25) and 3.5.x (v23) yield identical structure, keep data, are idempotent, one connection on first request / Upgrade-Pfad gegen echte MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): Neuinstallation v26 und Updates von 4.0.0 (v25) und 3.5.x (v23) ergeben dieselbe Struktur, erhalten Daten, laufen idempotent, eine Verbindung beim ersten Request (`php TESTS/schema-upgrade/run.php [-v]`) |
 | `TESTS/security/` | security tests / Sicherheitstests (`php TESTS/security/run.php`) |
@@ -164,7 +164,7 @@ Do not use the old 467-file / 28.03.2026 numbers. Current counts and file lists 
 
 **Deutsch**
 
-Die alten Zahlen (467 Dateien, 28.03.2026) nicht mehr verwenden. Aktuelle Zählungen und Dateilisten stehen in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md). `DOC/_cms_inventory_current.txt` existiert nicht.
+Zählungen und Dateilisten stehen in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md).
 
 ---
 
@@ -221,11 +221,15 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | SEO | `SEOService`, `SeoAnalysisService`, `RedirectService`, `SitemapService` |
 | Media | `MediaService`, `MediaDeliveryService`, `FileUploadService`, `ImageService` |
 | Editor | `EditorJsService`, `EditorJsRenderer`, `EditorService`, `PostPublishChecklistService`, `PostRevisionService` |
-| Admin UI (4.0.0) | `AdminNavigationService`, `AdminUiPreferenceService`, `AdminSiteContextService`, `PluginSiteAssignmentService`, `AdminNoticeService` |
-| Admin menu (4.0.0) | `Services/AdminMenu/`: `CoreCatalog`, `ProfileLayouts`, `MenuRegistry`, `MenuBuilder`, `LayoutValidator`, `LayoutRepository`, `BadgeProvider`, `AdminMenuService` ([admin/ADMIN-MENU.md](admin/ADMIN-MENU.md)) |
-| Content functions (4.0.0) | `Forms/` (`FormService`, `FormSubmissionService`, `FormUploadService` …), `Downloads/`, `Knowledgebase/` (Repository, Linker, CSV-Pakete, Provider), `Newsletter/` (Repository, Mailer, Dispatcher, Frontend, DSGVO), `Trash/` + `TrashListActions`, `Exchange/` (`ContentExchangeService` + providers), `Search/` (`SearchIndexService`, `SearchTermStatsService`), `ContentChangesService`, `TranslationStatusService`, `Media/ThumbnailRegenerationService`, `Media/MediaLicenseService`, `Legal/AccessibilityStatementService` |
-| System (4.0.0) | `AdminToolbarService` (cache, maintenance), `LoginThrottleSettings`, `EnvironmentInfoService`, `DataRetentionService` + `Retention/` |
-| Extension points (4.0.0) | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
+| Admin UI | `AdminNavigationService`, `AdminUiPreferenceService`, `AdminSiteContextService`, `PluginSiteAssignmentService`, `AdminNoticeService` |
+| Admin menu | `Services/AdminMenu/`: `CoreCatalog`, `ProfileLayouts`, `MenuRegistry`, `MenuBuilder`, `LayoutValidator`, `LayoutRepository`, `BadgeProvider`, `AdminMenuService` ([admin/ADMIN-MENU.md](admin/ADMIN-MENU.md)) |
+| Content functions | `Forms/` (`FormService`, `FormSubmissionService`, `FormUploadService` …), `Downloads/`, `Knowledgebase/` (Repository, Linker, CSV-Pakete, Provider), `Newsletter/` (Repository, Mailer, Dispatcher, Frontend, DSGVO), `Trash/` + `TrashListActions`, `Exchange/` (`ContentExchangeService` + providers), `Search/` (`SearchIndexService`, `SearchTermStatsService`), `ContentChangesService`, `TranslationStatusService`, `Media/ThumbnailRegenerationService`, `Media/MediaLicenseService`, `Legal/AccessibilityStatementService` |
+| System | `AdminToolbarService` (cache, maintenance), `LoginThrottleSettings`, `EnvironmentInfoService`, `DataRetentionService` + `Retention/` |
+| Extension points | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
+| Identity & security | `Security/PasswordPolicyService`, `Security/MfaEnforcementService`, `Auth/SSO/` (Entra ID), `Routing/SsoRouter` |
+| Media | `Media/AvifDerivativeService`, `Media/AvifRegenerationService`, `Media/MediaUsageIndex`, `Media/MediaReferenceExtractor`, `Media/Usage/` |
+| Editorial | `Content/ContentStatus`, `Content/ContentWorkflow`, `Content/ContentExpiryService`, `ReusableBlocks/ReusableBlockService` |
+| Operations | `Backup/OffsiteBackupService` (+ `S3Client`, `SigV4Signer`), `Webhooks/WebhookService`, `Payments/PaymentService` (Stripe, Mollie), `Routing/PaymentRouter` |
 | Landing | `LandingPageService` + `Services/Landing/` |
 | AI | `Services/AI/` (admin-only in 3.5.0) |
 | Member | `MemberService`, `MessageService` |
@@ -237,29 +241,29 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-391 files. Layout:
+408 files. Layout:
 
-- `CMS/admin/*.php` — HTTP entry points
-- `CMS/admin/modules/<domain>/` — domain modules (`comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
-- `CMS/admin/views/` — templates
-- `CMS/admin/partials/` — shared chrome (including sidebar)
-- `CMS/admin/logs/` — log UI helpers
-- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`)
+- `CMS/admin/*.php`. HTTP entry points
+- `CMS/admin/modules/<domain>/`, domain modules (`comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
+- `CMS/admin/views/`, templates
+- `CMS/admin/partials/`, shared chrome (including sidebar)
+- `CMS/admin/logs/`, log UI helpers
+- `CMS/admin/settings-tabs/`, extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
 
-Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), since 4.0.0 the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`, `multisites.php` (MultiSites) and `configuration.php` (tile pages `/admin/configuration[?group=…]`). Content and tool pages added in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, each long-running one with a JSON endpoint `*-api.php`.
+Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`, `multisites.php` (MultiSites) and `configuration.php` (tile pages `/admin/configuration[?group=…]`). Content and tool pages added in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, each long-running one with a JSON endpoint `*-api.php`.
 
 **Deutsch**
 
-391 Dateien. Aufbau:
+408 Dateien. Aufbau:
 
-- `CMS/admin/*.php` — HTTP-Einstiege
-- `CMS/admin/modules/<domain>/` — Fachmodule
-- `CMS/admin/views/` — Templates
-- `CMS/admin/partials/` — gemeinsame Oberfläche (inkl. Sidebar)
-- `CMS/admin/logs/` — Log-UI
-- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`)
+- `CMS/admin/*.php`. HTTP-Einstiege
+- `CMS/admin/modules/<domain>/`. Fachmodule
+- `CMS/admin/views/`. Templates
+- `CMS/admin/partials/`, gemeinsame Oberfläche (inkl. Sidebar)
+- `CMS/admin/logs/`. Log-UI
+- `CMS/admin/settings-tabs/`. Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
 
-Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), seit 4.0.0 die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`, `multisites.php` (MultiSites) und `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`). Seit 4.0.0 außerdem die Inhalts- und Werkzeugseiten `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, bei langen Aufgaben mit JSON-Endpunkt `*-api.php`.
+Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`, `multisites.php` (MultiSites) und `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`). Seit 4.0.0 außerdem die Inhalts- und Werkzeugseiten `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, bei langen Aufgaben mit JSON-Endpunkt `*-api.php`.
 
 ---
 
@@ -269,10 +273,10 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
-- `assets/css/` — 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
-- `assets/js/` — 58 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 18 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (since 4.0.0, no build step)
-- `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono as local WOFF2 files (since 4.0.0)
-- bundled libraries — see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
+- `assets/css/`. 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
+- `assets/js/`. 59 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (no build step)
+- `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono as local WOFF2 files
+- bundled libraries, see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
 `cookieconsent`, `elfinder`, `filepond`, and `msgraph` directories are **not** present under `CMS/assets/` in this tree. `cookieconsent-init.js` still exists.
 
@@ -280,10 +284,10 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
-- `assets/css/` — 32 Stylesheets
-- `assets/js/` — 58 Skripte plus 18 ES-Module in `admin-shell/`, `editor-blocks/` und `post-editor/` (seit 4.0.0, ohne Build-Schritt)
-- `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien (seit 4.0.0)
-- gebündelte Bibliotheken — siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
+- `assets/css/`. 32 Stylesheets
+- `assets/js/`. 59 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
+- `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien
+- gebündelte Bibliotheken, siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
 Die Ordner `cookieconsent`, `elfinder`, `filepond` und `msgraph` liegen in diesem Baum **nicht** unter `CMS/assets/`. `cookieconsent-init.js` existiert weiterhin.
 
@@ -333,11 +337,11 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 |---|---|
 | `CMS/includes/` | 12 helper files, including `wordpress-compat.php` and `admin-menu-profiles.php` |
 | `CMS/lang/` | `de.yaml`, `en.yaml` |
-| `CMS/logs/` | `LOG_PATH` — not `var/logs/` (that directory does not exist here) |
+| `CMS/logs/` | `LOG_PATH`: not `var/logs/` (that directory does not exist here) |
 | `CMS/uploads/` | public uploads; `.gitkeep` and `.htaccess` in git |
 | `CMS/cache/` | cache, including optimizer output |
 | `CMS/install/` | 10 installer files (six steps, including "Admin layout") |
-| `CMS/vendor/` | `dompdf` only in this tree — **no TCPDF** |
+| `CMS/vendor/` | `dompdf` only in this tree: **no TCPDF** |
 | `CMS/views/` | extra views: `auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/` |
 | `CMS/marketplace/` | core/plugin/theme index JSON |
 | `CMS/backups/` | local backups, protected |
@@ -350,17 +354,17 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 
 Canonical `DOC/` files: `README.md`, `INDEX.md`, `INSTALLATION.md`, `DEVLIST.md`, `FILELIST.md`, `FILESTRUCTUR.md`, `CMSFILESTRUCTUR.md`.
 
-Subfolders: `admin/`, `ai/`, `assets/`, `audit/`, `checks/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
+Subfolders: `admin/`, `ai/`, `assets/`, `audit/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
 
-Asset Markdown is under `DOC/assets/`. The code audit of 2026-10-03 is in `DOC/checks/`, the follow-up audits are in `DOC/audit/`; open gaps are tracked in `core/STATUS.md`.
+Asset Markdown is under `DOC/assets/`. The audit reports are in `DOC/audit/`; open gaps are tracked in `core/STATUS.md`.
 
 **Deutsch**
 
 Kanonische `DOC/`-Dateien: `README.md`, `INDEX.md`, `INSTALLATION.md`, `DEVLIST.md`, `FILELIST.md`, `FILESTRUCTUR.md`, `CMSFILESTRUCTUR.md`.
 
-Unterordner: `admin/`, `ai/`, `assets/`, `audit/`, `checks/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
+Unterordner: `admin/`, `ai/`, `assets/`, `audit/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
 
-Asset-Markdown liegt unter `DOC/assets/`. Das Code-Audit vom 2026-10-03 liegt unter `DOC/checks/`, die Folgeaudits liegen unter `DOC/audit/`; offene Lücken stehen in `core/STATUS.md`.
+Asset-Markdown liegt unter `DOC/assets/`. Die Prüfberichte liegen unter `DOC/audit/`; offene Lücken stehen in `core/STATUS.md`.
 
 ---
 

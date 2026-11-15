@@ -1,6 +1,6 @@
-# 365CMS – Admin: Feeds (Feed-Aggregator und RSS-Ausgang)
+# 365CMS: Admin: Feeds (Feed-Aggregator und RSS-Ausgang)
 
-> **Stand:** 2026-11-11 | **Version:** 4.0.0 | **Status:** Umgesetzt
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Umgesetzt
 
 ## Deutsch
 
@@ -13,21 +13,21 @@ Frühere Aufrufe von `/admin/feeds` leiten dorthin um.
 | Unterseite | Inhalt |
 |---|---|
 | Übersicht | Kennzahlen, Abrufzustand, Quellen mit Handlungsbedarf, neueste Artikel; „Fällige Quellen jetzt abrufen“ und „Alle aktiven Quellen abrufen“ |
-| Quellen | Feed-Adresse, Name, Bereich, Website, Abrufintervall (15 min – 24 h), Höchstzahl je Abruf; Sofortabruf, Massenaktionen (abrufen, aktivieren, deaktivieren, löschen) |
+| Quellen | Feed-Adresse, Name, Bereich, Website, Abrufintervall (15 min: 24 h), Höchstzahl je Abruf; Sofortabruf, Massenaktionen (abrufen, aktivieren, deaktivieren, löschen) |
 | Artikel | Filter nach Bereich, Quelle, Status und Text; hervorheben, ausblenden, löschen |
 | Bereiche | Öffentliche Themenseiten mit Name (DE/EN), Adresse, Symbol, Layout (Raster, Liste, Magazin), Artikel je Seite, Sichtbarkeit |
 | E-Mail-Digests | Zusammenfassungen ausgewählter Bereiche an feste Adressen, 1–4× täglich oder wöchentlich, DE/EN, Testversand |
 | Mitglieder-Abos | Abos aus dem Mitgliederbereich ansehen und löschen |
 | Abrufprotokoll | Aufträge der Abruf-Queue mit Auslöser, neuen Artikeln und Fehler; erneut einreihen, offene verwerfen, aufräumen |
 | Katalog & OPML | 10 kuratierte Vorlagen (rund 300 Quellen) ganz oder teilweise übernehmen; OPML-Import (Gruppen werden Bereiche) und -Export |
-| Einstellungen | Allgemein (Einschalten, Einwilligung, Titel/Beschreibung DE/EN, Adresse der Übersicht, Anzeige, Filter, Aufbewahrung, Quellen je Cron-Lauf), Design (Farben inkl. Text und Hintergrund, Radius, Spalten, seit 4.1.0 auch Schrift – wie Theme, System oder Serifen –, Kartenstil – Schatten, Rahmen, flach –, Bildformat 16:9/3:2/4:3/1:1 und Kopfbereich – Verlauf, einfarbig, ohne), Digest (Absender, Betreff, Umfang) |
+| Einstellungen | Allgemein (Einschalten, Einwilligung, Titel/Beschreibung DE/EN, Adresse der Übersicht, Anzeige, Filter, Aufbewahrung, Quellen je Cron-Lauf), Design (Farben inkl. Text und Hintergrund, Radius, Spalten, auch Schrift: wie Theme, System oder Serifen –, Kartenstil. Schatten, Rahmen, flach –, Bildformat 16:9/3:2/4:3/1:1 und Kopfbereich. Verlauf, einfarbig, ohne), Digest (Absender, Betreff, Umfang) |
 | RSS-Ausgang | Einstellungen von `/feed` (siehe unten) |
 
 **Öffentliche Seiten** (nur bei eingeschaltetem Aggregator, jeweils auch unter `/en/…`):
 
-- `/feeds` – alle öffentlichen Bereiche mit Suche und Seitenblättern (Adresse unter *Einstellungen* änderbar),
-- `/feed/<bereich>` und `/feeds/<bereich>` – Bereichsseite im Layout des Bereichs,
-- `/feeds/embed` – dieselbe Übersicht ohne Theme-Rahmen für ein `<iframe>` auf derselben Website
+- `/feeds`: alle öffentlichen Bereiche mit Suche und Seitenblättern (Adresse unter *Einstellungen* änderbar),
+- `/feed/<bereich>` und `/feeds/<bereich>`: Bereichsseite im Layout des Bereichs,
+- `/feeds/embed`: dieselbe Übersicht ohne Theme-Rahmen für ein `<iframe>` auf derselben Website
   (`X-Frame-Options: SAMEORIGIN`, `frame-ancestors 'self'`, `noindex`).
 
 `/feed` ohne weiteren Pfad bleibt der RSS-Ausgang. Ist „Einwilligung erforderlich“ aktiv, erscheinen die Artikel

@@ -1,5 +1,7 @@
 # Symfony Mailer
-> **Stand:** 2026-03-28 | **Version:** 2.8.0 RC | **Status:** Aktiv
+
+> **English summary:** Symfony Mailer is the transport layer of the mail system (SMTP, queue integration). Details in German below.
+> **Stand:** 2026-11-15 | **Version:** 2.8.0 RC | **Status:** Aktiv
 
 `Symfony Mailer` bildet in 365CMS die lokale Versandschicht für SMTP, Queue-Worker und OAuth-/XOAUTH2-nahe Mail-Flows.
 

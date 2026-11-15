@@ -1,6 +1,6 @@
-# 365CMS – Admin: Downloads
+# 365CMS: Admin: Downloads
 
-> **Stand:** 2026-11-11 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -14,7 +14,7 @@ Downloads are managed under *Media → Downloads* (`/admin/downloads`, capabilit
 |---|---|---|
 | Liste | `/admin/downloads` | Filter (Status, Kategorie, Zugriff, Dateityp), Suche, Sammelaktionen (Status, Kategorie, Zugriff, Papierkorb, Wiederherstellen, endgültig löschen); Spalten mit aktueller Version, Downloads gesamt / 30 Tage und Anzahl der Verwendungen |
 | Neuer Download | `?action=new` | mit Datei, externem Link oder zunächst ohne Version |
-| Bearbeiten | `?action=edit&id=<id>&section=…` | Abschnitte **Allgemein**, **Versionen**, **Eigenschaften**, **Zugriff**, **Statistik**, **Verwendung**, **SEO** – jeder mit eigenem Formular |
+| Bearbeiten | `?action=edit&id=<id>&section=…` | Abschnitte **Allgemein**, **Versionen**, **Eigenschaften**, **Zugriff**, **Statistik**, **Verwendung**, **SEO**: jeder mit eigenem Formular |
 | Statistik | `?tab=stats` | Abrufe 30/90/365 Tage als Balken, Top-Downloads, Quellseiten, CSV-Export (`?export=csv&period=…[&id=…]`) |
 | Kategorien | `?tab=categories` | Anlegen, Bearbeiten, Ausblenden, Löschen |
 | Einstellungen | `?tab=settings` | Standard-Template, Archivseite, Menüpunkt, erlaubte Dateitypen, Höchstgröße, Speicherbereich, Standard-Zugriff, externe Domains, Grenzwert, Zählregeln, Aufbewahrung, Eigenschaftsfelder |
@@ -35,7 +35,7 @@ Jeder Download hat genau eine aktuelle Version (eindeutiger Index). SHA-256 und 
 
 ### Editor.js-Block „Download“
 
-Im Beitrags- und Seiteneditor einfügen über **+ Block hinzufügen**, die Schnellleiste (Gruppe *Medien*), das „+“ zwischen zwei Blöcken oder das „+“-Menü von Editor.js (dort am Ende der Liste; Filter „Download“). Tab **Aus Downloads wählen** (Suche, Kategorie, Dateityp, Zugriff; Mehrfachauswahl nur im Template Kompakt) oder **Hochladen** (Recht `upload_downloads`): legt aus Datei, Titel, Kurzbeschreibung, Kategorie und Version einen vollständigen Download an und füllt die Eigenschaftsfelder aus *Downloads → Einstellungen*. Mit `manage_downloads` lassen sich dabei über **+ Neue Eigenschaft** weitere Eigenschaftsfelder anlegen (Bezeichnung, Typ, Wert; Auswahlfelder nur in den Einstellungen) – sie stehen danach allen Downloads zur Verfügung. Version „immer aktuell“ oder fest, Button-Text, Template (vier Layouts), Sichtbarkeit der Angaben und der Eigenschaften (Block-Menü). Gespeichert werden nur Referenzen und Anzeigeoptionen. Die Vorschau rendert der Server mit denselben Templates wie das Frontend. Nicht verfügbare Downloads (Entwurf, archiviert, Papierkorb, ohne Version) blendet das Frontend aus; der Editor zeigt einen Hinweis, die Veröffentlichungs-Checkliste meldet sie.
+Im Beitrags- und Seiteneditor einfügen über **+ Block hinzufügen**, die Schnellleiste (Gruppe *Medien*), das „+“ zwischen zwei Blöcken oder das „+“-Menü von Editor.js (dort am Ende der Liste; Filter „Download“). Tab **Aus Downloads wählen** (Suche, Kategorie, Dateityp, Zugriff; Mehrfachauswahl nur im Template Kompakt) oder **Hochladen** (Recht `upload_downloads`): legt aus Datei, Titel, Kurzbeschreibung, Kategorie und Version einen vollständigen Download an und füllt die Eigenschaftsfelder aus *Downloads → Einstellungen*. Mit `manage_downloads` lassen sich dabei über **+ Neue Eigenschaft** weitere Eigenschaftsfelder anlegen (Bezeichnung, Typ, Wert; Auswahlfelder nur in den Einstellungen), sie stehen danach allen Downloads zur Verfügung. Version „immer aktuell“ oder fest, Button-Text, Template (vier Layouts), Sichtbarkeit der Angaben und der Eigenschaften (Block-Menü). Gespeichert werden nur Referenzen und Anzeigeoptionen. Die Vorschau rendert der Server mit denselben Templates wie das Frontend. Nicht verfügbare Downloads (Entwurf, archiviert, Papierkorb, ohne Version) blendet das Frontend aus; der Editor zeigt einen Hinweis, die Veröffentlichungs-Checkliste meldet sie.
 
 ### Templates und Theme-Overrides
 
@@ -51,7 +51,7 @@ Partials erhalten `$downloads`, `$download` (View-Modell aus `DownloadRenderer::
 
 ### Übernahme aus cms-downloads
 
-`PluginMigration\DownloadsPluginMigrator` übernimmt Kategorien, Downloads (je eine aktuelle Version mit SHA-256, Zähler als Basiswert), den Plugin-Typ als Schlagwort und die Einstellungen – idempotent über `legacy_id`. Öffentliche Dateien bleiben unter `uploads/downloads/`; Dateien von Downloads mit Anmeldepflicht werden in den privaten Speicher verschoben. Danach wird das Plugin deaktiviert und `/admin/plugins/cms-downloads/…` leitet auf `/admin/downloads` um.
+`PluginMigration\DownloadsPluginMigrator` übernimmt Kategorien, Downloads (je eine aktuelle Version mit SHA-256, Zähler als Basiswert), den Plugin-Typ als Schlagwort und die Einstellungen, idempotent über `legacy_id`. Öffentliche Dateien bleiben unter `uploads/downloads/`; Dateien von Downloads mit Anmeldepflicht werden in den privaten Speicher verschoben. Danach wird das Plugin deaktiviert und `/admin/plugins/cms-downloads/…` leitet auf `/admin/downloads` um.
 
 ### Verwandte Dokumente
 

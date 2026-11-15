@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Monitoring, Cron & Benachrichtigungen
+# 365CMS Projektdokumentation | Admin: Monitoring, Cron & Benachrichtigungen
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/monitor-response-time`, `/admin/monitor-cron-status`, `/admin/monitor-disk-usage`, `/admin/monitor-scheduled-tasks`, `/admin/monitor-health-check`, `/admin/monitor-email-alerts`, `/admin/monitor-warnings` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)
@@ -52,7 +52,7 @@ php /pfad/zu/CMS/cron.php --task=mail-queue --limit=10 --quiet
 
 Optionen: `--task=<all|mail-queue|hourly|daily|feeds|cms_cron_…>`, `--limit=1..100`, `--force`, Ausgabe `--json`/`--verbose`, `--text`, `--quiet`.
 
-**Web-Cron:** `https://<domain>/cron.php?task=all` mit Header `X-CMS-Cron-Token: <token>` (alternativ `?token=` – nur über HTTPS, sonst Warnung im Log). Ohne gültigen Token: HTTP 403. Token anzeigen/erneuern unter `/admin/mail-settings` → Tab *Queue*.
+**Web-Cron:** `https://<domain>/cron.php?task=all` mit Header `X-CMS-Cron-Token: <token>` (alternativ `?token=`, nur über HTTPS, sonst Warnung im Log). Ohne gültigen Token: HTTP 403. Token anzeigen/erneuern unter `/admin/mail-settings` → Tab *Queue*.
 
 **Aufgaben und Hooks:**
 
@@ -68,7 +68,7 @@ Optionen: `--task=<all|mail-queue|hourly|daily|feeds|cms_cron_…>`, `--limit=1.
 
 Seit 4.0.0 hält `CronRunnerService` den letzten Lauf in der Einstellungsgruppe `cron` fest: `last_run_at` (Unix-Zeit), `last_run_status` (`ok`/`failed`), `last_run_task` und `last_error` (fehlgeschlagene Schritte bzw. Ausnahmeklasse, max. 300 Zeichen). Ein Lauf gilt als fehlgeschlagen, wenn ein Schritt `success: false` meldet oder eine Ausnahme auftritt.
 
-### Systemhinweise in der Seitenleiste (seit 4.0.0)
+### Systemhinweise in der Seitenleiste
 
 Administratoren mit `manage_system` sehen am Avatar im Fußbereich der Seitenleiste einen Hinweispunkt, sobald mindestens ein Hinweis vorliegt; ein Klick öffnet die Liste mit Links. Ohne Hinweise wird kein Punkt angezeigt. Die Daten liefert `AdminNoticeService` über `GET /admin/admin-ui?action=notices` (5 Minuten gecacht, das Ergebnis der Plugin-Update-Prüfung 1 Stunde; siehe [../ADMIN-API-AJAX.md](../ADMIN-API-AJAX.md)). Ein behobener Zustand, etwa nach einem neuen Backup, verschwindet daher erst nach Ablauf des Caches.
 

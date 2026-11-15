@@ -1,6 +1,8 @@
 # Carbon
 
-> **Stand:** 2026-10-04 | **Version:** 3.14.2 | **Status:** Aktiv
+> **English summary:** Carbon is the central date and time library of 365CMS. Details in German below.
+
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktiv
 
 ## Kurzbeschreibung
 
@@ -9,7 +11,7 @@
 ## Quellordner
 
 - `CMS/assets/Carbon/src/Carbon/` (PSR-4 `Carbon\`, inkl. `Lang/`)
-- `CMS/assets/Carbon/lazy/Carbon/` (wird von `Translator`, `CarbonPeriod` und `MessageFormatterMapper` relativ per `__DIR__/../../lazy` geladen – Struktur nicht verändern)
+- `CMS/assets/Carbon/lazy/Carbon/` (wird von `Translator`, `CarbonPeriod` und `MessageFormatterMapper` relativ per `__DIR__/../../lazy` geladen. Struktur nicht verändern)
 
 ## Verwendung in 365CMS
 

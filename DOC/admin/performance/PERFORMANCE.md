@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Performance
+# 365CMS Projektdokumentation | Admin: Performance
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/performance`, `-cache`, `-media`, `-database`, `-settings`, `-sessions` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_performance` | **Core-Modul:** `performance`
 
 ## English (summary)
@@ -24,7 +24,7 @@ All performance screens are rendered by `CMS/admin/performance-page.php` with th
 
 | Option | Standard | Bedeutung |
 |---|---|---|
-| `perf_page_cache` | an | Öffentliche Cache-Header (`Cache-Control: public, max-age=…`) für HTML-Seiten anonymer Besucher – nutzbar durch Browser, Reverse-Proxy oder CDN. Admin-, Member- und angemeldete Anfragen erhalten immer `private` |
+| `perf_page_cache` | an | Öffentliche Cache-Header (`Cache-Control: public, max-age=…`) für HTML-Seiten anonymer Besucher: nutzbar durch Browser, Reverse-Proxy oder CDN. Admin-, Member- und angemeldete Anfragen erhalten immer `private` |
 | `perf_html_cache_ttl` | 300 s | `max-age` dieser HTML-Antworten; `0` = `no-cache` |
 | `perf_browser_cache` | an | `Cache-Control`-Header für statische Dateien und Uploads |
 | `perf_browser_cache_ttl` | 604800 (7 Tage) | wählbar: 3 Tage, 7 Tage, 31 Tage |
@@ -39,7 +39,7 @@ All performance screens are rendered by `CMS/admin/performance-page.php` with th
 
 ### Cache
 
-- `CMS\CacheManager` arbeitet mit Dateicache in `CMS/cache/` und – falls verfügbar – **APCu** als schneller L1-Cache.
+- `CMS\CacheManager` arbeitet mit Dateicache in `CMS/cache/` und: falls verfügbar, **APCu** als schneller L1-Cache.
 - `clear_all_cache` leert Datei- und APCu-Cache (`CacheManager::clearAll()`); `clear_file_cache` nur die Dateien in `CMS/cache/`.
 - `clear_opcache` setzt den PHP-OPcache zurück, `warmup_opcache` kompiliert die meistgenutzten Dateien vor (`OpcacheWarmupService`; wird nach Deployments auch automatisch angestoßen).
 - Antwort-Header steuert `CacheManager::sendResponseHeaders()` (`public`/`private`, ETag/Last-Modified über `sendConditionalHeaders()`).

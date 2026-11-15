@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 2: Medien & Performance
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 2a und 2b umgesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Spec 4.1.0: Bereich 2: Medien & Performance
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 2a, 2b | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -29,12 +29,12 @@ nirgends aufgerufen wird. WebP-Varianten erzeugt der Upload-Weg bereits.
 | Hook | `cms_media_derivative_created` (Pfad, Format, Bytes) |
 
 **Referenzen:** `intervention/image` wird nicht eingeführt (GD reicht, keine neue Abhängigkeit); CLI-basierte Konverter
-(`rosell-dk/avif-convert`, `maximal/php-avif-thumbnailer`) scheiden aus (Shell-Aufrufe) – siehe [REFERENCES.md](REFERENCES.md).
+(`rosell-dk/avif-convert`, `maximal/php-avif-thumbnailer`) scheiden aus (Shell-Aufrufe), siehe [REFERENCES.md](REFERENCES.md).
 
 **Tests (`TESTS/media-avif/run.php`):** Erkennung mit/ohne Unterstützung (injizierbar), „nur wenn kleiner“, Pixel-Budget,
 `<picture>`-Markup mit und ohne AVIF, Löschen entfernt Derivate, Batch-Schritte idempotent.
 
-**Umsetzung (14.11.2026) – Präzisierungen:**
+**Umsetzung (14.11.2026). Präzisierungen:**
 
 | Punkt | Umsetzung |
 |---|---|
@@ -79,7 +79,7 @@ CREATE TABLE {p}media_usage (
 **Tests (`TESTS/media-usage/run.php`):** Extraktion je Inhaltsart (inkl. Derivat-Namen und absoluter URLs), Reindex nach
 Speichern/Löschen, „Ungenutzt“ korrekt, Löschwarnung, keine Treffer für fremde Domains.
 
-**Umsetzung 2b (14.11.2026) – Präzisierungen:**
+**Umsetzung 2b (14.11.2026). Präzisierungen:**
 
 | Punkt | Umsetzung |
 |---|---|

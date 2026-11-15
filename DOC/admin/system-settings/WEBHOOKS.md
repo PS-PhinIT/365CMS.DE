@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Webhooks
+# 365CMS Projektdokumentation | Admin: Webhooks
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/webhooks` | **Capability:** `webhooks.manage` | **CSRF-Aktion:** `admin_webhooks`
@@ -13,9 +13,9 @@ Outgoing webhooks notify external services (Zapier, Make, n8n, own endpoints) ab
 
 Menü *Einstellungen → Webhooks* (Kacheln) bzw. `/admin/webhooks`:
 
-- **Neuer Empfänger:** Name, URL (nur **HTTPS**, keine internen Hosts, keine privaten IP-Adressen, keine Zugangsdaten in der URL), Ereignisse. Nach dem Anlegen erscheint das **Geheimnis einmal** in der Erfolgsmeldung – sofort beim Empfänger hinterlegen.
+- **Neuer Empfänger:** Name, URL (nur **HTTPS**, keine internen Hosts, keine privaten IP-Adressen, keine Zugangsdaten in der URL), Ereignisse. Nach dem Anlegen erscheint das **Geheimnis einmal** in der Erfolgsmeldung, sofort beim Empfänger hinterlegen.
 - Je Empfänger: Ändern, **Aktiv**-Schalter (Aktivieren setzt Fehlerzähler und Deaktivierungsgrund zurück), **Test senden** (Ereignis `webhook.test`, sofort zugestellt), **Geheimnis neu erzeugen**, Löschen (samt Zustellungen).
-- **Zustellprotokoll:** die letzten 50 Zustellungen mit Ereignis, Status (ausstehend, zugestellt, aufgegeben), HTTP-Status, Versuchen und Fehlergrund – ohne Antwortinhalt und ohne Geheimnis.
+- **Zustellprotokoll:** die letzten 50 Zustellungen mit Ereignis, Status (ausstehend, zugestellt, aufgegeben), HTTP-Status, Versuchen und Fehlergrund, ohne Antwortinhalt und ohne Geheimnis.
 
 ### Ereignisse
 
@@ -28,6 +28,8 @@ Menü *Einstellungen → Webhooks* (Kacheln) bzw. `/admin/webhooks`:
 | `user.registered` | Registrierung | `user_id` |
 | `invoice.created` | Rechnung oder Storno-Rechnung erstellt (Bereich 5b) | `invoice_id`, `type`, `order_id` |
 | `order.paid`, `order.failed`, `subscription.renewed` | Zahlung bestätigt, fehlgeschlagen, Abo verlängert (Bereich 5a) | `order_id`, `provider` bzw. `subscription_id`, `order_id`, `period_end` |
+
+**Nicht enthalten:** Das Ereignis `alert.raised` (Echtzeit-Alerting) gehört zu Bereich 6 und kommt mit **4.3.0** ([06-CLI-ALERTING.md](../../workflow/specs/v4.1/06-CLI-ALERTING.md)). Ein Test-Ereignis `webhook.test` sendet der Knopf „Test senden“.
 
 Weitere Ereignisse liefern Plugins über den Filter `cms_webhook_event` (`['bereich.aktion' => 'Bezeichnung']`) und lösen sie mit `WebhookService::getInstance()->dispatch('bereich.aktion', [...])` aus.
 

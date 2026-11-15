@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Theme-Entwicklung – Übersicht
+# 365CMS Projektdokumentation | Theme-Entwicklung: Übersicht
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Referenz-Theme:** `cms-default` 1.1.0
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
 ## English (summary)
 
@@ -18,4 +18,4 @@ Documentation for building 365CMS themes. Themes live in `CMS/themes/<slug>/` an
 
 ### Admin-Seiten rund ums Theme
 
-Theme-Verwaltung `/admin/themes`, Customizer `/admin/theme-editor`, Dateieditor `/admin/theme-explorer`, Menüs `/admin/menu-editor`, Landingpage `/admin/landing-page`, Schriften `/admin/font-manager` – siehe [../admin/themes-design/README.md](../admin/themes-design/README.md).
+Theme-Verwaltung `/admin/themes`, Customizer `/admin/theme-editor`, Dateieditor `/admin/theme-explorer`, Menüs `/admin/menu-editor`, Landingpage `/admin/landing-page`, Schriften `/admin/font-manager`, siehe [../admin/themes-design/README.md](../admin/themes-design/README.md).

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Zahlungen
+# 365CMS Projektdokumentation | Admin: Zahlungen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/payments` | **Capability:** `payments.manage` | **CSRF-Aktion:** `admin_payments`
@@ -35,11 +35,13 @@ Gastbestellungen (ohne Konto) werden bezahlt, aber keinem Konto zugewiesen. Auto
 ### Sicherheit
 
 - Webhook-Route ohne Sitzung und CSRF, aber mit Signatur bzw. Abruf beim Anbieter, Rate-Limit (300/min je IP), Körper höchstens 64 KB; auch im Wartungsmodus erreichbar.
+- **Verifizierung:** Stripe über die Signatur `Stripe-Signature` (HMAC-SHA256, 300 s Zeitfenster, mehrere `v1`-Werte erlaubt); Mollie liefert nur eine Zahlungs-ID, deren Stand das CMS selbst beim Anbieter abruft.
+- **Idempotenz:** Jedes Ereignis wird genau einmal verarbeitet: `cms_payment_events` ist eindeutig je (`provider`, `provider_event_id`); wiederholte Zustellungen ändern nichts. Der Zustandsautomat der Bestellung kennt keine Rücksprünge (`paid` wird nie wieder `pending`).
 - Beträge und Währung nie aus dem Request; Abweichung → Ereignis `failed`, Bestellung bleibt offen.
 - Schlüssel verschlüsselt (`SettingsService`), getrennt für Test und Live; die Seite zeigt nur „gesetzt“.
 - Webhooks nach außen (`order.paid`, `order.failed`, `subscription.renewed`) enthalten nur IDs.
 
-### Grenzen (4.1.0)
+### Grenzen
 
 Erstattungen und Kündigungen werden nicht aus dem CMS an den Anbieter gesendet (im Dashboard des Anbieters erledigen; eine Kündigung dort kommt als Ereignis zurück). PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
 

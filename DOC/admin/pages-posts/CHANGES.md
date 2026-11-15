@@ -1,6 +1,6 @@
-# 365CMS – Admin: Letzte Änderungen
+# 365CMS: Admin: Letzte Änderungen
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -28,7 +28,7 @@ Filter: Typ, Benutzer, Art der Änderung, Zeitraum (von/bis). 50 Einträge je Se
 `CMS\Services\ContentChangesService` liest die vorhandenen Revisionen, es gibt keine eigene Protokolltabelle:
 
 - Beiträge: `post_revisions` (Statuswechsel per Vergleich mit der vorherigen Revision),
-- Seiten: `page_revisions`; seit 4.0.0 mit Spalte `created_by` (Schema v25), ältere Seitenrevisionen zeigen
+- Seiten: `page_revisions`, mit Spalte `created_by` (Schema v25), ältere Seitenrevisionen zeigen
   „unbekannt“,
 - Anlegen: `created_at` der Beiträge und Seiten.
 

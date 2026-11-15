@@ -1,13 +1,13 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Dashboard-Widgets
+# 365CMS Projektdokumentation | Admin: Dashboard-Widgets
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
 Two kinds of dashboard widgets exist in 365CMS:
 
-1. **Admin dashboard** (`/admin`) – KPI cards and panels rendered by `CMS/admin/modules/dashboard/DashboardModule.php` and `CMS/core/Services/DashboardService.php`; plugins can add their own panels via hooks. See [../dashboard/DASHBOARD.md](../dashboard/DASHBOARD.md).
-2. **Member dashboard** (`/member`) – standard widgets, up to four custom widgets and plugin widgets, configured at `/admin/member-dashboard-widgets` and `/admin/member-dashboard-plugin-widgets`. See [../member/README.md](../member/README.md).
+1. **Admin dashboard** (`/admin`): KPI cards and panels rendered by `CMS/admin/modules/dashboard/DashboardModule.php` and `CMS/core/Services/DashboardService.php`; plugins can add their own panels via hooks. See [../dashboard/DASHBOARD.md](../dashboard/DASHBOARD.md).
+2. **Member dashboard** (`/member`): standard widgets, up to four custom widgets and plugin widgets, configured at `/admin/member-dashboard-widgets` and `/admin/member-dashboard-plugin-widgets`. See [../member/README.md](../member/README.md).
 
 ## Deutsch
 

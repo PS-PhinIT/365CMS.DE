@@ -1,7 +1,7 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Übernahme aus cms-forum
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md) · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md)
+# 365CMS Projektdokumentation | Community: Übernahme aus cms-forum
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md) · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md)
 
-> **Entscheidung E6 (14.11.2026):** `cms-forum` war auf keiner Installation aktiv – es gibt **keine Datenübernahme**, keinen Migrator und keine Plugin-Weiterleitungen. Dieses Dokument bleibt als **Funktions-Referenz** (§1, §2, §4) erhalten: Es zeigt, welche Funktionen das Community-Modul mindestens abdecken muss und welche Einstellungen im Plugin wirkungslos waren. §3, §5 und §6 entfallen.
+> **Entscheidung E6 (14.11.2026):** `cms-forum` war auf keiner Installation aktiv, es gibt **keine Datenübernahme**, keinen Migrator und keine Plugin-Weiterleitungen. Dieses Dokument bleibt als **Funktions-Referenz** (§1, §2, §4) erhalten: Es zeigt, welche Funktionen das Community-Modul mindestens abdecken muss und welche Einstellungen im Plugin wirkungslos waren. §3, §5 und §6 entfallen.
 
 ## English (summary)
 
@@ -10,7 +10,7 @@ DB version 1.0.2): inventory (routes, tables, hooks, settings, admin pages, memb
 that must be fully ticked before the plugin is retired, URL mapping with 301 redirects, the `ForumPluginMigrator`
 (idempotent via `legacy_id`, dry run, batch job), settings mapping, and the retirement steps. Important finding:
 of 43 default settings only 5 are read by the plugin code, and the plugin's own settings page saves partly different
-keys (e.g. `guest_can_read`, `require_post_approval`) that are never read either — so switches such as "guests may
+keys (e.g. `guest_can_read`, `require_post_approval`) that are never read either, so switches such as "guests may
 read", "require approval" or attachment limits currently have no effect. The core module must make every migrated
 setting effective and tell administrators which behaviour changes.
 
@@ -22,7 +22,7 @@ setting effective and tell administrators which behaviour changes.
 |---|---|
 | Code | ca. 10.900 Zeilen PHP; `src/Controllers` (Forum, Thread, Post, Moderator, Admin), `src/Models` (13), `src/Services` (BBCodeParser, Notification, Permission, Search, FloodControl, ReadTracker), 9 Admin-Seiten, 7 Frontend-, 2 Mitglieder-Vorlagen, 6 JS-, 4 CSS-Dateien, Sprachdateien `de_DE`/`en_US` |
 | Tabellen | 17 × `{prefix}cmsforum_*`: categories, forums, threads, posts, user_meta, ranks, permissions, subscriptions, attachments, polls, poll_options, poll_votes, likes, reports, mod_log, read_tracking, settings |
-| Routen | `/forum`, `/forum/:slug`, `/forum/:slug/new-thread` (GET/POST), `/forum/thread/:id` (GET/POST), `/forum/post/:id/edit` (GET/POST), `/forum/search`, `/forum/user/:id`, `POST /forum/api/{like,subscribe,report,poll-vote}`, `GET /forum/api/similar-threads` – jeweils auch `/en/…` |
+| Routen | `/forum`, `/forum/:slug`, `/forum/:slug/new-thread` (GET/POST), `/forum/thread/:id` (GET/POST), `/forum/post/:id/edit` (GET/POST), `/forum/search`, `/forum/user/:id`, `POST /forum/api/{like,subscribe,report,poll-vote}`, `GET /forum/api/similar-threads`: jeweils auch `/en/…` |
 | Hooks genutzt | `cms_init`, `register_routes`, `cms_admin_menu`, `member_dashboard_init`, `head`, `body_end`, `dsgvo_export_data`, `dsgvo_delete_data`, `plugin_activated`, `plugin_uninstalled` |
 | Hooks gefeuert | keine eigenen |
 | Rechte | Tabelle `cmsforum_permissions` je Forum und `group_type` (`guest`, `member`, `moderator`); Rechte `can_read`, `can_post`, `can_create`, `can_edit_own`, `can_delete_own`, `can_upload`, `can_vote`, `can_moderate`; Admin = Core-Admin |
@@ -98,7 +98,7 @@ Die Admin-Seite speichert zudem teils **andere Schlüssel** (`forum_name`, `gues
 **Folge für Betreiber heute:** „Gäste dürfen lesen“, „Beiträge erst nach Freigabe“, Anhang-Grenzen, Längenprüfungen,
 Wortfilter, automatisches Schließen, Zusammenfassungs-Mails und „Wer ist online“ zeigen im Plugin keine Wirkung.
 Nach der Übernahme **wirken** diese Einstellungen. Der Migrator zeigt deshalb vor dem Lauf eine Liste
-„Verhalten ändert sich“ (z. B. „Freigabepflicht war eingestellt, aber aus – ist nach der Übernahme aktiv“) und
+„Verhalten ändert sich“ (z. B. „Freigabepflicht war eingestellt, aber aus, ist nach der Übernahme aktiv“) und
 lässt jede Abweichung bestätigen oder auf den bisherigen tatsächlichen Zustand setzen.
 
 | Plugin-Schlüssel (Config / Admin) | Wirkung im Plugin | Core-Schlüssel (`community.*`) |

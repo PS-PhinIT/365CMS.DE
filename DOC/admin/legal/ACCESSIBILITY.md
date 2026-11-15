@@ -1,6 +1,6 @@
-# 365CMS – Admin: Erklärung zur Barrierefreiheit
+# 365CMS: Admin: Erklärung zur Barrierefreiheit
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/legal-sites` (Karte *Erklärung zur Barrierefreiheit*) | **Capability:** `manage_settings`
 
 ## English (summary)
@@ -32,8 +32,6 @@ review. The generated text is a template, not legal advice.
    (DE `/barrierefreiheit`, EN `/en/accessibility`).
 2. Einmal im Jahr erinnert ein Hinweis im Admin an die Prüfung; *Heute überprüft* setzt das Prüfdatum.
 
-Geprüft (4.0.0, Laufzeit): Status, Mängel und Feedback-Adresse gespeichert → öffentliche Seite enthält beide Angaben,
-EN-Seite antwortet mit 200, Footer verlinkt `/barrierefreiheit`.
 
 ### Dateien
 

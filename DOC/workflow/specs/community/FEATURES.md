@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Funktionskatalog
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Community: Funktionskatalog
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -17,7 +17,7 @@ integrated, not rebuilt.
 | Spalte | Bedeutung |
 |---|---|
 | **ID** | `COM-<Bereich>-<Nr>`; Bereiche: `CORE` Kernfunktionen, `MOD` Moderation & Sicherheit, `INT` Community & Interaktion, `UX` Komfort & Technik, `PLUS` Nice-to-have, `ADM` Administration |
-| **Phase** | P1 = Grundlage/Parität (erste Auslieferung), P2 = Community-Ausbau, P3 = Erweiterungen – siehe [ROADMAP.md](ROADMAP.md) |
+| **Phase** | P1 = Grundlage/Parität (erste Auslieferung), P2 = Community-Ausbau, P3 = Erweiterungen: siehe [ROADMAP.md](ROADMAP.md) |
 | **Baustein** | Vorhandener Core-Dienst, der genutzt wird, oder **neu** |
 | **cms-forum** | ✅ vorhanden · 🟡 teilweise · ⬜ fehlt · ⚠️ Einstellung vorhanden, aber ohne Wirkung im Code |
 
@@ -25,7 +25,7 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 
 ---
 
-### 1. Kernfunktionen (Fundament) – Priorität 1
+### 1. Kernfunktionen (Fundament): Priorität 1
 
 | ID | Funktion | Akzeptanzkriterien | Baustein | Phase | cms-forum |
 |---|---|---|---|---|---|
@@ -43,7 +43,7 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 | COM-CORE-12 | **Themenliste eines Forums** | Angepinnte Themen oben, dann nach letzter Aktivität; Filter (ungelöst, ohne Antwort, meine); Spalten Antworten, Aufrufe, letzter Beitrag; Symbole für gesperrt, angepinnt, gelöst, Umfrage, Anhang. | neu | P1 | ✅ |
 | COM-CORE-13 | **Zweisprachigkeit DE/EN** | Alle Oberflächentexte über `lang/de.yaml`/`en.yaml`; Routen auch unter `/en/…`; Foren-Titel/Beschreibung je Sprache; Beiträge bleiben in der Sprache des Autors (keine Übersetzung). | `TranslationService`, `ContentLocalizationService` | P1 | ✅ (eigene Sprachdateien) |
 
-### 2. Moderation & Sicherheit – Priorität 2
+### 2. Moderation & Sicherheit: Priorität 2
 
 | ID | Funktion | Akzeptanzkriterien | Baustein | Phase | cms-forum |
 |---|---|---|---|---|---|
@@ -58,13 +58,13 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 | COM-MOD-09 | **Sperren (Bannen)** | Community-Sperre zeitlich begrenzt oder dauerhaft, mit Grund (für Mitglied sichtbar); Stufen: nur Lesen, kein Zugriff aufs Forum. Kontosperre der ganzen Site bleibt in der Core-Benutzerverwaltung. Gesperrte Mitglieder können nicht melden, reagieren, abstimmen oder Nachrichten im Forum-Kontext senden. | neu, `UserService` | P1 | ✅ (mit Ablauf) |
 | COM-MOD-10 | **Freigabe-Warteschlange** | Beiträge/Themen mit Status `pending`, wenn: Forum verlangt Freigabe, Vertrauensstufe 0, Spam-Verdacht, Verwarnungsschwelle. Warteschlange mit Vorschau, freigeben/ablehnen (mit Grund), Massenaktionen; Autor sieht „wartet auf Freigabe“. Badge im Admin-Menü. | neu + `BadgeProvider` | P1 | 🟡 `is_approved`, keine Warteschlange |
 | COM-MOD-11 | **Moderationsprotokoll** | Jede Moderationsaktion mit Wer, Was, Ziel, Grund, Zeit; filterbar; Aufbewahrung über Löschfristen. | neu + `DataRetentionService` | P1 | ✅ |
-| COM-MOD-12 | **Spam- und Bot-Schutz** | Honeypot und Mindest-Ausfüllzeit an allen Formularen; Link-Limit für neue Mitglieder; Wortfilter (sperren oder ersetzen); Captcha bei Registrierung und – einstellbar – beim ersten Beitrag bzw. für Vertrauensstufe 0 (E7: eingebaut, Proof-of-Work, Bild-Captcha `gregwar/captcha`, Turnstile, hCaptcha, optional reCAPTCHA; Bewertung in SECURITY-PRIVACY §3). Fehlversuche ins Sicherheitsprotokoll. | `AntispamService`, neu `CaptchaService` | P1 | 🟡 Wortfilter ⚠️ |
+| COM-MOD-12 | **Spam- und Bot-Schutz** | Honeypot und Mindest-Ausfüllzeit an allen Formularen; Link-Limit für neue Mitglieder; Wortfilter (sperren oder ersetzen); Captcha bei Registrierung und: einstellbar, beim ersten Beitrag bzw. für Vertrauensstufe 0 (E7: eingebaut, Proof-of-Work, Bild-Captcha `gregwar/captcha`, Turnstile, hCaptcha, optional reCAPTCHA; Bewertung in SECURITY-PRIVACY §3). Fehlversuche ins Sicherheitsprotokoll. | `AntispamService`, neu `CaptchaService` | P1 | 🟡 Wortfilter ⚠️ |
 | COM-MOD-13 | **Rate-Limiting / Langsamer Modus** | Grenzen je Mitglied: Abstand zwischen Beiträgen (Standard 30 s) und Themen (Standard 120 s), Höchstzahl pro Stunde/Tag, je Vertrauensstufe; „Langsamer Modus“ je Forum oder Thema (z. B. 1 Beitrag/10 min). Serverseitig, nicht nur im Browser. | `Security::checkDbRateLimit()` | P1 | 🟡 feste Abstände |
 | COM-MOD-14 | **Technische Sicherheit** | Nur gebundene SQL-Parameter; jede POST-Aktion mit CSRF-Token; Ausgabe escaped bzw. durch den Purifier; Uploads geprüft; Rechteprüfung serverseitig bei jeder Aktion (auch API). Details und Nachweise: [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md). | `Security`, `PurifierService` | P1 | ✅ (Plugin gehärtet in 3.0.1) |
 | COM-MOD-15 | **Vertrauensstufen** | Stufen 0–4 automatisch aus Tagen seit Registrierung, gelesenen Themen, Beiträgen, erhaltenen Reaktionen, Verwarnungen; steuern Freigabepflicht, Links, Bilder, Anhänge, Bearbeitungsfenster, Rate-Limits. Manuell festsetzbar durch Moderation. | neu | P2 | ⬜ (Plugin: geplant) |
 | COM-MOD-16 | **IP- und Gerätehinweise für Moderation** | Gekürzte IP (/24 bzw. /48) und Kennung je Beitrag nur für Moderation sichtbar, Löschfrist Standard 30 Tage; „gleiche Kennung wie …“-Hinweis gegen Mehrfachkonten. | `DataRetentionService` | P2 | ⬜ |
 
-### 3. Community & Interaktion – Priorität 3
+### 3. Community & Interaktion: Priorität 3
 
 | ID | Funktion | Akzeptanzkriterien | Baustein | Phase | cms-forum |
 |---|---|---|---|---|---|
@@ -82,7 +82,7 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 | COM-INT-12 | **Lesezeichen** | Beiträge/Themen merken; nutzt die Core-Favoriten (`favorites`), sichtbar unter `/member/favorites`. | `favorites` | P2 | ⬜ |
 | COM-INT-13 | **Ignorieren-Liste** | Beiträge ignorierter Mitglieder eingeklappt; keine Benachrichtigungen und Nachrichten von ihnen. Moderation ausgenommen. | neu | P2 | ⬜ |
 
-### 4. Komfort & Technik – Priorität 4
+### 4. Komfort & Technik: Priorität 4
 
 | ID | Funktion | Akzeptanzkriterien | Baustein | Phase | cms-forum |
 |---|---|---|---|---|---|
@@ -96,7 +96,7 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 | COM-UX-08 | **Leistung** | Startseite, Forum und Thema mit ≤ 6 SQL-Abfragen bei warmem Cache; Zähler denormalisiert; Ausgabe-Cache je Seite für Gäste (privat für Angemeldete); 10.000 Themen / 500.000 Beiträge ohne merkliche Verlangsamung (Lasttest im TEST-PLAN). | `CacheManager` | P1 | 🟡 |
 | COM-UX-09 | **Dunkles Design** | Alle Community-Komponenten folgen den Design-Tokens des aktiven Themes (inkl. Dark Mode). | Theme | P1 | 🟡 eigene Farbeinstellungen |
 
-### 5. Nice-to-have – Priorität 5
+### 5. Nice-to-have: Priorität 5
 
 | ID | Funktion | Akzeptanzkriterien | Baustein | Phase | cms-forum |
 |---|---|---|---|---|---|
