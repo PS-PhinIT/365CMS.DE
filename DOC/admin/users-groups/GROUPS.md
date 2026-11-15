@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Gruppen
+# 365CMS Projektdokumentation | Admin: Gruppen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/groups` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_groups`

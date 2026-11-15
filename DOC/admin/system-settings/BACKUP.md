@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Backup & Restore
+# 365CMS Projektdokumentation | Admin: Backup & Restore
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/backups` (Alt-Route `/admin/backup` leitet um) | **Capability:** `manage_settings` oder `manage_system` | **CSRF-Aktion:** `admin_backups`
@@ -21,9 +21,9 @@ Backups are created, validated, downloaded, restored and deleted at `/admin/back
 - `assets/` gehört zum Core und kommt mit jedem Update neu; es ist seit 4.0.0 nicht mehr im Datei-Archiv. Ältere Archive mit `assets/` bleiben wiederherstellbar, der Ordner wird dabei übersprungen.
 - Einzelne Dumps `database_JJJJ-MM-TT_HH-MM-SS.sql[.gz]` direkt in `backups/` (ältere Versionen) werden weiter angezeigt, heruntergeladen und wiederhergestellt. Fremde Ordner wie `performance-rollbacks/` gelten nicht als Backup.
 
-`config/` (Zugangsdaten, Schlüssel) ist bewusst **nicht** enthalten – `CMS/config/app.php` und `CMS/config.php` separat und sicher aufbewahren.
+`config/` (Zugangsdaten, Schlüssel) ist bewusst **nicht** enthalten, `CMS/config/app.php` und `CMS/config.php` separat und sicher aufbewahren.
 
-### Speicherort (`CMS_BACKUP_PATH`, ab 4.0.0)
+### Speicherort (`CMS_BACKUP_PATH`)
 
 Ohne Angabe liegen Backups wie bisher in `CMS/backups/`. Dieses Verzeichnis liegt im Webroot und ist nur per `.htaccess` (Apache) bzw. eigener Serverregel (nginx) vor direktem Abruf geschützt. Empfohlen ist ein Verzeichnis **außerhalb des Webroots**, eingetragen in `CMS/config/app.php`:
 
@@ -37,16 +37,16 @@ defined('CMS_BACKUP_PATH') || define('CMS_BACKUP_PATH', '../365cms-backups');   
 - Die Karte *Speicherort & Verschlüsselung* zeigt den aktiven Pfad, ob er im Webroot liegt, und wie viele Backups noch im bisherigen Verzeichnis `CMS/backups/` liegen. Diese Altbestände erscheinen nach dem Umstellen nicht mehr in der Liste; bei Bedarf per SFTP/SSH in das neue Verzeichnis verschieben oder löschen.
 - Die Update-Vorprüfung unter *System → Updates* prüft die Schreibrechte des konfigurierten Verzeichnisses. Die Rollback-Snapshots der Performance-Wartung bleiben unter `CMS/backups/performance-rollbacks/`.
 
-### Verschlüsselung (ab 4.0.0)
+### Verschlüsselung
 
 Unter *System → Backup & Restore → Speicherort & Verschlüsselung* lässt sich die Verschlüsselung neuer Backups einschalten (Option `backup_encryption`, Aktion `set_encryption`, Audit-Ereignisse `backup.encryption.enabled`/`backup.encryption.disabled`).
 
 - **Verfahren:** libsodium secretstream (XChaCha20-Poly1305) in Blöcken zu 64 KiB. Dump und Datei-Archiv werden nach `<datei>.enc` verschlüsselt, der Klartext wird danach gelöscht. Das Manifest erhält einen Block `encryption` (Format `cmsenc2`, Schlüssel-ID); die Prüfsummen beziehen sich auf die verschlüsselten Dateien.
-- **Schlüssel:** `CMS_ENCRYPTION_KEY` aus `config/app.php` (ohne eigenen Schlüssel aus `AUTH_KEY`/`SECURE_AUTH_KEY` abgeleitet). Der Schlüssel liegt nie im Backup. **Ohne Schlüssel ist ein verschlüsseltes Backup nicht wiederherstellbar** – `config/app.php` bzw. den Schlüssel getrennt von den Backups sichern (Passwortmanager, Tresor).
+- **Schlüssel:** `CMS_ENCRYPTION_KEY` aus `config/app.php` (ohne eigenen Schlüssel aus `AUTH_KEY`/`SECURE_AUTH_KEY` abgeleitet). Der Schlüssel liegt nie im Backup. **Ohne Schlüssel ist ein verschlüsseltes Backup nicht wiederherstellbar**, `config/app.php` bzw. den Schlüssel getrennt von den Backups sichern (Passwortmanager, Tresor).
 - **Schlüsselwechsel:** Den bisherigen Schlüssel in `CMS_ENCRYPTION_KEYS_PREVIOUS` eintragen (mehrere durch Komma getrennt). Ältere Backups bleiben damit lesbar; `validate` nennt je verschlüsseltem Teil die verwendete Schlüssel-ID.
 - **Ohne sodium:** Das Einschalten wird abgelehnt. Fehlt die Erweiterung bei aktiver Option, entsteht **kein** Backup statt eines unverschlüsselten.
 - **Prüfen und Wiederherstellen:** Die Dateien werden zuerst gegen das Manifest geprüft und dann in ein temporäres Arbeitsverzeichnis (`.decrypt-*`, Rechte `0700`) entschlüsselt, das danach gelöscht wird. Manipulierte Dateien scheitern an der Prüfsumme bzw. an der Authentifizierung. Fehlt der Schlüssel, bricht die Wiederherstellung vor jeder Änderung ab und nennt die fehlende Schlüssel-ID. Der Sicherungs-Snapshot vor einer Wiederherstellung ist ein normales Voll-Backup und wird bei aktiver Option ebenfalls verschlüsselt.
-- **Download:** Verschlüsselte Teile werden verschlüsselt heruntergeladen. Entschlüsseln außerhalb der Oberfläche – im CMS-Verzeichnis einer Installation mit derselben `config/app.php` (gleicher Schlüssel):
+- **Download:** Verschlüsselte Teile werden verschlüsselt heruntergeladen. Entschlüsseln außerhalb der Oberfläche, im CMS-Verzeichnis einer Installation mit derselben `config/app.php` (gleicher Schlüssel):
 
 ```bash
 cd /pfad/zu/CMS
@@ -69,9 +69,9 @@ Unvollständige Backups zählen im Sicherheits-Audit nicht als Sicherung.
 
 | Aktion | Wirkung |
 |---|---|
-| `validate` | Prüft Vollständigkeit, Manifest, Hashes, Lesbarkeit und kritische Tabellen (`users`, `settings`, `pages`, `posts`); optional Trockenlauf der Wiederherstellung. Bei unvollständigen Backups meldet die Prüfung „Backup-Vollständigkeit – Blockiert“ |
+| `validate` | Prüft Vollständigkeit, Manifest, Hashes, Lesbarkeit und kritische Tabellen (`users`, `settings`, `pages`, `posts`); optional Trockenlauf der Wiederherstellung. Bei unvollständigen Backups meldet die Prüfung „Backup-Vollständigkeit: Blockiert“ |
 | `download` | Einmaliger, sessiongebundener Download-Token je Datei und Teil (`database` oder `files`); nur für vorhandene Teile; verschlüsselte Teile bleiben verschlüsselt |
-| `restore` | Spielt Datenbank-Dump und – falls vorhanden – Datei-Archiv zurück; nur bei Status OK |
+| `restore` | Spielt Datenbank-Dump und: falls vorhanden, Datei-Archiv zurück; nur bei Status OK |
 | `delete` | Löscht das Backup |
 | `set_encryption` | Schaltet die Verschlüsselung neuer Backups ein oder aus (siehe oben) |
 
@@ -81,7 +81,7 @@ Die Übersicht zeigt bis zu 25 Backups und die letzten 15 Backup-Vorgänge (Hist
 
 1. Vorher `validate` ausführen.
 2. Wartungsfenster einplanen; die Datenbank wird überschrieben.
-3. `restore` – vor dem Rollback-Snapshot und vor jeder Änderung prüft das CMS:
+3. `restore`: vor dem Rollback-Snapshot und vor jeder Änderung prüft das CMS:
    - SHA-256 von Dump und Archiv gegen das Manifest; bei Abweichung wird abgebrochen.
    - das Datei-Archiv vollständig: keine absoluten Pfade, kein `..`, keine Symlinks, nur `uploads/`, `themes/`, `plugins/` (und übersprungenes `assets/`); max. 250.000 Einträge, 4 GiB je Datei, 32 GiB entpackt.
    - freien Speicherplatz: mindestens das 1,1-Fache der entpackten Größe.
@@ -89,12 +89,12 @@ Die Übersicht zeigt bis zu 25 Backups und die letzten 15 Backup-Vorgänge (Hist
 
 Vor 4.0.0 lagen die Grenzen bei 5000 Einträgen und 512 MB; größere Archive, die das CMS selbst erstellt hatte, ließen sich nicht zurückspielen.
 
-### Backup-Einstellungen und Offsite-Ziel (seit 4.1.0)
+### Backup-Einstellungen und Offsite-Ziel
 
 Seite **Backup-Einstellungen** (`/admin/backup-settings`, Menü *Einstellungen*; Link auch auf `/admin/backups`):
 
 - **Verschlüsselung** neuer Backups (derselbe Schalter wie auf der Backup-Seite, mit Audit-Eintrag).
-- **Offsite-Ziel (S3-kompatibel):** AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO u. a. Felder: Endpunkt (nur Host), Region, Bucket, Präfix, Zugangsschlüssel, geheimer Schlüssel (verschlüsselt gespeichert, nur schreibbar – leer lassen behält ihn), Path-Style, Teilgröße (5–64 MB), Speicherklasse, Aufbewahrung offsite („letzte N“ und/oder „nicht älter als D Tage“, 0 = aus). Für MinIO im eigenen Netz lassen sich genau dieser private Host und – nur dann – HTTP freigeben.
+- **Offsite-Ziel (S3-kompatibel):** AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO u. a. Felder: Endpunkt (nur Host), Region, Bucket, Präfix, Zugangsschlüssel, geheimer Schlüssel (verschlüsselt gespeichert, nur schreibbar, leer lassen behält ihn), Path-Style, Teilgröße (5–64 MB), Speicherklasse, Aufbewahrung offsite („letzte N“ und/oder „nicht älter als D Tage“, 0 = aus). Für MinIO im eigenen Netz lassen sich genau dieser private Host und, nur dann. HTTP freigeben.
 - **Verbindung prüfen:** schreibt, liest (HEAD) und löscht ein Testobjekt.
 - **Offsite-Status** je Backup (gesichert, läuft, fehlgeschlagen mit Grund, entfernt) und „Jetzt offsite kopieren“.
 - Recht: Lesen mit `manage_settings`/`manage_system`, Ändern, Prüfen und Hochladen zusätzlich `backups.offsite` (Admins haben es).
@@ -103,7 +103,7 @@ Ablauf: Nach jedem erfolgreichen Backup (Hook `cms_backup_created`) werden die *
 
 ### Externe Ziele (Service-API, älter)
 
-`BackupService` bietet weiterhin `emailDatabaseBackup($email)` (SQL per E-Mail) und `uploadToS3($pfad, $s3Config)` (AWS-SDK oder REST, max. 25 MB). Für Offsite-Kopien ist ab 4.1.0 der oben beschriebene Weg vorgesehen.
+`BackupService` bietet weiterhin `emailDatabaseBackup($email)` (SQL per E-Mail) und `uploadToS3($pfad, $s3Config)` (AWS-SDK oder REST, max. 25 MB). Für Offsite-Kopien dient der oben beschriebene Weg.
 
 ### Empfehlungen
 

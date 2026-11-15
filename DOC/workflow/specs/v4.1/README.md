@@ -1,12 +1,12 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Release 4.1.0
+# 365CMS Projektdokumentation | Workflow: Spec: Release 4.1.0
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema **v26** | **Status:** ✅ Bereiche 1–5 umgesetzt und mit 4.1.0 veröffentlicht, Bereich 6 → 4.3.0 | **Update:** 2026-11-15
 > **Fortschritt:** [PROGRESS.md](PROGRESS.md) · **Schema:** [SCHEMA-v26.md](SCHEMA-v26.md) · **Referenzen:** [REFERENCES.md](REFERENCES.md)
 
 ## English (summary)
 
-Technical architecture and implementation plan for 365CMS 4.1.0 with six feature areas: (1) identity – Entra ID
+Technical architecture and implementation plan for 365CMS 4.1.0 with six feature areas: (1) identity. Entra ID
 single sign-on via OpenID Connect, configurable password policy with history and expiry, role-based MFA enforcement;
-(2) media – AVIF derivatives, media usage index across all content types; (3) editorial – four-eyes review status
+(2) media, AVIF derivatives, media usage index across all content types; (3) editorial, four-eyes review status
 `pending`, reusable Editor.js blocks, content expiry and review dates; (4) S3-compatible offsite backups with a
 native Signature-V4 client and signed outbound webhooks; (5) Stripe and Mollie/PayPal payments with signed webhooks
 and sequential PDF invoices; (6) a CLI runner and real-time admin alerting. All schema changes share one bump to v26; the
@@ -24,7 +24,7 @@ security gates and tests. **Status 15 Nov 2026:** areas 1–5 are implemented an
 | [03-CONTENT-WORKFLOWS.md](03-CONTENT-WORKFLOWS.md) | Vier-Augen-Prinzip (`pending`), wiederverwendbare Blöcke, Ablauf- und Prüfdaten |
 | [04-BACKUP-WEBHOOKS.md](04-BACKUP-WEBHOOKS.md) | S3-kompatible Offsite-Backups, ausgehende Webhooks |
 | [05-PAYMENTS.md](05-PAYMENTS.md) | Stripe, Mollie/PayPal, Webhooks (5a); PDF-Rechnungen mit Nummernkreis (5b), beides umgesetzt |
-| [06-CLI-ALERTING.md](06-CLI-ALERTING.md) | `CMS/cli.php`, Echtzeit-Alerting mit Cooldown – **verschoben auf 4.3.0** |
+| [06-CLI-ALERTING.md](06-CLI-ALERTING.md) | `CMS/cli.php`, Echtzeit-Alerting mit Cooldown: **verschoben auf 4.3.0** |
 | [SCHEMA-v26.md](SCHEMA-v26.md) | Alle Tabellen und Spalten des Schema-Stands v26 |
 | [REFERENCES.md](REFERENCES.md) | Bewertung der im Auftrag verlinkten Repositories und der Sicherheitsmeldung GHSA-6hhv-gc4g-f4r7 |
 | [PROGRESS.md](PROGRESS.md) | Fortschritt je Arbeitspaket mit Nachweisen |
@@ -123,5 +123,5 @@ Schreibweise wie `comments.moderate` (Gruppe in `RolesModule::CAPABILITY_GROUPS`
 | V2 | Kontoverknüpfung per E-Mail automatisch? | Nur unter allen Bedingungen aus 01-IDENTITY §3.3, **nie für Rollen mit Admin-Zugriff**; sonst aktive Verknüpfung nach lokalem Login |
 | V3 | Passwort-Ablauf standardmäßig? | **Aus** (NIST SP 800-63B rät von periodischem Wechsel ab); Historie Standard 5 |
 | V4 | Erstes Zahlungs-Gateway | **Stripe** zuerst, Mollie danach (deckt PayPal über Mollie ab), PayPal direkt nur bei Bedarf |
-| V5 | Ort der Tests | `TESTS/` neu anlegen (Auftrag) – bestätigen, da am 14.11.2026 gelöscht |
+| V5 | Ort der Tests | `TESTS/` neu anlegen (Auftrag): bestätigen, da am 14.11.2026 gelöscht |
 | V6 | S3-Backups standardmäßig verschlüsselt hochladen? | **Ja, Pflicht**: unverschlüsselte Backups werden nicht offsite übertragen |

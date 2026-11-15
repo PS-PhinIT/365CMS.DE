@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Plugin-Marketplace
+# 365CMS Projektdokumentation | Admin: Plugin-Marketplace
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/plugin-marketplace` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_plugin_mp`

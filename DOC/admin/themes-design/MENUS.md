@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Theme-Menüs
+# 365CMS Projektdokumentation | Admin: Theme-Menüs
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/menu-editor` (Alt-Route `/admin/menus` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_menu_editor`
@@ -21,10 +21,10 @@ Positionen des Themes **cms-default**:
 | `secondary` | Sekundäres Menü (unter dem Header) |
 | `mobile` | Mobiles Menü (Hamburger) |
 | `footer` | Footer-Navigation (allgemein) |
-| `footer_topics` | Footer – Spalte Rubriken |
-| `footer_resources` | Footer – Spalte Ressourcen |
-| `footer_about` | Footer – Spalte Über |
-| `footer_legal` | Footer – Legal-Leiste unten |
+| `footer_topics` | Footer: Spalte Rubriken |
+| `footer_resources` | Footer: Spalte Ressourcen |
+| `footer_about` | Footer: Spalte Über |
+| `footer_legal` | Footer: Legal-Leiste unten |
 
 Die Übersicht zeigt je Position, welches Menü zugewiesen ist.
 

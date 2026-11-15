@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Service-Schicht
+# 365CMS Projektdokumentation | Core: Service-Schicht
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -33,9 +33,9 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `ContentLanguageCopyService` | DE→EN-Kopie von Inhalten |
 | `ContentMediaPlacementService` | Platzierung von Medien in Inhalten |
 | `ContentChangesService` | Übersicht *Letzte Änderungen* über Beiträge und Seiten aus Revisionen und Anlage ([CHANGES.md](../admin/pages-posts/CHANGES.md)) |
-| `Content\ContentStatus`, `Content\ContentWorkflow` | Statuswerte (`draft`, `pending`, `published`, `private`, `trash`) und Freigabe-Ablauf (seit 4.1.0): `canPublish()` (inkl. „zweite Person“), `resolveSaveStatus()`, Einreichen/Freigeben/Zurückgeben mit Verlauf (`content_workflow_events`) und Benachrichtigung, `pendingItems()`, Vorschau-Links (`content_preview_links`), Rechte-Migration ([REVIEW.md](../admin/pages-posts/REVIEW.md)) |
-| `ReusableBlocks\ReusableBlockService` (+ `ReusableBlock`, `ReusableBlockMediaExtractor`) | EditorJS Block Vorlagen (seit 4.1.0): Vorlagen mit Verlauf (20 Fassungen), Nutzungsindex `reusable_block_usage`, Rendern des Blocks „Vorlagen“ (`reusableBlock`) mit Rekursionsschutz, Aktualisieren verknüpfter Inhalte, Suchtext, Umwandeln ([BLOCK-TEMPLATES.md](../admin/pages-posts/BLOCK-TEMPLATES.md)) |
-| `Content\ContentExpiryService` | Ablauf- und Prüfdaten (seit 4.1.0): `processExpired()` (stündlich, 100 je Lauf, Entwurf oder nur Markierung), `processDueReviews()` (täglich, einmal je Termin), `markReviewed()` (+ Intervall in Monaten) ([POSTS.md](../admin/pages-posts/POSTS.md#gültigkeit-ablauf-und-wiedervorlage-seit-410)) |
+| `Content\ContentStatus`, `Content\ContentWorkflow` | Statuswerte (`draft`, `pending`, `published`, `private`, `trash`) und Freigabe-Ablauf: `canPublish()` (inkl. „zweite Person“), `resolveSaveStatus()`, Einreichen/Freigeben/Zurückgeben mit Verlauf (`content_workflow_events`) und Benachrichtigung, `pendingItems()`, Vorschau-Links (`content_preview_links`), Rechte-Migration ([REVIEW.md](../admin/pages-posts/REVIEW.md)) |
+| `ReusableBlocks\ReusableBlockService` (+ `ReusableBlock`, `ReusableBlockMediaExtractor`) | EditorJS Block Vorlagen: Vorlagen mit Verlauf (20 Fassungen), Nutzungsindex `reusable_block_usage`, Rendern des Blocks „Vorlagen“ (`reusableBlock`) mit Rekursionsschutz, Aktualisieren verknüpfter Inhalte, Suchtext, Umwandeln ([BLOCK-TEMPLATES.md](../admin/pages-posts/BLOCK-TEMPLATES.md)) |
+| `Content\ContentExpiryService` | Ablauf- und Prüfdaten: `processExpired()` (stündlich, 100 je Lauf, Entwurf oder nur Markierung), `processDueReviews()` (täglich, einmal je Termin), `markReviewed()` (+ Intervall in Monaten) ([POSTS.md](../admin/pages-posts/POSTS.md#gültigkeit-ablauf-und-wiedervorlage)) |
 | `ContentEditPermission` | Element-Rechte für Seiten und Beiträge außerhalb der Editoren (Redaktionskalender, Übersetzungsstatus), gleiche Regeln wie die Editoren |
 | `EditorialCalendarService` | Redaktionskalender: Termine von Beiträgen und Seiten, Verschieben, „Geplantes Datum“ (`planned_at`), Dashboard-Widgets *Meine Entwürfe* und *Demnächst geplant* |
 | `TranslationStatusService` | Übersetzungsstatus von Beiträgen und Seiten (`missing`, `current`, `outdated`; Tabelle `translation_sync`, [TRANSLATIONS.md](../admin/pages-posts/TRANSLATIONS.md)) |
@@ -67,8 +67,8 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 | Service | Aufgabe |
 |---|---|
-| `Media\MediaUsageIndex` (+ `MediaPathNormalizer`, `MediaReferenceExtractor`, `Media\Usage\*`, `MediaUsageRebuildService`) | Verwendungsnachweis (seit 4.1.0): Tabelle `media_usage`, `reindexContent()`/`removeContent()` über die Inhalts-Hooks, Neuaufbau in Schritten (Auftrag `media_usage`), `usageMap()` im Format von `MediaUsageService::buildUsageMap()` (das nach dem ersten Aufbau delegiert), `unusedMedia()`; Extraktoren für Beiträge, Seiten, Hub-Sites, Downloads, Formulare und Design, weitere über `cms_register_media_reference_extractors` ([MEDIA.md](../admin/media/MEDIA.md)) |
-| `Media\AvifDerivativeService`, `Media\AvifRegenerationService` | AVIF-Fassungen (seit 4.1.0): Probe-Kodierung → Option `media_capabilities`, Erzeugung je Bildgröße nur wenn kleiner als WebP, Pixel-Budget 25 MP, `pictureSources()`/`pictureHtml()` für `<picture>`, Derivate beim Löschen; Auftrag `media_avif` (Schritte à 20) unter *Medien-Werkzeuge*; Hook `cms_media_derivative_created` ([MEDIA-TOOLS.md](../admin/media/MEDIA-TOOLS.md)) |
+| `Media\MediaUsageIndex` (+ `MediaPathNormalizer`, `MediaReferenceExtractor`, `Media\Usage\*`, `MediaUsageRebuildService`) | Verwendungsnachweis: Tabelle `media_usage`, `reindexContent()`/`removeContent()` über die Inhalts-Hooks, Neuaufbau in Schritten (Auftrag `media_usage`), `usageMap()` im Format von `MediaUsageService::buildUsageMap()` (das nach dem ersten Aufbau delegiert), `unusedMedia()`; Extraktoren für Beiträge, Seiten, Hub-Sites, Downloads, Formulare und Design, weitere über `cms_register_media_reference_extractors` ([MEDIA.md](../admin/media/MEDIA.md)) |
+| `Media\AvifDerivativeService`, `Media\AvifRegenerationService` | AVIF-Fassungen: Probe-Kodierung → Option `media_capabilities`, Erzeugung je Bildgröße nur wenn kleiner als WebP, Pixel-Budget 25 MP, `pictureSources()`/`pictureHtml()` für `<picture>`, Derivate beim Löschen; Auftrag `media_avif` (Schritte à 20) unter *Medien-Werkzeuge*; Hook `cms_media_derivative_created` ([MEDIA-TOOLS.md](../admin/media/MEDIA-TOOLS.md)) |
 | `MediaService` (+ `Media\MediaRepository`, `Media\UploadHandler`, `Media\ImageProcessor`) | Dateisystem-Bibliothek, Metadaten, Kategorien/Tags, Upload-Regeln, `.htaccess`-Schutz. Metadaten-Schreibzugriffe nur über `MediaRepository::updateMeta()` (Dateisperre) bzw. `setFileMeta()`/`mergeFileMeta()` je Datei |
 | `MediaUsageService` | Verwendungsnachweis (Beitragsbilder, Inhalte) |
 | `MediaDeliveryService` | geschützte Auslieferung `/media-file` |
@@ -81,14 +81,14 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | Service | Aufgabe |
 |---|---|
 | `UserService` | Benutzer-CRUD, Sammelaktionen, Rollen, Statistik |
-| `MemberContentService` | Inhalte eines Mitglieds: `getContentStats()`, `getRecentComments()`, `getFavoritePosts()`, `isFavorite()`, `toggleFavorite()`, `removeFavorite()` (seit 4.0.0) |
+| `MemberContentService` | Inhalte eines Mitglieds: `getContentStats()`, `getRecentComments()`, `getFavoritePosts()`, `isFavorite()`, `toggleFavorite()`, `removeFavorite()` |
 | `MemberService` | Profil, Privatsphäre, Datenexport, Löschantrag, Sicherheitsempfehlungen; Request-Cache für `getUserMeta()` (`flushUserMetaCache()`), `getRecentActivity()`, `getMemberOrders()`, `resolveMessageRecipientId()`, `setUserMeta()` |
 | `MessageService` | Nachrichten zwischen Mitgliedern; legt beim Senden eine Benachrichtigung `message` für den Empfänger an |
-| `NotificationService` | In-App-Benachrichtigungen der Mitglieder: `create()`, `markRead()`, `markAllRead()`, `countUnread()`, `getRecent()`; wertet `notification_preferences` aus, Action `cms_member_notification_created` (seit 4.0.0) |
+| `NotificationService` | In-App-Benachrichtigungen der Mitglieder: `create()`, `markRead()`, `markAllRead()`, `countUnread()`, `getRecent()`; wertet `notification_preferences` aus, Action `cms_member_notification_created` |
 | `JwtService` | JWT erzeugen/prüfen für die optionale Bearer-Anmeldung der API (`/api/v1/auth/token`, nur mit `JWT_SECRET`, siehe [API-REFERENCE.md](API-REFERENCE.md)) |
 | `EmailVerificationService` | Bestätigung neuer Konten per Link (`/cms-verify-email`, Option `member_email_verification`, Status `unverified`), danach Zuordnung von Gastbestellungen |
-| `EmailChangeService` | E-Mail-Änderung mit Bestätigungslink an die neue Adresse (`/cms-confirm-email-change`, 48 h), Hinweis an die alte Adresse, Zuordnung von Gastbestellungen (seit 4.0.0) |
-| `CmsAuthPageService` | CMS-eigene Login-/Registrierungs-/Passwort-Seiten, Reset-Ablauf; seit 4.0.0 Login-Showcase `getShowcase(string $pageType = 'login'): ?array` (Rohwerte), `renderShowcase()` (bindet `<theme>/auth/showcase.php` oder `views/auth/partials/showcase.php` ein) und Farbimport `getThemeLoginColors()`/`importThemeColors()` aus `theme.json` → `login_page.colors` |
+| `EmailChangeService` | E-Mail-Änderung mit Bestätigungslink an die neue Adresse (`/cms-confirm-email-change`, 48 h), Hinweis an die alte Adresse, Zuordnung von Gastbestellungen |
+| `CmsAuthPageService` | CMS-eigene Login-/Registrierungs-/Passwort-Seiten, Reset-Ablauf, Login-Showcase `getShowcase(string $pageType = 'login'): ?array` (Rohwerte), `renderShowcase()` (bindet `<theme>/auth/showcase.php` oder `views/auth/partials/showcase.php` ein) und Farbimport `getThemeLoginColors()`/`importThemeColors()` aus `theme.json` → `login_page.colors` |
 
 ### Mail & Integration
 
@@ -111,8 +111,8 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `CookieConsentService` | Consent-Banner, Zustimmungsabfrage |
 | `CoreModuleService` | Feature-Module an/aus ([../admin/system-settings/MODULES.md](../admin/system-settings/MODULES.md)) |
 | `SettingsService` | gruppierte, optional verschlüsselte Einstellungen (Secrets über `CryptoService`) |
-| `CryptoService` | authentifizierte Verschlüsselung gespeicherter Geheimnisse (Einstellungen, TOTP) und Backups, Schlüsselring mit `CMS_ENCRYPTION_KEY`/`CMS_ENCRYPTION_KEYS_PREVIOUS` (seit 4.0.0, [SECURITY.md](SECURITY.md)) |
-| `Auth\SSO\EntraSsoService` (+ `EntraIdProvider`, `EntraSettings`, `IdentityLinker`, `OidcFlowState`) | Anmeldung mit Microsoft Entra ID (seit 4.1.0, Namespace `CMS\Auth\SSO`; Details in [CORE-CLASSES.md](CORE-CLASSES.md) und [../admin/security/SSO-ENTRA.md](../admin/security/SSO-ENTRA.md)) |
+| `CryptoService` | authentifizierte Verschlüsselung gespeicherter Geheimnisse (Einstellungen, TOTP) und Backups, Schlüsselring mit `CMS_ENCRYPTION_KEY`/`CMS_ENCRYPTION_KEYS_PREVIOUS` ([SECURITY.md](SECURITY.md)) |
+| `Auth\SSO\EntraSsoService` (+ `EntraIdProvider`, `EntraSettings`, `IdentityLinker`, `OidcFlowState`) | Anmeldung mit Microsoft Entra ID (Namespace `CMS\Auth\SSO`; Details in [CORE-CLASSES.md](CORE-CLASSES.md) und [../admin/security/SSO-ENTRA.md](../admin/security/SSO-ENTRA.md)) |
 | `LoginThrottleSettings` | einstellbare Login-Grenzwerte (Gruppe `security`: `max_login_attempts`, `login_timeout`), sonst die Konstanten aus `config/app.php`; genutzt von `Auth::login()` und der Passwort-Zurücksetzung ([LOGIN-THRESHOLDS.md](../admin/security/LOGIN-THRESHOLDS.md)) |
 | `TrustedProxyService` | vertrauenswürdige Proxys/CDNs, echte Client-IP (über `Security::getClientIp()`) und Länder-Header |
 
@@ -127,11 +127,11 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `FeatureUsageService` | Nutzung von Admin-Funktionen |
 | `MonitoringTrendService` | Verläufe für Monitoring |
 | `ErrorReportService` | Fehlerberichte |
-| `BackupService` | Backups, Restore, Validierung; Ablageort `CMS_BACKUP_PATH` und optionale Verschlüsselung (seit 4.0.0, [../admin/system-settings/BACKUP.md](../admin/system-settings/BACKUP.md)); Hook `cms_backup_created` (seit 4.1.0) |
-| `Payments\InvoiceService` | Rechnungen (seit 4.1.0): lückenloser Nummernkreis, Snapshot, PDF im privaten Speicher, Storno, Pflichtangaben § 14 UStG, Sperrvermerk statt Löschung ([INVOICES.md](../admin/subscription/INVOICES.md)) |
-| `Payments\PaymentService` | Zahlungen (seit 4.1.0): Stripe/Mollie-Checkout, signierte Webhooks als einzige Quelle, Idempotenz über `payment_events`, Abo-Aktivierung und -Verlängerung ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
-| `Webhooks\WebhookService` | Ausgehende Webhooks (seit 4.1.0): Empfänger mit verschlüsseltem Geheimnis, Warteschlange `webhook_deliveries`, signierte Zustellung im Cron, Wiederholungen, Deaktivieren bei 410/20 Fehlschlägen ([WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md)) |
-| `Backup\OffsiteBackupService` (+ `S3Client`, `S3Config`, `SigV4Signer`) | Offsite-Kopien auf S3-kompatible Ziele (seit 4.1.0): nur verschlüsselte Backups, Multipart, Status `backup_offsite_uploads`, Nachholen per Cron, Aufbewahrung, Verbindungstest; SigV4 ohne SDK |
+| `BackupService` | Backups, Restore, Validierung; Ablageort `CMS_BACKUP_PATH` und optionale Verschlüsselung ([../admin/system-settings/BACKUP.md](../admin/system-settings/BACKUP.md)); Hook `cms_backup_created` |
+| `Payments\InvoiceService` | Rechnungen: lückenloser Nummernkreis, Snapshot, PDF im privaten Speicher, Storno, Pflichtangaben § 14 UStG, Sperrvermerk statt Löschung ([INVOICES.md](../admin/subscription/INVOICES.md)) |
+| `Payments\PaymentService` | Zahlungen: Stripe/Mollie-Checkout, signierte Webhooks als einzige Quelle, Idempotenz über `payment_events`, Abo-Aktivierung und -Verlängerung ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
+| `Webhooks\WebhookService` | Ausgehende Webhooks: Empfänger mit verschlüsseltem Geheimnis, Warteschlange `webhook_deliveries`, signierte Zustellung im Cron, Wiederholungen, Deaktivieren bei 410/20 Fehlschlägen ([WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md)) |
+| `Backup\OffsiteBackupService` (+ `S3Client`, `S3Config`, `SigV4Signer`) | Offsite-Kopien auf S3-kompatible Ziele: nur verschlüsselte Backups, Multipart, Status `backup_offsite_uploads`, Nachholen per Cron, Aufbewahrung, Verbindungstest; SigV4 ohne SDK |
 | `UpdateService` | Update-Prüfung und -Installation, Systemvoraussetzungen |
 | `CronRunnerService`, `CronExpressionAdapter` | Cron-Tasks und -Ausdrücke |
 | `OpcacheWarmupService` | OPcache-Vorwärmen |
@@ -143,7 +143,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `CsvExchange` | CSV-Export/-Import im Admin (BOM, Trennzeichen-Erkennung, Schutz vor Formel-Injection) |
 | `MarketplaceEndpoints` | zentrale Marketplace- und Core-Update-URLs mit Fallback auf die offiziellen Werte |
 
-### Admin-Oberfläche (seit 4.0.0)
+### Admin-Oberfläche
 
 | Service | Aufgabe |
 |---|---|
@@ -161,7 +161,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `PostPublishChecklistService` | Veröffentlichungs-Checkliste (Beitragsbild, Meta-Beschreibung 120–160 Zeichen, Kategorie), serverseitige Prüfung beim Veröffentlichen/Planen |
 | `PostRevisionService` | Beitragsrevisionen (Tabelle `post_revisions`, max. 30 je Beitrag, Autosave-Revision höchstens alle 10 Minuten), Vergleich blockweise, Wiederherstellen als neue Revision |
 
-### Erweiterungspunkte der Core-Funktionen (seit 4.0.0)
+### Erweiterungspunkte der Core-Funktionen
 
 | Service | Aufgabe |
 |---|---|
@@ -172,10 +172,10 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `EditorJs\EditorJsBlockRegistry` | zusätzliche Editor.js-Blöcke aus Core-Funktionen (z. B. Download, Formular): ein Eintrag registriert das Tool-Skript (vor `editor-init.js`, Anmeldung über `window.CMS_EDITORJS_BLOCKS`), den Sanitizer beim Speichern und den Renderer. `render($type, $data, $tunes, $context)` übergibt den Kontext `['mode' => 'frontend']` bzw. `['mode' => 'preview']`; die Server-Vorschau im Editor läuft über `window.CMSBlockPreview` und `POST /admin/post-editor-api action=block_preview` ([../admin/ADMIN-API-AJAX.md](../admin/ADMIN-API-AJAX.md)) |
 | `ContentTypes\ContentTypeRegistry` | Inhaltstyp-Provider für Papierkorb (`TrashProvider`), Export/Import (`ExchangeProvider`) und Suchindex (`SearchDocumentProvider`); Anmeldung über die Action `cms_register_content_type_providers`. Diese Funktionen enthalten keine Sonderfälle je Typ ([CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)) |
 | `Retention\RetentionRule` | Aufbewahrungsregel eines Funktionsbereichs (Frist, Trockenlauf-Zählung, Löschen oder Anonymisieren), registriert über `DataRetentionService::registerRule()`. Der tägliche Cron ruft `prune()` auf; die Seite *Löschfristen* (`/admin/data-retention`) zeigt Frist, Trockenlauf und letzten Lauf |
-| `Security\PasswordPolicyService` | Konfigurierbare Passwort-Richtlinie (seit 4.1.0): Mindestlänge, Unicode-Zeichenklassen, Passwort-Historie (`password_history`), optionales Höchstalter (`users.password_changed_at`). `Auth::evaluatePasswordPolicy()`/`validatePasswordPolicy()` delegieren hierher; nach jedem gespeicherten Passwort `recordChange()` (Hook `cms_password_changed`); Filter `cms_password_policy` darf nur verschärfen. Einstellungen unter *Einstellungen → Login & Sperren* (Gruppe `password_policy`) |
-| `Security\MfaEnforcementService` | Rollenbasierter MFA-Zwang (seit 4.1.0): Rollen aus Gruppe `mfa_policy`, anerkannte Faktoren (TOTP, Passkey mit `user_verified = 1`, SSO-MFA der Sitzung), `decide()` für die Konto-Weiche in `Router::dispatch()` (Passwort-Ablauf vor MFA), `canRemoveFactor()` gegen das Entfernen des letzten Faktors, `wouldLockOut()` beim Speichern; Filter `cms_mfa_enforcement_required` |
+| `Security\PasswordPolicyService` | Konfigurierbare Passwort-Richtlinie: Mindestlänge, Unicode-Zeichenklassen, Passwort-Historie (`password_history`), optionales Höchstalter (`users.password_changed_at`). `Auth::evaluatePasswordPolicy()`/`validatePasswordPolicy()` delegieren hierher; nach jedem gespeicherten Passwort `recordChange()` (Hook `cms_password_changed`); Filter `cms_password_policy` darf nur verschärfen. Einstellungen unter *Einstellungen → Login & Sperren* (Gruppe `password_policy`) |
+| `Security\MfaEnforcementService` | Rollenbasierter MFA-Zwang: Rollen aus Gruppe `mfa_policy`, anerkannte Faktoren (TOTP, Passkey mit `user_verified = 1`, SSO-MFA der Sitzung), `decide()` für die Konto-Weiche in `Router::dispatch()` (Passwort-Ablauf vor MFA), `canRemoveFactor()` gegen das Entfernen des letzten Faktors, `wouldLockOut()` beim Speichern; Filter `cms_mfa_enforcement_required` |
 
-### Funktionsbereiche (seit 4.0.0)
+### Funktionsbereiche
 
 | Namespace | Aufgabe |
 |---|---|
@@ -183,7 +183,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `Downloads\…` | Downloads mit Versionen, Zugriffsschutz, Statistik und Editor-Block ([DOWNLOADS.md](../admin/media/DOWNLOADS.md)) |
 | `Feed\…` | Feed-Aggregator: Quellen, Abruf-Warteschlange, OPML, Digest-Versand ([FEEDS.md](../admin/system-settings/FEEDS.md)) |
 | `Knowledgebase\…` | Knowledgebase-Einträge, automatische Verlinkung, CSV-Pakete ([KNOWLEDGEBASE.md](../admin/pages-posts/KNOWLEDGEBASE.md)) |
-| `Newsletter\…` | Abonnenten, Kampagnen, Versand, Frontend-Seiten ([NEWSLETTER.md](../admin/pages-posts/NEWSLETTER.md)); seit 4.0.0 `NewsletterMemberService` (Status, An-/Abmeldung, Einstellungen, erneutes Senden im Mitgliederbereich, Rate-Limit 10/h je Konto) und `NewsletterConsentLog` (Einwilligungsverlauf im Audit-Log, Kategorie `newsletter`) |
+| `Newsletter\…` | Abonnenten, Kampagnen, Versand, Frontend-Seiten ([NEWSLETTER.md](../admin/pages-posts/NEWSLETTER.md)), `NewsletterMemberService` (Status, An-/Abmeldung, Einstellungen, erneutes Senden im Mitgliederbereich, Rate-Limit 10/h je Konto) und `NewsletterConsentLog` (Einwilligungsverlauf im Audit-Log, Kategorie `newsletter`) |
 | `Trash\…` | Papierkorb (`TrashService`) mit Providern für Beiträge, Seiten, Hub-Sites und Medien ([TRASH.md](../admin/pages-posts/TRASH.md)) |
 | `Exchange\…` | Export/Import von Inhalten (`ContentExchangeService` und Provider, [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md)) |
 | `Search\…` | Suchindex (`SearchIndexService`), Suchbegriff-Statistik (`SearchTermStatsService`) und Suchprovider ([SEARCH-INDEX.md](../admin/system-settings/SEARCH-INDEX.md)) |

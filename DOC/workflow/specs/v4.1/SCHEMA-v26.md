@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Schema v26 & Migrationsplanung
+# 365CMS Projektdokumentation | Spec 4.1.0: Schema v26 & Migrationsplanung
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 | **Status:** ✅ umgesetzt (90 Tabellen, `FEATURE_TABLES_V26`); Versionsmarke `v26` gesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
@@ -13,13 +13,13 @@ that the schema does not guarantee.
 
 ### 1. Mechanik (wie v25)
 
-1. **Versionsmarke erst mit dem Release:** `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION`, `Version::CURRENT` und `schema_version` im Marketplace-Manifest werden in **einem** Schritt der Release-Vorbereitung 4.1.0 auf `v26`/`4.1.0` gehoben (das Manifest beschreibt das veröffentlichte Paket, die Release-Suite prüft die Übereinstimmung). Bis dahin entstehen die v26-Tabellen und -Spalten bei Neuinstallationen über `getSchemaQueries()` und bei bestehenden Installationen über `SchemaManager::ensureFeatureSchema()` (Laufzeitprüfung, läuft nach jeder Änderung von `SchemaManager.php` einmal); die ALTER-Schritte im `MigrationManager` sind bereits eingetragen und greifen ab der Marke v26.
+1. **Versionsmarke:** `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION`, `Version::CURRENT` und `schema_version` im Marketplace-Manifest stehen gemeinsam auf `v26` bzw. `4.1.0` (das Manifest beschreibt das veröffentlichte Paket, die Release-Suite prüft die Übereinstimmung). Neuinstallationen legen die v26-Tabellen und -Spalten über `getSchemaQueries()` an, bestehende Installationen über den `MigrationManager` (Schritt v26) und zusätzlich über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()`.
 2. Das Community-Modul (Release 4.2) ist **nicht** Teil von v26; es bringt Schema **v27** ([../community/DATA-MODEL.md](../community/DATA-MODEL.md)).
-3. Neue Tabellen nur in `SchemaManager::getSchemaQueries()`; Liste `SchemaManager::FEATURE_TABLES_V26` (Abhängigkeitsreihenfolge) wird von Neuinstallation, `MigrationManager::run()` und der Laufzeitprüfung genutzt – eine Definition, drei Wege.
+3. Neue Tabellen nur in `SchemaManager::getSchemaQueries()`; Liste `SchemaManager::FEATURE_TABLES_V26` (Abhängigkeitsreihenfolge) wird von Neuinstallation, `MigrationManager::run()` und der Laufzeitprüfung genutzt, eine Definition, drei Wege.
 4. Spaltenerweiterungen als `ALTER TABLE … ADD COLUMN` in `MigrationManager::run()`; bekannte Fehler („Duplicate column“, „Duplicate key name“ …) werden wie bisher ignoriert → idempotent.
 5. Rechte-Vergabe als **Update-Schritt** (einmalig, Marker `capabilities_v26` in `settings`): neue Capabilities an Standardrollen; nie entziehen.
 6. Keine Daten-Löschungen in v26.
-7. Prüfung: Neuinstallation und Update von einem v25-Abzug ergeben dieselben Tabellen und Spalten (Test `TESTS/schema-v26/run.php`, vergleicht `getSchemaQueries()` mit den ALTER-Schritten statisch und – falls eine Testdatenbank verfügbar ist – per `INFORMATION_SCHEMA`).
+7. Prüfung: Neuinstallation und Update von einem v25-Abzug ergeben dieselben Tabellen und Spalten (Test `TESTS/schema-v26/run.php`, vergleicht `getSchemaQueries()` mit den ALTER-Schritten statisch und, falls eine Testdatenbank verfügbar ist, per `INFORMATION_SCHEMA`).
 
 ### 2. Neue Tabellen
 
@@ -52,7 +52,7 @@ Status `pending` für `posts`/`pages` braucht keine Schemaänderung (`status VAR
 
 | Schritt | Wirkung |
 |---|---|
-| Passwort-Richtlinie | Standardwerte = bisherige Konstanten (12 Zeichen, vier Klassen); Ablauf 0, Historie 5 – kein Konto muss sofort ändern |
+| Passwort-Richtlinie | Standardwerte = bisherige Konstanten (12 Zeichen, vier Klassen); Ablauf 0, Historie 5: kein Konto muss sofort ändern |
 | `password_changed_at` | bleibt `NULL`; Ablauf rechnet ab `created_at` (Ablauf ist standardmäßig aus) |
 | `passkey_credentials.user_verified` | bleibt `NULL` für Bestandspasskeys; wird bei der nächsten Anmeldung mit UV gesetzt |
 | Capabilities | `security.policies`, `security.sso`, `backups.offsite`, `webhooks.manage`, `payments.manage`, `invoices.view`, `alerts.manage` → `admin`; `media.tools`, `blocks.reusable` → `admin`, `editor`; `posts.publish` → `editor`, `author`; `pages.publish` → `editor` |

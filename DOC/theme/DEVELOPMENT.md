@@ -1,10 +1,10 @@
-# 365CMS – Projektdokumentation | Abschnitt: Theme – Entwicklungsablauf
+# 365CMS Projektdokumentation | Theme: Entwicklungsablauf
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
-Practical workflow for building or changing a theme: start from `cms-default` (copy and rename), develop locally against a 365CMS installation with `CMS_DEBUG = true` (CSP in report-only mode), keep everything in `CMS/themes/<slug>/`, bump the version in all four places, test the contract and publish the theme as a ZIP (optionally via the marketplace). Never edit the shipped theme in place on production – updates overwrite it.
+Practical workflow for building or changing a theme: start from `cms-default` (copy and rename), develop locally against a 365CMS installation with `CMS_DEBUG = true` (CSP in report-only mode), keep everything in `CMS/themes/<slug>/`, bump the version in all four places, test the contract and publish the theme as a ZIP (optionally via the marketplace). Never edit the shipped theme in place on production, updates overwrite it.
 
 ## Deutsch
 
@@ -12,7 +12,7 @@ Practical workflow for building or changing a theme: start from `cms-default` (c
 
 1. `CMS/themes/cms-default/` nach `CMS/themes/mein-theme/` kopieren.
 2. In `style.css` (`Theme Name`, `Version`, `Author`), `theme.json` (`name`, `slug`, `version`), `update.json` (`slug`, `name`, `version`, `min_cms_version: "3.4.00"`) und `functions.php` (Klassen- und Konstantennamen, z. B. `MERIDIAN_*` → eigenes Präfix) anpassen.
-3. Unter `/admin/themes` aktivieren – der Health-Check prüft Pflichtdateien und PHP-Syntax.
+3. Unter `/admin/themes` aktivieren: der Health-Check prüft Pflichtdateien und PHP-Syntax.
 
 ### 2. Lokale Entwicklung
 
@@ -41,7 +41,7 @@ Practical workflow for building or changing a theme: start from `cms-default` (c
 
 ### 5. Updates eigener Themes
 
-Customizer-Werte bleiben beim Update erhalten (Datenbank). Dateiänderungen auf dem Server gehen verloren – Anpassungen gehören ins Repository des Themes.
+Customizer-Werte bleiben beim Update erhalten (Datenbank). Dateiänderungen auf dem Server gehen verloren. Anpassungen gehören ins Repository des Themes.
 
 ### Verwandte Dokumente
 

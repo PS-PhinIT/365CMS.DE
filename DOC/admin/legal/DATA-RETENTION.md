@@ -1,4 +1,4 @@
-# 365CMS – Admin: Löschfristen
+# 365CMS: Admin: Löschfristen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -34,8 +34,6 @@ where the data lives; comment IP retention is configured on this page.
 - Abschnitt *IP-Adressen in Kommentaren*: Frist in Tagen (0 = nie) und Vorgehen (kürzen oder entfernen). Die
   Kommentare selbst bleiben erhalten.
 
-Geprüft (4.0.0, Laufzeit): Kommentar mit IP, 40 Tage alt; Frist 30 Tage gespeichert → Probelauf „1 fällig“ →
-*Jetzt ausführen* → IP `203.0.113.77` wird zu `203.0.113.0`, Probelauf danach 0.
 
 ### Erweiterung
 

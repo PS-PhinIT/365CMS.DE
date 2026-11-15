@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Seiten
+# 365CMS Projektdokumentation | Admin: Seiten
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/pages` | **Capability:** `manage_pages` | **CSRF-Aktion:** `admin_pages`
@@ -18,7 +18,7 @@ Static pages are managed at `/admin/pages` (entry `CMS/admin/pages.php`, logic i
 
 ### Überblick
 
-Die Seitenverwaltung pflegt statische Inhalte wie „Über uns“, Leistungsseiten oder Landing-Unterseiten. Seiten sind – anders als Beiträge – nicht datiert, haben keine Tags und erscheinen nicht in Archiven. Sie können aber einer Kategorie zugeordnet werden (dieselbe Tabelle `cms_post_categories` wie bei Beiträgen).
+Die Seitenverwaltung pflegt statische Inhalte wie „Über uns“, Leistungsseiten oder Landing-Unterseiten. Seiten sind, anders als Beiträge, nicht datiert, haben keine Tags und erscheinen nicht in Archiven. Sie können aber einer Kategorie zugeordnet werden (dieselbe Tabelle `cms_post_categories` wie bei Beiträgen).
 
 | Bestandteil | Datei |
 |---|---|
@@ -39,9 +39,9 @@ Die Seitenverwaltung pflegt statische Inhalte wie „Über uns“, Leistungsseit
 
 - **Filter:** `?status=published|draft|private`, `?category=<id>`, Suche über `?q=`. Unbekannte Werte werden verworfen.
 - **Sammelaktionen:** Auswahl per Checkbox, dann `bulk_action`:
-  - `publish` / `draft` – Status setzen
-  - `set_category` / `clear_category` – Kategorie zuweisen bzw. entfernen
-  - `delete` – endgültig löschen
+  - `publish` / `draft`: Status setzen
+  - `set_category` / `clear_category`: Kategorie zuweisen bzw. entfernen
+  - `delete`: endgültig löschen
 - Es werden maximal **200 IDs** pro Anfrage verarbeitet; nicht existierende IDs werden übersprungen.
 
 ### Editor (`/admin/pages?action=edit[&id=…][&lang=en]`)
@@ -56,11 +56,11 @@ Die Seitenverwaltung pflegt statische Inhalte wie „Über uns“, Leistungsseit
 | Kategorie | Optional, aus `cms_post_categories`. |
 | Beitragsbild | Medienauswahl über `featured-image-picker.php`; Referenzen werden normalisiert. |
 | Meta-Titel / Meta-Beschreibung | Direkt in der Seite gespeichert; Platzhalter wie `%title%` oder `%%sitename%%` werden seit 3.4.08 bei der Ausgabe aufgelöst. |
-| Erweiterte SEO-Felder | Fokus-Keyphrase, Keywords, Canonical, Robots (index/follow), Open Graph, Twitter Card, Schema-Typ (Standard `WebPage`), Sitemap-Priorität/-Frequenz, Hreflang-Gruppe – nur sichtbar, wenn das Modul `seo` aktiv ist (`admin-seo-editor.js`). |
+| Erweiterte SEO-Felder | Fokus-Keyphrase, Keywords, Canonical, Robots (index/follow), Open Graph, Twitter Card, Schema-Typ (Standard `WebPage`), Sitemap-Priorität/-Frequenz, Hreflang-Gruppe: nur sichtbar, wenn das Modul `seo` aktiv ist (`admin-seo-editor.js`). |
 | „Inhalt aktualisiert am“ | Optionales Datum/Uhrzeit (`content_updated_at`) für die sichtbare Aktualisierungsangabe. |
 | Seitenvorlage (`page_template`) | Auswahl aus `page_templates` der `theme.json` des aktiven Themes (Fallback „Standard“). Zusatzfelder der gewählten Vorlage werden vor dem Speichern validiert und als JSON in `page_meta_json` abgelegt; inaktive Vorlagen-Panels sind deaktiviert. Formulare ohne Vorlagenfeld (ältere Plugins) lassen Vorlage und Zusatzfelder unverändert. Änderungen erzeugen eine Revision und erscheinen im Revisionsvergleich. |
 
-**Seitenvorlagen:** `PageTemplateService` akzeptiert nur registrierte Vorlagen-IDs und vorhandene PHP-Dateien im Theme-Hauptverzeichnis. Zusatzfelder – einschließlich `array-of-objects` mit höchstens 20 Einträgen – werden vor Datenbankänderungen validiert; ungültige JSON-Werte, nicht erlaubte URLs und ungültige Werte führen zu einem sichtbaren Fehler. Inaktive Panels und Controls sind deaktiviert, damit gleichnamige Felder keine aktiven Werte überschreiben. Nicht gespeicherte Werte bleiben bei Sprachwechsel und Fehleranzeige erhalten; ältere Requests ohne `page_template` bewahren die vorhandene Auswahl und Metadaten.
+**Seitenvorlagen:** `PageTemplateService` akzeptiert nur registrierte Vorlagen-IDs und vorhandene PHP-Dateien im Theme-Hauptverzeichnis. Zusatzfelder, einschließlich `array-of-objects` mit höchstens 20 Einträgen, werden vor Datenbankänderungen validiert; ungültige JSON-Werte, nicht erlaubte URLs und ungültige Werte führen zu einem sichtbaren Fehler. Inaktive Panels und Controls sind deaktiviert, damit gleichnamige Felder keine aktiven Werte überschreiben. Nicht gespeicherte Werte bleiben bei Sprachwechsel und Fehleranzeige erhalten; ältere Requests ohne `page_template` bewahren die vorhandene Auswahl und Metadaten.
 
 **Sprachumschaltung:** Der Button „DE/EN“ sendet `switch_locale:de|en`. Die Seite wird *ohne Speichern* mit den aktuellen Formularwerten in der anderen Sprache neu gerendert, damit keine Eingaben verloren gehen.
 
@@ -69,8 +69,8 @@ Die Seitenverwaltung pflegt statische Inhalte wie „Über uns“, Leistungsseit
 **Revisionen:** Bei jedem Speichern entsteht ein Eintrag in `cms_page_revisions`. Der Editor zeigt die letzten Revisionen mit Autor, Zeitpunkt, geänderten Feldern und einer Gegenüberstellung „Aktuell / Revision“ (Text-Diff bzw. Block-Zusammenfassung für Editor.js-Inhalte).
 
 **KI-Helfer (optional):**
-- Übersetzung (`/admin/ai-translate-editorjs`, Token `admin_ai_editorjs_translation`) – nur, wenn das Core-Modul `ai_services` aktiv ist.
-- SEO-Metadaten (`/admin/ai-generate-seo-metadata`, Token `admin_ai_seo_metadata`) – nur, wenn `ai_services_enabled`, `ai_seo_meta_enabled` und `ai_editorjs_enabled` aktiv sind und der aktive Provider für die Editor-Sprache freigegeben ist. Andernfalls zeigt der Editor einen Hinweis (z. B. „Die Sprache EN ist für den aktiven AI-Provider nicht freigegeben“).
+- Übersetzung (`/admin/ai-translate-editorjs`, Token `admin_ai_editorjs_translation`): nur, wenn das Core-Modul `ai_services` aktiv ist.
+- SEO-Metadaten (`/admin/ai-generate-seo-metadata`, Token `admin_ai_seo_metadata`): nur, wenn `ai_services_enabled`, `ai_seo_meta_enabled` und `ai_editorjs_enabled` aktiv sind und der aktive Provider für die Editor-Sprache freigegeben ist. Andernfalls zeigt der Editor einen Hinweis (z. B. „Die Sprache EN ist für den aktiven AI-Provider nicht freigegeben“).
 
 ### POST-Aktionen
 
@@ -97,10 +97,10 @@ Veröffentlichte Seiten werden über `PublicRouter` unter `/<slug>` bzw. `/en/<s
 
 Bei `ThemeManager::render('page', …)` löst der neue `PageTemplateService` die gespeicherte ID auf und stellt validierte Zusatzfelder unter `page['meta']` bereit. Unbekannte/fehlende Vorlagen, etwa nach einem Theme-Wechsel, fallen mit Protokollierung auf das Standardlayout zurück. Explizite Plugin-Template-Overrides bleiben bestehen. Schema und Revisions-Snapshots enthalten die neuen Felder; Bestandsinstallationen erhalten idempotente Kompatibilitätsmigrationen. Migration und Rendering wurden bislang nur isoliert mit Datenbank-Doubles geprüft, nicht gegen eine laufende Installation.
 
-### Status „Zur Prüfung“ und Gültigkeit (seit 4.1.0)
+### Status „Zur Prüfung“ und Gültigkeit
 
 - **Status `pending`:** Wer `pages.publish` nicht besitzt (oder bei aktivem Vier-Augen-Prinzip keine eigene Seite freigeben darf), speichert „Veröffentlichen“, „Planen“ oder „Privat“ als Einreichung; der Bereich *Freigabe* im Editor bietet Freigeben/Zurückgeben, Verlauf und Vorschau-Link ([REVIEW.md](REVIEW.md)). Eingereichte Seiten sind nie öffentlich; Frontend und Sitemap fragen weiter `status = 'published'` ab.
-- **Gültigkeit:** Panel *Veröffentlichung* → Gruppe „Gültigkeit“ mit **Ablaufdatum** (`expires_at`, stündlicher Cron stuft auf Entwurf zurück oder markiert nur; Frontend 404 oder 410 Gone) und **Wiedervorlage** (`review_due_at`, täglicher Hinweis an den Autor, „Als geprüft markieren“). Einstellungen unter *Einstellungen → Beiträge & Sites*; Ablauf und Hooks (`cms_content_expired`, `cms_content_review_due`) siehe [POSTS.md](POSTS.md#gültigkeit-ablauf-und-wiedervorlage-seit-410) und [EDITORIAL-CALENDAR.md](EDITORIAL-CALENDAR.md).
+- **Gültigkeit:** Panel *Veröffentlichung* → Gruppe „Gültigkeit“ mit **Ablaufdatum** (`expires_at`, stündlicher Cron stuft auf Entwurf zurück oder markiert nur; Frontend 404 oder 410 Gone) und **Wiedervorlage** (`review_due_at`, täglicher Hinweis an den Autor, „Als geprüft markieren“). Einstellungen unter *Einstellungen → Beiträge & Sites*; Ablauf und Hooks (`cms_content_expired`, `cms_content_review_due`) siehe [POSTS.md](POSTS.md#gültigkeit-ablauf-und-wiedervorlage) und [EDITORIAL-CALENDAR.md](EDITORIAL-CALENDAR.md).
 - **Statuswechsel:** Jeder Statuswechsel beim Speichern, Freigeben oder per Sammelaktion löst `cms_content_status_changed` (`$type, $id, $from, $to, $userId`) aus; daraus entstehen die Webhook-Ereignisse `content.published` und `content.submitted` ([../system-settings/WEBHOOKS.md](../system-settings/WEBHOOKS.md)).
 - **Block „Vorlagen“:** Seiten können wiederverwendbare Bausteine einbinden ([BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md)).
 

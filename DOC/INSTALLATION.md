@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: INSTALLATION
+# 365CMS Projektdokumentation | INSTALLATION
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
@@ -147,7 +147,7 @@ In production the contents of `CMS/` are typically the web root.
 | `CMS/logs/` | log files (`LOG_PATH`) |
 | `CMS/cache/` | runtime cache |
 | `CMS/uploads/` | public uploads |
-| `CMS/marketplace/` | Marketplace host only (e.g. 365cms.de): feeds and packages written by the marketplace plugin; **kept untouched by core updates since 4.1.0** |
+| `CMS/marketplace/` | Marketplace host only (e.g. 365cms.de): feeds and packages written by the marketplace plugin; **kept untouched by core updates** |
 | `CMS/vendor/` | additional vendor code (currently `vendor/dompdf/`) |
 
 **Deutsch**
@@ -173,7 +173,7 @@ In produktiven Installationen ist in der Regel der Inhalt von `CMS/` das Webroot
 | `CMS/logs/` | Log-Dateien (`LOG_PATH`) |
 | `CMS/cache/` | Laufzeit-Cache |
 | `CMS/uploads/` | öffentliche Uploads |
-| `CMS/marketplace/` | nur auf Marketplace-Hosts (z. B. 365cms.de): vom Marketplace-Plugin geschriebene Feeds und Pakete; **bleibt ab 4.1.0 bei Core-Updates unangetastet** |
+| `CMS/marketplace/` | nur auf Marketplace-Hosts (z. B. 365cms.de): vom Marketplace-Plugin geschriebene Feeds und Pakete; **bleibt bei Core-Updates unangetastet** |
 | `CMS/vendor/` | zusätzlicher Vendor-Code (aktuell `vendor/dompdf/`) |
 
 ---
@@ -492,8 +492,8 @@ Das erste Admin-Passwort nach der Installation sofort ändern.
 - [ ] `install.php` removed or locked down
 - [ ] Backups scheduled; `CMS_BACKUP_PATH` outside the web root or backup encryption enabled
 - [ ] Write access limited to `config/`, `logs/`, `cache/`, `uploads/`, `backups/` (or the `CMS_BACKUP_PATH` directory) and `private/` (or the `CMS_PRIVATE_PATH` directory)
-- [ ] 4.1.0: if used, offsite backups configured (*Backup settings*, S3-compatible target; only `CMSENC2`-encrypted backups are copied, so enable backup encryption first) and the cron runs at least hourly (offsite retries, webhook delivery, content expiry)
-- [ ] 4.1.0 update from 4.0.0 on a marketplace host: back up `CMS/marketplace/` first – the 4.0.0 updater still moves it into the rollback directory; from 4.1.0 on `marketplace/` is left untouched
+- [ ] If used: offsite backups configured (*Backup settings*, S3-compatible target; only `CMSENC2`-encrypted backups are copied, so enable backup encryption first) and the cron runs at least hourly (offsite retries, webhook delivery, content expiry)
+- [ ] Update from 4.0.0 to 4.1.0 on a marketplace host: back up `CMS/marketplace/` first, the 4.0.0 updater still moves it into the rollback directory, on `marketplace/` is left untouched
 
 **Deutsch**
 
@@ -507,8 +507,8 @@ Das erste Admin-Passwort nach der Installation sofort ändern.
 - [ ] `install.php` entfernt oder abgesichert
 - [ ] regelmäßige Backups eingerichtet; `CMS_BACKUP_PATH` außerhalb des Webroots oder Backup-Verschlüsselung aktiv
 - [ ] Schreibrechte auf `config/`, `logs/`, `cache/`, `uploads/`, `backups/` (bzw. das Verzeichnis aus `CMS_BACKUP_PATH`) und `private/` (bzw. das Verzeichnis aus `CMS_PRIVATE_PATH`) begrenzt
-- [ ] 4.1.0: falls genutzt, Offsite-Backups eingerichtet (*Backup-Einstellungen*, S3-kompatibles Ziel; kopiert werden nur mit `CMSENC2` verschlüsselte Backups – Backup-Verschlüsselung also zuerst einschalten) und der Cron läuft mindestens stündlich (Offsite-Wiederholungen, Webhook-Zustellung, Ablauf von Inhalten)
-- [ ] 4.1.0, Update von 4.0.0 auf einem Marketplace-Host: `CMS/marketplace/` vorher sichern – der Updater von 4.0.0 schiebt das Verzeichnis noch ins Rollback-Verzeichnis; ab 4.1.0 bleibt `marketplace/` bei Core-Updates unangetastet
+- [ ] Falls genutzt: Offsite-Backups eingerichtet (*Backup-Einstellungen*, S3-kompatibles Ziel; kopiert werden nur mit `CMSENC2` verschlüsselte Backups. Backup-Verschlüsselung also zuerst einschalten) und der Cron läuft mindestens stündlich (Offsite-Wiederholungen, Webhook-Zustellung, Ablauf von Inhalten)
+- [ ] Update von 4.0.0 auf 4.1.0 auf einem Marketplace-Host: `CMS/marketplace/` vorher sichern, der Updater von 4.0.0 schiebt das Verzeichnis noch ins Rollback-Verzeichnis, bleibt `marketplace/` bei Core-Updates unangetastet
 
 ---
 

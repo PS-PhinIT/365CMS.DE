@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – KI-Einstellungen (Verweis)
+# 365CMS Projektdokumentation | Admin: KI-Einstellungen (Verweis)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

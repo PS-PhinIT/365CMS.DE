@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Übersicht
+# 365CMS Projektdokumentation | Core: Übersicht
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **Status:** Stable
 

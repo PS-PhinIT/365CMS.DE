@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Allgemeine Einstellungen
+# 365CMS Projektdokumentation | Admin: Allgemeine Einstellungen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/settings` (Tabs `general`, `content`) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_settings`
@@ -7,7 +7,7 @@
 
 `/admin/settings` (`CMS/admin/settings.php` → `CMS/admin/modules/settings/SettingsModule.php` → `CMS/admin/views/settings/general.php`) holds the site-wide configuration. Tab `general` covers website identity, localisation, mail hints, member/registration hints, marketplace and update endpoints, maintenance mode and advanced options; tab `content` is described in [../pages-posts/SETTINGS.md](../pages-posts/SETTINGS.md). Actions: `save`, `run_site_url_migration`, `repair_imported_slugs`.
 
-**Important:** `save` writes most values to `cms_settings` and updates only `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` and `CMS_DEBUG` in `CMS/config/app.php`. Other constants such as `LDAP_*`, `JWT_*`, `SMTP_*`, `CMS_HTTPS_REDIRECT_STRATEGY` or the time zone are kept. The file is rebuilt from the template, resetting such constants, only if one of the four constants is missing or defined more than once; since 4.0.0 the rebuild keeps `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` and `CMS_BACKUP_PATH`. Before every change the previous file is copied to `config/app.backup-<date>.php` with mode `0640`, and the last five copies are kept. Saving without changes leaves `config/app.php` untouched.
+**Important:** `save` writes most values to `cms_settings` and updates only `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` and `CMS_DEBUG` in `CMS/config/app.php`. Other constants such as `LDAP_*`, `JWT_*`, `SMTP_*`, `CMS_HTTPS_REDIRECT_STRATEGY` or the time zone are kept. The file is rebuilt from the template, resetting such constants, only if one of the four constants is missing or defined more than once, the rebuild keeps `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` and `CMS_BACKUP_PATH`. Before every change the previous file is copied to `config/app.backup-<date>.php` with mode `0640`, and the last five copies are kept. Saving without changes leaves `config/app.php` untouched.
 
 ## Deutsch
 
@@ -56,7 +56,7 @@ Die angezeigte „aktive Runtime-URL“ ist der tatsächlich verwendete Wert aus
 
 `CMS/admin/documentation.php` → `DocumentationModule` zeigt die Markdown- und CSV-Dateien aus dem Ordner `DOC/` neben dem `CMS/`-Verzeichnis als navigierbaren Katalog an (`?doc=<pfad>`; nur `.md`/`.csv`, keine Pfad-Traversal, max. 256 KB je Datei). Relative Links zwischen Dokumenten werden umgeschrieben. Lesend, Capability `manage_settings` oder `manage_system`. `/admin/support` leitet auf diese Seite um.
 
-**Doku-Sync (seit 3.4.13):** Benutzer mit `manage_system` sehen links die Karte „Doku-Sync“ mit Status und – falls möglich – dem Button „/DOC jetzt synchronisieren“ (Aktion `sync_docs`, CSRF `admin_documentation`, Bestätigungsdialog). `DocumentationSyncService` wählt den Modus:
+**Doku-Sync (seit 3.4.13):** Benutzer mit `manage_system` sehen links die Karte „Doku-Sync“ mit Status und, falls möglich, dem Button „/DOC jetzt synchronisieren“ (Aktion `sync_docs`, CSRF `admin_documentation`, Bestätigungsdialog). `DocumentationSyncService` wählt den Modus:
 
 | Modus | Voraussetzung | Konfiguration (`config/app.php`, optional) |
 |---|---|---|

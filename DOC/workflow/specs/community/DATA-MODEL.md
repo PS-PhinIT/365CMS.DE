@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Datenmodell
+# 365CMS Projektdokumentation | Community: Datenmodell
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
@@ -13,7 +13,7 @@ favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin 
 
 ### 1. Grundsätze
 
-- **E6:** keine Datenübernahme aus `cms-forum` – alle `legacy_id`-Spalten in den Definitionen unten entfallen bei der Umsetzung.
+- **E6:** keine Datenübernahme aus `cms-forum`: alle `legacy_id`-Spalten in den Definitionen unten entfallen bei der Umsetzung.
 - Präfix **`{prefix}community_`**; Engine InnoDB, `utf8mb4_unicode_ci`; alle IDs `INT UNSIGNED` bzw. `BIGINT UNSIGNED` bei sehr großen Tabellen (Beiträge, Reaktionen, Lesestatus, Ereignisse).
 - Zeiten als `DATETIME` in UTC (Ausgabe in der Zeitzone der Site), nicht `TIMESTAMP` (Jahr-2038-Grenze, keine automatische Zeitzone).
 - Strukturierte Werte als `LONGTEXT` in Spalten `*_json` (Core-Konvention wie `form_forms.fields_json`), nicht als Typ `JSON` (MariaDB-Kompatibilität).
@@ -409,7 +409,7 @@ Reparatur: Batch-Job „Community-Zähler neu berechnen“ (`BatchJobService`) j
 | `settings` | Gruppe `community` |
 | `search_queries` | Suchstatistik (Quelle `community`) |
 
-### 6. Zuordnung der Plugin-Tabellen (`{prefix}cmsforum_*`) – entfällt (E6)
+### 6. Zuordnung der Plugin-Tabellen (`{prefix}cmsforum_*`): entfällt (E6)
 
 > Keine Datenübernahme: Die Spalten `legacy_id` und der Wert `format = 'bbcode'` sowie die Tabelle `community_redirects` für Plugin-Adressen werden bei der Umsetzung **nicht** angelegt. Die Zuordnung unten bleibt nur als Referenz.
 
@@ -426,7 +426,7 @@ Die Tabellen heißen im Plugin `cmsforum_*` (nicht `forum_*`). Die Übernahme l�
 | `cmsforum_subscriptions` | `community_subscriptions` | `target_type` `thread` → `topic`; `notify_email` 0 → `mode = none` |
 | `cmsforum_read_tracking` | `community_read_states` | `last_read_at` → letzter Beitrag ≤ Zeitpunkt (`last_read_post_id`) |
 | `cmsforum_attachments` | `community_attachments` + Dateien | Dateien in den privaten Speicher kopieren, SHA-256 berechnen, Original bleibt bis zur Abschaltung des Plugins |
-| `cmsforum_polls`, `_poll_options`, `_poll_votes` | `community_polls`, `_options`, `_votes` | Options-Spalte heißt je nach Plugin-Stand `text` **oder** `option_text` (Plugin prüft beides) – Migrator ebenso; `is_public` → `is_public_voters`; `vote_count` → `voter_count` neu zählen |
+| `cmsforum_polls`, `_poll_options`, `_poll_votes` | `community_polls`, `_options`, `_votes` | Options-Spalte heißt je nach Plugin-Stand `text` **oder** `option_text` (Plugin prüft beides): Migrator ebenso; `is_public` → `is_public_voters`; `vote_count` → `voter_count` neu zählen |
 | `cmsforum_reports` | `community_reports` | `post_id` → `target_type = post`; `description` → `message` |
 | `cmsforum_mod_log` | `community_moderation_log` | Aktionsnamen abbilden (`thread_pin` → `topic.pin` …); `ip_address` verwerfen |
 | `cmsforum_ranks` | `community_ranks` | `is_special = 1` → `min_posts = NULL` |

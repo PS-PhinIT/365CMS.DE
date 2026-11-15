@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – API, AJAX und JSON-Endpunkte
+# 365CMS Projektdokumentation | Admin: API, AJAX und JSON-Endpunkte
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -38,7 +38,7 @@ Fehlerantworten sind JSON (`{"error":"…"}`) mit passendem HTTP-Status (401, 40
 
 Diese Endpunkte senden `Cache-Control: private`, `X-Robots-Tag: noindex` und verlangen `POST`.
 
-**Admin-Shell und Beitragseditor (seit 4.0.0)** – lesende Aktionen per `GET`, zustandsändernde nur per `POST` mit CSRF-Token (Feld `csrf_token`). Beide verlangen Anmeldung und `isAdmin()`, antworten mit JSON und `X-Robots-Tag: noindex, nofollow, noarchive`. Abgelaufene Tokens ergeben `403` mit `{"success":false,"code":"csrf"}`; das Frontend holt dann über `action=token` ein frisches Token und wiederholt den Aufruf einmal.
+**Admin-Shell und Beitragseditor**, lesende Aktionen per `GET`, zustandsändernde nur per `POST` mit CSRF-Token (Feld `csrf_token`). Beide verlangen Anmeldung und `isAdmin()`, antworten mit JSON und `X-Robots-Tag: noindex, nofollow, noarchive`. Abgelaufene Tokens ergeben `403` mit `{"success":false,"code":"csrf"}`; das Frontend holt dann über `action=token` ein frisches Token und wiederholt den Aufruf einmal.
 
 | Methode & Pfad | Zugriff / CSRF-Aktion | Zweck |
 |---|---|---|
@@ -65,7 +65,7 @@ Die Plugin-Zuweisung (`/admin/plugin-assignment`, `manage_settings`, CSRF `admin
 
 1. Zugriff serverseitig prüfen (`Auth::isAdmin()`, `hasCapability()`), nie nur im JavaScript.
 2. Zustandsändernde Requests nur per `POST` und mit CSRF-Token (`Security::verifyToken($token, '<aktion>')`).
-3. Eingaben normalisieren (Allowlists, Längen, Typen); keine Rohwerte in SQL – nur Prepared Statements.
+3. Eingaben normalisieren (Allowlists, Längen, Typen); keine Rohwerte in SQL, nur Prepared Statements.
 4. Antworten als JSON mit `Content-Type: application/json; charset=utf-8`, Fehler mit sinnvollem Status.
 5. Keine Secrets, Tokens oder personenbezogenen Daten in Antworten oder Logs.
 6. JavaScript als externe Datei unter `CMS/assets/js/` (CSP); Daten über `data-*`-Attribute oder JSON-Skriptblöcke mit Nonce übergeben.

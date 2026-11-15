@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Bestellungen & Zuweisung
+# 365CMS Projektdokumentation | Admin: Bestellungen & Zuweisung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/orders` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_orders`
@@ -36,7 +36,7 @@ Bestellungen entstehen im öffentlichen Checkout `CMS/orders.php` (Aufruf `/orde
 
 | `action` | Parameter | Wirkung |
 |---|---|---|
-| `assign_subscription` | `user_id`, `plan_id`, `billing_cycle` (`monthly`, `yearly`, `lifetime`) | `SubscriptionManager::assignSubscription()` – setzt ein bestehendes aktives Abo auf `cancelled` und legt ein neues aktives Abo an |
+| `assign_subscription` | `user_id`, `plan_id`, `billing_cycle` (`monthly`, `yearly`, `lifetime`) | `SubscriptionManager::assignSubscription()`: setzt ein bestehendes aktives Abo auf `cancelled` und legt ein neues aktives Abo an |
 | `update_status` | `id`, `status` | Bestellstatus ändern |
 | `delete` | `id` | Bestellung löschen |
 

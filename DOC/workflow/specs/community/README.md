@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Community-Modul (Forum)
+# 365CMS Projektdokumentation | Workflow: Spec: Community-Modul (Forum)
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** Planung · noch kein Code · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Update:** 2026-11-15
-> **Ersetzt:** [FORUM-PLUGIN-WORKFLOW.md](../../FORUM-PLUGIN-WORKFLOW.md) (Integrationsfahrplan aus 3.5.0) · **Muster:** [PLUGIN-INTEGRATION.md](../PLUGIN-INTEGRATION.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
+> **Ersetzt:** den früheren Integrationsfahrplan für das Plugin `cms-forum` · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
 
@@ -46,7 +46,7 @@ SECURITY-PRIVACY → ROADMAP. WORKFLOWS, THEME-UI und TEST-PLAN begleiten die je
 | Plugin `cms-forum` | Repository `PS-PhinIT/365CMS.DE-PLUGINS`, Version 3.0.4, DB-Version 1.0.2, ca. 10.900 Zeilen PHP. 17 Tabellen `{prefix}cmsforum_*`, 15 Routen unter `/forum` (je mit `/en/`), BBCode-Editor, Rechte je Forum (nur Gast/Mitglied/Moderator), Umfragen, Anhänge, Likes, Abos, Meldungen, Ränge, Moderationsprotokoll, „Gelöst“-Markierung, Doppel-Themen-Vorschläge, DSGVO-Hooks, Mitgliederbereich. **Nur 5 von 43 Einstellungen wirken** (Details: [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) §4). |
 | Core-Bausteine | Registrierung/Login/Passwort/E-Mail-Bestätigung (`CmsAuthPageService`, `EmailVerificationService`), Rollen und Gruppen (`roles`, `user_groups`), Profile mit Avatar (`MemberService`), Benachrichtigungen (`notifications`), Nachrichten 1:1 (`MessageService`), Favoriten, Mail-Warteschlange, `AntispamService` (Honeypot, Mindestzeit, Link-Limit), `Security::checkDbRateLimit()`, `PurifierService`, Suche (TNTSearch, `SearchDocumentProvider`), Papierkorb (`TrashProvider`), Löschfristen (`DataRetentionService::registerRule`), `PrivateStorageService`, `ImageService`, Admin-Menü-Katalog, `BadgeProvider`, `CoreModuleService`, `IntegratedPluginService` + `PluginMigrator`, `PluginDashboardRegistry` für den Mitgliederbereich, DSGVO-Export und -Löschantrag. |
 | Lücken im Core | Kein Captcha-Anbieter (nur die Rechenaufgabe der Formulare in `FormSpamGuard`), Single Sign-on nur über Microsoft Entra ID (4.1.0; kein GitHub/Google/Discord), keine Gruppen-Nachrichten, kein Markdown-Parser, kein Syntax-Highlighting. |
-| Theme `cms-phinit` | hat `member/forum.php` (Weiterleitung auf den Plugin-Mitgliederbereich bzw. Hinweis „Plugin nicht aktiviert“) – muss auf das Core-Modul umgestellt werden ([THEME-UI.md](THEME-UI.md) §7). |
+| Theme `cms-phinit` | hat `member/forum.php` (Weiterleitung auf den Plugin-Mitgliederbereich bzw. Hinweis „Plugin nicht aktiviert“): muss auf das Core-Modul umgestellt werden ([THEME-UI.md](THEME-UI.md) §7). |
 
 ### 4. Grundsatzentscheidungen
 
@@ -58,11 +58,11 @@ werden in WP-C0 noch einmal am Repository geprüft.
 |---|---|---|---|---|
 | E1 | Core-Modul oder Plugin? | **Core-Modul** `community`, abschaltbar über `CoreModuleService` | wie Feed, Downloads, Formulare, Wissensdatenbank, Newsletter in 4.0.0 | gesetzt |
 | E2 | Basis-Adresse | **`/forum`** als Standard, im Admin änderbar | lesbar, üblich | gesetzt |
-| E3 | Adressen für Themen | **`/forum/thema/{id}-{slug}`** (DE), **`/en/forum/topic/{id}-{slug}`** (EN); Auflösung über die ID, falscher Slug → 301 | ID macht die Adresse robust gegen Titeländerungen, Slug sorgt für Lesbarkeit und SEO – Muster großer Foren (Discourse, phpBB mit SEO-URLs) | gesetzt |
+| E3 | Adressen für Themen | **`/forum/thema/{id}-{slug}`** (DE), **`/en/forum/topic/{id}-{slug}`** (EN); Auflösung über die ID, falscher Slug → 301 | ID macht die Adresse robust gegen Titeländerungen, Slug sorgt für Lesbarkeit und SEO: Muster großer Foren (Discourse, phpBB mit SEO-URLs) | gesetzt |
 | E4 | Speicherformat und Editor | **Markdown (CommonMark + GFM), kein Roh-HTML**; Werkzeugleiste, Vorschau, Bild-Upload als **eigener Baustein** (Vanilla-ES-Modul, Tabler-Tokens, kein externer Editor) | sicher, leichtgewichtig, ohne Build-Schritt | gesetzt |
 | E5 | Markdown- und Highlighting-Bibliothek | **`league/commonmark`** (serverseitig) und **`highlight.js`** (nur benötigte Sprachen) als Assets unter `CMS/assets/`, über `VendorRegistry` geführt; **keine externen Quellen/CDNs** | beide verbreitet, MIT bzw. BSD-3; Highlighting nur auf Seiten mit Code geladen | gesetzt |
 | E6 | Daten aus `cms-forum` | **Keine Übernahme**: Das Plugin war nirgends aktiv. Kein Migrator, keine Plugin-Weiterleitungen, kein BBCode-Altbestand; [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) dient nur noch als Funktions-Referenz | spart Arbeitspaket WP-C12 | gesetzt |
-| E7 | Captcha | **`gregwar/captcha`** (MIT, gepflegt) als Asset für das Bild-Captcha **plus** eingebaute Rechenaufgabe als barrierefreie Alternative; Honeypot, Mindestzeit, Rate-Limits davor. **Keine Drittanbieter** (Turnstile, hCaptcha, reCAPTCHA) – passt zu „nichts extern“ | lokal, DSGVO ohne Einwilligung | gesetzt |
+| E7 | Captcha | **`gregwar/captcha`** (MIT, gepflegt) als Asset für das Bild-Captcha **plus** eingebaute Rechenaufgabe als barrierefreie Alternative; Honeypot, Mindestzeit, Rate-Limits davor. **Keine Drittanbieter** (Turnstile, hCaptcha, reCAPTCHA): passt zu „nichts extern“ | lokal, DSGVO ohne Einwilligung | gesetzt |
 | E8 | Private Nachrichten | **Core-`MessageService`**; Gruppen-Konversationen als Erweiterung des Core-Dienstes, nichts Forum-eigenes | ein Postfach für alle Mitglieder | gesetzt |
 | E9 | OAuth / Social Login | **Core-Funktion** (in 4.1.0: Entra-ID-SSO, [../v4.1/01-IDENTITY.md](../v4.1/01-IDENTITY.md)); die Community nutzt sie | Anmeldung gilt für die ganze Site | gesetzt |
 | E10 | Mandanten / MultiSite | keine `site_id` ([KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3) | verbindlich aus 4.0.0 | gesetzt |

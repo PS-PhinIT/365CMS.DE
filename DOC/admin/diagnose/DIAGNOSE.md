@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Diagnose & Protokolle
+# 365CMS Projektdokumentation | Admin: Diagnose & Protokolle
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/diagnose`, `/admin/monitor-assets`, `/admin/cms-logs`, `/admin/logs`, `/admin/logs/{operational,security-audit,php-errors,channels}` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
@@ -9,7 +9,7 @@ Diagnostic screens are rendered by `CMS/admin/system-monitor-page.php` (sections
 
 ## Deutsch
 
-### Diagnose – Datenbank (`/admin/diagnose`)
+### Diagnose: Datenbank (`/admin/diagnose`)
 
 | Anzeige | Inhalt |
 |---|---|
@@ -25,10 +25,10 @@ Diagnostic screens are rendered by `CMS/admin/system-monitor-page.php` (sections
 | `optimize_db` | `OPTIMIZE TABLE` für CMS-Tabellen |
 | `create_tables` | fehlende Tabellen aus `SchemaManager` anlegen |
 | `repair_tables` | Tabellen reparieren und idempotente Migrationen ausführen |
-| `export_diagnostic_report` | Diagnosebericht (System, Datenbank, letzte Logs) als Datei herunterladen – zum Weitergeben an den Support |
+| `export_diagnostic_report` | Diagnosebericht (System, Datenbank, letzte Logs) als Datei herunterladen: zum Weitergeben an den Support |
 | `clear_error_reports` | Fehlerreports löschen |
 
-### Diagnose – Assets (`/admin/monitor-assets`)
+### Diagnose: Assets (`/admin/monitor-assets`)
 
 Verzeichnisgrößen, Dateirechte und das **Vendor-Inventar** aus `CMS\VendorRegistry` (gebündelte Bibliotheken unter `CMS/assets/`, Version, Status, Prüfsymbol). Details: [../../assets/README.md](../../assets/README.md).
 

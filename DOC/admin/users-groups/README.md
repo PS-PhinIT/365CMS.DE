@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer & Gruppen
+# 365CMS Projektdokumentation | Admin: Benutzer & Gruppen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

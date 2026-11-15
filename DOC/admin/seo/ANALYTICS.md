@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Analysen & Tracking
+# 365CMS Projektdokumentation | Admin: Analysen & Tracking
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/analytics` | **Capability:** `manage_settings` oder `view_analytics` | **CSRF-Aktion:** `admin_seo_suite` | **Core-Modul:** `seo`

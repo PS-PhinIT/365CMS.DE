@@ -1,10 +1,10 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 3: Redaktions- & Content-Workflows
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) – 3a, 3b, 3c | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Spec 4.1.0: Bereich 3: Redaktions- & Content-Workflows
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 3a, 3b, 3c | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
 (3a) Four-eyes review: status `pending` for posts and pages, enforced server-side for users without
-`posts.publish`/`pages.publish`, review list, dashboard widget and notifications – this adopts part A of
+`posts.publish`/`pages.publish`, review list, dashboard widget and notifications, this adopts part A of
 [ROADMAP-CONTENT-PLATFORM.md](../ROADMAP-CONTENT-PLATFORM.md) unchanged and only fixes details. (3b) Reusable Editor.js
 blocks managed under `/admin/reusable-blocks` and embedded by reference through a `reusableBlock` tool registered in
 `EditorJsBlockRegistry`, rendered live with recursion protection. (3c) Expiry and review dates for posts, pages and
@@ -24,13 +24,13 @@ Rechte). Festlegungen für 4.1.0:
 - **Dashboard-Widget** „Ausstehende Prüfungen“ (`DashboardService`, nur mit Veröffentlichungsrecht): Titel, Autor, eingereicht am, Link.
 - **Benachrichtigung:** Mail (Mail-Warteschlange) und In-App-Hinweis an alle Konten mit Veröffentlichungsrecht für den Typ; Rückgabe/Freigabe an den Autor; Badge `content_pending` im Admin-Menü.
 - **Webhook-Ereignis** `content.submitted` (Bereich 4b).
-- Tests: `TESTS/content-workflow/run.php` – Durchsetzung im Speichern (auch über `post-editor-api.php`), Statusübergänge, Rechte-Migration, Benachrichtigungsempfänger, Vorschau-Link (signiert, Ablauf, widerrufbar).
+- Tests: `TESTS/content-workflow/run.php`: Durchsetzung im Speichern (auch über `post-editor-api.php`), Statusübergänge, Rechte-Migration, Benachrichtigungsempfänger, Vorschau-Link (signiert, Ablauf, widerrufbar).
 
-**Umsetzung (15.11.2026)** – Handbuch [REVIEW.md](../../../admin/pages-posts/REVIEW.md), Tests `TESTS/content-workflow`:
+**Umsetzung (15.11.2026)**. Handbuch [REVIEW.md](../../../admin/pages-posts/REVIEW.md), Tests `TESTS/content-workflow`:
 
-- Befund bei der Umsetzung: `/admin` ist nur für die Rolle `admin` erreichbar, und Admins haben alle Rechte. Die rechtebasierte Sperre allein hätte deshalb nie gegriffen. Entscheidung: zusätzliche Einstellung **„Veröffentlichung braucht eine zweite Person“** (`setting_content_review_second_person`) – Autor und einreichende Person können nicht selbst freigeben, auch als Admin. Der Weg über `posts.publish`/`pages.publish` ist trotzdem vollständig umgesetzt und greift, sobald andere Rollen Admin-Zugang erhalten.
+- Befund bei der Umsetzung: `/admin` ist nur für die Rolle `admin` erreichbar, und Admins haben alle Rechte. Die rechtebasierte Sperre allein hätte deshalb nie gegriffen. Entscheidung: zusätzliche Einstellung **„Veröffentlichung braucht eine zweite Person“** (`setting_content_review_second_person`). Autor und einreichende Person können nicht selbst freigeben, auch als Admin. Der Weg über `posts.publish`/`pages.publish` ist trotzdem vollständig umgesetzt und greift, sobald andere Rollen Admin-Zugang erhalten.
 - Statt „Autoren brauchen eine Freigabe“ als eigene Einstellung: Das Recht wird unter *Rollen & Rechte* entzogen. Die Rechte-Migration (in `SchemaManager::ensureFeatureSchema()`, idempotent, nur ohne gespeicherten Eintrag) vergibt `posts.publish`/`pages.publish` an `editor` und `posts.publish` an `author`.
-- Bereits veröffentlichte oder private Inhalte bleiben beim Bearbeiten veröffentlicht – **entschieden am 15.11.2026** (A.8): keine erneute Prüfung und keine „Revision zur Prüfung“; die Freigabe gilt für das Veröffentlichen, nicht für spätere Änderungen. Nachvollziehbar bleiben Änderungen über die Revisionen.
+- Bereits veröffentlichte oder private Inhalte bleiben beim Bearbeiten veröffentlicht, **entschieden am 15.11.2026** (A.8): keine erneute Prüfung und keine „Revision zur Prüfung“; die Freigabe gilt für das Veröffentlichen, nicht für spätere Änderungen. Nachvollziehbar bleiben Änderungen über die Revisionen.
 - Badges je Typ: `content_pending_posts`, `content_pending_pages` (statt eines gemeinsamen `content_pending`), gezählt wird nur, was das angemeldete Konto freigeben dürfte.
 - Durchsetzung zusätzlich nach den Filtern `cms_prepare_post_save_payload`/`cms_prepare_page_save_payload`, im Autosave (über `PostsModule::autosave()` → `save()`) und in der Sammelaktion „Veröffentlichen“ (eigene Entwürfe werden eingereicht).
 - Vorschau-Links: 64-stelliger Hex-Token, gespeichert als SHA-256, 7 Tage, `Referrer-Policy: no-referrer`; Ausgabe über `ThemeRouter::renderPreview()` mit den Vorlagen `blog-single`/`page`.
@@ -43,7 +43,7 @@ Rechte). Festlegungen für 4.1.0:
 |---|---|
 | Verwaltung | `/admin/reusable-blocks` (Liste, Anlegen, Bearbeiten im Editor.js, „Verwendet in“, Duplizieren, Löschen mit Warnung), Capability `blocks.reusable` |
 | Speicherung | eigene Tabelle (unten); Inhalt als Editor.js-JSON, je Sprache (`content`, `content_en`) |
-| Einbindung | Editor.js-Tool `reusableBlock` über `EditorJsBlockRegistry::register('reusableBlock', …)` – Registrierung in Factory, Asset-Registry **und** Renderer (DEVLIST-Fallstrick „alle drei Stellen“); Block-Daten nur `{ "id": 12 }` |
+| Einbindung | Editor.js-Tool `reusableBlock` über `EditorJsBlockRegistry::register('reusableBlock', …)`: Registrierung in Factory, Asset-Registry **und** Renderer (DEVLIST-Fallstrick „alle drei Stellen“); Block-Daten nur `{ "id": 12 }` |
 | Darstellung | Renderer lädt den aktuellen Block und rendert dessen Blöcke mit dem normalen `EditorJsRenderer` + Purifier; **Rekursionsschutz** (Block in sich selbst, Tiefe > 3 → leer + Admin-Hinweis); fehlender/gelöschter Block → im Frontend nichts, im Editor Hinweis |
 | Editor | Auswahl-Dialog (Suche), Vorschau serverseitig über `post-editor-api.php` (`block_preview`), Knopf „Bearbeiten“ öffnet den Block in neuem Tab, „In normale Blöcke umwandeln“ (Kopie, Verknüpfung endet) |
 | Cache | Ändern eines Blocks leert den Cache aller verknüpften Inhalte (Index aus `reusable_block_usage`) |
@@ -73,12 +73,12 @@ CREATE TABLE {p}reusable_block_revisions (
 Tests (`TESTS/reusable-blocks/run.php`): Rendern mit aktuellem Inhalt, Sprache, Rekursion (direkt und über zwei Ebenen),
 gelöschter Block, Sanitizing der Block-Daten (nur `id`), Nutzungsindex nach Speichern, Cache-Invalidierung.
 
-**Umsetzung (15.11.2026)** – Handbuch [BLOCK-TEMPLATES.md](../../../admin/pages-posts/BLOCK-TEMPLATES.md), Tests `TESTS/reusable-blocks`:
+**Umsetzung (15.11.2026)**. Handbuch [BLOCK-TEMPLATES.md](../../../admin/pages-posts/BLOCK-TEMPLATES.md), Tests `TESTS/reusable-blocks`:
 
 - Benennung nach Wunsch des Betreibers: Verwaltung **„EditorJS Block Vorlagen“**, Editor.js-Block **„Vorlagen“** (technisch weiter `reusableBlock`, Route `/admin/reusable-blocks`, Recht `blocks.reusable`).
 - Rekursion: wird schon beim Speichern abgelehnt (Selbsteinbindung, Kreise über beliebig viele Ebenen und beide Sprachen); der Render-Schutz (Wiederholung, Tiefe > 3) bleibt für Altbestand/Importe.
 - Löschen: endgültig, mit Bestätigung (bei verwendeten Vorlagen mit Zahl der Stellen) statt Status `trash`; die Spalte `status` bleibt für einen späteren Papierkorb.
-- Cache: Änderungen leeren den Seiten-Cache und lösen für jeden verknüpften Beitrag bzw. jede Seite – auch über verschachtelte Vorlagen – die Speicher-Hooks aus (Suchindex, Sitemap). Revisionen der Beiträge entstehen dabei nicht.
+- Cache: Änderungen leeren den Seiten-Cache und lösen für jeden verknüpften Beitrag bzw. jede Seite, auch über verschachtelte Vorlagen, die Speicher-Hooks aus (Suchindex, Sitemap). Revisionen der Beiträge entstehen dabei nicht.
 - Suche: `SiteSearchService::registerBlockTextResolver()` löst den Verweis auf (Sprache des Index); RSS nutzt den Editor.js-Renderer und ist damit automatisch aufgelöst. Medien in Vorlagen zählen im Verwendungsnachweis bei der Vorlage.
 - Revisionen speichern zusätzlich den Titel.
 
@@ -93,7 +93,7 @@ gelöschter Block, Sanitizing der Block-Daten (nur `id`), Nutzungsindex nach Spe
 | Frontend | abgelaufene, nur markierte Inhalte bleiben sichtbar; zurückgestufte liefern 404 bzw. 410 (Einstellung) |
 | SEO | Sitemap entfernt zurückgestufte Inhalte sofort (Cache-Invalidierung) |
 
-**Umsetzung, erster Lauf (15.11.2026)** – Beiträge und Seiten, `Content\ContentExpiryService`, `FeatureHooks\ContentExpiryHooks`, Editor-Felder „Gültigkeit“, Einstellungen *Bei Ablauf* und *Wiedervorlage nach „Geprüft“*, Tests `TESTS/content-expiry`. Abweichungen: zusätzliche Spalten `expiry_notified_at`/`review_notified_at` gegen Mehrfachmeldungen (statt `previous_status`, das der Papierkorb nutzt); Hinweise In-App statt Mail. **Zweiter Lauf (15.11.2026):** Wissensdatenbank (Zurückstufen = `is_active = 0`, keine Autoren-Hinweise, weil Einträge keinen Autor haben), Redaktionskalender-Art `review` (eigene Farbe, nicht verschiebbar), Dashboard-Karte „Fällige Prüfungen“, Einstellung 404/410 für Beiträge und Seiten.
+**Umsetzung, erster Lauf (15.11.2026)**. Beiträge und Seiten, `Content\ContentExpiryService`, `FeatureHooks\ContentExpiryHooks`, Editor-Felder „Gültigkeit“, Einstellungen *Bei Ablauf* und *Wiedervorlage nach „Geprüft“*, Tests `TESTS/content-expiry`. Abweichungen: zusätzliche Spalten `expiry_notified_at`/`review_notified_at` gegen Mehrfachmeldungen (statt `previous_status`, das der Papierkorb nutzt); Hinweise In-App statt Mail. **Zweiter Lauf (15.11.2026):** Wissensdatenbank (Zurückstufen = `is_active = 0`, keine Autoren-Hinweise, weil Einträge keinen Autor haben), Redaktionskalender-Art `review` (eigene Farbe, nicht verschiebbar), Dashboard-Karte „Fällige Prüfungen“, Einstellung 404/410 für Beiträge und Seiten.
 
 ```sql
 ALTER TABLE {p}posts ADD COLUMN expires_at DATETIME NULL, ADD COLUMN review_due_at DATETIME NULL,

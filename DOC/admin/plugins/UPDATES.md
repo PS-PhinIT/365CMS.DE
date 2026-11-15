@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Plugin-Updates
+# 365CMS Projektdokumentation | Admin: Plugin-Updates
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/updates` (Bereich *Plugins*) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_updates`

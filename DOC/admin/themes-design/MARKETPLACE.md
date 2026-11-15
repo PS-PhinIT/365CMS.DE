@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Theme-Verwaltung & Theme-Marktplatz
+# 365CMS Projektdokumentation | Admin: Theme-Verwaltung & Theme-Marktplatz
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/themes`, `/admin/theme-marketplace` | **Capability:** `manage_settings` | **CSRF-Aktionen:** `admin_themes`, `admin_theme_marketplace`
@@ -43,7 +43,7 @@
 
 1. Theme muss im Katalog vorhanden und noch nicht installiert sein.
 2. Paket nur als `.zip`, max. 100 MB; Archiv max. 2000 Einträge und 50 MB entpackt (Schutz vor ZIP-Bomben und Pfad-Traversal).
-3. Eine gültige SHA-256-Prüfsumme (`sha256`/`checksum_sha256`) ist **Pflicht** – ohne sie bricht `UpdateService::downloadAndInstallUpdate()` ab (`updates.install.integrity_hash_missing`); das Prüfergebnis wird angezeigt.
+3. Eine gültige SHA-256-Prüfsumme (`sha256`/`checksum_sha256`) ist **Pflicht**: ohne sie bricht `UpdateService::downloadAndInstallUpdate()` ab (`updates.install.integrity_hash_missing`); das Prüfergebnis wird angezeigt.
 4. Zielverzeichnis `CMS/themes/<slug>/` darf noch nicht existieren.
 5. Kostenpflichtige Themes (`is_paid`) werden mit Preis und Kauf-Link angezeigt statt installiert.
 

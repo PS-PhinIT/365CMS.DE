@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Dateistruktur
+# 365CMS Projektdokumentation | Admin: Dateistruktur
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -25,7 +25,7 @@ CMS/admin/
 │                              # section-page-shell.php, redirect-alias-shell.php,
 │                              # post-action-shell.php, editorjs-inline-boot.php,
 │                              # plugin-workspace.php (Plugin-Layout-Vertrag, siehe ../plugins/PLUGIN-DEVELOPMENT.md)
-├── settings-tabs/             # Erweiterungs-Tabs von /admin/settings: admin-menu.php, feeds.php, security.php, sso.php (Entra ID, seit 4.1.0)
+├── settings-tabs/             # Erweiterungs-Tabs von /admin/settings: admin-menu.php, feeds.php, security.php, sso.php (Entra ID)
 └── views/                     # Darstellung je Bereich (+ views/partials/ für gemeinsame Bausteine)
 ```
 
@@ -46,13 +46,13 @@ CMS/admin/
 |---|---|
 | `design-settings.php`, `theme-settings.php`, `privacy-requests.php`, `deletion-requests.php`, `support.php`, `system-info.php` | Weiterleitungen über `redirect-alias-shell.php` |
 | `ai-translate-editorjs.php`, `ai-generate-seo-metadata.php` | JSON-Endpunkte für den Editor |
-| `admin-ui.php` | JSON-Endpunkt der Admin-Shell (`/admin/admin-ui`): Sidebar-Präferenzen, Site-Wechsel, Systemhinweise (seit 4.0.0) |
-| `post-editor-api.php` | JSON-Endpunkt des Beitragseditors (`/admin/post-editor-api`): Autosave, Revisionen, Vergleich, Wiederherstellen (seit 4.0.0) |
-| `plugin-assignment.php` | *Einstellungen › Plugins › Plugin-Zuweisung* (`/admin/plugin-assignment`), View `views/settings/plugin-assignment.php` (seit 4.0.0) |
-| `reusable-blocks.php` | *EditorJS Block Vorlagen* (`/admin/reusable-blocks`, Recht `blocks.reusable`), Modul `modules/reusable-blocks/ReusableBlocksModule.php`, Views `views/reusable-blocks/{index,list,edit}.php` (seit 4.1.0) |
-| `backup-settings.php` | *Backup-Einstellungen* (`/admin/backup-settings`, Verschlüsselung und S3-Offsite, Recht `backups.offsite`), View `views/system/backup-settings.php` (seit 4.1.0) |
-| `webhooks.php` | *Webhooks* (`/admin/webhooks`, Recht `webhooks.manage`), View `views/system/webhooks.php` (seit 4.1.0) |
-| `payments.php` | *Abos › Zahlungen* (`/admin/payments`, Recht `payments.manage`), View `views/subscriptions/payments.php` (seit 4.1.0) |
+| `admin-ui.php` | JSON-Endpunkt der Admin-Shell (`/admin/admin-ui`): Sidebar-Präferenzen, Site-Wechsel, Systemhinweise |
+| `post-editor-api.php` | JSON-Endpunkt des Beitragseditors (`/admin/post-editor-api`): Autosave, Revisionen, Vergleich, Wiederherstellen |
+| `plugin-assignment.php` | *Einstellungen › Plugins › Plugin-Zuweisung* (`/admin/plugin-assignment`), View `views/settings/plugin-assignment.php` |
+| `reusable-blocks.php` | *EditorJS Block Vorlagen* (`/admin/reusable-blocks`, Recht `blocks.reusable`), Modul `modules/reusable-blocks/ReusableBlocksModule.php`, Views `views/reusable-blocks/{index,list,edit}.php` |
+| `backup-settings.php` | *Backup-Einstellungen* (`/admin/backup-settings`, Verschlüsselung und S3-Offsite, Recht `backups.offsite`), View `views/system/backup-settings.php` |
+| `webhooks.php` | *Webhooks* (`/admin/webhooks`, Recht `webhooks.manage`), View `views/system/webhooks.php` |
+| `payments.php` | *Abos › Zahlungen* (`/admin/payments`, Recht `payments.manage`), View `views/subscriptions/payments.php` |
 | `error-report.php` | Fehlerbericht speichern |
 | `monitor-cron-runner.php` | Cron aus dem Admin auslösen (POST) |
 
@@ -82,7 +82,7 @@ Seit 4.0.0 zusätzlich:
 | `CMS/assets/js/admin-plugin-assignment.js` | „Alle“/„Keine“ je Site-Spalte |
 | `CMS/assets/fonts/` | lokal ausgelieferte Schriften Inter, Source Serif 4, JetBrains Mono (je mit Lizenzdatei) |
 
-ES-Module werden über `page_assets['modules']` bzw. `$pageAssets['modules']` eingebunden und im Footer als `<script type="module">` geladen – ohne Build-Schritt.
+ES-Module werden über `page_assets['modules']` bzw. `$pageAssets['modules']` eingebunden und im Footer als `<script type="module">` geladen, ohne Build-Schritt.
 
 ### Verwandte Dokumente
 

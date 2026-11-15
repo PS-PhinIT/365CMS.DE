@@ -1,9 +1,9 @@
-# 365CMS – Projektdokumentation | Abschnitt: README
+# 365CMS Projektdokumentation | README
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.1.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-15, `stable`), PHP 8.4.1+, schema `v26`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.1.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-15, `stable`), PHP 8.4.1+, schema `v26`. Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -35,7 +35,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
-- Release 3.5.0 bündelt alle Änderungen seit 3.4.00 (Zwischenstände 3.4.01–3.4.25 und Folgeaudit vom 14.10.2026); 3.5.2 enthält die Korrekturen aus 3.5.1 (Speichern von Seiten); 3.5.3 ergänzt die Bearbeitung von Kommentaren im Adminbereich; 3.5.4 lädt lokale Google Fonts als WOFF2 statt TTF; 3.5.5 setzt das Aktualisierungsdatum von Beiträgen und Seiten nur noch bei echten Änderungen; 3.5.6 bündelt alle suchmaschinenbezogenen Einstellungen im neuen SEO-Bereich „Suchmaschinen“ (IndexNow mit Key-Generator und automatischer Meldung, Google Search Console, Webmaster-Verifizierung); 4.0.0 ist ein Sicherheits- und Korrekturrelease nach dem Folgeaudit vom 08.11.2026 (Host-Header, MFA, Datenexport, Installer, Importer, Bibliotheken, E-Mail-Verifizierung, Benutzer anlegen; [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md)) und bringt die neu gestaltete Administration (einklappbare Seitenleiste mit Site-Umschalter, Plugin-Zuweisung je Site, Systemhinweise; Beitragseditor mit Veröffentlichungs-Checkliste, Fokusmodus und Revisionen, Schema `v25`) ([../Changelog.md](../Changelog.md))
+- Änderungen je Release: [../Changelog.md](../Changelog.md) (führende Datei)
 
 ### Dokumentationsbereiche
 
@@ -60,9 +60,9 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 ### Wichtige Hinweise
 
 - **Konfiguration:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Eigene Konstanten deshalb in `config/app.php` pflegen und nach jedem Installer-Lauf prüfen.
-- **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar (siehe [checks/FUNKTIONEN.md](checks/FUNKTIONEN.md)).
-- **Bekannte Lücken:** Abweichungen zwischen Code und Doku (z. B. Upload-Token im Member-Medienbereich, fehlende `/order`-Ansicht, `config/app.php`-Neuerzeugung) stehen gesammelt in [core/STATUS.md](core/STATUS.md).
-- **Audits:** Code-Audit vom 2026-10-03 unter [checks/README.md](checks/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
+- **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar.
+- **Offene Punkte:** [core/STATUS.md](core/STATUS.md) (Abschnitt „Offene Punkte“).
+- **Audits:** Prüfberichte unter [audit/README.md](audit/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
 - **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei.
 
 ### Verwandte Einstiege

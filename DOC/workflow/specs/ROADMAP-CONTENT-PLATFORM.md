@@ -1,4 +1,4 @@
-# 365CMS – Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
+# 365CMS: Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
 
 > **Stand:** 2026-11-12 | **Ziel-Version:** 4.1 / 4.2 | **Status:** vorbereitet (Spezifikation, Bestandsaufnahme) · **Fortschritt:** PROGRESS.md, Arbeitspaket 5
 
@@ -19,9 +19,9 @@ Reihenfolge der Umsetzung: **A Freigabe-Ablauf → B Felder und Inhaltstypen →
 | Punkt | Befund |
 |---|---|
 | Status von Beiträgen/Seiten | `draft`, `published`, `private`, `scheduled` (geplant über `planned_at`/Veröffentlichungsdatum), `trash` mit `previous_status`; Spalte `status VARCHAR(20)` in `posts` und `pages` (`SchemaManager`) |
-| Verteilung im Code | `'published'` kommt in **65** Dateien vor, `'scheduled'` in 17 – Statuswerte sind über Editor, Listen, Kalender, Suche, Sitemap, Feeds und Themes verstreut |
+| Verteilung im Code | `'published'` kommt in **65** Dateien vor, `'scheduled'` in 17: Statuswerte sind über Editor, Listen, Kalender, Suche, Sitemap, Feeds und Themes verstreut |
 | Veröffentlichungsrechte | `posts.publish` und `pages.publish` stehen in der Rechteliste (`RolesModule::CAPABILITY_GROUPS`), werden aber **nirgends geprüft**: Wer bearbeiten darf, darf auch veröffentlichen |
-| Standardrollen | `UserService::DEFAULT_ROLE_CAPABILITIES`: Redakteur (`manage_pages`, `edit_all_posts`, …), Autor (`edit_own_posts`, …) – **keine Rolle** hat `posts.publish`/`pages.publish`; nur `admin` hat implizit alle Rechte |
+| Standardrollen | `UserService::DEFAULT_ROLE_CAPABILITIES`: Redakteur (`manage_pages`, `edit_all_posts`, …), Autor (`edit_own_posts`, …): **keine Rolle** hat `posts.publish`/`pages.publish`; nur `admin` hat implizit alle Rechte |
 | Bearbeitungsrechte je Element | zentral in `ContentEditPermission::canEdit()` (Beiträge: `edit_all_posts` oder Autor + `edit_own_posts`; Seiten: `manage_pages`) |
 | Revisionen | `post_revisions`, `page_revisions` mit `created_by`; Übersicht *Letzte Änderungen* (`ContentChangesService`) |
 | Benachrichtigungen | Mail-Dienst und Admin-Hinweise (`AdminNoticeService`) vorhanden; keine Redaktions-Benachrichtigungen |
@@ -29,7 +29,7 @@ Reihenfolge der Umsetzung: **A Freigabe-Ablauf → B Felder und Inhaltstypen →
 ### A.2 Ziel
 
 1. Neuer Status **„Zur Prüfung“** (`pending`) für Beiträge und Seiten.
-2. Wer `posts.publish` bzw. `pages.publish` nicht hat, kann nur speichern oder **zur Prüfung einreichen**. „Veröffentlichen“ und „Planen“ sind dann gesperrt – serverseitig, nicht nur in der Oberfläche.
+2. Wer `posts.publish` bzw. `pages.publish` nicht hat, kann nur speichern oder **zur Prüfung einreichen**. „Veröffentlichen“ und „Planen“ sind dann gesperrt, serverseitig, nicht nur in der Oberfläche.
 3. Prüfende (mit Veröffentlichungsrecht) sehen eine Liste „Zur Prüfung“ und können **freigeben** (veröffentlichen oder planen) oder **zurückgeben** (mit Kommentar → Status `draft`).
 4. **Kommentarverlauf** je Inhalt (Einreichung, Rückgabe mit Begründung, Freigabe) und Benachrichtigung der Beteiligten (Mail und Admin-Badge).
 5. **Vorschau-Link zum Teilen**: signierter, ablaufender Link auf den Entwurf für Personen ohne Login (z. B. Fachabteilung).
@@ -77,7 +77,7 @@ CREATE TABLE {p}content_preview_links (
 Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes Erzwingen alle Redakteure und Autoren aussperren. Deshalb:
 
 1. Update-Schritt vergibt `posts.publish` an `editor` und `author` sowie `pages.publish` an `editor` (= heutiges Verhalten bleibt).
-2. Einstellung *Inhalt → Freigabe*: „Autoren brauchen eine Freigabe“ (entzieht `author` das Veröffentlichungsrecht) – bewusster Schritt der Betreiber.
+2. Einstellung *Inhalt → Freigabe*: „Autoren brauchen eine Freigabe“ (entzieht `author` das Veröffentlichungsrecht), bewusster Schritt der Betreiber.
 3. Themes und Plugins, die `status = 'published'` abfragen, bleiben unverändert korrekt (`pending` ist nicht öffentlich).
 
 ### A.6 Oberfläche
@@ -97,7 +97,7 @@ Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes E
 
 ### A.8 Offene Entscheidungen
 
-- ~~Dürfen Autoren nach der Freigabe noch ändern (neue Prüfung nötig?)~~ – **entschieden (15.11.2026, 4.1.0):** ja, ohne neue Prüfung; veröffentlichte Inhalte bleiben beim Bearbeiten veröffentlicht. Eine „Revision zur Prüfung“ wird nicht gebaut.
+- ~~Dürfen Autoren nach der Freigabe noch ändern (neue Prüfung nötig?)~~, **entschieden (15.11.2026, 4.1.0):** ja, ohne neue Prüfung; veröffentlichte Inhalte bleiben beim Bearbeiten veröffentlicht. Eine „Revision zur Prüfung“ wird nicht gebaut.
 - Gilt der Ablauf auch für Downloads, Knowledgebase, Newsletter-Kampagnen? Vorschlag: zunächst nur Beiträge, Seiten und eigene Inhaltstypen.
 
 ---
@@ -108,10 +108,10 @@ Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes E
 
 | Punkt | Befund |
 |---|---|
-| Inhaltstypen | fest im Code: Seiten, Beiträge, Hub-Sites, Downloads, Formulare, Knowledgebase, Newsletter, Feed-Artikel – jeweils mit eigenen Tabellen, Diensten und Admin-Seiten |
-| Gemeinsame Schnittstelle | `ContentTypeRegistry` mit Providern für **Papierkorb**, **Suchindex** und **Import/Export** (`TrashProvider`, `SearchDocumentProvider`, `ExchangeProvider`) – darauf lassen sich neue Typen ohne Sonderfälle anschließen |
+| Inhaltstypen | fest im Code: Seiten, Beiträge, Hub-Sites, Downloads, Formulare, Knowledgebase, Newsletter, Feed-Artikel: jeweils mit eigenen Tabellen, Diensten und Admin-Seiten |
+| Gemeinsame Schnittstelle | `ContentTypeRegistry` mit Providern für **Papierkorb**, **Suchindex** und **Import/Export** (`TrashProvider`, `SearchDocumentProvider`, `ExchangeProvider`): darauf lassen sich neue Typen ohne Sonderfälle anschließen |
 | Zusatzdaten | `posts.post_meta_json`, `pages.page_meta_json` (JSON, u. a. SEO); `user_meta`, `plugin_meta`; keine frei definierbaren Felder |
-| Feldtypen-Wissen | Formular-Baukasten mit 15 Feldtypen, Prüfregeln, DE/EN-Beschriftungen (`FormFieldTypes`, `FormValidator`, Sortieren per Ziehen/Tastatur) – wiederverwendbar für einen Feld-Baukasten |
+| Feldtypen-Wissen | Formular-Baukasten mit 15 Feldtypen, Prüfregeln, DE/EN-Beschriftungen (`FormFieldTypes`, `FormValidator`, Sortieren per Ziehen/Tastatur): wiederverwendbar für einen Feld-Baukasten |
 | Editor | Editor.js mit Block-Registry (`EditorJsBlockRegistry`) |
 
 ### B.2 Ziel

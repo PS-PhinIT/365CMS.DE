@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Rechte & Moderation
+# 365CMS Projektdokumentation | Community: Rechte & Moderation
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
@@ -17,7 +17,7 @@ consequences, bans, the approval queue, trust levels 0–4 and the moderation lo
 | Rolle | Herkunft | Kurzbeschreibung |
 |---|---|---|
 | **Gast** | nicht angemeldet | Liest öffentliche Foren, sucht mit Rate-Limit; schreibt nie |
-| **Mitglied** | Core-Rolle `member` | Liest, erstellt Themen, antwortet, reagiert, meldet, abonniert – je nach Forum |
+| **Mitglied** | Core-Rolle `member` | Liest, erstellt Themen, antwortet, reagiert, meldet, abonniert: je nach Forum |
 | **Moderator** | **neue** Core-Rolle `moderator` (der Core 4.0.0 kennt nur `admin`, `editor`, `author`, `member` in `UserService::DEFAULT_ROLE_CAPABILITIES`) oder Forum-Moderator ohne eigene Rolle | Moderiert global (Capability) oder nur zugewiesene Foren |
 | **Administrator** | Core-Rolle `admin` | Alle Rechte inkl. Struktur, Rechte und Einstellungen |
 
@@ -72,7 +72,7 @@ Benachrichtigungen, Zitate in anderen Foren zeigen „[Zitat aus einem nicht sic
 
 Reihenfolge der Prüfung (erste zutreffende Regel entscheidet „nein“, sonst weiter):
 
-1. **Modul aktiv?** (`CoreModuleService`) – sonst 404.
+1. **Modul aktiv?** (`CoreModuleService`): sonst 404.
 2. **Konto:** gesperrt/gelöscht im Core → nur Gast-Rechte. Schreibaktionen verlangen bestätigte E-Mail (Einstellung).
 3. **Community-Sperre:** `scope = full` → kein Zugriff; `scope = write` → nur `read`.
 4. **Global:** `admin` bzw. `community.moderate` → erlaubt (außer bei Sperre durch höhere Rolle).

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Theme – JavaScript
+# 365CMS Projektdokumentation | Theme: JavaScript
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
@@ -20,7 +20,7 @@ Theme JavaScript must be external, deferred and compatible with the strict CSP (
 
 - Externe Dateien brauchen kein Nonce (Quelle `'self'`), Inline-Skripte schon: `<script <?= \CMS\Security::instance()->nonceAttr() ?>>`.
 - Mit `perf_minify_js = 1` liefert `AssetOptimizerService::getAssetUrl()` eine minifizierte Variante.
-- Daten an Skripte über `data-*`-Attribute oder JSON in `<script type="application/json" …nonce>` übergeben – nicht über Inline-Code.
+- Daten an Skripte über `data-*`-Attribute oder JSON in `<script type="application/json" …nonce>` übergeben, nicht über Inline-Code.
 
 ### Funktionen von `cms-default/js/theme.js`
 
@@ -53,7 +53,7 @@ Theme JavaScript must be external, deferred and compatible with the strict CSP (
 
 ### Regeln
 
-1. Kein `innerHTML` mit ungeprüften Daten – DOM-APIs (`textContent`, `createElement`) oder Trusted-Types-Policies (`cms365`, `sanitize-html`, `dompurify`) nutzen.
+1. Kein `innerHTML` mit ungeprüften Daten: DOM-APIs (`textContent`, `createElement`) oder Trusted-Types-Policies (`cms365`, `sanitize-html`, `dompurify`) nutzen.
 2. Keine `onclick=`-Attribute; Ereignisse per `addEventListener`.
 3. Keine externen CDNs ohne Freigabe (`Security::allowCspSources()`) und Consent.
 4. Fetch-Aufrufe mit `credentials: 'same-origin'`; schreibende Requests mit CSRF-Token.

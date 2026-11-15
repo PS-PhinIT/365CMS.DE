@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Panel-Integration
+# 365CMS Projektdokumentation | Admin: Panel-Integration
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -6,8 +6,8 @@
 
 There are two ways to add an admin screen:
 
-1. **Core page** – an entry file `CMS/admin/<page>.php` that configures `$sectionPageConfig` and includes `CMS/admin/partials/section-page-shell.php`. `AdminRouter` resolves `/admin/<page>` to that file (fallbacks: `admin/modules/<page>/page.php`, `admin/old/<page>.php`).
-2. **Plugin page** – registered in the hook `cms_admin_menu` with `add_menu_page()` / `add_submenu_page()` (`CMS/includes/functions/admin-menu.php`) and rendered by `AdminRouter::renderPluginPage()` at `/admin/plugins/<menu>/<page>`.
+1. **Core page**: an entry file `CMS/admin/<page>.php` that configures `$sectionPageConfig` and includes `CMS/admin/partials/section-page-shell.php`. `AdminRouter` resolves `/admin/<page>` to that file (fallbacks: `admin/modules/<page>/page.php`, `admin/old/<page>.php`).
+2. **Plugin page**: registered in the hook `cms_admin_menu` with `add_menu_page()` / `add_submenu_page()` (`CMS/includes/functions/admin-menu.php`) and rendered by `AdminRouter::renderPluginPage()` at `/admin/plugins/<menu>/<page>`.
 
 Both inherit authentication (role `admin`), the sidebar, flash messages, CSRF handling and the Tabler-based admin layout.
 
@@ -27,7 +27,7 @@ The plugin API (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) is un
 **Ablauf der Shell (`section-page-shell.php`):**
 
 1. Zugriff prüfen (`access_checker`, sonst `Auth::isAdmin()`), bei Ablehnung Weiterleitung auf `access_denied_route`.
-2. Modul laden (`module_file`) und über `module_factory` instanziieren – Fehler ergeben eine Fehlerseite statt eines Fatal Errors.
+2. Modul laden (`module_file`) und über `module_factory` instanziieren: Fehler ergeben eine Fehlerseite statt eines Fatal Errors.
 3. Laufzeitkontext ermitteln (`request_context_resolver`: View, Titel, Assets, Daten je Unteransicht).
 4. **POST:** CSRF-Token (`csrf_token`) gegen `csrf_action`/`csrf_actions` prüfen → `post_handler($module, $section, $_POST)` → Ergebnis als Flash-Meldung speichern → Redirect (303) auf `redirect_path_resolver` (Post/Redirect/Get). Mit `render_inline = true` wird stattdessen sofort gerendert (z. B. Validierungsfehler im Editor).
 5. **GET:** Daten über `data_loader` bzw. `$module->getData()` laden, `header.php`, `sidebar.php`, View und `footer.php` ausgeben. Fehler in der View werden abgefangen und mit Diagnosehinweis angezeigt.
@@ -40,7 +40,7 @@ The plugin API (`cms_admin_menu`, `add_menu_page()`, `add_submenu_page()`) is un
 | `view_file` | Pfad zur View unter `CMS/admin/views/…` (muss existieren) |
 | `page_title`, `active_page` | Titel und aktiver Sidebar-Eintrag (Wert `page` der Katalogzeile in `CMS\Services\AdminMenu\CoreCatalog`, z. B. `posts`, `settings`) |
 | `section` | logischer Bereich (für Handler und Redirects) |
-| `page_assets` | `['css' => [...], 'js' => [...], 'modules' => [...]]` – nur externe Dateien (CSP); `modules` werden seit 4.0.0 im Footer als `<script type="module">` geladen |
+| `page_assets` | `['css' => [...], 'js' => [...], 'modules' => [...]]`: nur externe Dateien (CSP); `modules` werden seit 4.0.0 im Footer als `<script type="module">` geladen |
 | `csrf_action` / `csrf_actions` | Token-Aktion(en); `csrf_persistent_validation` für mehrfach nutzbare Tokens |
 | `module_file`, `module_factory` | Modulklasse unter `CMS/admin/modules/<bereich>/` |
 | `access_checker`, `access_denied_route` | Berechtigungsprüfung |
@@ -109,7 +109,7 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 - AJAX an dieselbe URL mit Header `X-Requested-With: XMLHttpRequest` ruft den Callback ohne Layout auf.
 - Eigene Formulare brauchen eigene CSRF-Tokens (`\CMS\Security::instance()->generateToken('mein_plugin')` / `verifyToken()`).
 
-**Darstellung in der Seitenleiste (seit 4.0.0):** Die Registrierung oben bleibt unverändert – Hook-Name, Signaturen und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `AdminMenuService` liest das Ergebnis von `get_registered_admin_menus()` nur aus:
+**Darstellung in der Seitenleiste:** Die Registrierung oben bleibt unverändert. Hook-Name, Signaturen und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `AdminMenuService` liest das Ergebnis von `get_registered_admin_menus()` nur aus:
 
 - Ein Plugin-Menü ohne Unterseiten wird ein einfacher Link im eingeklappten Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (alphabetisch nach Menütitel).
 - Ein Menü mit Unterseiten wird dort eine eigene Gruppe. Ist der Hauptpunkt nicht selbst als Unterseite registriert, wird „Übersicht“ als erster Eintrag ergänzt.
@@ -121,7 +121,7 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 
 ### Gestaltung
 
-Admin-Oberfläche auf Basis von **Tabler** (`CMS/assets/tabler/`) mit Tabler-Icons, CSS in `CMS/assets/css/admin*.css`, JavaScript in `CMS/assets/js/admin-*.js`. Keine Inline-Skripte oder Inline-Styles verwenden – die Content-Security-Policy blockiert sie.
+Admin-Oberfläche auf Basis von **Tabler** (`CMS/assets/tabler/`) mit Tabler-Icons, CSS in `CMS/assets/css/admin*.css`, JavaScript in `CMS/assets/js/admin-*.js`. Keine Inline-Skripte oder Inline-Styles verwenden, die Content-Security-Policy blockiert sie.
 
 Seit 4.0.0 gelten zusätzlich:
 

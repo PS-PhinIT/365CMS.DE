@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – API-Integration
+# 365CMS Projektdokumentation | Workflow: API-Integration
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Quellen:** `CMS/core/Routing/ApiRouter.php`, `CMS/core/Api.php`, `CMS/core/Router.php`, `CMS/core/Bootstrap.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/JwtService.php`
 
@@ -12,7 +12,7 @@ This workflow describes how to consume the shipped JSON endpoints and how a plug
 
 | Methode | Route | Zugriff |
 |---|---|---|
-| GET | `/api/v1/status` | öffentlich – `{"status":"ok","version":"3.5.0"}` |
+| GET | `/api/v1/status` | öffentlich: `{"status":"ok","version":"3.5.0"}` |
 | GET | `/api/v1/pages?q=…`, `/api/v1/pages/:slug` | angemeldet |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft, max. 8 KB |
 | GET | `/api/v1/admin/posts`, `/pages`, `/users`, `/mail/logs` | Admin + Capability |
@@ -27,7 +27,7 @@ Vollständige Parameterlisten: [core/API-REFERENCE.md](../core/API-REFERENCE.md)
 1. Benutzer meldet sich regulär an (`/cms-login` bzw. `/login`); der Session-Cookie wird automatisch mitgeschickt (`credentials: 'same-origin'`).
 2. Für schreibende Aufrufe das passende Token im serverseitigen Template erzeugen (`Security::instance()->generateToken('<action>')`) und als Feld `csrf_token` oder Header `X-CSRF-Token` mitsenden.
 3. Antwort auswerten: Fehler sind immer `{"error":"…"}` mit HTTP-Status (400/401/403/404/413/422/429/500). Bei `429` den Header `Retry-After` beachten (`CMS\Api`: 60 Anfragen/Minute je IP).
-4. Uploads liefern ein frisches Token in `new_token` – dieses für den nächsten Request verwenden.
+4. Uploads liefern ein frisches Token in `new_token`: dieses für den nächsten Request verwenden.
 
 ```js
 const fd = new FormData();
@@ -89,14 +89,14 @@ function my_events_api_rsvp(string $id): void
 **Regeln:**
 
 - Routen werden exakt oder per Muster (`:name` → `[a-zA-Z0-9_-]+`) gematcht; eine statische Route hat Vorrang vor Mustern. Callbacks müssen `callable` sein (Funktionsname, Closure oder `[Objekt, 'methode']`).
-- Pfade unter `/api/` laufen im Modus `api`: kein Theme, keine Session-Weiterleitungen, `no-store`. Pfade außerhalb von `/api` laufen im Modus `web` – dann greift für POST die globale `form_guard`-Prüfung des Routers.
+- Pfade unter `/api/` laufen im Modus `api`: kein Theme, keine Session-Weiterleitungen, `no-store`. Pfade außerhalb von `/api` laufen im Modus `web`, dann greift für POST die globale `form_guard`-Prüfung des Routers.
 - Admin-Endpunkte: `Auth::instance()->isAdmin()` **und** `Auth::instance()->hasCapability('<cap>')` prüfen.
 - Keine Fehlerdetails ausgeben; Ausnahmen über `Logger::instance()->withChannel('<plugin>')` protokollieren.
 - Rate-Limiting bei Bedarf über `Security::checkRateLimit($id, $max, $window)` (Session-basiert) oder `Security::checkDbRateLimit()` / `recordDbRateLimitAttempt()` (Tabelle `cms_login_attempts`).
 
 ### 3. JWT (optional)
 
-`CMS\Services\JwtService` stellt `generateToken($userId, $claims, $ttl)`, `generateRefreshToken($userId)` und `validateToken($token)` bereit (HMAC mit `JWT_SECRET`, Fallback `AUTH_KEY`). Keine Core-Route wertet Bearer-Tokens aus – ein Plugin muss den Header `Authorization: Bearer …` selbst lesen und `validateToken()` aufrufen. `JWT_SECRET` dann unbedingt in `config/app.php` setzen.
+`CMS\Services\JwtService` stellt `generateToken($userId, $claims, $ttl)`, `generateRefreshToken($userId)` und `validateToken($token)` bereit (HMAC mit `JWT_SECRET`, Fallback `AUTH_KEY`). Keine Core-Route wertet Bearer-Tokens aus, ein Plugin muss den Header `Authorization: Bearer …` selbst lesen und `validateToken()` aufrufen. `JWT_SECRET` dann unbedingt in `config/app.php` setzen.
 
 ### 4. Checkliste vor dem Go-live
 

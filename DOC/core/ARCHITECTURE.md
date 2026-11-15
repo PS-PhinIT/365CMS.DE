@@ -1,10 +1,10 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Architektur
+# 365CMS Projektdokumentation | Core: Architektur
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **PHP:** ≥ 8.4.1
 
 ## English (summary)
 
-365CMS is a framework-less PHP 8.4.1+ application. Every web request enters through `CMS/index.php`, which loads `config/app.php`, configures the session cookie, includes `CMS/config.php` and the autoloader and starts `CMS\Bootstrap`. The bootstrap detects the runtime mode (`cli`, `api`, `admin`, `web`), validates bundled PHP requirements, connects to the database, runs pending migrations, sends security headers (CSP with nonce), starts the session, runs the application firewall, registers services in a small DI container, loads active plugins and – in web mode – the active theme, registers core cron hooks and finally fires `cms_init`. `Bootstrap::run()` lets plugins add routes (`register_routes`) and dispatches through `CMS\Router`, which loads exactly one route module group per request (API, admin, member or public+theme) and falls back to dynamic page/hub resolution and the theme's 404 page.
+365CMS is a framework-less PHP 8.4.1+ application. Every web request enters through `CMS/index.php`, which loads `config/app.php`, configures the session cookie, includes `CMS/config.php` and the autoloader and starts `CMS\Bootstrap`. The bootstrap detects the runtime mode (`cli`, `api`, `admin`, `web`), validates bundled PHP requirements, connects to the database, runs pending migrations, sends security headers (CSP with nonce), starts the session, runs the application firewall, registers services in a small DI container, loads active plugins and, in web mode, the active theme, registers core cron hooks and finally fires `cms_init`. `Bootstrap::run()` lets plugins add routes (`register_routes`) and dispatches through `CMS\Router`, which loads exactly one route module group per request (API, admin, member or public+theme) and falls back to dynamic page/hub resolution and the theme's 404 page.
 
 ## Deutsch
 
@@ -62,7 +62,7 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 ### Bootstrap im Detail (`Bootstrap::initializeCore()`)
 
 1. **Konstanten** sicherstellen (`ensureConstants()`), Plattformprüfung der gebündelten Bibliotheken (`validateBundledPhpPlatform()` liest Mindest-PHP-Versionen aus den Vendor-Manifests).
-2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()` – läuft nur, bis `SCHEMA_VERSION = v25` erreicht ist (Flag-Datei `cache/db_schema_v25.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
+2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()`: läuft nur, bis `SCHEMA_VERSION = v25` erreicht ist (Flag-Datei `cache/db_schema_v25.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
 3. **Security** (`Security::init()`): CSP-Nonce, Sicherheitsheader, Session-Start.
 4. **Auth** (`Auth::instance()`): Session-Benutzer laden, Rollen-Lebensdauer prüfen.
 5. **Firewall** (`SecurityRuntimeService::handleRequest()`), nicht im CLI.
@@ -71,7 +71,7 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 8. **Frontend-Hooks** (nur `web`): Cookie-Consent, Analytics (consent-gesteuert, CSP-Quellen über `cms_csp_prepare`), Core-Web-Vitals-Skript, PhotoSwipe für Galerien/Hub-Seiten, Hub-Styles.
 9. **Cron-Hooks**: `cms_cron_mail_queue`, `cms_cron_hourly` (Broken-Links, SEO-Trend, Monitoring-Trend, Sicherheitsalarme, IndexNow-Versand), `cms_cron_daily` (Sitemap, Daten-Aufbewahrung über `DataRetentionService`).
 10. **OPcache-Warmup** nach Deployments als Shutdown-Funktion.
-11. **Core-Funktionsbereiche** (seit 4.0.0): `FeatureHooks\Registry::register()` ruft je Bereich `register()` auf (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise). Fehlt eine Klasse oder wirft sie, bleiben die übrigen Bereiche aktiv; der Fehler landet im Kanal `core.features`.
+11. **Core-Funktionsbereiche**: `FeatureHooks\Registry::register()` ruft je Bereich `register()` auf (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise). Fehlt eine Klasse oder wirft sie, bleiben die übrigen Bereiche aktiv; der Fehler landet im Kanal `core.features`.
 12. `cms_init`, `cms_init_<modus>`.
 
 ### Routing (`CMS\Router`)
@@ -95,7 +95,7 @@ Plugins ergänzen Routen im Hook `register_routes` (`$router->addRoute('GET', '/
 4. Weiterleitungsregeln prüfen (`RedirectService::findRedirect()`).
 5. **Globaler CSRF-Schutz** für `POST/PUT/PATCH/DELETE` außerhalb von `/api`, `/admin`, `/member`: Token `csrf_token` der Aktion `form_guard` erforderlich (Ausnahmen: Login/Registrierung/Passwort, Logout, Kontakt, Kommentare, MFA, Theme-Favoriten mit eigenem Token). Fehlender Token → 404, ungültiger → 403.
 6. Exakter Routentreffer → Muster-Treffer (`/pfad/:param`).
-7. Landing-Alias, dann **dynamische Auflösung**: zuerst Hub-Site per Slug, dann Seite per Slug (DE/EN) – beide werden über das Theme-Template `page` gerendert. Beiträge laufen über die vom `ThemeRouter` registrierte Permalink-Route (`PermalinkService`).
+7. Landing-Alias, dann **dynamische Auflösung**: zuerst Hub-Site per Slug, dann Seite per Slug (DE/EN), beide werden über das Theme-Template `page` gerendert. Beiträge laufen über die vom `ThemeRouter` registrierte Permalink-Route (`PermalinkService`).
 8. Sonst `render404()` (404-Protokoll, Theme-Template `404.php`).
 
 `HEAD` wird wie `GET` behandelt. `Router::redirect()` erlaubt nur interne bzw. zulässige Ziele.

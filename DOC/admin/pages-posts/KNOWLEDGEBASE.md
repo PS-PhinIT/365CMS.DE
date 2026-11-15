@@ -1,4 +1,4 @@
-# 365CMS – Admin: Knowledgebase
+# 365CMS: Admin: Knowledgebase
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -31,7 +31,7 @@ Allgemeine Infos · Funktionsweise & technische Details · Vorteile & Nutzen · 
 | Allgemein | Auto-Verlinkung, Fallback für Themes ohne Filter `content_render`, `nofollow`, neuer Tab, Tooltips, max. Links pro Seite gesamt; Menüpunkt in der Hauptnavigation mit Text DE/EN; Titel und Einleitung von `/kb` und `/glossar` DE/EN; Suchfeld, Kategorien-Seitenleiste, Fokusbegriffe auf Karten, verwandte Einträge, Zahl verwandter Beiträge |
 | Design | Inhalts- und Seitenleistenbreite, Eckenradius, Farben (Akzent, Hover, Fläche, Rahmen, Tooltip), Übersichtsseite (Kopfbereich, Spalten, Karten-Stil, Kurztext-Zeilen, Karten-Hintergrund, Akzentleiste), Eintragsseite (Kopfbereich, Bereichsdarstellung und -hintergrund, Einfärbung, Icons, Seitenleiste: Stil, Position, Hintergrund, mitlaufend); Vorschau aktualisiert sich beim Ändern |
 | Import | Mitgelieferte CSV-Pakete (`core/Services/Knowledgebase/csv/*_Glossar.csv`) einzeln oder alle importieren; Abgleich über den Slug, im Editor ergänzte Inhalte bleiben erhalten. Beispiel-CSV mit allen Feldern herunterladen (`?download=csv-template`) |
-| System | Schema-Version, Adressen, letzter CSV-Import; Hardreset (alle Einträge endgültig löschen, auch im Papierkorb) wahlweise mit anschließendem Neuimport aller Pakete – jeweils mit Rückfrage |
+| System | Schema-Version, Adressen, letzter CSV-Import; Hardreset (alle Einträge endgültig löschen, auch im Papierkorb) wahlweise mit anschließendem Neuimport aller Pakete: jeweils mit Rückfrage |
 
 Je Formular werden nur die Felder des jeweiligen Tabs gespeichert.
 
@@ -45,13 +45,13 @@ Je Formular werden nur die Felder des jeweiligen Tabs gespeichert.
 
 `/kb` (Übersicht mit Suche und Kategorien), `/kb/<slug>` (Eintrag mit Bereichen, verwandten Einträgen und Beiträgen, JSON-LD), `/glossar` (A–Z), `/glossar-sitemap.xml`; jeweils auch unter `/en/…`. Vorlagen `views/knowledgebase/archive.php` und `single.php`; ein Theme überschreibt sie mit `themes/<theme>/knowledgebase/<vorlage>.php`. Stylesheets und Tooltip-Skript werden nur auf Seiten geladen, die sie brauchen.
 
-### Gültigkeit: Ablaufdatum und Wiedervorlage (seit 4.1.0)
+### Gültigkeit: Ablaufdatum und Wiedervorlage
 
-Der Eintrags-Editor hat in der Seitenspalte die Gruppe „Gültigkeit“ (Spalten `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` in `kb_entries`; Indizes `idx_kb_expires`, `idx_kb_review_due`). Ein abgelaufener Eintrag wird vom stündlichen Cron auf **inaktiv** gesetzt (`is_active = 0`) oder – Einstellung *Bei Ablauf* – nur markiert; er verlinkt dann nicht mehr automatisch und die Eintragsseite liefert 404 (die Einstellung „410 Gone“ gilt nur für Beiträge und Seiten). Die Wiedervorlage erinnert den Redakteur einmal; Verwaltung und Hooks (`cms_content_expired`, `cms_content_review_due`, Typ `kb`) wie bei [POSTS.md](POSTS.md#gültigkeit-ablauf-und-wiedervorlage-seit-410) beschrieben. Der Eintrags-Index löst die Suche über `cms_knowledgebase_entry_saved` neu auf.
+Der Eintrags-Editor hat in der Seitenspalte die Gruppe „Gültigkeit“ (Spalten `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` in `kb_entries`; Indizes `idx_kb_expires`, `idx_kb_review_due`). Ein abgelaufener Eintrag wird vom stündlichen Cron auf **inaktiv** gesetzt (`is_active = 0`) oder, Einstellung *Bei Ablauf*, nur markiert; er verlinkt dann nicht mehr automatisch und die Eintragsseite liefert 404 (die Einstellung „410 Gone“ gilt nur für Beiträge und Seiten). Die Wiedervorlage erinnert den Redakteur einmal; Verwaltung und Hooks (`cms_content_expired`, `cms_content_review_due`, Typ `kb`) wie bei [POSTS.md](POSTS.md#gültigkeit-ablauf-und-wiedervorlage) beschrieben. Der Eintrags-Index löst die Suche über `cms_knowledgebase_entry_saved` neu auf.
 
 ### Hooks
 
-`cms_knowledgebase_entry_saved` (auch nach Wiederherstellen), `cms_knowledgebase_entry_trashed`, `cms_knowledgebase_entry_deleted` – jeweils mit der Eintrags-ID. Siehe [HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md).
+`cms_knowledgebase_entry_saved` (auch nach Wiederherstellen), `cms_knowledgebase_entry_trashed`, `cms_knowledgebase_entry_deleted`, jeweils mit der Eintrags-ID. Siehe [HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md).
 
 ### Übernahme aus dem Plugin
 

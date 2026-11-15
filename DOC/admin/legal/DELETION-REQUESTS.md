@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Löschanträge (Art. 17 DSGVO)
+# 365CMS Projektdokumentation | Admin: Löschanträge (Art. 17 DSGVO)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/data-requests` (Bereich „Löschung“; `/admin/deletion-requests` leitet um) | **Capability:** `manage_settings` | **Core-Modul:** `legal`
@@ -22,15 +22,15 @@ Erasure requests (`type = deletion` in `cms_privacy_requests`) are handled by `C
 5. **Ablehnung (`reject`):** mit Begründung, z. B. wenn gesetzliche Aufbewahrungspflichten entgegenstehen.
 6. **Eskalation (`escalate`):** E-Mail an die Admin-Adresse (Mail-Queue, Header `X-365CMS-Source: legal-data-request-escalation`).
 
-### Was gelöscht wird – und was nicht
+### Was gelöscht wird: und was nicht
 
 | Daten | Verhalten |
 |---|---|
 | Benutzerkonto | gelöscht |
 | `cms_user_meta` (inkl. MFA-Daten), Nachrichten, Favoriten, Benachrichtigungen | per `ON DELETE CASCADE` mitgelöscht |
-| Sessions, Passkeys, Gruppen- und Abo-Zuordnungen | ohne Fremdschlüssel – Sessions laufen ab; verwaiste Zuordnungen bei Bedarf über die jeweiligen Admin-Seiten entfernen |
+| Sessions, Passkeys, Gruppen- und Abo-Zuordnungen | ohne Fremdschlüssel: Sessions laufen ab; verwaiste Zuordnungen bei Bedarf über die jeweiligen Admin-Seiten entfernen |
 | Beiträge/Seiten des Benutzers | bleiben bestehen (Autor-Zuordnung prüfen, ggf. Anzeigename ändern) |
-| Kommentare | bleiben mit gespeichertem Namen/E-Mail bestehen – bei Bedarf manuell unter `/admin/comments` löschen |
+| Kommentare | bleiben mit gespeichertem Namen/E-Mail bestehen: bei Bedarf manuell unter `/admin/comments` löschen |
 | Bestellungen (`cms_orders`) | bleiben wegen handels-/steuerrechtlicher Aufbewahrungspflichten bestehen |
 | Logs (Audit, 404, Mail) | werden nach ihren eigenen Aufbewahrungsregeln bereinigt |
 

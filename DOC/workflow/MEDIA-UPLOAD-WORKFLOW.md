@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – Medien-Upload
+# 365CMS Projektdokumentation | Workflow: Medien-Upload
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Quellen:** `CMS/admin/media.php`, `CMS/admin/modules/media/MediaModule.php`, `CMS/core/Services/MediaService.php`, `CMS/core/Services/Media/UploadHandler.php`, `CMS/core/Services/Media/ImageProcessor.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/MediaDeliveryService.php`, `CMS/core/Services/EditorJsService.php`
 

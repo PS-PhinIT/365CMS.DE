@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Verzeichnisstruktur
+# 365CMS Projektdokumentation | Core: Verzeichnisstruktur
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -24,25 +24,25 @@ CMS/core/
 │   ├── LDAP/LdapAuthProvider.php
 │   ├── MFA/TotpAdapter.php, BackupCodesManager.php
 │   ├── Passkey/WebAuthnAdapter.php
-│   └── SSO/                   # Entra ID (4.1.0): EntraSsoService, EntraIdProvider, EntraSettings, IdentityLinker, OidcFlowState, Store
+│   └── SSO/                   # Entra ID: EntraSsoService, EntraIdProvider, EntraSettings, IdentityLinker, OidcFlowState, Store
 ├── Contracts/                 # CacheInterface, DatabaseInterface, LoggerInterface
 ├── Http/                      # Client, Request, InlineStyleRewriter
 ├── Member/                    # PluginDashboardRegistry, MemberI18n, MemberSanitizer
-├── Routing/                   # ApiRouter, AdminRouter, MemberRouter, PublicRouter, SsoRouter (4.1.0), PaymentRouter (4.1.0), ThemeRouter, ThemeArchiveRepository
+├── Routing/                   # ApiRouter, AdminRouter, MemberRouter, PublicRouter, SsoRouter, PaymentRouter, ThemeRouter, ThemeArchiveRepository
 └── Services/                  # ~90 Fachservices im Wurzelordner, dazu Unterordner (Auswahl):
     ├── AI/ (+ Providers/)      # KI-Dienste
-    ├── Backup/                # Offsite-Backups S3 (4.1.0): OffsiteBackupService, S3Client, S3Config, SigV4Signer
-    ├── Content/               # ContentStatus, ContentWorkflow (Vier-Augen-Prinzip), ContentExpiryService (4.1.0)
+    ├── Backup/                # Offsite-Backups S3: OffsiteBackupService, S3Client, S3Config, SigV4Signer
+    ├── Content/               # ContentStatus, ContentWorkflow (Vier-Augen-Prinzip), ContentExpiryService
     ├── EditorJs/              # Editor.js-Hilfsklassen
     ├── FeatureHooks/          # Registry + je Funktion eine Hooks-Klasse (u. a. BackupOffsite, ContentExpiry, ContentWorkflow, ReusableBlock, Webhook)
     ├── Landing/               # Landingpage
     ├── Media/                 # Medienbibliothek, AVIF, Verwendungsindex (+ Usage/)
-    ├── Payments/              # Stripe, Mollie, PaymentService (4.1.0)
-    ├── ReusableBlocks/        # EditorJS Block Vorlagen (4.1.0)
+    ├── Payments/              # Stripe, Mollie, PaymentService
+    ├── ReusableBlocks/        # EditorJS Block Vorlagen
     ├── SEO/                   # SEO-Ausgabe, Sitemaps, Analytics
-    ├── Security/              # PasswordPolicyService, MfaEnforcementService (4.1.0)
+    ├── Security/              # PasswordPolicyService, MfaEnforcementService
     ├── SiteTable/             # Tabellen & Hub-Sites
-    ├── Webhooks/              # WebhookService (4.1.0)
+    ├── Webhooks/              # WebhookService
     └── …                      # Downloads, Exchange, Feed, Forms, Knowledgebase, Legal, Newsletter, Retention, Search, Trash, AdminMenu, ContentTypes, PluginMigration (vollständig: ../CMSFILESTRUCTUR.md)
 ```
 
@@ -66,7 +66,7 @@ CMS/core/
 | `cache/` | Dateicache, Schema-Flag | **ja** |
 | `logs/` | Kanal-Logs, `error.log` | **ja** |
 | `uploads/` | Medien, Mitglieder-Uploads, Schriften | **ja** |
-| `backups/` | Backups (Standard; seit 4.0.0 per `CMS_BACKUP_PATH` außerhalb des Webroots ablegbar), Performance-Snapshots (bleiben immer hier) | **ja** |
+| `backups/` | Backups (Standard, per `CMS_BACKUP_PATH` außerhalb des Webroots ablegbar), Performance-Snapshots (bleiben immer hier) | **ja** |
 
 ### Namespaces und Autoloading
 

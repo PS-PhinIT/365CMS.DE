@@ -1,7 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Plugin-Entwicklung
+# 365CMS Projektdokumentation | Plugin-Entwicklung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-14 (Plugin-Layout-Vertrag; Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`, `AdminMenuService`, `AdminNavigationService`, `PluginSiteAssignmentService`)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 
 # 365CMS Plugin Development
@@ -101,7 +100,7 @@ Use `add_menu_page()` for a top-level menu and `add_submenu_page()` for child pa
 
 Admin callbacks should render content only. They should use `renderAdminLayoutStart()` and `renderAdminLayoutEnd()` only when the compatibility path requires it, because the router already supplies the current shell for ordinary plugin callbacks.
 
-Sidebar presentation (4.0.0): the registration contract above is unchanged – the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. The admin menu (`CMS\Services\AdminMenu\AdminMenuService`) only reads `get_registered_admin_menus()` and places the entries the same way in every sidebar profile:
+Sidebar presentation: the registration contract above is unchanged, the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. The admin menu (`CMS\Services\AdminMenu\AdminMenuService`) only reads `get_registered_admin_menus()` and places the entries the same way in every sidebar profile:
 
 - a menu without submenus becomes a plain link in the collapsed sidebar section "Aktive Plugins" (active plugins) at the end of the sidebar, sorted alphabetically by title;
 - a menu with submenus becomes a group of its own in that section; "Übersicht" is prepended when the top-level slug is not registered as a submenu itself;
@@ -115,7 +114,7 @@ The admin router loads `assets/css/admin-plugins.css` after the plugin styleshee
 
 For path routes (`/admin/plugins/:plugin/:page`) the router sets `$_GET['page']` to the requested page before calling the callback, so dispatchers and the active sidebar entry can rely on it. Pass the active page slug to `renderAdminLayoutStart()`.
 
-#### Plugin layout contract (4.0.0)
+#### Plugin layout contract
 
 Every plugin admin page uses the same two-level structure inside `.cms-plugin-admin-content`:
 
@@ -138,7 +137,7 @@ Every plugin admin page uses the same two-level structure inside `.cms-plugin-ad
 #### Changes for plugins in 4.1.0
 
 - **Content status `pending` ("Zur Prüfung").** Posts and pages gain the status `pending` (four-eyes review, [REVIEW.md](../admin/pages-posts/REVIEW.md)). It is never public; queries for `status = 'published'` stay correct. Plugins that keep their own status lists should treat `pending` as "not public". Use `CMS\Services\Content\ContentStatus` instead of string literals.
-- **New hooks:** `cms_content_submitted`, `cms_content_approved`, `cms_content_returned`, `cms_content_status_changed`, `cms_content_expired`, `cms_content_review_due`, `cms_reusable_block_saved|deleted|changed`, `cms_media_derivative_created`, `cms_backup_created`, `cms_backup_offsite_uploaded|failed`, `cms_payment_succeeded|failed`, `cms_subscription_renewed|ended`, `cms_invoice_created`, `cms_sso_login`, `cms_sso_user_provisioned`, `cms_password_changed`; filters `cms_password_policy`, `cms_mfa_enforcement_required`, `cms_webhook_event` – signatures in [HOOKS-REFERENCE.md](../core/HOOKS-REFERENCE.md).
+- **New hooks:** `cms_content_submitted`, `cms_content_approved`, `cms_content_returned`, `cms_content_status_changed`, `cms_content_expired`, `cms_content_review_due`, `cms_reusable_block_saved|deleted|changed`, `cms_media_derivative_created`, `cms_backup_created`, `cms_backup_offsite_uploaded|failed`, `cms_payment_succeeded|failed`, `cms_subscription_renewed|ended`, `cms_invoice_created`, `cms_sso_login`, `cms_sso_user_provisioned`, `cms_password_changed`; filters `cms_password_policy`, `cms_mfa_enforcement_required`, `cms_webhook_event`, signatures in [HOOKS-REFERENCE.md](../core/HOOKS-REFERENCE.md).
 - **Media usage.** Plugins that store media references register an extractor on the action `cms_register_media_reference_extractors` (`$index->register(new MyExtractor())`, interface `CMS\Services\Media\MediaReferenceExtractor`) so the library shows "used in …" and warns before deleting.
 - **Webhooks.** Custom events: filter `cms_webhook_event` (`['area.action' => 'Label']`) plus `WebhookService::getInstance()->dispatch('area.action', [...])` ([WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md)).
 - **Capabilities.** New: `security.sso`, `posts.publish`, `pages.publish`, `blocks.reusable`, `backups.offsite`, `payments.manage`, `invoices.view`, `webhooks.manage` ([RBAC.md](../admin/users-groups/RBAC.md)).
@@ -321,7 +320,7 @@ Für ein Hauptmenü wird `add_menu_page()`, für Unterseiten `add_submenu_page()
 
 Admin-Callbacks rendern ausschließlich Inhalt. `renderAdminLayoutStart()` und `renderAdminLayoutEnd()` werden nur im Kompatibilitätspfad verwendet, weil der Router bei normalen Plugin-Callbacks bereits die aktuelle Shell bereitstellt.
 
-Darstellung in der Seitenleiste (4.0.0): Der Registrierungsvertrag oben bleibt unverändert – Hook `cms_admin_menu`, Signaturen von `add_menu_page()` / `add_submenu_page()` und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. Das Admin-Menü (`CMS\Services\AdminMenu\AdminMenuService`) liest nur `get_registered_admin_menus()` und platziert die Einträge nach dem aktiven Sidebar-Profil:
+Darstellung in der Seitenleiste: Der Registrierungsvertrag oben bleibt unverändert. Hook `cms_admin_menu`, Signaturen von `add_menu_page()` / `add_submenu_page()` und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. Das Admin-Menü (`CMS\Services\AdminMenu\AdminMenuService`) liest nur `get_registered_admin_menus()` und platziert die Einträge nach dem aktiven Sidebar-Profil:
 
 - ein Menü ohne Untermenüs wird ein einfacher Link im eingeklappten Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (alphabetisch nach Titel);
 - ein Menü mit Untermenüs wird dort eine eigene Gruppe; „Übersicht“ wird vorangestellt, wenn der Hauptslug nicht selbst als Untermenü registriert ist;
@@ -335,7 +334,7 @@ Der AdminRouter lädt auf jeder Plugin-Seite `assets/css/admin-plugins.css` nach
 
 Bei Pfad-Routen (`/admin/plugins/:plugin/:page`) setzt der Router vor dem Callback `$_GET['page']` auf die angeforderte Seite, sodass Dispatcher und aktive Sidebar-Markierung sich darauf verlassen können. Den aktiven Seiten-Slug an `renderAdminLayoutStart()` übergeben.
 
-#### Plugin-Layout-Vertrag (4.0.0)
+#### Plugin-Layout-Vertrag
 
 Jede Plugin-Adminseite folgt innerhalb von `.cms-plugin-admin-content` derselben zweistufigen Struktur:
 
@@ -383,7 +382,7 @@ echo cms_plugin_workspace_close();
 #### Änderungen für Plugins in 4.1.0
 
 - **Inhaltsstatus `pending` („Zur Prüfung“).** Beiträge und Seiten kennen den Status `pending` (Vier-Augen-Prinzip, [REVIEW.md](../admin/pages-posts/REVIEW.md)). Er ist nie öffentlich; Abfragen auf `status = 'published'` bleiben korrekt. Plugins mit eigenen Statuslisten sollten `pending` als „nicht öffentlich“ behandeln und `CMS\Services\Content\ContentStatus` statt Zeichenketten verwenden.
-- **Neue Hooks:** `cms_content_submitted`, `cms_content_approved`, `cms_content_returned`, `cms_content_status_changed`, `cms_content_expired`, `cms_content_review_due`, `cms_reusable_block_saved|deleted|changed`, `cms_media_derivative_created`, `cms_backup_created`, `cms_backup_offsite_uploaded|failed`, `cms_payment_succeeded|failed`, `cms_subscription_renewed|ended`, `cms_sso_login`, `cms_sso_user_provisioned`, `cms_password_changed`; Filter `cms_password_policy`, `cms_mfa_enforcement_required`, `cms_webhook_event` – Signaturen in [HOOKS-REFERENCE.md](../core/HOOKS-REFERENCE.md).
+- **Neue Hooks:** `cms_content_submitted`, `cms_content_approved`, `cms_content_returned`, `cms_content_status_changed`, `cms_content_expired`, `cms_content_review_due`, `cms_reusable_block_saved|deleted|changed`, `cms_media_derivative_created`, `cms_backup_created`, `cms_backup_offsite_uploaded|failed`, `cms_payment_succeeded|failed`, `cms_subscription_renewed|ended`, `cms_sso_login`, `cms_sso_user_provisioned`, `cms_password_changed`; Filter `cms_password_policy`, `cms_mfa_enforcement_required`, `cms_webhook_event`. Signaturen in [HOOKS-REFERENCE.md](../core/HOOKS-REFERENCE.md).
 - **Medien-Verwendung.** Plugins, die Medienverweise speichern, melden einen Extraktor an der Action `cms_register_media_reference_extractors` an (`$index->register(new MeinExtractor())`, Schnittstelle `CMS\Services\Media\MediaReferenceExtractor`), damit die Mediathek „verwendet in …“ zeigt und vor dem Löschen warnt.
 - **Webhooks.** Eigene Ereignisse: Filter `cms_webhook_event` (`['bereich.aktion' => 'Bezeichnung']`) und `WebhookService::getInstance()->dispatch('bereich.aktion', [...])` ([WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md)).
 - **Capabilities.** Neu: `security.sso`, `posts.publish`, `pages.publish`, `blocks.reusable`, `backups.offsite`, `payments.manage`, `webhooks.manage` ([RBAC.md](../admin/users-groups/RBAC.md)).
@@ -476,7 +475,7 @@ Vor dem Release Syntaxprüfungen und vorhandene Projekt-Tests beziehungsweise Qu
 
 ## Ergänzung (Stand 2026-10-02) / Addendum
 
-> English: plugin header fields, lifecycle callbacks, the activation security scan, WordPress-compatible helpers, custom routes, subscription gating, GDPR and cron hooks – verified against `CMS/core/PluginManager.php` and `CMS/includes/functions/`.
+> English: plugin header fields, lifecycle callbacks, the activation security scan, WordPress-compatible helpers, custom routes, subscription gating, GDPR and cron hooks, verified against `CMS/core/PluginManager.php` and `CMS/includes/functions/`.
 
 ### Plugin-Header
 
@@ -552,17 +551,17 @@ Details: [../admin/subscription/SUBSCRIPTION-SYSTEM.md](../admin/subscription/SU
 
 ### DSGVO und Cron
 
-- `dsgvo_export_data($userId, $email)` – eigene personenbezogene Daten zur Auskunft beitragen.
-- `dsgvo_delete_data($userId, $email)` – vor der endgültigen Kontolöschung eigene Daten löschen.
-- `cms_cron_hourly`, `cms_cron_daily`, `cms_cron_<name>` – geplante Aufgaben (`cron.php --task=<name>`).
+- `dsgvo_export_data($userId, $email)`: eigene personenbezogene Daten zur Auskunft beitragen.
+- `dsgvo_delete_data($userId, $email)`: vor der endgültigen Kontolöschung eigene Daten löschen.
+- `cms_cron_hourly`, `cms_cron_daily`, `cms_cron_<name>`: geplante Aufgaben (`cron.php --task=<name>`).
 
 ### Mitglieder-Dashboard
 
-Strukturierte Bereiche und Kacheln über `member_dashboard_init` und `PluginDashboardRegistry::register()` – vollständiges Beispiel in [../member/MEMBER-DASHBOARD.md](../member/MEMBER-DASHBOARD.md).
+Strukturierte Bereiche und Kacheln über `member_dashboard_init` und `PluginDashboardRegistry::register()`, vollständiges Beispiel in [../member/MEMBER-DASHBOARD.md](../member/MEMBER-DASHBOARD.md).
 
 ### Landingpage
 
-Bausteine über den Filter `landing_page_plugins` – siehe [../admin/landing-page/LANDING-PAGE.md](../admin/landing-page/LANDING-PAGE.md).
+Bausteine über den Filter `landing_page_plugins`, siehe [../admin/landing-page/LANDING-PAGE.md](../admin/landing-page/LANDING-PAGE.md).
 
 ### Weiterführend
 

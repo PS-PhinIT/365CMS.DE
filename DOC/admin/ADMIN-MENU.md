@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Admin-Menü (Profile, Editor, Plugin-Plätze)
+# 365CMS Projektdokumentation | Admin: Admin-Menü (Profile, Editor, Plugin-Plätze)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Verbindliche Bäume:** [ADMIN-MENU-PROFILE.md](../workflow/specs/ADMIN-MENU-PROFILE.md) · **Entscheidungen:** [KLARSTELLUNGEN.md §7](../workflow/specs/KLARSTELLUNGEN.md)
@@ -28,7 +28,7 @@ To add a core page: add a catalog row, place the ID in both profiles, update the
 | `AdminMenuService` | `…/AdminMenu/AdminMenuService.php` | Fassade für Profil, Layouts, Cache, Audit-Log sowie Export und Import |
 | `AdminNavigationService` | `CMS/core/Services/AdminNavigationService.php` | Sidebar-Modell: URLs, aktiver Eintrag, Brotkrumen, Badges, Aufklappzustand, Kachelseiten |
 | Sidebar | `CMS/admin/partials/sidebar.php`, `sidebar-nav.php` | Ausgabe; `sidebar-nav.php` rendert auch die Vorschau |
-| Plugin-API | `CMS/includes/functions/admin-menu-profiles.php` | `cms_admin_menu_set_preferred_parent()` – nur noch aus Kompatibilität, ohne Wirkung |
+| Plugin-API | `CMS/includes/functions/admin-menu-profiles.php` | `cms_admin_menu_set_preferred_parent()`: nur noch aus Kompatibilität, ohne Wirkung |
 
 ### 2. Welches Layout gilt?
 
@@ -83,7 +83,7 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 
 **Abschnitt „Aktive Plugins“** (Nutzerentscheidung, [KLARSTELLUNGEN.md §7](../workflow/specs/KLARSTELLUNGEN.md)):
 
-- Alle Seiten aktiver Plugins, die das Layout nicht selbst platziert, stehen in jedem Profil gesammelt im letzten Abschnitt der Seitenleiste – auch die früher unter *Plugins* bzw. *Erweitern* einsortierten.
+- Alle Seiten aktiver Plugins, die das Layout nicht selbst platziert, stehen in jedem Profil gesammelt im letzten Abschnitt der Seitenleiste, auch die früher unter *Plugins* bzw. *Erweitern* einsortierten.
 - Der Abschnitt ist standardmäßig **eingeklappt** und zeigt im Kopf die Zahl seiner Einträge. Er öffnet sich, wenn die aktuelle Seite darin liegt, bei „Alle aufklappen“ oder wenn der Benutzer ihn aufgeklappt hat (gespeichert unter `g:_active-plugins`).
 - Ein Plugin mit **einer** Seite ist ein Link, ein Plugin mit **mehreren** Seiten eine Gruppe `plugin.<menü-slug>` mit Menütitel und Icon. Beide sind gemeinsam natürlich nach Titel sortiert.
 - Die Abschnitts-ID `_active-plugins` (`MenuBuilder::ACTIVE_PLUGINS_SECTION_ID`) beginnt mit `_` und kollidiert deshalb mit keiner Layout-ID.
@@ -108,9 +108,9 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 
 | Classic | Bezeichnung | | Structured | Bezeichnung |
 |---|---|---|---|---|
-| `posts` | **Inhalte** (seit 4.1.0, vorher *Beiträge*; enthält *Beiträge*, *Seiten*, Kategorien, Schlagwörter, Redaktionskalender) | | `content` | Inhalt |
+| `posts` | **Inhalte** (vorher *Beiträge*; enthält *Beiträge*, *Seiten*, Kategorien, Schlagwörter, Redaktionskalender) | | `content` | Inhalt |
 | `media` | Medien | | `media` | Medien |
-| `building-blocks` | **Bausteine** (seit 4.1.0) | | `editorial` | Redaktion |
+| `building-blocks` | **Bausteine** | | `editorial` | Redaktion |
 | `forms` | Formulare | | `ai` | KI-Dienste ¹ |
 | `ai` | KI-Dienste ¹ | | `structure` | Struktur |
 | `design` | Design | | `design` | Design |
@@ -125,7 +125,7 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 
 ¹ Gruppe eines optionalen Core-Moduls. Ohne aktives Modul ist sie leer und damit ausgeblendet.
 
-**Änderungen der Menügruppen seit 4.1.0:**
+**Menügruppen im Überblick:**
 
 - Profil *Klassisch*: Die frühere Gruppe *Seiten* (nur noch „Alle Seiten“) ist in *Beiträge* aufgegangen; die Gruppe `posts` heißt jetzt **„Inhalte“** (Unterpunkte *Beiträge*, *Seiten*, *Kategorien*, *Schlagwörter*, *Redaktionskalender*).
 - Profil *Klassisch*: Neue Gruppe `building-blocks` **„Bausteine“** (Symbol Puzzle) mit *EditorJS Block Vorlagen* (`content.reusable-blocks`, `/admin/reusable-blocks`), *Knowledgebase*, *Hub-Sites*, *Tabellen* und *Inhaltsverzeichnis*. Diese Punkte gelten für Seiten und Beiträge gemeinsam und standen vorher unter *Seiten* bzw. *Medien*.

@@ -1,4 +1,4 @@
-# ASSETS OwnAssets – Roadmap für Eigenersatz
+# ASSETS OwnAssets: Roadmap für Eigenersatz
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktuell
 
 ## Zielbild
@@ -26,7 +26,7 @@ Bereits entfernte oder nicht mehr führende Legacy-Assets aus früheren Laufzeit
 
 | Asset | Status in 2.9.1 | Rolle heute | Empfehlung | Priorität | Ziel für Eigenlösung |
 |---|---|---|---|---|---|
-| `gridjs` | **erledigt** – in 3.4.02 aus `CMS/assets/` entfernt | Admin-Listen werden serverseitig gerendert, ohne Grid.js | – | – | umgesetzt |
+| `gridjs` | **erledigt**: in 3.4.02 aus `CMS/assets/` entfernt | Admin-Listen werden serverseitig gerendert, ohne Grid.js | – | – | umgesetzt |
 | `photoswipe` | aktiv | Frontend-Lightbox | durch eigene Lightbox-Komponente ablösen | P2 | `cms-lightbox.js` + schlanke CSS-Komponente |
 | `melbahja-seo` | aktiv | Schema, Sitemap, SEO-Helfer | Funktionen schrittweise in Core-Services überführen | P2 | eigene `Seo*Service`-/`Sitemap*Service`-Bausteine |
 
@@ -51,7 +51,7 @@ Diese Pakete liegen bereits im Staging-Bereich, sind aber **nicht** automatisch 
 
 ## Empfohlene Reihenfolge
 
-### Phase 1 – Kleine UI-Bibliotheken herauslösen
+### Phase 1: Kleine UI-Bibliotheken herauslösen
 
 Diese Bibliotheken sind aktiv, aber funktional gut durch 365CMS-eigene UI-Bausteine ersetzbar:
 
@@ -64,7 +64,7 @@ Diese Bibliotheken sind aktiv, aber funktional gut durch 365CMS-eigene UI-Bauste
 - `CMS/assets/js/cms-lightbox.js`
 - optionale Styles unter `CMS/assets/css/cms-grid.css` und `CMS/assets/css/cms-lightbox.css`
 
-### Phase 2 – SEO-Abhängigkeit strategisch verkleinern
+### Phase 2: SEO-Abhängigkeit strategisch verkleinern
 
 `melbahja-seo` sollte nicht in einem Schritt „hart“ entfernt werden. Sinnvoll ist eine **funktionale Zerlegung**:
 
@@ -72,7 +72,7 @@ Diese Bibliotheken sind aktiv, aber funktional gut durch 365CMS-eigene UI-Bauste
 - Schema-Aufbau in eigene `Seo`-/`Schema`-Bausteine überführen
 - IndexNow sauber als isolierten Service oder Adapter pflegen
 
-### Phase 3 – Neue externe Kandidaten nur über Adapter bewerten
+### Phase 3: Neue externe Kandidaten nur über Adapter bewerten
 
 Neue Pakete aus `/ASSETS` sollten künftig zuerst in eine von drei Klassen einsortiert werden:
 
@@ -134,7 +134,7 @@ Diese Bibliotheken lieber **hinter Services kapseln**, aber **nicht selbst neu i
 
 ---
 
-## Was 365CMS eher selbst bauen sollte – und was nicht
+## Was 365CMS eher selbst bauen sollte: und was nicht
 
 ### Gute Eigenbau-Ziele
 
@@ -157,11 +157,11 @@ Diese Bibliotheken lieber **hinter Services kapseln**, aber **nicht selbst neu i
 
 Jeder künftige Ersatz sollte in derselben Reihenfolge umgesetzt werden:
 
-1. **Wrapper definieren** – bestehenden Einsatz über eine kleine interne Schnittstelle kapseln
-2. **Nativen Ersatz parallel einführen** – zunächst nur in klar abgegrenzten Pfaden
-3. **Feature-Lücken schließen** – UX, Accessibility und Edge-Cases angleichen
-4. **Altpfad entkoppeln** – alte Bibliothek nur noch fallback-artig halten
-5. **Dokumentation aktualisieren** – `DOC/assets/ASSET.md`, `DOC/assets/README.md`, `DOC/assets/ASSETS_NEW.md`, Changelog und diese Datei synchron halten
+1. **Wrapper definieren**: bestehenden Einsatz über eine kleine interne Schnittstelle kapseln
+2. **Nativen Ersatz parallel einführen**: zunächst nur in klar abgegrenzten Pfaden
+3. **Feature-Lücken schließen**: UX, Accessibility und Edge-Cases angleichen
+4. **Altpfad entkoppeln**: alte Bibliothek nur noch fallback-artig halten
+5. **Dokumentation aktualisieren**: `DOC/assets/ASSET.md`, `DOC/assets/README.md`, `DOC/assets/ASSETS_NEW.md`, Changelog und diese Datei synchron halten
 
 ---
 

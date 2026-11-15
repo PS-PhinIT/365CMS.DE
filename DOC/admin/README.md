@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Einstieg & Navigation
+# 365CMS Projektdokumentation | Admin: Einstieg & Navigation
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -76,7 +76,7 @@ Weitere Sichtbarkeitsregeln:
 - Der Plugin-Marktplatz erscheint nur bei `marketplace_enabled = 1`.
 - Plugins, die der aktuellen Site nicht zugewiesen sind, fehlen in der Sidebar. Bleibt dadurch kein Plugin-Eintrag übrig, zeigt der Abschnitt „Aktive Plugins“ einen Hinweis mit Link zur Plugin-Zuweisung.
 
-### Admin-Shell (seit 4.0.0)
+### Admin-Shell
 
 | Baustein | Verhalten |
 |---|---|

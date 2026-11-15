@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Seiten & Beiträge
+# 365CMS Projektdokumentation | Admin: Seiten & Beiträge
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -14,8 +14,8 @@ This folder documents the sidebar entry **Pages & Posts** (*Seiten & Beiträge*,
 |---|---|---|---|
 | Seiten | `/admin/pages` | `manage_pages` | [PAGES.md](PAGES.md) |
 | Beiträge | `/admin/posts` | `edit_all_posts` / `edit_own_posts` / `posts.view` | [POSTS.md](POSTS.md) |
-| EditorJS Block Vorlagen (seit 4.1.0) | `/admin/reusable-blocks` | `blocks.reusable` | [BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md) |
-| Freigabe (Vier-Augen-Prinzip, seit 4.1.0) | `/admin/posts`, `/admin/pages`, `/preview/<token>` | `posts.publish` / `pages.publish` | [REVIEW.md](REVIEW.md) |
+| EditorJS Block Vorlagen | `/admin/reusable-blocks` | `blocks.reusable` | [BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md) |
+| Freigabe (Vier-Augen-Prinzip) | `/admin/posts`, `/admin/pages`, `/preview/<token>` | `posts.publish` / `pages.publish` | [REVIEW.md](REVIEW.md) |
 | Kategorien | `/admin/post-categories` | `edit_all_posts` | [POSTS.md](POSTS.md#kategorien-adminpost-categories) |
 | Tags | `/admin/post-tags` | `edit_all_posts` | [POSTS.md](POSTS.md#tags-adminpost-tags) |
 | Kommentare | `/admin/comments` | `comments.view` / `.moderate` / `.delete` | [COMMENTS.md](COMMENTS.md) |
@@ -29,7 +29,7 @@ This folder documents the sidebar entry **Pages & Posts** (*Seiten & Beiträge*,
 - **Request-Shell:** `CMS/admin/partials/section-page-shell.php` lädt Modul und View, prüft das CSRF-Token (`csrf_action` je Seite), speichert Meldungen als Flash in der Session und leitet nach erfolgreichem POST weiter (PRG). Bei Validierungsfehlern wird der Editor inline mit den Eingaben erneut gerendert.
 - **Mehrsprachigkeit:** Seiten, Beiträge, Kategorien und Tags führen deutsche und englische Felder (`*_en`). Der Editor wechselt über `?lang=en` bzw. den DE/EN-Schalter.
 - **Editor:** Editor.js (lokal unter `CMS/assets/editorjs/`), alternativ SunEditor (siehe [SETTINGS.md](SETTINGS.md)).
-- **Beitragseditor (seit 4.0.0):** Kopfleiste mit Autosave-Status, Schreibbereich und Einstellungsspalte, Veröffentlichungs-Checkliste, Fokusmodus und Revisionen mit Vergleich/Wiederherstellen – siehe [POSTS.md](POSTS.md#editor-layout-seit-400).
+- **Beitragseditor:** Kopfleiste mit Autosave-Status, Schreibbereich und Einstellungsspalte, Veröffentlichungs-Checkliste, Fokusmodus und Revisionen mit Vergleich/Wiederherstellen, siehe [POSTS.md](POSTS.md#editor-layout).
 - **Shortcodes im Inhalt:** `[site-table id="…"]`, `[table id="…"]`, `[hub-site id="…"]`.
 - **Audit:** Speichern, Löschen und Sammelaktionen werden über `AuditLogger` bzw. den Logger-Kanal des Moduls protokolliert.
 

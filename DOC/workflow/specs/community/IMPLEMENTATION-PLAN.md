@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Umsetzungsfahrplan 4.2.0
+# 365CMS Projektdokumentation | Community: Umsetzungsfahrplan 4.2.0
 
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** Planung · noch kein Code · direkt umsetzbar | **Übersicht:** [README.md](README.md)
 > **Quellen:** [ROADMAP.md](ROADMAP.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -28,12 +28,12 @@ Single entry point for building the **Community module** (forum) in release **4.
 | `Webhooks\WebhookService` + Filter `cms_webhook_event` | Ereignisse `community.topic_created`, `community.post_reported` u. a. (P3, WP-C16); Zustellung unverändert signiert. |
 | `Backup\OffsiteBackupService` | Keine Änderung; Community-Tabellen und privater Speicher (`community/uploads/`) kommen automatisch in die Backups. |
 | `ReusableBlocks`, `<picture>`-Ausgabe | Anhänge-Bilder nutzen dieselbe AVIF/WebP-Ausgabe (`display: contents`); Beitrags-HTML selbst enthält kein Roh-`<picture>`. |
-| Hooks `user_role_changed` (seit 4.1.0 nur im SSO-Pfad gefeuert), `cms_sso_user_provisioned`, `user_registered`, `user_email_verified` | Rechte-Cache leeren, neue Konten ohne Vertrauensstufe. **Lücke:** `user_deleted` existiert noch nicht als Hook (`UserService::deleteUser()` schreibt nur den Audit-Eintrag) und `user_role_changed` fehlt in `UserService`/Rollenverwaltung – beides ist in WP-C1 als Core-Änderung einzuplanen (bis dahin: `CommunityAccess` prüft Rolle je Anfrage frisch, täglicher Cron anonymisiert Beiträge gelöschter Konten, [ARCHITECTURE.md](ARCHITECTURE.md) §6). |
+| Hooks `user_role_changed` (seit 4.1.0 nur im SSO-Pfad gefeuert), `cms_sso_user_provisioned`, `user_registered`, `user_email_verified` | Rechte-Cache leeren, neue Konten ohne Vertrauensstufe. **Lücke:** `user_deleted` existiert noch nicht als Hook (`UserService::deleteUser()` schreibt nur den Audit-Eintrag) und `user_role_changed` fehlt in `UserService`/Rollenverwaltung: beides ist in WP-C1 als Core-Änderung einzuplanen (bis dahin: `CommunityAccess` prüft Rolle je Anfrage frisch, täglicher Cron anonymisiert Beiträge gelöschter Konten, [ARCHITECTURE.md](ARCHITECTURE.md) §6). |
 | `FeatureHooks\Registry`, `CoreModuleService`, `BatchJobService`, `DataRetentionService`, `PrivateStorageService`, Trash-/Search-Provider | Wie bei Formularen/Downloads/Knowledgebase aus 4.0.0 (siehe [ARCHITECTURE.md](ARCHITECTURE.md) §5). |
 
 ### 3. Entscheidungen (verbindlich, [README.md](README.md) §4)
 
-Core-Modul `community`, abschaltbar (E1) · Basis `/forum` (E2) · Adressen `/forum/thema/{id}-{slug}` bzw. `/en/forum/topic/{id}-{slug}` (E3) · Markdown (CommonMark + GFM) ohne Roh-HTML (E4) · `league/commonmark` und `highlight.js` lokal (E5) · keine Datenübernahme (E6) · Captcha nur lokal: `gregwar/captcha`, eingebaute Rechenaufgabe, Proof-of-Work – **keine** Drittanbieter (E7) · private Nachrichten über den Core-`MessageService` (E8) · keine `site_id` (E10) · Schema v27 (E11) · Tests unter `TESTS/<suite>/run.php` (E12).
+Core-Modul `community`, abschaltbar (E1) · Basis `/forum` (E2) · Adressen `/forum/thema/{id}-{slug}` bzw. `/en/forum/topic/{id}-{slug}` (E3) · Markdown (CommonMark + GFM) ohne Roh-HTML (E4) · `league/commonmark` und `highlight.js` lokal (E5) · keine Datenübernahme (E6) · Captcha nur lokal: `gregwar/captcha`, eingebaute Rechenaufgabe, Proof-of-Work, **keine** Drittanbieter (E7) · private Nachrichten über den Core-`MessageService` (E8) · keine `site_id` (E10) · Schema v27 (E11) · Tests unter `TESTS/<suite>/run.php` (E12).
 
 ### 4. Arbeitspakete Phase P1 (Release 4.2.0)
 
@@ -90,7 +90,7 @@ Neue Standardrolle **`moderator`** (Anzeigename „Moderator“). Die Entscheidu
 
 ### 6a. Hooks (Auswahl, Namensschema `cms_community_*`)
 
-`cms_community_topic_created|updated|deleted|moved|merged`, `cms_community_post_created|updated|deleted|approved|rejected`, `cms_community_report_created|resolved`, `cms_community_user_warned|banned|unbanned`, `cms_community_solution_marked`; Filter `cms_community_render_post`, `cms_community_can`, `cms_community_spam_check`, `cms_community_notification_types` – vollständig in [ARCHITECTURE.md](ARCHITECTURE.md) §6; bei Umsetzung in [../../core/HOOKS-REFERENCE.md](../../../core/HOOKS-REFERENCE.md) aufnehmen.
+`cms_community_topic_created|updated|deleted|moved|merged`, `cms_community_post_created|updated|deleted|approved|rejected`, `cms_community_report_created|resolved`, `cms_community_user_warned|banned|unbanned`, `cms_community_solution_marked`; Filter `cms_community_render_post`, `cms_community_can`, `cms_community_spam_check`, `cms_community_notification_types`, vollständig in [ARCHITECTURE.md](ARCHITECTURE.md) §6; bei Umsetzung in [../../core/HOOKS-REFERENCE.md](../../../core/HOOKS-REFERENCE.md) aufnehmen.
 
 ### 7. Datenschutz- und Moderationsregeln
 
@@ -110,7 +110,7 @@ Neue Standardrolle **`moderator`** (Anzeigename „Moderator“). Die Entscheidu
 
 ### 8. CSP- und Sicherheitsvorgaben (Pflicht je Arbeitspaket)
 
-- **CSP:** kein Inline-Skript und -Style, keine Inline-Handler; alle Skripte als ES-Module unter `CMS/assets/js/community/`, Styles unter `CMS/assets/css/`; Trusted-Types-konform (nur DOMPurify-Policy, kein `innerHTML` mit Nutzerdaten); keine externen Ressourcen und keine CDNs – Highlighting, Markdown und Captcha lokal (E5, E7). Neue Hosts nur über `Security::allowCspSources()` **und** Einwilligungsprüfung.
+- **CSP:** kein Inline-Skript und -Style, keine Inline-Handler; alle Skripte als ES-Module unter `CMS/assets/js/community/`, Styles unter `CMS/assets/css/`; Trusted-Types-konform (nur DOMPurify-Policy, kein `innerHTML` mit Nutzerdaten); keine externen Ressourcen und keine CDNs. Highlighting, Markdown und Captcha lokal (E5, E7). Neue Hosts nur über `Security::allowCspSources()` **und** Einwilligungsprüfung.
 - **Rechte:** jede Route über `CommunityAccess`; 404 statt 403 bei fehlendem Leserecht; interne Foren nie in Suche, Feed, Sitemap, Zitaten, Benachrichtigungen, Anhängen oder öffentlichem Cache (Seiten mit Token/Personalisierung `private, no-store`).
 - **Schreibzugriffe:** nur POST mit CSRF-Token je Aktion (`Security::generateToken`/`verifyToken`), JSON-API mit Token im Header, Rate-Limit (`Security::checkDbRateLimit`), Idempotenz; Weiterleitungsziele nur lokale Pfade.
 - **SQL:** nur gebundene Parameter, Sortier-/Filterspalten aus Allowlists, Index je Abfrage, Keyset-Paginierung.
