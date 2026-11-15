@@ -50,6 +50,13 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | [`ai/`](ai/) | AI Services, Provider, Assets |
 | [`assets/`](assets/) | Gebündelte Bibliotheken unter `CMS/assets/` und `CMS/vendor/dompdf/` |
 
+### Roadmap 4.2.0 / 4.3.0
+
+- **4.1.0** (Schema `v26`): Bereiche 1–5 umgesetzt ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); Rechnungen (5b) offen.
+- **4.2.0** (Schema `v27`): Community-Modul (Forum). Umsetzungsfahrplan: [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Planungsset: [workflow/specs/community/README.md](workflow/specs/community/README.md); Fortschritt: [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md).
+- **4.3.0**: zentrale CLI `CMS/cli.php`, Echtzeit-Alerting und Webhook-Ereignis `alert.raised` (verschoben aus 4.1.0, Spezifikation [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Entwicklerübersicht und Planungsabschnitt: [DEVLIST.md](DEVLIST.md) (Abschnitt 31).
+
 ### Wichtige Hinweise
 
 - **Konfiguration:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Eigene Konstanten deshalb in `config/app.php` pflegen und nach jedem Installer-Lauf prüfen.

@@ -227,11 +227,11 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 
 **English**
 
-4.1.0 is feature-complete for areas 1–5 ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)). Area 6 (central CLI `CMS/cli.php`, real-time alerting, webhook event `alert.raised`) moved to **4.3.0**. **4.2.0** (schema `v27`) is the Community module; its implementation plan is in [workflow/specs/community/](workflow/specs/community/README.md).
+4.1.0 is implemented for areas 1–5 ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md); invoices 5b are not implemented and stay open). Area 6 (central CLI `CMS/cli.php`, real-time alerting, webhook event `alert.raised`) moved to **4.3.0**. **4.2.0** (schema `v27`) is the Community module; its implementation plan is in [workflow/specs/community/](workflow/specs/community/README.md).
 
 **Deutsch**
 
-4.1.0 ist für die Bereiche 1–5 funktionsvollständig ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)). Bereich 6 (zentrale CLI `CMS/cli.php`, Echtzeit-Alerting, Webhook-Ereignis `alert.raised`) ist auf **4.3.0** verschoben. **4.2.0** (Schema `v27`) ist das Community-Modul; der Umsetzungsfahrplan steht in [workflow/specs/community/](workflow/specs/community/README.md).
+4.1.0 ist für die Bereiche 1–5 umgesetzt ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md); die Rechnungen 5b sind nicht umgesetzt und bleiben offen). Bereich 6 (zentrale CLI `CMS/cli.php`, Echtzeit-Alerting, Webhook-Ereignis `alert.raised`) ist auf **4.3.0** verschoben. **4.2.0** (Schema `v27`) ist das Community-Modul; der Umsetzungsfahrplan steht in [workflow/specs/community/](workflow/specs/community/README.md).
 
 | Document / Dokument | Purpose / Zweck |
 |---|---|
@@ -239,7 +239,8 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | [workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md) | 4.1.0 progress (areas 1–5 done, area 6 → 4.3.0) |
 | [workflow/specs/v4.1/SCHEMA-v26.md](workflow/specs/v4.1/SCHEMA-v26.md) | Schema `v26` specification |
 | [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md) | CLI and real-time alerting (planned for 4.3.0) |
-| [workflow/specs/community/README.md](workflow/specs/community/README.md) | Community module 4.2.0 (schema `v27`): entry point and work packages |
+| [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) | **Community module 4.2.0 (schema `v27`): executable implementation plan** – work packages, tables, capabilities, privacy/moderation rules, CSP/security, tests |
+| [workflow/specs/community/README.md](workflow/specs/community/README.md) | Community module 4.2.0 (schema `v27`): planning set entry point, decisions E1–E12 |
 | [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md) | 4.2.0 implementation roadmap |
 | [DEVLIST.md](DEVLIST.md) | Architecture contracts and development list (incl. 4.2.0 plan) |
 
@@ -375,6 +376,31 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 **`checks/`**
 
 - [checks/FOLGEAUDIT-2026-10-07.md](checks/FOLGEAUDIT-2026-10-07.md) – Audit 2026-10-07
+
+**`workflow/specs/`**
+
+- [workflow/specs/ADMIN-MENU-PROFILE.md](workflow/specs/ADMIN-MENU-PROFILE.md) – Workflow – Spec: Admin-Sidebar-Menü mit Profilen
+- [workflow/specs/KLARSTELLUNGEN.md](workflow/specs/KLARSTELLUNGEN.md) – Workflow – Klarstellungen zu den Specs
+- [workflow/specs/PLUGIN-INTEGRATION.md](workflow/specs/PLUGIN-INTEGRATION.md) – Workflow – Spec: Plugin-Integration (cms-feed, cms-downloads, cms-contact)
+- [workflow/specs/PLUGIN-PARITY.md](workflow/specs/PLUGIN-PARITY.md) – 365CMS – Paritäts-Checkliste der in den Core integrierten Plugins
+- [workflow/specs/PROGRESS.md](workflow/specs/PROGRESS.md) – Workflow – Umsetzungsfortschritt Release 4.0.0
+- [workflow/specs/ROADMAP-15-FEATURES.md](workflow/specs/ROADMAP-15-FEATURES.md) – Workflow – Spec: Roadmap – 15 Funktionen in 4 Arbeitspaketen
+- [workflow/specs/ROADMAP-CONTENT-PLATFORM.md](workflow/specs/ROADMAP-CONTENT-PLATFORM.md) – 365CMS – Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
+- [workflow/specs/community/ARCHITECTURE.md](workflow/specs/community/ARCHITECTURE.md) – Community – Architektur
+- [workflow/specs/community/DATA-MODEL.md](workflow/specs/community/DATA-MODEL.md) – Community – Datenmodell
+- [workflow/specs/community/FEATURES.md](workflow/specs/community/FEATURES.md) – Community – Funktionskatalog
+- [workflow/specs/community/MIGRATION-CMS-FORUM.md](workflow/specs/community/MIGRATION-CMS-FORUM.md) – Community – Übernahme aus cms-forum
+- [workflow/specs/community/PERMISSIONS-MODERATION.md](workflow/specs/community/PERMISSIONS-MODERATION.md) – Community – Rechte & Moderation
+- [workflow/specs/community/SECURITY-PRIVACY.md](workflow/specs/community/SECURITY-PRIVACY.md) – Community – Sicherheit & Datenschutz
+- [workflow/specs/community/TEST-PLAN.md](workflow/specs/community/TEST-PLAN.md) – Community – Testplan
+- [workflow/specs/community/THEME-UI.md](workflow/specs/community/THEME-UI.md) – Community – Theme, Oberfläche & SEO
+- [workflow/specs/community/WORKFLOWS.md](workflow/specs/community/WORKFLOWS.md) – Community – Abläufe
+- [workflow/specs/v4.1/01-IDENTITY.md](workflow/specs/v4.1/01-IDENTITY.md) – Spec 4.1.0 – Bereich 1: Identität, Anmeldung & Konto-Sicherheit
+- [workflow/specs/v4.1/02-MEDIA.md](workflow/specs/v4.1/02-MEDIA.md) – Spec 4.1.0 – Bereich 2: Medien & Performance
+- [workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md](workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md) – Spec 4.1.0 – Bereich 3: Redaktions- & Content-Workflows
+- [workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md](workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md) – Spec 4.1.0 – Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
+- [workflow/specs/v4.1/05-PAYMENTS.md](workflow/specs/v4.1/05-PAYMENTS.md) – Spec 4.1.0 – Bereich 5: Zahlungen, Abos & Rechnungen
+- [workflow/specs/v4.1/REFERENCES.md](workflow/specs/v4.1/REFERENCES.md) – Spec 4.1.0 – Bewertung der Referenzen
 
 ---
 

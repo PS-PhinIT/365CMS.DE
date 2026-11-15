@@ -30,6 +30,7 @@
 - [28. Pitfalls](#28-pitfalls--stolperfallen)
 - [29. Checklist](#29-checklist--checkliste-vor-änderungen)
 - [30. Closing](#30-closing--abschlussbild)
+- [31. Roadmap 4.2.0 / 4.3.0](#31-roadmap-420--430--planung)
 
 Audience: developers, integrators, auditors, operators. Companion docs: [INDEX.md](INDEX.md), [FILELIST.md](FILELIST.md), [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md).
 
@@ -708,3 +709,21 @@ Arbeitsmodell dieses Projekts:
 **Repo ↔ Runtime-Datei unter `CMS/` ↔ Deploy ↔ Live-Prüfung**
 
 Versionsquelle: `CMS/core/Version.php` (`4.0.0`, bis die Release-Vorbereitung 4.1.0 sie hebt). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.
+
+---
+
+## 31. Roadmap 4.2.0 / 4.3.0 | Planung
+
+**English**
+
+- **4.1.0** (schema `v26`, 88 tables) is implemented for areas 1–5 ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); invoices (5b) are open. Version and schema constants in code are raised in the release preparation.
+- **4.2.0 – Community module** (schema `v27`, +27 `community_*` tables → 115): core module `community` under `core/Services/Community/`, routes under `/forum`, capabilities `community.*`, role `moderator`, Markdown renderer with Purifier profile, local captcha, privacy rules and 14 test suites. Executable plan with work packages WP-C0 … WP-C13 (≈ 89 person-days): [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); details in the other files of [workflow/specs/community/](workflow/specs/community/README.md).
+- **4.3.0 – CLI and alerting:** central CLI `CMS/cli.php`, real-time alerting with cooldown, webhook event `alert.raised`, hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Contracts for new modules stay as in sections 17 (hooks), 11 (services) and 8 (database): one table definition in `SchemaManager::getSchemaQueries()` used by install, update and runtime check; hooks via `FeatureHooks\Registry`; tests under `TESTS/<suite>/run.php`.
+
+**Deutsch**
+
+- **4.1.0** (Schema `v26`, 88 Tabellen) ist für die Bereiche 1–5 umgesetzt ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); Rechnungen (5b) sind offen. Versions- und Schemakonstanten im Code hebt die Release-Vorbereitung.
+- **4.2.0 – Community-Modul** (Schema `v27`, +27 `community_*`-Tabellen → 115): Core-Modul `community` unter `core/Services/Community/`, Routen unter `/forum`, Capabilities `community.*`, Rolle `moderator`, Markdown-Renderer mit Purifier-Profil, lokales Captcha, Datenschutzregeln und 14 Test-Suiten. Umsetzungsfahrplan mit Arbeitspaketen WP-C0 … WP-C13 (≈ 89 Personentage): [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Details in den übrigen Dateien unter [workflow/specs/community/](workflow/specs/community/README.md).
+- **4.3.0 – CLI und Alerting:** zentrale CLI `CMS/cli.php`, Echtzeit-Alerting mit Cooldown, Webhook-Ereignis `alert.raised`, Hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Verträge für neue Module bleiben wie in den Abschnitten 17 (Hooks), 11 (Services) und 8 (Datenbank): eine Tabellendefinition in `SchemaManager::getSchemaQueries()` für Installation, Update und Laufzeitprüfung; Hooks über `FeatureHooks\Registry`; Tests unter `TESTS/<suite>/run.php`.

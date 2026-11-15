@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Community – Datenmodell
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 · Schema **v27** | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

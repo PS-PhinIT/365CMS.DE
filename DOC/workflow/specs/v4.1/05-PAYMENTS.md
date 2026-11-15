@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 5: Zahlungen, Abos & Rechnungen
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** Spezifikation | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 5a (Zahlungen) ✅ umgesetzt in 4.1.0; 5b (Rechnungen) nicht umgesetzt, offen für ein Folgerelease ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
