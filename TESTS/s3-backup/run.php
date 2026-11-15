@@ -361,8 +361,12 @@ T::run('Aufbewahrung', static function (): void {
     foreach ([1, 2, 3] as $index) {
         $f['db']->execute('UPDATE cms_backup_offsite_uploads SET uploaded_at = ? WHERE backup_name = ?', ['2026-11-1' . $index . ' 10:00:00', 'full_backup_' . $index]);
     }
+    // SEC-410-07: fremde Objekte unter demselben Präfix (sehen aus wie ein Backup-Name) bleiben unangetastet.
+    $f['fake']->objects['/backups/site-a/fremde-daten/report.pdf'] = 'x';
+    $f['fake']->modified['site-a/fremde-daten/report.pdf'] = '2020-01-01T00:00:00.000Z';
     $retention = $f['service']->applyRetention();
     T::same(['full_backup_1'], $retention['deleted'], 'letzte 2 Backups bleiben offsite');
+    T::check(isset($f['fake']->objects['/backups/site-a/fremde-daten/report.pdf']), 'SEC-410-07: nur selbst hochgeladene Backups werden gelöscht, fremde Objekte bleiben');
     T::check(!isset($f['fake']->objects['/backups/site-a/full_backup_1/manifest.json']) && isset($f['fake']->objects['/backups/site-a/full_backup_3/manifest.json']), 'alle Objekte des ältesten Backups gelöscht');
     T::same('deleted', (string) $f['db']->get_var("SELECT status FROM cms_backup_offsite_uploads WHERE backup_name = 'full_backup_1'"), 'Status deleted');
     // Backup 2 ist das zuletzt erfolgreich hochgeladene; beide verbliebenen sind älter als 1 Tag.

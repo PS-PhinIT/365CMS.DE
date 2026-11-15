@@ -638,7 +638,12 @@ class WebAuthn {
 
         // The RP ID must be equal to the origin's effective domain, or a registrable
         // domain suffix of the origin's effective domain.
-        return \preg_match('/' . \preg_quote($this->_rpId) . '$/i', $host) === 1;
+        // 365CMS (SEC-410-17): nur exakt die RP-ID oder eine Subdomain davon (mit Punktgrenze) –
+        // der Original-Suffixvergleich ließe „evilexample.com“ für „example.com“ zu.
+        $host = \strtolower((string) $host);
+        $rpId = \strtolower((string) $this->_rpId);
+
+        return $host === $rpId || \str_ends_with($host, '.' . $rpId);
     }
 
     /**

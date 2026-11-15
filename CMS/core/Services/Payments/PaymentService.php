@@ -244,18 +244,20 @@ final class PaymentService
 
             return ['status' => 400, 'message' => 'Ungültig.'];
         }
+        $retry = false;
         foreach ($parsed['events'] ?? [] as $event) {
-            $this->receive($provider, $event, hash('sha256', $rawBody));
+            $retry = $this->receive($provider, $event, hash('sha256', $rawBody)) === 'error' || $retry;
         }
 
-        return ['status' => 200, 'message' => 'OK'];
+        // 500 = Anbieter wiederholt die Zustellung (Stripe/Mollie mit Backoff).
+        return $retry ? ['status' => 500, 'message' => 'Später erneut.'] : ['status' => 200, 'message' => 'OK'];
     }
 
     /**
      * Ein Ereignis einmalig aufnehmen und verarbeiten.
      *
      * @param array<string, mixed> $event
-     * @return string received-Status: duplicate | processed | ignored | failed
+     * @return string received-Status: duplicate | processed | ignored | failed | error (interner Fehler, nicht gespeichert)
      */
     public function receive(string $provider, array $event, string $payloadHash = ''): string
     {
@@ -283,11 +285,29 @@ final class PaymentService
             // Eindeutiger Schlüssel griff (parallele Zustellung) – schon in Arbeit.
             return 'duplicate';
         }
+        // SEC-410-04: Bestellstatus, Abo-Zuweisung und Folgeschritte (Rechnung, Webhooks) in einer Transaktion – bei einem
+        // internen Fehler bleibt nichts halb verbucht, und die Wiederholung des Anbieters verarbeitet das Ereignis neu.
+        $pdo = $this->transactionPdo();
+        $ownTransaction = $pdo !== null && !$pdo->inTransaction() && $pdo->beginTransaction();
         try {
             $outcome = $this->process($provider, $event);
+            if ($ownTransaction) {
+                $pdo->commit();
+            }
         } catch (\Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             Logger::instance()->withChannel('payments')->error('Zahlungsereignis fehlgeschlagen.', ['provider' => $provider, 'event' => $eventId, 'exception' => $e::class]);
-            $outcome = ['status' => 'failed', 'error' => 'Interner Fehler bei der Verarbeitung.'];
+            // SEC-410-04: Interner Fehler (z. B. Datenbank kurz weg) ist kein endgültiges Ergebnis. Den Eintrag wieder
+            // entfernen, damit die Wiederholung des Anbieters (Antwort 500) erneut verarbeitet statt als Duplikat
+            // verworfen wird – sonst bliebe eine bezahlte Bestellung dauerhaft offen.
+            try {
+                $this->db->execute("DELETE FROM {$this->prefix}payment_events WHERE id = ?", [(int) $rowId]);
+            } catch (\Throwable) {
+            }
+
+            return 'error';
         }
         $this->db->update('payment_events', [
             'status' => $outcome['status'],
@@ -368,11 +388,15 @@ final class PaymentService
             return ['status' => 'ignored', 'order_id' => $orderId];
         }
         $now = ($this->clock)();
-        $this->db->update('orders', [
-            'status' => 'paid',
-            'paid_at' => gmdate('Y-m-d H:i:s', $now),
-            'payment_ref' => mb_substr((string) $event['payment_ref'], 0, 200) ?: null,
-        ], ['id' => $orderId]);
+        // SEC-410-03: Zustandswechsel atomar – zwei gleichzeitige „bezahlt“-Ereignisse (z. B. `completed` und
+        // `async_payment_succeeded`) aktivieren das Abo sonst doppelt. Nur die Anfrage, die die Zeile umstellt, fährt fort.
+        $changed = $this->db->execute(
+            "UPDATE {$this->prefix}orders SET status = 'paid', paid_at = ?, payment_ref = ? WHERE id = ? AND status IN ('pending', 'failed')",
+            [gmdate('Y-m-d H:i:s', $now), mb_substr((string) $event['payment_ref'], 0, 200) ?: null, $orderId]
+        )->rowCount();
+        if ($changed !== 1) {
+            return ['status' => 'ignored', 'order_id' => $orderId];
+        }
 
         $error = $this->activateSubscription($provider, $event, $order, $now);
         Hooks::doAction('cms_payment_succeeded', $orderId, $provider, $event);
@@ -499,10 +523,13 @@ final class PaymentService
             'next_billing_date' => $end,
         ], ['id' => (int) $subscription['id']]);
 
-        $renewalOrderId = $this->createRenewalOrder($provider, $event, $subscription, $now);
+        $mismatch = '';
+        $renewalOrderId = $this->createRenewalOrder($provider, $event, $subscription, $now, $mismatch);
         Hooks::doAction('cms_subscription_renewed', (int) $subscription['id'], (int) $subscription['user_id'], $renewalOrderId, $periodEnd);
 
-        return ['status' => 'processed', 'order_id' => $renewalOrderId];
+        // SEC-410-05: Der Anbieter hat abgebucht, die Laufzeit gilt. Weicht Betrag oder Währung von der Vorlage ab,
+        // steht das sichtbar am Ereignis (Zahlungen → Ereignisse), damit die Rechnung geprüft wird.
+        return ['status' => 'processed', 'order_id' => $renewalOrderId] + ($mismatch !== '' ? ['error' => $mismatch] : []);
     }
 
     /**
@@ -511,7 +538,7 @@ final class PaymentService
      * @param array<string, mixed> $event
      * @param array<string, mixed> $subscription
      */
-    private function createRenewalOrder(string $provider, array $event, array $subscription, int $now): int
+    private function createRenewalOrder(string $provider, array $event, array $subscription, int $now, string &$mismatch = ''): int
     {
         $template = $this->findOrder(
             "user_id = ? AND plan_id = ? AND provider = ? AND status = 'paid' ORDER BY id DESC",
@@ -525,7 +552,17 @@ final class PaymentService
             'payment_method', 'billing_cycle', 'contact_data', 'forename', 'lastname', 'company', 'email', 'phone',
             'street', 'zip', 'city', 'country',
         ]));
-        if ($event['amount_cents'] !== null && (int) $event['amount_cents'] !== AbstractGateway::amountCents($template)) {
+        $expected = AbstractGateway::amountCents($template);
+        $currency = strtoupper((string) ($event['currency'] ?? ''));
+        if (($event['amount_cents'] !== null && (int) $event['amount_cents'] !== $expected)
+            || ($currency !== '' && $currency !== AbstractGateway::currency($template))) {
+            $mismatch = sprintf(
+                'Verlängerung mit abweichendem Betrag: erwartet %d %s, gemeldet %s %s – Rechnung prüfen.',
+                $expected,
+                AbstractGateway::currency($template),
+                $event['amount_cents'] === null ? '–' : (string) (int) $event['amount_cents'],
+                $currency !== '' ? $currency : '–'
+            );
             Logger::instance()->withChannel('payments')->warning('Verlängerung mit abweichendem Betrag.', ['subscription' => (int) $subscription['id']]);
         }
         $baseNumber = preg_replace('/-V[0-9a-f]{6}$/', '', (string) $template['order_number']);
@@ -607,5 +644,19 @@ final class PaymentService
     private function now(): string
     {
         return gmdate('Y-m-d H:i:s', ($this->clock)());
+    }
+
+    /**
+     * PDO der Datenbank für die Transaktion; null, wenn keine verfügbar ist (Test-Doubles).
+     */
+    private function transactionPdo(): ?\PDO
+    {
+        try {
+            $pdo = $this->db->getPdo();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $pdo instanceof \PDO ? $pdo : null;
     }
 }

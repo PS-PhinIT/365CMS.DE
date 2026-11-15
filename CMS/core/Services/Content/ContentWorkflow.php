@@ -134,7 +134,9 @@ final class ContentWorkflow
      */
     public static function resolveSaveStatus(string $requested, string $current, bool $canPublish): array
     {
-        if (!ContentStatus::isPublishing($requested) || ContentStatus::isPublishing($current) || $canPublish) {
+        // SEC-410-13: Nur ein bereits öffentlicher Inhalt (bzw. unveränderter Status) braucht keine neue Freigabe.
+        // privat → veröffentlicht macht den Inhalt erstmals öffentlich und verlangt das Freigaberecht.
+        if (!ContentStatus::isPublishing($requested) || $current === ContentStatus::PUBLISHED || $requested === $current || $canPublish) {
             return ['status' => $requested, 'downgraded' => false];
         }
 
@@ -262,7 +264,8 @@ final class ContentWorkflow
             $id = (int) $row->id;
             $status = (string) ($row->status ?? '');
             $submitter = $status === ContentStatus::PENDING ? $this->lastSubmitterId($type, $id) : 0;
-            if (ContentStatus::isPublishing($status) || $this->canPublish($type, $userId, (int) ($row->author_id ?? 0), $can, $submitter)) {
+            // SEC-410-13: „Veröffentlichen“ eines privaten Inhalts ist eine neue Freigabe.
+            if ($status === ContentStatus::PUBLISHED || $this->canPublish($type, $userId, (int) ($row->author_id ?? 0), $can, $submitter)) {
                 $allowed[] = $id;
             } elseif ($status === ContentStatus::DRAFT) {
                 $submit[] = $id;

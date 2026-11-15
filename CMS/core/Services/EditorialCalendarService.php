@@ -622,6 +622,11 @@ final class EditorialCalendarService
         $newValue = $decision === self::MOVE_PUBLISH_NOW ? $now : $target;
 
         if ($decision === self::MOVE_RESCHEDULE || $decision === self::MOVE_PUBLISH_NOW) {
+            // SEC-410-14: Termin einer geplanten Veröffentlichung ändern bzw. sofort veröffentlichen verlangt das
+            // Freigaberecht (posts.publish) – Bearbeitungsrecht allein reicht nicht (Sperrfrist).
+            if (!\CMS\Services\Content\ContentWorkflow::canPublishWith($type, $userId, (int) ($row->author_id ?? 0), $can, false)) {
+                return $this->moveResult(403, false, 'forbidden', self::t('calendar.move.error_forbidden'));
+            }
             $checklistError = $this->checkPublishChecklist($row, $newValue);
             if ($checklistError !== null) {
                 return $checklistError;

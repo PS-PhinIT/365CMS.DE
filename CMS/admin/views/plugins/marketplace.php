@@ -345,4 +345,4 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
     </div>
 </div>
 
-<script type="application/json" id="plugin-marketplace-config"><?php echo json_encode($pluginMarketplaceConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+<script type="application/json" id="plugin-marketplace-config"><?php echo json_encode($pluginMarketplaceConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
