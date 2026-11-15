@@ -1,15 +1,15 @@
-# 365CMS – Admin: Medien-Werkzeuge und Urheberangaben
+# 365CMS: Admin: Medien-Werkzeuge und Urheberangaben
 
-> **Stand:** 2026-11-14 | **Version:** 4.0.0 (Abschnitt „AVIF“: seit 4.1.0, in Entwicklung) | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/media-tools` | **Capability:** `manage_media`
 
 ## English (summary)
 
 *Media → Media tools* regenerates the thumbnails (and optionally WebP versions) of all images in the media library
-in the current sizes – as a background job with progress, cancel and continuation by the hourly cron when the page is
+in the current sizes, as a background job with progress, cancel and continuation by the hourly cron when the page is
 closed. The page also holds the output switches for image credits (credit line in captions, Schema.org
 `ImageObject`, prefill from EXIF/IPTC on upload). Author, license, source and “AI-generated” are maintained per image in
-the media library. Since 4.1.0 a second job regenerates AVIF versions (steps of 20 images, kept only if smaller than
+the media library. A second job regenerates AVIF versions (steps of 20 images, kept only if smaller than
 the WebP version of the same size); uploads create them when *Also create AVIF* is on under *Media → Settings*.
 
 ## Deutsch
@@ -34,14 +34,14 @@ die Funktion gesperrt (siehe *Systeminfo → PHP-Erweiterungen*). Die ältere St
 JSON-Endpunkt: `/admin/media-tools-api` (POST, Token `admin_media_tools_api`): `start` (`webp=0|1`; `job=avif` für AVIF),
 `step`, `cancel`, `status` (`job=avif`). Schritte und Abbruch ordnet der Server über den Typ des gespeicherten Auftrags zu.
 
-### Verwendungsindex neu aufbauen (seit 4.1.0)
+### Verwendungsindex neu aufbauen
 
-Karte „Verwendungsindex“: baut den dauerhaften Index (`media_usage`) über alle Inhaltsarten neu auf – Auftrag
+Karte „Verwendungsindex“: baut den dauerhaften Index (`media_usage`) über alle Inhaltsarten neu auf. Auftrag
 `media_usage`, je Schritt 50 Inhalte, Abbruch, Fortsetzung im stündlichen Cron. Am Ende entfernt der Lauf Einträge von
 Inhalten, die es nicht mehr gibt, und setzt den Merker `media_usage_index_built_at`. Erst danach nutzen Mediathek und
 Papierkorb den Index (siehe [MEDIA.md](MEDIA.md)). API: `start`/`status` mit `job=usage`.
 
-### AVIF-Fassungen (seit 4.1.0)
+### AVIF-Fassungen
 
 **Einstellungen** (*Medien → Einstellungen → Bild-Verarbeitung*): „AVIF zusätzlich erzeugen“ (Standard aus), Qualität
 1–100 (Standard 50), Geschwindigkeit 0–10 (Standard 6). Beim Speichern prüft eine Probe-Kodierung eines 8×8-Bildes, ob die
@@ -58,11 +58,11 @@ und Abbruch, Fortsetzung im stündlichen Cron. Idempotent: aktuelle AVIF-Dateien
 ein wiederholter Lauf erzeugt nichts doppelt.
 
 **Auslieferung:** Editor.js-Bild, Galerie und Medien-Text sowie die `<picture>`-Vorlagen von `cms-default` geben
-`<source type="image/avif">` vor `<source type="image/webp">` aus – nur wenn die Datei existiert und nur für Dateien unter
+`<source type="image/avif">` vor `<source type="image/webp">` aus, nur wenn die Datei existiert und nur für Dateien unter
 `UPLOAD_URL` (`AvifDerivativeService::pictureSources()`/`pictureHtml()`). Die Lightbox umschließt das ganze `<picture>`,
 damit die Quellen wirksam bleiben.
 
-**Löschen:** Wird ein Bild in der Mediathek gelöscht, entfernt der Core seine erzeugten Fassungen mit – Größen, WebP und
+**Löschen:** Wird ein Bild in der Mediathek gelöscht, entfernt der Core seine erzeugten Fassungen mit. Größen, WebP und
 AVIF (auch der Größen). Dateien gleichen Namens, die selbst hochgeladen wurden (eigene Metadaten), oder die älter sind als
 das Original, bleiben stehen. Umbenennen und Verschieben nehmen die Fassungen weiterhin nicht mit.
 
@@ -81,14 +81,11 @@ Größen und WebP-Fassungen.
 | Schema.org-Angaben | ein JSON-LD-Block je Seite mit `ImageObject` (creator, license, copyrightNotice, creditText), nur im öffentlichen Frontend |
 | Vorbelegung beim Hochladen | übernimmt Urheber und Copyright aus IPTC/XMP/EXIF |
 
-Geprüft (4.0.0, Laufzeit): Angaben an einem Bild gesetzt → Beitrag zeigt Credit-Zeile mit Links (Quelle, Lizenz) und
-JSON-LD; beide Schalter aus → keine Ausgabe, wieder an → Ausgabe. Vorschaubilder: Lauf im Browser (16 Bilder) und
-Fortsetzung eines offenen Laufs im Cron.
 
 ### Dateien
 
 `CMS/admin/media-tools.php`, `CMS/admin/media-tools-api.php`, `CMS/admin/views/media/tools.php`,
 `CMS/assets/js/admin-media-tools.js`, `CMS/core/Services/Media/ThumbnailRegenerationService.php`,
 `CMS/core/Services/Media/AvifDerivativeService.php`, `CMS/core/Services/Media/AvifRegenerationService.php`,
-`CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php` (4.1.0),
+`CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php`,
 `CMS/core/Services/Media/MediaLicenseService.php`, `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php`

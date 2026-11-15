@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Folgeaudit 2026-10-14
+# 365CMS Projektdokumentation | Folgeaudit 2026-10-14
 
 > **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne gebündelte Drittbibliotheken, Theme `cms-default`, Plugin `cms-importer`, `README.md`, `DOC/`, `RELEASE/` | Übersicht: [README.md](README.md)
 
@@ -45,69 +45,69 @@ Schwere: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 
 | ID | Befund | Schwere | Status |
 |---|---|---|---|
-| SEC-28 | SSRF-Filter (`Http\Client`, `FeedService`, `UpdateService`) ließ IPv4-mapped/-compatible IPv6 (`::ffff:127.0.0.1`, Hex-Form), NAT64 `64:ff9b::/96` und CGNAT durch | 🟠 | ✅ 3.5.0 – gemeinsame Prüfung `Http\Client::isNonPublicIp()` mit `FILTER_FLAG_GLOBAL_RANGE` |
-| SEC-29 | `/media-file` lieferte `uploads/import/` an angemeldete Nicht-Admins | 🟡 | ✅ 3.5.0 – nur Admins |
-| SEC-30 | API-JWTs blieben nach Passwortänderung bis zum Ablauf (Refresh: 30 Tage) gültig | 🟠 | ✅ 3.5.0 – Claim `pwf` (Passwort-Fingerabdruck), Prüfung bei Bearer-Anmeldung und Refresh |
+| SEC-28 | SSRF-Filter (`Http\Client`, `FeedService`, `UpdateService`) ließ IPv4-mapped/-compatible IPv6 (`::ffff:127.0.0.1`, Hex-Form), NAT64 `64:ff9b::/96` und CGNAT durch | 🟠 | ✅ 3.5.0: gemeinsame Prüfung `Http\Client::isNonPublicIp()` mit `FILTER_FLAG_GLOBAL_RANGE` |
+| SEC-29 | `/media-file` lieferte `uploads/import/` an angemeldete Nicht-Admins | 🟡 | ✅ 3.5.0: nur Admins |
+| SEC-30 | API-JWTs blieben nach Passwortänderung bis zum Ablauf (Refresh: 30 Tage) gültig | 🟠 | ✅ 3.5.0: Claim `pwf` (Passwort-Fingerabdruck), Prüfung bei Bearer-Anmeldung und Refresh |
 | SEC-31 | Prüfung privater Mitgliederpfade abhängig von Groß-/Kleinschreibung | 🟡 | ✅ 3.5.0 |
 
 #### Funktionen und Fehler
 
 | ID | Befund | Schwere | Status |
 |---|---|---|---|
-| FUN-26 | `cms-importer`: Load-Guard prüfte die per Early Binding bereits deklarierte Klasse `CMS_Importer_DB` → `CMS_Importer_Service` wurde nie definiert; zusätzlich fehlten 34 Methoden seit der Aufteilung | 🔴 | ✅ 3.5.0 – Guard korrigiert, Methoden in `trait-importer-content.php` |
+| FUN-26 | `cms-importer`: Load-Guard prüfte die per Early Binding bereits deklarierte Klasse `CMS_Importer_DB` → `CMS_Importer_Service` wurde nie definiert; zusätzlich fehlten 34 Methoden seit der Aufteilung | 🔴 | ✅ 3.5.0: Guard korrigiert, Methoden in `trait-importer-content.php` |
 | FUN-27 | Statische Aufrufe `Logger::error()` in Admin-Modulen (Fatal Error im Fehlerpfad) | 🟠 | ✅ 3.5.0 |
 | FUN-28 | `MailSettingsModule`: Aktionsergebnis Objekt statt Array, Zusatzfelder der Queue/Graph-Tests gingen verloren | 🟡 | ✅ 3.5.0 |
-| FUN-29 | Ungültiger Regex beim Umbenennen von Ordnern (`preg_match` → `false`) erlaubte `../` und `\` | 🔴 | ✅ 3.5.0 – `UploadHandler`, `MemberController` |
-| FUN-30 | `PdfService` rief nicht vorhandenes `PurifierService::sanitize()` auf | 🟠 | ✅ 3.5.0 – `purify(…, 'hub')` |
+| FUN-29 | Ungültiger Regex beim Umbenennen von Ordnern (`preg_match` → `false`) erlaubte `../` und `\` | 🔴 | ✅ 3.5.0: `UploadHandler`, `MemberController` |
+| FUN-30 | `PdfService` rief nicht vorhandenes `PurifierService::sanitize()` auf | 🟠 | ✅ 3.5.0: `purify(…, 'hub')` |
 | FUN-31 | `TranslationService` las nur den Altschlüssel `setting_language` | 🟡 | ✅ 3.5.0 |
-| FUN-32 | `upsertSetting()` der Marketplaces prüfte `PDOStatement === 0` (nie wahr) | 🟡 | ✅ 3.5.0 – `INSERT … ON DUPLICATE KEY UPDATE` |
+| FUN-32 | `upsertSetting()` der Marketplaces prüfte `PDOStatement === 0` (nie wahr) | 🟡 | ✅ 3.5.0: `INSERT … ON DUPLICATE KEY UPDATE` |
 | FUN-33 | Hub-Sites: ungültiges Karten-JSON konnte bestehende Karten verwerfen | 🟡 | ✅ 3.5.0 |
-| FUN-34 | Customizer-Optionen (u. a. `content_layout`) werden gespeichert, aber im Theme nicht gelesen | ⚪ | ✅ 3.5.0 – drei Optionen umgesetzt, vier entfernt (OFFEN-17) |
+| FUN-34 | Customizer-Optionen (u. a. `content_layout`) werden gespeichert, aber im Theme nicht gelesen | ⚪ | ✅ 3.5.0: drei Optionen umgesetzt, vier entfernt (OFFEN-17) |
 
 #### Verweise und Best Practice
 
 | ID | Befund | Schwere | Status |
 |---|---|---|---|
-| REF-12 | Verwaiste Dateien `CMS/db-`, `CMS/getPrefix`, `CMS/prefix` (leer), `CMS/default.php` (Hoster-Platzhalter) | 🟡 | ✅ 3.5.0 – entfernt |
-| REF-13 | Upgrade-Links in Abo-Hinweisen zeigten auf `/admin/subscriptions` | 🟡 | ✅ 3.5.0 – `/member/subscription` |
-| REF-14 | 37 tote private Methoden (Kern, Admin-Module), teils mit Aufrufen nicht vorhandener Methoden | 🟡 | ✅ 3.5.0 – entfernt |
+| REF-12 | Verwaiste Dateien `CMS/db-`, `CMS/getPrefix`, `CMS/prefix` (leer), `CMS/default.php` (Hoster-Platzhalter) | 🟡 | ✅ 3.5.0: entfernt |
+| REF-13 | Upgrade-Links in Abo-Hinweisen zeigten auf `/admin/subscriptions` | 🟡 | ✅ 3.5.0: `/member/subscription` |
+| REF-14 | 37 tote private Methoden (Kern, Admin-Module), teils mit Aufrufen nicht vorhandener Methoden | 🟡 | ✅ 3.5.0: entfernt |
 | REF-15 | `RELEASE/365CMS-3.5.0-SHA256SUMS.txt` von `README-3.5.0.md` referenziert, aber per `.gitignore` ausgeschlossen | 🟡 | ✅ 3.5.0 |
 | BP-01 | `fputcsv`/`str_getcsv` ohne Escape-Argument (Deprecation ab PHP 8.4) | ⚪ | ✅ 3.5.0 |
 | BP-02 | `StatusService`: `disk_*_space()` = `false` → TypeError/Division durch null | 🟡 | ✅ 3.5.0 |
 | BP-03 | `AnalyticsService::getCpuUsage()` blockierte den Request mit `sleep(1)`, Division durch null möglich | 🟡 | ✅ 3.5.0 – 200 ms Messfenster, Guards |
 | BP-04 | Debug-Panel mit Inline-`onclick` (CSP), Editor-Vorschau mit `javascript:void(0)` | ⚪ | ✅ 3.5.0 |
 | BP-05 | `SeoMetaRepository` nutzte `getPdo()` am `DatabaseInterface` vorbei; doppelte Array-Schlüssel in `admin/views/pages/edit.php`; UTF-8-BOM in `cms-importer/admin/page.php` | ⚪ | ✅ 3.5.0 |
-| DOC-01 | `README.md` und `DOC/` nannten `3.4.00` bzw. „Changelog bis 3.4.xx“ als aktuelle Version | 🟡 | ✅ 3.5.0 – überall `3.5.0`; die Changelog-Abschnitte 3.4.01–3.4.25 bleiben als Historie erhalten |
+| DOC-01 | `README.md` und `DOC/` nannten `3.4.00` bzw. „Changelog bis 3.4.xx“ als aktuelle Version | 🟡 | ✅ 3.5.0: überall `3.5.0`; die Changelog-Abschnitte 3.4.01–3.4.25 bleiben als Historie erhalten |
 
 #### Performance
 
 | ID | Befund | Schwere | Status |
 |---|---|---|---|
-| PERF-12 | Sprachverfügbarkeit von Beiträgen über `CHAR_LENGTH(TRIM(content))` (LONGTEXT-Scan) in Archiv- und Tag-Abfragen | 🟡 | ✅ 3.5.0 – Tag-Übersicht einmal je Request; generierte Spalten `has_locale_de`/`has_locale_en` mit Index (OFFEN-14) |
-| PERF-13 | `SeoAnalysisService::getSetting()` mit eigener Abfrage je Schlüssel (~20 je Beitragsseite) | 🟠 | ✅ 3.5.0 – Options-Cache; SEO-Meta je Inhalt einmal pro Request |
-| PERF-14 | Unbekannte `/tag/…`-URL lud alle getaggten Beiträge mit `p.*` (Bot-Last) | 🟠 | ✅ 3.5.0 – Legacy-Fallback liest zuerst nur `id`/`tags`, Volltext nur für Treffer |
-| PERF-15 | `ThemeManager::hasUnsafeCode()` tokenisierte die ~90 KB `functions.php` bei jedem Request | 🟡 | ✅ 3.5.0 – Ergebnis je Dateiinhalt (SHA-256) in `cache/` |
+| PERF-12 | Sprachverfügbarkeit von Beiträgen über `CHAR_LENGTH(TRIM(content))` (LONGTEXT-Scan) in Archiv- und Tag-Abfragen | 🟡 | ✅ 3.5.0: Tag-Übersicht einmal je Request; generierte Spalten `has_locale_de`/`has_locale_en` mit Index (OFFEN-14) |
+| PERF-13 | `SeoAnalysisService::getSetting()` mit eigener Abfrage je Schlüssel (~20 je Beitragsseite) | 🟠 | ✅ 3.5.0: Options-Cache; SEO-Meta je Inhalt einmal pro Request |
+| PERF-14 | Unbekannte `/tag/…`-URL lud alle getaggten Beiträge mit `p.*` (Bot-Last) | 🟠 | ✅ 3.5.0: Legacy-Fallback liest zuerst nur `id`/`tags`, Volltext nur für Treffer |
+| PERF-15 | `ThemeManager::hasUnsafeCode()` tokenisierte die ~90 KB `functions.php` bei jedem Request | 🟡 | ✅ 3.5.0: Ergebnis je Dateiinhalt (SHA-256) in `cache/` |
 | PERF-16 | Startseite fragte im Landing-Modus alle Blog-Daten ab; Tag-Wolke lud alle `posts.tags` | 🟡 | ✅ 3.5.0 |
 | PERF-17 | Einstellungen am Options-Cache vorbei (`CmsAuthPageService`, Schriften in `Bootstrap`, `ThemeManager::loadSettings`) | 🟡 | ✅ 3.5.0 für Auth-Seiten und Schriften; `ThemeManager` über `OptionStore::getMany()` (OFFEN-15) |
-| PERF-18 | `SiteTableRepository`: `SHOW COLUMNS` je Instanz, `JSON_EXTRACT … OR table_slug` ohne Index | ⚪ | ✅ 3.5.0 – `table_slug` mit Unique-Index garantiert (OFFEN-16) |
+| PERF-18 | `SiteTableRepository`: `SHOW COLUMNS` je Instanz, `JSON_EXTRACT … OR table_slug` ohne Index | ⚪ | ✅ 3.5.0: `table_slug` mit Unique-Index garantiert (OFFEN-16) |
 | PERF-19 | `ThemeCustomizer::setTheme()` lud das bereits geladene Theme erneut | ⚪ | ✅ 3.5.0 |
 | PERF-20 | Fallback-Template fragte die nicht vorhandene Spalte `is_sticky` ab (Fehlerabfrage je Aufruf) | ⚪ | ✅ 3.5.0 |
 | PERF-21 | Aufrufzähler schrieb auch bei HEAD, Prefetch und Crawlern | 🟡 | ✅ 3.5.0 |
-| PERF-22 | Plattform-Check dekodierte bei jedem Request sechs `composer.json`; PhotoSwipe-Prüfung doppelt; redundante Indizes | ⚪ | ✅ 3.5.0 – Plattform-Check; PhotoSwipe-Prüfung einmal je Request, 26 redundante Indizes entfernt (OFFEN-18) |
+| PERF-22 | Plattform-Check dekodierte bei jedem Request sechs `composer.json`; PhotoSwipe-Prüfung doppelt; redundante Indizes | ⚪ | ✅ 3.5.0: Plattform-Check; PhotoSwipe-Prüfung einmal je Request, 26 redundante Indizes entfernt (OFFEN-18) |
 
 #### GUI und Barrierefreiheit
 
 | ID | Befund | Schwere | Status |
 |---|---|---|---|
-| GUI-08 | Tag-Links über den Namen statt Slug (404 bei eigenem Slug/`slug_en`), Startseite verlinkte Tags auf die Suche | 🟠 | ✅ 3.5.0 – `meridian_tag_link_data()` |
+| GUI-08 | Tag-Links über den Namen statt Slug (404 bei eigenem Slug/`slug_en`), Startseite verlinkte Tags auf die Suche | 🟠 | ✅ 3.5.0: `meridian_tag_link_data()` |
 | GUI-09 | Fallback-Template: Newsletter-Formular auf nicht vorhandene Route ohne CSRF, Demo-Tags `href="#"`, englische Monatsnamen | 🟡 | ✅ 3.5.0 |
-| GUI-10 | Newsletter-Widgets ohne Beschriftung; Sidebar-Widget auf nicht vorhandene Route | 🟡 | ✅ 3.5.0 – `aria-label`, Weiterleitung zur Registrierung mit vorbelegter E-Mail |
+| GUI-10 | Newsletter-Widgets ohne Beschriftung; Sidebar-Widget auf nicht vorhandene Route | 🟡 | ✅ 3.5.0: `aria-label`, Weiterleitung zur Registrierung mit vorbelegter E-Mail |
 | GUI-11 | Editor-Vorschau-Link mit `javascript:`-URL | ⚪ | ✅ 3.5.0 |
 | GUI-12 | ASCII-Umlaute und Mischsprache („Logout“, „Ue…“) in Oberflächentexten | ⚪ | ✅ 3.5.0 |
 | GUI-13 | Icon-Buttons/Dropdown-Toggles ohne `type` und zugänglichen Namen | 🟡 | ✅ 3.5.0 – 22 Stellen |
-| GUI-14 | Filter-, Such- und Auswahlfelder ohne Label-Verknüpfung | 🟡 | ✅ 3.5.0 – ~140 `for`/`id`, ~55 `aria-label` |
-| GUI-15 | Footer-Fallback mit festen Links auf `/about`, `/impressum` ohne Prüfung | ⚪ | ✅ 3.5.0 – nur vorhandene Seiten |
-| GUI-16 | Öffentlich abrufbarer Prototyp `themes/cms-default/meridan.html`; ungenutztes `partials/home-blog.php` | ⚪ | ✅ 3.5.0 – entfernt |
+| GUI-14 | Filter-, Such- und Auswahlfelder ohne Label-Verknüpfung | 🟡 | ✅ 3.5.0: ~140 `for`/`id`, ~55 `aria-label` |
+| GUI-15 | Footer-Fallback mit festen Links auf `/about`, `/impressum` ohne Prüfung | ⚪ | ✅ 3.5.0: nur vorhandene Seiten |
+| GUI-16 | Öffentlich abrufbarer Prototyp `themes/cms-default/meridan.html`; ungenutztes `partials/home-blog.php` | ⚪ | ✅ 3.5.0: entfernt |
 
 Kein Befund nach Prüfung:
 

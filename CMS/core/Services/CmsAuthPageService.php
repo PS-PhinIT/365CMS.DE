@@ -802,6 +802,16 @@ final class CmsAuthPageService
                 return ['success' => false, 'message' => (string) PasswordPolicyService::getInstance()->validate($password, $resetUserId)];
             }
 
+            // SEC-410-19: Token zuerst atomar einlösen – zwei gleichzeitige Anfragen mit demselben Link setzen sonst beide
+            // ein Passwort.
+            $claimed = $this->db->execute(
+                "DELETE FROM {$this->prefix}password_resets WHERE token = ?",
+                [hash('sha256', $token)]
+            )->rowCount();
+            if ($claimed !== 1) {
+                return ['success' => false, 'message' => 'Ungültiger oder bereits verwendeter Reset-Link.'];
+            }
+
             $passwordHash = Security::instance()->hashPassword($password);
             $this->db->execute("UPDATE {$this->prefix}users SET password = ? WHERE email = ?", [$passwordHash, (string) $row->email]);
             if ($resetUserId > 0) {

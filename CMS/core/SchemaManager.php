@@ -33,13 +33,11 @@ class SchemaManager
     /**
      * Flag-Datei-Version – erhöhen wenn Schema geändert wird.
      *
-     * Die Tabellen und Spalten von v26 (FEATURE_TABLES_V26, Release 4.1.0) sind bereits definiert: Neuinstallationen
-     * legen sie über getSchemaQueries() an, bestehende Installationen über ensureFeatureSchema() (Laufzeitprüfung,
-     * läuft nach jeder Änderung dieser Datei einmal). Die Marke selbst wird erst mit der Release-Vorbereitung von 4.1.0
-     * gehoben – zusammen mit MigrationManager::SCHEMA_VERSION, Version::CURRENT und dem Marketplace-Manifest
-     * (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
+     * v26 (Release 4.1.0): Tabellen FEATURE_TABLES_V26 und die Spalten der Bereiche 1–5. Neuinstallationen legen sie
+     * über getSchemaQueries() an, Updates über MigrationManager (Schritt v26) und zusätzlich die Laufzeitprüfung
+     * ensureFeatureSchema() (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
      */
-    public const SCHEMA_VERSION = 'v25';
+    public const SCHEMA_VERSION = 'v26';
 
     /**
      * Tabellen der Core-Funktionen seit v25 (Formulare, Downloads, Feed-Aggregator) in Abhängigkeitsreihenfolge.
@@ -75,6 +73,7 @@ class SchemaManager
         'content_workflow_events', 'content_preview_links',
         'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions',
         'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
+        'payment_events', 'invoice_sequences', 'invoices',
     ];
 
     private Database $db;
@@ -381,12 +380,16 @@ class SchemaManager
                 end_date DATETIME,
                 next_billing_date DATETIME,
                 cancelled_at DATETIME,
+                provider VARCHAR(20) DEFAULT NULL,
+                provider_subscription_id VARCHAR(255) DEFAULT NULL,
+                current_period_end DATETIME DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_user_id (user_id),
                 INDEX idx_plan_id (plan_id),
                 INDEX idx_status (status),
-                INDEX idx_dates (start_date, end_date)
+                INDEX idx_dates (start_date, end_date),
+                INDEX idx_provider_sub (provider, provider_subscription_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'user_groups' => "CREATE TABLE IF NOT EXISTS {$p}user_groups (
@@ -541,12 +544,16 @@ class SchemaManager
                 zip VARCHAR(20) DEFAULT NULL,
                 city VARCHAR(100) DEFAULT NULL,
                 country VARCHAR(100) DEFAULT NULL,
+                provider VARCHAR(20) DEFAULT NULL,
+                provider_checkout_id VARCHAR(255) DEFAULT NULL,
+                paid_at DATETIME DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_user_id (user_id),
                 INDEX idx_plan_id (plan_id),
                 INDEX idx_status (status),
-                INDEX idx_created_at (created_at)
+                INDEX idx_created_at (created_at),
+                INDEX idx_provider_checkout (provider, provider_checkout_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c}",
 
             'blocked_ips' => "CREATE TABLE IF NOT EXISTS {$p}blocked_ips (
@@ -1283,12 +1290,18 @@ class SchemaManager
                 trashed_at DATETIME NULL DEFAULT NULL,
                 trashed_by INT UNSIGNED NULL DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME DEFAULT NULL,
+                review_due_at DATETIME DEFAULT NULL,
+                expiry_notified_at DATETIME DEFAULT NULL,
+                review_notified_at DATETIME DEFAULT NULL,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY uniq_slug (slug),
                 KEY idx_keyword (keyword),
                 KEY idx_active_priority (is_active, priority),
                 KEY idx_category (category),
-                KEY idx_kb_trashed (trashed_at)
+                KEY idx_kb_trashed (trashed_at),
+                KEY idx_kb_expires (is_active, expires_at),
+                KEY idx_kb_review_due (review_due_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Knowledgebase: Einträge'",
 
             'kb_categories' => "CREATE TABLE IF NOT EXISTS {$p}kb_categories (
@@ -1594,6 +1607,60 @@ class SchemaManager
                 INDEX idx_webhook_deliveries_due (status, next_attempt_at),
                 INDEX idx_webhook_deliveries_endpoint (endpoint_id, created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Zustellungen ausgehender Webhooks'",
+
+            // v26: Eingehende Ereignisse der Zahlungsanbieter (PaymentService). Jedes Ereignis genau einmal.
+            'payment_events' => "CREATE TABLE IF NOT EXISTS {$p}payment_events (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                provider VARCHAR(20) NOT NULL,
+                provider_event_id VARCHAR(255) NOT NULL,
+                type VARCHAR(80) NOT NULL,
+                order_id BIGINT UNSIGNED NULL,
+                status VARCHAR(12) NOT NULL DEFAULT 'received',
+                payload_hash CHAR(64) NOT NULL,
+                error VARCHAR(500) NULL,
+                received_at DATETIME NOT NULL,
+                processed_at DATETIME NULL,
+                UNIQUE KEY uq_payment_events_event (provider, provider_event_id),
+                INDEX idx_payment_events_order (order_id),
+                INDEX idx_payment_events_received (received_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Ereignisse der Zahlungsanbieter'",
+            // v26: Rechnungs-Nummernkreise (InvoiceService, lückenlos, nie rückwärts).
+            'invoice_sequences' => "CREATE TABLE IF NOT EXISTS {$p}invoice_sequences (
+                sequence_key VARCHAR(30) NOT NULL PRIMARY KEY,
+                next_number INT UNSIGNED NOT NULL,
+                updated_at DATETIME NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Rechnungs-Nummernkreise (lückenlos, nie rückwärts)'",
+
+            // v26: Rechnungen und Storno-Rechnungen (unveränderlich, 10 Jahre; kein FK auf users).
+            'invoices' => "CREATE TABLE IF NOT EXISTS {$p}invoices (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                invoice_number VARCHAR(40) NOT NULL,
+                sequence_key VARCHAR(30) NOT NULL,
+                sequence_number INT UNSIGNED NOT NULL,
+                type VARCHAR(12) NOT NULL DEFAULT 'invoice',
+                order_id BIGINT UNSIGNED NULL,
+                user_id INT UNSIGNED NULL,
+                cancels_invoice_id BIGINT UNSIGNED NULL,
+                issued_at DATETIME NOT NULL,
+                service_period_start DATE NULL,
+                service_period_end DATE NULL,
+                currency CHAR(3) NOT NULL,
+                net_total DECIMAL(12,2) NOT NULL,
+                tax_total DECIMAL(12,2) NOT NULL,
+                gross_total DECIMAL(12,2) NOT NULL,
+                tax_mode VARCHAR(20) NOT NULL DEFAULT 'standard',
+                snapshot_json LONGTEXT NOT NULL,
+                pdf_path VARCHAR(255) NOT NULL,
+                pdf_sha256 CHAR(64) NOT NULL,
+                created_by INT UNSIGNED NULL,
+                restricted_at DATETIME NULL,
+                created_at DATETIME NOT NULL,
+                UNIQUE KEY uq_invoices_number (invoice_number),
+                UNIQUE KEY uq_invoices_sequence (sequence_key, sequence_number),
+                UNIQUE KEY uq_invoices_cancels (cancels_invoice_id),
+                KEY idx_invoices_user (user_id, issued_at),
+                KEY idx_invoices_order (order_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Rechnungen und Storno-Rechnungen (unveränderlich, 10 Jahre)'",
         ];
     }
 
@@ -2426,6 +2493,26 @@ class SchemaManager
             error_log(sprintf('SchemaManager::ensureFeatureSchema(capabilities) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
         }
 
+        // v26: Zahlungsanbieter (PaymentService, Bereich 5a).
+        $paymentColumns = [
+            'orders' => ['provider' => 'VARCHAR(20) DEFAULT NULL', 'provider_checkout_id' => 'VARCHAR(255) DEFAULT NULL', 'paid_at' => 'DATETIME DEFAULT NULL'],
+            'user_subscriptions' => ['provider' => 'VARCHAR(20) DEFAULT NULL', 'provider_subscription_id' => 'VARCHAR(255) DEFAULT NULL', 'current_period_end' => 'DATETIME DEFAULT NULL'],
+        ];
+        $paymentIndexes = ['orders' => ['idx_provider_checkout', '(provider, provider_checkout_id)'], 'user_subscriptions' => ['idx_provider_sub', '(provider, provider_subscription_id)']];
+        foreach ($paymentColumns as $table => $columns) {
+            foreach ($columns as $column => $definition) {
+                $this->ensureColumnExists($this->prefix . $table, $column, "ALTER TABLE {$this->prefix}{$table} ADD COLUMN {$column} {$definition}");
+            }
+            [$indexName, $indexColumns] = $paymentIndexes[$table];
+            if (!isset($this->loadIndexes($this->prefix . $table)[$indexName])) {
+                try {
+                    $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX {$indexName} {$indexColumns}");
+                } catch (\Throwable $e) {
+                    error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.%s) failed: %s', $table, $indexName, $this->sanitizeDiagnosticText($e->getMessage())));
+                }
+            }
+        }
+
         // v25: Wer hat eine Seitenrevision ausgelöst? (Übersicht „Letzte Änderungen“)
         $this->ensureColumnExists(
             $this->prefix . 'page_revisions',
@@ -2434,7 +2521,7 @@ class SchemaManager
         );
 
         // v26: Ablauf- und Prüfdaten (ContentExpiryService, Bereich 3c).
-        foreach (['posts', 'pages'] as $table) {
+        foreach (['posts' => 'status', 'pages' => 'status', 'kb_entries' => 'is_active'] as $table => $liveColumn) {
             foreach (['expires_at', 'review_due_at', 'expiry_notified_at', 'review_notified_at'] as $column) {
                 $this->ensureColumnExists(
                     $this->prefix . $table,
@@ -2443,7 +2530,8 @@ class SchemaManager
                 );
             }
             $indexes = $this->loadIndexes($this->prefix . $table);
-            foreach (['idx_expires' => '(status, expires_at)', 'idx_review_due' => '(review_due_at)'] as $name => $columns) {
+            $indexNames = $table === 'kb_entries' ? ['idx_kb_expires', 'idx_kb_review_due'] : ['idx_expires', 'idx_review_due'];
+            foreach ([$indexNames[0] => "({$liveColumn}, expires_at)", $indexNames[1] => '(review_due_at)'] as $name => $columns) {
                 if (!isset($indexes[$name])) {
                     try {
                         $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} ADD INDEX {$name} {$columns}");

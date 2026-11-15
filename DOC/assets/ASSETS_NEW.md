@@ -1,5 +1,5 @@
-# ASSETS NEW – Integrationsdoku für neue Kandidaten
-> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Status:** Aktuell
+# ASSETS NEW: Integrationsdoku für neue Kandidaten
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktuell
 
 ## Inhaltsverzeichnis
 - <a>Überblick</a>
@@ -138,7 +138,7 @@ Für eine künftige 365CMS-Kernfunktion ist das zu fragil. Deshalb gilt jetzt kl
 - **nicht** als Basis eines produktiven Übersetzungsdienstes einplanen
 - maschinelle Übersetzung nur über **offizielle oder austauschbare Provider-Adapter** betrachten
 
-Die Übersetzungsfunktion selbst bleibt fachlich relevant – nur **dieses konkrete Paket** ist dafür nicht mehr die gewünschte Basis.
+Die Übersetzungsfunktion selbst bleibt fachlich relevant, nur **dieses konkrete Paket** ist dafür nicht mehr die gewünschte Basis.
 
 ---
 
@@ -386,13 +386,13 @@ Wichtig:
 
 Für neue Pakete aus `/ASSETS` sollte künftig dieselbe Checkliste gelten:
 
-1. **Runtime-Relevanz prüfen** – wird das Paket wirklich produktiv gebraucht?
-2. **Abhängigkeiten vollständig inventarisieren** – nicht nur das Hauptpaket, auch transitive Komponenten
-3. **Service-/Adapter-Schicht definieren** – keine Direktkopplung quer durchs System
+1. **Runtime-Relevanz prüfen**: wird das Paket wirklich produktiv gebraucht?
+2. **Abhängigkeiten vollständig inventarisieren**: nicht nur das Hauptpaket, auch transitive Komponenten
+3. **Service-/Adapter-Schicht definieren**: keine Direktkopplung quer durchs System
 4. **Provider-/Security-/Quota-Risiken dokumentieren**
-5. **Nur den echten Runtime-Scope übernehmen** – nicht die komplette Upstream-Struktur
-6. **Admin- und Doku-Zielbild früh festhalten** – Menüpunkt, Capability-Modell, Feature-Gates, Operator-Sicht
-7. **Dokumentation synchron halten** – `DOC/assets/ASSET.md`, `DOC/assets/README.md`, `DOC/assets/ASSETS_OwnAssets.md`, `DOC/ai/AI-SERVICES.md`, `DOC/admin/system-settings/AI-SERVICES.md`, `README.md`, `Changelog.md`
+5. **Nur den echten Runtime-Scope übernehmen**: nicht die komplette Upstream-Struktur
+6. **Admin- und Doku-Zielbild früh festhalten**: Menüpunkt, Capability-Modell, Feature-Gates, Operator-Sicht
+7. **Dokumentation synchron halten**: `DOC/assets/ASSET.md`, `DOC/assets/README.md`, `DOC/assets/ASSETS_OwnAssets.md`, `DOC/ai/AI-SERVICES.md`, `DOC/admin/system-settings/AI-SERVICES.md`, `README.md`, `Changelog.md`
 
 Kurzform für Entscheidungen:
 

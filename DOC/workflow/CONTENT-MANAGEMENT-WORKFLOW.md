@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – Content Management
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+# 365CMS Projektdokumentation | Workflow: Content Management
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Quellen:** `CMS/admin/pages.php`, `CMS/admin/posts.php`, `CMS/admin/modules/pages/PagesModule.php`, `CMS/admin/modules/posts/PostsModule.php`, `CMS/admin/views/pages/`, `CMS/admin/views/posts/`, `CMS/core/PageManager.php`, `CMS/core/Services/EditorJsService.php`, `CMS/core/Services/PostPublishChecklistService.php`, `CMS/core/Services/PostRevisionService.php`, `CMS/includes/functions/options-runtime.php`
 
 ## English (summary)
@@ -21,15 +21,15 @@ Der Adminbereich setzt zusätzlich die Rolle `admin` voraus (`Auth::isAdmin()`);
 
 ### Ablauf: neuer Beitrag
 
-1. **Anlegen:** `/admin/posts?action=edit` öffnen. Titel eingeben – der Slug wird beim Speichern aus dem Titel erzeugt, wenn das Feld leer bleibt.
+1. **Anlegen:** `/admin/posts?action=edit` öffnen. Titel eingeben: der Slug wird beim Speichern aus dem Titel erzeugt, wenn das Feld leer bleibt.
 2. **Inhalt:** Editor.js-Blöcke (Absatz, Überschrift, Liste, Bild, Tabelle, Code, Zitat …). Bilder über die Medienauswahl oder Upload (`/api/media`, Token `editorjs_media`).
 3. **Einordnung:** Hauptkategorie + weitere Kategorien, Tags (kommagetrennt), Auszug (Teaser für Archive, Feeds, Suche).
 4. **Beitragsbild** über den Featured-Image-Picker; Referenzen werden normalisiert.
 5. **SEO:** Meta-Titel/-Beschreibung (Platzhalter wie `%title%`, `%%sitename%%` werden seit 3.4.08 bei der Ausgabe aufgelöst); erweiterte Felder (Canonical, Robots, OG, Schema-Typ, Sitemap) nur bei aktivem Modul `seo`.
 6. **Englische Fassung (optional):** Sprachumschalter DE/EN (`switch_locale`, rendert ohne Speichern neu) oder „DE → EN kopieren“ (`copy_de_to_en`, nach dem ersten Speichern). KI-Übersetzung über `/admin/ai-translate-editorjs`, wenn das Modul `ai_services` aktiv ist.
-7. **Speichern als Entwurf** (`status = draft`) – jede manuelle Speicherung legt einen Eintrag in `cms_post_revisions` an (unveränderte Stände werden nicht doppelt gespeichert). Nach dem ersten Speichern sichert der Editor automatisch: Entwürfe höchstens jede Minute (Kopfleiste „Gespeichert um HH:MM“), veröffentlichte und geplante Beiträge nur als Revision, ohne den Live-Stand zu ändern. Eine Autosave-Revision entsteht höchstens alle 10 Minuten, je Beitrag bleiben die letzten 30 Revisionen erhalten.
+7. **Speichern als Entwurf** (`status = draft`): jede manuelle Speicherung legt einen Eintrag in `cms_post_revisions` an (unveränderte Stände werden nicht doppelt gespeichert). Nach dem ersten Speichern sichert der Editor automatisch: Entwürfe höchstens jede Minute (Kopfleiste „Gespeichert um HH:MM“), veröffentlichte und geplante Beiträge nur als Revision, ohne den Live-Stand zu ändern. Eine Autosave-Revision entsteht höchstens alle 10 Minuten, je Beitrag bleiben die letzten 30 Revisionen erhalten.
 8. **Vorschau/Prüfung:** Revisionsvergleich im Editor (Panel „Revisionen“ → „Vergleichen“, „Diese Version wiederherstellen“), Medien-Check (`/admin/media?tab=check`) für fehlende Beitragsbilder. Der Fokusmodus (Strg+Umschalt+F bzw. Cmd+Umschalt+F) blendet Seitenleiste und Einstellungsspalte aus.
-9. **Veröffentlichen:** Status `published`. Für eine geplante Veröffentlichung `published_at` in die Zukunft setzen („Planen“) – die Liste zeigt den Beitrag dann unter „Geplant“. Seit 4.0.0 müssen dafür alle Punkte der Veröffentlichungs-Checkliste erfüllt sein: Beitragsbild gesetzt, Meta-Beschreibung mit 120–160 Zeichen, Kategorie gesetzt. Der Server lehnt Veröffentlichen/Planen sonst ab, ebenso die Sammelaktion `publish` für unvollständige Beiträge (Details: [admin/pages-posts/POSTS.md](../admin/pages-posts/POSTS.md#veröffentlichungs-checkliste)).
+9. **Veröffentlichen:** Status `published`. Für eine geplante Veröffentlichung `published_at` in die Zukunft setzen („Planen“), die Liste zeigt den Beitrag dann unter „Geplant“. Seit 4.0.0 müssen dafür alle Punkte der Veröffentlichungs-Checkliste erfüllt sein: Beitragsbild gesetzt, Meta-Beschreibung mit 120–160 Zeichen, Kategorie gesetzt. Der Server lehnt Veröffentlichen/Planen sonst ab, ebenso die Sammelaktion `publish` für unvollständige Beiträge (Details: [admin/pages-posts/POSTS.md](../admin/pages-posts/POSTS.md#veröffentlichungs-checkliste)).
 10. **Pflege:** „Inhalt aktualisiert am“ (`content_updated_at`) setzen, wenn sich Inhalte wesentlich ändern.
 
 ### Ablauf: neue Seite

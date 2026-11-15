@@ -37,6 +37,8 @@ final class EditorialCalendarService
     public const KIND_SCHEDULED = 'scheduled';
     public const KIND_PLANNED = 'planned';
     public const KIND_PUBLISHED = 'published';
+    /** Wiedervorlage (`review_due_at`, 4.1.0 Bereich 3c) – nur Anzeige, nicht verschiebbar. */
+    public const KIND_REVIEW = 'review';
 
     public const MOVE_REPLAN = 'replan';
     public const MOVE_RESCHEDULE = 'reschedule';
@@ -415,7 +417,7 @@ final class EditorialCalendarService
                     continue;
                 }
 
-                $kinds = $type === 'post' ? [self::KIND_SCHEDULED, self::KIND_PLANNED] : [self::KIND_PLANNED];
+                $kinds = $type === 'post' ? [self::KIND_SCHEDULED, self::KIND_PLANNED, self::KIND_REVIEW] : [self::KIND_PLANNED, self::KIND_REVIEW];
                 if ($filters['published']) {
                     $kinds[] = self::KIND_PUBLISHED;
                 }
@@ -465,6 +467,11 @@ final class EditorialCalendarService
                 $dateExpr = "{$alias}.planned_at";
                 $where = ["{$alias}.status IN (?, ?)"];
                 $params = ['draft', 'pending'];
+                break;
+            case self::KIND_REVIEW:
+                $dateExpr = "{$alias}.review_due_at";
+                $where = ["{$alias}.status <> ?", "{$alias}.review_due_at IS NOT NULL"];
+                $params = ['trash'];
                 break;
             default:
                 $dateExpr = "COALESCE({$alias}.published_at, {$alias}.created_at)";
@@ -535,7 +542,7 @@ final class EditorialCalendarService
 
         $id = (int) $row->id;
         $authorId = (int) ($row->author_id ?? 0);
-        $movable = $kind !== self::KIND_PUBLISHED && ContentEditPermission::currentUserCanEdit($type, $authorId);
+        $movable = !in_array($kind, [self::KIND_PUBLISHED, self::KIND_REVIEW], true) && ContentEditPermission::currentUserCanEdit($type, $authorId);
 
         return [
             'uid' => $type . '-' . $id,
@@ -615,6 +622,11 @@ final class EditorialCalendarService
         $newValue = $decision === self::MOVE_PUBLISH_NOW ? $now : $target;
 
         if ($decision === self::MOVE_RESCHEDULE || $decision === self::MOVE_PUBLISH_NOW) {
+            // SEC-410-14: Termin einer geplanten Veröffentlichung ändern bzw. sofort veröffentlichen verlangt das
+            // Freigaberecht (posts.publish) – Bearbeitungsrecht allein reicht nicht (Sperrfrist).
+            if (!\CMS\Services\Content\ContentWorkflow::canPublishWith($type, $userId, (int) ($row->author_id ?? 0), $can, false)) {
+                return $this->moveResult(403, false, 'forbidden', self::t('calendar.move.error_forbidden'));
+            }
             $checklistError = $this->checkPublishChecklist($row, $newValue);
             if ($checklistError !== null) {
                 return $checklistError;

@@ -1,6 +1,6 @@
-# 365CMS – Admin: Login & Sperren
+# 365CMS: Admin: Login & Sperren
 
-> **Stand:** 2026-11-14 | **Version:** 4.0.0 (Abschnitte „seit 4.1.0“: in Entwicklung) | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -8,7 +8,7 @@
 before an IP address is locked out (3–20) and the lockout period (60–3600 seconds). Without a setting, the constants
 `MAX_LOGIN_ATTEMPTS` and `LOGIN_TIMEOUT` from `config/app.php` apply. The page shows the effective value and its
 source. The limits apply to admin and member login and additionally cap password resets via link.
-Since 4.1.0 the page also holds the password policy and role-based MFA enforcement (accounts of selected roles without
+The page also holds the password policy and role-based MFA enforcement (accounts of selected roles without
 TOTP or a user-verified passkey are confined to the MFA setup until they add a factor).
 
 ## Deutsch
@@ -26,7 +26,7 @@ TOTP or a user-verified passkey are confined to the MFA setup until they add a f
 - Änderungen werden im Audit-Log festgehalten (`security.login_thresholds_updated`).
 - Dienst: `CMS\Services\LoginThrottleSettings` (`maxAttempts()`, `lockoutSeconds()`, `describe()`, `save()`).
 
-## Passwort-Richtlinie (seit 4.1.0)
+## Passwort-Richtlinie
 
 Zweites Formular auf derselben Seite (eigenes CSRF-Token `admin_password_policy`, Audit-Log `password_policy_saved`).
 Die Standardwerte entsprechen dem Verhalten bis 4.0.0.
@@ -51,7 +51,7 @@ Die Standardwerte entsprechen dem Verhalten bis 4.0.0.
 - Dienst: `CMS\Services\Security\PasswordPolicyService`; Spezifikation:
   [workflow/specs/v4.1/01-IDENTITY.md](../../workflow/specs/v4.1/01-IDENTITY.md) §1a.
 
-## MFA-Zwang je Rolle (seit 4.1.0)
+## MFA-Zwang je Rolle
 
 Drittes Formular auf derselben Seite (eigenes CSRF-Token `admin_mfa_policy`, Audit-Log `mfa_policy_saved` mit
 Vorher/Nachher). Standard: keine Rolle.
@@ -66,7 +66,7 @@ Vorher/Nachher). Standard: keine Rolle.
   PIN/Biometrie. Eine Entra-ID-Anmeldung mit MFA-Nachweis (`amr`) gilt nur für die laufende Sitzung ([SSO-ENTRA.md](SSO-ENTRA.md)).
 - **Kein Aussperren:** Die eigene Rolle lässt sich nur wählen, wenn das eigene Konto bereits einen Faktor hat. Bei aktivem
   Zwang lehnen `/mfa-disable`, „2FA deaktivieren“ und „Passkey entfernen“ das Entfernen des letzten Faktors ab.
-- **Reihenfolge der Weiche** (`Router::dispatch()`, nach dem Wartungsmodus, vor dem CSRF-Block): erst abgelaufenes
+- **Reihenfolge der Weiche** (`Router::enforceAccountGates()`, aufgerufen aus `Router::dispatch()` nach dem Wartungsmodus und vor dem CSRF-Block): erst abgelaufenes
   Passwort (nur Sicherheitsseite mit Aktion `password_change`), dann MFA-Zwang.
 - **Erweiterungen** können den Zwang über den Filter `cms_mfa_enforcement_required` zusätzlich einschalten, aber für eine
   gewählte Rolle nicht aufheben.

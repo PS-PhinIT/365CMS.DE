@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 1: Identität, Anmeldung & Konto-Sicherheit
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 1a, 1b, 1c umgesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Spec 4.1.0: Bereich 1: Identität, Anmeldung & Konto-Sicherheit
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 1a, 1b, 1c | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -36,11 +36,11 @@ SSO-Konten ohne lokales Passwort sind ausgenommen (01-IDENTITY §3.6).
 ### 1.2 Technik
 
 - **`CMS\Services\Security\PasswordPolicyService`** (neu):
-  - `definition(): array` – wirksame Richtlinie (Einstellungen → Filter `cms_password_policy` → Grenzen erzwingen).
-  - `evaluate(string $password, ?int $userId = null): array` – gleiche Struktur wie heute `Auth::evaluatePasswordPolicy()` (Anforderungen mit `key`, `label`, `message`, `passed`), zusätzlich Anforderung `history` bei `$userId`.
-  - `isReused(int $userId, string $password): bool` – `password_verify()` gegen aktuellen Hash und die letzten *N* aus `password_history`.
-  - `recordChange(int $userId, string $newHash, string $source): void` – alten Hash in `password_history` übernehmen, `users.password_changed_at = NOW()`, überzählige Einträge löschen, Hook `cms_password_changed`.
-  - `isExpired(int $userId): bool` – `password_changed_at` (Rückfall `created_at`) älter als Höchstalter.
+  - `definition(): array`: wirksame Richtlinie (Einstellungen → Filter `cms_password_policy` → Grenzen erzwingen).
+  - `evaluate(string $password, ?int $userId = null): array`: gleiche Struktur wie heute `Auth::evaluatePasswordPolicy()` (Anforderungen mit `key`, `label`, `message`, `passed`), zusätzlich Anforderung `history` bei `$userId`.
+  - `isReused(int $userId, string $password): bool`: `password_verify()` gegen aktuellen Hash und die letzten *N* aus `password_history`.
+  - `recordChange(int $userId, string $newHash, string $source): void`: alten Hash in `password_history` übernehmen, `users.password_changed_at = NOW()`, überzählige Einträge löschen, Hook `cms_password_changed`.
+  - `isExpired(int $userId): bool`: `password_changed_at` (Rückfall `created_at`) älter als Höchstalter.
 - **`Auth::evaluatePasswordPolicy()` / `validatePasswordPolicy()`** bleiben als öffentliche API und delegieren an den Dienst (keine Änderung für Aufrufer, die nur Stärke prüfen); neue optionale Parameter `?int $userId`.
 - **Aufrufer mit Benutzer-ID** (`MemberService::changePassword`, `UserService::updateUser`, `CmsAuthPageService` Zurücksetzen) übergeben die ID und rufen nach dem Speichern `recordChange()` auf.
 - **Ablauf:** Nach dem Login (Passwort-Weg) mit abgelaufenem Passwort: Sitzungsflag `password_change_required`; die Weiche in `Router::dispatch()` (gemeinsam mit 1b) erlaubt dann nur die Passwort-Änderungsseite, Abmelden und statische Assets.
@@ -99,7 +99,7 @@ Entscheidung; Selbstaussperr-Schutz; `/mfa-disable` bei Zwang; Gegenprobe.
 
 ---
 
-## 1c. Microsoft Entra ID – Single Sign-On (OpenID Connect)
+## 1c. Microsoft Entra ID: Single Sign-On (OpenID Connect)
 
 ### 3.1 Ablauf (Authorization Code Flow mit PKCE)
 
@@ -147,7 +147,7 @@ Reihenfolge:
 1. **Bestehende Bindung** `user_identities (provider='entra', tenant_id=tid, subject=oid)` → dieses Konto. Ist es gesperrt/inaktiv → Ablehnung (nie reaktivieren).
 2. **Keine Bindung, automatische Verknüpfung** nur wenn **alle** Bedingungen gelten (Einstellung „Bestehende Konten automatisch verknüpfen“, Standard **aus**):
    - Single-Tenant-Konfiguration (fester `tid`);
-   - Claim `email` vorhanden **und** `xms_edov = true` (E-Mail-Domain vom Tenant verifiziert; optionaler Claim, im App-Manifest zu aktivieren) – `preferred_username`/`upn` werden **nie** zur Zuordnung verwendet;
+   - Claim `email` vorhanden **und** `xms_edov = true` (E-Mail-Domain vom Tenant verifiziert; optionaler Claim, im App-Manifest zu aktivieren), `preferred_username`/`upn` werden **nie** zur Zuordnung verwendet;
    - Domain der Adresse steht in der Allowlist „Erlaubte Domains“;
    - genau ein lokales Konto mit dieser Adresse, dessen E-Mail lokal **bestätigt** ist (`EmailVerificationService`) und das aktiv ist;
    - dieses Konto hat **keine** Rolle mit Admin-Zugriff und keine Rolle aus dem MFA-Zwang (privilegierte Konten nur aktiv nach lokalem Login, Punkt 4).
@@ -236,12 +236,12 @@ abgelaufen, falsche/wiederverwendete `nonce`); `state` fehlt/wiederverwendet/abg
 inkl. Angriff „`preferred_username` = admin“ und „E-Mail eines Admin-Kontos ohne `xms_edov`“; gesperrtes Konto;
 Provisioning an/aus; Rollen-Mapping mit Herab-/Hochstufung; `amr`-Auswertung; Gegenprobe.
 
-### 3.11 Umsetzung (14.11.2026) – Abweichungen und Präzisierungen
+### 3.11 Umsetzung (14.11.2026): Abweichungen und Präzisierungen
 
 | Punkt | Umsetzung |
 |---|---|
 | Callback und `SameSite=Strict` | Das Sitzungs-Cookie fehlt beim Rücksprung von `login.microsoftonline.com`. Der Callback liefert zuerst eine Zwischenseite (`<meta http-equiv="refresh">` auf dieselbe URL mit `hop=1`); erst dieser von der eigenen Seite ausgelöste Aufruf trägt die Sitzung. In Chromium nachgestellt. |
-| Verknüpfen/Trennen | Statt eigener Routen `POST /member/security/sso/entra/link` und `…/unlink` die Aktionen `sso_link`/`sso_unlink` auf `/member/security` (CSRF `security_sso`, Passwort) – gleiche Konvention wie die Passkey-Aktionen; `/member/security` ist auch während der Konto-Weiche erreichbar. Re-Auth nur per Passwort (kein Passkey-Re-Auth im Bestand). |
+| Verknüpfen/Trennen | Statt eigener Routen `POST /member/security/sso/entra/link` und `…/unlink` die Aktionen `sso_link`/`sso_unlink` auf `/member/security` (CSRF `security_sso`, Passwort): gleiche Konvention wie die Passkey-Aktionen; `/member/security` ist auch während der Konto-Weiche erreichbar. Re-Auth nur per Passwort (kein Passkey-Re-Auth im Bestand). |
 | Zusätzliche Dateien | `EntraSettings` (Gruppe `auth_entra`), `EntraSsoService` (Ablauf), `IdentityStoreInterface` + `DatabaseIdentityStore` (austauschbar für Tests). |
 | „Rollen mit Admin-Zugriff“ (§3.3) | `admin`, `editor`, `author` plus alle Rollen mit MFA-Zwang werden nie automatisch verknüpft. |
 | `allow_admin_mapping` | eine globale Einstellung; eine Mapping-Regel auf `admin` wirkt nur, wenn sie gesetzt ist. Die Standardrolle ist nie `admin`. |

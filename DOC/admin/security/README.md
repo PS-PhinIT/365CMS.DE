@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Sicherheit
+# 365CMS Projektdokumentation | Admin: Sicherheit
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -14,7 +14,7 @@ This folder documents the admin area **Security** (core module `security`): anti
 | Firewall | `/admin/firewall` | [FIREWALL.md](FIREWALL.md) |
 | Audit | `/admin/security-audit` | [SECURITY-AUDIT.md](SECURITY-AUDIT.md) |
 | Login & Sperren (Einstellungen) | `/admin/settings?tab=security` | [LOGIN-THRESHOLDS.md](LOGIN-THRESHOLDS.md) |
-| SSO mit Microsoft Entra ID (seit 4.1.0) | `/admin/settings?tab=sso` | [SSO-ENTRA.md](SSO-ENTRA.md) |
+| SSO mit Microsoft Entra ID | `/admin/settings?tab=sso` | [SSO-ENTRA.md](SSO-ENTRA.md) |
 
 ### Schutzschichten im Überblick
 

@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Plugins – Marketplace
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+# 365CMS Projektdokumentation | Plugins: Marketplace
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Kurzbeschreibung:** User and technical reference for the 365CMS plugin marketplace, registry sources, catalog validation, automatic installation, integrity checks, and manual-install fallbacks.
 > **Quellen:** `CMS/admin/plugin-marketplace.php`, `CMS/admin/modules/plugins/PluginMarketplaceModule.php`, `CMS/admin/views/plugins/marketplace.php`, `CMS/core/Services/UpdateService.php`, `CMS/marketplace/plugins/index.json`
 
@@ -38,10 +38,10 @@ The installed-plugin page is `/admin/plugins`. Its accepted actions are `activat
 
 Load order in `loadRegistry()`:
 
-1. **Fresh cache** – settings options `plugin_marketplace_registry_cache` / `plugin_marketplace_registry_cache_meta`, valid for 900 seconds (source type `cache`, status `info`).
-2. **Remote registry** – fetched via `HttpClient` with the host allowlist; a non-empty result is persisted to the cache (source type `remote`).
-3. **Stale cache** – if the remote fetch fails, the last cache is used regardless of age (status `warning`, including the remote error).
-4. **Local index** – `index.json` in the parent directory of `PLUGIN_PATH`, i.e. `CMS/index.json` in a default installation (symlinked roots are refused). This file is **not** shipped; the repository file `CMS/marketplace/plugins/index.json` is the *published* registry served at `365cms.de/marketplace/plugins/index.json` and is not read as the local fallback.
+1. **Fresh cache**: settings options `plugin_marketplace_registry_cache` / `plugin_marketplace_registry_cache_meta`, valid for 900 seconds (source type `cache`, status `info`).
+2. **Remote registry**: fetched via `HttpClient` with the host allowlist; a non-empty result is persisted to the cache (source type `remote`).
+3. **Stale cache**: if the remote fetch fails, the last cache is used regardless of age (status `warning`, including the remote error).
+4. **Local index**: `index.json` in the parent directory of `PLUGIN_PATH`, i.e. `CMS/index.json` in a default installation (symlinked roots are refused). This file is **not** shipped; the repository file `CMS/marketplace/plugins/index.json` is the *published* registry served at `365cms.de/marketplace/plugins/index.json` and is not read as the local fallback.
 5. Otherwise the source status is `none` with a warning and the catalog is empty.
 
 Per-entry manifests (`manifest` key) are loaded relative to the registry base, limited to 512 KiB and filtered through `MANIFEST_ALLOWED_KEYS`.
@@ -119,10 +119,10 @@ Die Seite für installierte Plugins liegt unter `/admin/plugins`. Ihre Actions s
 
 Ladereihenfolge in `loadRegistry()`:
 
-1. **Frischer Cache** – Settings-Optionen `plugin_marketplace_registry_cache` / `plugin_marketplace_registry_cache_meta`, gültig 900 Sekunden (Quelle `cache`, Status `info`).
-2. **Remote-Registry** – Abruf über `HttpClient` mit Host-Allowlist; ein nicht leeres Ergebnis wird in den Cache geschrieben (Quelle `remote`).
-3. **Veralteter Cache** – schlägt der Remote-Abruf fehl, wird der letzte Cache unabhängig vom Alter genutzt (Status `warning`, inklusive Remote-Fehler).
-4. **Lokaler Index** – `index.json` im Elternverzeichnis von `PLUGIN_PATH`, also in einer Standardinstallation `CMS/index.json` (Symlink-Wurzeln werden abgelehnt). Diese Datei wird **nicht** mitgeliefert; `CMS/marketplace/plugins/index.json` im Repository ist die *veröffentlichte* Registry, die unter `365cms.de/marketplace/plugins/index.json` ausgeliefert wird, und wird nicht als lokaler Fallback gelesen.
+1. **Frischer Cache**: Settings-Optionen `plugin_marketplace_registry_cache` / `plugin_marketplace_registry_cache_meta`, gültig 900 Sekunden (Quelle `cache`, Status `info`).
+2. **Remote-Registry**: Abruf über `HttpClient` mit Host-Allowlist; ein nicht leeres Ergebnis wird in den Cache geschrieben (Quelle `remote`).
+3. **Veralteter Cache**: schlägt der Remote-Abruf fehl, wird der letzte Cache unabhängig vom Alter genutzt (Status `warning`, inklusive Remote-Fehler).
+4. **Lokaler Index**: `index.json` im Elternverzeichnis von `PLUGIN_PATH`, also in einer Standardinstallation `CMS/index.json` (Symlink-Wurzeln werden abgelehnt). Diese Datei wird **nicht** mitgeliefert; `CMS/marketplace/plugins/index.json` im Repository ist die *veröffentlichte* Registry, die unter `365cms.de/marketplace/plugins/index.json` ausgeliefert wird, und wird nicht als lokaler Fallback gelesen.
 5. Sonst ist die Quelle `none` mit Warnung, der Katalog bleibt leer.
 
 Manifeste pro Eintrag (Schlüssel `manifest`) werden relativ zur Registry-Basis geladen, auf 512 KiB begrenzt und über `MANIFEST_ALLOWED_KEYS` gefiltert.
@@ -167,7 +167,7 @@ Registry- und Manifestfelder bleiben innerhalb der aktuellen Allowlists, SHA-256
 
 ## Ergänzung (Stand 2026-10-02)
 
-### Registry-Eintrag – Beispiel
+### Registry-Eintrag: Beispiel
 
 ```json
 {
@@ -192,7 +192,7 @@ Registry- und Manifestfelder bleiben innerhalb der aktuellen Allowlists, SHA-256
 ```
 
 - `sha256` oder `checksum_sha256` muss exakt 64 Hex-Zeichen enthalten, sonst bleibt der Eintrag „manuell“.
-- `is_paid: true` + `purchase_url` → Hinweis „Kostenpflichtiges Plugin – bitte zuerst über den Marketplace erwerben oder anfragen.“
+- `is_paid: true` + `purchase_url` → Hinweis „Kostenpflichtiges Plugin: bitte zuerst über den Marketplace erwerben oder anfragen.“
 - Katalog-Strings werden auf 500 Zeichen gekürzt (`MAX_CATALOG_STRING_LENGTH`).
 
 ### Fehlercodes von `installPlugin()`

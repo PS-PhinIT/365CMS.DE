@@ -1,6 +1,6 @@
 <?php
 /**
- * Ablauf- und Prüfdaten für Beiträge und Seiten (4.1.0, Bereich 3c – erster Lauf).
+ * Ablauf- und Prüfdaten für Beiträge, Seiten und Wissensdatenbank-Einträge (4.1.0, Bereich 3c).
  *
  * - `expires_at`: Ab diesem Zeitpunkt ist ein veröffentlichter Inhalt abgelaufen. Einstellung
  *   `setting_content_expiry_action`: `draft` (Standard, auf Entwurf zurückstufen → Frontend 404, Sitemap ohne Eintrag)
@@ -32,14 +32,25 @@ final class ContentExpiryService
 {
     public const SETTING_ACTION = 'setting_content_expiry_action';
     public const SETTING_REVIEW_INTERVAL = 'setting_content_review_interval';
+    /** Antwort für zurückgestufte, abgelaufene Inhalte im Frontend: `404` (Standard) oder `410` (Gone). */
+    public const SETTING_RESPONSE = 'setting_content_expiry_response';
     public const ACTION_DRAFT = 'draft';
     public const ACTION_MARK = 'mark';
     public const BATCH = 100;
     public const DEFAULT_REVIEW_MONTHS = 12;
 
-    private const TABLES = ['post' => 'posts', 'page' => 'pages'];
-    private const SAVE_HOOKS = ['post' => 'cms_after_post_save', 'page' => 'cms_after_page_save'];
-    private const EDIT_URLS = ['post' => '/admin/posts?action=edit&id=', 'page' => '/admin/pages?action=edit&id='];
+    /**
+     * Je Inhaltsart: Tabelle, Bedingung „veröffentlicht“, Zurückstufen, „nicht im Papierkorb“, Autor-Spalte,
+     * Speicher-Hook (Suchindex, Sitemap …), Editor-Link und Bezeichnung.
+     */
+    private const TYPES = [
+        'post' => ['table' => 'posts', 'live' => "status = 'published'", 'unpublish' => "status = 'draft'", 'active' => "status <> 'trash'",
+            'author' => 'author_id', 'hook' => 'cms_after_post_save', 'edit' => '/admin/posts?action=edit&id=', 'label' => 'Beitrag'],
+        'page' => ['table' => 'pages', 'live' => "status = 'published'", 'unpublish' => "status = 'draft'", 'active' => "status <> 'trash'",
+            'author' => 'author_id', 'hook' => 'cms_after_page_save', 'edit' => '/admin/pages?action=edit&id=', 'label' => 'Seite'],
+        'kb' => ['table' => 'kb_entries', 'live' => 'is_active = 1 AND trashed_at IS NULL', 'unpublish' => 'is_active = 0', 'active' => 'trashed_at IS NULL',
+            'author' => '', 'hook' => 'cms_knowledgebase_entry_saved', 'edit' => '/admin/knowledgebase?section=edit&id=', 'label' => 'Wissensdatenbank-Eintrag'],
+    ];
 
     private static ?self $instance = null;
 
@@ -133,17 +144,35 @@ final class ContentExpiryService
         return ['value' => $value->format('Y-m-d H:i:s'), 'error' => null];
     }
 
+    /**
+     * Wurde der Inhalt wegen Ablaufs zurückgestuft (Entwurf bzw. inaktiv, Ablauf gemeldet)?
+     */
+    public static function wasExpiredAndUnpublished(array|object $row): bool
+    {
+        $value = static fn (string $key): string => (string) (is_array($row) ? ($row[$key] ?? '') : ($row->{$key} ?? ''));
+
+        return $value('expiry_notified_at') !== '' && $value('status') === ContentStatus::DRAFT;
+    }
+
+    /**
+     * HTTP-Status für einen nicht mehr öffentlichen Inhalt: 410, wenn er abgelaufen ist und die Einstellung es will.
+     */
+    public function frontendStatusFor(array|object $row): int
+    {
+        return self::wasExpiredAndUnpublished($row) && ($this->setting)(self::SETTING_RESPONSE, '404') === '410' ? 410 : 404;
+    }
+
     // ── Speichern aus dem Editor ────────────────────────────────────────────────────────────────────────────────
 
     public function saveDates(string $type, int $id, ?string $expiresAt, ?string $reviewDueAt): bool
     {
-        if (!isset(self::TABLES[$type]) || $id <= 0) {
+        if (!isset(self::TYPES[$type]) || $id <= 0) {
             return false;
         }
         try {
             // Ein neues Ablaufdatum setzt die Markierung zurück, damit ein späterer Ablauf erneut meldet.
             $this->db->execute(
-                "UPDATE {$this->prefix}" . self::TABLES[$type] . "
+                "UPDATE {$this->prefix}" . self::TYPES[$type]['table'] . "
                  SET expiry_notified_at = CASE WHEN expires_at <=> ? THEN expiry_notified_at ELSE NULL END,
                      review_notified_at = CASE WHEN review_due_at <=> ? THEN review_notified_at ELSE NULL END,
                      expires_at = ?, review_due_at = ?, updated_at = updated_at
@@ -171,13 +200,15 @@ final class ContentExpiryService
         $now = $this->now();
         $action = self::normalizeAction(($this->setting)(self::SETTING_ACTION, self::ACTION_DRAFT));
         $result = ['expired' => 0, 'marked' => 0];
-        foreach (self::TABLES as $type => $table) {
+        foreach (self::TYPES as $type => $config) {
+            $table = $config['table'];
+            $author = $config['author'] !== '' ? $config['author'] : '0';
             try {
                 $rows = $this->db->get_results(
-                    "SELECT id, title, author_id, expires_at FROM {$this->prefix}{$table}
-                     WHERE status = ? AND expires_at IS NOT NULL AND expires_at <= ? AND expiry_notified_at IS NULL
+                    "SELECT id, title, {$author} AS author_id, expires_at FROM {$this->prefix}{$table}
+                     WHERE {$config['live']} AND expires_at IS NOT NULL AND expires_at <= ? AND expiry_notified_at IS NULL
                      ORDER BY expires_at ASC LIMIT " . self::BATCH,
-                    [ContentStatus::PUBLISHED, $now]
+                    [$now]
                 ) ?: [];
             } catch (\Throwable $e) {
                 $this->logWarning('Abgelaufene Inhalte konnten nicht gelesen werden.', $e);
@@ -187,14 +218,14 @@ final class ContentExpiryService
                 $id = (int) $row->id;
                 if ($action === self::ACTION_DRAFT) {
                     $changed = $this->db->execute(
-                        "UPDATE {$this->prefix}{$table} SET status = ?, expiry_notified_at = ?, updated_at = ? WHERE id = ? AND status = ?",
-                        [ContentStatus::DRAFT, $now, $now, $id, ContentStatus::PUBLISHED]
+                        "UPDATE {$this->prefix}{$table} SET {$config['unpublish']}, expiry_notified_at = ?, updated_at = ? WHERE id = ? AND {$config['live']}",
+                        [$now, $now, $id]
                     )->rowCount();
                     if ($changed < 1) {
                         continue;
                     }
                     $result['expired']++;
-                    $this->runHook(self::SAVE_HOOKS[$type], $id, ['status' => ContentStatus::DRAFT, 'expired' => true]);
+                    $this->runHook($config['hook'], $id, ['status' => ContentStatus::DRAFT, 'expired' => true]);
                 } else {
                     $this->db->execute("UPDATE {$this->prefix}{$table} SET expiry_notified_at = ? WHERE id = ?", [$now, $id]);
                     $result['marked']++;
@@ -222,11 +253,13 @@ final class ContentExpiryService
     {
         $now = $this->now();
         $count = 0;
-        foreach (self::TABLES as $type => $table) {
+        foreach (self::TYPES as $type => $config) {
+            $table = $config['table'];
+            $author = $config['author'] !== '' ? $config['author'] : '0';
             try {
                 $rows = $this->db->get_results(
-                    "SELECT id, title, author_id FROM {$this->prefix}{$table}
-                     WHERE status <> 'trash' AND review_due_at IS NOT NULL AND review_due_at <= ? AND review_notified_at IS NULL
+                    "SELECT id, title, {$author} AS author_id FROM {$this->prefix}{$table}
+                     WHERE {$config['active']} AND review_due_at IS NOT NULL AND review_due_at <= ? AND review_notified_at IS NULL
                      ORDER BY review_due_at ASC LIMIT " . self::BATCH,
                     [$now]
                 ) ?: [];
@@ -253,12 +286,12 @@ final class ContentExpiryService
      */
     public function markReviewed(string $type, int $id): array
     {
-        if (!isset(self::TABLES[$type]) || $id <= 0) {
+        if (!isset(self::TYPES[$type]) || $id <= 0) {
             return ['success' => false, 'error' => 'Ungültiger Inhalt.'];
         }
         $next = self::nextReviewDate($this->now(), self::normalizeInterval(($this->setting)(self::SETTING_REVIEW_INTERVAL, (string) self::DEFAULT_REVIEW_MONTHS)));
         $this->db->execute(
-            "UPDATE {$this->prefix}" . self::TABLES[$type] . " SET review_due_at = ?, review_notified_at = NULL, updated_at = updated_at WHERE id = ?",
+            "UPDATE {$this->prefix}" . self::TYPES[$type]['table'] . " SET review_due_at = ?, review_notified_at = NULL, updated_at = updated_at WHERE id = ?",
             [$next, $id]
         );
 
@@ -268,16 +301,16 @@ final class ContentExpiryService
     /**
      * Fällige Wiedervorlagen für Listen/Widgets.
      *
-     * @return list<array{type: string, id: int, title: string, review_due_at: string, edit_url: string}>
+     * @return list<array{type: string, id: int, title: string, review_due_at: string, label: string, edit_url: string}>
      */
     public function dueReviews(int $limit = 10): array
     {
         $items = [];
-        foreach (self::TABLES as $type => $table) {
+        foreach (self::TYPES as $type => $config) {
             try {
                 $rows = $this->db->get_results(
-                    "SELECT id, title, review_due_at FROM {$this->prefix}{$table}
-                     WHERE status <> 'trash' AND review_due_at IS NOT NULL AND review_due_at <= ?
+                    "SELECT id, title, review_due_at FROM {$this->prefix}{$config['table']}
+                     WHERE {$config['active']} AND review_due_at IS NOT NULL AND review_due_at <= ?
                      ORDER BY review_due_at ASC LIMIT " . max(1, min(100, $limit)),
                     [$this->now()]
                 ) ?: [];
@@ -290,7 +323,8 @@ final class ContentExpiryService
                     'id' => (int) $row->id,
                     'title' => (string) ($row->title ?? ''),
                     'review_due_at' => (string) ($row->review_due_at ?? ''),
-                    'edit_url' => self::EDIT_URLS[$type] . (int) $row->id,
+                    'label' => $config['label'],
+                    'edit_url' => $config['edit'] . (int) $row->id,
                 ];
             }
         }
@@ -306,9 +340,9 @@ final class ContentExpiryService
         if ($userId <= 0) {
             return;
         }
-        $label = $type === 'page' ? 'Seite' : 'Beitrag';
+        $label = self::TYPES[$type]['label'];
         try {
-            ($this->notifier)($userId, sprintf('%s „%s“', $label, $title !== '' ? $title : '#' . $id), sprintf('%s „%s“ %s', $label, $title, $text), self::EDIT_URLS[$type] . $id);
+            ($this->notifier)($userId, sprintf('%s „%s“', $label, $title !== '' ? $title : '#' . $id), sprintf('%s „%s“ %s', $label, $title, $text), self::TYPES[$type]['edit'] . $id);
         } catch (\Throwable $e) {
             $this->logWarning('Hinweis zu Ablauf/Wiedervorlage fehlgeschlagen.', $e);
         }

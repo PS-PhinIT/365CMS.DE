@@ -1,9 +1,9 @@
-# 365CMS – Projektdokumentation | Abschnitt: README
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+# 365CMS Projektdokumentation | README
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.0.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-12, `stable`), PHP 8.4.1+, schema `v25`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.1.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-15, `stable`), PHP 8.4.1+, schema `v26`. Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -28,14 +28,14 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | Dateien/Struktur sucht | [FILELIST.md](FILELIST.md) · [FILESTRUCTUR.md](FILESTRUCTUR.md) · [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) · [DEVLIST.md](DEVLIST.md) |
 | alle Dokumente sehen wollt | [INDEX.md](INDEX.md) |
 
-### Eckdaten 4.0.0
+### Eckdaten 4.1.0
 
-- `CMS/core/Version.php`: `CURRENT = '4.0.0'`, `RELEASE_DATE = '2026-11-12'`, `STATUS = 'stable'`
-- `SchemaManager::SCHEMA_VERSION = 'v25'`, Tabellenpräfix `cms_`
+- Dokumentierter Stand: Version `4.1.0` (Release `2026-11-15`), Schema `v26` (90 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
+- `CMS/core/Version.php`: `CURRENT = '4.1.0'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v26'`
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
-- Release 3.5.0 bündelt alle Änderungen seit 3.4.00 (Zwischenstände 3.4.01–3.4.25 und Folgeaudit vom 14.10.2026); 3.5.2 enthält die Korrekturen aus 3.5.1 (Speichern von Seiten); 3.5.3 ergänzt die Bearbeitung von Kommentaren im Adminbereich; 3.5.4 lädt lokale Google Fonts als WOFF2 statt TTF; 3.5.5 setzt das Aktualisierungsdatum von Beiträgen und Seiten nur noch bei echten Änderungen; 3.5.6 bündelt alle suchmaschinenbezogenen Einstellungen im neuen SEO-Bereich „Suchmaschinen“ (IndexNow mit Key-Generator und automatischer Meldung, Google Search Console, Webmaster-Verifizierung); 4.0.0 ist ein Sicherheits- und Korrekturrelease nach dem Folgeaudit vom 08.11.2026 (Host-Header, MFA, Datenexport, Installer, Importer, Bibliotheken, E-Mail-Verifizierung, Benutzer anlegen; [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md)) und bringt die neu gestaltete Administration (einklappbare Seitenleiste mit Site-Umschalter, Plugin-Zuweisung je Site, Systemhinweise; Beitragseditor mit Veröffentlichungs-Checkliste, Fokusmodus und Revisionen, Schema `v25`) ([../Changelog.md](../Changelog.md))
+- Änderungen je Release: [../Changelog.md](../Changelog.md) (führende Datei)
 
 ### Dokumentationsbereiche
 
@@ -50,12 +50,19 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | [`ai/`](ai/) | AI Services, Provider, Assets |
 | [`assets/`](assets/) | Gebündelte Bibliotheken unter `CMS/assets/` und `CMS/vendor/dompdf/` |
 
+### Roadmap 4.2.0 / 4.3.0
+
+- **4.1.0** (Schema `v26`): Bereiche 1–5 vollständig umgesetzt, einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); veröffentlicht am 2026-11-15.
+- **4.2.0** (Schema `v27`): Community-Modul (Forum). Umsetzungsfahrplan: [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Planungsset: [workflow/specs/community/README.md](workflow/specs/community/README.md); Fortschritt: [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md).
+- **4.3.0**: zentrale CLI `CMS/cli.php`, Echtzeit-Alerting und Webhook-Ereignis `alert.raised` (verschoben aus 4.1.0, Spezifikation [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Entwicklerübersicht und Planungsabschnitt: [DEVLIST.md](DEVLIST.md) (Abschnitt 31).
+
 ### Wichtige Hinweise
 
 - **Konfiguration:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Eigene Konstanten deshalb in `config/app.php` pflegen und nach jedem Installer-Lauf prüfen.
-- **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar (siehe [checks/FUNKTIONEN.md](checks/FUNKTIONEN.md)).
-- **Bekannte Lücken:** Abweichungen zwischen Code und Doku (z. B. Upload-Token im Member-Medienbereich, fehlende `/order`-Ansicht, `config/app.php`-Neuerzeugung) stehen gesammelt in [core/STATUS.md](core/STATUS.md).
-- **Audits:** Code-Audit vom 2026-10-03 unter [checks/README.md](checks/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
+- **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar.
+- **Offene Punkte:** [core/STATUS.md](core/STATUS.md) (Abschnitt „Offene Punkte“).
+- **Audits:** Prüfberichte unter [audit/README.md](audit/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
 - **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei.
 
 ### Verwandte Einstiege

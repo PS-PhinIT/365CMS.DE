@@ -83,6 +83,7 @@ class EditorialCalendarModule
                 'typePost' => __('calendar.type.post'),
                 'typePage' => __('calendar.type.page'),
                 'kindScheduled' => __('calendar.kind.scheduled'),
+                'kindReview' => __('calendar.kind.review'),
                 'kindPlanned' => __('calendar.kind.planned'),
                 'kindPublished' => __('calendar.kind.published'),
                 'author' => __('calendar.event.author'),

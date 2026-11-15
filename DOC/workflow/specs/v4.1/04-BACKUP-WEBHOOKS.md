@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** Spezifikation, Umsetzung begonnen | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Spec 4.1.0: Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 4a, 4b | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -102,7 +102,7 @@ SigV4 gegen AWS-Testvektoren (`get-vanilla`, `get-vanilla-query-order-key-case`,
 
 Admins legen Empfänger an (URL, Ereignisse, Geheimnis). Ereignisse: `backup.offsite_uploaded`, `backup.offsite_failed`,
 `content.published`, `content.submitted`, `user.registered`, `order.paid`, `order.failed`, `subscription.renewed`,
-`alert.raised`, `community.report_created` (ab 4.2) – erweiterbar über Filter `cms_webhook_event`.
+`alert.raised`, `community.report_created` (ab 4.2), erweiterbar über Filter `cms_webhook_event`.
 
 ### 8. Technik
 

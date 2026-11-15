@@ -178,6 +178,8 @@ T::run('Durchsetzung beim Speichern (resolveSaveStatus)', static function (): vo
     T::same(['status' => 'private', 'downgraded' => false], W::resolveSaveStatus('private', 'published', false), 'veröffentlicht → privat: keine neue Freigabe');
     T::same(['status' => 'draft', 'downgraded' => false], W::resolveSaveStatus('draft', 'published', false), 'zurück auf Entwurf ist immer erlaubt');
     T::same(['status' => 'pending', 'downgraded' => false], W::resolveSaveStatus('pending', 'draft', false), 'Einreichen ist immer erlaubt');
+    T::same(['status' => 'pending', 'downgraded' => true], W::resolveSaveStatus('published', 'private', false), 'SEC-410-13: privat → veröffentlicht ohne Recht = Einreichung');
+    T::same(['status' => 'private', 'downgraded' => false], W::resolveSaveStatus('private', 'private', false), 'privat bleibt privat ohne neue Freigabe');
 });
 
 T::run('Statusübergänge (transitionAction)', static function (): void {

@@ -532,7 +532,12 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                                     <option value="draft" <?php echo ($s['content_expiry_action'] ?? 'draft') === 'draft' ? 'selected' : ''; ?>>Auf Entwurf zurückstufen</option>
                                     <option value="mark" <?php echo ($s['content_expiry_action'] ?? 'draft') === 'mark' ? 'selected' : ''; ?>>Sichtbar lassen, nur Hinweis</option>
                                 </select>
-                                <small id="settingsContentExpiryHint" class="form-hint">Gilt für Beiträge und Seiten mit Ablaufdatum; verarbeitet stündlich per Cron.</small>
+                                <small id="settingsContentExpiryHint" class="form-hint">Gilt für Beiträge, Seiten und Wissensdatenbank-Einträge mit Ablaufdatum; verarbeitet stündlich per Cron.</small>
+                                <label class="form-label mt-2" for="settingsContentExpiryResponse">Antwort für zurückgestufte Inhalte</label>
+                                <select name="content_expiry_response" id="settingsContentExpiryResponse" class="form-select">
+                                    <option value="404" <?php echo ($s['content_expiry_response'] ?? '404') === '404' ? 'selected' : ''; ?>>404 Nicht gefunden</option>
+                                    <option value="410" <?php echo ($s['content_expiry_response'] ?? '404') === '410' ? 'selected' : ''; ?>>410 Dauerhaft entfernt (Suchmaschinen entfernen schneller)</option>
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="settingsContentReviewInterval">Wiedervorlage nach „Geprüft“</label>

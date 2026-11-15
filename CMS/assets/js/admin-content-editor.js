@@ -1209,6 +1209,7 @@
                         { label: 'Akkordeon', icon: '⌄', block: 'accordion', description: 'Aufklappbarer Abschnitt' },
                         { label: 'Button', icon: '⬜', block: 'button', description: 'Call-to-Action-Schaltfläche' },
                         { label: 'Formular', icon: '☰', block: 'form', description: 'Formular aus der Formularverwaltung' },
+                        { label: 'Vorlagen', icon: '⧉', block: 'reusableBlock', description: 'Zentrale Vorlage aus „EditorJS Block Vorlagen“ einbinden' },
                         { label: 'Abstand', icon: '↕', block: 'spacer', data: { height: 40, preset: '40px' }, description: 'Vertikalen Weißraum einfügen' },
                         { label: 'Code', icon: '</>', block: 'code', description: 'Code-Beispiel' },
                         { label: 'HTML', icon: '{}', block: 'raw', description: 'Sanitizter HTML-Block' },

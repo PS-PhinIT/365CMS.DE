@@ -285,7 +285,7 @@ $packageHistorySeverityMeta = static function (string $severity): array {
                                 <div class="col-md-4">
                                     <label for="fld-payment_methods" class="form-label">Zahlungsmethoden</label>
                                     <select id="fld-payment_methods" name="payment_methods" class="form-select">
-                                        <?php foreach (['invoice' => 'Rechnung', 'stripe' => 'Stripe', 'paypal' => 'PayPal', 'all' => 'Alle'] as $value => $label): ?>
+                                        <?php foreach (['invoice' => 'Rechnung', 'stripe' => 'Stripe', 'mollie' => 'Mollie', 'paypal' => 'PayPal (über Mollie)', 'all' => 'Alle'] as $value => $label): ?>
                                             <option value="<?= $value ?>" <?= ($settings['payment_methods'] ?? 'invoice') === $value ? 'selected' : '' ?>><?= $label ?></option>
                                         <?php endforeach; ?>
                                     </select>

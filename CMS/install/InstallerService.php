@@ -1130,8 +1130,14 @@ PHP;
 
             $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
             $displayName = ucfirst($username);
-            $stmt = $pdo->prepare("INSERT INTO {$prefix}users (username, email, password, display_name, role, status) VALUES (?, ?, ?, ?, 'admin', 'active')");
+            $stmt = $pdo->prepare("INSERT INTO {$prefix}users (username, email, password, display_name, role, status, password_changed_at) VALUES (?, ?, ?, ?, 'admin', 'active', UTC_TIMESTAMP())");
             $stmt->execute([$username, $email, $hash, $displayName]);
+            // SEC-410-23: erster Eintrag der Passwort-Historie wie bei jeder anderen Passwortvergabe.
+            $userId = (int) $pdo->lastInsertId();
+            if ($userId > 0) {
+                $pdo->prepare("INSERT INTO {$prefix}password_history (user_id, password_hash, created_at) VALUES (?, ?, UTC_TIMESTAMP())")
+                    ->execute([$userId, $hash]);
+            }
 
             return true;
         } catch (PDOException $e) {

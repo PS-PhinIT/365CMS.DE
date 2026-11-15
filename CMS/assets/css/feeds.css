@@ -24,7 +24,9 @@
     --fd-border:        #e2e8f0;
     --fd-shadow:        0 1px 4px rgba(0,0,0,.06);
     --fd-shadow-hover:  0 4px 16px rgba(0,0,0,.10);
-    --fd-font:          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --fd-font:          inherit;
+    --fd-image-ratio:   16/9;
+    --fd-card-border-width: 1px;
     --fd-content-max:   var(--container-width, 1100px);
 }
 
@@ -45,8 +47,8 @@
  * Header
  * ---------------------------------------------------------------------- */
 .fd-header {
-    background: linear-gradient(135deg, var(--fd-hdr-from), var(--fd-hdr-to));
-    color: var(--fd-hdr-title);
+    background: var(--fd-hdr-bg, linear-gradient(135deg, var(--fd-hdr-from), var(--fd-hdr-to)));
+    color: var(--fd-hdr-fg, var(--fd-hdr-title));
     width: min(calc(100% - 2rem), var(--fd-content-max));
     margin: 1.25rem auto 0;
     padding: 1.35rem clamp(1rem, 2vw, 1.5rem) 1.1rem;
@@ -250,8 +252,9 @@
  * ---------------------------------------------------------------------- */
 .fd-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.25rem;
+    /* Einstellung „Spalten im Raster“ (Feeds → Design); bisher fest verdrahtet. */
+    grid-template-columns: var(--fd-grid-columns, repeat(auto-fill, minmax(300px, 1fr)));
+    gap: 1.5rem;
 }
 
 /* -------------------------------------------------------------------------
@@ -271,6 +274,7 @@
 
 .fd-list .fd-card__image {
     height: 100%;
+    aspect-ratio: auto;
     object-fit: cover;
     border-radius: var(--fd-radius) 0 0 var(--fd-radius);
 }
@@ -306,16 +310,34 @@
  * Feed-Card
  * ---------------------------------------------------------------------- */
 .fd-card {
+    display: flex;
+    flex-direction: column;
     background: var(--fd-card-bg);
-    border: 1px solid var(--fd-card-border);
+    border: var(--fd-card-border-width) solid var(--fd-card-border);
     border-radius: var(--fd-radius);
+    box-shadow: var(--fd-shadow);
     overflow: hidden;
-    transition: box-shadow .25s, transform .25s;
+    transition: box-shadow .25s, transform .25s, border-color .25s;
 }
 
-.fd-card:hover {
+.fd-card:hover,
+.fd-card:focus-within {
     box-shadow: var(--fd-shadow-hover);
-    transform: translateY(-2px);
+    border-color: var(--fd-primary);
+    transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fd-card,
+    .fd-card__image {
+        transition: none;
+    }
+
+    .fd-card:hover,
+    .fd-card:focus-within,
+    .fd-card:hover .fd-card__image {
+        transform: none;
+    }
 }
 
 .fd-card--featured {
@@ -330,9 +352,11 @@
 
 .fd-card__image {
     width: 100%;
-    height: 180px;
+    aspect-ratio: var(--fd-image-ratio);
+    height: auto;
     object-fit: cover;
     display: block;
+    background: var(--fd-accent);
     transition: transform .3s;
 }
 
@@ -341,7 +365,10 @@
 }
 
 .fd-card__body {
-    padding: 1rem 1.25rem 1.25rem;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 1.1rem 1.25rem 1.25rem;
 }
 
 .fd-card__badge {
@@ -358,8 +385,12 @@
 .fd-card__title {
     font-size: 1rem;
     font-weight: 700;
-    line-height: 1.4;
+    line-height: 1.35;
     margin: 0 0 .5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .fd-card__title a {
@@ -376,18 +407,32 @@
     font-size: .875rem;
     color: var(--fd-text-muted);
     line-height: 1.6;
-    margin: 0 0 .75rem;
+    margin: 0 0 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
+/* Quelle und Datum unten an der Karte, gleich hohe Karten im Raster. */
 .fd-card__meta {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: .4rem .75rem;
+    margin-top: auto;
+    padding-top: .75rem;
+    border-top: 1px solid var(--fd-border);
     font-size: .78rem;
-    color: var(--fd-text-light);
+    color: var(--fd-text-muted);
 }
 
 .fd-card__source {
+    display: inline-flex;
+    align-items: center;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: var(--fd-accent);
     font-weight: 600;
     color: var(--fd-primary);
 }

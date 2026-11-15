@@ -54,6 +54,7 @@ $pageId = (int) ($page['id'] ?? 0);
                 <p class="page-hero__excerpt"><?php echo $pageExcerpt; ?></p>
                 <?php endif; ?>
 
+                <?php if ((int) ($page['id'] ?? 0) > 0): /* virtuelle Seiten (z. B. Feed-Übersicht) ohne Meta-Zeile */ ?>
                 <div class="page-hero__meta">
                     <?php if ($pageUpdatedLabel !== ''): ?>
                     <span><strong><?php echo esc_html(meridian_t('theme.post.updated')); ?></strong> <?php echo htmlspecialchars($pageUpdatedLabel, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -65,6 +66,7 @@ $pageId = (int) ($page['id'] ?? 0);
                     <span>Slug: <code><?php echo htmlspecialchars($pageSlug, ENT_QUOTES, 'UTF-8'); ?></code></span>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
             </div>
 
             <?php if ($pageImage['url'] !== ''): ?>

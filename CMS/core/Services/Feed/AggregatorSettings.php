@@ -60,6 +60,13 @@ final class AggregatorSettings
         'color_card_border' => '#e2e8f0',
         'border_radius' => 10,
         'grid_columns' => 'auto',
+        // Seit 4.1.0: mehr als nur Farben (Nachtrag N5).
+        'color_text' => '#1e293b',
+        'color_bg' => '#f1f5f9',
+        'font_family' => 'theme',
+        'card_style' => 'shadow',
+        'image_ratio' => '16/9',
+        'header_style' => 'gradient',
         'digest_from_name' => '365 CMS Feed Digest',
         'digest_from_email' => '',
         'digest_subject' => 'Dein Feed-Digest – {date}',
@@ -81,9 +88,20 @@ final class AggregatorSettings
         'design' => [
             'color_primary', 'color_accent', 'color_hdr_from', 'color_hdr_to', 'color_hdr_title', 'color_card_bg',
             'color_card_border', 'border_radius', 'grid_columns',
+            'color_text', 'color_bg', 'font_family', 'card_style', 'image_ratio', 'header_style',
         ],
         'digest' => ['digest_from_name', 'digest_from_email', 'digest_subject', 'digest_subject_en', 'digest_max_items'],
     ];
+
+    /** Schriftwahl der Feed-Seiten: `theme` übernimmt die Schrift des Themes. */
+    public const FONTS = [
+        'theme' => 'inherit',
+        'system' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        'serif' => "Georgia, 'Times New Roman', serif",
+    ];
+    public const CARD_STYLES = ['shadow', 'border', 'flat'];
+    public const IMAGE_RATIOS = ['16/9', '3/2', '4/3', '1/1'];
+    public const HEADER_STYLES = ['gradient', 'solid', 'none'];
 
     /** @var array<string, bool|int|string>|null */
     private static ?array $cache = null;
@@ -212,6 +230,25 @@ final class AggregatorSettings
             '--fd-grid-columns' => $columns === 'auto'
                 ? 'repeat(auto-fill, minmax(300px, 1fr))'
                 : 'repeat(' . (int) $columns . ', minmax(0, 1fr))',
+            '--fd-text' => (string) $s['color_text'],
+            '--fd-bg' => (string) $s['color_bg'],
+            '--fd-font' => self::FONTS[(string) $s['font_family']] ?? 'inherit',
+            '--fd-image-ratio' => (string) $s['image_ratio'],
+            '--fd-shadow' => match ((string) $s['card_style']) {
+                'shadow' => '0 1px 3px rgba(15,23,42,.06), 0 6px 16px rgba(15,23,42,.06)',
+                default => 'none',
+            },
+            '--fd-shadow-hover' => match ((string) $s['card_style']) {
+                'flat' => 'none',
+                default => '0 10px 28px rgba(15,23,42,.12)',
+            },
+            '--fd-card-border-width' => (string) $s['card_style'] === 'flat' ? '0' : '1px',
+            '--fd-hdr-bg' => match ((string) $s['header_style']) {
+                'solid' => (string) $s['color_hdr_from'],
+                'none' => 'transparent',
+                default => 'linear-gradient(135deg, ' . $s['color_hdr_from'] . ', ' . $s['color_hdr_to'] . ')',
+            },
+            '--fd-hdr-fg' => (string) $s['header_style'] === 'none' ? (string) $s['color_text'] : (string) $s['color_hdr_title'],
         ];
 
         $css = ':root{';
@@ -267,6 +304,10 @@ final class AggregatorSettings
         return match ($key) {
             'archive_slug' => self::sanitizeSlug($value),
             'grid_columns' => in_array($value, self::GRID_COLUMNS, true) ? $value : 'auto',
+            'font_family' => array_key_exists($value, self::FONTS) ? $value : 'theme',
+            'card_style' => in_array($value, self::CARD_STYLES, true) ? $value : 'shadow',
+            'image_ratio' => in_array($value, self::IMAGE_RATIOS, true) ? $value : '16/9',
+            'header_style' => in_array($value, self::HEADER_STYLES, true) ? $value : 'gradient',
             'digest_from_email' => filter_var(trim($value), FILTER_VALIDATE_EMAIL) !== false ? trim($value) : '',
             'noise_exclude_keywords', 'noise_exclude_authors' => self::listText($value, 4000),
             'noise_exclude_domains' => self::listText($value, 2000),

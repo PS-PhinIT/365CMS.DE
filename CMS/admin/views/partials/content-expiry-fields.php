@@ -34,7 +34,7 @@ $exE = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES,
             <input type="time" class="form-control" id="<?= $exE($exPrefix) ?>ExpiresTime" name="expires_time" value="<?= $exE($exTime) ?>" step="60" aria-label="Ablaufuhrzeit" aria-describedby="<?= $exE($exPrefix) ?>ExpiresHint">
         </div>
     </div>
-    <div class="form-hint mb-2" id="<?= $exE($exPrefix) ?>ExpiresHint">Optional. Danach wird der Inhalt automatisch auf Entwurf gesetzt (oder nur markiert, je nach Einstellung).</div>
+    <div class="form-hint mb-2" id="<?= $exE($exPrefix) ?>ExpiresHint">Optional. Danach wird der Inhalt automatisch zurückgestuft – Entwurf bzw. inaktiv – oder nur markiert (Einstellung „Bei Ablauf“).</div>
     <label class="form-label small mb-1" for="<?= $exE($exPrefix) ?>ReviewDate">Wiedervorlage</label>
     <input type="date" class="form-control mb-1" id="<?= $exE($exPrefix) ?>ReviewDate" name="review_due_date" value="<?= $exE($exReviewDate) ?>" aria-describedby="<?= $exE($exPrefix) ?>ReviewHint">
     <div class="form-hint" id="<?= $exE($exPrefix) ?>ReviewHint">Optional. Am Stichtag erhält der Autor einen Hinweis; der Inhalt bleibt unverändert.</div>

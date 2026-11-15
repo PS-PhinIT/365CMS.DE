@@ -1,8 +1,8 @@
-# 365CMS – Projektdokumentation | Abschnitt: Gesamtaudit 2026-10-14
+# 365CMS Projektdokumentation | Gesamtaudit 2026-10-14
 
-> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml`
 
-> **Neuestes Audit:** [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) – Folgeaudit zu 3.5.6 (Sicherheit, Bibliotheken, Funktionen, Backups und Statusanzeigen), alle 44 Befunde in 4.0.0 behoben
+> **Neuestes Audit:** [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md). Folgeaudit zu 3.5.6 (Sicherheit, Bibliotheken, Funktionen, Backups und Statusanzeigen), alle 44 Befunde in 4.0.0 behoben
 
 ## English (summary)
 
@@ -38,7 +38,7 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) | Folgeaudit zu 3.5.6 vom 2026-11-08: SEC-32 bis SEC-47, Bibliotheken DEP-01 bis DEP-04, FUN-35 bis FUN-54 (u. a. E-Mail-Verifizierung, Benutzer anlegen, Kennzeichnung kritischer Updates, Backup-Prüfung im Audit, Wiederherstellung, falsche Statusanzeigen, Firewall-Rate-Limit), BP-06 bis BP-09 (behoben in 4.0.0), Empfehlungen OFFEN-20 bis OFFEN-27 (offen) |
 | [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md) | Folgeaudit vom 2026-11-09: Umsetzung OFFEN-20 bis OFFEN-26, Regressionsprüfung (SEC-48, FUN-55 bis FUN-62, BP-10) |
 | [FOLGEAUDIT-2026-11-12.md](FOLGEAUDIT-2026-11-12.md) | Prüfprotokoll der Code-, Sicherheits- und Architekturprüfung des Stands 4.0.0: Changelog (CL-001 bis CL-233), weitere Prüfbereiche je Pull Request |
-| [TODO-MEMBERDASHBOARD-V4.md](TODO-MEMBERDASHBOARD-V4.md) | ToDo-Plan zum Stand 4.0.0 vom 2026-11-14: Memberdashboard im Core (MD), Newsletter-Widget (NL), Oberfläche und Barrierefreiheit (UI), Theme `cms-phinit` (PH), Login-Showcase (LS), Tests und Doku (QA) |
+| [RELEASE-AUDIT-4.1.0-2026-11-15.md](RELEASE-AUDIT-4.1.0-2026-11-15.md) | Release- und Code-Abnahmeprüfung 4.1.0 (Linie 3.5.0 → 4.1.0, Schema v23 → v26), je Prüfbereich ein Pull Request: SEC-410 (Sicherheit), DB-410, FUN-410, PERF-410, DOC-410 |
 
 Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Offene Empfehlungen tragen `OFFEN-xx`.
 
@@ -47,7 +47,7 @@ Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (S
 1. **Prüfkatalog:** zusammengestellt aus OWASP Top 10:2025 und aktuellen Website-/CMS-Audit-Checklisten ([PRUEFKATALOG.md](PRUEFKATALOG.md)).
 2. **Statische Prüfung:** vier parallele Stränge (Sicherheit, Geschwindigkeit/Last, Verweise/Funktionen, GUI).
    - Jeder Treffer wurde am Code nachvollzogen.
-   - Nicht bestätigte Treffer wurden verworfen. Beispiel: „`cmsConfirm`/`cmsAlert` nie definiert“ stimmt nicht – beide stehen in `admin/partials/footer.php`.
+   - Nicht bestätigte Treffer wurden verworfen. Beispiel: „`cmsConfirm`/`cmsAlert` nie definiert“ stimmt nicht, beide stehen in `admin/partials/footer.php`.
 3. **Laufzeittests:** gegen MySQL 8.0 mit dem PHP-Entwicklungsserver auf einer **Kopie** von `CMS/` (Neuinstallation über `install.php`).
    - Abfragezählung über das MySQL-General-Log je Seitenaufruf.
    - Geprüft wurden u. a. Startseite, Blog, Suche inkl. Rate-Limit, 404 inkl. überlangem Pfad, Feed und `robots.txt`.
@@ -148,7 +148,7 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
 | OFFEN-09 | Verweis | Ältere Changelog-Einträge nennen Pfade als `CMS/DOC/…`; korrekt ist `DOC/…`. | ✅ 68 Pfade korrigiert. |
 | OFFEN-10 | GUI | Rund 380 `<label>` haben kein `for=`. Ein Teil umschließt das Feld und ist damit gültig. Die übrigen mit axe-core prüfen und verknüpfen. | ✅ 250 Labels verknüpft; die übrigen umschließen ihr Feld, sitzen vor Wrappern oder werden dynamisch erzeugt. |
 | OFFEN-11 | GUI | Dashboard-Links auf `/admin/posts` sind fest verdrahtet statt über `SITE_URL` gebildet (Problem bei Installation im Unterverzeichnis). | ✅ `dashboardUrl()` setzt `SITE_URL` vor alle internen Pfade. |
-| OFFEN-12 | GUI | Für `data-autohide` und `data-copy-input-target` gibt es JS-Handler, aber kein Markup – entfernen oder nutzen. | ✅ Beide Handler entfernt. |
+| OFFEN-12 | GUI | Für `data-autohide` und `data-copy-input-target` gibt es JS-Handler, aber kein Markup: entfernen oder nutzen. | ✅ Beide Handler entfernt. |
 | OFFEN-13 | Datenschutz | `activity_log` und `audit_log` werden bewusst **nicht** automatisch gelöscht (Nachweispflicht). Die Frist im Verarbeitungsverzeichnis festlegen. | ✅ Optionale Frist unter *Sicherheit → Sicherheits-Audit* (Standard aus; 90–3650 Tage; täglicher Cron). |
 
 ### Hinweise für Betreiber
@@ -167,8 +167,8 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
   Die Fristen lassen sich über den Filter `cms_data_retention_days` anpassen (Wert `0` = nicht löschen; sonst gelten mindestens 7 und höchstens 3650 Tage).
 - **Reverse Proxy / CDN (ab 3.5.0):** Die Rate-Limits (Suche, Web-Vitals, MFA, Re-Auth, Nachrichten, Firewall) zählen je Client-IP.
   - Ohne Einstellung gilt `cloudflare`: Cloudflare wird automatisch erkannt. Hinter einem lokalen Reverse Proxy, Docker oder Load Balancer `private` (bzw. `auto`) setzen, wenn dieser `X-Forwarded-For` selbst ergänzt oder überschreibt.
-  - **Host-CDN mit unbekannten Adressen (z. B. Hostinger):** Unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* erscheinen erkannte Proxy-Netze. Das Netz, über das Ihr eigener Seitenaufruf kam, ist als **Ihre Anfrage** markiert – mit **Vertrauen** übernehmen. Das Sicherheits-Audit warnt in diesem Fall. Andere Netze nur nach Bestätigung durch den Hoster übernehmen (Header-Angaben sind fälschbar). Alternativ `*` setzen, wenn der Server **nur** über das CDN erreichbar ist.
-  - Erscheint dort kein Kandidat und zeigt die Diagnose bereits unterschiedliche Besucher-IPs, schreibt der Webserver (z. B. LiteSpeed) die echte IP schon selbst in `REMOTE_ADDR` – dann ist nichts zu tun.
+  - **Host-CDN mit unbekannten Adressen (z. B. Hostinger):** Unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* erscheinen erkannte Proxy-Netze. Das Netz, über das Ihr eigener Seitenaufruf kam, ist als **Ihre Anfrage** markiert, mit **Vertrauen** übernehmen. Das Sicherheits-Audit warnt in diesem Fall. Andere Netze nur nach Bestätigung durch den Hoster übernehmen (Header-Angaben sind fälschbar). Alternativ `*` setzen, wenn der Server **nur** über das CDN erreichbar ist.
+  - Erscheint dort kein Kandidat und zeigt die Diagnose bereits unterschiedliche Besucher-IPs, schreibt der Webserver (z. B. LiteSpeed) die echte IP schon selbst in `REMOTE_ADDR`, dann ist nichts zu tun.
   - `CMS_TRUSTED_PROXIES` in `config/app.php` hat Vorrang vor der Admin-Einstellung; Schlüsselwörter und Header-Reihenfolge in [../core/SECURITY.md](../core/SECURITY.md) (Abschnitt 7a).
 - **nginx:** Die `.htaccess`-Regeln greifen hier nicht. Die Sperren für `uploads/member`, `uploads/import` und die Importer-Verzeichnisse stehen in [../INSTALLATION.md](../INSTALLATION.md).
 - **Checkout:** Lifetime-Tarife werden nur noch im Admin vergeben.

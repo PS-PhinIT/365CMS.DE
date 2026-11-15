@@ -33,6 +33,8 @@ final class EntraSsoService
     /** Sitzung: Konto, das sich per SSO angemeldet hat, und Zeitpunkt (Re-Auth „frische SSO-Anmeldung“, §3.4). */
     public const SESSION_SSO_USER = 'auth_sso_user_id';
     public const SESSION_SSO_AT = 'auth_sso_at';
+    /** Ausstehende lokale Code-Abfrage nach einer Entra-Anmeldung (SEC-410-01): Konto-ID. */
+    public const SESSION_SSO_PENDING = 'auth_sso_mfa_pending_user_id';
     public const FRESH_SECONDS = 600;
 
     public const RATE_LIMIT_ACTION = 'sso_callback';
@@ -54,6 +56,7 @@ final class EntraSsoService
         'user_has_identity' => 'Dein Konto ist bereits mit einem anderen Microsoft-Konto verknüpft. Trenne die Verknüpfung zuerst.',
         'link_session' => 'Bitte melde dich erneut an und starte die Verknüpfung noch einmal.',
         'local_login_disabled' => 'Bitte melde dich mit Microsoft an.',
+        'unlink_blocked' => 'Die Verknüpfung mit Microsoft ist Pflicht, solange die lokale Anmeldung eingeschränkt ist. Bitte wende dich an die Administration.',
     ];
 
     private static ?self $instance = null;
@@ -228,6 +231,10 @@ final class EntraSsoService
             $_SESSION['mfa_pending_remember'] = '0';
             $_SESSION['mfa_pending_since'] = time();
             $_SESSION['mfa_failed_attempts'] = 0;
+            // SEC-410-01: Nach der Code-Abfrage gilt die Sitzung weiter als SSO-Sitzung (Sperre „Lokale Anmeldung“,
+            // frische SSO-Anmeldung); ein Passwort-Ablauf-Flag aus einem früheren Versuch gilt hier nicht.
+            $_SESSION[self::SESSION_SSO_PENDING] = $userId;
+            unset($_SESSION[MfaEnforcementService::SESSION_PASSWORD_CHANGE]);
             // Wie beim Passwort-Login: Standardziel für Admins ist das Dashboard.
             $pendingTarget = (string) $flow['redirect'];
             if ($pendingTarget === '/member' && (string) ($store->findUser($userId)->role ?? '') === 'admin') {
@@ -246,12 +253,10 @@ final class EntraSsoService
         }
 
         // SSO-Anmeldungen setzen kein Passwort-Ablauf-Flag (1a); MFA-Nachweis nur für diese Sitzung (1b).
-        unset($_SESSION[MfaEnforcementService::SESSION_PASSWORD_CHANGE]);
+        self::markSsoSession($userId);
         if ($mfaProof) {
             $_SESSION[MfaEnforcementService::SESSION_SSO_MFA] = $userId;
         }
-        $_SESSION[self::SESSION_SSO_USER] = $userId;
-        $_SESSION[self::SESSION_SSO_AT] = time();
 
         $this->audit('sso_login_success', 'Entra-Anmeldung erfolgreich.', $userId, [
             'linked' => (string) ($resolved['linked'] ?? 'existing'),
@@ -320,6 +325,45 @@ final class EntraSsoService
             'message' => self::MESSAGES[$result['status'] === 'linked' ? 'linked' : 'already_linked'],
             'alert' => $result['status'] === 'linked' ? 'success' : 'info',
         ];
+    }
+
+    /**
+     * Markiert die (neu angelegte) Sitzung als über Microsoft begonnen. Nach `Auth::completeLoginForUserId()` aufrufen –
+     * die Sitzungsanlage entfernt die SSO-Merkmale.
+     */
+    public static function markSsoSession(int $userId): void
+    {
+        unset($_SESSION[MfaEnforcementService::SESSION_PASSWORD_CHANGE], $_SESSION[self::SESSION_SSO_PENDING]);
+        $_SESSION[self::SESSION_SSO_USER] = $userId;
+        $_SESSION[self::SESSION_SSO_AT] = time();
+    }
+
+    /**
+     * Ausstehende Code-Abfrage stammt aus einer Entra-Anmeldung dieses Kontos?
+     */
+    public static function isSsoMfaPending(int $userId): bool
+    {
+        return $userId > 0 && (int) ($_SESSION[self::SESSION_SSO_PENDING] ?? 0) === $userId;
+    }
+
+    /**
+     * Darf das Konto die Verknüpfung selbst trennen (SEC-410-02)? Solange die lokale Anmeldung eingeschränkt ist,
+     * würde das Trennen die Sperre umgehen (`disabled_for_linked`: danach wieder Passwort-Login an Microsoft vorbei)
+     * bzw. das Konto aussperren (`admins_only`). Admins behalten das Recht (Notfallzugang).
+     */
+    public function mayUnlink(int $userId, ?string $role = null): bool
+    {
+        try {
+            $mode = EntraSettings::enforcedLocalLogin($this->settings());
+            if ($mode === EntraSettings::LOCAL_LOGIN_ALL) {
+                return true;
+            }
+            $role ??= (string) ((new DatabaseIdentityStore())->findUser($userId)->role ?? '');
+
+            return $role === 'admin';
+        } catch (\Throwable) {
+            return true;
+        }
     }
 
     /**

@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Schriftverwaltung
+# 365CMS Projektdokumentation | Admin: Schriftverwaltung
 
-> **Stand:** 2026-10-23 | **Version:** 3.5.4 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/font-manager` (Alt-Route `/admin/fonts-local` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_font_manager`
 
 ## English (summary)
@@ -21,7 +21,7 @@ Since 3.5.4 downloads request Google Fonts with exactly one modern browser User-
 | Fließtext-Schrift | `font_body` | wie oben |
 | Basisgröße | `font_size_base` | 12–24 px (Standard 16) |
 | Zeilenhöhe | `font_line_height` | 1,0–2,5 (Standard 1,6) |
-| Lokale Schriften erzwingen | `privacy_use_local_fonts` | an/aus – das Theme lädt dann keine Schriften von `fonts.googleapis.com` |
+| Lokale Schriften erzwingen | `privacy_use_local_fonts` | an/aus: das Theme lädt dann keine Schriften von `fonts.googleapis.com` |
 | Google Fonts als Fallback (Theme-Customizer `typography.google_fonts`) | seit 3.4.13 standardmäßig **aus** | nur wenn aktiviert und keine lokalen Schriften aktiv sind, lädt `cms-default` Fonts von Google; sonst greifen die System-Fallbacks (`Georgia`, `system-ui`) |
 
 **Kuratierte Auswahl (Auszug):** Inter, Space Grotesk, Sora, Barlow, Roboto, Open Sans, Lato, Montserrat, Poppins, Source Sans, Nunito, Oswald, Rajdhani, DM Sans, Libre Baskerville, Playfair Display, Merriweather, JetBrains Mono, Fira Code sowie Systemschriften (system-ui, Arial, Georgia, Verdana …) mit passenden Fallback-Stacks.
@@ -52,7 +52,7 @@ Für lokal gespeicherte Google Fonts. Schriften, die noch als TTF/OTF vorliegen,
 
 Bei aktivem `privacy_use_local_fonts` bindet `Bootstrap` nur die als Überschrift/Fließtext gewählten Schriften ein (Filter `local_font_slugs`):
 
-- `<link rel="preload" as="font" type="font/woff2" crossorigin>` für die Primärdatei – der Browser lädt die Schrift parallel zum CSS.
+- `<link rel="preload" as="font" type="font/woff2" crossorigin>` für die Primärdatei: der Browser lädt die Schrift parallel zum CSS.
 - Stylesheet mit `?ver=<Dateizeit>`: `.htaccess` cached CSS ein Jahr `immutable`, nach „Neu laden“ holen Browser so sofort die neue Fassung.
 - Pfade aus der Datenbank werden nur akzeptiert, wenn sie direkt unter `uploads/fonts/` liegen.
 - WOFF/WOFF2 sind bereits komprimiert und werden von Brotli/Deflate ausgenommen; TTF/OTF werden weiterhin komprimiert.

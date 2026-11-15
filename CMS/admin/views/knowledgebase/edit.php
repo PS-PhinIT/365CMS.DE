@@ -148,6 +148,9 @@ $kbEditor = static function (string $name, string $value, string $label, int $he
                         </div>
                     </div>
                     <div class="form-hint mt-2"><?= $kbT('knowledgebase.admin.field_priority_hint') ?></div>
+                    <div class="mt-3">
+                        <?php $expiryFields = ['prefix' => 'kb', 'expires_at' => $kbIsNew ? null : ($kbEntry['expires_at'] ?? null), 'review_due_at' => $kbIsNew ? null : ($kbEntry['review_due_at'] ?? null)]; require __DIR__ . '/../partials/content-expiry-fields.php'; ?>
+                    </div>
                 </div>
                 <div class="card-footer d-flex gap-2">
                     <a class="btn" href="<?= $kbE(KnowledgebaseModule::url(['section' => 'entries'])) ?>"><?= $kbT('knowledgebase.admin.cancel') ?></a>

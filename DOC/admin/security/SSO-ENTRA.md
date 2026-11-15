@@ -1,6 +1,6 @@
-# 365CMS – Admin: Anmeldung mit Microsoft Entra ID (SSO)
+# 365CMS: Admin: Anmeldung mit Microsoft Entra ID (SSO)
 
-> **Stand:** 2026-11-14 | **Version:** 4.1.0 (in Entwicklung) | **Status:** Beta | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
 
 ## English (summary)
 
@@ -18,10 +18,10 @@ encrypted and never shown again. No tokens are stored.
 ### 1. App-Registrierung in Entra ID
 
 1. *Entra Admin Center → App-Registrierungen → Neue Registrierung*, unterstützte Kontotypen: **nur dieses Organisationsverzeichnis** (Single-Tenant, empfohlen).
-2. **Umleitungs-URI** (Plattform *Web*): `https://<deine-site>/cms-login/sso/entra/callback` – die exakte Adresse steht oben im Tab.
+2. **Umleitungs-URI** (Plattform *Web*): `https://<deine-site>/cms-login/sso/entra/callback`: die exakte Adresse steht oben im Tab.
 3. *Zertifikate & Geheimnisse → Neuer geheimer Clientschlüssel*: Wert sofort kopieren, Ablaufdatum notieren.
 4. *Token-Konfiguration → Optionalen Anspruch hinzufügen (ID)*: `email`; für die automatische Verknüpfung zusätzlich `xms_edov`.
-5. Für das Rollen-Mapping **App-Rollen** anlegen (*App-Rollen → App-Rolle erstellen*, z. B. `CMS.Editor`) und unter *Unternehmensanwendungen → Benutzer und Gruppen* zuweisen. Gruppen-IDs (`groups`-Claim) gehen auch, liefern aber ab 200 Gruppen nur einen Verweis (Overage) – dann wertet 365CMS nur App-Rollen aus.
+5. Für das Rollen-Mapping **App-Rollen** anlegen (*App-Rollen → App-Rolle erstellen*, z. B. `CMS.Editor`) und unter *Unternehmensanwendungen → Benutzer und Gruppen* zuweisen. Gruppen-IDs (`groups`-Claim) gehen auch, liefern aber ab 200 Gruppen nur einen Verweis (Overage), dann wertet 365CMS nur App-Rollen aus.
 6. Keine API-Berechtigungen nötig: 365CMS fordert nur `openid profile email` an und verwirft Zugriffstokens.
 
 ### 2. Einstellungen (`/admin/settings?tab=sso`)
@@ -35,7 +35,7 @@ encrypted and never shown again. No tokens are stored.
 | Weitere erlaubte Tenants | Multi-Tenant nur mit Allowlist (Autorität `organizations`); die automatische Verknüpfung ist dann aus |
 | Bestehende Konten automatisch verknüpfen | Standard aus; Bedingungen siehe §3 |
 | Neue Konten anlegen | Standard aus; Konto mit Standardrolle oder Rolle aus dem Mapping, zufälliges Passwort |
-| Lokale Anmeldung (Passwort, Passkey, LDAP) | `all` · `disabled_for_linked` (verknüpfte Konten nur über Microsoft) · `admins_only` (lokal nur noch Admins). Gilt für **jeden** Weg an Microsoft vorbei – Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren eines Kontos in Entra auch im CMS wirken; ein vorher angelegter Passkey öffnet das Konto dann nicht mehr. Beim Einschalten enden laufende lokal begonnene Sitzungen betroffener Konten mit ihrer nächsten Anfrage (Audit `session_local_login_ended`); über Microsoft begonnene Sitzungen laufen weiter. Der wirksame Modus liegt als automatisch geladene Option `auth_entra.local_login_enforced` vor, die Prüfung kostet keine zusätzliche Datenbankabfrage (nur bei `disabled_for_linked` eine je Anfrage eines Nicht-Admins). Admins behalten immer den lokalen Notfallzugang; wirkt nur, solange SSO eingerichtet ist |
+| Lokale Anmeldung (Passwort, Passkey, LDAP) | `all` · `disabled_for_linked` (verknüpfte Konten nur über Microsoft) · `admins_only` (lokal nur noch Admins). Gilt für **jeden** Weg an Microsoft vorbei: Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren eines Kontos in Entra auch im CMS wirken; ein vorher angelegter Passkey öffnet das Konto dann nicht mehr. Beim Einschalten enden laufende lokal begonnene Sitzungen betroffener Konten mit ihrer nächsten Anfrage (Audit `session_local_login_ended`); über Microsoft begonnene Sitzungen laufen weiter. Der wirksame Modus liegt als automatisch geladene Option `auth_entra.local_login_enforced` vor, die Prüfung kostet keine zusätzliche Datenbankabfrage (nur bei `disabled_for_linked` eine je Anfrage eines Nicht-Admins). Admins behalten immer den lokalen Notfallzugang; wirkt nur, solange SSO eingerichtet ist |
 | MFA aus Entra anerkennen | `amr` mit `mfa`, `ngcmfa`, `fido` oder `rsa` gilt für die Sitzung als zweiter Faktor (MFA-Zwang aus [LOGIN-THRESHOLDS.md](LOGIN-THRESHOLDS.md)) |
 | Rollen-Mapping | erste passende Zeile gewinnt; `admin` nur mit „Admin-Rolle erlauben“ |
 | Rollen synchronisieren | nur für über SSO angelegte Konten; Herabstufen erlaubt |
@@ -55,7 +55,7 @@ abgelaufenes Secret.
 
 - Start `GET /cms-login/sso/entra/start` legt `state`, `nonce` und PKCE-Verifier (je 32 Byte) für 10 Minuten in die Sitzung; jeder `state` ist einmalig.
 - Das Sitzungs-Cookie ist `SameSite=Strict` und fehlt beim Rücksprung von Microsoft. Der Callback antwortet deshalb zuerst mit einer kurzen Zwischenseite, die sich per `<meta http-equiv="refresh">` selbst mit `hop=1` aufruft; erst dieser Aufruf von der eigenen Seite trägt die Sitzung und löst den Code ein.
-- Ungültiger oder wiederverwendeter `state` → 400 und Audit `sso_state_invalid`; mehr als 20 Fehlschläge je IP in 15 Minuten (auch Abbrüche bei Microsoft) → 429 (`sso_callback`). Ein Callback ohne eigenen Start in der Sitzung wird mit 400 abgelehnt, ohne zu zählen – eine fremde Seite kann so das Limit einer geteilten IP nicht ausschöpfen.
+- Ungültiger oder wiederverwendeter `state` → 400 und Audit `sso_state_invalid`; mehr als 20 Fehlschläge je IP in 15 Minuten (auch Abbrüche bei Microsoft) → 429 (`sso_callback`). Ein Callback ohne eigenen Start in der Sitzung wird mit 400 abgelehnt, ohne zu zählen, eine fremde Seite kann so das Limit einer geteilten IP nicht ausschöpfen.
 - Ohne MFA-Nachweis im Token und mit lokaler Authenticator-App folgt die gewohnte Code-Abfrage. Fehlt bei MFA-Zwang ein Faktor, landet die Sitzung auf `/mfa-setup`; dort (und beim Hinzufügen von TOTP oder Passkey im Mitgliederbereich) ersetzt eine höchstens 10 Minuten alte Microsoft-Anmeldung die Passwortabfrage.
 - Gespeichert werden keine Tokens, nur Tenant-ID, Objekt-ID, Adresse zum Zeitpunkt der Verknüpfung und Zeitpunkte.
 
@@ -66,13 +66,13 @@ Audit (Kategorie Sicherheit): `sso_login_success`, `sso_login_failed`, `sso_logi
 `sso_role_changed`, `sso_groups_overage`, `sso_settings_saved`, `sso_connection_test`, `login_local_disabled` (mit `method`: `password`, `passkey` oder `ldap`), `session_local_login_ended`.
 
 Hooks: `cms_sso_login` (`$userId, 'entra', $claims` ohne Token), `cms_sso_user_provisioned`, `user_role_changed`
-(`$userId, $from, $to, 'sso'`) – siehe [../../core/HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md).
+(`$userId, $from, $to, 'sso'`), siehe [../../core/HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md).
 
 ### 6. Fehlersuche
 
 | Meldung | Ursache |
 |---|---|
-| „Kein Konto verknüpft“ | Keine Bindung, keine automatische Verknüpfung möglich (Adresse unbestätigt, Domain fehlt, privilegierte Rolle) und kein Provisioning – Konto aktiv verknüpfen |
+| „Kein Konto verknüpft“ | Keine Bindung, keine automatische Verknüpfung möglich (Adresse unbestätigt, Domain fehlt, privilegierte Rolle) und kein Provisioning: Konto aktiv verknüpfen |
 | „abgelaufen oder ungültig“ (400) | Mehr als 10 Minuten bei Microsoft, Zurück-Taste oder Callback in einem anderen Browser geöffnet |
 | Verbindung prüfen: `invalid_client` | Secret falsch oder abgelaufen |
 | AADSTS50011 bei Microsoft | Umleitungs-URI in der App-Registrierung stimmt nicht exakt |

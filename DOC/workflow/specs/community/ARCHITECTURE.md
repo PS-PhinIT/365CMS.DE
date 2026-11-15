@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Architektur
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+# 365CMS Projektdokumentation | Community: Architektur
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
@@ -169,12 +169,12 @@ aktivem `cms-forum`.
 | `cms_community_spam_check` | Filter | Ergebnis der Spam-Prüfung (z. B. KI-Signal, COM-PLUS-11) |
 | `cms_community_notification_types` | Filter | zusätzliche Benachrichtigungsarten |
 
-**Genutzt** (vorhanden im Core 4.0.0): `register_routes`, `cms_register_content_type_providers`,
+**Genutzt** (vorhanden im Core 4.1.0; `user_role_changed` wird dort bisher nur im SSO-Pfad gefeuert): `register_routes`, `cms_register_content_type_providers`,
 `member_dashboard_init`, `cms_admin_menu` (nur Kompatibilität), `head`/`body_end` (Assets), `dsgvo_export_data`,
 `dsgvo_delete_data`, `user_registered`, `user_email_verified` (Vertrauensstufe 0 → 1 möglich), `user_sessions_revoked`,
 Cron-Hooks über `CronRunnerService`.
 
-**Neu im Core einzuführen** (gibt es in 4.0.0 nicht, Prüfung vom 14.11.2026): `user_deleted` in
+**Neu im Core einzuführen** (gibt es auch in 4.1.0 nicht durchgängig, Prüfung vom 15.11.2026): `user_deleted` in
 `UserService::deleteUser()` (Anonymisierung der Beiträge, falls das Konto ohne DSGVO-Antrag gelöscht wird) und
 `user_role_changed` (Rechte-Cache von `CommunityAccess` leeren). Bis dahin prüft `CommunityAccess` die Rolle bei jeder
 Anfrage frisch und ein täglicher Cron-Lauf anonymisiert Beiträge gelöschter Konten.
@@ -203,9 +203,9 @@ Die Vorschau im Editor nutzt denselben Weg über `POST /forum/api/vorschau` (nic
 ### 8. Leistung und Zwischenspeicher
 
 - **Zähler denormalisiert:** `topic_count`, `post_count`, `last_post_id`, `last_post_at` an Forum und Thema; Pflege in derselben Transaktion wie der Beitrag; Reparatur-Job „Zähler neu berechnen“ (`BatchJobService`).
-- **Indizes** für alle Listen: `(forum_id, is_pinned, last_post_at)`, `(topic_id, status, id)`, `(user_id, created_at)` – siehe [DATA-MODEL.md](DATA-MODEL.md).
+- **Indizes** für alle Listen: `(forum_id, is_pinned, last_post_at)`, `(topic_id, status, id)`, `(user_id, created_at)`: siehe [DATA-MODEL.md](DATA-MODEL.md).
 - **Seiten in langen Themen:** Position eines Beitrags = Zählung über `(topic_id, status, id)`; ab Seite 50 Keyset-Abfrage (`id > letzter`) statt `OFFSET`.
-- **Cache:** Gäste erhalten ganze Seiten aus dem Cache (Schlüssel enthält Forum-/Thema-Version und Sprache), Angemeldete nur Fragmente (gerenderte Beiträge, Forenbaum) – keine Vermischung personenbezogener Teile. Seiten mit Formularen/Token sind `private` (wie im Theme mit `sendCoreFormCacheHeaders`).
+- **Cache:** Gäste erhalten ganze Seiten aus dem Cache (Schlüssel enthält Forum-/Thema-Version und Sprache), Angemeldete nur Fragmente (gerenderte Beiträge, Forenbaum), keine Vermischung personenbezogener Teile. Seiten mit Formularen/Token sind `private` (wie im Theme mit `sendCoreFormCacheHeaders`).
 - **Polling** neuer Beiträge nur bei sichtbarem Tab, Intervall 60 s, Antwort mit `ETag`/304.
 - **Abfragebudget:** Startseite, Forum und Thema ≤ 6 SQL-Abfragen bei warmem Cache (Test im TEST-PLAN).
 

@@ -42,6 +42,9 @@ class RolesModule
         'newsletter' => ['manage_newsletter'],
         'system'   => ['manage_search_index', 'manage_feeds', 'manage_admin_menu'],
         'security' => ['security.sso'],
+        'backups'  => ['backups.offsite'],
+        'webhooks' => ['webhooks.manage'],
+        'payments' => ['payments.manage', 'invoices.view'],
     ];
 
     public function __construct()

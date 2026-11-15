@@ -779,7 +779,12 @@ class DownloadsModule
         if ($out !== false) {
             fwrite($out, "\xEF\xBB\xBF");
             foreach ($rows as $row) {
-                fputcsv($out, array_map('strval', $row), ';', '"', '');
+                // SEC-410-21: Formel-Injection in Tabellenprogrammen verhindern (wie Newsletter-/Formular-Export).
+                fputcsv($out, array_map(static function (mixed $cell): string {
+                    $cell = (string) $cell;
+
+                    return $cell !== '' && in_array($cell[0], ['=', '+', '-', '@', "\t", "\r"], true) && !is_numeric($cell) ? "'" . $cell : $cell;
+                }, $row), ';', '"', '');
             }
             fclose($out);
         }

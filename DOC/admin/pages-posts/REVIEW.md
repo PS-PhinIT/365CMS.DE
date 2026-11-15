@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Freigabe (Vier-Augen-Prinzip)
+# 365CMS Projektdokumentation | Admin: Freigabe (Vier-Augen-Prinzip)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** in Entwicklung (Bereich 3a)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Routen:** `/admin/posts`, `/admin/pages` (Aktion `workflow`), `/preview/<token>` (öffentlich) | **Einstellung:** *Einstellungen → Beiträge & Sites → Standard beim Speichern*
 
 ## English (summary)
@@ -14,7 +14,7 @@ Posts and pages gain the status **`pending`** ("Zur Prüfung"). Publishing (stat
 | Situation | Ergebnis |
 |---|---|
 | Konto ohne `posts.publish` bzw. `pages.publish` wählt „Veröffentlichen“, „Planen“ oder „Privat“ | gespeichert wird **Zur Prüfung** (`pending`), Hinweis in der Meldung |
-| Einstellung **„Veröffentlichung braucht eine zweite Person“** an, eigener Beitrag bzw. eigene Seite | wie oben – auch für Admins; freigeben muss ein anderes Konto mit Veröffentlichungsrecht |
+| Einstellung **„Veröffentlichung braucht eine zweite Person“** an, eigener Beitrag bzw. eigene Seite | wie oben: auch für Admins; freigeben muss ein anderes Konto mit Veröffentlichungsrecht |
 | Einstellung an, fremder Inhalt, den man selbst eingereicht hat | ebenfalls keine Freigabe durch einen selbst (Autor **und** einreichende Person sind ausgeschlossen) |
 | Inhalt ist bereits veröffentlicht oder privat | Bearbeiten bleibt ohne neue Prüfung möglich; der Status bleibt |
 | Zurück auf Entwurf, Einreichen | immer erlaubt |
@@ -33,7 +33,7 @@ Admins haben in 365CMS alle Rechte. Solange nur Admins den Admin-Bereich nutzen,
 
 - Filter **„Zur Prüfung“** und Zähler in den Listen *Beiträge* und *Seiten* (`?status=pending`).
 - Sammelaktion **„Veröffentlichen“**: veröffentlicht, was das Konto freigeben darf; eigene Entwürfe werden stattdessen eingereicht, eingereichte Inhalte ohne Recht bleiben unverändert. Die Meldung nennt beide Zahlen.
-- Dashboard-Karte **„Ausstehende Prüfungen“**: Titel, Typ, Autor, Einreichungszeitpunkt – nur Inhalte, die das angemeldete Konto freigeben dürfte.
+- Dashboard-Karte **„Ausstehende Prüfungen“**: Titel, Typ, Autor, Einreichungszeitpunkt: nur Inhalte, die das angemeldete Konto freigeben dürfte.
 - Badges an *Beiträge* (`content_pending_posts`) und *Seiten* (`content_pending_pages`) nach derselben Regel.
 - Redaktionskalender: eingereichte Inhalte mit „Geplantem Datum“ bleiben sichtbar und verschiebbar.
 
@@ -41,20 +41,20 @@ Admins haben in 365CMS alle Rechte. Solange nur Admins den Admin-Bereich nutzen,
 
 | Schritt | Empfänger | Weg |
 |---|---|---|
-| Eingereicht | alle aktiven Konten, die den Inhaltstyp freigeben dürften – ohne Autor und einreichende Person | In-App-Hinweis + Mail (Mail-Warteschlange, Quelle `content_workflow`) |
-| Freigegeben, Zurückgegeben | Autor und einreichende Person – ohne die handelnde Person | wie oben |
+| Eingereicht | alle aktiven Konten, die den Inhaltstyp freigeben dürften: ohne Autor und einreichende Person | In-App-Hinweis + Mail (Mail-Warteschlange, Quelle `content_workflow`) |
+| Freigegeben, Zurückgegeben | Autor und einreichende Person: ohne die handelnde Person | wie oben |
 
 Die Mail enthält Titel, Kommentar und den Link in den Editor.
 
 ### Vorschau-Link
 
-- „Vorschau-Link erstellen“ im Bereich *Freigabe* (nicht für bereits öffentliche Inhalte und den Papierkorb). Der Link `https://<site>/preview/<token>` wird **nur einmal** in der Erfolgsmeldung angezeigt – gespeichert wird lediglich der SHA-256-Hash.
+- „Vorschau-Link erstellen“ im Bereich *Freigabe* (nicht für bereits öffentliche Inhalte und den Papierkorb). Der Link `https://<site>/preview/<token>` wird **nur einmal** in der Erfolgsmeldung angezeigt, gespeichert wird lediglich der SHA-256-Hash.
 - Gültig 7 Tage; „Alle widerrufen“ entfernt sofort alle Links des Inhalts. Abgelaufene Einträge räumt `cms_cron_daily` auf. Landet der Inhalt im Papierkorb, liefert der Link 404.
 - Ausgabe über dieselben Theme-Vorlagen (`blog-single`, `page`) mit `X-Robots-Tag: noindex, nofollow`, `Cache-Control: private, no-store` und `Referrer-Policy: no-referrer`. Unbekannte, abgelaufene und widerrufene Tokens liefern dieselbe 404-Seite.
 
 ### Rechte und Update
 
-Mit 4.1.0 werden `posts.publish` und `pages.publish` erstmals geprüft. Damit niemand ausgesperrt wird, vergibt die Laufzeitprüfung des Schemas einmalig `posts.publish` und `pages.publish` an *Redakteur* sowie `posts.publish` an *Autor* – nur dort, wo für die Rolle noch kein Eintrag gespeichert ist. Ein bewusst entzogenes Recht bleibt entzogen. Soll ein Autor nicht selbst veröffentlichen, wird ihm `posts.publish` unter *Rollen & Rechte* (`/admin/roles`) entzogen.
+Mit 4.1.0 werden `posts.publish` und `pages.publish` erstmals geprüft. Damit niemand ausgesperrt wird, vergibt die Laufzeitprüfung des Schemas einmalig `posts.publish` und `pages.publish` an *Redakteur* sowie `posts.publish` an *Autor*, nur dort, wo für die Rolle noch kein Eintrag gespeichert ist. Ein bewusst entzogenes Recht bleibt entzogen. Soll ein Autor nicht selbst veröffentlichen, wird ihm `posts.publish` unter *Rollen & Rechte* (`/admin/roles`) entzogen.
 
 ### Grenzen
 

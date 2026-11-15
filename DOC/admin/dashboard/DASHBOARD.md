@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Dashboard
+# 365CMS Projektdokumentation | Admin: Dashboard
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin` | **Zugang:** Rolle `admin` | **CSRF-Aktion:** `admin_dashboard`
 
 ## English (summary)
@@ -16,13 +16,13 @@ The admin start page (`CMS/admin/index.php` → `CMS/admin/modules/dashboard/Das
 | Begrüßung | Name, Version, Hinweise zum System |
 | KPIs | Benutzer, Seiten, Beiträge, Medien, Umsatz (30 Tage, nur bei aktiver Bestellverwaltung) |
 | Highlights | neue Benutzer heute/7 Tage, Entwürfe & private Seiten, geplante & private Beiträge, Uploads gesamt |
-| `work_overview` – Zentrale Arbeitsübersicht | konfigurierbare Widgets (siehe unten) |
-| `favorites_recent` – Favoriten & zuletzt genutzt | Schnellzugriffe und zuletzt aufgerufene Admin-Seiten (`FeatureUsageService`) |
-| `attention` – Nächste Aufmerksamkeit | offene Aufgaben: ausstehende Kommentare, Updates, Warnungen, Fehler |
-| `system_status` – Systemstatus | PHP, Datenbank, Speicher, Cron |
+| `work_overview`: Zentrale Arbeitsübersicht | konfigurierbare Widgets (siehe unten) |
+| `favorites_recent`: Favoriten & zuletzt genutzt | Schnellzugriffe und zuletzt aufgerufene Admin-Seiten (`FeatureUsageService`) |
+| `attention`: Nächste Aufmerksamkeit | offene Aufgaben: ausstehende Kommentare, Updates, Warnungen, Fehler |
+| `system_status`: Systemstatus | PHP, Datenbank, Speicher, Cron |
 | `security_performance` | Sicherheits- und Performance-Kennzahlen |
-| `recent_orders` – Neueste Bestellungen | nur mit aktivem Modul `subscription_admin_orders` |
-| `recent_activity` – Letzte Aktivitäten | Aktivitäts-/Audit-Feed |
+| `recent_orders`: Neueste Bestellungen | nur mit aktivem Modul `subscription_admin_orders` |
+| `recent_activity`: Letzte Aktivitäten | Aktivitäts-/Audit-Feed |
 
 Hinweise (Alerts) entstehen aus Systemzustand und Statistik, z. B. ausstehende Kommentare, fehlende Backups oder Health-Probleme.
 

@@ -1,5 +1,5 @@
-# 365CMS – Projektdokumentation | Abschnitt: Plugins – Quick Start
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable | **Update:** 2026-10-02
+# 365CMS Projektdokumentation | Plugins: Quick Start
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Kurzbeschreibung:** Beginner-friendly and technical quick start for creating, loading, activating, and maintaining a 365CMS plugin in the current runtime.
 
 ## English
@@ -331,10 +331,10 @@ Prüfen Sie die PHP-Syntax jeder geänderten PHP-Datei, aktivieren Sie das Plugi
 1. Ordner `CMS/plugins/<slug>/` und Bootstrap `CMS/plugins/<slug>/<slug>.php` anlegen (Dateiname = Ordnername; sonst wird das Plugin beim Laden entfernt).
 2. Header mit `Plugin Name`, `Version`, `Description`, `Author`, optional `Requires CMS` / `Requires PHP` ergänzen.
 3. Direktaufruf-Schutz `if (!defined('ABSPATH')) { exit; }` an den Anfang setzen.
-4. Hooks registrieren (`add_action`, `add_filter`, `CMS\Hooks::addAction`) – keine Ausgabe beim Laden.
+4. Hooks registrieren (`add_action`, `add_filter`, `CMS\Hooks::addAction`): keine Ausgabe beim Laden.
 5. Optional Lifecycle-Callbacks `<slug_mit_unterstrichen>_activate()`, `_deactivate()`, `_uninstall()` definieren (z. B. `hello_world_activate`).
 6. Unter `/admin/plugins` aktivieren; vorher prüft der Sicherheits-Scan den Code auf `eval`, `exec`, `shell_exec`, `system`, `passthru`, `popen`, `proc_open`, `pcntl_exec`.
-7. Fehler beim Laden (fehlende Datei, Exception) werden geloggt, auditiert und das Plugin aus der aktiven Liste entfernt – im Audit-Log unter `/admin/cms-logs` nachsehen.
+7. Fehler beim Laden (fehlende Datei, Exception) werden geloggt, auditiert und das Plugin aus der aktiven Liste entfernt, im Audit-Log unter `/admin/cms-logs` nachsehen.
 
 ### Was der Quick Start nicht abdeckt
 

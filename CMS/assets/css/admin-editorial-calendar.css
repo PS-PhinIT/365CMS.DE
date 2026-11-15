@@ -5,6 +5,8 @@
 	--cms-ecal-scheduled-bg: var(--tblr-azure-lt, #e8f3fc);
 	--cms-ecal-planned: var(--tblr-orange, #f76707);
 	--cms-ecal-planned-bg: var(--tblr-orange-lt, #fef0e6);
+	--cms-ecal-review: var(--tblr-purple, #ae3ec9);
+	--cms-ecal-review-bg: var(--tblr-purple-lt, #f7ecfa);
 	--cms-ecal-published: var(--tblr-green, #2fb344);
 	--cms-ecal-published-bg: var(--tblr-green-lt, #eaf7ec);
 }
@@ -51,6 +53,7 @@
 
 .cms-ecal__swatch--scheduled { color: var(--cms-ecal-scheduled); background: var(--cms-ecal-scheduled-bg); }
 .cms-ecal__swatch--planned { color: var(--cms-ecal-planned); background: var(--cms-ecal-planned-bg); }
+.cms-ecal__swatch--review { color: var(--cms-ecal-review); background: var(--cms-ecal-review-bg); }
 .cms-ecal__swatch--published { color: var(--cms-ecal-published); background: var(--cms-ecal-published-bg); }
 
 .cms-ecal__grid-wrap {
@@ -175,6 +178,12 @@
 	border-left-color: var(--cms-ecal-planned);
 	background: var(--cms-ecal-planned-bg);
 	border-left-style: dashed;
+}
+
+.cms-ecal__event--review {
+	border-left-color: var(--cms-ecal-review);
+	background: var(--cms-ecal-review-bg);
+	border-left-style: dotted;
 }
 
 .cms-ecal__event.is-movable {

@@ -475,6 +475,7 @@ class Auth
             $_SESSION['mfa_pending_remember'] = $remember ? '1' : '0';
             $_SESSION['mfa_pending_since'] = time();
             $_SESSION['mfa_failed_attempts'] = 0;
+            unset($_SESSION[\CMS\Auth\SSO\EntraSsoService::SESSION_SSO_PENDING]);
             return 'MFA_REQUIRED';
         }
 
@@ -889,7 +890,7 @@ class Auth
         }
 
         $user = $this->getUserById((int) $payload->sub);
-        if ($user === null || !self::matchesApiTokenBinding($user, $payload)) {
+        if ($user === null || !self::matchesApiTokenBinding($user, $payload) || !self::apiTokenPoliciesAllow($user, $payload)) {
             return false;
         }
 
@@ -938,7 +939,73 @@ class Auth
         $userId = (int) ($payload->sub ?? 0);
         $user = $userId > 0 ? $this->getUserById($userId) : null;
 
-        return $user !== null && self::matchesApiTokenBinding($user, $payload);
+        return $user !== null && self::matchesApiTokenBinding($user, $payload) && self::apiTokenPoliciesAllow($user, $payload);
+    }
+
+    /**
+     * Herkunfts-Claims für API-Tokens aus der laufenden Sitzung (SEC-410-09): `sso` = Sitzung über Microsoft begonnen,
+     * `smfa` = MFA-Nachweis aus dem Entra-Token. Werden beim Refresh übernommen.
+     *
+     * @return array<string, int>
+     */
+    public static function apiTokenOriginClaims(int $userId): array
+    {
+        $claims = [];
+        if ($userId > 0 && (int) ($_SESSION[\CMS\Auth\SSO\EntraSsoService::SESSION_SSO_USER] ?? 0) === $userId) {
+            $claims['sso'] = 1;
+        }
+        if ($userId > 0 && (int) ($_SESSION[Services\Security\MfaEnforcementService::SESSION_SSO_MFA] ?? 0) === $userId) {
+            $claims['smfa'] = 1;
+        }
+
+        return $claims;
+    }
+
+    /**
+     * SEC-410-09: Kontoregeln, die nach der Ausstellung eines API-Tokens eingeschaltet werden können, gelten auch für
+     * Bearer-Anfragen und Refresh: Sperre „Lokale Anmeldung“, MFA-Zwang ohne Faktor, abgelaufenes Passwort. Wie bei
+     * Sitzungen gilt: Lesefehler sperren niemanden aus.
+     */
+    private static function apiTokenPoliciesAllow(object $user, object $payload): bool
+    {
+        $userId = (int) ($user->id ?? 0);
+        $role = (string) ($user->role ?? '');
+        $viaSso = !empty($payload->sso);
+
+        try {
+            $mode = Services\SettingsService::getInstance()->getString(
+                \CMS\Auth\SSO\EntraSettings::GROUP,
+                \CMS\Auth\SSO\EntraSettings::ENFORCED_LOCAL_LOGIN_KEY,
+                \CMS\Auth\SSO\EntraSettings::LOCAL_LOGIN_ALL
+            );
+            if (!\CMS\Auth\SSO\EntraSettings::sessionMayContinue(
+                $userId,
+                $role,
+                $mode,
+                $viaSso ? [\CMS\Auth\SSO\EntraSsoService::SESSION_SSO_USER => $userId] : [],
+                static fn (int $id): bool => \CMS\Auth\SSO\EntraSsoService::getInstance()->isLinked($id)
+            )) {
+                return false;
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
+            $mfa = Services\Security\MfaEnforcementService::getInstance();
+            if (empty($payload->smfa) && $mfa->isRequiredFor($user) && !$mfa->hasRecognisedFactor($userId)) {
+                return false;
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
+            if (!$viaSso && PasswordPolicyService::getInstance()->isExpired($userId)) {
+                return false;
+            }
+        } catch (\Throwable) {
+        }
+
+        return true;
     }
 
     /**
@@ -1414,7 +1481,7 @@ class Auth
         $this->touchSessionRegistry((int) $user->id, $this->getConfiguredSessionLifetime((string) ($user->role ?? 'member')), time(), true);
         unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember'], $_SESSION['mfa_pending_since'], $_SESSION['mfa_failed_attempts']);
         // 4.1.0 (1c): SSO-Merkmale gelten nur für die Anmeldung, die sie gesetzt hat (EntraSsoService setzt sie danach neu).
-        unset($_SESSION['auth_sso_mfa_user_id'], $_SESSION['auth_sso_user_id'], $_SESSION['auth_sso_at']);
+        unset($_SESSION['auth_sso_mfa_user_id'], $_SESSION['auth_sso_user_id'], $_SESSION['auth_sso_at'], $_SESSION['auth_sso_mfa_pending_user_id']);
 
         $this->refreshSessionCookie((string) ($user->role ?? 'member'), $remember);
         $this->bindCurrentSessionToDeviceCookie((int)$user->id);

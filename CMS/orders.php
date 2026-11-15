@@ -149,8 +149,9 @@ function cms_checkout_available_payment_methods(string $setting): array
 {
     return match (strtolower(trim($setting))) {
         'stripe' => ['stripe'],
+        'mollie' => ['mollie'],
         'paypal' => ['paypal'],
-        'all' => ['invoice', 'stripe', 'paypal'],
+        'all' => ['invoice', 'stripe', 'mollie', 'paypal'],
         default => ['invoice'],
     };
 }
@@ -165,7 +166,8 @@ function cms_checkout_normalize_payment_method(mixed $value, array $allowedMetho
 function cms_checkout_payment_method_label(string $method): string
 {
     return match ($method) {
-        'stripe' => 'Stripe',
+        'stripe' => 'Kreditkarte (Stripe)',
+        'mollie' => 'Online-Zahlung (Mollie)',
         'paypal' => 'PayPal',
         default => 'Rechnung',
     };
@@ -258,6 +260,8 @@ $billing = in_array($billing, ['monthly', 'yearly'], true) ? $billing : 'monthly
 // Services
 $db = Database::instance();
 $auth = Auth::instance();
+// SEC-410-08: Direkt ausgeliefert, also ohne Router – MFA-Zwang und Passwort-Ablauf hier selbst prüfen.
+\CMS\Services\Security\MfaEnforcementService::enforceOnEntryPoint('/order');
 $subManager = SubscriptionManager::instance();
 $coreModuleService = CoreModuleService::getInstance();
 $checkoutSettings = cms_checkout_load_settings($db, [
@@ -271,6 +275,15 @@ $subscriptionsEnabled = $coreModuleService->isModuleEnabled('subscriptions');
 $orderingEnabled = $coreModuleService->isModuleEnabled('subscription_ordering');
 $publicPricingEnabled = $coreModuleService->isModuleEnabled('subscription_public_pricing');
 $paymentMethods = cms_checkout_available_payment_methods((string) ($checkoutSettings['payment_methods'] ?? 'invoice'));
+// 4.1.0 (5a): Online-Zahlarten nur anbieten, wenn der Anbieter eingerichtet ist; sonst bleibt „Rechnung“.
+try {
+    $paymentMethods = \CMS\Services\Payments\PaymentService::getInstance()->filterMethods($paymentMethods);
+} catch (\Throwable) {
+    $paymentMethods = array_values(array_intersect($paymentMethods, ['invoice']));
+}
+if ($paymentMethods === []) {
+    $paymentMethods = ['invoice'];
+}
 $defaultPaymentMethod = $paymentMethods[0] ?? 'invoice';
 $taxRate = max(0.0, min(100.0, (float) ($checkoutSettings['tax_rate'] ?? '19')));
 $taxIncluded = cms_checkout_bool_setting($checkoutSettings, 'tax_included', '1');
@@ -395,6 +408,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $success = (bool) $orderId;
                 Security::recordDbRateLimitAttempt($clientIp, 'checkout_order');
+
+                // 4.1.0 (5a): Online-Zahlung → gehosteter Checkout des Anbieters. Bezahlt ist erst nach dem Webhook.
+                if ($success && isset(\CMS\Services\Payments\PaymentService::METHOD_PROVIDER[$selectedPaymentMethod])) {
+                    $checkout = \CMS\Services\Payments\PaymentService::getInstance()->startCheckout(
+                        (int) $orderId,
+                        $selectedPaymentMethod,
+                        rtrim((string) SITE_URL, '/'),
+                        trim((string) ($plan['name'] ?? '') . ' (' . ($billing === 'yearly' ? 'jährlich' : 'monatlich') . ')')
+                    );
+                    if (!empty($checkout['success'])) {
+                        header('Location: ' . (string) $checkout['redirect_url'], true, 303);
+                        exit;
+                    }
+                    $success = false;
+                    $error = (string) ($checkout['error'] ?? 'Die Zahlung konnte nicht gestartet werden.')
+                        . ' Ihre Bestellung ' . $orderNumber . ' ist gespeichert; bitte wählen Sie „Rechnung“ oder versuchen Sie es später erneut.';
+                }
 
                 if ($success) {
                     $confirmationSent = cms_checkout_send_confirmation(

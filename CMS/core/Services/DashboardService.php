@@ -666,6 +666,7 @@ class DashboardService {
             'drafts' => [],
             'upcoming' => [],
             'pending_reviews' => [],
+            'due_reviews' => [],
             'calendar_url' => $canViewCalendar ? '/admin/editorial-calendar' : '',
         ];
 
@@ -682,6 +683,8 @@ class DashboardService {
         // Vier-Augen-Prinzip (4.1.0, 3a): „Ausstehende Prüfungen“ – nur Inhalte, die dieses Konto freigeben dürfte.
         try {
             $widgets['pending_reviews'] = \CMS\Services\Content\ContentWorkflow::instance()->pendingItems(8, $userId);
+            // Ablauf- und Prüfdaten (4.1.0, 3c): fällige Wiedervorlagen.
+            $widgets['due_reviews'] = \CMS\Services\Content\ContentExpiryService::instance()->dueReviews(8);
         } catch (\Throwable $e) {
             Logger::instance()->withChannel('dashboard')->warning('Pending reviews could not be loaded.', [
                 'exception' => $e,

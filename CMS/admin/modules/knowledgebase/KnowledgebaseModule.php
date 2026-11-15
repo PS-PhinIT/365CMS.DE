@@ -230,8 +230,15 @@ final class KnowledgebaseModule
     private function saveEntry(array $post): array
     {
         $id = (int) ($post['entry_id'] ?? 0);
-        $result = $this->repository->saveEntry($post, false);
+        // Ablauf- und Prüfdaten (4.1.0, 3c): vor dem Speichern prüfen, danach übernehmen.
+        $expiryError = \CMS\Services\FeatureHooks\ContentExpiryHooks::validate($post);
+        $result = $expiryError !== null
+            ? ['success' => false, 'error' => $expiryError]
+            : $this->repository->saveEntry($post, false);
         $savedId = (int) ($result['id'] ?? $id);
+        if (!empty($result['success']) && $savedId > 0) {
+            \CMS\Services\FeatureHooks\ContentExpiryHooks::persist('kb', $savedId, $post);
+        }
         if (empty($result['success'])) {
             // Eingaben für das erneut angezeigte Formular aufbewahren (nur skalare Formularfelder).
             $_SESSION[self::DRAFT_SESSION_KEY] = ['id' => $id] + array_map(

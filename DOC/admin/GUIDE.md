@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Bedienleitfaden
+# 365CMS Projektdokumentation | Admin: Bedienleitfaden
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -10,7 +10,7 @@ Operator guide for day-to-day work in the 365CMS administration: sign-in, naviga
 
 ### 1. Anmelden
 
-1. `https://<domain>/cms-login` aufrufen (oder direkt `/admin` – nicht angemeldete Besucher werden zur Anmeldung geleitet und danach zurückgeführt).
+1. `https://<domain>/cms-login` aufrufen (oder direkt `/admin`: nicht angemeldete Besucher werden zur Anmeldung geleitet und danach zurückgeführt).
 2. Benutzername/E-Mail und Passwort eingeben; je nach Konto folgt die Abfrage des Authenticator-Codes (`/mfa-challenge`) oder die Anmeldung per Passkey.
 3. Nur Konten mit der Rolle **Administrator** gelangen in den Adminbereich; alle anderen landen im Mitgliederbereich `/member`.
 
@@ -26,7 +26,7 @@ Abmelden über das Benutzermenü im Fußbereich der Seitenleiste (Klick auf den 
   Gruppen optionaler Module (z. B. SEO, KI-Dienste, Mitgliederbereich, Abos) erscheinen nur bei aktivem Modul. Gruppen sind zugeklappt, bis man sie öffnet; die Gruppe der aktiven Seite ist immer offen. *Einstellungen*, *Website-Zustand*, *Konfiguration* und *Berichte* öffnen Kachelseiten. Auf-/Zuklapp-Zustände und die eingeklappte Icon-Leiste (Schalter oben in der Seitenleiste) werden je Benutzer gespeichert. Unter 992 px Breite öffnet das Menü-Symbol in der Kopfzeile die Seitenleiste als Drawer.
 - Plugin-Seiten stehen in der Gruppe *Plugins* bzw. *Erweitern*; Plugins mit mehreren Seiten erhalten eine eigene Gruppe direkt danach. Welche Plugins in welcher Site erscheinen, legt *Einstellungen › Plugins › Plugin-Zuweisung* fest ([plugins/PLUGINS.md](plugins/PLUGINS.md#plugin-zuweisung)).
 - Ein Punkt am Avatar im Fußbereich zeigt Systemhinweise (fehlgeschlagener Cron-Lauf, Backup älter als 24 Stunden, verfügbare Updates); ein Klick öffnet die Liste.
-- Fehlende Menüpunkte bedeuten: Modul deaktiviert (`/admin/modules`), Marketplace ausgeschaltet, der Eintrag ist im eigenen Layout ausgeblendet oder – bei Plugins – das Plugin ist der aktuellen Site nicht zugewiesen.
+- Fehlende Menüpunkte bedeuten: Modul deaktiviert (`/admin/modules`), Marketplace ausgeschaltet, der Eintrag ist im eigenen Layout ausgeblendet oder, bei Plugins, das Plugin ist der aktuellen Site nicht zugewiesen.
 - Das **Dashboard** zeigt offene Aufgaben unter „Nächste Aufmerksamkeit“ und lässt sich je Administrator personalisieren (sichtbare Bereiche, Widgets, Favoriten).
 
 ### 3. Häufige Aufgaben
@@ -53,7 +53,7 @@ Abmelden über das Benutzermenü im Fußbereich der Seitenleiste (Klick auf den 
 2. **Vor riskanten Aktionen** (Löschen, Sammelaktionen, Restore, Updates, Site-URL-Migration) ein Backup erstellen.
 3. Formulare nur über die Oberfläche absenden; nach dem Speichern die Erfolgsmeldung und das Ergebnis kontrollieren.
 4. Nach sicherheitsrelevanten Änderungen das Sicherheits-Audit (`/admin/security-audit`) ausführen.
-5. Zugangsdaten (Mail, KI-Provider, LDAP) nur in die dafür vorgesehenen Felder bzw. `config/app.php` eintragen – nie in Inhalte, Kommentare oder Prompts.
+5. Zugangsdaten (Mail, KI-Provider, LDAP) nur in die dafür vorgesehenen Felder bzw. `config/app.php` eintragen, nie in Inhalte, Kommentare oder Prompts.
 
 ### 5. Fehlerbilder
 

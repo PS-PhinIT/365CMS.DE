@@ -1,5 +1,8 @@
 # LdapRecord
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** LdapRecord provides the LDAP / Active Directory connection for external directories. Details in German below.
+
 ## Kurzbeschreibung
 
 `LdapRecord` stellt die LDAP-Anbindung für externe Verzeichnisdienste bereit.

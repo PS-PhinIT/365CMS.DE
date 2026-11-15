@@ -1,5 +1,8 @@
 # Editor.js
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** Editor.js is the block editor for content editing in 365CMS, including the custom block tools. Details in German below.
+
 ## Kurzbeschreibung
 
 `Editor.js` ist der blockbasierte Editor für moderne Inhaltsbearbeitung in 365CMS.
@@ -26,6 +29,7 @@
 - Der Core wird bytegleich aus dem offiziellen 2.31.7-Build in `CMS/assets/editorjs/editorjs.umd.js` bereitgestellt. Der bisherige 2.31.6-Core war ebenfalls unverändert; lokale 365CMS-Anpassungen stecken ausschließlich in den Plugin-Bundles (z. B. `hyperlink.umd.js`, lokal gebautes `delimiter.umd.js`) und in `CMS/assets/js/editor-init.js`, die vom Core-Update unberührt bleiben.
 - Die Page/Post-Tools werden als lokale UMD-Dateien aus `CMS/assets/editorjs/` geladen: Core, Basis-Tools und stabile Erweiterungen werden deterministisch vor `CMS/assets/js/editor-init.js` eingebunden.
 - `CMS/assets/js/editor-init.js` ist nur noch die 365CMS-Factory/Normalizer-Schicht: Sie verdrahtet die UMD-Globals (`Paragraph`, `Header`, `EditorjsList`, `ImageTool`, `Quote`, `CodeTool`, `Table`, `Delimiter`, `Embed`, `LinkTool`, `AttachesTool`, `Warning`, `RawTool`, `Accordion`/`AccordionBlock`, `CmsImageGalleryTool`, `InlineCode`, `Underline`, `Strikethrough`, `Hyperlink`, `TgSpoilerEditorJS`, `ColorPlugin`) sowie lokale Factory-Tools wie `CmsMarkerTool` und die Plugin-Globals (`Undo`, `DragDrop`) mit Upload-, Save-, History- und Legacy-Datenkompatibilität.
+- `link.umd.js`, `image.umd.js` und `attaches.umd.js` sind gegenüber dem npm-Build lokal angepasst: Der mitgebündelte `@codexteam/ajax`-Shim ermittelt das globale Objekt über `globalThis` statt `new Function("return this")`, und der `setImmediate`-Polyfill führt keine String-Callbacks mehr aus. Damit laufen sie unter der Produktiv-CSP (kein `unsafe-eval`, Trusted Types) ohne `securitypolicyviolation`. Beim Aktualisieren eines dieser Pakete die Anpassung erneut anwenden; `TESTS/security/csp-bundles.php` schlägt sonst fehl.
 - Plugin-Registrierung ist defensiv: optionale Tools werden nur aktiviert, wenn ihr lokales UMD-Global tatsächlich vorhanden ist. Dadurch gibt es keine toten Toolbar-Buttons und keine parallelen Modul-/Eval-Loader.
 
 ## WordPress-like Block-/Blockly-Verhalten

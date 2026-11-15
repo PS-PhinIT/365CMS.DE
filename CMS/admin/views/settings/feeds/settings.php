@@ -77,7 +77,7 @@ $fdTextarea = static function (string $key) use ($fdSettings, $feedsT, $feedsEsc
             </div>
         <?php elseif ($fdTab === 'design') : ?>
             <div class="row g-3">
-                <?php foreach (['color_primary', 'color_accent', 'color_hdr_from', 'color_hdr_to', 'color_hdr_title', 'color_card_bg', 'color_card_border'] as $fdKey) : ?>
+                <?php foreach (['color_primary', 'color_accent', 'color_hdr_from', 'color_hdr_to', 'color_hdr_title', 'color_card_bg', 'color_card_border', 'color_text', 'color_bg'] as $fdKey) : ?>
                     <div class="col-6 col-md-3"><?= $fdInput($fdKey, 'color') ?></div>
                 <?php endforeach; ?>
                 <div class="col-6 col-md-3"><?= $fdInput('border_radius', 'number', ['min' => 0, 'max' => 24]) ?></div>
@@ -89,6 +89,21 @@ $fdTextarea = static function (string $key) use ($fdSettings, $feedsT, $feedsEsc
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <?php foreach ([
+                    'font_family' => array_keys(AggregatorSettings::FONTS),
+                    'card_style' => AggregatorSettings::CARD_STYLES,
+                    'image_ratio' => AggregatorSettings::IMAGE_RATIOS,
+                    'header_style' => AggregatorSettings::HEADER_STYLES,
+                ] as $fdSelectKey => $fdOptions) : ?>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label" for="fd-set-<?= $feedsEscape($fdSelectKey) ?>"><?= $feedsT('settings.' . $fdSelectKey) ?></label>
+                        <select class="form-select" id="fd-set-<?= $feedsEscape($fdSelectKey) ?>" name="<?= $feedsEscape($fdSelectKey) ?>">
+                            <?php foreach ($fdOptions as $fdOption) : ?>
+                                <option value="<?= $feedsEscape($fdOption) ?>"<?= (string) $fdSettings[$fdSelectKey] === $fdOption ? ' selected' : '' ?>><?= $feedsT('settings.' . $fdSelectKey . '_' . str_replace('/', '_', $fdOption)) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endforeach; ?>
             </div>
         <?php else : ?>
             <div class="row g-3">

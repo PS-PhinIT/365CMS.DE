@@ -231,6 +231,8 @@ final class CoreCatalog
             // ── Abos (Modul subscriptions) ──────────────────────────────────────────
             ['id' => 'subscriptions.packages', 'label' => 'Pakete', 'route' => '/admin/packages', 'icon' => 'package', 'caps' => self::SETTINGS, 'file' => 'admin/packages.php', 'page' => 'packages'],
             ['id' => 'subscriptions.orders', 'label' => 'Bestellungen', 'route' => '/admin/orders', 'icon' => 'receipt', 'caps' => self::SETTINGS, 'file' => 'admin/orders.php', 'page' => 'orders'],
+            ['id' => 'subscriptions.invoices', 'label' => 'Rechnungen', 'route' => '/admin/invoices', 'icon' => 'file-invoice', 'caps' => ['invoices.view'], 'file' => 'admin/invoices.php', 'page' => 'invoices'],
+            ['id' => 'subscriptions.payments', 'label' => 'Zahlungen', 'route' => '/admin/payments', 'icon' => 'cash', 'caps' => ['payments.manage'], 'file' => 'admin/payments.php', 'page' => 'payments'],
             ['id' => 'subscriptions.settings', 'label' => 'Abo-Einstellungen', 'route' => '/admin/subscription-settings', 'icon' => 'settings-2', 'caps' => self::SETTINGS, 'file' => 'admin/subscription-settings.php', 'page' => 'subscription-settings'],
 
             // ── Einstellungen / Konfiguration ───────────────────────────────────────
@@ -257,6 +259,8 @@ final class CoreCatalog
 
             // ── Wartung / System ────────────────────────────────────────────────────
             ['id' => 'system.backups', 'label' => 'Backups', 'route' => '/admin/backups', 'icon' => 'database-export', 'caps' => self::SETTINGS_OR_SYSTEM, 'file' => 'admin/backups.php', 'page' => 'backups', 'category' => 'maintenance', 'desc' => 'Sicherungen erstellen, herunterladen und wiederherstellen.'],
+            ['id' => 'system.webhooks', 'label' => 'Webhooks', 'route' => '/admin/webhooks', 'icon' => 'webhook', 'caps' => ['webhooks.manage'], 'file' => 'admin/webhooks.php', 'page' => 'webhooks', 'category' => 'maintenance', 'desc' => 'Ereignisse an externe Dienste senden (signiert, mit Wiederholungen).'],
+            ['id' => 'system.backup-settings', 'label' => 'Backup-Einstellungen', 'route' => '/admin/backup-settings', 'icon' => 'cloud-upload', 'caps' => self::SETTINGS_OR_SYSTEM, 'file' => 'admin/backup-settings.php', 'page' => 'backup-settings', 'category' => 'maintenance', 'desc' => 'Verschlüsselung und Offsite-Ziel (S3-kompatibel) der Backups.'],
             ['id' => 'system.content-exchange', 'label' => 'Import/Export', 'route' => '/admin/content-exchange', 'icon' => 'file-export', 'caps' => ['import_export'], 'file' => 'admin/content-exchange.php', 'page' => 'content-exchange', 'category' => 'maintenance', 'desc' => 'Inhalte als ZIP exportieren und in diese Installation importieren.'],
             ['id' => 'system.search-index', 'label' => 'Suchindex', 'route' => '/admin/search-index', 'icon' => 'zoom-code', 'caps' => ['manage_search_index'], 'file' => 'admin/search-index.php', 'page' => 'search-index', 'category' => 'maintenance', 'desc' => 'Suchindex neu aufbauen und Suchbegriffe auswerten.'],
             ['id' => 'system.info', 'label' => 'Systeminfo', 'route' => '/admin/info', 'icon' => 'info-circle', 'caps' => self::SETTINGS, 'file' => 'admin/info.php', 'page' => 'info', 'category' => 'system', 'desc' => 'PHP, Datenbank, Erweiterungen und Verzeichnisrechte.'],

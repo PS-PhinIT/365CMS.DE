@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Mitglieder-Dashboard
+# 365CMS Projektdokumentation | Admin: Mitglieder-Dashboard
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/member-dashboard` (+ Unterseiten) | **Capabilities:** `manage_settings` bzw. `manage_users` | **CSRF-Aktion:** `admin_member_dashboard`
 
 ## English (summary)
@@ -35,7 +35,7 @@ Die Navigation zwischen den Unterseiten liefert `views/member/subnav.php`. Alte 
 |---|---|---|
 | Dashboard aktiv | `member_dashboard_enabled` | Deaktiviert die Dashboard-Startseite: `/member` leitet dann auf `/member/profile` um (wirkt nur, wenn das Core-Modul „Mitglieder-Dashboard“ aktiv ist) |
 | Logo | `member_dashboard_logo` | Medien-URL |
-| Begrüßungszeile | `member_dashboard_greeting` | Standard „Guten Tag, {name}!“ – `{name}` wird durch den Namen des Mitglieds ersetzt |
+| Begrüßungszeile | `member_dashboard_greeting` | Standard „Guten Tag, {name}!“: `{name}` wird durch den Namen des Mitglieds ersetzt |
 | Willkommenstext / anzeigen | `member_dashboard_welcome_text`, `member_dashboard_show_welcome` | Kopfbereich des Dashboards |
 | Willkommensnachricht | `member_welcome_message` | Nachricht für neue Mitglieder |
 

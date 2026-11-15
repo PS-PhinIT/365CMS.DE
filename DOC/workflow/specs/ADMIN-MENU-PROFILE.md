@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Admin-Sidebar-Menü mit Profilen
+# 365CMS Projektdokumentation | Workflow: Spec: Admin-Sidebar-Menü mit Profilen
 > **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** In Umsetzung | **Update:** 2026-11-10
-> **Fortschritt:** [PROGRESS.md](PROGRESS.md) · **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
+> **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)
 
@@ -41,8 +41,9 @@ Badges sind in jedem Profil gleich. Eine Gruppe bzw. Kachelseite zeigt an ihrem 
 ── Arbeit ─────────────────────────────────────────────────────────────────────
 Dashboard 🔒                                     /admin
 Updates                (Badge: Updates)          /admin/updates
-Beiträge
+Inhalte
   ├─ Alle Beiträge                               /admin/posts
+  ├─ Alle Seiten                                 /admin/pages
   ├─ Kategorien                                  /admin/post-categories
   ├─ Tags                                        /admin/post-tags
   └─ Redaktionskalender *WP2                     /admin/editorial-calendar
@@ -55,12 +56,12 @@ Medien
   │                                              /admin/downloads
   ├─ Medien-Werkzeuge *WP4                       /admin/media-tools
   └─ Einstellungen                               /admin/media?tab=settings
-Seiten
-  ├─ Alle Seiten                                 /admin/pages
+Bausteine              (für Seiten und Beiträge, 4.1.0)
+  ├─ EditorJS Block Vorlagen                     /admin/reusable-blocks
+  ├─ Knowledgebase *B                            /admin/knowledgebase
   ├─ Hub-Sites                                   /admin/hub-sites
   ├─ Tabellen                                    /admin/site-tables
-  ├─ Inhaltsverzeichnis                          /admin/table-of-contents
-  └─ Knowledgebase *B                            /admin/knowledgebase
+  └─ Inhaltsverzeichnis                          /admin/table-of-contents
 Kommentare             (Badge: offene Kommentare) /admin/comments
 Formulare *B
   ├─ Formulare                                   /admin/forms

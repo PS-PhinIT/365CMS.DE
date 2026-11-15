@@ -86,7 +86,7 @@ final class ApiRouter
         if ($binding === null) {
             $this->jsonError(401, 'Anmeldung über die Weboberfläche erforderlich.');
         }
-        $claims = ['pwf' => $binding];
+        $claims = ['pwf' => $binding] + Auth::apiTokenOriginClaims($userId);
         $jwt = Services\JwtService::getInstance();
 
         try {
@@ -143,7 +143,8 @@ final class ApiRouter
         header('Cache-Control: no-store');
         echo json_encode([
             'token_type' => 'Bearer',
-            'access_token' => $jwt->generateToken((int) $payload->sub, ['pwf' => (string) $payload->pwf]),
+            'access_token' => $jwt->generateToken((int) $payload->sub, ['pwf' => (string) $payload->pwf]
+                + array_filter(['sso' => !empty($payload->sso) ? 1 : 0, 'smfa' => !empty($payload->smfa) ? 1 : 0])),
             'expires_in' => $jwt->getTtl(),
         ]);
         exit;

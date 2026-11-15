@@ -1,6 +1,6 @@
-# 365CMS – Admin: Suchindex
+# 365CMS: Admin: Suchindex
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -29,7 +29,7 @@ finished) and evaluates anonymous search terms (top terms, terms without results
 
 ### Suchbegriff-Statistik
 
-Gespeichert werden nur normalisierter Begriff, Sprache, Trefferzahl und Zeitpunkt – keine IP, keine Benutzer-ID,
+Gespeichert werden nur normalisierter Begriff, Sprache, Trefferzahl und Zeitpunkt, keine IP, keine Benutzer-ID,
 keine Session, kein User-Agent. Begriffe, die wie E-Mail-Adressen oder lange Ziffernfolgen aussehen, sowie Anfragen von
 Bots und Prefetches werden nicht gespeichert. Die Rohdaten (`search_queries`) werden täglich je Tag, Sprache und
 Begriff in `search_term_daily` verdichtet und gelöscht; die Aufbewahrung der Tageswerte steht auch unter

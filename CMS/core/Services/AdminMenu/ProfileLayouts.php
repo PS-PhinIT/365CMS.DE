@@ -103,16 +103,17 @@ final class ProfileLayouts
                 self::separator('sep.work', 'Arbeit'),
                 self::item('dashboard'),
                 self::item('system.updates'),
-                self::group('posts', 'Beiträge', 'article', [
-                    'content.posts', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar',
+                // Seiten hatten nur noch „Alle Seiten“ – deshalb hier eingegliedert.
+                self::group('posts', 'Inhalte', 'article', [
+                    'content.posts', 'content.pages', 'content.post-categories', 'content.post-tags', 'content.editorial-calendar',
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check',
                     'media.downloads', 'media.tools', 'media.settings',
                 ]),
-                self::group('pages', 'Seiten', 'file', [
-                    'content.pages', 'content.hub-sites', 'content.site-tables', 'content.toc', 'content.knowledgebase',
-                    'content.reusable-blocks',
+                // Für Seiten und Beiträge gemeinsam (Vorlagen, Knowledgebase, Shortcodes, Inhaltsverzeichnis) – eigener Menüpunkt.
+                self::group('building-blocks', 'Bausteine', 'puzzle', [
+                    'content.reusable-blocks', 'content.knowledgebase', 'content.hub-sites', 'content.site-tables', 'content.toc',
                 ]),
                 self::item('content.comments'),
                 self::group('forms', 'Formulare', 'forms', ['content.forms', 'content.form-submissions', 'content.newsletter']),
@@ -136,7 +137,7 @@ final class ProfileLayouts
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
                 self::group('subscriptions', 'Abos', 'credit-card', [
-                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.settings',
+                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.invoices', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
                 self::group('tools', 'Werkzeuge', 'tool', [
                     'system.content-exchange', 'content.trash', 'content.changes', 'content.translations',
@@ -148,6 +149,7 @@ final class ProfileLayouts
                     ...self::legalItems(),
                     ...self::performanceItems(),
                     'ai.settings',
+                    'system.backup-settings', 'system.webhooks',
                 ], LayoutValidator::DISPLAY_TILES),
                 self::group('health', 'Website-Zustand', 'heart-rate-monitor', self::reportItems(), LayoutValidator::DISPLAY_TILES),
             ],
@@ -184,9 +186,10 @@ final class ProfileLayouts
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check', 'media.downloads', 'media.tools',
+                    'content.reusable-blocks',
                 ]),
                 self::group('editorial', 'Redaktion', 'calendar-event', [
-                    'content.editorial-calendar', 'content.changes', 'content.translations', 'content.reusable-blocks',
+                    'content.editorial-calendar', 'content.changes', 'content.translations',
                 ]),
                 self::group('ai', 'KI-Dienste', 'sparkles', [
                     'ai.dashboard', 'ai.translation', 'ai.content-creator', 'ai.seo-creator',
@@ -208,7 +211,7 @@ final class ProfileLayouts
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
                 self::group('subscriptions', 'Abos', 'credit-card', [
-                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.settings',
+                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.invoices', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
                 self::group('configuration', 'Konfiguration', 'settings', [
                     ...self::settingsGeneralItems(),
@@ -217,7 +220,7 @@ final class ProfileLayouts
                     ...self::performanceItems(),
                     'media.settings',
                     'ai.settings',
-                    'system.backups', 'system.content-exchange', 'system.search-index',
+                    'system.backups', 'system.backup-settings', 'system.webhooks', 'system.content-exchange', 'system.search-index',
                 ], LayoutValidator::DISPLAY_TILES),
                 self::group('reports', 'Berichte', 'report-analytics', self::reportItems(), LayoutValidator::DISPLAY_TILES),
             ],

@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – System & Dokumentation
+# 365CMS Projektdokumentation | Admin: System & Dokumentation
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -59,4 +59,4 @@ Die Seite **KI-Einstellungen** ist eine Kachel unter *Einstellungen* (Klassisch)
 
 - **Speichern der allgemeinen Einstellungen ändert in `config/app.php` nur `SITE_NAME`, `SITE_URL`, `ADMIN_EMAIL` und `CMS_DEBUG`;** eigene LDAP-/JWT-/SMTP-/HTTPS-Konstanten bleiben erhalten. Vor jeder Änderung entsteht eine Kopie `config/app.backup-<Datum>.php` (Rechte `0640`, die letzten fünf bleiben erhalten) ([SYSTEM.md](SYSTEM.md#speichern-und-configappphp)).
 - Vor Updates, Restores und Site-URL-Migrationen immer ein Backup erstellen.
-- Geheimnisse (SMTP-Passwort, Azure-/Graph-Secrets, KI-API-Keys) werden über `SettingsService` verschlüsselt in der Datenbank gespeichert – seit 4.0.0 authentifiziert (XChaCha20-Poly1305 bzw. AES-256-GCM über `CryptoService`, Schlüssel `CMS_ENCRYPTION_KEY`, siehe [../../core/SECURITY.md](../../core/SECURITY.md)) – und nie im Klartext angezeigt.
+- Geheimnisse (SMTP-Passwort, Azure-/Graph-Secrets, KI-API-Keys) werden über `SettingsService` verschlüsselt in der Datenbank gespeichert, seit 4.0.0 authentifiziert (XChaCha20-Poly1305 bzw. AES-256-GCM über `CryptoService`, Schlüssel `CMS_ENCRYPTION_KEY`, siehe [../../core/SECURITY.md](../../core/SECURITY.md)), und nie im Klartext angezeigt.

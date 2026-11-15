@@ -1,6 +1,6 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Beiträge, Kategorien und Tags
+# 365CMS Projektdokumentation | Admin: Beiträge, Kategorien und Tags
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/posts`, `/admin/post-categories`, `/admin/post-tags`, `/admin/post-editor-api` (JSON) | **CSRF-Aktionen:** `admin_posts`, `admin_post_editor` (Editor-API)
 
 ## English (summary)
@@ -9,12 +9,12 @@ Blog posts are managed at `/admin/posts` (`CMS/admin/posts.php` → `CMS/admin/m
 
 - Access: `edit_all_posts` (all posts), `edit_own_posts` (own posts only), or `posts.view` (read). Categories and tags require `edit_all_posts`.
 - List filters: `status=published|scheduled|pending|draft|private`, `category`, `q`.
-- Four-eyes review (4.1.0): status `pending`, "Zur Prüfung einreichen", approve/return with history, preview links – see [REVIEW.md](REVIEW.md).
+- Four-eyes review: status `pending`, "Zur Prüfung einreichen", approve/return with history, preview links, see [REVIEW.md](REVIEW.md).
 - POST actions: `save`, `delete`, `bulk`, `save_category`, `delete_category`, `switch_locale`, `copy_de_to_en`.
 - Bulk actions: `delete`, `publish`, `draft`, `set_category`, `clear_category`, `set_author_display_name`, `clear_author_display_name`.
 - Scheduling: a published post with `published_at` in the future is listed as *scheduled* and stays hidden from the frontend, archives, search and sitemap until that time (`cms_post_publication_where()`).
 - Post templates and their meta fields come from `post_templates` in the active theme's `theme.json`.
-- Editor layout (4.0.0): header bar (back link, save state "Gespeichert um HH:MM", focus mode, Vorschau, Speichern/Planen/Veröffentlichen), writing column (category label, serif title, EditorJS; max. width from *Beitrags-Editorbreite*, default 750 px) and a settings column (~300 px). Behaviour lives in ES modules under `CMS/assets/js/post-editor/`, styles in `CMS/assets/css/admin-post-editor.css`. The EditorJS integration and the stored JSON format are unchanged.
+- Editor layout: header bar (back link, save state "Gespeichert um HH:MM", focus mode, Vorschau, Speichern/Planen/Veröffentlichen), writing column (category label, serif title, EditorJS; max. width from *Beitrags-Editorbreite*, default 750 px) and a settings column (~300 px). Behaviour lives in ES modules under `CMS/assets/js/post-editor/`, styles in `CMS/assets/css/admin-post-editor.css`. The EditorJS integration and the stored JSON format are unchanged.
 - Publish checklist: featured image set, meta description with 120–160 characters, category set. While an item is missing, "Veröffentlichen" and "Planen" stay focusable with `aria-disabled="true"` and open a dialog listing the gaps. The server (`PostPublishChecklistService`) enforces the same rules on publish/schedule, on the bulk action `publish` and when restoring a revision of a scheduled post. Drafts, private posts and updates of already live posts are exempt.
 - Focus mode: Ctrl+Shift+F (macOS ⌘+Shift+F) or the header button hides sidebar, topbar and settings column; Escape exits. The state is kept in `sessionStorage` per post.
 - Revisions (`cms_post_revisions`, schema v24, `PostRevisionService`): created on manual save, by autosave at most every 10 minutes, on restore and as a baseline; the last 30 per post are kept. "Vergleichen" diffs a revision against its predecessor (title/meta word by word, EditorJS block by block); "Diese Version wiederherstellen" creates a new revision and never deletes history.
@@ -47,7 +47,7 @@ Der Zugriff setzt zusätzlich `isAdmin()` voraus (Admin-Bereich).
 
 ### Beitragsliste
 
-- **Statuskacheln:** Gesamt, veröffentlicht, **geplant**, **zur Prüfung** (seit 4.1.0, [REVIEW.md](REVIEW.md)), Entwürfe, privat.
+- **Statuskacheln:** Gesamt, veröffentlicht, **geplant**, **zur Prüfung** ([REVIEW.md](REVIEW.md)), Entwürfe, privat.
 - **Filter:** `?status=` (`published`, `scheduled`, `draft`, `private`), `?category=<id>`, `?q=` (Titel/Slug).
 - „Geplant“ = Status `published` **und** `published_at` liegt in der Zukunft.
 - **Sammelaktionen:** `publish`, `draft`, `set_category`, `clear_category`, `set_author_display_name`, `clear_author_display_name`, `delete`.
@@ -71,7 +71,7 @@ Zusätzlich zu den Feldern der Seiten (Titel/Slug/Inhalt DE+EN, Status, Beitrags
 
 Sprachumschaltung (`switch_locale`), DE→EN-Kopie (`copy_de_to_en`) und KI-Helfer funktionieren wie bei [Seiten](PAGES.md). Revisionen, Autosave und die Veröffentlichungs-Checkliste haben im Beitragseditor seit 4.0.0 einen eigenen Ablauf (siehe unten).
 
-### Editor-Layout (seit 4.0.0)
+### Editor-Layout
 
 | Bereich | Inhalt |
 |---|---|
@@ -93,7 +93,7 @@ Die Checkliste in der Einstellungsspalte prüft live:
 
 - Solange ein Punkt rot ist, tragen „Veröffentlichen“ und „Planen“ `aria-disabled="true"`, bleiben aber fokussierbar. Ein Klick öffnet einen Warndialog mit den fehlenden Punkten; „Zum ersten fehlenden Feld“ springt direkt dorthin. Sind alle Punkte grün, sind die Buttons normal aktiv.
 - „Speichern“ eines Entwurfs bleibt immer möglich. Wird im Statusfeld „Veröffentlicht“ gewählt, gilt die Prüfung auch für „Speichern“.
-- **Serverseitig** prüft `PostPublishChecklistService` dieselben Regeln (`PostsModule::save()`), wenn ein Beitrag veröffentlicht oder geplant wird, bei der Sammelaktion `publish` und beim Wiederherstellen einer Revision eines geplanten Beitrags. Abgelehnte Speicherungen melden z. B. „Veröffentlichen nicht möglich – die Veröffentlichungs-Checkliste ist unvollständig.“ mit den fehlenden Punkten als Liste.
+- **Serverseitig** prüft `PostPublishChecklistService` dieselben Regeln (`PostsModule::save()`), wenn ein Beitrag veröffentlicht oder geplant wird, bei der Sammelaktion `publish` und beim Wiederherstellen einer Revision eines geplanten Beitrags. Abgelehnte Speicherungen melden z. B. „Veröffentlichen nicht möglich, die Veröffentlichungs-Checkliste ist unvollständig.“ mit den fehlenden Punkten als Liste.
 - Ausgenommen sind Entwürfe, private Beiträge und Änderungen an bereits live veröffentlichten Beiträgen (kein nachträgliches Sperren bestehender Inhalte).
 
 ### Fokusmodus
@@ -114,7 +114,7 @@ Die Checkliste in der Einstellungsspalte prüft live:
 
 - Eine Revision enthält Titel, Slugs, Inhalte (Editor.js-JSON) und Auszüge DE/EN, Beitragsbild, Meta-Titel und -Beschreibung, Kategorie, Tags, Autor-Anzeige, Status und Datumswerte des Beitrags sowie Bearbeiter (`created_by`) und Zeitpunkt (`created_at`). Identische Stände werden über einen SHA-1-Fingerabdruck erkannt und nicht doppelt gespeichert.
 - Pro Beitrag bleiben die **letzten 30** Revisionen erhalten; ältere werden beim Speichern entfernt. Das gilt auch für Revisionen aus Versionen vor 4.0.0 (bis dahin unbegrenzt): Die erste neue Revision nach dem Update (Speichern, Autosave oder Wiederherstellung) kürzt den Verlauf des Beitrags auf 30 Einträge.
-- **Autosave** läuft nur für gespeicherte Beiträge und nur nach Änderungen: Entwürfe werden höchstens jede Minute selbst gespeichert, veröffentlichte, geplante und private Beiträge bleiben unverändert – ihr Zwischenstand landet nur als Revision. Die Kopfleiste zeigt danach „Gespeichert um HH:MM“.
+- **Autosave** läuft nur für gespeicherte Beiträge und nur nach Änderungen: Entwürfe werden höchstens jede Minute selbst gespeichert, veröffentlichte, geplante und private Beiträge bleiben unverändert, ihr Zwischenstand landet nur als Revision. Die Kopfleiste zeigt danach „Gespeichert um HH:MM“.
 - Das Panel **Revisionen** listet Zeitpunkt, Autor und Typ. **Vergleichen** stellt die Revision ihrer Vorgängerversion gegenüber: Titel und Meta-Felder als Wort-Diff, der Editor.js-Inhalt Block für Block mit markierten Ergänzungen und Löschungen.
 - **Diese Version wiederherstellen** übernimmt Titel, Inhalte, Auszüge, Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige der Revision. Status, Slugs und Datumswerte bleiben unverändert. Vorher wird der aktuelle Stand gesichert; die Wiederherstellung wird als neue Revision abgelegt, es wird nie Historie gelöscht. Existiert die damalige Kategorie nicht mehr, bleibt die aktuelle erhalten.
 
@@ -157,15 +157,16 @@ Die Beitrags-URL folgt der Struktur aus *Einstellungen → Inhalte* (`setting_po
 
 ### Datenmodell
 
-`cms_posts` (inkl. `title_en`, `slug_en`, `content_en`, `excerpt_en`, `featured_image`, `meta_title`, `meta_description`, `author_display_name`, `author_display_url`, `post_template`, `post_meta_json`, `published_at`, `content_updated_at`), `cms_post_categories`, `cms_post_tags`, `cms_post_tag_rel`, `cms_post_category_rel`, `cms_post_revisions` (seit Schema v24 mit `revision_type`, `fingerprint` und den Spalten für Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige, siehe [DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md#schema-v24-400)). Fehlende Spalten werden vom Modul bei Bedarf per `ALTER TABLE` ergänzt (Abwärtskompatibilität mit älteren Installationen).
+`cms_posts` (inkl. `title_en`, `slug_en`, `content_en`, `excerpt_en`, `featured_image`, `meta_title`, `meta_description`, `author_display_name`, `author_display_url`, `post_template`, `post_meta_json`, `published_at`, `content_updated_at`), `cms_post_categories`, `cms_post_tags`, `cms_post_tag_rel`, `cms_post_category_rel`, `cms_post_revisions` (seit Schema v24 mit `revision_type`, `fingerprint` und den Spalten für Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige, siehe [DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md#schema-v24)). Fehlende Spalten werden vom Modul bei Bedarf per `ALTER TABLE` ergänzt (Abwärtskompatibilität mit älteren Installationen).
 
-### Gültigkeit: Ablauf und Wiedervorlage (seit 4.1.0)
+### Gültigkeit: Ablauf und Wiedervorlage
 
-Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit“):
+Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit“) und Wissensdatenbank-Einträge (Seitenspalte des Editors; dort heißt Zurückstufen „inaktiv“):
 
 - **Ablaufdatum** (Datum, optional Uhrzeit): Ist es erreicht, stuft der stündliche Cron einen veröffentlichten Inhalt auf *Entwurf* zurück (Frontend 404, Sitemap und Suche ohne Eintrag, Cache wird geleert). Mit der Einstellung *Beiträge & Sites → Bei Ablauf: „Sichtbar lassen, nur Hinweis“* bleibt er sichtbar. Der Autor erhält einen Hinweis, Hook `cms_content_expired`. Je Lauf werden höchstens 100 Inhalte je Typ verarbeitet; wer einen zurückgestuften Inhalt wieder veröffentlicht, ohne das Ablaufdatum zu ändern, behält ihn veröffentlicht.
 - **Wiedervorlage** (Datum): keine Statusänderung. Am Stichtag meldet der tägliche Cron den Inhalt einmal (Hinweis an den Autor, Hook `cms_content_review_due`). „Als geprüft markieren“ setzt die nächste Wiedervorlage auf heute + Intervall (*Beiträge & Sites → Wiedervorlage nach „Geprüft“*, Standard 12 Monate).
-- Noch nicht in diesem Lauf: Markierung im Redaktionskalender, Dashboard-Widget „Fällige Prüfungen“, Wissensdatenbank.
+- **Antwort im Frontend:** Zurückgestufte, abgelaufene Beiträge und Seiten liefern 404 oder, Einstellung *Antwort für zurückgestufte Inhalte*, **410 Gone** (Suchmaschinen entfernen sie schneller). Für die Wissensdatenbank bleibt es bei 404.
+- **Übersicht:** Wiedervorlagen erscheinen im Redaktionskalender (eigene Farbe, nicht verschiebbar), das Dashboard zeigt die Karte **„Fällige Prüfungen“**.
 
 ### Hinweise
 

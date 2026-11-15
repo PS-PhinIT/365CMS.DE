@@ -400,7 +400,7 @@ return [
             ],
             'show_reading_time' => [
                 'label' => 'Lesezeit anzeigen',
-                'description' => 'Geschätzte Lesezeit bei Artikeln anzeigen (z. B. „3 min Lesezeit").',
+                'description' => 'Geschätzte Lesezeit im einzelnen Beitrag anzeigen (z. B. „3 min Lesezeit“); Übersichtsseiten zeigen sie nie.',
                 'type' => 'checkbox',
                 'default' => true,
             ],
