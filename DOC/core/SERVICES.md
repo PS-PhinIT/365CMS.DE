@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Service-Schicht
 
-> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -112,6 +112,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `CoreModuleService` | Feature-Module an/aus ([../admin/system-settings/MODULES.md](../admin/system-settings/MODULES.md)) |
 | `SettingsService` | gruppierte, optional verschlüsselte Einstellungen (Secrets über `CryptoService`) |
 | `CryptoService` | authentifizierte Verschlüsselung gespeicherter Geheimnisse (Einstellungen, TOTP) und Backups, Schlüsselring mit `CMS_ENCRYPTION_KEY`/`CMS_ENCRYPTION_KEYS_PREVIOUS` (seit 4.0.0, [SECURITY.md](SECURITY.md)) |
+| `Auth\SSO\EntraSsoService` (+ `EntraIdProvider`, `EntraSettings`, `IdentityLinker`, `OidcFlowState`) | Anmeldung mit Microsoft Entra ID (seit 4.1.0, Namespace `CMS\Auth\SSO`; Details in [CORE-CLASSES.md](CORE-CLASSES.md) und [../admin/security/SSO-ENTRA.md](../admin/security/SSO-ENTRA.md)) |
 | `LoginThrottleSettings` | einstellbare Login-Grenzwerte (Gruppe `security`: `max_login_attempts`, `login_timeout`), sonst die Konstanten aus `config/app.php`; genutzt von `Auth::login()` und der Passwort-Zurücksetzung ([LOGIN-THRESHOLDS.md](../admin/security/LOGIN-THRESHOLDS.md)) |
 | `TrustedProxyService` | vertrauenswürdige Proxys/CDNs, echte Client-IP (über `Security::getClientIp()`) und Länder-Header |
 

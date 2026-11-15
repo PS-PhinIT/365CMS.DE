@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Dateistruktur
 
-> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -24,8 +24,8 @@ CMS/admin/
 ├── partials/                  # header.php, sidebar.php, topbar.php, footer.php,
 │                              # section-page-shell.php, redirect-alias-shell.php,
 │                              # post-action-shell.php, editorjs-inline-boot.php,
-│                              # plugin-workspace.php (Plugin-Layout-Vertrag 4.0.0)
-├── settings-tabs/             # Erweiterungs-Tabs von /admin/settings: admin-menu.php, feeds.php, security.php
+│                              # plugin-workspace.php (Plugin-Layout-Vertrag, siehe ../plugins/PLUGIN-DEVELOPMENT.md)
+├── settings-tabs/             # Erweiterungs-Tabs von /admin/settings: admin-menu.php, feeds.php, security.php, sso.php (Entra ID, seit 4.1.0)
 └── views/                     # Darstellung je Bereich (+ views/partials/ für gemeinsame Bausteine)
 ```
 
@@ -49,6 +49,10 @@ CMS/admin/
 | `admin-ui.php` | JSON-Endpunkt der Admin-Shell (`/admin/admin-ui`): Sidebar-Präferenzen, Site-Wechsel, Systemhinweise (seit 4.0.0) |
 | `post-editor-api.php` | JSON-Endpunkt des Beitragseditors (`/admin/post-editor-api`): Autosave, Revisionen, Vergleich, Wiederherstellen (seit 4.0.0) |
 | `plugin-assignment.php` | *Einstellungen › Plugins › Plugin-Zuweisung* (`/admin/plugin-assignment`), View `views/settings/plugin-assignment.php` (seit 4.0.0) |
+| `reusable-blocks.php` | *EditorJS Block Vorlagen* (`/admin/reusable-blocks`, Recht `blocks.reusable`), Modul `modules/reusable-blocks/ReusableBlocksModule.php`, Views `views/reusable-blocks/{index,list,edit}.php` (seit 4.1.0) |
+| `backup-settings.php` | *Backup-Einstellungen* (`/admin/backup-settings`, Verschlüsselung und S3-Offsite, Recht `backups.offsite`), View `views/system/backup-settings.php` (seit 4.1.0) |
+| `webhooks.php` | *Webhooks* (`/admin/webhooks`, Recht `webhooks.manage`), View `views/system/webhooks.php` (seit 4.1.0) |
+| `payments.php` | *Abos › Zahlungen* (`/admin/payments`, Recht `payments.manage`), View `views/subscriptions/payments.php` (seit 4.1.0) |
 | `error-report.php` | Fehlerbericht speichern |
 | `monitor-cron-runner.php` | Cron aus dem Admin auslösen (POST) |
 

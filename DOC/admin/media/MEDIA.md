@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Medienverwaltung
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/media` | **Capability:** `manage_media` | **CSRF-Aktion:** `admin_media`
 
 ## English (summary)
@@ -11,6 +11,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 - Actions: `upload`, `replace_item`, `replace_items`, `create_folder`, `rename_item`, `move_item`, `delete_item`, `bulk_items`, `assign_category`, `add_category`, `delete_category`, `save_settings`, `start/process/cancel_media_processing_job`.
 - Upload batch: max. 20 files and 100 MB per request, file names max. 180 characters.
 - Delivery of protected files goes through `GET /media-file?path=…` (`MediaDeliveryService`).
+- Since 4.1.0: optional AVIF derivatives (`auto_avif`, `AvifDerivativeService`) with `<picture>` output (`display: contents`), deleting an image also removes its generated sizes/WebP/AVIF, and a persistent usage index (`media_usage`, `MediaUsageIndex`, extensible via `cms_register_media_reference_extractors`).
 
 ## Deutsch
 
@@ -22,7 +23,8 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 | Modul | `CMS/admin/modules/media/MediaModule.php` | Listen, Filter, Dateiaktionen, Einstellungen, Verarbeitungsjobs |
 | Views | `CMS/admin/views/media/library.php`, `featured.php`, `check.php`, `categories.php`, `settings.php` | Tabs |
 | Services | `CMS/core/Services/MediaService.php` (Fassade), `Media/MediaRepository.php`, `Media/UploadHandler.php`, `Media/ImageProcessor.php` | Dateisystem, Metadaten, Upload-Validierung, Bildverarbeitung |
-| Nutzung | `CMS/core/Services/MediaUsageService.php` | Wo wird eine Datei verwendet (Beitragsbilder, Inhalte) |
+| Nutzung | `CMS/core/Services/MediaUsageService.php` (Fassade), seit 4.1.0 `Media/MediaUsageIndex.php`, `Media/MediaReferenceExtractor.php`, `Media/MediaUsageRebuildService.php`, `Media/Usage/*` | Wo wird eine Datei verwendet (Verwendungsnachweis über alle Inhaltsarten) |
+| AVIF (seit 4.1.0) | `Media/AvifDerivativeService.php`, `Media/AvifRegenerationService.php` | AVIF-Fassungen erzeugen, prüfen und nachgenerieren |
 | Auslieferung | `CMS/core/Services/MediaDeliveryService.php` → `GET /media-file` | Geschützte Dateien, Member-Uploads |
 | Upload-API | `ApiRouter`: `POST /api/upload`, `GET\|POST /api/media` | Editor- und Plugin-Uploads |
 | Metadaten | `CMS/config/media-meta.json` | Kategorien, Tags, Alt-Texte. Schreibzugriffe laufen über `MediaRepository::updateMeta()` unter einer Dateisperre (`media-meta.json.lock`), damit sich parallele Uploads, Papierkorb und Import nicht gegenseitig überschreiben. Je Datei: `getFileMeta()`, `setFileMeta()` (ersetzen/entfernen), `mergeFileMeta()` (einzelne Felder). |
@@ -44,8 +46,16 @@ Verwendungsindex neu aufbauen*). Erfasst werden Beiträge und Seiten (Beitragsbi
 getrennt nach Galerie- und Anhang-Blöcken), Hub-Sites (Einstellungen, Karten), Downloads (Titelbild, Beschreibungen),
 Formulare (Felder, Einstellungen) und die Einstellungen des aktiven Themes („Design“). Erzeugte Größen und WebP/AVIF-
 Fassungen zählen für ihr Original. Bis zum ersten Aufbau sucht die Mediathek wie bisher nur in Beiträgen und Seiten und
-weist beim Filtern darauf hin. Danach hält jedes Speichern den Index aktuell. Weitere Inhaltsarten melden Plugins über
-die Action `cms_register_media_reference_extractors` an (Schnittstelle `Media\MediaReferenceExtractor`).
+weist beim Filtern darauf hin. Danach hält jedes Speichern den Index aktuell. Die Extraktion übernimmt `Media\MediaUsageIndex` mit `Media\MediaPathNormalizer` (erkannt werden `/uploads/…`, absolute URLs der eigenen Domain, `/media-file?path=…`, `srcset` und CSS-`url()`; fremde Domains zählen nie) und je Inhaltsart einem `Media\MediaReferenceExtractor` (`Usage/ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`). Kontexte der Tabelle `media_usage`: `content`, `content_en`, `featured`, `gallery`, `attachment`, `setting`. Weitere Inhaltsarten melden Plugins über
+die Action `cms_register_media_reference_extractors` an (`$index->register(new MeinExtractor())`).
+
+#### Bilder in Inhalten: AVIF, WebP und `<picture>` (seit 4.1.0)
+
+Ist „AVIF zusätzlich erzeugen“ (`auto_avif`) an, legt der Upload nach der WebP-Fassung je Bildgröße (Original, `-small`, `-medium`, `-large`, `-banner`) eine AVIF-Datei an (`Media\AvifDerivativeService`). Sie bleibt nur, wenn sie kleiner ist als die WebP-Fassung derselben Größe; Bilder über 25 Megapixel werden übersprungen. Beim Speichern prüft eine Probe-Kodierung, ob GD wirklich AVIF schreiben kann (Option `media_capabilities`). Bestehende Bilder holt die Karte „AVIF nachgenerieren“ unter *Medien-Werkzeuge* nach (`Media\AvifRegenerationService`, Auftrag `media_avif`, [MEDIA-TOOLS.md](MEDIA-TOOLS.md)). Nach jeder erzeugten Fassung läuft die Action `cms_media_derivative_created`.
+
+Editor.js-Bild, Galerie und Medien-Text sowie die `<picture>`-Vorlagen von `cms-default` geben `<picture>` aus, sobald eine AVIF- oder WebP-Fassung existiert: zuerst `<source type="image/avif">`, dann `<source type="image/webp">`, danach das ursprüngliche `<img>` als Rückfall – nur für tatsächlich vorhandene Dateien. Das gilt auch für bestehende WebP-Fassungen (`auto_webp` ist standardmäßig an). Für `<picture>` gilt `display: contents` (`editorjs-content.css`), damit das Layout unverändert bleibt. **Hinweis für eigene Theme-Regeln:** Kindselektoren wie `figure > img` greifen nicht mehr, weil `<img>` nun in `<picture>` steht; Nachfahren-Selektoren (`figure img`) wirken weiter.
+
+**Löschen:** *Löschen* in der Mediathek entfernt zusätzlich die erzeugten Fassungen eines Bildes – Größen (`-small` …), WebP und AVIF. Dateien gleichen Namens, die selbst hochgeladen wurden, bleiben stehen. Der Verwendungsindex erfasst die Fassungen über ihr Original (nur, wenn das Original existiert).
 
 ### Tab „Beitrags- & Site-Medien“ (`featured`)
 
@@ -68,6 +78,7 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 | Dateinamen | `sanitize_filenames`, `unique_filenames`, `lowercase_filenames` | an, an, aus |
 | Ablage | `organize_month_year` (Unterordner `JJJJ/MM`) | aus |
 | Bilder | `auto_webp` (WebP-Variante), `strip_exif`, `jpeg_quality` (60–100), `max_width`/`max_height` (bis 8000 px) | an, an, 85, 2560/2560 |
+| | `auto_avif` (AVIF zusätzlich erzeugen, seit 4.1.0), `avif_quality` (1–100), `avif_speed` (0–10) | aus, 50, 6 |
 | Vorschaubilder | `generate_thumbnails`; Größen small 150×150, medium 300×300, large 1024×1024, banner 1200×400 | aus |
 | Sicherheit | `block_dangerous_types`, `validate_image_content`, `require_login_for_upload`, `protect_uploads_dir` | alle an |
 | Mitglieder | `member_uploads_enabled`, `member_max_upload_size` (`5M`), `member_allowed_types` (`image`, `document`), `member_delete_own` | aus |

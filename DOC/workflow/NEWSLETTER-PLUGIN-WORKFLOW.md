@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Newsletter-Plugin
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Nicht in der Runtime enthalten | **Update:** 2026-10-02
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Nicht in der Runtime enthalten | **Update:** 2026-11-15
 > **Quellen:** `CMS/plugins/`, `CMS/core/PluginManager.php` (`PLUGIN_SLUG_ALIASES`), `CMS/core/Services/MailService.php`, `CMS/core/Services/MailQueueService.php`, `CMS/admin/modules/legal/LegalSitesModule.php`
 
 ## English (summary)

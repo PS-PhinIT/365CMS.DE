@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: FILELIST
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-13
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -27,13 +27,13 @@
 
 This file is the **readable structure map**. It answers: where does something live, what does the running CMS load, and which paths matter when you change code.
 
-Product version in code: `4.0.0`. PHP: 8.4.1+. Schema: `v25`.
+Product version in code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 **Deutsch**
 
 Diese Datei ist die **lesbare Strukturkarte**. Sie beantwortet: wo liegt etwas, was lädt das laufende CMS, und welche Pfade zählen bei Änderungen.
 
-Produktversion im Code: `4.0.0`. PHP: 8.4.1+. Schema: `v25`.
+Produktversion im Code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 ### 1.1 Workspace context | Workspace-Kontext
 
@@ -225,6 +225,10 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | Content functions (4.0.0) | `Forms/` (`FormService`, `FormSubmissionService`, `FormUploadService` …), `Downloads/`, `Knowledgebase/` (Repository, Linker, CSV-Pakete, Provider), `Newsletter/` (Repository, Mailer, Dispatcher, Frontend, DSGVO), `Trash/` + `TrashListActions`, `Exchange/` (`ContentExchangeService` + providers), `Search/` (`SearchIndexService`, `SearchTermStatsService`), `ContentChangesService`, `TranslationStatusService`, `Media/ThumbnailRegenerationService`, `Media/MediaLicenseService`, `Legal/AccessibilityStatementService` |
 | System (4.0.0) | `AdminToolbarService` (cache, maintenance), `LoginThrottleSettings`, `EnvironmentInfoService`, `DataRetentionService` + `Retention/` |
 | Extension points (4.0.0) | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
+| Identity & security (4.1.0) | `Security/PasswordPolicyService`, `Security/MfaEnforcementService`, `Auth/SSO/` (Entra ID), `Routing/SsoRouter` |
+| Media (4.1.0) | `Media/AvifDerivativeService`, `Media/AvifRegenerationService`, `Media/MediaUsageIndex`, `Media/MediaReferenceExtractor`, `Media/Usage/` |
+| Editorial (4.1.0) | `Content/ContentStatus`, `Content/ContentWorkflow`, `Content/ContentExpiryService`, `ReusableBlocks/ReusableBlockService` |
+| Operations (4.1.0) | `Backup/OffsiteBackupService` (+ `S3Client`, `SigV4Signer`), `Webhooks/WebhookService`, `Payments/PaymentService` (Stripe, Mollie), `Routing/PaymentRouter` |
 | Landing | `LandingPageService` + `Services/Landing/` |
 | AI | `Services/AI/` (admin-only in 3.5.0) |
 | Member | `MemberService`, `MessageService` |
@@ -236,27 +240,27 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-391 files. Layout:
+408 files. Layout:
 
 - `CMS/admin/*.php` — HTTP entry points
 - `CMS/admin/modules/<domain>/` — domain modules (`comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
 - `CMS/admin/views/` — templates
 - `CMS/admin/partials/` — shared chrome (including sidebar)
 - `CMS/admin/logs/` — log UI helpers
-- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`)
+- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
 
 Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), since 4.0.0 the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`, `multisites.php` (MultiSites) and `configuration.php` (tile pages `/admin/configuration[?group=…]`). Content and tool pages added in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, each long-running one with a JSON endpoint `*-api.php`.
 
 **Deutsch**
 
-391 Dateien. Aufbau:
+408 Dateien. Aufbau:
 
 - `CMS/admin/*.php` — HTTP-Einstiege
 - `CMS/admin/modules/<domain>/` — Fachmodule
 - `CMS/admin/views/` — Templates
 - `CMS/admin/partials/` — gemeinsame Oberfläche (inkl. Sidebar)
 - `CMS/admin/logs/` — Log-UI
-- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`)
+- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
 
 Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), seit 4.0.0 die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`, `multisites.php` (MultiSites) und `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`). Seit 4.0.0 außerdem die Inhalts- und Werkzeugseiten `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, bei langen Aufgaben mit JSON-Endpunkt `*-api.php`.
 
@@ -269,7 +273,7 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 - `assets/css/` — 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
-- `assets/js/` — 58 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 18 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (since 4.0.0, no build step)
+- `assets/js/` — 59 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (since 4.0.0, no build step)
 - `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono as local WOFF2 files (since 4.0.0)
 - bundled libraries — see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
@@ -280,7 +284,7 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
 - `assets/css/` — 32 Stylesheets
-- `assets/js/` — 58 Skripte plus 18 ES-Module in `admin-shell/`, `editor-blocks/` und `post-editor/` (seit 4.0.0, ohne Build-Schritt)
+- `assets/js/` — 59 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (seit 4.0.0, ohne Build-Schritt)
 - `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien (seit 4.0.0)
 - gebündelte Bibliotheken — siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 

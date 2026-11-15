@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 2: Medien & Performance
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 2a und 2b umgesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) – 2a, 2b | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

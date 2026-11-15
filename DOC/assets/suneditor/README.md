@@ -1,5 +1,8 @@
 # SunEditor
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** SunEditor is the legacy WYSIWYG editor, loaded only when `setting_editor_type = suneditor`. Details in German below.
+
 ## Kurzbeschreibung
 
 `SunEditor` ist der klassische WYSIWYG-Editor in 365CMS. Standard ist `Editor.js`; SunEditor wird nur noch geladen, wenn `setting_editor_type = suneditor` gesetzt ist.

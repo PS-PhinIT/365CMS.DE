@@ -1,5 +1,8 @@
 # RobThree TwoFactorAuth
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** RobThree/TwoFactorAuth provides TOTP-based multi-factor authentication. Details in German below.
+
 ## Kurzbeschreibung
 
 `RobThree/TwoFactorAuth` liefert TOTP-basierte Mehrfaktor-Authentifizierung.

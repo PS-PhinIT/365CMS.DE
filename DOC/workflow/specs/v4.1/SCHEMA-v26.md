@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Schema v26 & Migrationsplanung
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 | **Status:** Planung, Teile umgesetzt (siehe [PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 | **Status:** ✅ umgesetzt (90 Tabellen, `FEATURE_TABLES_V26`); Versionsmarke `v26` gesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

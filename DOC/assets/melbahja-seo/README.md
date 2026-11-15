@@ -1,5 +1,8 @@
 # melbahja-seo
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** melbahja-seo is documented as a placeholder; it is currently not a present runtime bundle. Details in German below.
+
 ## Kurzbeschreibung
 
 `melbahja-seo` ist in 365CMS aktuell **kein vorhandenes Runtime-Bundle**, wird aber als dokumentierter Platzhalter für ältere Bestandslisten und mögliche künftige SEO-/Schema-Migrationen geführt.

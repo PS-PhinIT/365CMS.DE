@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Architektur
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** v25 | **PHP:** ≥ 8.4.1
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **PHP:** ≥ 8.4.1
 
 ## English (summary)
 

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Community-Modul (Forum)
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.2 · Schema v27 | **Status:** Planung · noch kein Code | **Update:** 2026-11-14
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** Planung · noch kein Code · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Update:** 2026-11-15
 > **Ersetzt:** [FORUM-PLUGIN-WORKFLOW.md](../../FORUM-PLUGIN-WORKFLOW.md) (Integrationsfahrplan aus 3.5.0) · **Muster:** [PLUGIN-INTEGRATION.md](../PLUGIN-INTEGRATION.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
@@ -31,20 +31,21 @@ Datenübernahme abgelöst; seine öffentlichen Adressen bleiben erreichbar.
 | [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) | Bedrohungsmodell, Schutzmaßnahmen (XSS, CSRF, SQL, Uploads, Spam, Bots), DSGVO, Löschfristen |
 | [THEME-UI.md](THEME-UI.md) | Vorlagen, Theme-Overrides, Komponenten, Mobile-First, Barrierefreiheit, SEO, Auswirkungen auf `cms-phinit` |
 | [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) | Paritäts-Checkliste Plugin → Core, URL-Zuordnung, Datenübernahme, Plugin-Abschaltung |
+| [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Umsetzungsfahrplan 4.2.0**: Ausgangslage nach 4.1.0, Arbeitspakete P1 mit Lieferumfang, Sicherheits-Gate und Tests, Tabellen v27, Capabilities, Datenschutz-/Moderationsregeln, CSP-/Security-Vorgaben, Freigabe-Kriterien |
 | [ROADMAP.md](ROADMAP.md) | Phasen, Arbeitspakete mit Abhängigkeiten und Aufwand, Fortschritts-Checkliste |
 | [TEST-PLAN.md](TEST-PLAN.md) | Test-Suiten, Prüffälle, Gegenproben, Laufzeit- und Browserprüfungen |
 
-Lesereihenfolge für die Umsetzung: README → FEATURES → ARCHITECTURE → DATA-MODEL → PERMISSIONS-MODERATION →
+Lesereihenfolge für die Umsetzung: README → **IMPLEMENTATION-PLAN** → FEATURES → ARCHITECTURE → DATA-MODEL → PERMISSIONS-MODERATION →
 SECURITY-PRIVACY → ROADMAP. WORKFLOWS, THEME-UI und TEST-PLAN begleiten die jeweiligen Arbeitspakete.
 
-### 3. Ausgangslage (14.11.2026)
+### 3. Ausgangslage (aktualisiert 15.11.2026, ursprünglich 14.11.2026)
 
 | Punkt | Befund |
 |---|---|
-| Core | 365CMS **4.0.0**, Schema **v25** (`SchemaManager::SCHEMA_VERSION`). Kein Forum im Core. `PLUGIN-PARITY.md` führt `cms-forum` ausdrücklich als eigenständiges Plugin. |
+| Core | 365CMS **4.1.0**, Schema **v26** (90 Tabellen; `Version::CURRENT = '4.1.0'`, `SCHEMA_VERSION = 'v26'`). Kein Forum im Core. `PLUGIN-PARITY.md` führt `cms-forum` ausdrücklich als eigenständiges Plugin. |
 | Plugin `cms-forum` | Repository `PS-PhinIT/365CMS.DE-PLUGINS`, Version 3.0.4, DB-Version 1.0.2, ca. 10.900 Zeilen PHP. 17 Tabellen `{prefix}cmsforum_*`, 15 Routen unter `/forum` (je mit `/en/`), BBCode-Editor, Rechte je Forum (nur Gast/Mitglied/Moderator), Umfragen, Anhänge, Likes, Abos, Meldungen, Ränge, Moderationsprotokoll, „Gelöst“-Markierung, Doppel-Themen-Vorschläge, DSGVO-Hooks, Mitgliederbereich. **Nur 5 von 43 Einstellungen wirken** (Details: [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) §4). |
 | Core-Bausteine | Registrierung/Login/Passwort/E-Mail-Bestätigung (`CmsAuthPageService`, `EmailVerificationService`), Rollen und Gruppen (`roles`, `user_groups`), Profile mit Avatar (`MemberService`), Benachrichtigungen (`notifications`), Nachrichten 1:1 (`MessageService`), Favoriten, Mail-Warteschlange, `AntispamService` (Honeypot, Mindestzeit, Link-Limit), `Security::checkDbRateLimit()`, `PurifierService`, Suche (TNTSearch, `SearchDocumentProvider`), Papierkorb (`TrashProvider`), Löschfristen (`DataRetentionService::registerRule`), `PrivateStorageService`, `ImageService`, Admin-Menü-Katalog, `BadgeProvider`, `CoreModuleService`, `IntegratedPluginService` + `PluginMigrator`, `PluginDashboardRegistry` für den Mitgliederbereich, DSGVO-Export und -Löschantrag. |
-| Lücken im Core | Kein Captcha-Anbieter (nur die Rechenaufgabe der Formulare in `FormSpamGuard`), kein OAuth/Social Login, keine Gruppen-Nachrichten, kein Markdown-Parser, kein Syntax-Highlighting. |
+| Lücken im Core | Kein Captcha-Anbieter (nur die Rechenaufgabe der Formulare in `FormSpamGuard`), Single Sign-on nur über Microsoft Entra ID (4.1.0; kein GitHub/Google/Discord), keine Gruppen-Nachrichten, kein Markdown-Parser, kein Syntax-Highlighting. |
 | Theme `cms-phinit` | hat `member/forum.php` (Weiterleitung auf den Plugin-Mitgliederbereich bzw. Hinweis „Plugin nicht aktiviert“) – muss auf das Core-Modul umgestellt werden ([THEME-UI.md](THEME-UI.md) §7). |
 
 ### 4. Grundsatzentscheidungen
@@ -65,7 +66,7 @@ werden in WP-C0 noch einmal am Repository geprüft.
 | E8 | Private Nachrichten | **Core-`MessageService`**; Gruppen-Konversationen als Erweiterung des Core-Dienstes, nichts Forum-eigenes | ein Postfach für alle Mitglieder | gesetzt |
 | E9 | OAuth / Social Login | **Core-Funktion** (in 4.1.0: Entra-ID-SSO, [../v4.1/01-IDENTITY.md](../v4.1/01-IDENTITY.md)); die Community nutzt sie | Anmeldung gilt für die ganze Site | gesetzt |
 | E10 | Mandanten / MultiSite | keine `site_id` ([KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3) | verbindlich aus 4.0.0 | gesetzt |
-| E11 | Version und Schema | **Release 4.2**, eigener Schema-Stand **v27** (4.1.0 belegt v26, [../v4.1/](../v4.1/README.md)) | Roadmap 4.1.0 kommt zuerst | gesetzt |
+| E11 | Version und Schema | **Release 4.2.0**, eigener Schema-Stand **v27** (4.1.0 belegt v26, [../v4.1/](../v4.1/README.md)); CLI und Alerting folgen in 4.3.0 | Roadmap 4.1.0 kommt zuerst | gesetzt |
 | E12 | Ablage der Tests | **`TESTS/<suite>/run.php`** mit `TESTS/lib/TestRunner.php` (in `main` wiederhergestellt) | wie die übrigen Core-Suiten | gesetzt |
 
 ### 5. Nicht-Ziele (in diesem Vorhaben)

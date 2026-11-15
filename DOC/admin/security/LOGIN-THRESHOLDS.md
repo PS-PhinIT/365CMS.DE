@@ -1,6 +1,6 @@
 # 365CMS – Admin: Login & Sperren
 
-> **Stand:** 2026-11-14 | **Version:** 4.0.0 (Abschnitte „seit 4.1.0“: in Entwicklung) | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -66,7 +66,7 @@ Vorher/Nachher). Standard: keine Rolle.
   PIN/Biometrie. Eine Entra-ID-Anmeldung mit MFA-Nachweis (`amr`) gilt nur für die laufende Sitzung ([SSO-ENTRA.md](SSO-ENTRA.md)).
 - **Kein Aussperren:** Die eigene Rolle lässt sich nur wählen, wenn das eigene Konto bereits einen Faktor hat. Bei aktivem
   Zwang lehnen `/mfa-disable`, „2FA deaktivieren“ und „Passkey entfernen“ das Entfernen des letzten Faktors ab.
-- **Reihenfolge der Weiche** (`Router::dispatch()`, nach dem Wartungsmodus, vor dem CSRF-Block): erst abgelaufenes
+- **Reihenfolge der Weiche** (`Router::enforceAccountGates()`, aufgerufen aus `Router::dispatch()` nach dem Wartungsmodus und vor dem CSRF-Block): erst abgelaufenes
   Passwort (nur Sicherheitsseite mit Aktion `password_change`), dann MFA-Zwang.
 - **Erweiterungen** können den Zwang über den Filter `cms_mfa_enforcement_required` zusätzlich einschalten, aber für eine
   gewählte Rolle nicht aufheben.

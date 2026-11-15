@@ -1,6 +1,6 @@
 # 365CMS – Admin: Löschfristen
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 

@@ -3,7 +3,7 @@
 
 ## English (summary)
 
-Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progress · ⬜ open.
+Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progress · ⬜ open · ➡️ moved. **Result (15 Nov 2026):** areas 1–5, including invoices (5b), are done and released in 4.1.0 (version `4.1.0`, schema `v26`); area 6 (CLI, alerting) moved to **4.3.0**; the community module follows in **4.2.0** (schema `v27`, [../community/README.md](../community/README.md)).
 
 ## Deutsch
 

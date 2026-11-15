@@ -1,6 +1,8 @@
 # Tabler Core
 
-> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Tabler:** 1.6.1 | **Tabler Icons:** 3.48.0
+> **English summary:** Tabler is the primary admin UI framework of 365CMS. Details in German below.
+
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Tabler:** 1.6.1 | **Tabler Icons:** 3.48.0
 
 ## Kurzbeschreibung
 

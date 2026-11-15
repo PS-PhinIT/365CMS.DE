@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bewertung der Referenzen
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 | **Status:** Bewertung abgeschlossen | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 | **Status:** Bewertung abgeschlossen | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

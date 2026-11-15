@@ -43,7 +43,7 @@ Im Block gibt es außerdem:
 - Für jeden Beitrag und jede Seite, die die Vorlage – auch über eine andere Vorlage – einbinden, laufen die normalen Speicher-Hooks (`cms_after_post_save`/`cms_after_page_save`): Suchindex, Sitemap und weitere Folgeaktionen sehen den neuen Inhalt. Die Inhalte selbst und ihre Revisionen bleiben unverändert.
 - Suche und Feeds lösen die Vorlage auf (`SiteSearchService::registerBlockTextResolver()`), der Verwendungsnachweis der Medien zählt Bilder in Vorlagen bei der Vorlage.
 
-### Schutz vor Endlosschleifen
+### Schutz vor Endlosschleifen (Zyklenprüfung)
 
 - Speichern wird abgelehnt, wenn eine Vorlage sich selbst einbindet – direkt oder über andere Vorlagen, in beiden Sprachfassungen.
 - Beim Rendern bricht der Dienst zusätzlich ab, wenn eine Vorlage erneut vorkommt oder mehr als 3 Ebenen verschachtelt sind (z. B. nach einem Import): Frontend nichts, Editor-Vorschau ein Hinweis, Protokoll-Eintrag im Kanal `content.reusable_blocks`.

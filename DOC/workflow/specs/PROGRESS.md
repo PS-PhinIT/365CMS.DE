@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Umsetzungsfortschritt Release 4.0.0
-> **Stand:** 2026-11-11 | **Version:** 4.0.0 | **Status:** In Umsetzung | **Update:** 2026-11-11
+> **Stand:** 2026-11-15 | **Version:** 4.0.0 (abgeschlossen) | **Status:** Release 4.0.0 abgeschlossen; Inhaltsplattform (Arbeitspaket 5) teilweise in 4.1.0 umgesetzt | **Fortschritt 4.1.0:** [v4.1/PROGRESS.md](v4.1/PROGRESS.md)
 > **Specs:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-INTEGRATION.md](PLUGIN-INTEGRATION.md) · [PLUGIN-PARITY.md](PLUGIN-PARITY.md) · [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md) · [ROADMAP-15-FEATURES.md](ROADMAP-15-FEATURES.md) · **Vorrang:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)
@@ -9,7 +9,7 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 
 ## Deutsch
 
-**Legende:** ✅ erledigt · 🟡 in Arbeit · ⬜ offen · ➖ entfällt laut [Klarstellungen](KLARSTELLUNGEN.md)
+**Legende:** ✅ erledigt · 🟡 in Arbeit · ⬜ offen · ➖ entfällt laut [Klarstellungen](KLARSTELLUNGEN.md) · ➡️ verschoben / nicht Teil des Release
 
 ### 0. Vorarbeiten (erledigt)
 
@@ -103,24 +103,24 @@ Order of work: admin menu → plugin integration → work packages 1–4.
 
 ### Arbeitspaket 5 – Inhaltsplattform (vorbereitet) – [Spec](ROADMAP-CONTENT-PLATFORM.md)
 
-Freigabe-Ablauf, eigene Felder und Inhaltstypen sowie beliebig viele Sprachen – die größten Lücken im Vergleich zu WordPress, Drupal und TYPO3. Stand 12.11.: Bestandsaufnahme im Code und Spezifikation fertig, Umsetzung offen.
+Freigabe-Ablauf, eigene Felder und Inhaltstypen sowie beliebig viele Sprachen – die größten Lücken im Vergleich zu WordPress, Drupal und TYPO3. Stand 12.11.: Bestandsaufnahme im Code und Spezifikation fertig. **Stand 15.11.2026:** A1–A3 (Freigabe-Ablauf) sind in **4.1.0** umgesetzt; A4, B und C sind nicht Teil von 4.1.0 und bleiben offen (Roadmap nach 4.2.0).
 
 | # | Punkt | Status | Ergebnis |
 |---|---|---|---|
 | 5.0 | Bestandsaufnahme und Spezifikation (Datenmodell, Migration, Rechte, Oberfläche, Phasen, Aufwand) | ✅ | [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md). Befunde: `posts.publish`/`pages.publish` existieren, werden aber nirgends geprüft und keiner Standardrolle zugewiesen; Inhaltssprachen stecken in festen `*_en`-Spalten (8 Tabellen, ~70 Dateien), obwohl `ContentLocalizationService` schon einen Sprachfilter und einen `*_{locale}`-Rückfall hat; `ContentTypeRegistry` trägt neue Inhaltstypen ohne Sonderfälle (Papierkorb, Suche, Import/Export). |
-| A1 | Status „Zur Prüfung“, zentrale Statusdefinition, Veröffentlichungsrecht durchsetzen (Update vergibt es an Redakteur/Autor) | ⬜ | |
-| A2 | Freigeben/Zurückgeben mit Verlauf und Kommentaren, Mails, Badge, Dashboard-Widget | ⬜ | |
-| A3 | Vorschau-Links zum Teilen (signiert, ablaufend, widerrufbar) | ⬜ | |
-| A4 | Mehrstufige Freigaben je Inhaltstyp (optional) | ⬜ | |
-| B1 | Feldgruppen und Feldwerte für Beiträge/Seiten, Ausgabe-API, Revisionen | ⬜ | |
-| B2 | Eigene Inhaltstypen (Baukasten, Editor, Routing, Vorlagen, Papierkorb/Suche/Export) | ⬜ | |
-| B3 | Block „Inhaltsliste“, Filter und Sortierung nach Feldern, Sitemap, Feeds | ⬜ | |
-| B4 | Wiederholgruppen, Verknüpfungen, CSV-Import | ⬜ | |
-| C0 | Sprachenverwaltung, Präfixe, `hreflang` und Umschalter aus der Sprachliste | ⬜ | |
-| C1–C2 | Übersetzungstabelle, Lese-/Schreibpfad, Editor mit Sprachauswahl | ⬜ | |
-| C3 | Umzug der `*_en`-Daten, Umstellung von Code und Themes | ⬜ | |
-| C4 | Sitemaps, Suche, Übersetzungsstatus und KI-Übersetzung für alle Sprachen | ⬜ | |
-| C5 | Funktionsbereiche (Formulare, Downloads, KB, Newsletter, Feeds) mehrsprachig | ⬜ | |
+| A1 | Status „Zur Prüfung“, zentrale Statusdefinition, Veröffentlichungsrecht durchsetzen (Update vergibt es an Redakteur/Autor) | ✅ 4.1.0 | `Content\ContentStatus`, `Content\ContentWorkflow`, `ContentWorkflow::migrateCapabilities()` ([REVIEW.md](../../admin/pages-posts/REVIEW.md), [v4.1/PROGRESS.md](v4.1/PROGRESS.md) 3a) |
+| A2 | Freigeben/Zurückgeben mit Verlauf und Kommentaren, Mails, Badge, Dashboard-Widget | ✅ 4.1.0 | Tabelle `content_workflow_events`, Bereich *Freigabe* in beiden Editoren, Badges, Dashboard-Karte „Ausstehende Prüfungen“ |
+| A3 | Vorschau-Links zum Teilen (signiert, ablaufend, widerrufbar) | ✅ 4.1.0 | `/preview/<token>`, Tabelle `content_preview_links` (7 Tage, SHA-256-Hash, widerrufbar) |
+| A4 | Mehrstufige Freigaben je Inhaltstyp (optional) | ➡️ | nicht in 4.1.0 (optional, offen) |
+| B1 | Feldgruppen und Feldwerte für Beiträge/Seiten, Ausgabe-API, Revisionen | ➡️ | nicht in 4.1.0; offen |
+| B2 | Eigene Inhaltstypen (Baukasten, Editor, Routing, Vorlagen, Papierkorb/Suche/Export) | ➡️ | nicht in 4.1.0; offen |
+| B3 | Block „Inhaltsliste“, Filter und Sortierung nach Feldern, Sitemap, Feeds | ➡️ | nicht in 4.1.0; offen |
+| B4 | Wiederholgruppen, Verknüpfungen, CSV-Import | ➡️ | nicht in 4.1.0; offen |
+| C0 | Sprachenverwaltung, Präfixe, `hreflang` und Umschalter aus der Sprachliste | ➡️ | nicht in 4.1.0; offen |
+| C1–C2 | Übersetzungstabelle, Lese-/Schreibpfad, Editor mit Sprachauswahl | ➡️ | nicht in 4.1.0; offen |
+| C3 | Umzug der `*_en`-Daten, Umstellung von Code und Themes | ➡️ | nicht in 4.1.0; offen |
+| C4 | Sitemaps, Suche, Übersetzungsstatus und KI-Übersetzung für alle Sprachen | ➡️ | nicht in 4.1.0; offen |
+| C5 | Funktionsbereiche (Formulare, Downloads, KB, Newsletter, Feeds) mehrsprachig | ➡️ | nicht in 4.1.0; offen |
 
 ### Querschnitt und Abschluss
 

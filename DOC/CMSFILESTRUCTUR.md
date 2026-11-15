@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: CMSFILESTRUCTUR
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-13
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -25,13 +25,13 @@
 
 **English**
 
-This file is the **CMS runtime inventory** for `CMS/`, counts updated on 2026-11-13 (release 4.0.0). It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
+This file is the **CMS runtime inventory** for `CMS/`, counts updated on 2026-11-15 (release 4.1.0). It replaces the old 28.03.2026 snapshot (467 files, versions 2.9.0 / 3.3.47).
 
 Out of scope for a full file listing: deep vendor trees (`CMS/vendor/dompdf/`, large library trees under `CMS/assets/` such as `htmlpurifier`, `tabler`, `editorjs`). Those directories exist and are loaded at runtime; listing every vendor file is not useful for GitHub readers.
 
 **Deutsch**
 
-Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, Zählung aktualisiert am 2026-11-13 (Release 4.0.0). Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
+Diese Datei ist das **CMS-Runtime-Inventar** für `CMS/`, Zählung aktualisiert am 2026-11-15 (Release 4.1.0). Sie ersetzt den alten Snapshot vom 28.03.2026 (467 Dateien, Versionen 2.9.0 / 3.3.47).
 
 Nicht vollständig ausgerollt: tiefe Vendor-Bäume (`CMS/vendor/dompdf/`, große Bibliotheksbäume unter `CMS/assets/` wie `htmlpurifier`, `tabler`, `editorjs`). Diese Verzeichnisse existieren und werden zur Laufzeit geladen; jede Vendor-Datei aufzulisten ist für GitHub-Leser nicht sinnvoll.
 
@@ -49,9 +49,9 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 
 | Area / Bereich | Files / Dateien |
 |---|---:|
-| `CMS/admin/` | 391 |
-| `CMS/assets/` | 3107 (mostly bundled libraries) |
-| `CMS/core/` | 329 |
+| `CMS/admin/` | 408 |
+| `CMS/assets/` | 3113 (mostly bundled libraries) |
+| `CMS/core/` | 382 |
 | `CMS/themes/` | 41 |
 | `CMS/member/` | 17 |
 | `CMS/plugins/` | 15 |
@@ -59,6 +59,7 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/install/` | 10 |
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
+| `CMS/views/` | 21 |
 | `CMS/assets/css/` | 33 stylesheets |
 | `CMS/assets/js/` | 59 scripts + 22 ES modules (`admin-shell/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
@@ -153,14 +154,14 @@ Root-Klassen in `CMS/core/`:
 - `PageManager.php`
 - `PluginManager.php`
 - `Router.php`
-- `SchemaManager.php` (`SCHEMA_VERSION = 'v25'`)
+- `SchemaManager.php` (`SCHEMA_VERSION = 'v26'`, `FEATURE_TABLES_V26`)
 - `Security.php`
 - `SubscriptionManager.php`
 - `TableOfContents.php`
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT = '4.0.0'`)
+- `Version.php` (`CURRENT = '4.1.0'`)
 - `WP_Error.php`
 
 Subdirectories:
@@ -170,13 +171,25 @@ Subdirectories:
 | `core/Auth/` | `AuthManager.php`, `LDAP/LdapAuthProvider.php`, `MFA/BackupCodesManager.php`, `MFA/TotpAdapter.php`, `Passkey/WebAuthnAdapter.php`; since/seit 4.1.0 `SSO/` (Entra ID): `DatabaseIdentityStore.php`, `EntraIdProvider.php`, `EntraSettings.php`, `EntraSsoService.php`, `IdentityLinker.php`, `IdentityStoreInterface.php`, `OidcFlowState.php`, `OidcProviderInterface.php` |
 | `core/Contracts/` | interfaces (cache, DB, logger, …) |
 | `core/Http/` | HTTP client / transport |
-| `core/Member/` | member core registration |
-| `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `SsoRouter.php` (4.1.0), `ThemeArchiveRepository.php`, `ThemeRouter.php` |
+| `core/Member/` | `PluginDashboardRegistry.php`, `MemberI18n.php`, `MemberSanitizer.php` (member-area texts and input sanitising / Texte und Eingabebereinigung des Mitgliederbereichs) |
+| `core/Routing/` | `AdminRouter.php`, `ApiRouter.php`, `MemberRouter.php`, `PublicRouter.php`, `SsoRouter.php` (4.1.0, Entra ID), `PaymentRouter.php` (4.1.0, `/payments/webhook/*`, `/payments/return/*`), `ThemeArchiveRepository.php`, `ThemeRouter.php` |
 | `core/Services/` | domain services (see [FILELIST.md](FILELIST.md) and [DEVLIST.md](DEVLIST.md)) |
 
 Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminToolbarService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `BatchJobService`, `CmsAuthPageService`, `CommentService`, `ContentChangesService`, `ContentEditPermission`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorialCalendarService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `EnvironmentInfoService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `IntegratedPluginService`, `JwtService`, `LandingPageService`, `LoginThrottleSettings`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberContentService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `NotificationService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PrivateStorageService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TranslationStatusService`, `TrustedProxyService`, `UpdateService`, `UserService`.
 
 Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Content/`, `ContentTypes/`, `Downloads/`, `EditorJs/`, `Exchange/`, `FeatureHooks/`, `Feed/`, `Forms/`, `Knowledgebase/`, `Landing/`, `Legal/`, `Media/`, `Newsletter/`, `Payments/`, `PluginMigration/`, `Retention/`, `ReusableBlocks/`, `Search/`, `Security/`, `SEO/`, `SiteTable/`, `Trash/`, `Webhooks/`.
+
+New in 4.1.0 / Neu in 4.1.0:
+
+- `Services/Security/` — `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
+- `Services/Media/` additions — `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
+- `Services/Content/` — `ContentStatus.php` (status values incl. `pending`), `ContentWorkflow.php` (four-eyes review, preview links / Vier-Augen-Prinzip, Vorschau-Links), `ContentExpiryService.php` (expiry and review reminders / Ablauf und Wiedervorlage)
+- `Services/ReusableBlocks/` — `ReusableBlock.php`, `ReusableBlockService.php`, `ReusableBlockMediaExtractor.php` (EditorJS block templates / EditorJS Block Vorlagen)
+- `Services/Backup/` — `OffsiteBackupService.php`, `S3Client.php`, `S3Config.php`, `SigV4Signer.php` (S3-compatible offsite backups / S3-kompatible Offsite-Backups)
+- `Services/Webhooks/WebhookService.php` — outbound webhooks / ausgehende Webhooks
+- `Services/Payments/` — `PaymentService.php`, `PaymentSettings.php`, `PaymentGatewayInterface.php`, `AbstractGateway.php`, `StripeGateway.php`, `MollieGateway.php`
+- `Services/FeatureHooks/` additions — `BackupOffsiteHooks`, `ContentExpiryHooks`, `ContentWorkflowHooks`, `ReusableBlockHooks`, `WebhookHooks`
+- `Services/Newsletter/` additions — `NewsletterConsentLog.php`, `NewsletterMemberService.php`
 
 New in 4.0.0 / Neu in 4.0.0:
 
@@ -432,7 +445,7 @@ These folders were **not** found under `CMS/assets/` (older docs mentioned them)
 
 **English**
 
-`CMS/admin/` contains 394 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
+`CMS/admin/` contains 408 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
 
 Module directories: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `newsletter`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
@@ -440,12 +453,14 @@ Entry examples that match public admin routes include `index.php`, `pages.php`, 
 
 **Deutsch**
 
-`CMS/admin/` enthält 394 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
+`CMS/admin/` enthält 408 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
 
 Modulverzeichnisse: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `newsletter`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
 Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php` sowie die übrigen `CMS/admin/*.php`-Dateien. Neu in 4.0.0: `admin-ui.php` (JSON-Endpunkt der Admin-Shell), `post-editor-api.php` (JSON-Endpunkt des Beitragseditors) und `plugin-assignment.php` (Plugin-Zuweisung je Site, View `views/settings/plugin-assignment.php`). Ebenfalls neu: `multisites.php` (Einstellungsbereich MultiSites, View `views/settings/multisites.php`), `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`, Views `views/configuration/`), `settings-tabs/admin-menu.php` (Einstellungs-Tab „Admin-Menü“ mit dem Sidebar-Editor, Views `views/settings/admin-menu.php` und `views/settings/admin-sidebar-editor.php`), `settings-tabs/feeds.php` (RSS-Einstellungs-Controller und View `views/settings/feeds.php`), `partials/sidebar-nav.php` (Sidebar-Liste, auch für die Vorschau) und `views/settings/partials-tabs.php` (gemeinsame Tab-Leiste der Einstellungsbereiche).
 
+
+New admin pages in 4.1.0 / Neue Admin-Seiten in 4.1.0: `reusable-blocks.php` (EditorJS Block Vorlagen, module `modules/reusable-blocks/ReusableBlocksModule.php`, views `views/reusable-blocks/{index,list,edit}.php`), `backup-settings.php` (+ `views/system/backup-settings.php`), `webhooks.php` (+ `views/system/webhooks.php`), `payments.php` (+ `views/subscriptions/payments.php`), settings tab / Einstellungs-Tab `settings-tabs/sso.php` (+ `views/settings/sso.php`); shared partials / gemeinsame Partials `views/partials/content-workflow-form.php`, `content-workflow-panel.php`, `content-expiry-fields.php`, `partials/plugin-workspace.php`.
 
 New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`; since/seit 4.1.0 `settings-tabs/sso.php` (view/View `views/settings/sso.php`) `reusable-blocks.php` (EditorJS Block Vorlagen, views/Views `views/reusable-blocks/`) `backup-settings.php` (Backup-Einstellungen) `webhooks.php` (Webhooks) and/und `payments.php` (Zahlungen, view/View `views/subscriptions/payments.php`) and/und `invoices.php` (Rechnungen, view/View `views/subscriptions/invoices.php`).
 

@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Backup & Restore
 
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/backups` (Alt-Route `/admin/backup` leitet um) | **Capability:** `manage_settings` oder `manage_system` | **CSRF-Aktion:** `admin_backups`
 
 ## English (summary)
@@ -99,7 +99,7 @@ Seite **Backup-Einstellungen** (`/admin/backup-settings`, Menü *Einstellungen*;
 - **Offsite-Status** je Backup (gesichert, läuft, fehlgeschlagen mit Grund, entfernt) und „Jetzt offsite kopieren“.
 - Recht: Lesen mit `manage_settings`/`manage_system`, Ändern, Prüfen und Hochladen zusätzlich `backups.offsite` (Admins haben es).
 
-Ablauf: Nach jedem erfolgreichen Backup (Hook `cms_backup_created`) werden die **verschlüsselten** Dateien nach `{präfix}{backup-name}/{datei}` kopiert, `manifest.json` zuletzt, danach HEAD-Prüfung; Dateien über der Teilgröße laufen als Multipart-Upload (bei Fehler Abbruch). Unverschlüsselte Backups werden nie offsite kopiert. Fehlgeschlagene Uploads holt der tägliche Cron nach (höchstens 3 Versuche), danach greift die Aufbewahrung; das zuletzt erfolgreich hochgeladene Backup wird nie gelöscht. Technik: `Backup\OffsiteBackupService`, `Backup\S3Client`, `Backup\SigV4Signer` (ohne SDK), Tabelle `cms_backup_offsite_uploads`, Hooks `cms_backup_offsite_uploaded`/`cms_backup_offsite_failed`.
+Ablauf: Nach jedem erfolgreichen Backup (Hook `cms_backup_created`) werden die **verschlüsselten** Dateien nach `{präfix}{backup-name}/{datei}` kopiert, `manifest.json` zuletzt, danach HEAD-Prüfung; Dateien über der Teilgröße laufen als Multipart-Upload (bei Fehler Abbruch). Unverschlüsselte Backups werden nie offsite kopiert: Kopiert wird nur, wenn das Manifest `encryption` ausweist und jede Datei mit dem Magic `CMSENC2\0` beginnt (`OffsiteBackupService`; dasselbe Format wie die Backup-Verschlüsselung oben). Die Anfragen signiert `Backup\SigV4Signer` (AWS Signature Version 4, ohne SDK) über `Backup\S3Client` mit `Http\Client`; Hooks `cms_backup_created`, `cms_backup_offsite_uploaded`, `cms_backup_offsite_failed`. Fehlgeschlagene Uploads holt der tägliche Cron nach (höchstens 3 Versuche), danach greift die Aufbewahrung; das zuletzt erfolgreich hochgeladene Backup wird nie gelöscht. Technik: `Backup\OffsiteBackupService`, `Backup\S3Client`, `Backup\SigV4Signer` (ohne SDK), Tabelle `cms_backup_offsite_uploads`, Hooks `cms_backup_offsite_uploaded`/`cms_backup_offsite_failed`.
 
 ### Externe Ziele (Service-API, älter)
 

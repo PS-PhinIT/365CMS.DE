@@ -30,8 +30,8 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 
 ### Eckdaten 4.1.0
 
-- `CMS/core/Version.php`: `CURRENT = '4.1.0'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'`
-- `SchemaManager::SCHEMA_VERSION = 'v26'`, Tabellenpräfix `cms_`
+- Dokumentierter Stand: Version `4.1.0` (Release `2026-11-15`), Schema `v26` (90 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
+- `CMS/core/Version.php`: `CURRENT = '4.1.0'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v26'`
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
@@ -49,6 +49,13 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | [`workflow/`](workflow/) | Schritt-für-Schritt-Abläufe: Inhalte, Medien-Upload, API, Marketplace, Update/Deployment, Integrationsfahrpläne Newsletter, Planung des Community-Moduls (Forum) unter [`workflow/specs/community/`](workflow/specs/community/README.md) |
 | [`ai/`](ai/) | AI Services, Provider, Assets |
 | [`assets/`](assets/) | Gebündelte Bibliotheken unter `CMS/assets/` und `CMS/vendor/dompdf/` |
+
+### Roadmap 4.2.0 / 4.3.0
+
+- **4.1.0** (Schema `v26`): Bereiche 1–5 vollständig umgesetzt, einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); veröffentlicht am 2026-11-15.
+- **4.2.0** (Schema `v27`): Community-Modul (Forum). Umsetzungsfahrplan: [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Planungsset: [workflow/specs/community/README.md](workflow/specs/community/README.md); Fortschritt: [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md).
+- **4.3.0**: zentrale CLI `CMS/cli.php`, Echtzeit-Alerting und Webhook-Ereignis `alert.raised` (verschoben aus 4.1.0, Spezifikation [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- Entwicklerübersicht und Planungsabschnitt: [DEVLIST.md](DEVLIST.md) (Abschnitt 31).
 
 ### Wichtige Hinweise
 

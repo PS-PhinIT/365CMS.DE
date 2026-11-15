@@ -1,6 +1,6 @@
 # 365CMS – Admin: Knowledgebase
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -44,6 +44,10 @@ Je Formular werden nur die Felder des jeweiligen Tabs gespeichert.
 ### Öffentliche Seiten und Theme-Overrides
 
 `/kb` (Übersicht mit Suche und Kategorien), `/kb/<slug>` (Eintrag mit Bereichen, verwandten Einträgen und Beiträgen, JSON-LD), `/glossar` (A–Z), `/glossar-sitemap.xml`; jeweils auch unter `/en/…`. Vorlagen `views/knowledgebase/archive.php` und `single.php`; ein Theme überschreibt sie mit `themes/<theme>/knowledgebase/<vorlage>.php`. Stylesheets und Tooltip-Skript werden nur auf Seiten geladen, die sie brauchen.
+
+### Gültigkeit: Ablaufdatum und Wiedervorlage (seit 4.1.0)
+
+Der Eintrags-Editor hat in der Seitenspalte die Gruppe „Gültigkeit“ (Spalten `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` in `kb_entries`; Indizes `idx_kb_expires`, `idx_kb_review_due`). Ein abgelaufener Eintrag wird vom stündlichen Cron auf **inaktiv** gesetzt (`is_active = 0`) oder – Einstellung *Bei Ablauf* – nur markiert; er verlinkt dann nicht mehr automatisch und die Eintragsseite liefert 404 (die Einstellung „410 Gone“ gilt nur für Beiträge und Seiten). Die Wiedervorlage erinnert den Redakteur einmal; Verwaltung und Hooks (`cms_content_expired`, `cms_content_review_due`, Typ `kb`) wie bei [POSTS.md](POSTS.md#gültigkeit-ablauf-und-wiedervorlage-seit-410) beschrieben. Der Eintrags-Index löst die Suche über `cms_knowledgebase_entry_saved` neu auf.
 
 ### Hooks
 

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 1: Identität, Anmeldung & Konto-Sicherheit
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** 1a, 1b, 1c umgesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) – 1a, 1b, 1c | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

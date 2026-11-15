@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 6: CLI & Echtzeit-Alerting
-> **Stand:** 2026-11-15 | **Ziel-Version:** ~~4.1.0~~ → **4.3.0** (verschoben am 15.11.2026) | **Status:** Spezifikation | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** ~~4.1.0~~ → **4.3.0** (verschoben am 15.11.2026) | **Status:** Spezifikation, **Umsetzung in 4.3.0** (CLI und Alerting; Webhook-Ereignis `alert.raised`, Hook `cms_alert_raised`) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

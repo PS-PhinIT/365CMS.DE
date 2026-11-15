@@ -1,6 +1,6 @@
 # 365CMS – Admin: Anmeldung mit Microsoft Entra ID (SSO)
 
-> **Stand:** 2026-11-14 | **Version:** 4.1.0 (in Entwicklung) | **Status:** Beta | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
 
 ## English (summary)
 

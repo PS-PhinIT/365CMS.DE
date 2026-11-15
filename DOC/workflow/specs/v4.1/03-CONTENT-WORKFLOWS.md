@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Spec 4.1.0 – Bereich 3: Redaktions- & Content-Workflows
-> **Stand:** 2026-11-14 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** Spezifikation | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) – 3a, 3b, 3c | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 

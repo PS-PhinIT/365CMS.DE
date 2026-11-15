@@ -1,10 +1,10 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Datenbank & Schema
 
-> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Schema:** `v25` | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** `v26` | **Status:** Stable
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The base schema (90 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`; `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version (`SCHEMA_VERSION = 'v26'`, flag file `CMS/cache/db_schema_v26.flag`). Release 4.0.0 brings two schema steps: `v24` adds revision columns to `cms_post_revisions` for the post editor's revision history, `v25` adds 32 tables: `cms_admin_menu_layouts` (custom admin sidebar layouts), `cms_batch_jobs` (long-running admin tasks processed in steps) and the 30 feature tables listed in `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash). Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`. Release 4.1.0 (schema `v26`) adds fourteen further tables in `SchemaManager::FEATURE_TABLES_V26` – `cms_password_history`, `cms_user_identities`, `cms_media_usage`, `cms_content_workflow_events`, `cms_content_preview_links`, `cms_reusable_blocks`, `cms_reusable_block_usage`, `cms_reusable_block_revisions`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries`, `cms_payment_events`, `cms_invoice_sequences`, `cms_invoices` – plus the columns `cms_users.password_changed_at` and `cms_passkey_credentials.user_verified`; existing installations receive them through the runtime check `SchemaManager::ensureFeatureSchema()`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). The schema state described here is **release 4.1.0 = schema `v26`**: `CMS\SchemaManager::getSchemaQueries()` defines **90 tables** (76 up to `v25` plus 14 new in `v26`); `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version. Schema history: `v24` (4.0.0) adds revision columns to `cms_post_revisions`; `v25` (4.0.0) adds `cms_admin_menu_layouts`, `cms_batch_jobs` and the 30 feature tables of `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash); **`v26` (4.1.0)** adds the fourteen tables of `SchemaManager::FEATURE_TABLES_V26` – `cms_password_history`, `cms_user_identities`, `cms_media_usage`, `cms_content_workflow_events`, `cms_content_preview_links`, `cms_reusable_blocks`, `cms_reusable_block_usage`, `cms_reusable_block_revisions`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries`, `cms_payment_events`, `cms_invoice_sequences`, `cms_invoices` – and the columns `cms_users.password_changed_at`, `cms_passkey_credentials.user_verified`, `expires_at`/`review_due_at`/`expiry_notified_at`/`review_notified_at` on `cms_posts`, `cms_pages` and `cms_kb_entries`, plus payment columns on `cms_orders` and `cms_user_subscriptions`. Existing installations receive all of it through the runtime check `SchemaManager::ensureFeatureSchema()`. Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
 
 ## Deutsch
 
@@ -39,11 +39,11 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 
 | Tabelle | Spalten |
 |---|---|
-| `users` | id, username, email, password, display_name, role, status, created_at, updated_at, last_login |
+| `users` | id, username, email, password, display_name, role, status, created_at, updated_at, last_login, `password_changed_at` (seit v26) |
 | `user_meta` | id, user_id → users (CASCADE), meta_key, meta_value – sicherheitsrelevante Schlüssel siehe unten |
 | `roles` | id, name, display_name, description, capabilities, member_dashboard_access, sort_order, … |
 | `sessions` | id (SHA-256 der Session-ID, nie die ID selbst), user_id, ip_address, user_agent, payload, last_activity, expires_at – ab 3.4.20 von `Auth` bei Anmeldung angelegt, höchstens alle 5 Minuten aktualisiert und bei Abmeldung/Passwortwechsel entfernt |
-| `passkey_credentials` | id, user_id, credential_id, public_key, sign_count, aaguid, attestation_fmt, name, created_at, last_used_at |
+| `passkey_credentials` | id, user_id, credential_id, public_key, sign_count, aaguid, attestation_fmt, name, `user_verified` (seit v26), created_at, last_used_at |
 | `password_resets` | id, email, token, expires_at, created_at |
 | `login_attempts`, `failed_logins` | Anmeldeversuche (Rate-Limit, Sicherheitsalarme). `action` VARCHAR(30), `username` VARCHAR(60): `Security::normalizeRateLimitAction()`/`normalizeRateLimitIdentifier()` kürzen bzw. hashen längere Werte (ab 3.4.20). Seit 4.0.0 zusätzlich die Aktionen `login_account` (Verzögerung je Konto), `register_existing`, `email_change`, `email_change_confirm` und `email_change_notice` |
 | `blocked_ips` | id, ip_address, reason, expires_at, permanent, … |
@@ -54,9 +54,9 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 
 | Tabelle | Spalten |
 |---|---|
-| `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.4.21, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`) |
+| `pages` | id, slug, slug_en, title (+ title_en), content (+ content_en), excerpt, status, hide_title, show_title_toc, featured_image, meta_title, meta_description, author_id, category_id, created_at, updated_at, published_at, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT; ab 3.4.21, Neuinstallation per `SchemaManager`, Bestand per `PageManager::ensureColumns()`), seit v25 `previous_status`, `trashed_*`, `planned_at`, seit v26 `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at`; `status` kennt seit 4.1.0 auch `pending` |
 | `page_revisions` | id, page_id, title, title_en, slug, slug_en, content, content_en, excerpt, status, author_id, content_updated_at, page_template (VARCHAR 80), page_meta_json (TEXT), created_at |
-| `posts` | id, title (+ title_en), slug, slug_en, content (+ content_en), excerpt (+ excerpt_en), featured_image, status, author_id, author_display_name, author_display_url, post_template, post_meta_json, category_id, tags, views, allow_comments, meta_title, meta_description, created_at, updated_at, published_at, content_updated_at |
+| `posts` | id, title (+ title_en), slug, slug_en, content (+ content_en), excerpt (+ excerpt_en), featured_image, status, author_id, author_display_name, author_display_url, post_template, post_meta_json, category_id, tags, views, allow_comments, meta_title, meta_description, created_at, updated_at, published_at, content_updated_at, seit v25 `previous_status`, `trashed_*`, `planned_at`, seit v26 `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at`; `status` kennt seit 4.1.0 auch `pending` |
 | `post_revisions` | Snapshot je Speichern (Titel, Slugs, Inhalte DE/EN, Status, Kategorie, Tags, Autor-Anzeige, Datumswerte); seit v24 zusätzlich `revision_type` (`manual`, `autosave`, `restore`, `baseline`, Bestandszeilen `legacy`), `created_by`, `featured_image`, `meta_title`, `meta_description` und `fingerprint` (SHA-1 des Inhaltsstands gegen doppelte Revisionen). `PostRevisionService` behält je Beitrag die letzten 30 |
 | `post_categories` | id, name, slug, slug_en, description, parent_id, sort_order, replacement_category_id, created_at |
 | `post_tags` | id, name, slug, slug_en, description, post_count, created_at |
@@ -80,9 +80,9 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | Tabelle | Spalten |
 |---|---|
 | `subscription_plans` | Preise, Limits (`limit_*`), Plugin-Freigaben (`plugin_*`), Features (`feature_*`), is_active, sort_order |
-| `user_subscriptions` | user_id, plan_id, status, billing_cycle, start_date, end_date, next_billing_date, cancelled_at |
+| `user_subscriptions` | user_id, plan_id, status, billing_cycle, start_date, end_date, next_billing_date, cancelled_at, seit v26 `provider`, `provider_subscription_id`, `current_period_end` |
 | `subscription_usage` | user_id, resource_type, current_count, last_updated |
-| `orders` | order_number, user_id, plan_id, Beträge, currency, status, payment_method, billing_cycle, Adressdaten, contact_data |
+| `orders` | order_number, user_id, plan_id, Beträge, currency, status, payment_method, billing_cycle, Adressdaten, contact_data, seit v26 `provider`, `provider_checkout_id`, `paid_at` |
 
 **System, Plugins, Themes**
 
@@ -128,7 +128,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `downloads_usage` | download_id, content_type, content_id | Verwendung in Inhalten (Editor-Block) |
 | `downloads_events`, `downloads_stats_daily` | id, download_id, version_id, source_type, source_id, dedupe_hash, aggregated, created_at · stat_date, download_id, version_id, source_type, source_id, hits | Abrufe ohne Personendaten, täglich verdichtet (Löschregel `downloads.events`) |
 | `downloads_rate_limits` | key_hash, request_count, window_started_at | Grenzwert für Abrufe |
-| `kb_entries` | id, title, keyword, slug, excerpt, content, content_details, content_benefits, content_practice, content_notes, content_license, content_conclusion, content_links, tooltip_text, synonyms, category, priority, is_active, is_case_sensitive, is_whole_word, max_links_per_page, trashed_at, trashed_by, created_at, updated_at | Knowledgebase-Einträge ([KNOWLEDGEBASE.md](../admin/pages-posts/KNOWLEDGEBASE.md)); Tabellen wie im früheren Plugin, Schema-Version in Option `cms_knowledgebase_version` |
+| `kb_entries` | id, title, keyword, slug, excerpt, content, content_details, content_benefits, content_practice, content_notes, content_license, content_conclusion, content_links, tooltip_text, synonyms, category, priority, is_active, is_case_sensitive, is_whole_word, max_links_per_page, trashed_at, trashed_by, seit v26 expires_at, review_due_at, expiry_notified_at, review_notified_at, created_at, updated_at | Knowledgebase-Einträge ([KNOWLEDGEBASE.md](../admin/pages-posts/KNOWLEDGEBASE.md)); Tabellen wie im früheren Plugin, Schema-Version in Option `cms_knowledgebase_version` |
 | `kb_categories`, `kb_settings` | Kategorien (name, slug, sort_order) · Einstellungen (setting_key, setting_value) | Knowledgebase |
 | `newsletter_subscribers` | id, email, first_name, last_name, status, source, segment_slug, locale, user_id, optin_token, optin_sent_at, consent_at, consent_text, confirmed_at, unsubscribed_at, last_sent_at, created_at, updated_at | Newsletter-Abonnenten ([NEWSLETTER.md](../admin/pages-posts/NEWSLETTER.md)); Schema-Version in Option `cms_newsletter_version` |
 | `newsletter_templates`, `newsletter_campaigns` | Vorlagen (name, subject, content_html/_text, status) · Kampagnen (template_id, subject, preview_text, content_html/_text, segment_slug, locale, status, is_public, scheduled_at, started_at, sent_at, recipient/sent/failed_count, created_by) | Newsletter |
@@ -141,9 +141,15 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `search_term_daily` | day, locale, term, searches, zero_hits, result_sum | Tageswerte der Suchbegriffe (Löschregel `search_terms`) |
 | `trash_media` | id, original_path, storage_name, title, filetype, filesize, payload_json, trashed_at, trashed_by | Medien im Papierkorb (Datei im privaten Speicher `trash/media/`) |
 
-#### Tabellen aus `FEATURE_TABLES_V26` (Vorbereitung Release 4.1.0)
+Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und Update von v24 (Feature-Tabellen, `batch_jobs`, `admin_menu_layouts`, `planned_at` und `page_revisions.created_by` entfernt, Version auf v24) ergeben dieselben 68 Tabellen und Spalten; die Version steht danach auf v25. Die Zahl 68 ist der Stand dieses Tests; das Schema von v25 enthielt 76 Tabellendefinitionen (`SchemaManager::getSchemaQueries()`, einschließlich `kb_*` und `newsletter_*`), das von 4.1.0 (v26) enthält 88, der Vergleich wurde damit nicht wiederholt.
 
-Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA-v26.md). Die Versionsmarke bleibt bis zum Release `v25`; Neuinstallationen erhalten die Tabellen über `getSchemaQueries()`, bestehende Installationen über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()`, die ALTER-Schritte im `MigrationManager` greifen ab der Marke `v26`.
+Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Die Papierkorb-Spalten stehen in den `CREATE TABLE`-Anweisungen, als `ALTER TABLE` in den v25-Migrationen und in der Laufzeitprüfung `SchemaManager::ensureTrashColumns()`, die Spalten und Index auch bei Installationen nachträgt, die v25 schon erreicht hatten. Das gewählte Profil steht in der Option `admin_menu_profile`.
+
+### Schema v26 (4.1.0)
+
+#### Tabellen aus `FEATURE_TABLES_V26`
+
+Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA-v26.md). Gesamtstand von Release 4.1.0: **90 Tabellendefinitionen** in `SchemaManager::getSchemaQueries()` (76 bis `v25`, 14 neu in `v26`, darunter `invoice_sequences` und `invoices`). Neuinstallationen erhalten sie über `getSchemaQueries()`, Updates über den `MigrationManager` (Schritt `v26`) und zusätzlich über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()` (idempotent, `CREATE TABLE IF NOT EXISTS`). Die Konstanten `SchemaManager::SCHEMA_VERSION` und `MigrationManager::SCHEMA_VERSION` stehen auf `v26`.
 
 | Tabelle / Spalte | Spalten | Zweck |
 |---|---|---|
@@ -158,17 +164,14 @@ Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA
 | `backup_offsite_uploads` | id, backup_name, target, object_prefix, status, bytes, files, attempts, last_error, uploaded_at, created_at, updated_at | Offsite-Status je Backup (S3-kompatibel) |
 | `webhook_endpoints` | id, name, url, events_json, secret_encrypted, is_active, consecutive_failures, disabled_reason, created_by, created_at, updated_at | Empfänger ausgehender Webhooks; Geheimnis über `CryptoService` |
 | `webhook_deliveries` | id, endpoint_id, delivery_uuid, event, payload_json, status, attempts, next_attempt_at, response_status, last_error, created_at, delivered_at | Zustell-Warteschlange mit Wiederholungen |
-| `payment_events` | id, provider, provider_event_id, type, order_id, status, payload_hash, error, received_at, processed_at | Eingehende Ereignisse der Zahlungsanbieter, eindeutig je (provider, provider_event_id); dazu Spalten `orders.provider/provider_checkout_id/paid_at`, `user_subscriptions.provider/provider_subscription_id/current_period_end` |
+| `payment_events` | id, provider, provider_event_id, type, order_id, status, payload_hash, error, received_at, processed_at | Eingehende Ereignisse der Zahlungsanbieter (Idempotenz), eindeutig je (provider, provider_event_id) |
+| `orders`, `user_subscriptions`: Zahlungsspalten | `orders.provider`, `provider_checkout_id`, `paid_at` (Index `idx_provider_checkout`) · `user_subscriptions.provider`, `provider_subscription_id`, `current_period_end` (Index `idx_provider_sub`) | Zuordnung zu Stripe/Mollie und Laufzeitende bei Verlängerungen |
 | `invoice_sequences` | sequence_key, next_number, updated_at | Rechnungs-Nummernkreise (nie rückwärts) |
 | `invoices` | id, invoice_number, sequence_key, sequence_number, type, order_id, user_id, cancels_invoice_id, issued_at, service_period_start, service_period_end, currency, net_total, tax_total, gross_total, tax_mode, snapshot_json, pdf_path, pdf_sha256, created_by, restricted_at, created_at | Rechnungen/Storno-Rechnungen, unveränderlich, 10 Jahre |
 | `posts`, `pages`, `kb_entries`: `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` (DATETIME NULL), Indizes `idx_expires (status, expires_at)`, `idx_review_due` (Wissensdatenbank: `idx_kb_expires (is_active, expires_at)`, `idx_kb_review_due`) | Ablauf- und Prüfdaten (seit 4.1.0, Bereich 3c, `ContentExpiryService`); die `*_notified_at`-Spalten verhindern Mehrfachmeldungen |
 | `posts.status`, `pages.status` | neuer Wert `pending` | „Zur Prüfung“ (Vier-Augen-Prinzip) – kein Schemawechsel (`VARCHAR(20)`); nie öffentlich, Frontend-Abfragen bleiben bei `status = 'published'` |
 | `users.password_changed_at` | DATETIME NULL | Passwort-Alter für das optionale Höchstalter; Bestand `NULL` (rechnet ab `created_at`) |
 | `passkey_credentials.user_verified` | TINYINT(1) NULL | UV-Flag der Registrierung; zählt beim MFA-Zwang nur mit `1` |
-
-Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und Update von v24 (Feature-Tabellen, `batch_jobs`, `admin_menu_layouts`, `planned_at` und `page_revisions.created_by` entfernt, Version auf v24) ergeben dieselben 68 Tabellen und Spalten; die Version steht danach auf v25. Die Zahl 68 ist der Stand dieses Tests; das aktuelle Schema enthält 76 Tabellendefinitionen (`SchemaManager::getSchemaQueries()`, einschließlich `kb_*` und `newsletter_*`), der Vergleich wurde damit nicht wiederholt.
-
-Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Die Papierkorb-Spalten stehen in den `CREATE TABLE`-Anweisungen, als `ALTER TABLE` in den v25-Migrationen und in der Laufzeitprüfung `SchemaManager::ensureTrashColumns()`, die Spalten und Index auch bei Installationen nachträgt, die v25 schon erreicht hatten. Das gewählte Profil steht in der Option `admin_menu_profile`.
 
 ### Schema v24 (4.0.0)
 

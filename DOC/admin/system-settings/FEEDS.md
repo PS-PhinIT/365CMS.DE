@@ -1,6 +1,6 @@
 # 365CMS – Admin: Feeds (Feed-Aggregator und RSS-Ausgang)
 
-> **Stand:** 2026-11-11 | **Version:** 4.0.0 | **Status:** Umgesetzt
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Umgesetzt
 
 ## Deutsch
 
