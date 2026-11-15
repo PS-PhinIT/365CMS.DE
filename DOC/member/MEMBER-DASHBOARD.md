@@ -1,17 +1,17 @@
-# 365CMS – Projektdokumentation | Abschnitt: Mitglieder-Dashboard
+# 365CMS Projektdokumentation | Mitglieder-Dashboard
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Referenz für Dashboard-Runtime, Bereiche, Widgets, Reihenfolge, Plugin-Integration, Benachrichtigungen, Favoriten und Sprachtexte des Core-Mitgliederbereichs in Version 4.1.0.
 
 # 365CMS Member Dashboard
 
-## English — user guide
+## English: user guide
 
 The dashboard shows a welcome block, quick access, key figures, custom information widgets, plugin widgets, onboarding and the core widgets profile progress, security status, account status, notifications, favorites, messages and recent activity. Administrators control which core widgets appear (`widgets`), the order of the four main sections (`section_order`) and the number of widget columns (`dashboard_columns`). Members only see enabled items allowed for their account.
 
 If `dashboard_enabled` is false, `/member` and `/member/dashboard` redirect directly to the profile page (one redirect). Texts are read from `lang/de.yaml` and `lang/en.yaml` (`member.*` keys) in the language of the request.
 
-## English — technical reference
+## English: technical reference
 
 | Setting | Runtime meaning |
 |---|---|
@@ -31,13 +31,13 @@ Plugin widgets come from `PluginDashboardRegistry::getDashboardWidgets()`. `Memb
 
 # 365CMS Member-Dashboard
 
-## Deutsch — Anwenderblock
+## Deutsch: Anwenderblock
 
 Das Dashboard zeigt Begrüßung, Schnellzugriff, Kennzahlen, eigene Info-Widgets, Plugin-Widgets, Onboarding und die Kern-Widgets Profil-Fortschritt, Sicherheitsstatus (2FA, letzte Passwortänderung), Kontostatus, Benachrichtigungen, Favoriten, Nachrichten und letzte Aktivität. Im Admin unter *Mitgliederbereich → Dashboard-Widgets* legen Administratoren fest, welche Kern-Widgets erscheinen, in welcher Reihenfolge die vier Hauptbereiche stehen und wie viele Spalten die Widget-Raster haben.
 
 Ist das Dashboard abgeschaltet, führen `/member` und `/member/dashboard` mit einer einzigen Weiterleitung zum Profil. Die Oberflächentexte stehen in `lang/de.yaml` und `lang/en.yaml` (Schlüssel `member.*`) und erscheinen in der Sprache der Anfrage (`/en/member/…` → Englisch).
 
-## Deutsch — Technikblock
+## Deutsch: Technikblock
 
 ### Einstellungen und ihre Wirkung
 
@@ -73,7 +73,7 @@ Favoriten: Die Tabelle `favorites` enthält nur `user_id`/`post_id`; Titel und P
 
 ### Plugin-Widgets
 
-`PluginDashboardRegistry::getDashboardWidgets()` filtert nach Berechtigung und `member_dashboard_plugin_{plugin}`. `MemberController::sanitizeDashboardWidget()` übernimmt `html` (bereits escaptes Markup eines vertrauenswürdigen `render_callback`) unverändert und reduziert `anchor` auf `[a-z0-9_-]`. Mit `html` rendert das Dashboard einen Container `member-widget member-widget--custom` ohne eigenes `id` (das Markup bringt seine Wurzel-ID mit, z. B. `id="newsletter"`); ohne `html` die Kachel mit `badge`, Statistik, Öffnen-Link und – für Administratoren – `admin_link`. Die Dashboard-Daten werden vor `partials/header.php` geladen, damit Widget-Callbacks ihre Flash-Meldung selbst verbrauchen können.
+`PluginDashboardRegistry::getDashboardWidgets()` filtert nach Berechtigung und `member_dashboard_plugin_{plugin}`. `MemberController::sanitizeDashboardWidget()` übernimmt `html` (bereits escaptes Markup eines vertrauenswürdigen `render_callback`) unverändert und reduziert `anchor` auf `[a-z0-9_-]`. Mit `html` rendert das Dashboard einen Container `member-widget member-widget--custom` ohne eigenes `id` (das Markup bringt seine Wurzel-ID mit, z. B. `id="newsletter"`); ohne `html` die Kachel mit `badge`, Statistik, Öffnen-Link und, für Administratoren, `admin_link`. Die Dashboard-Daten werden vor `partials/header.php` geladen, damit Widget-Callbacks ihre Flash-Meldung selbst verbrauchen können.
 
 ### Menü
 

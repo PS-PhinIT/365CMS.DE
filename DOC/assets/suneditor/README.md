@@ -9,7 +9,7 @@
 
 ## Quellordner
 
-- `CMS/assets/suneditor/` – Version **3.4.3** (`suneditor.min.js`, `css/suneditor.min.css`, `lang/de.js`; das nirgends geladene `css/suneditor-contents.min.css` wurde in 3.4.19 entfernt)
+- `CMS/assets/suneditor/`: Version **3.4.3** (`suneditor.min.js`, `css/suneditor.min.css`, `lang/de.js`; das nirgends geladene `css/suneditor-contents.min.css` wurde in 3.4.19 entfernt)
 - Quelle: npm `suneditor@3.4.3` (`dist/suneditor.min.js`, `dist/suneditor.min.css`, `src/langs/de.js`, unverändert übernommen); `CMS_ASSETS/suneditor-3.4.3.zip` enthält den vollständigen Inhalt dieses npm-Pakets (inkl. `dist/`)
 - Registry-Prüfsummen des Tarballs `suneditor-3.4.3.tgz`: SHA-1 `3de265803b44ab353ea6620b8ad8466b4fb94e02`, SHA-512 (npm `integrity`) `sha512-j92HO5IONjqUmFxbu80U0bmgrJ2ALmrpy3JcgXEis97TDAnYRjkXBZcDBkX/gWyhiOoBLlC1kqcUxP2DTIoIFw==`, SHA-256 `50a843ec37053ba56d42b7a72450a2c6351468c33f2956d237026a6b49847fd7`
 - SHA-256 der Runtime-Dateien: `suneditor.min.js` `6543eace29c8031817705220014e9b2daed65d33e45de7cfdebbaf970b1d80ca`, `css/suneditor.min.css` `56470575c227b4c0c14a83c50aa54569365f5047f74bc9ee5a41a1a0da5736d3`, `lang/de.js` `d486d416f56ca16c63737087a0034793a091557bdef1dc825e4e0db9048bdf9e`

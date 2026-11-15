@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Benutzer
+# 365CMS Projektdokumentation | Admin: Benutzer
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/users` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_users`
@@ -61,7 +61,7 @@ Die Bearbeitungsansicht zeigt zusätzlich Gruppen, Abo, MFA-/Passkey-Status und 
 
 Umgesetzt in `CMS/core/Services/EmailChangeService.php`.
 
-- **Mit Bestätigung (Standard):** Eine geänderte Adresse wird nicht sofort übernommen. Der Benutzer erhält an die **neue** Adresse einen Link (`/cms-confirm-email-change?uid=…&token=…`, 48 Stunden gültig, einmal verwendbar) und bestätigt dort mit der Schaltfläche **E-Mail-Adresse bestätigen** – das bloße Öffnen des Links ändert nichts. Die bisherige Adresse erhält einen Hinweis. Bis zur Bestätigung bleibt die alte Adresse aktiv. Die Bearbeitungsansicht zeigt „Ausstehend: …“ mit Ablaufzeit und den Button **Änderung verwerfen** (`action=cancel_email_change`).
+- **Mit Bestätigung (Standard):** Eine geänderte Adresse wird nicht sofort übernommen. Der Benutzer erhält an die **neue** Adresse einen Link (`/cms-confirm-email-change?uid=…&token=…`, 48 Stunden gültig, einmal verwendbar) und bestätigt dort mit der Schaltfläche **E-Mail-Adresse bestätigen**, das bloße Öffnen des Links ändert nichts. Die bisherige Adresse erhält einen Hinweis. Bis zur Bestätigung bleibt die alte Adresse aktiv. Die Bearbeitungsansicht zeigt „Ausstehend: …“ mit Ablaufzeit und den Button **Änderung verwerfen** (`action=cancel_email_change`).
 - **Neue Adresse ohne Bestätigung übernehmen** (`email_skip_confirmation`): Die Adresse gilt sofort, die bisherige Adresse wird benachrichtigt. Der Bestätigungsstatus (`email_verified_at`) wird zurückgesetzt, Gastbestellungen werden nicht zugeordnet.
 - Nach der Bestätigung per Link werden Gastbestellungen mit der neuen Adresse dem Konto zugeordnet.
 - Gehört die Adresse bereits einem anderen Konto, meldet der Adminbereich einen Fehler. Ändert sich nur die Groß-/Kleinschreibung, wird die Adresse sofort übernommen.

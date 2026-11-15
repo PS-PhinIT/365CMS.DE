@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Allgemeine Einstellungen
+# 365CMS Projektdokumentation | Admin: Allgemeine Einstellungen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/settings` (Tabs `general`, `content`) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_settings`
@@ -56,7 +56,7 @@ Die angezeigte „aktive Runtime-URL“ ist der tatsächlich verwendete Wert aus
 
 `CMS/admin/documentation.php` → `DocumentationModule` zeigt die Markdown- und CSV-Dateien aus dem Ordner `DOC/` neben dem `CMS/`-Verzeichnis als navigierbaren Katalog an (`?doc=<pfad>`; nur `.md`/`.csv`, keine Pfad-Traversal, max. 256 KB je Datei). Relative Links zwischen Dokumenten werden umgeschrieben. Lesend, Capability `manage_settings` oder `manage_system`. `/admin/support` leitet auf diese Seite um.
 
-**Doku-Sync (seit 3.4.13):** Benutzer mit `manage_system` sehen links die Karte „Doku-Sync“ mit Status und – falls möglich – dem Button „/DOC jetzt synchronisieren“ (Aktion `sync_docs`, CSRF `admin_documentation`, Bestätigungsdialog). `DocumentationSyncService` wählt den Modus:
+**Doku-Sync (seit 3.4.13):** Benutzer mit `manage_system` sehen links die Karte „Doku-Sync“ mit Status und, falls möglich, dem Button „/DOC jetzt synchronisieren“ (Aktion `sync_docs`, CSRF `admin_documentation`, Bestätigungsdialog). `DocumentationSyncService` wählt den Modus:
 
 | Modus | Voraussetzung | Konfiguration (`config/app.php`, optional) |
 |---|---|---|

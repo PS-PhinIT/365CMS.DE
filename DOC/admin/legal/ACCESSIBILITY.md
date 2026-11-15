@@ -1,4 +1,4 @@
-# 365CMS – Admin: Erklärung zur Barrierefreiheit
+# 365CMS: Admin: Erklärung zur Barrierefreiheit
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/legal-sites` (Karte *Erklärung zur Barrierefreiheit*) | **Capability:** `manage_settings`

@@ -1,4 +1,4 @@
-# 365CMS – Paritäts-Checkliste der in den Core integrierten Plugins
+# 365CMS: Paritäts-Checkliste der in den Core integrierten Plugins
 
 > **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Gehört zu:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
@@ -10,7 +10,7 @@ Item-by-item comparison of the five plugins integrated in 365CMS 4.0.0 (cms-feed
 
 ### Vorgehen
 
-1. **Routen:** alle `addRoute`-Aufrufe der Plugins (`PS-PhinIT/365CMS.DE-PLUGINS`) ausgelesen und jede öffentliche Adresse – auch unter `/en/…` – gegen den Core abgerufen (Testinstallation, 12.11.2026).
+1. **Routen:** alle `addRoute`-Aufrufe der Plugins (`PS-PhinIT/365CMS.DE-PLUGINS`) ausgelesen und jede öffentliche Adresse, auch unter `/en/…`, gegen den Core abgerufen (Testinstallation, 12.11.2026).
 2. **Hooks:** gefeuerte (`doAction`/`applyFilters`) und genutzte Hooks der Plugins gegen den Core abgeglichen.
 3. **Einstellungen:** jeden Einstellungsschlüssel der Plugins in den Core-Diensten und Migratoren gesucht.
 4. **Admin, Mails, Cron, Rechte, Mitgliederbereich, Daten:** Plugin-Aktionen und Ansichten mit den Core-Seiten verglichen; Datenübernahme je Plugin mit Beispieldaten geprobt (Migratoren, jeweils zweiter Lauf ohne Änderung).

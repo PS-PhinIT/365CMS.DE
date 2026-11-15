@@ -1,4 +1,4 @@
-# 365CMS – Admin: Newsletter
+# 365CMS: Admin: Newsletter
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -43,7 +43,7 @@ Inhalte bereinigt der Core-Purifier (Profil `default`): keine Skripte, keine Inl
 | `/newsletter` | Anmeldung (Name optional, Themenauswahl optional, Einwilligung Pflicht, Link zur Datenschutzerklärung aus *Einstellungen → Formulare*) und Archiv versendeter, als öffentlich markierter Ausgaben |
 | `POST /newsletter/subscribe` | Anmeldung: CSRF-Token, Honeypot, max. 6 Versuche je Stunde und IP. Die Rückmeldung ist für neue, bestehende und abgemeldete Adressen gleich; eine erneute Bestätigungsmail geht höchstens alle 10 Minuten hinaus |
 | `/newsletter/confirm/<token>` | Seite mit Knopf „Anmeldung bestätigen“, erst der POST bestätigt |
-| `/newsletter/unsubscribe/<token>` | Seite mit Knopf „Abmelden“; der POST meldet ab – auch als One-Click-Abmeldung des Postfachanbieters (Antwort `200 Unsubscribed`) |
+| `/newsletter/unsubscribe/<token>` | Seite mit Knopf „Abmelden“; der POST meldet ab: auch als One-Click-Abmeldung des Postfachanbieters (Antwort `200 Unsubscribed`) |
 | `/newsletter/issue/<id>` | Webversion: öffentlich bei Archiv-Ausgaben, sonst nur mit Empfänger-Token (`?t=…`, `noindex`) |
 
 Alle Seiten gibt es auch unter `/en/…`. Vorlagen `views/newsletter/{page,action,issue}.php`, im Theme überschreibbar unter `themes/<theme>/newsletter/<vorlage>.php`. Optionaler Menüpunkt in der Hauptnavigation (Einstellungen → Inhalte).
@@ -60,7 +60,7 @@ Bestätigen und Abmelden passieren bewusst erst per POST: Mailfilter wie Microso
 
 ### Import und Export
 
-- **Import:** CSV-Datei oder eingefügter Text, je Zeile `E-Mail;Vorname;Nachname;Thema` (Kopfzeile erlaubt, Trennzeichen `;` oder `,`, max. 5 MB). Vorhandene Adressen bleiben unverändert. Status wahlweise „Unbestätigt – Bestätigungsmail senden“ oder „Aktiv (Einwilligung liegt vor)“; das Vorliegen der Einwilligung muss bestätigt werden.
+- **Import:** CSV-Datei oder eingefügter Text, je Zeile `E-Mail;Vorname;Nachname;Thema` (Kopfzeile erlaubt, Trennzeichen `;` oder `,`, max. 5 MB). Vorhandene Adressen bleiben unverändert. Status wahlweise „Unbestätigt. Bestätigungsmail senden“ oder „Aktiv (Einwilligung liegt vor)“; das Vorliegen der Einwilligung muss bestätigt werden.
 - **Export:** CSV mit E-Mail, Name, Status, Thema, Sprache, Quelle, den Zeitpunkten von Anmeldung, Einwilligung, Bestätigung und Abmeldung sowie der Spalte `user_id` (verknüpftes Benutzerkonto, leer ohne Konto).
 
 ### Datenschutz
@@ -99,18 +99,18 @@ Regeln:
 
 | Hook | Typ | Argumente |
 |---|---|---|
-| `cms_newsletter_subscribed` | Action | `int $subscriberId` – Abonnent wurde aktiv |
+| `cms_newsletter_subscribed` | Action | `int $subscriberId`: Abonnent wurde aktiv |
 | `cms_newsletter_unsubscribed` | Action | `int $subscriberId` |
 | `cms_newsletter_subscriber_deleted` | Action | `int $subscriberId` |
 | `cms_newsletter_campaign_started` | Action | `int $campaignId` |
 | `cms_newsletter_campaign_sent` | Action | `int $campaignId` |
-| `cms_member_export_data` | Filter | `array $export`, `int $userId`, `string $email` – Selbstauskunft ergänzen |
+| `cms_member_export_data` | Filter | `array $export`, `int $userId`, `string $email`: Selbstauskunft ergänzen |
 
 ### Übernahme aus dem Plugin
 
 Die Tabellen `newsletter_*` des Plugins werden weiterverwendet. `NewsletterPluginMigrator` ergänzt neue Spalten und Schlüssel, setzt den Plugin-Status „ready“ auf Entwurf, trägt Einwilligungs- und Abmeldezeitpunkte nach und legt fehlende Standardwerte an; Platzhalter-Absender `…@example.com` werden geleert. Einstellungen bleiben erhalten; ein zweiter Lauf ändert nichts. Alte Adressen `/admin/plugins/newsletter-dashboard/…` leiten auf die passenden Bereiche um.
 
-Im Plugin fehlten der Versand selbst (Kampagnen ließen sich nur als „gesendet“ markieren), die Bestätigungsmail und die Route zum Bestätigen – unbestätigte Abonnenten konnten nie aktiv werden. Ein GET auf den Abmeldelink meldete sofort ab.
+Im Plugin fehlten der Versand selbst (Kampagnen ließen sich nur als „gesendet“ markieren), die Bestätigungsmail und die Route zum Bestätigen, unbestätigte Abonnenten konnten nie aktiv werden. Ein GET auf den Abmeldelink meldete sofort ab.
 
 ### Rechte
 

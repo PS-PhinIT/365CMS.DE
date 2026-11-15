@@ -1,4 +1,4 @@
-# 365CMS – Admin: Übersetzungsstatus
+# 365CMS: Admin: Übersetzungsstatus
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

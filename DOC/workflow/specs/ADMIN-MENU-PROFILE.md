@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Admin-Sidebar-Menü mit Profilen
+# 365CMS Projektdokumentation | Workflow: Spec: Admin-Sidebar-Menü mit Profilen
 > **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** In Umsetzung | **Update:** 2026-11-10
 > **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 

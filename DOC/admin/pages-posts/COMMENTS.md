@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Kommentare
+# 365CMS Projektdokumentation | Admin: Kommentare
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/comments` | **Capabilities:** `comments.view`, `comments.moderate`, `comments.delete` | **CSRF-Aktion:** `admin_comments`

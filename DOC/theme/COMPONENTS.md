@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Theme – Komponenten & Helfer
+# 365CMS Projektdokumentation | Theme: Komponenten & Helfer
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
@@ -37,7 +37,7 @@ Building blocks of the reference theme `CMS/themes/cms-default/`: page templates
 
 | Gruppe | Funktionen (Auszug) |
 |---|---|
-| Einstellungen | `meridian_setting($bereich, $schluessel, $standard)` – Customizer-Wert lesen |
+| Einstellungen | `meridian_setting($bereich, $schluessel, $standard)`: Customizer-Wert lesen |
 | Inhalte | `meridian_get_posts()`, `meridian_get_recent_posts()`, `meridian_get_related_posts()`, `meridian_get_categories()`, `meridian_get_tags()`, `meridian_post_tags()`, `meridian_excerpt()`, `meridian_reading_time()`, `meridian_post_update_badge()`, `meridian_format_date()` |
 | Bilder | `meridian_get_picture_sources()` (WebP), `meridian_image_loading_attributes()` (lazy/eager), `meridian_image_dimension_attributes()`, `meridian_safe_public_media_url()` |
 | Navigation | `meridian_nav_menu()`, `meridian_filter_navigation_items()`, `theme_get_menu()`, `meridian_footer_about_links()` |
@@ -51,7 +51,7 @@ Die Theme-Klasse `MeridianCMSDefaultTheme` registriert: Preconnect/Fonts/Styles/
 
 | Komponente | Nutzung im Theme |
 |---|---|
-| Gerenderter Inhalt | `$page['content']` / Beitragsinhalt – Editor.js-HTML inkl. Inhaltsverzeichnis, Tabellen-/Hub-Shortcodes, Lazy Loading |
+| Gerenderter Inhalt | `$page['content']` / Beitragsinhalt: Editor.js-HTML inkl. Inhaltsverzeichnis, Tabellen-/Hub-Shortcodes, Lazy Loading |
 | Inhaltsverzeichnis | automatisch nach TOC-Einstellungen ([../admin/pages-posts/TOC.md](../admin/pages-posts/TOC.md)) |
 | Menüs | `ThemeManager::instance()->getMenu('<position>')` |
 | Tabellen & Hub-Sites | Shortcodes `[site-table id="…"]`, `[hub-site id="…"]` |
@@ -59,8 +59,8 @@ Die Theme-Klasse `MeridianCMSDefaultTheme` registriert: Preconnect/Fonts/Styles/
 | Kommentare | Formular an `POST /comments/post` mit Token `comment_<postId>`; freigegebene Kommentare über `CommentService::getApprovedForPost()`; ist `edited_at` gesetzt, zeigt das Theme „Bearbeitet vom Administrator“ |
 | Favoriten | POST mit `phinit_toggle_favorite`, `favorite_content_type`, `favorite_content_id`, Token `phinit_favorite_<typ>_<id>` |
 | Logout | `<form method="post" action="/logout">` mit `csrf_token` aus `Security::generateToken('logout')` |
-| Consent | `CookieConsentService` – eigener Banner nur, wenn nicht extern verwaltet |
-| PDF-Export | `?pdf=1` an einer Seiten- oder Beitrags-URL liefert die Seite als PDF (`Router::streamContentAsPdf()`, Dompdf) – im Theme als „PDF“-Link anbieten |
+| Consent | `CookieConsentService`: eigener Banner nur, wenn nicht extern verwaltet |
+| PDF-Export | `?pdf=1` an einer Seiten- oder Beitrags-URL liefert die Seite als PDF (`Router::streamContentAsPdf()`, Dompdf): im Theme als „PDF“-Link anbieten |
 
 ### Regeln
 

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Themes & Gestaltung
+# 365CMS Projektdokumentation | Admin: Themes & Gestaltung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -33,7 +33,7 @@ This folder documents the admin area **Themes & Design** (*Themes & Gestaltung*)
 
 ### Mitgeliefertes Theme
 
-`CMS/themes/cms-default/` – „Meridian CMS Default“, Version **1.1.0** (`theme.json`). Es bringt einen eigenen Customizer (`admin/customizer.php`) mit neun Bereichen und registriert acht Menüpositionen. Entwicklung eigener Themes: [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md).
+`CMS/themes/cms-default/`, „Meridian CMS Default“, Version **1.1.0** (`theme.json`). Es bringt einen eigenen Customizer (`admin/customizer.php`) mit neun Bereichen und registriert acht Menüpositionen. Entwicklung eigener Themes: [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md).
 
 ### Hinweis zu DASHBOARD-WIDGETS.md
 

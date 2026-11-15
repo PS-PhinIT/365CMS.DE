@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Beiträge, Kategorien und Tags
+# 365CMS Projektdokumentation | Admin: Beiträge, Kategorien und Tags
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/posts`, `/admin/post-categories`, `/admin/post-tags`, `/admin/post-editor-api` (JSON) | **CSRF-Aktionen:** `admin_posts`, `admin_post_editor` (Editor-API)
@@ -9,7 +9,7 @@ Blog posts are managed at `/admin/posts` (`CMS/admin/posts.php` → `CMS/admin/m
 
 - Access: `edit_all_posts` (all posts), `edit_own_posts` (own posts only), or `posts.view` (read). Categories and tags require `edit_all_posts`.
 - List filters: `status=published|scheduled|pending|draft|private`, `category`, `q`.
-- Four-eyes review: status `pending`, "Zur Prüfung einreichen", approve/return with history, preview links – see [REVIEW.md](REVIEW.md).
+- Four-eyes review: status `pending`, "Zur Prüfung einreichen", approve/return with history, preview links, see [REVIEW.md](REVIEW.md).
 - POST actions: `save`, `delete`, `bulk`, `save_category`, `delete_category`, `switch_locale`, `copy_de_to_en`.
 - Bulk actions: `delete`, `publish`, `draft`, `set_category`, `clear_category`, `set_author_display_name`, `clear_author_display_name`.
 - Scheduling: a published post with `published_at` in the future is listed as *scheduled* and stays hidden from the frontend, archives, search and sitemap until that time (`cms_post_publication_where()`).
@@ -93,7 +93,7 @@ Die Checkliste in der Einstellungsspalte prüft live:
 
 - Solange ein Punkt rot ist, tragen „Veröffentlichen“ und „Planen“ `aria-disabled="true"`, bleiben aber fokussierbar. Ein Klick öffnet einen Warndialog mit den fehlenden Punkten; „Zum ersten fehlenden Feld“ springt direkt dorthin. Sind alle Punkte grün, sind die Buttons normal aktiv.
 - „Speichern“ eines Entwurfs bleibt immer möglich. Wird im Statusfeld „Veröffentlicht“ gewählt, gilt die Prüfung auch für „Speichern“.
-- **Serverseitig** prüft `PostPublishChecklistService` dieselben Regeln (`PostsModule::save()`), wenn ein Beitrag veröffentlicht oder geplant wird, bei der Sammelaktion `publish` und beim Wiederherstellen einer Revision eines geplanten Beitrags. Abgelehnte Speicherungen melden z. B. „Veröffentlichen nicht möglich – die Veröffentlichungs-Checkliste ist unvollständig.“ mit den fehlenden Punkten als Liste.
+- **Serverseitig** prüft `PostPublishChecklistService` dieselben Regeln (`PostsModule::save()`), wenn ein Beitrag veröffentlicht oder geplant wird, bei der Sammelaktion `publish` und beim Wiederherstellen einer Revision eines geplanten Beitrags. Abgelehnte Speicherungen melden z. B. „Veröffentlichen nicht möglich, die Veröffentlichungs-Checkliste ist unvollständig.“ mit den fehlenden Punkten als Liste.
 - Ausgenommen sind Entwürfe, private Beiträge und Änderungen an bereits live veröffentlichten Beiträgen (kein nachträgliches Sperren bestehender Inhalte).
 
 ### Fokusmodus
@@ -114,7 +114,7 @@ Die Checkliste in der Einstellungsspalte prüft live:
 
 - Eine Revision enthält Titel, Slugs, Inhalte (Editor.js-JSON) und Auszüge DE/EN, Beitragsbild, Meta-Titel und -Beschreibung, Kategorie, Tags, Autor-Anzeige, Status und Datumswerte des Beitrags sowie Bearbeiter (`created_by`) und Zeitpunkt (`created_at`). Identische Stände werden über einen SHA-1-Fingerabdruck erkannt und nicht doppelt gespeichert.
 - Pro Beitrag bleiben die **letzten 30** Revisionen erhalten; ältere werden beim Speichern entfernt. Das gilt auch für Revisionen aus Versionen vor 4.0.0 (bis dahin unbegrenzt): Die erste neue Revision nach dem Update (Speichern, Autosave oder Wiederherstellung) kürzt den Verlauf des Beitrags auf 30 Einträge.
-- **Autosave** läuft nur für gespeicherte Beiträge und nur nach Änderungen: Entwürfe werden höchstens jede Minute selbst gespeichert, veröffentlichte, geplante und private Beiträge bleiben unverändert – ihr Zwischenstand landet nur als Revision. Die Kopfleiste zeigt danach „Gespeichert um HH:MM“.
+- **Autosave** läuft nur für gespeicherte Beiträge und nur nach Änderungen: Entwürfe werden höchstens jede Minute selbst gespeichert, veröffentlichte, geplante und private Beiträge bleiben unverändert, ihr Zwischenstand landet nur als Revision. Die Kopfleiste zeigt danach „Gespeichert um HH:MM“.
 - Das Panel **Revisionen** listet Zeitpunkt, Autor und Typ. **Vergleichen** stellt die Revision ihrer Vorgängerversion gegenüber: Titel und Meta-Felder als Wort-Diff, der Editor.js-Inhalt Block für Block mit markierten Ergänzungen und Löschungen.
 - **Diese Version wiederherstellen** übernimmt Titel, Inhalte, Auszüge, Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige der Revision. Status, Slugs und Datumswerte bleiben unverändert. Vorher wird der aktuelle Stand gesichert; die Wiederherstellung wird als neue Revision abgelegt, es wird nie Historie gelöscht. Existiert die damalige Kategorie nicht mehr, bleibt die aktuelle erhalten.
 
@@ -165,7 +165,7 @@ Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit
 
 - **Ablaufdatum** (Datum, optional Uhrzeit): Ist es erreicht, stuft der stündliche Cron einen veröffentlichten Inhalt auf *Entwurf* zurück (Frontend 404, Sitemap und Suche ohne Eintrag, Cache wird geleert). Mit der Einstellung *Beiträge & Sites → Bei Ablauf: „Sichtbar lassen, nur Hinweis“* bleibt er sichtbar. Der Autor erhält einen Hinweis, Hook `cms_content_expired`. Je Lauf werden höchstens 100 Inhalte je Typ verarbeitet; wer einen zurückgestuften Inhalt wieder veröffentlicht, ohne das Ablaufdatum zu ändern, behält ihn veröffentlicht.
 - **Wiedervorlage** (Datum): keine Statusänderung. Am Stichtag meldet der tägliche Cron den Inhalt einmal (Hinweis an den Autor, Hook `cms_content_review_due`). „Als geprüft markieren“ setzt die nächste Wiedervorlage auf heute + Intervall (*Beiträge & Sites → Wiedervorlage nach „Geprüft“*, Standard 12 Monate).
-- **Antwort im Frontend:** Zurückgestufte, abgelaufene Beiträge und Seiten liefern 404 oder – Einstellung *Antwort für zurückgestufte Inhalte* – **410 Gone** (Suchmaschinen entfernen sie schneller). Für die Wissensdatenbank bleibt es bei 404.
+- **Antwort im Frontend:** Zurückgestufte, abgelaufene Beiträge und Seiten liefern 404 oder, Einstellung *Antwort für zurückgestufte Inhalte*, **410 Gone** (Suchmaschinen entfernen sie schneller). Für die Wissensdatenbank bleibt es bei 404.
 - **Übersicht:** Wiedervorlagen erscheinen im Redaktionskalender (eigene Farbe, nicht verschiebbar), das Dashboard zeigt die Karte **„Fällige Prüfungen“**.
 
 ### Hinweise

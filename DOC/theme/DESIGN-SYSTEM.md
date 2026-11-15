@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Theme – Design-System
+# 365CMS Projektdokumentation | Theme: Design-System
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Referenz-Theme:** `cms-default` 1.1.0 („Meridian“)
 
@@ -52,7 +52,7 @@ Grundtypografie: 15 px, Zeilenhöhe 1,6, Sticky-Footer-Layout (`body` als Flex-S
 
 ### Gestaltungsregeln
 
-1. Farben, Abstände, Radien ausschließlich über Variablen – dann greifen Customizer-Änderungen überall.
+1. Farben, Abstände, Radien ausschließlich über Variablen: dann greifen Customizer-Änderungen überall.
 2. Kontraste mindestens WCAG AA (Text auf `--ground`/`--surface`).
 3. Keine Inline-`style`-Attribute in neuen Templates (CSP); falls unvermeidbar, schreibt der Core sie in Nonce-Klassen um.
 4. Responsiv: Breakpoint des mobilen Menüs bei 720 px.

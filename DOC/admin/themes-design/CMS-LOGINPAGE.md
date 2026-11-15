@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – CMS-Loginseite
+# 365CMS Projektdokumentation | Admin: CMS-Loginseite
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/cms-loginpage` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_cms_loginpage`
@@ -38,7 +38,7 @@ POST-Anfragen werden unter beiden Pfaden verarbeitet. Für englische Aufrufe wer
 | Login-Formular | Beschriftungen und Platzhalter, „Angemeldet bleiben“ (`login_show_remember`), **Passkey-Button** (`login_show_passkey`, Text `login_passkey_button_text`) |
 | Registrierung | Beschriftungen, Pflicht-Checkbox für Bedingungen (`register_require_terms`, Text `register_terms_label`), Meldung bei deaktivierter Registrierung |
 | Passwort vergessen | Beschriftungen, Erfolgsmeldungen, Gültigkeit des Reset-Links (`password_reset_expiry_minutes`, Standard 60), Betreff und Text der Reset-E-Mail mit Platzhaltern `{site_name}`, `{reset_url}`, `{expires_minutes}`, `{brand_name}` |
-| Rechtliche Seiten | `privacy_page_id`, `terms_page_id`, `imprint_page_id` – werden im Footer der Auth-Seiten verlinkt |
+| Rechtliche Seiten | `privacy_page_id`, `terms_page_id`, `imprint_page_id`: werden im Footer der Auth-Seiten verlinkt |
 | Registrierung erlaubt | gemeinsam genutzt mit `registration_enabled` / `member_registration_enabled` ([../users-groups/AUTH-SETTINGS.md](../users-groups/AUTH-SETTINGS.md)) |
 | Showcase | siehe [Login-Showcase](#login-showcase) |
 
@@ -52,7 +52,7 @@ Optionaler Bereich mit Bild und Text **unter** dem Anmeldebereich (eigener `<sec
 |---|---|---|
 | `showcase_enabled` | `0` | `1`/`0` |
 | `showcase_pages` | `login` | `login` (nur Anmeldung) oder `login_register` (Anmeldung und Registrierung); nie auf Passwort-Reset und E-Mail-Bestätigung |
-| `showcase_image_url` | leer | nur lokale Bilder aus der Mediathek: Pfad unter `/uploads/` (auch unterhalb eines `SITE_URL`-Unterpfads), Endung `jpg`, `jpeg`, `png`, `webp`, `avif`; keine Query, kein Fragment, keine Pfad-Traversal. Absolute URLs mit dem Origin von `SITE_URL` werden auf den Pfad gekürzt, externe URLs **abgelehnt** (Fehlermeldung, nichts wird gespeichert) – die CSP erlaubt für `img-src` nur `'self'`, `data:`, `blob:` und den Seiten-Origin |
+| `showcase_image_url` | leer | nur lokale Bilder aus der Mediathek: Pfad unter `/uploads/` (auch unterhalb eines `SITE_URL`-Unterpfads), Endung `jpg`, `jpeg`, `png`, `webp`, `avif`; keine Query, kein Fragment, keine Pfad-Traversal. Absolute URLs mit dem Origin von `SITE_URL` werden auf den Pfad gekürzt, externe URLs **abgelehnt** (Fehlermeldung, nichts wird gespeichert): die CSP erlaubt für `img-src` nur `'self'`, `data:`, `blob:` und den Seiten-Origin |
 | `showcase_image_alt` | leer | Text, max. 160 Zeichen; **Pflicht**, sobald ein Bild gesetzt ist (sonst Fehlermeldung, nichts wird gespeichert) |
 | `showcase_image_width`, `showcase_image_height` | leer | werden beim Speichern aus der Bilddatei ermittelt (`ImageService::getDimensions()`), nicht aus dem Formular |
 | `showcase_image_position` | `left` | `left` oder `right` (gilt ab 768 px Breite) |
@@ -73,7 +73,7 @@ Optionaler Bereich mit Bild und Text **unter** dem Anmeldebereich (eigener `<sec
 
 - **Daten:** `CMS\Services\CmsAuthPageService::getInstance()->getShowcase(string $pageType = 'login'): ?array` liefert `null` (abgeschaltet, Seite nicht passend oder leer) oder
   `['position' => 'left'|'right', 'eyebrow' => string, 'headline' => string, 'paragraphs' => list<string>, 'features' => list<string>, 'cta' => null|['label' => string, 'url' => string], 'image' => null|['src' => string, 'webp' => ?string, 'alt' => string, 'width' => ?int, 'height' => ?int]]`.
-  Die Werte sind **nicht** escaped – Templates escapen selbst.
+  Die Werte sind **nicht** escaped. Templates escapen selbst.
 - **Override:** Existiert `<aktives Theme>/auth/showcase.php`, bindet `CmsAuthPageService::renderShowcase($showcase, $pageType, $mode)` diese Datei statt `CMS/views/auth/partials/showcase.php` ein. Verfügbar sind `$showcase` (Array oben), `$pageType` (`login`/`register`) und `$showcaseMode` (`cms` = Core-Loginseite ohne Theme-CSS, `legacy` = Theme-Vorlage). Im Modus `cms` lädt die Loginseite kein Theme-CSS: Ein Override bringt eigene Stile nur als `<style <?= \CMS\Security::instance()->nonceAttr() ?>>` mit.
 - **Legacy-Modus:** `PublicRouter::redirectLegacyLogin()` übergibt `showcase` an `ThemeManager::render('login', ['login_redirect' => …, 'showcase' => …])` (Registrierung entsprechend mit `getShowcase('register')`). `cms-default/login.php` gibt ihn nach der Karte über `renderShowcase($showcase, 'login', 'legacy')` aus; die Stile stehen in `cms-default/style.css`.
 

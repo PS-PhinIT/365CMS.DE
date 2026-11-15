@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: FILELIST
+# 365CMS Projektdokumentation | FILELIST
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
@@ -41,9 +41,9 @@ Produktversion im Code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 Relevant repositories in the workspace:
 
-- `365CMS.DE-MAIN` — this repository, **productive runtime base**
-- `365CMS.DE-THEME` — separate theme source repository
-- `365CMS.DE-PLUGINS` — separate plugin source repository
+- `365CMS.DE-MAIN`, this repository, **productive runtime base**
+- `365CMS.DE-THEME`, separate theme source repository
+- `365CMS.DE-PLUGINS`, separate plugin source repository
 
 The CMS loads themes and plugins only from `CMS/themes/` and `CMS/plugins/`.
 
@@ -51,9 +51,9 @@ The CMS loads themes and plugins only from `CMS/themes/` and `CMS/plugins/`.
 
 Relevante Repositories im Workspace:
 
-- `365CMS.DE-MAIN` — dieses Repository, **produktive Laufzeitbasis**
-- `365CMS.DE-THEME` — separates Theme-Quellrepository
-- `365CMS.DE-PLUGINS` — separates Plugin-Quellrepository
+- `365CMS.DE-MAIN`, dieses Repository, **produktive Laufzeitbasis**
+- `365CMS.DE-THEME`, separates Theme-Quellrepository
+- `365CMS.DE-PLUGINS`, separates Plugin-Quellrepository
 
 Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 
@@ -242,12 +242,12 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 408 files. Layout:
 
-- `CMS/admin/*.php` — HTTP entry points
-- `CMS/admin/modules/<domain>/` — domain modules (`comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
-- `CMS/admin/views/` — templates
-- `CMS/admin/partials/` — shared chrome (including sidebar)
-- `CMS/admin/logs/` — log UI helpers
-- `CMS/admin/settings-tabs/` — extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
+- `CMS/admin/*.php`. HTTP entry points
+- `CMS/admin/modules/<domain>/`, domain modules (`comments`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
+- `CMS/admin/views/`, templates
+- `CMS/admin/partials/`, shared chrome (including sidebar)
+- `CMS/admin/logs/`, log UI helpers
+- `CMS/admin/settings-tabs/`, extension tabs of `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
 
 Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `/admin/cms-logs` (`cms-logs.php`), AI admin scripts (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), the JSON endpoints `admin-ui.php` (admin shell) and `post-editor-api.php` (post editor) plus `plugin-assignment.php`, `multisites.php` (MultiSites) and `configuration.php` (tile pages `/admin/configuration[?group=…]`). Content and tool pages added in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, each long-running one with a JSON endpoint `*-api.php`.
 
@@ -255,12 +255,12 @@ Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `
 
 408 Dateien. Aufbau:
 
-- `CMS/admin/*.php` — HTTP-Einstiege
-- `CMS/admin/modules/<domain>/` — Fachmodule
-- `CMS/admin/views/` — Templates
-- `CMS/admin/partials/` — gemeinsame Oberfläche (inkl. Sidebar)
-- `CMS/admin/logs/` — Log-UI
-- `CMS/admin/settings-tabs/` — Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
+- `CMS/admin/*.php`. HTTP-Einstiege
+- `CMS/admin/modules/<domain>/`. Fachmodule
+- `CMS/admin/views/`. Templates
+- `CMS/admin/partials/`, gemeinsame Oberfläche (inkl. Sidebar)
+- `CMS/admin/logs/`. Log-UI
+- `CMS/admin/settings-tabs/`. Erweiterungs-Tabs von `/admin/settings` (`admin-menu.php`, `feeds.php`, `security.php`, `sso.php`)
 
 Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php`, `ai-translation.php`, …), die JSON-Endpunkte `admin-ui.php` (Admin-Shell) und `post-editor-api.php` (Beitragseditor) sowie `plugin-assignment.php`, `multisites.php` (MultiSites) und `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`). Seit 4.0.0 außerdem die Inhalts- und Werkzeugseiten `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php`, `trash.php`, `content-changes.php`, `translations.php`, `search-index.php`, `content-exchange.php`, `data-retention.php`, `media-tools.php`, bei langen Aufgaben mit JSON-Endpunkt `*-api.php`.
 
@@ -272,10 +272,10 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
-- `assets/css/` — 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
-- `assets/js/` — 59 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (no build step)
-- `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono as local WOFF2 files
-- bundled libraries — see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
+- `assets/css/`. 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
+- `assets/js/`. 59 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (no build step)
+- `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono as local WOFF2 files
+- bundled libraries, see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
 `cookieconsent`, `elfinder`, `filepond`, and `msgraph` directories are **not** present under `CMS/assets/` in this tree. `cookieconsent-init.js` still exists.
 
@@ -283,10 +283,10 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
-- `assets/css/` — 32 Stylesheets
-- `assets/js/` — 59 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
-- `assets/fonts/` — Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien
-- gebündelte Bibliotheken — siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
+- `assets/css/`. 32 Stylesheets
+- `assets/js/`. 59 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
+- `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien
+- gebündelte Bibliotheken, siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
 Die Ordner `cookieconsent`, `elfinder`, `filepond` und `msgraph` liegen in diesem Baum **nicht** unter `CMS/assets/`. `cookieconsent-init.js` existiert weiterhin.
 
@@ -336,11 +336,11 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 |---|---|
 | `CMS/includes/` | 12 helper files, including `wordpress-compat.php` and `admin-menu-profiles.php` |
 | `CMS/lang/` | `de.yaml`, `en.yaml` |
-| `CMS/logs/` | `LOG_PATH` — not `var/logs/` (that directory does not exist here) |
+| `CMS/logs/` | `LOG_PATH`: not `var/logs/` (that directory does not exist here) |
 | `CMS/uploads/` | public uploads; `.gitkeep` and `.htaccess` in git |
 | `CMS/cache/` | cache, including optimizer output |
 | `CMS/install/` | 10 installer files (six steps, including "Admin layout") |
-| `CMS/vendor/` | `dompdf` only in this tree — **no TCPDF** |
+| `CMS/vendor/` | `dompdf` only in this tree: **no TCPDF** |
 | `CMS/views/` | extra views: `auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/` |
 | `CMS/marketplace/` | core/plugin/theme index JSON |
 | `CMS/backups/` | local backups, protected |

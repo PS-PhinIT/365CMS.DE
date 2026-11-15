@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Firewall
+# 365CMS Projektdokumentation | Admin: Firewall
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/firewall` (Alt-Route `/admin/cms-firewall` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_firewall` | **Core-Modul:** `security`
@@ -36,13 +36,13 @@ The application firewall runs on every web request (`Bootstrap` → `CMS\Service
 | `block_ip` | einzelne IP | 403 |
 | `block_range` | CIDR, z. B. `198.51.100.0/24` | 403 |
 | `block_ua` | Teilstring des User-Agents (min. 3 Zeichen) | 403 |
-| `block_country` | ISO-Ländercode (2 Buchstaben) | 403 – nur wirksam, wenn ein vorgelagerter Dienst den Header `CF-IPCountry` (Cloudflare) oder `X-AppEngine-Country` setzt |
+| `block_country` | ISO-Ländercode (2 Buchstaben) | 403: nur wirksam, wenn ein vorgelagerter Dienst den Header `CF-IPCountry` (Cloudflare) oder `X-AppEngine-Country` setzt |
 
 Jede Regel hat optional Grund und Ablaufdatum (`expires_at`) und kann aktiviert/deaktiviert (`toggle_rule`) werden.
 
 **Modus (`set_rule_mode`):**
-- `enforce` – Regel blockiert.
-- `simulate` – Regel blockiert **nicht**, Treffer werden als `simulated` protokolliert. So lassen sich neue Regeln gefahrlos testen; die Auswertung zeigt die Treffer der letzten `firewall_simulation_preview_hours` Stunden.
+- `enforce`: Regel blockiert.
+- `simulate`: Regel blockiert **nicht**, Treffer werden als `simulated` protokolliert. So lassen sich neue Regeln gefahrlos testen; die Auswertung zeigt die Treffer der letzten `firewall_simulation_preview_hours` Stunden.
 
 ### Ablauf je Anfrage
 

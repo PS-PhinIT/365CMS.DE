@@ -1,15 +1,15 @@
-# 365CMS – Projektdokumentation | Abschnitt: Mitglieder-Sicherheit
+# 365CMS Projektdokumentation | Mitglieder-Sicherheit
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Sicherheitsreferenz für Authentifizierung, CSRF, Capabilities, privates Caching, benutzerbezogene Medien, sichere Ausgabe und die Trennung von Member- und Admin-Bereich. Sie entspricht der Implementierung von Version 4.1.0.
 
 # 365CMS Member Security
 
-## English — user guide
+## English: user guide
 
 Use a unique password, enable TOTP/MFA or a passkey, review active sessions, and store backup codes offline. Treat uploaded files and profile data as private: the member area is scoped to the signed-in account, and actions that change data require the page's form token.
 
-## English — technical reference
+## English: technical reference
 
 - `MemberController::requireAuth()` protects every runtime page. `MemberRouter` applies the same login check before rendering or dispatching.
 - `bootstrap.php` calls `CacheManager::sendResponseHeaders('private')`; member responses must not be shared between users.
@@ -31,11 +31,11 @@ Use a unique password, enable TOTP/MFA or a passkey, review active sessions, and
 
 # 365CMS-Sicherheit im Mitgliederbereich
 
-## Deutsch — Anwenderblock
+## Deutsch: Anwenderblock
 
 Verwenden Sie ein einzigartiges Passwort, aktivieren Sie TOTP/MFA oder einen Passkey, prüfen Sie aktive Sitzungen und bewahren Sie Backup-Codes offline auf. Hochgeladene Dateien und Profildaten bleiben privat: Der Bereich ist auf das angemeldete Konto begrenzt und jede Änderung benötigt das Formular-Token der jeweiligen Seite.
 
-## Deutsch — Technikblock
+## Deutsch: Technikblock
 
 - `MemberController::requireAuth()` schützt jede Runtime-Seite; `MemberRouter` prüft vor Rendering und Dispatch ebenfalls den Login.
 - `bootstrap.php` ruft `CacheManager::sendResponseHeaders('private')` auf; Antworten dürfen nicht zwischen Benutzern geteilt werden.
@@ -44,7 +44,7 @@ Verwenden Sie ein einzigartiges Passwort, aktivieren Sie TOTP/MFA oder einen Pas
 - Das aktuelle Passwort verlangen `totp_start`, `totp_disable`, `backup_generate`, `passkey_register`, `passkey_delete`, `sessions_revoke_all` und der Löschantrag `privacy_delete_request`. `totp_confirm` ist an die per Passwort gestartete Einrichtung derselben Sitzung gebunden.
 - Profileingaben werden seit 4.0.0 geprüft: `birth_date` als echtes Kalenderdatum, nicht in der Zukunft; `phone` (Ziffern, Leerzeichen, `+()/-.`, max. 40 Zeichen); `company`, `position`, `location` max. 120 Zeichen; `notification_frequency` nur `immediate|daily|weekly`; unbekannte Schlüssel der Benachrichtigungs-Einstellungen werden verworfen; Passkey-Bezeichnungen max. 100 Zeichen.
 - Sicherheitsaktionen sind aufgelistet (`password_change`, `totp_start`, `totp_confirm`, `totp_disable`, `backup_generate`, `passkey_register`, `passkey_delete`, `sessions_revoke_all`) und wählen den passenden CSRF-Kontext.
-- Seit 4.0.0 gilt eine unter `/member/profile` eingegebene neue E-Mail-Adresse (aktuelles Passwort erforderlich) erst, wenn der Link an diese Adresse geöffnet und auf der Seite die Schaltfläche **E-Mail-Adresse bestätigen** gedrückt wird (`/cms-confirm-email-change`, 48 Stunden, einmal verwendbar). Das bloße Öffnen des Links ändert nichts – Mailfilter, die Links vorab abrufen, können so keine Adresse bestätigen. Die bisherige Adresse erhält einen Hinweis und bleibt bis dahin aktiv. Gehört die Adresse bereits einem anderen Konto, sieht das Mitglied dieselbe Antwort, und der Inhaber der Adresse erhält stattdessen einen Hinweis.
+- Seit 4.0.0 gilt eine unter `/member/profile` eingegebene neue E-Mail-Adresse (aktuelles Passwort erforderlich) erst, wenn der Link an diese Adresse geöffnet und auf der Seite die Schaltfläche **E-Mail-Adresse bestätigen** gedrückt wird (`/cms-confirm-email-change`, 48 Stunden, einmal verwendbar). Das bloße Öffnen des Links ändert nichts. Mailfilter, die Links vorab abrufen, können so keine Adresse bestätigen. Die bisherige Adresse erhält einen Hinweis und bleibt bis dahin aktiv. Gehört die Adresse bereits einem anderen Konto, sieht das Mitglied dieselbe Antwort, und der Inhaber der Adresse erhält stattdessen einen Hinweis.
 - `sessions_revoke_all` („Überall sonst abmelden“, aktuelles Passwort erforderlich) beendet alle anderen Sitzungen und macht ausgestellte API-Tokens ungültig; die aktuelle Sitzung bleibt angemeldet.
 - TOTP-Secrets liegen seit 4.0.0 verschlüsselt in der Datenbank (`CryptoService`).
 - Medienpfade bleiben unter `member/user-{id}`; Traversal, fremde Roots und unbegrenzte Verschiebeziele werden abgewiesen. Uploads verwenden `/api/upload`, Member-Token, Größenlimits und konfigurierte Typ-Allowlist.

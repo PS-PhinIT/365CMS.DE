@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – SEO
+# 365CMS Projektdokumentation | Admin: SEO
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

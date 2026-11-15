@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Theme, Oberfläche & SEO
+# 365CMS Projektdokumentation | Community: Theme, Oberfläche & SEO
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
@@ -48,8 +48,8 @@ Overrides erhalten dieselben Variablen; jede Vorlage dokumentiert sie im Kopfkom
 | Melden | Dialog (`<dialog>`), Gründe als Radio-Gruppe, Rückmeldung `aria-live` |
 | Moderationsmenü | ein Menüknopf je Beitrag/Thema statt vieler Icons (mobil), Bestätigung für destruktive Aktionen, Pflichtgrund |
 | Seitennavigation | erste, vorherige, Nummern mit Auslassung, nächste, letzte; „Gehe zu Seite“ bei > 10 Seiten |
-| Leere Zustände | „Noch keine Themen – starte das erste“, Suche ohne Treffer mit Tipps |
-| Neue Beiträge seit dem Laden | Hinweisleiste „2 neue Antworten – anzeigen“ (Polling, nur sichtbarer Tab) |
+| Leere Zustände | „Noch keine Themen: starte das erste“, Suche ohne Treffer mit Tipps |
+| Neue Beiträge seit dem Laden | Hinweisleiste „2 neue Antworten: anzeigen“ (Polling, nur sichtbarer Tab) |
 
 ### 4. Profil
 

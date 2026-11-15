@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Webhooks
+# 365CMS Projektdokumentation | Admin: Webhooks
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
 > **Route:** `/admin/webhooks` | **Capability:** `webhooks.manage` | **CSRF-Aktion:** `admin_webhooks`
@@ -13,9 +13,9 @@ Outgoing webhooks notify external services (Zapier, Make, n8n, own endpoints) ab
 
 Menü *Einstellungen → Webhooks* (Kacheln) bzw. `/admin/webhooks`:
 
-- **Neuer Empfänger:** Name, URL (nur **HTTPS**, keine internen Hosts, keine privaten IP-Adressen, keine Zugangsdaten in der URL), Ereignisse. Nach dem Anlegen erscheint das **Geheimnis einmal** in der Erfolgsmeldung – sofort beim Empfänger hinterlegen.
+- **Neuer Empfänger:** Name, URL (nur **HTTPS**, keine internen Hosts, keine privaten IP-Adressen, keine Zugangsdaten in der URL), Ereignisse. Nach dem Anlegen erscheint das **Geheimnis einmal** in der Erfolgsmeldung, sofort beim Empfänger hinterlegen.
 - Je Empfänger: Ändern, **Aktiv**-Schalter (Aktivieren setzt Fehlerzähler und Deaktivierungsgrund zurück), **Test senden** (Ereignis `webhook.test`, sofort zugestellt), **Geheimnis neu erzeugen**, Löschen (samt Zustellungen).
-- **Zustellprotokoll:** die letzten 50 Zustellungen mit Ereignis, Status (ausstehend, zugestellt, aufgegeben), HTTP-Status, Versuchen und Fehlergrund – ohne Antwortinhalt und ohne Geheimnis.
+- **Zustellprotokoll:** die letzten 50 Zustellungen mit Ereignis, Status (ausstehend, zugestellt, aufgegeben), HTTP-Status, Versuchen und Fehlergrund, ohne Antwortinhalt und ohne Geheimnis.
 
 ### Ereignisse
 

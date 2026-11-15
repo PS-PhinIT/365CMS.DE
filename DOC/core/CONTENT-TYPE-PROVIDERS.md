@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Inhaltstyp-Provider
+# 365CMS Projektdokumentation | Core: Inhaltstyp-Provider
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -89,7 +89,7 @@ Geliefert werden nur öffentlich sichtbare Inhalte: veröffentlicht, nicht im Pa
 | Kategorien, Tags | – | ✓ | – |
 | Downloads | ✓ | – | – |
 | Formulare | ✓ | ✓ | – |
-| Formulareingänge | ✓ | – (Personendaten) | – |
+| Formulareingänge | ✓ |: (Personendaten) | – |
 | Knowledgebase-Einträge (`kb_entry`) | ✓ | ✓ | ✓ |
 
 Die Export/Import-Provider des Cores liegen unter `CMS/core/Services/Exchange/` (Formulare: `CMS/core/Services/Forms/FormContentProvider.php`, Knowledgebase: `CMS/core/Services/Knowledgebase/KnowledgebaseContentProvider.php`); die Oberfläche beschreibt [CONTENT-EXCHANGE.md](../admin/system-settings/CONTENT-EXCHANGE.md).

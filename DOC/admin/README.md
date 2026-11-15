@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Einstieg & Navigation
+# 365CMS Projektdokumentation | Admin: Einstieg & Navigation
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

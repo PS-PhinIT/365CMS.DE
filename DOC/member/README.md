@@ -1,11 +1,11 @@
-# 365CMS – Projektdokumentation | Abschnitt: Mitgliederbereich
+# 365CMS Projektdokumentation | Mitgliederbereich
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Vollständige Referenz des privaten Member-Bereichs mit Seiten, Routing, Einstellungen, Erweiterungspunkten, Sicherheit und Fallbacks. Die Angaben entsprechen dem Code-Stand von Version 4.1.0.
 
 # 365CMS Member Area
 
-## English — user guide
+## English: user guide
 
 The member area is the private, authenticated workspace for profile data, security, notifications, messages, media, favourites, privacy, subscriptions, and plugin features. Open `/member/dashboard` after signing in; `/member` is an alias that redirects to the dashboard. If the dashboard is disabled, the runtime redirects the member to `/member/profile`.
 
@@ -26,7 +26,7 @@ The member area is the private, authenticated workspace for profile data, securi
 
 All pages require a logged-in session. A failed authentication check redirects to the configured public login page and preserves the original request in `redirect`.
 
-## English — technical reference
+## English: technical reference
 
 The runtime entry point is `CMS/member/includes/bootstrap.php`. It loads `CMS\MemberArea\MemberController`, calls `requireAuth()`, sends private cache headers, and exposes normalized settings to the page. Each page includes the shared header, sidebar, alerts, and footer; the footer fires `body_end` and `member_body_end`.
 
@@ -42,7 +42,7 @@ See [MEMBER-ROUTES.md](MEMBER-ROUTES.md), [MEMBER-DASHBOARD.md](MEMBER-DASHBOARD
 
 # 365CMS Mitgliederbereich
 
-## Deutsch — Anwenderblock
+## Deutsch: Anwenderblock
 
 Der Member-Bereich ist der private, authentifizierte Arbeitsbereich für Profil, Sicherheit, Benachrichtigungen, Nachrichten, Medien, Favoriten, Datenschutz, Abonnements und Plugin-Funktionen. Nach der Anmeldung öffnet `/member/dashboard` das Dashboard; `/member` ist ein Alias und leitet dorthin weiter. Ist das Dashboard deaktiviert, leitet die Runtime auf `/member/profile` um.
 
@@ -63,7 +63,7 @@ Der Member-Bereich ist der private, authentifizierte Arbeitsbereich für Profil,
 
 Alle Seiten benötigen eine eingeloggte Sitzung. Bei fehlender Authentifizierung erfolgt eine Weiterleitung zur konfigurierten öffentlichen Login-Seite mit der ursprünglichen Anfrage im Parameter `redirect`.
 
-## Deutsch — Technikblock
+## Deutsch: Technikblock
 
 Der Runtime-Einstieg ist `CMS/member/includes/bootstrap.php`. Er lädt `CMS\MemberArea\MemberController`, ruft `requireAuth()` auf, setzt private Cache-Header und stellt normalisierte Einstellungen für die Seite bereit. Gemeinsamer Header, Sidebar, Meldungen und Footer werden von jeder Seite verwendet; der Footer feuert `body_end` und `member_body_end`.
 
@@ -98,7 +98,7 @@ Alle Formulare senden `POST` an die eigene Seite mit Feld `action` und `csrf_tok
 | | `privacy_export` | sofortiger JSON-Download aller eigenen Daten (`member-export-<id>.json`); Zugangsgeheimnisse (MFA-/TOTP-Secrets, Backup-Codes, Passkey-, LDAP-, Token- und Passwort-Metadaten) sind ausgenommen |
 | | `privacy_delete_request` | Löschantrag: Status `pending_deletion`, Ausführung frühestens nach 30 Tagen durch Administratoren ([../admin/legal/DELETION-REQUESTS.md](../admin/legal/DELETION-REQUESTS.md)) |
 | `/member/favorites` | – | Liste gemerkter Beiträge/Seiten (Merken über das Theme) |
-| `/member/subscription` | – | aktuelles Paket, Limits/Nutzung, Verlängerungshinweise, eigene Bestellungen (nur angemeldet aufgegebene, also mit `user_id` des Kontos; Gastbestellungen mit derselben E-Mail-Adresse werden seit 4.0.0 dem Konto zugeordnet, sobald die Adresse bestätigt ist – per Link aus der Registrierung (`/cms-verify-email`) oder nach einer bestätigten E-Mail-Änderung; bis dahin bleiben sie nur unter *Aboverwaltung → Bestellungen & Zuweisung* sichtbar) |
+| `/member/subscription` | – | aktuelles Paket, Limits/Nutzung, Verlängerungshinweise, eigene Bestellungen (nur angemeldet aufgegebene, also mit `user_id` des Kontos; Gastbestellungen mit derselben E-Mail-Adresse werden seit 4.0.0 dem Konto zugeordnet, sobald die Adresse bestätigt ist: per Link aus der Registrierung (`/cms-verify-email`) oder nach einer bestätigten E-Mail-Änderung; bis dahin bleiben sie nur unter *Aboverwaltung → Bestellungen & Zuweisung* sichtbar) |
 
 ### Menü
 

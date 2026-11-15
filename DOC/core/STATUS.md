@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Implementierungsstatus
+# 365CMS Projektdokumentation | Core: Implementierungsstatus
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **Status:** Stable
 
@@ -18,7 +18,7 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.1.0 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026), Release `4.1.0` (15.11.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
+| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026), Release `4.1.0` (15.11.2026) | `Changelog.md`: 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
 
 ### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
 
@@ -70,33 +70,33 @@ Nachgeprüft im Audit vom 2026-10-03, ergänzt in den Folgeaudits vom 2026-11-08
 
 | # | Befund | Auswirkung | Fundstelle | Status |
 |---|---|---|---|---|
-| 1 | Speichern unter `/admin/settings` erzeugte `config/app.php` aus einer Vorlage neu | manuell gesetzte Konstanten gingen verloren | `SettingsModule::saveSettings()` | ✅ 3.4.12 – nur verwaltete Konstanten werden ersetzt |
+| 1 | Speichern unter `/admin/settings` erzeugte `config/app.php` aus einer Vorlage neu | manuell gesetzte Konstanten gingen verloren | `SettingsModule::saveSettings()` | ✅ 3.4.12: nur verwaltete Konstanten werden ersetzt |
 | 2 | Option `maintenance_mode` wurde nicht ausgewertet | Wartungsmodus ohne Wirkung | `SettingsModule`, Router | ✅ 3.4.12 – 503-Seite in `Router::dispatch()` |
-| 3 | Route `/order` erwartete fehlendes `CMS/member/order_public.php` | 404 | `PublicRouter::renderOrder()` | ✅ 3.4.12 – Weiterleitung auf `/orders.php` |
-| 4 | Sicherheits-Audit bewertete PHP ≥ 8.2 als „ok“ | Abweichung zur Mindestanforderung 8.4 | `SecurityAuditModule` | ✅ 3.4.12 – nutzt `CMS_MIN_PHP_VERSION` |
+| 3 | Route `/order` erwartete fehlendes `CMS/member/order_public.php` | 404 | `PublicRouter::renderOrder()` | ✅ 3.4.12: Weiterleitung auf `/orders.php` |
+| 4 | Sicherheits-Audit bewertete PHP ≥ 8.2 als „ok“ | Abweichung zur Mindestanforderung 8.4 | `SecurityAuditModule` | ✅ 3.4.12: nutzt `CMS_MIN_PHP_VERSION` |
 | 5 | `checkLimit('storage')` suchte `limit_storage`; Free-Fallback unsortiert | Speicherlimit nicht prüfbar | `SubscriptionManager` | ✅ 3.4.12 |
-| 6 | `DesignSettingsModule` und `views/themes/settings.php` wurden nicht eingebunden | toter Code | `CMS/admin/modules/themes/` | ✅ 3.4.13 – entfernt |
-| 7 | Dokumentations-Sync-Klassen waren nicht an `/admin/documentation` angebunden | kein Abgleich per Oberfläche | `DocumentationSync*` | ✅ 3.4.13 – Karte „Doku-Sync“ |
-| 8 | Sammelaktion `delete` löschte wie `hard_delete` | kein weiches Löschen | `UserService::bulkAction()` | ✅ 3.4.12 – `delete` = Soft-Delete |
-| 9 | Health-Endpunkt ohne Core-Route | Prüfung schlug fehl | `SystemInfoModule` | ✅ 3.4.12 – `GET /health` (Standardpfad) |
-| 10 | `JwtService` war nicht in API-Routen verdrahtet | API nur mit Session | `ApiRouter`, `Api` | ✅ 3.4.13 – Bearer-Anmeldung opt-in über `JWT_SECRET` |
+| 6 | `DesignSettingsModule` und `views/themes/settings.php` wurden nicht eingebunden | toter Code | `CMS/admin/modules/themes/` | ✅ 3.4.13: entfernt |
+| 7 | Dokumentations-Sync-Klassen waren nicht an `/admin/documentation` angebunden | kein Abgleich per Oberfläche | `DocumentationSync*` | ✅ 3.4.13: Karte „Doku-Sync“ |
+| 8 | Sammelaktion `delete` löschte wie `hard_delete` | kein weiches Löschen | `UserService::bulkAction()` | ✅ 3.4.12: `delete` = Soft-Delete |
+| 9 | Health-Endpunkt ohne Core-Route | Prüfung schlug fehl | `SystemInfoModule` | ✅ 3.4.12: `GET /health` (Standardpfad) |
+| 10 | `JwtService` war nicht in API-Routen verdrahtet | API nur mit Session | `ApiRouter`, `Api` | ✅ 3.4.13: Bearer-Anmeldung opt-in über `JWT_SECRET` |
 | 11 | Beispiel-Manifeste unter `CMS/marketplace/` mit veralteten Versionen | Anzeige veraltet | `CMS/marketplace/*/index.json` | ✅ 3.4.12 |
 | 12 | Member-Upload sendete Token `member_media_action`, `/api/upload` prüft `media_action` | erster Upload scheiterte (403) | `CMS/member/media.php` | ✅ 3.4.12 |
-| 13 | Plugin-Member-Bereiche (`post_callback`) ohne zentrale CSRF-Prüfung | Plugins mussten CSRF selbst prüfen | `PluginDashboardRegistry` | ✅ 3.4.13 – Herkunftsprüfung, optional Core-Token (`'csrf' => 'core'`) |
-| 14 | `wp_enqueue_*`/`wp_dequeue_*` waren leere Stubs | WP-nahe Plugins luden keine Assets | `includes/functions/wordpress-compat.php` | ✅ 3.4.13 – Asset-Registry |
-| 16 | DB-Rate-Limits zählten nie, wenn MySQL-Zeitzone ≠ PHP-Zeitzone | Login-/Reset-/API-Schutz wirkungslos | `Security::checkDbRateLimit()` | ✅ 3.4.13 – Sitzungszeitzone in `Database` |
+| 13 | Plugin-Member-Bereiche (`post_callback`) ohne zentrale CSRF-Prüfung | Plugins mussten CSRF selbst prüfen | `PluginDashboardRegistry` | ✅ 3.4.13: Herkunftsprüfung, optional Core-Token (`'csrf' => 'core'`) |
+| 14 | `wp_enqueue_*`/`wp_dequeue_*` waren leere Stubs | WP-nahe Plugins luden keine Assets | `includes/functions/wordpress-compat.php` | ✅ 3.4.13: Asset-Registry |
+| 16 | DB-Rate-Limits zählten nie, wenn MySQL-Zeitzone ≠ PHP-Zeitzone | Login-/Reset-/API-Schutz wirkungslos | `Security::checkDbRateLimit()` | ✅ 3.4.13: Sitzungszeitzone in `Database` |
 | 17 | `POST /contact` ohne Route | Kontaktformular immer 404 | `ThemeRouter` | ✅ 3.4.13 |
-| 18 | `posts.title_en/content_en/excerpt_en` nur über `/admin/posts` ergänzt | frische Installation: `/blog` 500 | `SchemaManager`, `PostsModule` | ✅ 3.4.13 – Schema v23 |
-| 15 | `Version::CURRENT` blieb `3.4.00` trotz ausgelieferter Fixes | Installationen nicht unterscheidbar | `CMS/core/Version.php` | ✅ 3.5.0 – `Version::CURRENT = 3.5.0` (Audit FUN-12) |
-| 19 | Option `member_email_verification` wurde nicht ausgewertet | neue Konten ohne bestätigte E-Mail-Adresse sofort aktiv | `Auth::register()`, Benutzer-Einstellungen | ✅ 4.0.0 – `EmailVerificationService`, Status `unverified`, Link `/cms-verify-email` (Audit FUN-36) |
-| 20 | `UserService::createUser()` setzte `display_name` nicht (`NOT NULL` ohne Standardwert) | „Benutzer anlegen“ unter `/admin/users` scheiterte auf MySQL/MariaDB im Strict-Mode | `UserService` | ✅ 4.0.0 – Anzeigename aus Vor-/Nachname bzw. Benutzername (Audit FUN-37) |
-| 21 | Feld `critical` im Core-Update-Manifest wurde nicht ausgewertet | Sicherheitsupdates unter *System → Updates* nicht von normalen Updates zu unterscheiden | `UpdateService::checkCoreUpdates()`, Update-Ansicht | ✅ 4.0.0 – roter Hinweis „Kritisches Update verfügbar“ (Audit FUN-38) |
-| 22 | `cms_mail()` ignorierte `Content-Type: text/plain` | Klartext-Mails gingen über SMTP und die Mail-Queue als HTML ohne Zeilenumbrüche hinaus | `includes/functions/mail.php` | ✅ 4.0.0 – Versand bzw. Queue über `sendPlain()`/`enqueuePlain()` (Audit FUN-55) |
-| 23 | `mail()`-Fallback ohne RFC-2047-Kodierung | Umlaute in Betreff und Absendername kamen ohne SMTP verstümmelt an | `MailService` | ✅ 4.0.0 – Betreff und Absendername als `=?UTF-8?B?…?=` (Audit FUN-56) |
-| 24 | Dashboard verlinkte Seiten deaktivierter Core-Module | Klick führte auf die Startseite | `DashboardModule` | ✅ 4.0.0 – Ersatzziel oder Link entfernt (Audit FUN-57) |
-| 25 | `mail()`-Fallback ohne `Content-Transfer-Encoding` | UTF-8-Mails ohne SMTP als 7bit deklariert, HTML-Zeilen über 998 Zeichen konnten von MTAs umbrochen werden | `MailService::sendMessageFallback()` | ✅ 4.0.0 – Body als `quoted-printable` mit CRLF (Audit FUN-61) |
-| 26 | Theme-Helfer gaben Exception-Texte aus; `theme_register_user()` meldete vergebene E-Mail-Adressen | interne Fehlermeldungen sichtbar, Umgehung der neutralen Registrierung | `themes/cms-default/functions.php` (`theme_login_user()`, `theme_register_user()`) | ✅ 4.0.0 – nur `Auth::register()`, Fehler im Log, neutrale Meldung (Audit SEC-48) |
-| 27 | `/member/plugin-section` war direkt aufrufbar | PHP-Warnungen (Variablen fehlen), Hook `member_plugin_section_head` mit `null` statt Bereich | `MemberRouter::renderMemberPage()` | ✅ 4.0.0 – interne Vorlage liefert 404 (Audit FUN-62) |
+| 18 | `posts.title_en/content_en/excerpt_en` nur über `/admin/posts` ergänzt | frische Installation: `/blog` 500 | `SchemaManager`, `PostsModule` | ✅ 3.4.13: Schema v23 |
+| 15 | `Version::CURRENT` blieb `3.4.00` trotz ausgelieferter Fixes | Installationen nicht unterscheidbar | `CMS/core/Version.php` | ✅ 3.5.0: `Version::CURRENT = 3.5.0` (Audit FUN-12) |
+| 19 | Option `member_email_verification` wurde nicht ausgewertet | neue Konten ohne bestätigte E-Mail-Adresse sofort aktiv | `Auth::register()`, Benutzer-Einstellungen | ✅ 4.0.0: `EmailVerificationService`, Status `unverified`, Link `/cms-verify-email` (Audit FUN-36) |
+| 20 | `UserService::createUser()` setzte `display_name` nicht (`NOT NULL` ohne Standardwert) | „Benutzer anlegen“ unter `/admin/users` scheiterte auf MySQL/MariaDB im Strict-Mode | `UserService` | ✅ 4.0.0: Anzeigename aus Vor-/Nachname bzw. Benutzername (Audit FUN-37) |
+| 21 | Feld `critical` im Core-Update-Manifest wurde nicht ausgewertet | Sicherheitsupdates unter *System → Updates* nicht von normalen Updates zu unterscheiden | `UpdateService::checkCoreUpdates()`, Update-Ansicht | ✅ 4.0.0: roter Hinweis „Kritisches Update verfügbar“ (Audit FUN-38) |
+| 22 | `cms_mail()` ignorierte `Content-Type: text/plain` | Klartext-Mails gingen über SMTP und die Mail-Queue als HTML ohne Zeilenumbrüche hinaus | `includes/functions/mail.php` | ✅ 4.0.0: Versand bzw. Queue über `sendPlain()`/`enqueuePlain()` (Audit FUN-55) |
+| 23 | `mail()`-Fallback ohne RFC-2047-Kodierung | Umlaute in Betreff und Absendername kamen ohne SMTP verstümmelt an | `MailService` | ✅ 4.0.0: Betreff und Absendername als `=?UTF-8?B?…?=` (Audit FUN-56) |
+| 24 | Dashboard verlinkte Seiten deaktivierter Core-Module | Klick führte auf die Startseite | `DashboardModule` | ✅ 4.0.0: Ersatzziel oder Link entfernt (Audit FUN-57) |
+| 25 | `mail()`-Fallback ohne `Content-Transfer-Encoding` | UTF-8-Mails ohne SMTP als 7bit deklariert, HTML-Zeilen über 998 Zeichen konnten von MTAs umbrochen werden | `MailService::sendMessageFallback()` | ✅ 4.0.0: Body als `quoted-printable` mit CRLF (Audit FUN-61) |
+| 26 | Theme-Helfer gaben Exception-Texte aus; `theme_register_user()` meldete vergebene E-Mail-Adressen | interne Fehlermeldungen sichtbar, Umgehung der neutralen Registrierung | `themes/cms-default/functions.php` (`theme_login_user()`, `theme_register_user()`) | ✅ 4.0.0: nur `Auth::register()`, Fehler im Log, neutrale Meldung (Audit SEC-48) |
+| 27 | `/member/plugin-section` war direkt aufrufbar | PHP-Warnungen (Variablen fehlen), Hook `member_plugin_section_head` mit `null` statt Bereich | `MemberRouter::renderMemberPage()` | ✅ 4.0.0: interne Vorlage liefert 404 (Audit FUN-62) |
 
 Die Härtungspunkte OFFEN-20 bis OFFEN-26 aus dem Folgeaudit vom 2026-11-08 (AEAD-Verschlüsselung gespeicherter Geheimnisse, bestätigte E-Mail-Änderung, Sitzungs-Widerruf, neutrale Registrierung, Anmeldeverzögerung je Konto, Backup-Ablage außerhalb des Webroots) sind in 4.0.0 umgesetzt. Offen ist nur OFFEN-27 (signierte Update-Pakete); Details in [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md).
 

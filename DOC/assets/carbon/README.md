@@ -11,7 +11,7 @@
 ## Quellordner
 
 - `CMS/assets/Carbon/src/Carbon/` (PSR-4 `Carbon\`, inkl. `Lang/`)
-- `CMS/assets/Carbon/lazy/Carbon/` (wird von `Translator`, `CarbonPeriod` und `MessageFormatterMapper` relativ per `__DIR__/../../lazy` geladen – Struktur nicht verändern)
+- `CMS/assets/Carbon/lazy/Carbon/` (wird von `Translator`, `CarbonPeriod` und `MessageFormatterMapper` relativ per `__DIR__/../../lazy` geladen. Struktur nicht verändern)
 
 ## Verwendung in 365CMS
 

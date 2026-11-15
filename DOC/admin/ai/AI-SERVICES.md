@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – KI-Dienste (AI Services)
+# 365CMS Projektdokumentation | Admin: KI-Dienste (AI Services)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/ai-services`, `/admin/ai-translation`, `/admin/ai-content-creator`, `/admin/ai-seo-creator`, `/admin/ai-settings` | **Core-Modul:** `ai_services` | **CSRF-Aktion:** `admin_ai_services`
@@ -15,7 +15,7 @@ The complete user and technical documentation (providers, policies, quotas, cont
 
 | Menüpunkt | Route | Bereich | Aktionen |
 |---|---|---|---|
-| KI-Dashboard | `/admin/ai-services` | `overview` | – (Status, Nutzung, Quotas, letzte Läufe) |
+| KI-Dashboard | `/admin/ai-services` | `overview` |: (Status, Nutzung, Quotas, letzte Läufe) |
 | Übersetzung | `/admin/ai-translation` | `translation` | `save_translation`, `save_translation_prompts` |
 | Inhaltsassistent | `/admin/ai-content-creator` | `content_creator` | `save_content_prompts`, `generate_content_draft` |
 | SEO-Assistent | `/admin/ai-seo-creator` | `seo_creator` | `save_seo_prompts` |

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – Hook-Referenz
+# 365CMS Projektdokumentation | Core: Hook-Referenz
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -21,7 +21,7 @@
 | `Hooks::applyFilters(string $tag, mixed $value, ...$args): mixed` | Wert durch die Filterkette reichen |
 | `Hooks::removeFilter(string $tag, callable $cb, int $priority = 10)` | entfernen |
 
-Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierungsreihenfolge ausgeführt; Filter geben den (veränderten) Wert zurück. Ausnahmen werden nicht von `Hooks` abgefangen – Callbacks sollten selbst fehlertolerant sein.
+Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierungsreihenfolge ausgeführt; Filter geben den (veränderten) Wert zurück. Ausnahmen werden nicht von `Hooks` abgefangen. Callbacks sollten selbst fehlertolerant sein.
 
 ### Lebenszyklus & Routing
 
@@ -33,9 +33,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_init` | Action | – | Ende `Bootstrap::initializeCore()` |
 | `cms_init_<modus>` | Action | – | `cms_init_web`, `cms_init_admin`, `cms_init_api`, `cms_init_cli` |
 | `cms_before_route` | Action | – | `Bootstrap::run()` |
-| `register_routes` | Action | `Router $router` | vor dem Dispatch – eigene Routen mit `$router->addRoute()` |
+| `register_routes` | Action | `Router $router` | vor dem Dispatch: eigene Routen mit `$router->addRoute()` |
 | `cms_after_route` | Action | – | nach dem Dispatch |
-| `cms_public_form_persistent_token` (`Router::PUBLIC_FORM_TOKEN_FILTER`) | Filter | `$current (null), $routingUri, $method` | globaler CSRF-Guard für öffentliche POSTs – Rückgabe `['action' => …, 'token' => …]` meldet ein Formular mit sessiongebundenem Persistent-Token an (ab 3.4.15, z. B. PHINIT-Favoriten) |
+| `cms_public_form_persistent_token` (`Router::PUBLIC_FORM_TOKEN_FILTER`) | Filter | `$current (null), $routingUri, $method` | globaler CSRF-Guard für öffentliche POSTs: Rückgabe `['action' => …, 'token' => …]` meldet ein Formular mit sessiongebundenem Persistent-Token an (ab 3.4.15, z. B. PHINIT-Favoriten) |
 | `cms_content_request_context` | Filter | `$context, $uri` | Sprachkontext der Anfrage |
 | `cms_content_supported_locales` | Filter | `$locales` | unterstützte Inhaltssprachen (Standard `de`, `en`) |
 
@@ -46,7 +46,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `template_name` | Filter | `$template` | Template-Namen umleiten |
 | `before_render` / `after_render` | Action | `$template` | um jedes Template |
 | `before_header` / `after_header` | Action | – | um `header.php` |
-| `head` | Action | – | im `<head>` (Theme `header.php`, Member-Header) – CSS, Meta, Skripte mit Nonce |
+| `head` | Action | – | im `<head>` (Theme `header.php`, Member-Header): CSS, Meta, Skripte mit Nonce |
 | `page_title` | Filter | `$siteTitle` | Dokumenttitel im Theme |
 | `before_footer` / `after_footer` | Action | – | um `footer.php` (`before_footer` einmal je Request) |
 | `body_end` | Action | – | vor `</body>` (einmal je Request) |
@@ -54,7 +54,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `register_menu_locations` | Filter | `$locations` | Menüpositionen ergänzen |
 | `site_favicon_default` | Filter | `$relativePath` | Standard-Favicon |
 | `local_font_slugs` | Filter | `$slugs` | lokal ausgelieferte Schriften |
-| `cms_csp_prepare` | Action | – | vor dem Senden der CSP – zusätzliche Quellen mit `Security::allowCspSources()` |
+| `cms_csp_prepare` | Action | – | vor dem Senden der CSP: zusätzliche Quellen mit `Security::allowCspSources()` |
 
 ### Inhalte (Admin)
 
@@ -104,9 +104,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 
 | Hook | Typ | Argumente |
 |---|---|---|
-| `cms_admin_menu` | Action | – (Menüs mit `add_menu_page()`/`add_submenu_page()` registrieren) |
+| `cms_admin_menu` | Action |: (Menüs mit `add_menu_page()`/`add_submenu_page()` registrieren) |
 | `cms_admin_menu_preferred_parents` | Filter | `$parents` (Menü-Slug ⇒ [Profil ⇒ Gruppen-ID]); **ohne Wirkung** seit „Aktive Plugins“ (nur Kompatibilität), ergänzt `cms_admin_menu_set_preferred_parent()` ([ADMIN-MENU.md](../admin/ADMIN-MENU.md#4-plugin-menüs-im-abschnitt-aktive-plugins)) |
-| `admin_head` / `admin_body_end` | Action | – (Admin-Layout) |
+| `admin_head` / `admin_body_end` | Action |: (Admin-Layout) |
 | `plugin_activated`, `plugin_deactivated`, `plugin_before_delete`, `plugin_deleted` | Action | `$slug` |
 | `plugin_installed` | Action | – |
 | `user_registered` | Action | `$userId` |
@@ -123,25 +123,25 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_password_policy` | Filter | `$policy` (`min_length`, `require_uppercase`/`_lowercase`/`_digit`/`_special`, `max_age_days`, `history`); Ergebnis kann die Einstellungen nur verschärfen, nie abschwächen |
 | `subscription_assigned` | Action | `$userId, $planId` |
 | `dsgvo_export_data` | Action | `$userId, $email` (Auskunft abgeschlossen) |
-| `dsgvo_delete_data` | Action | `$userId, $email` (unmittelbar vor der endgültigen Kontolöschung – Plugins löschen hier ihre Daten) |
+| `dsgvo_delete_data` | Action | `$userId, $email` (unmittelbar vor der endgültigen Kontolöschung: Plugins löschen hier ihre Daten) |
 | `performance_cache_purged` | Action | `'all', $report` |
 | `performance_cdn_purge_requested` | Action | `$payload` (CDN-Purge durch Plugin) |
-| `cms_data_retention_days` | Filter | `$days` – Tage je Bereich (`page_views`, `core_web_vitals`, `not_found_logs`, `log_files`, `activity_log`, `audit_log`); 0 = nicht löschen, sonst mindestens 7 Tage (Protokolle 90), höchstens 3650 (`DataRetentionService::getRetentionDays()`) |
+| `cms_data_retention_days` | Filter | `$days`: Tage je Bereich (`page_views`, `core_web_vitals`, `not_found_logs`, `log_files`, `activity_log`, `audit_log`); 0 = nicht löschen, sonst mindestens 7 Tage (Protokolle 90), höchstens 3650 (`DataRetentionService::getRetentionDays()`) |
 | `theme_customizer_save` | Action | `$themeSlug, $tab, $sections, $context` |
-| `cms_register_content_type_providers` (`ContentTypeRegistry::REGISTER_ACTION`) | Action | `ContentTypeRegistry $registry` – Inhaltstyp-Provider für Papierkorb, Export/Import und Suchindex anmelden; einmal beim ersten Zugriff auf die Registry ausgelöst ([CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)) |
+| `cms_register_content_type_providers` (`ContentTypeRegistry::REGISTER_ACTION`) | Action | `ContentTypeRegistry $registry`: Inhaltstyp-Provider für Papierkorb, Export/Import und Suchindex anmelden; einmal beim ersten Zugriff auf die Registry ausgelöst ([CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)) |
 
 ### Member-Bereich
 
 | Hook | Typ | Argumente |
 |---|---|---|
-| `member_head` | Action | `$pageKey, $user` – der Newsletter lädt hier `css/member-newsletter.css` für `dashboard` und `plugin_newsletter` |
+| `member_head` | Action | `$pageKey, $user`: der Newsletter lädt hier `css/member-newsletter.css` für `dashboard` und `plugin_newsletter` |
 | `body_start` | Action | – |
 | `member_body_end` | Action | `$pageKey` |
-| `member_menu_items` | Filter | `$items` – Einträge dürfen `priority` und `parent_slug` tragen; das Ergebnis wird nach Kategorie (`core`, `content`, `account`, `plugins`, `admin`) und Priorität sortiert, Unterpunkte stehen in `children` |
-| `member_dashboard_widgets` | Filter | `$widgets, $user, $settings` – Einträge dürfen `html` (fertig escaptes Markup, unverändert ausgegeben) und `anchor` (`[a-z0-9_-]`) tragen |
+| `member_menu_items` | Filter | `$items`: Einträge dürfen `priority` und `parent_slug` tragen; das Ergebnis wird nach Kategorie (`core`, `content`, `account`, `plugins`, `admin`) und Priorität sortiert, Unterpunkte stehen in `children` |
+| `member_dashboard_widgets` | Filter | `$widgets, $user, $settings`: Einträge dürfen `html` (fertig escaptes Markup, unverändert ausgegeben) und `anchor` (`[a-z0-9_-]`) tragen |
 | `member_dashboard_init` | Action | `PluginDashboardRegistry $registry` |
 | `member_plugin_section_head` | Action | `$section, $user, $params` |
-| `cms_member_notification_created` | Action | `int $id, int $userId, string $type` – nach dem Anlegen durch `NotificationService::create()` |
+| `cms_member_notification_created` | Action | `int $id, int $userId, string $type`: nach dem Anlegen durch `NotificationService::create()` |
 
 **`PluginDashboardRegistry::register()`:**
 
@@ -208,7 +208,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_invoice_created` | Aktion | `int $invoiceId, string $type, int $orderId, int $userId`; nach dem Erstellen einer Rechnung (`invoice`) bzw. Storno-Rechnung (`cancellation`), PDF liegt vor |
 | `cms_user_deleted` | Aktion | `int $userId`; nach dem endgültigen Löschen eines Kontos (`UserService::deleteUser(…, true)`), z. B. Sperrvermerk für Rechnungen |
 | `cms_webhook_endpoint_disabled` | Action | `int $endpointId, string $reason`; Empfänger automatisch deaktiviert (410 oder 20 Fehlschläge) |
-| `cms_cron_feeds` / `cms_cron_<name>` | Action | – (über `cron.php --task=…`) |
+| `cms_cron_feeds` / `cms_cron_<name>` | Action |: (über `cron.php --task=…`) |
 
 ### Beispiele
 

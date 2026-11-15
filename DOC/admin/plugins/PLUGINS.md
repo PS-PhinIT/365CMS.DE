@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Plugin-Verwaltung
+# 365CMS Projektdokumentation | Admin: Plugin-Verwaltung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/plugins`, `/admin/plugin-assignment` | **Capability:** `manage_settings` | **CSRF-Aktionen:** `admin_plugins`, `admin_plugin_assignment`
@@ -23,7 +23,7 @@ Je Plugin: Name, Beschreibung, Version, Autor, Status (aktiv/inaktiv), Abhängig
 |---|---|
 | `activate` | Prüft Abhängigkeiten (`Requires Plugins`) und Mindestversion (`Requires CMS` aus Header oder `update.json`), führt den Aktivierungs-Callback aus, löst `plugin_activated` aus und protokolliert im Audit-Log |
 | `deactivate` | Entfernt das Plugin aus `active_plugins`, führt den Deaktivierungs-Callback aus |
-| `delete` | Löscht das Plugin-Verzeichnis – nur für inaktive Plugins; `cms-importer` ist geschützt |
+| `delete` | Löscht das Plugin-Verzeichnis: nur für inaktive Plugins; `cms-importer` ist geschützt |
 
 ### Laden zur Laufzeit
 
@@ -39,18 +39,18 @@ Je Plugin: Name, Beschreibung, Version, Autor, Status (aktiv/inaktiv), Abhängig
   - Andere Plätze sind nur über ein eigenes Layout im Sidebar-Editor möglich. `cms_admin_menu_set_preferred_parent()` wirkt nicht mehr.
 - Die Darstellung liest nur die bereits registrierten Menüs (`get_registered_admin_menus()`). `CMS\Services\AdminMenu\AdminMenuService` setzt sie in den Menübaum ein, `CMS\Services\AdminNavigationService` bereitet ihn für die Ausgabe auf. Registrierung, Hook-Namen, Signaturen und Aufrufreihenfolge sind unverändert; bestehende Plugins funktionieren ohne Anpassung.
 - Gibt ein Plugin kein vollständiges Layout aus, bettet der Router die Ausgabe in die Admin-Shell ein und lädt `CMS/assets/css/admin-plugins.css` (einheitliches Plugin-Design). Stylesheets aus der Plugin-Ausgabe werden in den `<head>` verschoben.
-- Exceptions im Plugin-Callback werden abgefangen, protokolliert (`error_log`) und als Fehlerkarte angezeigt – die Admin-Shell bleibt bedienbar. AJAX-Aufrufe (`X-Requested-With: XMLHttpRequest`) erhalten JSON-Fehler mit HTTP 500.
+- Exceptions im Plugin-Callback werden abgefangen, protokolliert (`error_log`) und als Fehlerkarte angezeigt, die Admin-Shell bleibt bedienbar. AJAX-Aufrufe (`X-Requested-With: XMLHttpRequest`) erhalten JSON-Fehler mit HTTP 500.
 
 ### Plugin-Zuweisung
 
-*Einstellungen › Plugins › Plugin-Zuweisung* – Route `/admin/plugin-assignment` (`CMS/admin/plugin-assignment.php` → `CMS/admin/views/settings/plugin-assignment.php`, Logik `CMS\Services\PluginSiteAssignmentService`). Erreichbar über den Reiter „Plugins“ unter *Einstellungen* und in der Seitenleiste über *Plugins › Plugin-Zuweisung* (Profil *Klassisch*) bzw. *Erweitern › Plugin-Zuweisung* (Profil *Strukturiert*).
+*Einstellungen › Plugins › Plugin-Zuweisung*. Route `/admin/plugin-assignment` (`CMS/admin/plugin-assignment.php` → `CMS/admin/views/settings/plugin-assignment.php`, Logik `CMS\Services\PluginSiteAssignmentService`). Erreichbar über den Reiter „Plugins“ unter *Einstellungen* und in der Seitenleiste über *Plugins › Plugin-Zuweisung* (Profil *Klassisch*) bzw. *Erweitern › Plugin-Zuweisung* (Profil *Strukturiert*).
 
 | Aspekt | Verhalten |
 |---|---|
 | Zugriff | `isAdmin()` und `manage_settings`; Speichern per POST mit CSRF-Aktion `admin_plugin_assignment`, danach Erfolgsmeldung und Audit-Eintrag `plugin.assignment.update` |
 | Tabelle | Eine Zeile je installiertem Plugin (Name, Status aktiv/inaktiv, Anzahl registrierter Admin-Menüeinträge) und eine Checkbox-Spalte je Site; je Spalte die Buttons „Alle“ und „Keine“ |
 | Speicherung | Option `admin_plugin_site_assignments` als JSON `{"<plugin-slug>": ["<site-key>", …]}`. Plugins, die allen Sites zugewiesen sind, werden nicht gespeichert. |
-| Standard | Plugins ohne gespeicherte Zuweisung gelten für **alle** Sites – nach dem Update verschwindet nichts. Plugins, die nach dem Laden des Formulars installiert wurden, behalten beim Speichern ihren Stand. |
+| Standard | Plugins ohne gespeicherte Zuweisung gelten für **alle** Sites: nach dem Update verschwindet nichts. Plugins, die nach dem Laden des Formulars installiert wurden, behalten beim Speichern ihren Stand. |
 | Wirkung | Die Seitenleiste blendet in der Administration einer Site nur die Menüs der dort zugewiesenen Plugins ein. Bleibt dadurch kein Plugin-Eintrag übrig, zeigt der Abschnitt „Aktive Plugins“ den Hinweis „Für <Site> sind keine Plugins mit Menüeinträgen zugewiesen.“ mit Link hierher. |
 | Direktaufruf | Wird eine Plugin-Seite in einer nicht zugewiesenen Site direkt geöffnet, erscheint das Info-Banner „Dieses Plugin ist für <Site> nicht zugewiesen.“ mit Link „Plugin-Zuweisung öffnen“. Die Seite wird nicht blockiert. |
 

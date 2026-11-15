@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Dateistruktur
+# 365CMS Projektdokumentation | Admin: Dateistruktur
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
@@ -82,7 +82,7 @@ Seit 4.0.0 zusätzlich:
 | `CMS/assets/js/admin-plugin-assignment.js` | „Alle“/„Keine“ je Site-Spalte |
 | `CMS/assets/fonts/` | lokal ausgelieferte Schriften Inter, Source Serif 4, JetBrains Mono (je mit Lizenzdatei) |
 
-ES-Module werden über `page_assets['modules']` bzw. `$pageAssets['modules']` eingebunden und im Footer als `<script type="module">` geladen – ohne Build-Schritt.
+ES-Module werden über `page_assets['modules']` bzw. `$pageAssets['modules']` eingebunden und im Footer als `<script type="module">` geladen, ohne Build-Schritt.
 
 ### Verwandte Dokumente
 

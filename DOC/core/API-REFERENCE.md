@@ -1,10 +1,10 @@
-# 365CMS – Projektdokumentation | Abschnitt: Core – API-Referenz
+# 365CMS Projektdokumentation | Core: API-Referenz
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 
-The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRouter.php`) and – for the generic `pages` endpoint – handled by `CMS\Api`. Requests below `/api` run in runtime mode `api` (`Cache-Control: no-store`). Authentication is the regular CMS session cookie; admin endpoints additionally require role `admin` and a capability, state-changing admin endpoints a CSRF token. There is no public write API and no CORS configuration. Since 3.4.13 API clients can optionally authenticate with `Authorization: Bearer <JWT>` when `JWT_SECRET` (≥ 32 characters) is set; tokens are issued only to an existing, fully logged-in session (`POST /api/v1/auth/token`) and renewed via `POST /api/v1/auth/refresh`. CSRF-protected endpoints still require their CSRF token.
+The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRouter.php`) and, for the generic `pages` endpoint, handled by `CMS\Api`. Requests below `/api` run in runtime mode `api` (`Cache-Control: no-store`). Authentication is the regular CMS session cookie; admin endpoints additionally require role `admin` and a capability, state-changing admin endpoints a CSRF token. There is no public write API and no CORS configuration. Since 3.4.13 API clients can optionally authenticate with `Authorization: Bearer <JWT>` when `JWT_SECRET` (≥ 32 characters) is set; tokens are issued only to an existing, fully logged-in session (`POST /api/v1/auth/token`) and renewed via `POST /api/v1/auth/refresh`. CSRF-protected endpoints still require their CSRF token.
 
 ## Deutsch
 
@@ -13,7 +13,7 @@ The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRout
 | Methode | Route | Zugriff | Antwort |
 |---|---|---|---|
 | GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"3.5.0"}` |
-| GET | `/api/v1/pages?q=<suche>` | angemeldet | `{"data":[…]}` – Seitensuche (`PageManager::search()`, leere Suche → leere Liste) |
+| GET | `/api/v1/pages?q=<suche>` | angemeldet | `{"data":[…]}`: Seitensuche (`PageManager::search()`, leere Suche → leere Liste) |
 | GET | `/api/v1/pages/:slug` | angemeldet | `{"data":{…}}` oder `404 {"error":"Page not found"}` |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft | `204` |
 | GET | `/api/v1/admin/posts` | Admin + `edit_all_posts` | `{"data":[…],"total":n,"page":p,"limit":l}` |

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Rollen & Rechte (RBAC)
+# 365CMS Projektdokumentation | Admin: Rollen & Rechte (RBAC)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/roles` (Alt-Route `/admin/rbac` leitet um) | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_roles`
@@ -7,7 +7,7 @@
 
 Roles and capabilities are managed at `/admin/roles` (`CMS/admin/roles.php` → `CMS/admin/modules/users/RolesModule.php` → `CMS/admin/views/users/roles.php`). Default role definitions live in `CMS/includes/functions/roles.php` (`cms_get_default_role_definitions()`); overrides are stored in `cms_role_permissions`. `Auth::hasCapability()` grants every capability to role `admin`; other roles are resolved via `cms_load_role_capabilities()`.
 
-**Important:** the admin area itself requires role `admin` (`Auth::isAdmin()` in `AdminRouter`). Capabilities of other roles therefore apply to the member area, the API, plugins and frontend features – not to `/admin`.
+**Important:** the admin area itself requires role `admin` (`Auth::isAdmin()` in `AdminRouter`). Capabilities of other roles therefore apply to the member area, the API, plugins and frontend features, not to `/admin`.
 
 ## Deutsch
 
@@ -42,11 +42,11 @@ Alle Rollen besitzen `read`, `edit_profile` und `view_content`. Der Alias `admin
 | Downloads | `manage_downloads`, `upload_downloads`, `view_download_stats` |
 | System & Werkzeuge | `manage_search_index`, `manage_feeds`, `manage_admin_menu` (Sidebar-Editor, [../ADMIN-MENU.md](../ADMIN-MENU.md)) |
 | Wissensdatenbank, Newsletter | `manage_knowledgebase`, `manage_newsletter` |
-| Bausteine | `blocks.reusable` – *EditorJS Block Vorlagen* verwalten (`/admin/reusable-blocks`) und im Editor einfügen; Standard: Editor (Admin immer) |
-| Identität | `security.sso` – Tab *Einstellungen → SSO* (Microsoft Entra ID, [../security/SSO-ENTRA.md](../security/SSO-ENTRA.md)); Admin über die Rolle, weitere Rollen nur per Matrix |
-| Backups | `backups.offsite` – *Backup-Einstellungen* mit S3-Offsite-Ziel ([../system-settings/BACKUP.md](../system-settings/BACKUP.md)) |
-| Webhooks | `webhooks.manage` – ausgehende Webhooks ([../system-settings/WEBHOOKS.md](../system-settings/WEBHOOKS.md)) |
-| Zahlungen | `payments.manage` – Stripe/Mollie-Einstellungen und Zahlungsübersicht ([../subscription/PAYMENTS.md](../subscription/PAYMENTS.md)); `invoices.view` – Rechnungen aller Kunden ansehen und Storno erstellen ([../subscription/INVOICES.md](../subscription/INVOICES.md)) |
+| Bausteine | `blocks.reusable`: *EditorJS Block Vorlagen* verwalten (`/admin/reusable-blocks`) und im Editor einfügen; Standard: Editor (Admin immer) |
+| Identität | `security.sso`: Tab *Einstellungen → SSO* (Microsoft Entra ID, [../security/SSO-ENTRA.md](../security/SSO-ENTRA.md)); Admin über die Rolle, weitere Rollen nur per Matrix |
+| Backups | `backups.offsite`: *Backup-Einstellungen* mit S3-Offsite-Ziel ([../system-settings/BACKUP.md](../system-settings/BACKUP.md)) |
+| Webhooks | `webhooks.manage`: ausgehende Webhooks ([../system-settings/WEBHOOKS.md](../system-settings/WEBHOOKS.md)) |
+| Zahlungen | `payments.manage`: Stripe/Mollie-Einstellungen und Zahlungsübersicht ([../subscription/PAYMENTS.md](../subscription/PAYMENTS.md)); `invoices.view`, Rechnungen aller Kunden ansehen und Storno erstellen ([../subscription/INVOICES.md](../subscription/INVOICES.md)) |
 
 Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden zu `.`).
 
@@ -64,7 +64,7 @@ Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden z
 
 ### Veröffentlichungsrechte
 
-`posts.publish` und `pages.publish` werden tatsächlich geprüft: Wer das Recht nicht besitzt, kann „Veröffentlichen“, „Planen“ und „Privat“ nur als Einreichung (Status `pending`, „Zur Prüfung“) speichern ([../pages-posts/REVIEW.md](../pages-posts/REVIEW.md)). Damit sich für bestehende Rollen nichts ändert, vergibt der Update-Schritt `ContentWorkflow::migrateCapabilities()` einmalig `posts.publish` und `pages.publish` an *Editor* sowie `posts.publish` an *Autor* – nur, wenn für die Rolle und die Capability noch kein Eintrag in `cms_role_permissions` steht; ein bewusst entzogenes Recht bleibt entzogen. Admins sind nicht betroffen. Mit der Einstellung „Veröffentlichung braucht eine zweite Person“ kann zusätzlich niemand mehr den eigenen oder selbst eingereichten Inhalt freigeben, auch kein Admin.
+`posts.publish` und `pages.publish` werden tatsächlich geprüft: Wer das Recht nicht besitzt, kann „Veröffentlichen“, „Planen“ und „Privat“ nur als Einreichung (Status `pending`, „Zur Prüfung“) speichern ([../pages-posts/REVIEW.md](../pages-posts/REVIEW.md)). Damit sich für bestehende Rollen nichts ändert, vergibt der Update-Schritt `ContentWorkflow::migrateCapabilities()` einmalig `posts.publish` und `pages.publish` an *Editor* sowie `posts.publish` an *Autor*, nur, wenn für die Rolle und die Capability noch kein Eintrag in `cms_role_permissions` steht; ein bewusst entzogenes Recht bleibt entzogen. Admins sind nicht betroffen. Mit der Einstellung „Veröffentlichung braucht eine zweite Person“ kann zusätzlich niemand mehr den eigenen oder selbst eingereichten Inhalt freigeben, auch kein Admin.
 
 ### Auflösung zur Laufzeit
 
@@ -75,13 +75,13 @@ Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden z
 
 ### Wichtig: Adminbereich nur für `admin`
 
-`AdminRouter::renderAdminPage()` lässt nur `Auth::isAdmin()` (Rolle exakt `admin`) zu. Ein Editor oder Autor wird – unabhängig von seinen Capabilities – auf `/member` umgeleitet. Feingranulare Rechte wirken daher auf:
+`AdminRouter::renderAdminPage()` lässt nur `Auth::isAdmin()` (Rolle exakt `admin`) zu. Ein Editor oder Autor wird, unabhängig von seinen Capabilities, auf `/member` umgeleitet. Feingranulare Rechte wirken daher auf:
 
 - Member-Bereich und Plugin-Bereiche im Member-Dashboard,
 - JSON-API (`/api/v1/…`, z. B. `/api/v1/admin/posts`) und Upload-Endpunkte (`/api/upload`, `/api/media`),
 - Plugin-Funktionen, die `current_user_can()` (`CMS/includes/functions/redirects-auth.php`) verwenden.
 
-Für Benutzer mit der Rolle `admin` kann kein Recht entzogen werden – `hasCapability()` liefert für `admin` immer `true`. Die Capability-Prüfungen in den Admin-Einstiegen (z. B. `manage_pages`, `edit_own_posts`) sind damit eine zusätzliche Absicherung für künftige oder angepasste Rollenmodelle.
+Für Benutzer mit der Rolle `admin` kann kein Recht entzogen werden, `hasCapability()` liefert für `admin` immer `true`. Die Capability-Prüfungen in den Admin-Einstiegen (z. B. `manage_pages`, `edit_own_posts`) sind damit eine zusätzliche Absicherung für künftige oder angepasste Rollenmodelle.
 
 ### Verwandte Dokumente
 

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Weiterleitungen & 404-Monitor
+# 365CMS Projektdokumentation | Admin: Weiterleitungen & 404-Monitor
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/redirect-manager`, `/admin/not-found-monitor` | **Capability:** `manage_settings` | **Core-Modul:** `seo`
@@ -49,7 +49,7 @@ Importregeln:
 
 - Pflichtspalten sind `source_path` und `target_url`; deutsche Spaltennamen (`Quelle`, `Ziel`, `Site`, `Typ`, `Aktiv`, `Notiz`) werden ebenfalls erkannt. Trennzeichen `;`, `,` oder Tab werden automatisch erkannt, Windows-1252-Dateien nach UTF-8 umgewandelt.
 - Zeilen ohne `target_url` werden übersprungen.
-- Vorhandene Regeln werden über `redirect_id` oder – ohne ID – über Quelle + `site_scope` gefunden und aktualisiert; unveränderte Regeln werden nicht angefasst. Alle anderen Zeilen legen neue Regeln an.
+- Vorhandene Regeln werden über `redirect_id` oder: ohne ID, über Quelle + `site_scope` gefunden und aktualisiert; unveränderte Regeln werden nicht angefasst. Alle anderen Zeilen legen neue Regeln an.
 - `site_scope`: leer bzw. `global` = alle Sites, sonst `host:domain.tld` oder `path:/hub-pfad`. `redirect_type`: `301` oder `302`. `is_active`: `1`/`0` bzw. `ja`/`nein`. Fehlt eine Spalte, bleibt bei bestehenden Regeln der bisherige Wert erhalten.
 - Jede Zeile wird wie im Formular geprüft (gültige Quelle und Ziel, keine Selbstweiterleitung, keine Dubletten). Als Ziel sind nur Pfade/Slugs und `http(s)`-URLs erlaubt. Kommt Quelle + Site mehrfach mit identischen Werten vor, zählt die Wiederholung als unverändert; abweichende Werte werden als Fehler gemeldet.
 - Fehlerhafte Zeilen werden mit Zeilennummer gemeldet, gültige Zeilen trotzdem übernommen (Hinweis in Gelb statt Rot, wenn Teile übernommen wurden). Der Import läuft in einer Datenbank-Transaktion.

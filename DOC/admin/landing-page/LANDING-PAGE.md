@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Landingpage
+# 365CMS Projektdokumentation | Admin: Landingpage
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/landing-page` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_landing_page`
@@ -17,7 +17,7 @@ Die Landingpage wird nicht automatisch angezeigt. Im Theme **cms-default**:
 
 1. `/admin/theme-editor?tab=homepage` öffnen,
 2. Startseiten-Modus `landing` wählen (Standard `posts` = Blog-Startseite),
-3. speichern – die Startseite rendert nun `CMS/themes/cms-default/partials/home-landing.php`, das `LandingPageService` ausliest.
+3. speichern: die Startseite rendert nun `CMS/themes/cms-default/partials/home-landing.php`, das `LandingPageService` ausliest.
 
 Eigene Themes können den Service ebenso nutzen (`LandingPageService::getInstance()->getHeader()`, `getFeatures()`, `getFooter()`, `getDesign()`, `getContentSettings()`).
 

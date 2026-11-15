@@ -9,10 +9,10 @@
 
 ## Quellordner
 
-- `CMS/assets/psr/Log/` – `psr/log` 3.0.2
-- `CMS/assets/psr/EventDispatcher/` – `psr/event-dispatcher` 1.0.0
-- `CMS/assets/psr/Container/` – `psr/container` 2.0.2
-- `CMS/assets/psr/Clock/` – `psr/clock` 1.0.0
+- `CMS/assets/psr/Log/`: `psr/log` 3.0.2
+- `CMS/assets/psr/EventDispatcher/`: `psr/event-dispatcher` 1.0.0
+- `CMS/assets/psr/Container/`: `psr/container` 2.0.2
+- `CMS/assets/psr/Clock/`: `psr/clock` 1.0.0
 
 ## Verwendung in 365CMS
 

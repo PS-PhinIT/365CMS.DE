@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: INDEX
+# 365CMS Projektdokumentation | INDEX
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
@@ -218,7 +218,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | [UPDATE-DEPLOYMENT-WORKFLOW.md](workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) | CMS update, SHA-256 verification, deployment |
 | [MARKETPLACE-WORKFLOW.md](workflow/MARKETPLACE-WORKFLOW.md) | Install plugin / theme from marketplace |
 | [API-INTEGRATION-WORKFLOW.md](workflow/API-INTEGRATION-WORKFLOW.md) | JSON endpoints, custom routes via `register_routes`, JWT note |
-| [specs/community/](workflow/specs/community/README.md) | Community module (forum) – plan: features, architecture, data model, permissions & moderation, workflows, security & privacy, theme/UI, migration from cms-forum, roadmap, test plan / Community-Modul (Forum) – Planung |
+| [specs/community/](workflow/specs/community/README.md) | Community module (forum): plan: features, architecture, data model, permissions & moderation, workflows, security & privacy, theme/UI, migration from cms-forum, roadmap, test plan / Community-Modul (Forum), Planung |
 
 ---
 
@@ -238,7 +238,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | [workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md) | 4.1.0 progress (areas 1–5 done, area 6 → 4.3.0) |
 | [workflow/specs/v4.1/SCHEMA-v26.md](workflow/specs/v4.1/SCHEMA-v26.md) | Schema `v26` specification |
 | [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md) | CLI and real-time alerting (planned for 4.3.0) |
-| [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) | **Community module 4.2.0 (schema `v27`): executable implementation plan** – work packages, tables, capabilities, privacy/moderation rules, CSP/security, tests |
+| [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) | **Community module 4.2.0 (schema `v27`): executable implementation plan**: work packages, tables, capabilities, privacy/moderation rules, CSP/security, tests |
 | [workflow/specs/community/README.md](workflow/specs/community/README.md) | Community module 4.2.0 (schema `v27`): planning set entry point, decisions E1–E12 |
 | [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md) | 4.2.0 implementation roadmap |
 | [DEVLIST.md](DEVLIST.md) | Architecture contracts and development list (incl. 4.2.0 plan) |
@@ -253,146 +253,146 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 
 **`admin/ai/`**
 
-- [admin/ai/AI-SERVICES.md](admin/ai/AI-SERVICES.md) – Admin – KI-Dienste (AI Services)
+- [admin/ai/AI-SERVICES.md](admin/ai/AI-SERVICES.md): Admin, KI-Dienste (AI Services)
 
 **`admin/dashboard/`**
 
-- [admin/dashboard/DASHBOARD.md](admin/dashboard/DASHBOARD.md) – Admin – Dashboard
+- [admin/dashboard/DASHBOARD.md](admin/dashboard/DASHBOARD.md): Admin, Dashboard
 
 **`admin/diagnose/`**
 
-- [admin/diagnose/README.md](admin/diagnose/README.md) – Admin – Diagnose & Protokolle
+- [admin/diagnose/README.md](admin/diagnose/README.md): Admin, Diagnose & Protokolle
 
 **`admin/info/`**
 
-- [admin/info/README.md](admin/info/README.md) – Admin – Info
+- [admin/info/README.md](admin/info/README.md): Admin, Info
 
 **`admin/landing-page/`**
 
-- [admin/landing-page/README.md](admin/landing-page/README.md) – Admin – Landingpage
+- [admin/landing-page/README.md](admin/landing-page/README.md): Admin, Landingpage
 
 **`admin/legal/`**
 
-- [admin/legal/COOKIES.md](admin/legal/COOKIES.md) – Admin – Cookie-Manager & Einwilligung
-- [admin/legal/DELETION-REQUESTS.md](admin/legal/DELETION-REQUESTS.md) – Admin – Löschanträge (Art. 17 DSGVO)
-- [admin/legal/DSGVO.md](admin/legal/DSGVO.md) – Admin – DSGVO-Anfragen (Auskunft & Löschung)
-- [admin/legal/LEGAL.md](admin/legal/LEGAL.md) – Admin – Rechtsseiten
+- [admin/legal/COOKIES.md](admin/legal/COOKIES.md): Admin, Cookie-Manager & Einwilligung
+- [admin/legal/DELETION-REQUESTS.md](admin/legal/DELETION-REQUESTS.md): Admin, Löschanträge (Art. 17 DSGVO)
+- [admin/legal/DSGVO.md](admin/legal/DSGVO.md): Admin, DSGVO-Anfragen (Auskunft & Löschung)
+- [admin/legal/LEGAL.md](admin/legal/LEGAL.md): Admin, Rechtsseiten
 
 **`admin/media/`**
 
-- [admin/media/MEDIA.md](admin/media/MEDIA.md) – Admin – Medienverwaltung
+- [admin/media/MEDIA.md](admin/media/MEDIA.md): Admin, Medienverwaltung
 
 **`admin/pages-posts/`**
 
-- [admin/pages-posts/COMMENTS.md](admin/pages-posts/COMMENTS.md) – Admin – Kommentare
-- [admin/pages-posts/HUBSITES.md](admin/pages-posts/HUBSITES.md) – Admin – Hub-Sites
-- [admin/pages-posts/PAGES.md](admin/pages-posts/PAGES.md) – Admin – Seiten
-- [admin/pages-posts/SETTINGS.md](admin/pages-posts/SETTINGS.md) – Admin – Inhalts-Einstellungen
-- [admin/pages-posts/TABLES.md](admin/pages-posts/TABLES.md) – Admin – Tabellen (Site Tables)
-- [admin/pages-posts/TOC.md](admin/pages-posts/TOC.md) – Admin – Inhaltsverzeichnis (TOC)
+- [admin/pages-posts/COMMENTS.md](admin/pages-posts/COMMENTS.md): Admin, Kommentare
+- [admin/pages-posts/HUBSITES.md](admin/pages-posts/HUBSITES.md): Admin, Hub-Sites
+- [admin/pages-posts/PAGES.md](admin/pages-posts/PAGES.md): Admin, Seiten
+- [admin/pages-posts/SETTINGS.md](admin/pages-posts/SETTINGS.md): Admin, Inhalts-Einstellungen
+- [admin/pages-posts/TABLES.md](admin/pages-posts/TABLES.md): Admin, Tabellen (Site Tables)
+- [admin/pages-posts/TOC.md](admin/pages-posts/TOC.md): Admin, Inhaltsverzeichnis (TOC)
 
 **`admin/performance/`**
 
-- [admin/performance/README.md](admin/performance/README.md) – Admin – Performance
+- [admin/performance/README.md](admin/performance/README.md): Admin, Performance
 
 **`admin/plugins/`**
 
-- [admin/plugins/MARKETPLACE.md](admin/plugins/MARKETPLACE.md) – Admin – Plugin-Marketplace
-- [admin/plugins/README.md](admin/plugins/README.md) – Admin – Plugins
-- [admin/plugins/UPDATES.md](admin/plugins/UPDATES.md) – Admin – Plugin-Updates
+- [admin/plugins/MARKETPLACE.md](admin/plugins/MARKETPLACE.md): Admin, Plugin-Marketplace
+- [admin/plugins/README.md](admin/plugins/README.md): Admin, Plugins
+- [admin/plugins/UPDATES.md](admin/plugins/UPDATES.md): Admin, Plugin-Updates
 
 **`admin/security/`**
 
-- [admin/security/ANTISPAM.md](admin/security/ANTISPAM.md) – Admin – Anti-Spam
-- [admin/security/FIREWALL.md](admin/security/FIREWALL.md) – Admin – Firewall
+- [admin/security/ANTISPAM.md](admin/security/ANTISPAM.md): Admin, Anti-Spam
+- [admin/security/FIREWALL.md](admin/security/FIREWALL.md): Admin, Firewall
 
 **`admin/seo/`**
 
-- [admin/seo/ANALYTICS.md](admin/seo/ANALYTICS.md) – Admin – Analysen & Tracking
-- [admin/seo/README.md](admin/seo/README.md) – Admin – SEO
-- [admin/seo/REDIRECTS.md](admin/seo/REDIRECTS.md) – Admin – Weiterleitungen & 404-Monitor
+- [admin/seo/ANALYTICS.md](admin/seo/ANALYTICS.md): Admin, Analysen & Tracking
+- [admin/seo/README.md](admin/seo/README.md): Admin, SEO
+- [admin/seo/REDIRECTS.md](admin/seo/REDIRECTS.md): Admin, Weiterleitungen & 404-Monitor
 
 **`admin/subscription/`**
 
-- [admin/subscription/ORDERS.md](admin/subscription/ORDERS.md) – Admin – Bestellungen & Zuweisung
-- [admin/subscription/PACKAGES.md](admin/subscription/PACKAGES.md) – Admin – Abo-Pakete
-- [admin/subscription/README.md](admin/subscription/README.md) – Admin – Aboverwaltung
+- [admin/subscription/ORDERS.md](admin/subscription/ORDERS.md): Admin, Bestellungen & Zuweisung
+- [admin/subscription/PACKAGES.md](admin/subscription/PACKAGES.md): Admin, Abo-Pakete
+- [admin/subscription/README.md](admin/subscription/README.md): Admin, Aboverwaltung
 
 **`admin/system-settings/`**
 
-- [admin/system-settings/SYSTEM.md](admin/system-settings/SYSTEM.md) – Admin – Allgemeine Einstellungen
+- [admin/system-settings/SYSTEM.md](admin/system-settings/SYSTEM.md): Admin, Allgemeine Einstellungen
 
 **`admin/themes-design/`**
 
-- [admin/themes-design/CUSTOMIZER.md](admin/themes-design/CUSTOMIZER.md) – Admin – Theme-Customizer
-- [admin/themes-design/DASHBOARD-WIDGETS.md](admin/themes-design/DASHBOARD-WIDGETS.md) – Admin – Dashboard-Widgets
-- [admin/themes-design/EDITOR.md](admin/themes-design/EDITOR.md) – Admin – Theme-Explorer (Dateieditor)
-- [admin/themes-design/FONTS.md](admin/themes-design/FONTS.md) – Admin – Schriftverwaltung
-- [admin/themes-design/MARKETPLACE.md](admin/themes-design/MARKETPLACE.md) – Admin – Theme-Verwaltung & Theme-Marktplatz
-- [admin/themes-design/MENUS.md](admin/themes-design/MENUS.md) – Admin – Theme-Menüs
+- [admin/themes-design/CUSTOMIZER.md](admin/themes-design/CUSTOMIZER.md): Admin, Theme-Customizer
+- [admin/themes-design/DASHBOARD-WIDGETS.md](admin/themes-design/DASHBOARD-WIDGETS.md): Admin, Dashboard-Widgets
+- [admin/themes-design/EDITOR.md](admin/themes-design/EDITOR.md): Admin, Theme-Explorer (Dateieditor)
+- [admin/themes-design/FONTS.md](admin/themes-design/FONTS.md): Admin, Schriftverwaltung
+- [admin/themes-design/MARKETPLACE.md](admin/themes-design/MARKETPLACE.md): Admin, Theme-Verwaltung & Theme-Marktplatz
+- [admin/themes-design/MENUS.md](admin/themes-design/MENUS.md): Admin, Theme-Menüs
 
 **`admin/users-groups/`**
 
-- [admin/users-groups/GROUPS.md](admin/users-groups/GROUPS.md) – Admin – Gruppen
-- [admin/users-groups/USERS.md](admin/users-groups/USERS.md) – Admin – Benutzer
+- [admin/users-groups/GROUPS.md](admin/users-groups/GROUPS.md): Admin, Gruppen
+- [admin/users-groups/USERS.md](admin/users-groups/USERS.md): Admin, Benutzer
 
 **`assets/`**
 
-- [assets/carbon/README.md](assets/carbon/README.md) – Carbon
-- [assets/cron/README.md](assets/cron/README.md) – Cron Library (poliander/cron 3.3.1)
-- [assets/css/README.md](assets/css/README.md) – Interne CSS-Assets
-- [assets/dompurify/README.md](assets/dompurify/README.md) – DOMPurify
-- [assets/editorjs/README.md](assets/editorjs/README.md) – Editor.js
-- [assets/htmlpurifier/README.md](assets/htmlpurifier/README.md) – HTMLPurifier
-- [assets/images/README.md](assets/images/README.md) – Interne Bild-Assets
-- [assets/js/README.md](assets/js/README.md) – Interne JavaScript-Assets
-- [assets/ldaprecord/README.md](assets/ldaprecord/README.md) – LdapRecord
-- [assets/mailer/README.md](assets/mailer/README.md) – Symfony Mailer
-- [assets/melbahja-seo/README.md](assets/melbahja-seo/README.md) – melbahja-seo
-- [assets/mime/README.md](assets/mime/README.md) – Symfony Mime
-- [assets/photoswipe/README.md](assets/photoswipe/README.md) – PhotoSwipe
-- [assets/php-jwt/README.md](assets/php-jwt/README.md) – firebase/php-jwt
-- [assets/psr/README.md](assets/psr/README.md) – PSR-Interfaces
-- [assets/suneditor/README.md](assets/suneditor/README.md) – SunEditor
-- [assets/tabler/README.md](assets/tabler/README.md) – Tabler Core
-- [assets/tntsearch/README.md](assets/tntsearch/README.md) – TNTSearch
-- [assets/translation/README.md](assets/translation/README.md) – Symfony Translation
-- [assets/twofactorauth/README.md](assets/twofactorauth/README.md) – RobThree TwoFactorAuth
-- [assets/webauthn/README.md](assets/webauthn/README.md) – lbuchs/WebAuthn
+- [assets/carbon/README.md](assets/carbon/README.md): Carbon
+- [assets/cron/README.md](assets/cron/README.md): Cron Library (poliander/cron 3.3.1)
+- [assets/css/README.md](assets/css/README.md): Interne CSS-Assets
+- [assets/dompurify/README.md](assets/dompurify/README.md): DOMPurify
+- [assets/editorjs/README.md](assets/editorjs/README.md): Editor.js
+- [assets/htmlpurifier/README.md](assets/htmlpurifier/README.md): HTMLPurifier
+- [assets/images/README.md](assets/images/README.md): Interne Bild-Assets
+- [assets/js/README.md](assets/js/README.md): Interne JavaScript-Assets
+- [assets/ldaprecord/README.md](assets/ldaprecord/README.md): LdapRecord
+- [assets/mailer/README.md](assets/mailer/README.md): Symfony Mailer
+- [assets/melbahja-seo/README.md](assets/melbahja-seo/README.md): melbahja-seo
+- [assets/mime/README.md](assets/mime/README.md): Symfony Mime
+- [assets/photoswipe/README.md](assets/photoswipe/README.md): PhotoSwipe
+- [assets/php-jwt/README.md](assets/php-jwt/README.md): firebase/php-jwt
+- [assets/psr/README.md](assets/psr/README.md): PSR-Interfaces
+- [assets/suneditor/README.md](assets/suneditor/README.md): SunEditor
+- [assets/tabler/README.md](assets/tabler/README.md): Tabler Core
+- [assets/tntsearch/README.md](assets/tntsearch/README.md): TNTSearch
+- [assets/translation/README.md](assets/translation/README.md): Symfony Translation
+- [assets/twofactorauth/README.md](assets/twofactorauth/README.md): RobThree TwoFactorAuth
+- [assets/webauthn/README.md](assets/webauthn/README.md): lbuchs/WebAuthn
 
 **`audit/`**
 
-- [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md) – Release-Prüfung 4.1.0
-- [audit/FOLGEAUDIT-2026-11-09.md](audit/FOLGEAUDIT-2026-11-09.md) – Folgeaudit 2026-11-09
-- [audit/FOLGEAUDIT-2026-11-12.md](audit/FOLGEAUDIT-2026-11-12.md) – Folgeaudit 2026-11-12
-- [audit/FUNKTIONEN-VERWEISE.md](audit/FUNKTIONEN-VERWEISE.md) – 365CMS – Gesamtaudit 2026-10-14 | Funktionen und Verweise
-- [audit/GUI-BARRIEREFREIHEIT.md](audit/GUI-BARRIEREFREIHEIT.md) – 365CMS – Gesamtaudit 2026-10-14 | GUI und Barrierefreiheit
-- [audit/PERFORMANCE-LAST.md](audit/PERFORMANCE-LAST.md) – 365CMS – Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
-- [audit/PRUEFKATALOG.md](audit/PRUEFKATALOG.md) – 365CMS – Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
-- [audit/SICHERHEIT.md](audit/SICHERHEIT.md) – 365CMS – Gesamtaudit 2026-10-14 | Sicherheit
+- [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md): Release-Prüfung 4.1.0
+- [audit/FOLGEAUDIT-2026-11-09.md](audit/FOLGEAUDIT-2026-11-09.md): Folgeaudit 2026-11-09
+- [audit/FOLGEAUDIT-2026-11-12.md](audit/FOLGEAUDIT-2026-11-12.md): Folgeaudit 2026-11-12
+- [audit/FUNKTIONEN-VERWEISE.md](audit/FUNKTIONEN-VERWEISE.md): 365CMS, Gesamtaudit 2026-10-14 | Funktionen und Verweise
+- [audit/GUI-BARRIEREFREIHEIT.md](audit/GUI-BARRIEREFREIHEIT.md): 365CMS, Gesamtaudit 2026-10-14 | GUI und Barrierefreiheit
+- [audit/PERFORMANCE-LAST.md](audit/PERFORMANCE-LAST.md): 365CMS, Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
+- [audit/PRUEFKATALOG.md](audit/PRUEFKATALOG.md): 365CMS, Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
+- [audit/SICHERHEIT.md](audit/SICHERHEIT.md): 365CMS, Gesamtaudit 2026-10-14 | Sicherheit
 
 
 **`workflow/specs/`**
 
-- [workflow/specs/ADMIN-MENU-PROFILE.md](workflow/specs/ADMIN-MENU-PROFILE.md) – Workflow – Spec: Admin-Sidebar-Menü mit Profilen
-- [workflow/specs/KLARSTELLUNGEN.md](workflow/specs/KLARSTELLUNGEN.md) – Workflow – Klarstellungen zu den Specs
-- [workflow/specs/PLUGIN-PARITY.md](workflow/specs/PLUGIN-PARITY.md) – 365CMS – Paritäts-Checkliste der in den Core integrierten Plugins
-- [workflow/specs/ROADMAP-CONTENT-PLATFORM.md](workflow/specs/ROADMAP-CONTENT-PLATFORM.md) – 365CMS – Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
-- [workflow/specs/community/ARCHITECTURE.md](workflow/specs/community/ARCHITECTURE.md) – Community – Architektur
-- [workflow/specs/community/DATA-MODEL.md](workflow/specs/community/DATA-MODEL.md) – Community – Datenmodell
-- [workflow/specs/community/FEATURES.md](workflow/specs/community/FEATURES.md) – Community – Funktionskatalog
-- [workflow/specs/community/MIGRATION-CMS-FORUM.md](workflow/specs/community/MIGRATION-CMS-FORUM.md) – Community – Übernahme aus cms-forum
-- [workflow/specs/community/PERMISSIONS-MODERATION.md](workflow/specs/community/PERMISSIONS-MODERATION.md) – Community – Rechte & Moderation
-- [workflow/specs/community/SECURITY-PRIVACY.md](workflow/specs/community/SECURITY-PRIVACY.md) – Community – Sicherheit & Datenschutz
-- [workflow/specs/community/TEST-PLAN.md](workflow/specs/community/TEST-PLAN.md) – Community – Testplan
-- [workflow/specs/community/THEME-UI.md](workflow/specs/community/THEME-UI.md) – Community – Theme, Oberfläche & SEO
-- [workflow/specs/community/WORKFLOWS.md](workflow/specs/community/WORKFLOWS.md) – Community – Abläufe
-- [workflow/specs/v4.1/01-IDENTITY.md](workflow/specs/v4.1/01-IDENTITY.md) – Spec 4.1.0 – Bereich 1: Identität, Anmeldung & Konto-Sicherheit
-- [workflow/specs/v4.1/02-MEDIA.md](workflow/specs/v4.1/02-MEDIA.md) – Spec 4.1.0 – Bereich 2: Medien & Performance
-- [workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md](workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md) – Spec 4.1.0 – Bereich 3: Redaktions- & Content-Workflows
-- [workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md](workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md) – Spec 4.1.0 – Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
-- [workflow/specs/v4.1/05-PAYMENTS.md](workflow/specs/v4.1/05-PAYMENTS.md) – Spec 4.1.0 – Bereich 5: Zahlungen, Abos & Rechnungen
-- [workflow/specs/v4.1/REFERENCES.md](workflow/specs/v4.1/REFERENCES.md) – Spec 4.1.0 – Bewertung der Referenzen
+- [workflow/specs/ADMIN-MENU-PROFILE.md](workflow/specs/ADMIN-MENU-PROFILE.md): Workflow, Spec: Admin-Sidebar-Menü mit Profilen
+- [workflow/specs/KLARSTELLUNGEN.md](workflow/specs/KLARSTELLUNGEN.md): Workflow, Klarstellungen zu den Specs
+- [workflow/specs/PLUGIN-PARITY.md](workflow/specs/PLUGIN-PARITY.md): 365CMS, Paritäts-Checkliste der in den Core integrierten Plugins
+- [workflow/specs/ROADMAP-CONTENT-PLATFORM.md](workflow/specs/ROADMAP-CONTENT-PLATFORM.md): 365CMS, Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
+- [workflow/specs/community/ARCHITECTURE.md](workflow/specs/community/ARCHITECTURE.md): Community, Architektur
+- [workflow/specs/community/DATA-MODEL.md](workflow/specs/community/DATA-MODEL.md): Community, Datenmodell
+- [workflow/specs/community/FEATURES.md](workflow/specs/community/FEATURES.md): Community, Funktionskatalog
+- [workflow/specs/community/MIGRATION-CMS-FORUM.md](workflow/specs/community/MIGRATION-CMS-FORUM.md): Community, Übernahme aus cms-forum
+- [workflow/specs/community/PERMISSIONS-MODERATION.md](workflow/specs/community/PERMISSIONS-MODERATION.md): Community, Rechte & Moderation
+- [workflow/specs/community/SECURITY-PRIVACY.md](workflow/specs/community/SECURITY-PRIVACY.md): Community, Sicherheit & Datenschutz
+- [workflow/specs/community/TEST-PLAN.md](workflow/specs/community/TEST-PLAN.md): Community, Testplan
+- [workflow/specs/community/THEME-UI.md](workflow/specs/community/THEME-UI.md): Community, Theme, Oberfläche & SEO
+- [workflow/specs/community/WORKFLOWS.md](workflow/specs/community/WORKFLOWS.md): Community, Abläufe
+- [workflow/specs/v4.1/01-IDENTITY.md](workflow/specs/v4.1/01-IDENTITY.md): Spec 4.1.0, Bereich 1: Identität, Anmeldung & Konto-Sicherheit
+- [workflow/specs/v4.1/02-MEDIA.md](workflow/specs/v4.1/02-MEDIA.md): Spec 4.1.0, Bereich 2: Medien & Performance
+- [workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md](workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md): Spec 4.1.0, Bereich 3: Redaktions- & Content-Workflows
+- [workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md](workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md): Spec 4.1.0, Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
+- [workflow/specs/v4.1/05-PAYMENTS.md](workflow/specs/v4.1/05-PAYMENTS.md): Spec 4.1.0, Bereich 5: Zahlungen, Abos & Rechnungen
+- [workflow/specs/v4.1/REFERENCES.md](workflow/specs/v4.1/REFERENCES.md): Spec 4.1.0, Bewertung der Referenzen
 
 ---
 

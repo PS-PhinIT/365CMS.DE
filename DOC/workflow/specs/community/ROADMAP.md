@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Roadmap & Fortschritt
+# 365CMS Projektdokumentation | Community: Roadmap & Fortschritt
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** Planung | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
 
 ## English (summary)
@@ -15,9 +15,9 @@ The progress table at the end is the checklist; every item starts as ⬜ and is 
 
 | Phase | Ziel | Ergebnis |
 |---|---|---|
-| **P1 – Grundlage & Parität** | Alles aus deinen Prioritäten 1, 2 und den Kernpunkten aus 3 und 4, plus Parität zu `cms-forum` | Auslieferbar; `cms-forum` kann abgelöst werden |
-| **P2 – Community-Ausbau** | Vertrauensstufen, Verwarnungen, Zusammenführen/Teilen, Erwähnungen, Entwürfe, Zusammenfassungs-Mails, Umfragen, Lesezeichen, Ignorieren, Online-Anzeige, Statistik, Feeds | Moderation skaliert, Mitglieder bleiben aktiv |
-| **P3 – Erweiterungen** | Reputation, Abzeichen, Tags/Präfixe, Gruppen-Nachrichten (Core), Webhooks, KI-Signale, Export/Import der Struktur | Nice-to-have aus deiner Liste (OAuth als eigenes Core-Vorhaben) |
+| **P1: Grundlage & Parität** | Alles aus deinen Prioritäten 1, 2 und den Kernpunkten aus 3 und 4, plus Parität zu `cms-forum` | Auslieferbar; `cms-forum` kann abgelöst werden |
+| **P2: Community-Ausbau** | Vertrauensstufen, Verwarnungen, Zusammenführen/Teilen, Erwähnungen, Entwürfe, Zusammenfassungs-Mails, Umfragen, Lesezeichen, Ignorieren, Online-Anzeige, Statistik, Feeds | Moderation skaliert, Mitglieder bleiben aktiv |
+| **P3: Erweiterungen** | Reputation, Abzeichen, Tags/Präfixe, Gruppen-Nachrichten (Core), Webhooks, KI-Signale, Export/Import der Struktur | Nice-to-have aus deiner Liste (OAuth als eigenes Core-Vorhaben) |
 
 ### 2. Arbeitspakete
 
@@ -30,7 +30,7 @@ Aufwand in Personentagen (PT), grob geschätzt einschließlich Tests und Doku; �
 | **WP-C2** | Struktur: Kategorien/Foren-Baum, Admin „Struktur“ (Drag & Drop, Tastatur), Forentypen und -status, Rechte-Matrix inkl. Vererbung, Forum-Moderatoren, `CommunityAccess` mit Tests | COM-CORE-02, COM-MOD-01, COM-MOD-02 | C1 | 8 |
 | **WP-C3** | Inhalte: Themen/Beiträge erstellen, antworten, zitieren, bearbeiten mit Verlauf, weich löschen; Zähler; Seitennavigation; Startseite, Forum, Thema, Listen „Neu/Aktiv/Unbeantwortet“; Permalinks; Gelesen-Status | COM-CORE-03…06, 09, 11, 12, COM-INT-09, 10 | C2 | 12 |
 | **WP-C4** | Editor & Rendering: Markdown-Renderer, Purifier-Profil `community`, Code-Highlighting, Vorschau-Endpunkt, Werkzeugleiste, lokale Entwürfe (Basis), BBCode-Renderer für Altbestand | COM-CORE-07, 08, COM-UX-05 (lokal) | C0, C3 | 7 |
-| **WP-C5** | Sicherheit & Spam: `CaptchaService` (eingebaut, Proof-of-Work, Bild – keine Drittanbieter, E7), Antispam-Schichten, Rate-Limits/Langsamer Modus, Wortfilter, Freigabe-Warteschlange, Sicherheits-Checkliste | COM-MOD-10, 12, 13, 14, COM-CORE-01 | C3 | 8 |
+| **WP-C5** | Sicherheit & Spam: `CaptchaService` (eingebaut, Proof-of-Work, Bild: keine Drittanbieter, E7), Antispam-Schichten, Rate-Limits/Langsamer Modus, Wortfilter, Freigabe-Warteschlange, Sicherheits-Checkliste | COM-MOD-10, 12, 13, 14, COM-CORE-01 | C3 | 8 |
 | **WP-C6** | Moderation: schließen, anpinnen, Ankündigung, verschieben, ausblenden/wiederherstellen, Beiträge verschieben, Massenaktionen, Melde-System, Sperren, Protokoll, Badges, Admin-Seiten Moderation | COM-MOD-03, 04, 06, 07, 09, 11 | C3, C5 | 9 |
 | **WP-C7** | Interaktion: Abos, In-App-Benachrichtigungen (Core), Sofort-Mails, Reaktionen, Lösung markieren, Ränge, Profil-Abschnitt, „Nachricht senden“ (Core-Postfach), Mitgliederbereich `community` | COM-INT-01, 02 (sofort), 03, 05, 06, 07, 08 (1:1), COM-PLUS-01, 04 | C3 | 9 |
 | **WP-C8** | Anhänge: Upload, Prüfung, Bildneukodierung, privater Speicher, Auslieferung mit Rechten, Vorschaubilder, verwaiste Uploads | COM-UX-02 | C3, C5 | 5 |
@@ -59,10 +59,10 @@ flowchart LR
 
 | Meilenstein | Inhalt | Kriterium |
 |---|---|---|
-| M1 – Lesbar | WP-C1…C3 | Struktur anlegen, Themen lesen/schreiben unter `/forum` auf einer Testinstallation |
-| M2 – Sicher | WP-C4…C6, C8 | Sicherheits-Checkliste grün, XSS-Korpus und Rechte-Matrix bestanden |
-| M3 – Funktionsumfang | WP-C7, C9…C11 | Funktions-Referenz aus MIGRATION-CMS-FORUM §2 abgedeckt |
-| M4 – Release P1 | WP-C13 | TEST-PLAN P1 grün, Lighthouse ≥ 90, Doku und Changelog, RELEASE-Paket |
+| M1: Lesbar | WP-C1…C3 | Struktur anlegen, Themen lesen/schreiben unter `/forum` auf einer Testinstallation |
+| M2: Sicher | WP-C4…C6, C8 | Sicherheits-Checkliste grün, XSS-Korpus und Rechte-Matrix bestanden |
+| M3: Funktionsumfang | WP-C7, C9…C11 | Funktions-Referenz aus MIGRATION-CMS-FORUM §2 abgedeckt |
+| M4: Release P1 | WP-C13 | TEST-PLAN P1 grün, Lighthouse ≥ 90, Doku und Changelog, RELEASE-Paket |
 
 ### 4. Risiken
 

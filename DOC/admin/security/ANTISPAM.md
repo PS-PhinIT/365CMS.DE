@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Anti-Spam
+# 365CMS Projektdokumentation | Admin: Anti-Spam
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/antispam` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_antispam` | **Core-Modul:** `security`

@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Sicherheit & Datenschutz
+# 365CMS Projektdokumentation | Community: Sicherheit & Datenschutz
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
@@ -34,15 +34,15 @@ retention periods, third-party captchas and consent) and the security checklist 
 
 1. **Konto:** E-Mail bestätigt, nicht gesperrt, Vertrauensstufe.
 2. **Formular:** CSRF, Honeypot (`website_url` wie `FormSpamGuard::HONEYPOT_FIELD`), signierte Startzeit (Mindestzeit).
-3. **Captcha** (nur wenn Stufe/Einstellung es verlangt) – §3.
+3. **Captcha** (nur wenn Stufe/Einstellung es verlangt): §3.
 4. **Grenzen:** Abstand zwischen Beiträgen/Themen, Höchstzahl pro Stunde/Tag, Langsamer Modus.
 5. **Inhalt:** `AntispamService::evaluate()` (Links, Schlüsselwörter, leerer User-Agent), Wortfilter, Link-/Bildgrenzen der Stufe, Duplikat-Erkennung (gleicher Text in den letzten 24 h).
-6. **Optional:** Filter `cms_community_spam_check` (z. B. KI-Signal, COM-PLUS-11) – darf nur auf „prüfen“ setzen, nie allein löschen.
+6. **Optional:** Filter `cms_community_spam_check` (z. B. KI-Signal, COM-PLUS-11): darf nur auf „prüfen“ setzen, nie allein löschen.
 7. **Ergebnis:** veröffentlichen, in die Warteschlange (`pending`) oder ablehnen; Ablehnungen in `security_log` (ohne Inhalt, mit Grund).
 
 ### 3. Captcha: Dienst und Bibliotheken
 
-> **Entscheidung E7 (14.11.2026):** `gregwar/captcha` als Asset (Bild-Captcha) plus eingebaute Rechenaufgabe als barrierefreie Alternative. **Keine Drittanbieter** – Turnstile, hCaptcha und reCAPTCHA werden nicht eingebaut (Vorgabe „nichts extern“). Die Bewertung unten bleibt als Begründung.
+> **Entscheidung E7 (14.11.2026):** `gregwar/captcha` als Asset (Bild-Captcha) plus eingebaute Rechenaufgabe als barrierefreie Alternative. **Keine Drittanbieter**. Turnstile, hCaptcha und reCAPTCHA werden nicht eingebaut (Vorgabe „nichts extern“). Die Bewertung unten bleibt als Begründung.
 
 **`CaptchaService`** (neu, `core/Services/Security/`): eine Schnittstelle `CaptchaProvider` mit `render(context)`,
 `verify(request, context)`, `requiresConsent()`, `cspSources()`. Genutzt von Community, Formularen (ersetzt die
@@ -54,7 +54,7 @@ Bewertung der vorgeschlagenen Bibliotheken (Stand der Repositories am 14.11.2026
 | Bibliothek | Art | Lizenz / Pflege | Abhängigkeiten | Datenschutz | Bewertung |
 |---|---|---|---|---|---|
 | [`gregwar/captcha`](https://github.com/gregwar/captcha) | Bild-Captcha, lokal erzeugt | MIT; aktiv (letzter Commit 27.08.2026); Schriften mit eigenen Lizenzdateien | PHP ^8.2, `ext-gd`, `ext-mbstring`, `ext-fileinfo`, `symfony/finder` | keine Drittanbieter, keine Einwilligung nötig | **Geeignet** als Anbieter „Bild-Captcha“. Grenzen: für OCR-Bots lösbar, nicht barrierefrei ohne Alternative → nur zusammen mit Text-Alternative und als eine Schicht von mehreren. `symfony/finder` als zusätzliche Vendor-Bibliothek prüfen (Core bringt `symfony-contracts` mit, nicht `finder`). |
-| [`google/recaptcha`](https://github.com/google/recaptcha) | Client für Google reCAPTCHA (v2/v3) | BSD-3-Clause; aktiv (23.10.2026) | PHP ≥ 8.4 | Daten an Google (USA): Einwilligung über Cookie-Consent (Kategorie „Externe Medien/Sicherheit“), Datenschutztext, CSP-Freigabe `www.google.com`, `www.gstatic.com` | **Optional**, nie Standard. Ohne Einwilligung Rückfall auf einen lokalen Anbieter. Die Bibliothek ist nur ein dünner HTTP-Client; die Prüfung geht auch ohne sie über einen einfachen HTTP-Aufruf wie bei Turnstile – dann entfällt eine Abhängigkeit. |
+| [`google/recaptcha`](https://github.com/google/recaptcha) | Client für Google reCAPTCHA (v2/v3) | BSD-3-Clause; aktiv (23.10.2026) | PHP ≥ 8.4 | Daten an Google (USA): Einwilligung über Cookie-Consent (Kategorie „Externe Medien/Sicherheit“), Datenschutztext, CSP-Freigabe `www.google.com`, `www.gstatic.com` | **Optional**, nie Standard. Ohne Einwilligung Rückfall auf einen lokalen Anbieter. Die Bibliothek ist nur ein dünner HTTP-Client; die Prüfung geht auch ohne sie über einen einfachen HTTP-Aufruf wie bei Turnstile: dann entfällt eine Abhängigkeit. |
 | [`olakunlevpn/phpcapcha`](https://github.com/olakunlevpn/phpcapcha) | Bild-/Rechen-Captcha, lokal | `composer.json` nennt MIT, aber **keine LICENSE-Datei** im Repository; sehr kleines Projekt | PHP ^8.0, `ext-gd` | lokal | **Nicht empfohlen**: mitgelieferte Schrift `fonts/Monaco.ttf` ist eine proprietäre Apple-Schrift (Weitergabe nicht erlaubt); Lizenzlage unklar. Funktional durch `gregwar/captcha` + eingebaute Rechenaufgabe abgedeckt. |
 | [`capskip/capskip-php`](https://github.com/capskip/capskip-php) | **Captcha-Löser** (SDK für eine Desktop-App, die reCAPTCHA, Turnstile, hCaptcha, ALTCHA, Friendly Captcha u. a. automatisch löst) | MIT | PHP ≥ 8.0, `ext-curl` | – | **Ausgeschlossen.** Kein Schutz, sondern ein Werkzeug zum Umgehen von Captchas. Gehört nicht in das CMS. Für Tests der eigenen Abwehr wird es ebenfalls nicht eingesetzt (Tests prüfen die Serverlogik direkt). |
 

@@ -1,4 +1,4 @@
-# 365CMS – Admin: Medien-Werkzeuge und Urheberangaben
+# 365CMS: Admin: Medien-Werkzeuge und Urheberangaben
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/media-tools` | **Capability:** `manage_media`
@@ -6,7 +6,7 @@
 ## English (summary)
 
 *Media → Media tools* regenerates the thumbnails (and optionally WebP versions) of all images in the media library
-in the current sizes – as a background job with progress, cancel and continuation by the hourly cron when the page is
+in the current sizes, as a background job with progress, cancel and continuation by the hourly cron when the page is
 closed. The page also holds the output switches for image credits (credit line in captions, Schema.org
 `ImageObject`, prefill from EXIF/IPTC on upload). Author, license, source and “AI-generated” are maintained per image in
 the media library. A second job regenerates AVIF versions (steps of 20 images, kept only if smaller than
@@ -36,7 +36,7 @@ JSON-Endpunkt: `/admin/media-tools-api` (POST, Token `admin_media_tools_api`): `
 
 ### Verwendungsindex neu aufbauen
 
-Karte „Verwendungsindex“: baut den dauerhaften Index (`media_usage`) über alle Inhaltsarten neu auf – Auftrag
+Karte „Verwendungsindex“: baut den dauerhaften Index (`media_usage`) über alle Inhaltsarten neu auf. Auftrag
 `media_usage`, je Schritt 50 Inhalte, Abbruch, Fortsetzung im stündlichen Cron. Am Ende entfernt der Lauf Einträge von
 Inhalten, die es nicht mehr gibt, und setzt den Merker `media_usage_index_built_at`. Erst danach nutzen Mediathek und
 Papierkorb den Index (siehe [MEDIA.md](MEDIA.md)). API: `start`/`status` mit `job=usage`.
@@ -58,11 +58,11 @@ und Abbruch, Fortsetzung im stündlichen Cron. Idempotent: aktuelle AVIF-Dateien
 ein wiederholter Lauf erzeugt nichts doppelt.
 
 **Auslieferung:** Editor.js-Bild, Galerie und Medien-Text sowie die `<picture>`-Vorlagen von `cms-default` geben
-`<source type="image/avif">` vor `<source type="image/webp">` aus – nur wenn die Datei existiert und nur für Dateien unter
+`<source type="image/avif">` vor `<source type="image/webp">` aus, nur wenn die Datei existiert und nur für Dateien unter
 `UPLOAD_URL` (`AvifDerivativeService::pictureSources()`/`pictureHtml()`). Die Lightbox umschließt das ganze `<picture>`,
 damit die Quellen wirksam bleiben.
 
-**Löschen:** Wird ein Bild in der Mediathek gelöscht, entfernt der Core seine erzeugten Fassungen mit – Größen, WebP und
+**Löschen:** Wird ein Bild in der Mediathek gelöscht, entfernt der Core seine erzeugten Fassungen mit. Größen, WebP und
 AVIF (auch der Größen). Dateien gleichen Namens, die selbst hochgeladen wurden (eigene Metadaten), oder die älter sind als
 das Original, bleiben stehen. Umbenennen und Verschieben nehmen die Fassungen weiterhin nicht mit.
 

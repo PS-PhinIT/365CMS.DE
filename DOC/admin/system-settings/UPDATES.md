@@ -1,11 +1,11 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Updates
+# 365CMS Projektdokumentation | Admin: Updates
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/updates` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_updates`
 
 ## English (summary)
 
-`/admin/updates` (`CMS/admin/updates.php` → `CMS/admin/modules/system/UpdatesModule.php` → `CMS\Services\UpdateService`, view `CMS/admin/views/system/updates.php`) checks and installs updates for the core, plugins and the active theme, and runs pending database migrations (`DatabaseUpdateRunner`). Packages must come from allow-listed hosts and carry a SHA-256 checksum; core updates preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/` and `uploads/`; in `plugins/` and `themes/` only the bundled folders (`cms-importer`, `cms-default`) are replaced, so plugins and themes installed later stay in place (since 4.0.0 – an update from 3.x still runs the old updater, which replaces both folders completely). Actions: `check_updates`, `run_database_update`, `install_core`, `install_plugin`, `install_theme`. Since 4.0.0, a core manifest with `"critical": true` is shown as a red "critical update" alert.
+`/admin/updates` (`CMS/admin/updates.php` → `CMS/admin/modules/system/UpdatesModule.php` → `CMS\Services\UpdateService`, view `CMS/admin/views/system/updates.php`) checks and installs updates for the core, plugins and the active theme, and runs pending database migrations (`DatabaseUpdateRunner`). Packages must come from allow-listed hosts and carry a SHA-256 checksum; core updates preserve `backups/`, `cache/`, `config/`, `config.php`, `logs/` and `uploads/`; in `plugins/` and `themes/` only the bundled folders (`cms-importer`, `cms-default`) are replaced, so plugins and themes installed later stay in place (since 4.0.0, an update from 3.x still runs the old updater, which replaces both folders completely). Actions: `check_updates`, `run_database_update`, `install_core`, `install_plugin`, `install_theme`. Since 4.0.0, a core manifest with `"critical": true` is shown as a red "critical update" alert.
 
 ## Deutsch
 
@@ -17,7 +17,7 @@
 | Datenbank | installierte und Ziel-Schema-Version (`SchemaManager::SCHEMA_VERSION = v26`), Downgrade-Erkennung |
 | Plugins | installierte vs. verfügbare Versionen aus der Plugin-Registry |
 | Theme | aktives Theme vs. Marktplatz-Version |
-| Systemvoraussetzungen | PHP-Version, MySQL/MariaDB-Version, Erweiterungen (`pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`), Schreibrechte (`uploads`, `cache`, `logs`, Backup-Verzeichnis – `backups` bzw. seit 4.0.0 `CMS_BACKUP_PATH` –, `assets`), freier Speicherplatz |
+| Systemvoraussetzungen | PHP-Version, MySQL/MariaDB-Version, Erweiterungen (`pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`), Schreibrechte (`uploads`, `cache`, `logs`, Backup-Verzeichnis: `backups` bzw. seit 4.0.0 `CMS_BACKUP_PATH` –, `assets`), freier Speicherplatz |
 | Historie | letzte Update-Vorgänge |
 
 ### Update-Quellen

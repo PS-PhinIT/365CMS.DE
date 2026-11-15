@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Medienverwaltung
+# 365CMS Projektdokumentation | Admin: Medienverwaltung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/media` | **Capability:** `manage_media` | **CSRF-Aktion:** `admin_media`
@@ -53,9 +53,9 @@ die Action `cms_register_media_reference_extractors` an (`$index->register(new M
 
 Ist „AVIF zusätzlich erzeugen“ (`auto_avif`) an, legt der Upload nach der WebP-Fassung je Bildgröße (Original, `-small`, `-medium`, `-large`, `-banner`) eine AVIF-Datei an (`Media\AvifDerivativeService`). Sie bleibt nur, wenn sie kleiner ist als die WebP-Fassung derselben Größe; Bilder über 25 Megapixel werden übersprungen. Beim Speichern prüft eine Probe-Kodierung, ob GD wirklich AVIF schreiben kann (Option `media_capabilities`). Bestehende Bilder holt die Karte „AVIF nachgenerieren“ unter *Medien-Werkzeuge* nach (`Media\AvifRegenerationService`, Auftrag `media_avif`, [MEDIA-TOOLS.md](MEDIA-TOOLS.md)). Nach jeder erzeugten Fassung läuft die Action `cms_media_derivative_created`.
 
-Editor.js-Bild, Galerie und Medien-Text sowie die `<picture>`-Vorlagen von `cms-default` geben `<picture>` aus, sobald eine AVIF- oder WebP-Fassung existiert: zuerst `<source type="image/avif">`, dann `<source type="image/webp">`, danach das ursprüngliche `<img>` als Rückfall – nur für tatsächlich vorhandene Dateien. Das gilt auch für bestehende WebP-Fassungen (`auto_webp` ist standardmäßig an). Für `<picture>` gilt `display: contents` (`editorjs-content.css`), damit das Layout unverändert bleibt. **Hinweis für eigene Theme-Regeln:** Kindselektoren wie `figure > img` greifen nicht mehr, weil `<img>` nun in `<picture>` steht; Nachfahren-Selektoren (`figure img`) wirken weiter.
+Editor.js-Bild, Galerie und Medien-Text sowie die `<picture>`-Vorlagen von `cms-default` geben `<picture>` aus, sobald eine AVIF- oder WebP-Fassung existiert: zuerst `<source type="image/avif">`, dann `<source type="image/webp">`, danach das ursprüngliche `<img>` als Rückfall, nur für tatsächlich vorhandene Dateien. Das gilt auch für bestehende WebP-Fassungen (`auto_webp` ist standardmäßig an). Für `<picture>` gilt `display: contents` (`editorjs-content.css`), damit das Layout unverändert bleibt. **Hinweis für eigene Theme-Regeln:** Kindselektoren wie `figure > img` greifen nicht mehr, weil `<img>` nun in `<picture>` steht; Nachfahren-Selektoren (`figure img`) wirken weiter.
 
-**Löschen:** *Löschen* in der Mediathek entfernt zusätzlich die erzeugten Fassungen eines Bildes – Größen (`-small` …), WebP und AVIF. Dateien gleichen Namens, die selbst hochgeladen wurden, bleiben stehen. Der Verwendungsindex erfasst die Fassungen über ihr Original (nur, wenn das Original existiert).
+**Löschen:** *Löschen* in der Mediathek entfernt zusätzlich die erzeugten Fassungen eines Bildes. Größen (`-small` …), WebP und AVIF. Dateien gleichen Namens, die selbst hochgeladen wurden, bleiben stehen. Der Verwendungsindex erfasst die Fassungen über ihr Original (nur, wenn das Original existiert).
 
 ### Tab „Beitrags- & Site-Medien“ (`featured`)
 
@@ -87,7 +87,7 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 
 ### Nachträgliche Bildverarbeitung
 
-Über die Jobs `start_media_processing_job` / `process_media_processing_job` / `cancel_media_processing_job` können bestehende Bilder nachträglich verarbeitet werden. Modi: `all`, `webp`, `thumbnails`. Der Job arbeitet in Schritten zu 5 Dateien, höchstens 1000 Kandidaten und überspringt Dateien über 1 MB. Fortschritt wird per AJAX abgefragt; ein Abbruch ist jederzeit möglich. Alle Vorschaubilder nach geänderten Größen neu erzeugen – mit Fortschritt und Fortsetzung im Cron – geht unter *Medien → Medien-Werkzeuge* ([MEDIA-TOOLS.md](MEDIA-TOOLS.md)); dort stehen auch die Schalter für Urheberangaben.
+Über die Jobs `start_media_processing_job` / `process_media_processing_job` / `cancel_media_processing_job` können bestehende Bilder nachträglich verarbeitet werden. Modi: `all`, `webp`, `thumbnails`. Der Job arbeitet in Schritten zu 5 Dateien, höchstens 1000 Kandidaten und überspringt Dateien über 1 MB. Fortschritt wird per AJAX abgefragt; ein Abbruch ist jederzeit möglich. Alle Vorschaubilder nach geänderten Größen neu erzeugen, mit Fortschritt und Fortsetzung im Cron, geht unter *Medien → Medien-Werkzeuge* ([MEDIA-TOOLS.md](MEDIA-TOOLS.md)); dort stehen auch die Schalter für Urheberangaben.
 
 ### Upload-Prüfung
 
@@ -98,7 +98,7 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 
 ### Auslieferung geschützter Dateien
 
-`GET /media-file?path=<relativ>&disposition=inline|attachment` prüft Pfad (keine `..`, keine versteckten Segmente), Lesbarkeit und – für `member/user-<id>/…` – dass der angemeldete Benutzer Eigentümer oder Administrator ist. Der alte Endpunkt `/media-proxy.php` leitet weiter.
+`GET /media-file?path=<relativ>&disposition=inline|attachment` prüft Pfad (keine `..`, keine versteckten Segmente), Lesbarkeit und, für `member/user-<id>/…`, dass der angemeldete Benutzer Eigentümer oder Administrator ist. Der alte Endpunkt `/media-proxy.php` leitet weiter.
 
 ### Verwandte Dokumente
 

@@ -1,4 +1,4 @@
-# 365CMS – Admin: Letzte Änderungen
+# 365CMS: Admin: Letzte Änderungen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

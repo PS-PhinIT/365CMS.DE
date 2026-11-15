@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Community – Architektur
+# 365CMS Projektdokumentation | Community: Architektur
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
@@ -203,9 +203,9 @@ Die Vorschau im Editor nutzt denselben Weg über `POST /forum/api/vorschau` (nic
 ### 8. Leistung und Zwischenspeicher
 
 - **Zähler denormalisiert:** `topic_count`, `post_count`, `last_post_id`, `last_post_at` an Forum und Thema; Pflege in derselben Transaktion wie der Beitrag; Reparatur-Job „Zähler neu berechnen“ (`BatchJobService`).
-- **Indizes** für alle Listen: `(forum_id, is_pinned, last_post_at)`, `(topic_id, status, id)`, `(user_id, created_at)` – siehe [DATA-MODEL.md](DATA-MODEL.md).
+- **Indizes** für alle Listen: `(forum_id, is_pinned, last_post_at)`, `(topic_id, status, id)`, `(user_id, created_at)`: siehe [DATA-MODEL.md](DATA-MODEL.md).
 - **Seiten in langen Themen:** Position eines Beitrags = Zählung über `(topic_id, status, id)`; ab Seite 50 Keyset-Abfrage (`id > letzter`) statt `OFFSET`.
-- **Cache:** Gäste erhalten ganze Seiten aus dem Cache (Schlüssel enthält Forum-/Thema-Version und Sprache), Angemeldete nur Fragmente (gerenderte Beiträge, Forenbaum) – keine Vermischung personenbezogener Teile. Seiten mit Formularen/Token sind `private` (wie im Theme mit `sendCoreFormCacheHeaders`).
+- **Cache:** Gäste erhalten ganze Seiten aus dem Cache (Schlüssel enthält Forum-/Thema-Version und Sprache), Angemeldete nur Fragmente (gerenderte Beiträge, Forenbaum), keine Vermischung personenbezogener Teile. Seiten mit Formularen/Token sind `private` (wie im Theme mit `sendCoreFormCacheHeaders`).
 - **Polling** neuer Beiträge nur bei sichtbarem Tab, Intervall 60 s, Antwort mit `ETag`/304.
 - **Abfragebudget:** Startseite, Forum und Thema ≤ 6 SQL-Abfragen bei warmem Cache (Test im TEST-PLAN).
 

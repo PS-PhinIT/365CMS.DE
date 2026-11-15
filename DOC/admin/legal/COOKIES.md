@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Cookie-Manager & Einwilligung
+# 365CMS Projektdokumentation | Admin: Cookie-Manager & Einwilligung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/cookie-manager` (Alt-Route `/admin/cookies`) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_cookies` | **Core-Modul:** `legal`

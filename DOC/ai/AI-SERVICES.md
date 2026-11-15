@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: KI-Dienste
+# 365CMS Projektdokumentation | KI-Dienste
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Complete user and technical documentation for the protected 365CMS AI Services, including administration, translation, content drafts, SEO metadata, provider policies, quotas, security, and integration assets.
@@ -312,18 +312,18 @@ The central executor applies policy and quota checks before a provider operation
 
 #### Admin entry points
 
-- `CMS/admin/ai-services.php` — overview route wrapper.
-- `CMS/admin/ai-translation.php` — translation route wrapper.
-- `CMS/admin/ai-content-creator.php` — content creator route wrapper.
-- `CMS/admin/ai-seo-creator.php` — SEO creator route wrapper.
-- `CMS/admin/ai-settings.php` — settings route wrapper.
-- `CMS/admin/ai-page.php` — shared route configuration, access checks, action routing, CSRF shell, and section redirects.
-- `CMS/admin/modules/system/AiServicesModule.php` — admin data loading and mutation actions.
-- `CMS/admin/modules/system/AiEditorJsTranslationModule.php` — Editor.js translation request handling.
-- `CMS/admin/modules/system/AiEditorJsSeoMetadataModule.php` — SEO metadata request handling.
-- `CMS/admin/views/system/ai-services.php` — shared section view.
-- `CMS/admin/ai-translate-editorjs.php` — protected JSON translation endpoint.
-- `CMS/admin/ai-generate-seo-metadata.php` — protected JSON SEO endpoint.
+- `CMS/admin/ai-services.php`, overview route wrapper.
+- `CMS/admin/ai-translation.php`, translation route wrapper.
+- `CMS/admin/ai-content-creator.php`, content creator route wrapper.
+- `CMS/admin/ai-seo-creator.php`. SEO creator route wrapper.
+- `CMS/admin/ai-settings.php`, settings route wrapper.
+- `CMS/admin/ai-page.php`, shared route configuration, access checks, action routing, CSRF shell, and section redirects.
+- `CMS/admin/modules/system/AiServicesModule.php`, admin data loading and mutation actions.
+- `CMS/admin/modules/system/AiEditorJsTranslationModule.php`. Editor.js translation request handling.
+- `CMS/admin/modules/system/AiEditorJsSeoMetadataModule.php`. SEO metadata request handling.
+- `CMS/admin/views/system/ai-services.php`, shared section view.
+- `CMS/admin/ai-translate-editorjs.php`, protected JSON translation endpoint.
+- `CMS/admin/ai-generate-seo-metadata.php`, protected JSON SEO endpoint.
 
 #### Core AI services
 
@@ -337,21 +337,21 @@ The central executor applies policy and quota checks before a provider operation
 - `CMS/core/Services/AI/EditorJsTranslationPipeline.php`
 - `CMS/core/Services/AI/ContentDraftGenerationPipeline.php`
 - `CMS/core/Services/AI/SeoMetadataGenerationPipeline.php`
-- `CMS/core/Services/AI/AiService.php` — façade used by admin modules
-- `CMS/core/Services/AI/AiProviderInterface.php` — provider contract
-- `CMS/core/Services/AI/Providers/AbstractPromptingAiProvider.php` — shared prompt/JSON handling
-- `CMS/core/Services/AI/Providers/MockAiProvider.php` — deterministic local provider (default `active_provider_id = mock`)
-- `CMS/core/Services/AI/Providers/OllamaAiProvider.php` — self-hosted Ollama
-- `CMS/core/Services/AI/Providers/AzureOpenAiProvider.php` — Azure OpenAI deployments
-- `CMS/core/Services/AI/Providers/OpenAiCompatibleProvider.php` — OpenAI, Mistral and OpenRouter (provider types `openai`, `mistral`, `openrouter`)
+- `CMS/core/Services/AI/AiService.php`, façade used by admin modules
+- `CMS/core/Services/AI/AiProviderInterface.php`, provider contract
+- `CMS/core/Services/AI/Providers/AbstractPromptingAiProvider.php`, shared prompt/JSON handling
+- `CMS/core/Services/AI/Providers/MockAiProvider.php`, deterministic local provider (default `active_provider_id = mock`)
+- `CMS/core/Services/AI/Providers/OllamaAiProvider.php`, self-hosted Ollama
+- `CMS/core/Services/AI/Providers/AzureOpenAiProvider.php`. Azure OpenAI deployments
+- `CMS/core/Services/AI/Providers/OpenAiCompatibleProvider.php`. OpenAI, Mistral and OpenRouter (provider types `openai`, `mistral`, `openrouter`)
 
 Known provider types (`AiSettingsService::PROVIDER_SLUGS`): `mock`, `openai`, `mistral`, `azure_openai`, `ollama`, `openrouter`.
 
 #### Browser assets and permissions
 
-- `CMS/assets/js/admin-ai-services.js` — CSP-compatible AI admin behavior.
-- `CMS/assets/js/admin-content-editor.js` — editor translation and preview/diff integration.
-- `CMS/includes/functions/roles.php` — default AI capabilities.
+- `CMS/assets/js/admin-ai-services.js`. CSP-compatible AI admin behavior.
+- `CMS/assets/js/admin-content-editor.js`, editor translation and preview/diff integration.
+- `CMS/includes/functions/roles.php`, default AI capabilities.
 
 ### 15. Routes and action contract
 
@@ -897,18 +897,18 @@ Der zentrale Executor prüft Policies und Quotas vor dem Provider-Aufruf. Transi
 
 #### Admin
 
-- `CMS/admin/ai-services.php` — Wrapper für die Übersichtsroute.
-- `CMS/admin/ai-translation.php` — Wrapper für Übersetzung.
-- `CMS/admin/ai-content-creator.php` — Wrapper für Content Creator.
-- `CMS/admin/ai-seo-creator.php` — Wrapper für SEO Creator.
-- `CMS/admin/ai-settings.php` — Wrapper für Einstellungen.
-- `CMS/admin/ai-page.php` — gemeinsame Routen-, Rechte-, Aktions- und CSRF-Logik.
-- `CMS/admin/modules/system/AiServicesModule.php` — Daten und Mutationsaktionen im Admin.
-- `CMS/admin/modules/system/AiEditorJsTranslationModule.php` — Editor.js-Übersetzungsrequest.
-- `CMS/admin/modules/system/AiEditorJsSeoMetadataModule.php` — SEO-Request.
-- `CMS/admin/views/system/ai-services.php` — gemeinsame Bereichsansicht.
-- `CMS/admin/ai-translate-editorjs.php` — geschützter JSON-Übersetzungsendpoint.
-- `CMS/admin/ai-generate-seo-metadata.php` — geschützter JSON-SEO-Endpoint.
+- `CMS/admin/ai-services.php`. Wrapper für die Übersichtsroute.
+- `CMS/admin/ai-translation.php`. Wrapper für Übersetzung.
+- `CMS/admin/ai-content-creator.php`. Wrapper für Content Creator.
+- `CMS/admin/ai-seo-creator.php`. Wrapper für SEO Creator.
+- `CMS/admin/ai-settings.php`. Wrapper für Einstellungen.
+- `CMS/admin/ai-page.php`, gemeinsame Routen-, Rechte-, Aktions- und CSRF-Logik.
+- `CMS/admin/modules/system/AiServicesModule.php`. Daten und Mutationsaktionen im Admin.
+- `CMS/admin/modules/system/AiEditorJsTranslationModule.php`. Editor.js-Übersetzungsrequest.
+- `CMS/admin/modules/system/AiEditorJsSeoMetadataModule.php`. SEO-Request.
+- `CMS/admin/views/system/ai-services.php`, gemeinsame Bereichsansicht.
+- `CMS/admin/ai-translate-editorjs.php`, geschützter JSON-Übersetzungsendpoint.
+- `CMS/admin/ai-generate-seo-metadata.php`, geschützter JSON-SEO-Endpoint.
 
 #### Core
 
@@ -922,21 +922,21 @@ Der zentrale Executor prüft Policies und Quotas vor dem Provider-Aufruf. Transi
 - `CMS/core/Services/AI/EditorJsTranslationPipeline.php`
 - `CMS/core/Services/AI/ContentDraftGenerationPipeline.php`
 - `CMS/core/Services/AI/SeoMetadataGenerationPipeline.php`
-- `CMS/core/Services/AI/AiService.php` — Fassade für die Admin-Module
-- `CMS/core/Services/AI/AiProviderInterface.php` — Provider-Vertrag
-- `CMS/core/Services/AI/Providers/AbstractPromptingAiProvider.php` — gemeinsame Prompt-/JSON-Logik
-- `CMS/core/Services/AI/Providers/MockAiProvider.php` — deterministischer lokaler Provider (Standard `active_provider_id = mock`)
-- `CMS/core/Services/AI/Providers/OllamaAiProvider.php` — selbst gehostetes Ollama
-- `CMS/core/Services/AI/Providers/AzureOpenAiProvider.php` — Azure-OpenAI-Deployments
-- `CMS/core/Services/AI/Providers/OpenAiCompatibleProvider.php` — OpenAI, Mistral und OpenRouter (Typen `openai`, `mistral`, `openrouter`)
+- `CMS/core/Services/AI/AiService.php`. Fassade für die Admin-Module
+- `CMS/core/Services/AI/AiProviderInterface.php`. Provider-Vertrag
+- `CMS/core/Services/AI/Providers/AbstractPromptingAiProvider.php`, gemeinsame Prompt-/JSON-Logik
+- `CMS/core/Services/AI/Providers/MockAiProvider.php`, deterministischer lokaler Provider (Standard `active_provider_id = mock`)
+- `CMS/core/Services/AI/Providers/OllamaAiProvider.php`, selbst gehostetes Ollama
+- `CMS/core/Services/AI/Providers/AzureOpenAiProvider.php`. Azure-OpenAI-Deployments
+- `CMS/core/Services/AI/Providers/OpenAiCompatibleProvider.php`. OpenAI, Mistral und OpenRouter (Typen `openai`, `mistral`, `openrouter`)
 
 Bekannte Provider-Typen (`AiSettingsService::PROVIDER_SLUGS`): `mock`, `openai`, `mistral`, `azure_openai`, `ollama`, `openrouter`.
 
 #### Assets und Rollen
 
-- `CMS/assets/js/admin-ai-services.js` — CSP-kompatibles Admin-JavaScript.
-- `CMS/assets/js/admin-content-editor.js` — Editor-Übersetzung und Preview/Diff.
-- `CMS/includes/functions/roles.php` — Default-Capabilities.
+- `CMS/assets/js/admin-ai-services.js`. CSP-kompatibles Admin-JavaScript.
+- `CMS/assets/js/admin-content-editor.js`. Editor-Übersetzung und Preview/Diff.
+- `CMS/includes/functions/roles.php`. Default-Capabilities.
 
 ### 15. Routen und Actions
 

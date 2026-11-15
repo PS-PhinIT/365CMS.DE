@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: CMSFILESTRUCTUR
+# 365CMS Projektdokumentation | CMSFILESTRUCTUR
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
@@ -108,7 +108,7 @@ Verified files in `CMS/`:
 - `update.json`
 - `update.php`
 
-Not versioned / nicht versioniert: `robots.txt` – written at runtime when saved under SEO → Sitemap & robots.txt / wird zur Laufzeit erzeugt, wenn sie unter SEO → Sitemap & robots.txt gespeichert wird.
+Not versioned / nicht versioniert: `robots.txt`, written at runtime when saved under SEO → Sitemap & robots.txt / wird zur Laufzeit erzeugt, wenn sie unter SEO → Sitemap & robots.txt gespeichert wird.
 
 Directories at this level: `admin`, `assets`, `backups`, `cache`, `config`, `core`, `includes`, `install`, `lang`, `logs`, `marketplace`, `member`, `plugins`, `themes`, `uploads`, `vendor`, `views`.
 
@@ -181,20 +181,20 @@ Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Content/`, `ContentTypes/`,
 
 Identität, Medien, Redaktion, Betrieb / Identity, media, editorial, operations:
 
-- `Services/Security/` — `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
-- `Services/Media/` additions — `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
-- `Services/Content/` — `ContentStatus.php` (status values incl. `pending`), `ContentWorkflow.php` (four-eyes review, preview links / Vier-Augen-Prinzip, Vorschau-Links), `ContentExpiryService.php` (expiry and review reminders / Ablauf und Wiedervorlage)
-- `Services/ReusableBlocks/` — `ReusableBlock.php`, `ReusableBlockService.php`, `ReusableBlockMediaExtractor.php` (EditorJS block templates / EditorJS Block Vorlagen)
-- `Services/Backup/` — `OffsiteBackupService.php`, `S3Client.php`, `S3Config.php`, `SigV4Signer.php` (S3-compatible offsite backups / S3-kompatible Offsite-Backups)
-- `Services/Webhooks/WebhookService.php` — outbound webhooks / ausgehende Webhooks
-- `Services/Payments/` — `PaymentService.php`, `PaymentSettings.php`, `PaymentGatewayInterface.php`, `AbstractGateway.php`, `StripeGateway.php`, `MollieGateway.php`
-- `Services/FeatureHooks/` additions — `BackupOffsiteHooks`, `ContentExpiryHooks`, `ContentWorkflowHooks`, `ReusableBlockHooks`, `WebhookHooks`
-- `Services/Newsletter/` additions — `NewsletterConsentLog.php`, `NewsletterMemberService.php`
+- `Services/Security/`, `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
+- `Services/Media/` additions, `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
+- `Services/Content/`, `ContentStatus.php` (status values incl. `pending`), `ContentWorkflow.php` (four-eyes review, preview links / Vier-Augen-Prinzip, Vorschau-Links), `ContentExpiryService.php` (expiry and review reminders / Ablauf und Wiedervorlage)
+- `Services/ReusableBlocks/`, `ReusableBlock.php`, `ReusableBlockService.php`, `ReusableBlockMediaExtractor.php` (EditorJS block templates / EditorJS Block Vorlagen)
+- `Services/Backup/`, `OffsiteBackupService.php`, `S3Client.php`, `S3Config.php`, `SigV4Signer.php` (S3-compatible offsite backups / S3-kompatible Offsite-Backups)
+- `Services/Webhooks/WebhookService.php`, outbound webhooks / ausgehende Webhooks
+- `Services/Payments/`, `PaymentService.php`, `PaymentSettings.php`, `PaymentGatewayInterface.php`, `AbstractGateway.php`, `StripeGateway.php`, `MollieGateway.php`
+- `Services/FeatureHooks/` additions, `BackupOffsiteHooks`, `ContentExpiryHooks`, `ContentWorkflowHooks`, `ReusableBlockHooks`, `WebhookHooks`
+- `Services/Newsletter/` additions, `NewsletterConsentLog.php`, `NewsletterMemberService.php`
 
 Admin-Menü und Erweiterungspunkte / Admin menu and extension points:
 
-- `Services/AdminMenu/` — admin sidebar with profiles / Admin-Sidebar mit Profilen: `AdminMenuItem`, `AdminMenuService`, `BadgeProvider`, `CoreCatalog`, `LayoutRepository`, `LayoutValidator`, `MenuBuilder`, `MenuRegistry`, `ProfileLayouts` (see / siehe [admin/ADMIN-MENU.md](admin/ADMIN-MENU.md))
-- `Services/FeatureHooks/Registry.php`, `Services/PluginMigration/PluginMigrator.php`, `Services/Retention/RetentionRule.php`, `Services/EditorJs/EditorJsBlockRegistry.php`, `Services/ContentTypes/ContentTypeRegistry.php` (+ provider interfaces and value objects / Provider-Schnittstellen und Wertobjekte) — shared extension points / gemeinsame Erweiterungspunkte
+- `Services/AdminMenu/`, admin sidebar with profiles / Admin-Sidebar mit Profilen: `AdminMenuItem`, `AdminMenuService`, `BadgeProvider`, `CoreCatalog`, `LayoutRepository`, `LayoutValidator`, `MenuBuilder`, `MenuRegistry`, `ProfileLayouts` (see / siehe [admin/ADMIN-MENU.md](admin/ADMIN-MENU.md))
+- `Services/FeatureHooks/Registry.php`, `Services/PluginMigration/PluginMigrator.php`, `Services/Retention/RetentionRule.php`, `Services/EditorJs/EditorJsBlockRegistry.php`, `Services/ContentTypes/ContentTypeRegistry.php` (+ provider interfaces and value objects / Provider-Schnittstellen und Wertobjekte), shared extension points / gemeinsame Erweiterungspunkte
 
 ---
 

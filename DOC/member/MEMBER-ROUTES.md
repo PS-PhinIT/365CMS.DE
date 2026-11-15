@@ -1,15 +1,15 @@
-# 365CMS – Projektdokumentation | Abschnitt: Mitglieder-Routen
+# 365CMS Projektdokumentation | Mitglieder-Routen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Routenreferenz für authentifizierte Member-Seiten, Theme-Overrides, Plugin-Dispatch, Weiterleitungen, Nutzungs-Tracking und 404-Fallbacks. Sie entspricht dem Stand von `MemberRouter.php` in Version 4.1.0.
 
 # 365CMS Member Routes
 
-## English — user guide
+## English: user guide
 
 Use `/member/dashboard` as the canonical entry point. `/member` redirects to it, or directly to `/member/profile` when the dashboard is disabled. Plugin sections start at `/member/plugin/{slug}`; an action and a numeric ID may be appended. Visitors who are not signed in are sent to the public login page and returned to the requested URL after login.
 
-## English — technical reference
+## English: technical reference
 
 `MemberRouter::registerRoutes()` registers the following routes:
 
@@ -34,11 +34,11 @@ POST actions of the core pages (all with CSRF token and redirect afterwards, PRG
 
 # 365CMS-Member-Routen
 
-## Deutsch — Anwenderblock
+## Deutsch: Anwenderblock
 
 Der zentrale Einstieg ist `/member/dashboard`; `/member` leitet dorthin weiter, bei abgeschaltetem Dashboard direkt auf `/member/profile`. Plugin-Bereiche beginnen mit `/member/plugin/{slug}` und können um Aktion und numerische ID ergänzt werden. Nicht eingeloggte Besucher gelangen zur öffentlichen Login-Seite und nach der Anmeldung zurück zur ursprünglichen URL.
 
-## Deutsch — Technikblock
+## Deutsch: Technikblock
 
 `MemberRouter::registerRoutes()` registriert:
 

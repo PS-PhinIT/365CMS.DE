@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: FILESTRUCTUR
+# 365CMS Projektdokumentation | FILESTRUCTUR
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
@@ -19,7 +19,7 @@ This document describes the **repository layout** of `365CMS.DE-MAIN`. It is not
 
 | Document | Role |
 |---|---|
-| [FILESTRUCTUR.md](FILESTRUCTUR.md) | this file — repository and documentation layout |
+| [FILESTRUCTUR.md](FILESTRUCTUR.md) | this file: repository and documentation layout |
 | [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) | inventory of the `CMS/` runtime |
 | [FILELIST.md](FILELIST.md) | developer-oriented structure map |
 | [DEVLIST.md](DEVLIST.md) | technical reference |
@@ -30,7 +30,7 @@ Dieses Dokument beschreibt die **Repository-Struktur** von `365CMS.DE-MAIN`. Es 
 
 | Dokument | Rolle |
 |---|---|
-| [FILESTRUCTUR.md](FILESTRUCTUR.md) | diese Datei — Repository- und Dokumentationslayout |
+| [FILESTRUCTUR.md](FILESTRUCTUR.md) | diese Datei: Repository- und Dokumentationslayout |
 | [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) | Inventar der Runtime `CMS/` |
 | [FILELIST.md](FILELIST.md) | entwicklerfreundliche Strukturkarte |
 | [DEVLIST.md](DEVLIST.md) | technische Referenz |
@@ -183,11 +183,11 @@ Subfolders (all present):
 
 Broken historical links (do **not** use):
 
-- `DOC/ASSET.md` — actual path is `DOC/assets/ASSET.md`
-- `DOC/ASSETS_NEW.md` — actual path is `DOC/assets/ASSETS_NEW.md`
-- `DOC/ASSETS_OwnAssets.md` — actual path is `DOC/assets/ASSETS_OwnAssets.md`
-- `AUDIT/` — not present in this repository
-- `DOC/_cms_inventory_current.txt` — file does not exist
+- `DOC/ASSET.md`, actual path is `DOC/assets/ASSET.md`
+- `DOC/ASSETS_NEW.md`, actual path is `DOC/assets/ASSETS_NEW.md`
+- `DOC/ASSETS_OwnAssets.md`, actual path is `DOC/assets/ASSETS_OwnAssets.md`
+- `AUDIT/`, not present in this repository
+- `DOC/_cms_inventory_current.txt`, file does not exist
 
 **Deutsch**
 
@@ -219,11 +219,11 @@ Unterordner (alle vorhanden):
 
 Historisch kaputte Links (nicht verwenden):
 
-- `DOC/ASSET.md` — tatsächlicher Pfad: `DOC/assets/ASSET.md`
-- `DOC/ASSETS_NEW.md` — tatsächlicher Pfad: `DOC/assets/ASSETS_NEW.md`
-- `DOC/ASSETS_OwnAssets.md` — tatsächlicher Pfad: `DOC/assets/ASSETS_OwnAssets.md`
-- `AUDIT/` — in diesem Repository nicht vorhanden
-- `DOC/_cms_inventory_current.txt` — Datei existiert nicht
+- `DOC/ASSET.md`, tatsächlicher Pfad: `DOC/assets/ASSET.md`
+- `DOC/ASSETS_NEW.md`, tatsächlicher Pfad: `DOC/assets/ASSETS_NEW.md`
+- `DOC/ASSETS_OwnAssets.md`, tatsächlicher Pfad: `DOC/assets/ASSETS_OwnAssets.md`
+- `AUDIT/`, in diesem Repository nicht vorhanden
+- `DOC/_cms_inventory_current.txt`. Datei existiert nicht
 
 ---
 
@@ -233,8 +233,8 @@ Historisch kaputte Links (nicht verwenden):
 
 On this machine, sibling folders next to `365CMS.DE-MAIN` include:
 
-- `365CMS.DE-THEME` — theme source repository
-- `365CMS.DE-PLUGINS` — plugin source repository
+- `365CMS.DE-THEME`, theme source repository
+- `365CMS.DE-PLUGINS`, plugin source repository
 
 The running CMS loads themes and plugins **only** from:
 
@@ -247,8 +247,8 @@ A change in a sibling repo is not live until it is present under those runtime p
 
 Auf dieser Maschine liegen neben `365CMS.DE-MAIN` unter anderem:
 
-- `365CMS.DE-THEME` — Theme-Quellrepository
-- `365CMS.DE-PLUGINS` — Plugin-Quellrepository
+- `365CMS.DE-THEME`. Theme-Quellrepository
+- `365CMS.DE-PLUGINS`. Plugin-Quellrepository
 
 Das laufende CMS lädt Themes und Plugins **nur** aus:
 

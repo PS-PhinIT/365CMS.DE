@@ -1,4 +1,4 @@
-# 365CMS – Admin: Import/Export von Inhalten
+# 365CMS: Admin: Import/Export von Inhalten
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 

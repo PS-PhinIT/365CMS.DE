@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Abo-System & Einstellungen
+# 365CMS Projektdokumentation | Admin: Abo-System & Einstellungen
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/subscription-settings` (Alt-Route `/admin/subscriptions` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_sub_settings`
@@ -75,7 +75,7 @@ if (!$subs->canAccessPlugin($userId, 'events') || !$subs->checkLimit($userId, 'e
 
 ### Hinweise
 
-- Ist die Limitdurchsetzung aus, gelten keine Paketgrenzen – auch nicht für Free-Benutzer.
+- Ist die Limitdurchsetzung aus, gelten keine Paketgrenzen: auch nicht für Free-Benutzer.
 - Der Fallback „erster Paket-Datensatz“ setzt voraus, dass das kostenlose Paket zuerst angelegt wurde (bei `seed_defaults` der Fall).
 - Zahlungseingänge werden nicht automatisch verbucht; siehe [ORDERS.md](ORDERS.md).
 

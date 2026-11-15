@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: README
+# 365CMS Projektdokumentation | README
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## English (summary)

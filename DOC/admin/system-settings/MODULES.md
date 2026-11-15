@@ -1,4 +1,4 @@
-# 365CMS – Projektdokumentation | Abschnitt: Admin – Core-Module (Feature-Schalter)
+# 365CMS Projektdokumentation | Admin: Core-Module (Feature-Schalter)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/modules` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_modules`

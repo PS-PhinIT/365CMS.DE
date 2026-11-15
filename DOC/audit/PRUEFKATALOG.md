@@ -1,4 +1,4 @@
-# 365CMS – Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
+# 365CMS: Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
 
 > Übersicht: [README.md](README.md)
 
@@ -14,10 +14,10 @@ Die Prüfpunkte wurden aus folgenden öffentlichen Checklisten zusammengestellt 
 
 | Quelle | Schwerpunkt |
 |---|---|
-| OWASP Top 10:2025 – <https://owasp.org/Top10/2025/> | Sicherheitsrisiken von Webanwendungen (A01–A10) |
-| SpotDev – „Website Audit Checklist“ – <https://www.spotdev.co.uk/> | Technik, SEO, Geschwindigkeit, Sicherheit, Inhalte |
-| Optimum Web – „Website Security Audit Checklist“ – <https://www.optimum-web.com/> | Server-Härtung, Updates, Backups, Zugriffskontrolle, Logging |
-| OpenSense Labs – „CMS Audit Checklist“ – <https://opensenselabs.com/> | CMS-spezifisch: Rollen, Plugins, Inhalte, Performance, Barrierefreiheit |
+| OWASP Top 10:2025: <https://owasp.org/Top10/2025/> | Sicherheitsrisiken von Webanwendungen (A01–A10) |
+| SpotDev: „Website Audit Checklist“, <https://www.spotdev.co.uk/> | Technik, SEO, Geschwindigkeit, Sicherheit, Inhalte |
+| Optimum Web: „Website Security Audit Checklist“, <https://www.optimum-web.com/> | Server-Härtung, Updates, Backups, Zugriffskontrolle, Logging |
+| OpenSense Labs: „CMS Audit Checklist“, <https://opensenselabs.com/> | CMS-spezifisch: Rollen, Plugins, Inhalte, Performance, Barrierefreiheit |
 | Vorgänger-Audits vom 2026-10-03 bis 2026-10-07 | Nachprüfung bereits behobener Punkte, Nummernkreise |
 
 ### Prüfpunkte und Abdeckung

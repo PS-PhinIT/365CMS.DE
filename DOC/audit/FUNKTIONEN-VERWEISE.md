@@ -1,4 +1,4 @@
-# 365CMS – Gesamtaudit 2026-10-14 | Funktionen und Verweise
+# 365CMS: Gesamtaudit 2026-10-14 | Funktionen und Verweise
 
 > Übersicht: [README.md](README.md)
 
