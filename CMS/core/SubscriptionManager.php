@@ -697,6 +697,25 @@ class SubscriptionManager
      */
     public function assignSubscription(int $userId, int $planId, string $billingCycle = 'monthly'): bool
     {
+        // Release-Prüfung 4.1.0 (FUN-410-21): Ein Tarifwechsel ersetzt das alte Abo. Dessen wiederkehrende Zahlung
+        // beim Anbieter wird beendet, sonst würde das alte Paket weiter abgebucht (Doppelabbuchung).
+        try {
+            $keep = \CMS\Services\Payments\PaymentService::$assigningProviderSubscriptionId;
+            $previous = $this->db->get_results(
+                "SELECT * FROM {$this->db->prefix()}user_subscriptions WHERE user_id = ? AND status = 'active' AND provider_subscription_id IS NOT NULL AND provider_subscription_id <> ''",
+                [$userId]
+            ) ?: [];
+            foreach ($previous as $row) {
+                $row = (array) $row;
+                if ($keep !== '' && hash_equals((string) $row['provider_subscription_id'], $keep)) {
+                    continue;
+                }
+                \CMS\Services\Payments\PaymentService::getInstance()->cancelRecurring($row, false);
+            }
+        } catch (\Throwable $e) {
+            error_log('SubscriptionManager::assignSubscription() Anbieter-Abo nicht beendet: ' . $e->getMessage());
+        }
+
         // Deaktiviere alte Abos
         $this->db->update('user_subscriptions',
             ['status' => 'cancelled', 'cancelled_at' => date('Y-m-d H:i:s')],

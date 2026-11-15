@@ -11,7 +11,7 @@
  * [
  *   'event_id'        => string,       // eindeutig je Anbieter (Idempotenz)
  *   'type'            => string,       // Anbieter-Typ, z. B. checkout.session.completed
- *   'kind'            => string,       // paid | failed | cancelled | renewed | renewal_failed | subscription_ended | ignored
+ *   'kind'            => string,       // paid | failed | cancelled | renewed | renewal_failed | subscription_ended | refunded | ignored
  *   'order_id'        => int,          // aus den Metadaten (0 = unbekannt)
  *   'checkout_id'     => string,       // Checkout-Session bzw. Zahlung
  *   'subscription_id' => string,       // wiederkehrende Zahlung beim Anbieter ('' = keine)
@@ -36,7 +36,8 @@ if (!defined('ABSPATH')) {
 
 interface PaymentGatewayInterface
 {
-    public const KINDS = ['paid', 'failed', 'cancelled', 'renewed', 'renewal_failed', 'subscription_ended', 'ignored'];
+    // Release-Prüfung 4.1.0 (FUN-410-27): `refunded` = vollständige Erstattung oder Rückbuchung (Chargeback).
+    public const KINDS = ['paid', 'failed', 'cancelled', 'renewed', 'renewal_failed', 'subscription_ended', 'refunded', 'ignored'];
 
     public function id(): string;
 

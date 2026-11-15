@@ -129,9 +129,20 @@ final class MollieGateway extends AbstractGateway
             'canceled', 'expired' => $subscription !== '' ? 'ignored' : 'cancelled',
             default => 'ignored',
         };
+        // Release-Prüfung 4.1.0 (FUN-410-27): Mollie ruft denselben Webhook bei Erstattung und Rückbuchung auf; die
+        // Zahlung bleibt `paid`, erkennbar an amountRefunded/amountChargedBack. Eigene Ereignis-ID, sonst gälte der
+        // Aufruf als Wiederholung des Zahlungseingangs.
+        $amount = self::parseAmount($payment['amount']['value'] ?? null);
+        $refunded = self::parseAmount($payment['amountRefunded']['value'] ?? null) ?? 0;
+        $chargedBack = self::parseAmount($payment['amountChargedBack']['value'] ?? null) ?? 0;
+        $suffix = $status;
+        if ($status === 'paid' && ($chargedBack > 0 || ($amount !== null && $amount > 0 && $refunded >= $amount))) {
+            $kind = 'refunded';
+            $suffix = $chargedBack > 0 ? 'chargeback' : 'refunded';
+        }
 
         return self::event([
-            'event_id' => (string) $payment['id'] . ':' . $status,
+            'event_id' => (string) $payment['id'] . ':' . $suffix,
             'type' => 'payment.' . ($status !== '' ? $status : 'unknown'),
             'kind' => $kind,
             'order_id' => (int) ($payment['metadata']['order_id'] ?? 0),
@@ -164,6 +175,35 @@ final class MollieGateway extends AbstractGateway
         }
 
         return ['success' => true, 'subscription_id' => $id];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-21): Mollie-Abo beenden. Mollie kennt nur sofortiges Beenden; die bezahlte
+     * Periode bleibt im CMS über `end_date` erhalten. Die Kunden-ID kommt aus dem Kontext oder aus einer Zahlung.
+     *
+     * @param array<string, mixed> $context customer_id oder payment_id
+     * @return array{success: bool, error?: string}
+     */
+    public function cancelRecurring(string $subscriptionId, array $context = []): array
+    {
+        if (preg_match('/^sub_[A-Za-z0-9]{4,40}$/', $subscriptionId) !== 1) {
+            return ['success' => false, 'error' => 'Unbekannte Mollie-Abo-ID.'];
+        }
+        $customerId = (string) ($context['customer_id'] ?? '');
+        $paymentId = (string) ($context['payment_id'] ?? '');
+        if (preg_match(self::CUSTOMER_ID, $customerId) !== 1 && preg_match(self::PAYMENT_ID, $paymentId) === 1) {
+            $payment = $this->call('GET', self::API . 'payments/' . rawurlencode($paymentId), '', $this->headers());
+            $customerId = is_string($payment['data']['customerId'] ?? null) ? $payment['data']['customerId'] : '';
+        }
+        if (preg_match(self::CUSTOMER_ID, $customerId) !== 1) {
+            return ['success' => false, 'error' => 'Mollie-Kunde zum Abo nicht gefunden.'];
+        }
+        $result = $this->call('DELETE', self::API . 'customers/' . rawurlencode($customerId) . '/subscriptions/' . rawurlencode($subscriptionId), '', $this->headers());
+        if (in_array($result['status'], [404, 410, 422], true)) {
+            return ['success' => true];
+        }
+
+        return $result['error'] === '' ? ['success' => true] : ['success' => false, 'error' => $result['error']];
     }
 
     protected function errorMessage(array $data): string

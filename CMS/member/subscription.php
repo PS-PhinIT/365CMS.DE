@@ -14,6 +14,19 @@ if (class_exists('\CMS\Services\CoreModuleService')
     $controller->redirect($controller->getHomePath());
 }
 
+// Release-Prüfung 4.1.0 (FUN-410-21): Kündigung durch das Mitglied zum Ende der bezahlten Periode.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string) ($_POST['action'] ?? '') === 'cancel_subscription') {
+    if (!$controller->verifyCsrf('subscription_cancel')) {
+        $controller->flash('danger', $t('member.subscription.cancel_csrf'));
+    } elseif (empty($_POST['confirm_cancel'])) {
+        $controller->flash('warning', $t('member.subscription.cancel_confirm'));
+    } else {
+        $cancel = \CMS\Services\Payments\PaymentService::getInstance()->cancelMemberSubscription($controller->getUserId());
+        $controller->flash(!empty($cancel['success']) ? 'success' : 'danger', (string) ($cancel['message'] ?? $cancel['error'] ?? ''));
+    }
+    $controller->redirect('/member/subscription');
+}
+
 $pageTitle = $t('member.nav.subscription');
 $pageKey = 'subscription';
 $pageAssets = [];
@@ -49,6 +62,19 @@ include __DIR__ . '/partials/header.php';
                         </p>
                     <?php elseif (!empty($subscription->end_date)): ?>
                         <p class="text-secondary mb-3"><?= $e($t('member.subscription.runs_until', ['date' => MemberI18n::formatDate((string) $subscription->end_date, false)])) ?></p>
+                    <?php endif; ?>
+                    <?php if (!empty($subscription->cancelled_at) && !empty($subscription->end_date)): ?>
+                        <p class="text-warning mb-3"><?= $e($t('member.subscription.cancelled_until', ['date' => MemberI18n::formatDate((string) $subscription->end_date, false)])) ?></p>
+                    <?php elseif (!empty($subscription->end_date)): ?>
+                        <form method="post" action="/member/subscription" class="mb-3">
+                            <input type="hidden" name="action" value="cancel_subscription">
+                            <input type="hidden" name="csrf_token" value="<?= $e($controller->csrfToken('subscription_cancel')) ?>">
+                            <label class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="confirm_cancel" value="1" required>
+                                <span class="form-check-label small"><?= $e($t('member.subscription.cancel_confirm')) ?></span>
+                            </label>
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><?= $e($t('member.subscription.cancel')) ?></button>
+                        </form>
                     <?php endif; ?>
                     <?php if (!empty($renewalNotice['has_notice'])): ?>
                         <div class="alert <?= $e($renewalAlertClass) ?> mb-0" role="<?= $renewalSeverity === 'danger' ? 'alert' : 'status' ?>">

@@ -43,7 +43,14 @@ Gastbestellungen (ohne Konto) werden bezahlt, aber keinem Konto zugewiesen. Auto
 
 ### Grenzen
 
-Erstattungen und Kündigungen werden nicht aus dem CMS an den Anbieter gesendet (im Dashboard des Anbieters erledigen; eine Kündigung dort kommt als Ereignis zurück). PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
+Erstattungen werden im Dashboard des Anbieters ausgelöst. Seit 4.1.7 verarbeitet das CMS die Rückmeldung: Eine vollständige Erstattung oder Rückbuchung (Stripe `charge.refunded`, `charge.dispute.created`; Mollie `amountRefunded`/`amountChargedBack`) setzt die Bestellung auf `refunded`, erzeugt die Stornorechnung und beendet das zugehörige Abo, auch beim Anbieter. Teilerstattungen ändern den Status nicht. Bei Stripe die beiden Ereignisse im Webhook ergänzen.
+
+Kündigungen gehen seit 4.1.7 vom CMS an den Anbieter (Stripe: Abo löschen bzw. `cancel_at_period_end`, Mollie: Abo des Kunden löschen):
+- **Tarifwechsel:** Beim Zuweisen eines neuen Pakets wird das wiederkehrende Abo des alten Pakets beim Anbieter beendet (keine Doppelabbuchung).
+- **Kündigung durch Mitglieder:** unter *Mitgliederbereich → Abo* mit Bestätigung. Das Abo bleibt bis zum Ende der bezahlten Periode (`end_date`) aktiv, danach endet der Zugang. Hook `cms_subscription_cancelled_by_member`.
+- Schlägt der Aufruf beim Anbieter fehl, wird das protokolliert (Kanal `payments`) und das Mitglied erhält eine Fehlermeldung. Dann im Dashboard des Anbieters kündigen.
+
+PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
 
 ### Technik
 

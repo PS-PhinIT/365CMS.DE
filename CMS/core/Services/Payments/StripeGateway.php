@@ -210,11 +210,48 @@ final class StripeGateway extends AbstractGateway
             ]);
         }
 
+        // Release-Prüfung 4.1.0 (FUN-410-27): vollständige Erstattung und Rückbuchung (Dispute). Teilerstattungen
+        // ändern den Bestellstatus nicht; sie bleiben als Ereignis im Protokoll.
+        if ($type === 'charge.refunded' || $type === 'charge.dispute.created') {
+            $full = $type === 'charge.dispute.created' || !empty($object['refunded']);
+
+            return self::event($base + [
+                'kind' => $full ? 'refunded' : 'ignored',
+                'payment_ref' => is_string($object['payment_intent'] ?? null) ? $object['payment_intent'] : '',
+                'amount_cents' => isset($object['amount_refunded']) ? (int) $object['amount_refunded'] : (isset($object['amount']) ? (int) $object['amount'] : null),
+                'reason' => $type === 'charge.dispute.created' ? 'chargeback' : 'refund',
+            ]);
+        }
+
         if ($type === 'customer.subscription.deleted') {
             return self::event($base + ['kind' => 'subscription_ended', 'subscription_id' => (string) ($object['id'] ?? '')]);
         }
 
         return self::event($base + ['kind' => 'ignored']);
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-21): wiederkehrendes Abo beim Anbieter beenden. `at_period_end` lässt die
+     * bezahlte Periode laufen (Kündigung durch Mitglieder), sonst sofort (Tarifwechsel, Erstattung).
+     *
+     * @param array<string, mixed> $context
+     * @return array{success: bool, error?: string}
+     */
+    public function cancelRecurring(string $subscriptionId, array $context = []): array
+    {
+        if (preg_match('/^sub_[A-Za-z0-9]{4,80}$/', $subscriptionId) !== 1) {
+            return ['success' => false, 'error' => 'Unbekannte Stripe-Abo-ID.'];
+        }
+        $url = self::API . 'subscriptions/' . rawurlencode($subscriptionId);
+        $result = !empty($context['at_period_end'])
+            ? $this->call('POST', $url, http_build_query(['cancel_at_period_end' => 'true']), $this->headers())
+            : $this->call('DELETE', $url, '', $this->headers());
+        // Bereits beendet oder gelöscht: Ziel erreicht.
+        if ($result['status'] === 404 || ($result['data']['status'] ?? '') === 'canceled') {
+            return ['success' => true];
+        }
+
+        return $result['error'] === '' ? ['success' => true] : ['success' => false, 'error' => $result['error']];
     }
 
     protected function errorMessage(array $data): string

@@ -1289,6 +1289,22 @@ final class InvoiceService
         }
     }
 
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-27): Stornorechnung zur aktiven Rechnung einer Bestellung (Erstattung beim
+     * Anbieter). Ohne Rechnung oder bei bereits storniertem Beleg nichts zu tun.
+     *
+     * @return array<string, mixed>
+     */
+    public function cancelForOrder(int $orderId, string $reason): array
+    {
+        $invoiceId = $this->activeInvoiceIdForOrder($orderId);
+        if ($invoiceId === null) {
+            return ['success' => true, 'skipped' => true];
+        }
+
+        return $this->createCancellation($invoiceId, $reason);
+    }
+
     private function activeInvoiceIdForOrder(int $orderId): ?int
     {
         $id = $this->db->get_var(
