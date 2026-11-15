@@ -116,6 +116,11 @@ function pyDatabase(): Database
         {
             return 'cms_';
         }
+
+        public function getPdo(): PDO
+        {
+            return $this->sqlite;
+        }
     };
 }
 
@@ -368,6 +373,51 @@ T::run('Verlängerung und Ende', static function (): void {
     $deleted = pyStripeBody('evt_d', 'customer.subscription.deleted', ['id' => 'sub_1']);
     $f['service']->handleWebhook('stripe', pyStripeHeaders($deleted, PY_NOW + 86400 * 30), $deleted);
     T::same('cancelled', (string) $f['db']->get_var('SELECT status FROM cms_user_subscriptions WHERE provider_subscription_id = ?', ['sub_1']), 'Abo beim Anbieter beendet → gekündigt');
+});
+
+T::run('Audit 4.1.0: atomarer Zustandswechsel, Wiederholung nach Fehler, Verlängerungsbetrag', static function (): void {
+    // SEC-410-03: zweites „bezahlt“-Ereignis (andere Ereignis-ID) aktiviert das Abo nicht erneut.
+    $f = pyFixture();
+    $id = pyOrder($f['db'], ['provider' => 'stripe', 'provider_checkout_id' => 'cs_1']);
+    $object = ['id' => 'cs_1', 'payment_status' => 'paid', 'amount_total' => 1199, 'currency' => 'eur', 'metadata' => ['order_id' => (string) $id], 'subscription' => 'sub_1'];
+    $first = pyStripeBody('evt_a', 'checkout.session.completed', $object);
+    $second = pyStripeBody('evt_b', 'checkout.session.async_payment_succeeded', $object);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($first), $first);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($second), $second);
+    T::same(1, count($f['assigned']), 'SEC-410-03: zweites Bezahlt-Ereignis weist kein zweites Abo zu');
+    T::same('ignored', (string) $f['db']->get_var("SELECT status FROM cms_payment_events WHERE provider_event_id = 'evt_b'"), 'zweites Ereignis steht auf ignored');
+    T::check(str_contains(pySource('core/Services/Payments/PaymentService.php'), "WHERE id = ? AND status IN ('pending', 'failed')"), 'Statuswechsel nur aus pending/failed (bedingtes UPDATE)');
+
+    // SEC-410-04: interner Fehler → 500, nichts verbucht, Wiederholung verarbeitet neu.
+    $db = pyDatabase();
+    $config = pySettings();
+    $fail = new \ArrayObject(['on' => true]);
+    $assigned = new \ArrayObject();
+    $service = new P($db, $config, ['stripe' => new StripeGateway($config, static fn (): array => ['status' => 404, 'body' => '{}'], static fn (): int => PY_NOW)], static fn (): int => PY_NOW,
+        static function (int $userId, int $planId, string $cycle) use ($fail, $assigned, $db): bool {
+            if ($fail['on']) {
+                throw new \RuntimeException('DB weg');
+            }
+            $assigned[] = $userId;
+            $db->insert('user_subscriptions', ['user_id' => $userId, 'plan_id' => $planId, 'status' => 'active', 'billing_cycle' => $cycle]);
+
+            return true;
+        });
+    $orderId = pyOrder($db, ['provider' => 'stripe', 'provider_checkout_id' => 'cs_9']);
+    $body = pyStripeBody('evt_retry', 'checkout.session.completed', ['id' => 'cs_9', 'payment_status' => 'paid', 'amount_total' => 1199, 'currency' => 'eur', 'metadata' => ['order_id' => (string) $orderId]]);
+    T::same(500, $service->handleWebhook('stripe', pyStripeHeaders($body), $body)['status'], 'SEC-410-04: interner Fehler → 500 (Anbieter wiederholt)');
+    T::same('pending', pyOrderRow($db, $orderId)['status'], 'Transaktion zurückgerollt: Bestellung bleibt offen');
+    T::same(0, (int) $db->get_var('SELECT COUNT(*) FROM cms_payment_events'), 'Ereignis nicht als erledigt gespeichert');
+    $fail['on'] = false;
+    T::same(200, $service->handleWebhook('stripe', pyStripeHeaders($body), $body)['status'], 'Wiederholung → 200');
+    T::same(['paid', 1], [pyOrderRow($db, $orderId)['status'], count($assigned)], 'Wiederholung bezahlt die Bestellung und weist das Abo zu');
+
+    // SEC-410-05: Verlängerung mit abweichender Währung steht sichtbar am Ereignis.
+    $f['clock']['now'] = PY_NOW + 86400 * 30;
+    $usd = pyStripeBody('evt_usd_r', 'invoice.paid', ['id' => 'in_9', 'billing_reason' => 'subscription_cycle', 'subscription' => 'sub_1', 'amount_paid' => 1199, 'currency' => 'usd']);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($usd, PY_NOW + 86400 * 30), $usd);
+    $event = (array) $f['db']->get_row("SELECT status, error FROM cms_payment_events WHERE provider_event_id = 'evt_usd_r'");
+    T::check(($event['status'] ?? '') === 'processed' && str_contains((string) ($event['error'] ?? ''), 'abweichendem Betrag'), 'SEC-410-05: Verlängerung verbucht, Abweichung am Ereignis vermerkt');
 });
 
 T::run('Zustandsautomat, Laufzeit, Rücksprung', static function (): void {

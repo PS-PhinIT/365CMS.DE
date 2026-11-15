@@ -1,0 +1,14 @@
+{
+  "slug": "365cms-core",
+  "name": "365CMS",
+  "type": "core",
+  "version": "4.1.0",
+  "min_php": "8.4.1",
+  "released": "2026-11-15",
+  "schema_version": "v26",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.1.0-update.zip",
+  "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
+  "checksum_sha256": "bec76f6d7107d00ee43f6c4020bbb339d9dc85dbf984cad8d988b4db0a4bb904",
+  "notes": "WICHTIG beim Update von 3.5.x: Der Updater von 3.5.x ersetzt die Ordner plugins/ und themes/ vollständig – nachinstallierte Plugins und eigene Themes vorher sichern und danach wieder hochladen (ab 4.0.0 bleiben sie erhalten); die Daten der Plugins cms-contact, cms-downloads, cms-feed, cms-newsletter und cms-knowledgebase werden automatisch in den Core übernommen. Release 4.1.0 (15.11.2026): Feature-Release – Passwort-Richtlinie, MFA-Zwang je Rolle, Anmeldung mit Microsoft Entra ID, AVIF-Bilder, Medien-Verwendungsnachweis, Vier-Augen-Prinzip, EditorJS Block Vorlagen, Ablauf- und Prüfdaten, Offsite-Backups (S3), ausgehende Webhooks, Zahlungen über Stripe/Mollie (auch PayPal) und Rechnungen nach § 14 UStG. Datenbankschema v26: nach dem Update unter Admin > Updates das Datenbank-Update ausführen; den Cron mindestens stündlich laufen lassen. Neue Rechte hat zunächst nur die Rolle admin (unter Benutzer > Rollen vergeben).",
+  "critical": false
+}

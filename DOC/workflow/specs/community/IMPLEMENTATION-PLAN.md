@@ -5,7 +5,7 @@
 
 ## English (summary)
 
-Single entry point for building the **Community module** (forum) in release **4.2.0** with schema **v27**. It condenses the planning set into an executable plan: the starting point after 4.1.0 (schema `v26`, 88 tables), the reusable 4.1.0 building blocks, the work packages WP-C0 … WP-C13 for phase P1 (the 4.2.0 release) with deliverables, security gate and tests per package, the 27 planned `community_*` tables (88 + 27 = 115 tables in `v27`), the capabilities `community.*`, privacy and moderation rules, CSP and security requirements and the test suites that must be green before release. Phases P2 (WP-C14, WP-C15) and P3 (WP-C16) follow after 4.2.0. CLI and real-time alerting are **not** part of 4.2.0; they move to 4.3.0 ([../v4.1/06-CLI-ALERTING.md](../v4.1/06-CLI-ALERTING.md)).
+Single entry point for building the **Community module** (forum) in release **4.2.0** with schema **v27**. It condenses the planning set into an executable plan: the starting point after 4.1.0 (schema `v26`, 90 tables), the reusable 4.1.0 building blocks, the work packages WP-C0 … WP-C13 for phase P1 (the 4.2.0 release) with deliverables, security gate and tests per package, the 27 planned `community_*` tables (90 + 27 = 117 tables in `v27`), the capabilities `community.*`, privacy and moderation rules, CSP and security requirements and the test suites that must be green before release. Phases P2 (WP-C14, WP-C15) and P3 (WP-C16) follow after 4.2.0. CLI and real-time alerting are **not** part of 4.2.0; they move to 4.3.0 ([../v4.1/06-CLI-ALERTING.md](../v4.1/06-CLI-ALERTING.md)).
 
 ## Deutsch
 
@@ -13,10 +13,10 @@ Single entry point for building the **Community module** (forum) in release **4.
 
 | Punkt | Stand |
 |---|---|
-| Core | 365CMS **4.1.0**, Schema **v26** (88 Tabellen, `SchemaManager::FEATURE_TABLES_V26`), PHP ≥ 8.4.1. Die Konstanten `Version::CURRENT` / `SchemaManager::SCHEMA_VERSION` stehen bis zur Release-Vorbereitung 4.1.0 noch auf `4.0.0` / `v25` ([../../core/STATUS.md](../../../core/STATUS.md)). |
+| Core | 365CMS **4.1.0**, Schema **v26** (90 Tabellen, `SchemaManager::FEATURE_TABLES_V26`), PHP ≥ 8.4.1; `Version::CURRENT = '4.1.0'`, `SCHEMA_VERSION = 'v26'` ([../../../core/STATUS.md](../../../core/STATUS.md)). |
 | Schema v27 | Eigener Stand **v27** für alle Community-Tabellen; Definitionen nur in `SchemaManager::getSchemaQueries()`, Anlage über `MigrationManager::run()` und `ensureFeatureSchema()` (idempotent, wie v25/v26). |
 | Release 4.2.0 | Phase **P1** (WP-C0 … WP-C13, ≈ 89 PT). P2 und P3 folgen in Folgereleases. |
-| Nicht Teil von 4.2.0 | CLI und Echtzeit-Alerting (→ **4.3.0**), PDF-Rechnungen (5b, offen), Datenübernahme aus `cms-forum` (entfällt, E6), Mandanten/`site_id` (E10). |
+| Nicht Teil von 4.2.0 | CLI und Echtzeit-Alerting (→ **4.3.0**), Datenübernahme aus `cms-forum` (entfällt, E6), Mandanten/`site_id` (E10). |
 
 ### 2. Wiederverwendbare Bausteine aus 4.1.0
 
@@ -42,7 +42,7 @@ Reihenfolge und Abhängigkeiten: `WP-C0 → C1 → C2 → C3`, danach `C4 · C5 
 | WP | Lieferumfang (Dateien/Dienste) | Sicherheits-Gate | Tests (Suite) | PT |
 |---|---|---|---|---|
 | **C0** | Entscheidungen bestätigen; Bibliotheken prüfen (CommonMark, highlight.js, `gregwar/captcha`, Proof-of-Work): Lizenz, PHP 8.4/8.5, CSP, SHA-256 in `DOC/assets/` | keine CDN-Einbindung, Vendoring über `VendorRegistry` | – | 2 |
-| **C1** | `CoreModuleService`-Eintrag `community`, `FeatureHooks\CommunityHooks`, Core-Hooks `user_deleted` und `user_role_changed` (in `UserService`/`RolesModule`), `Support/Settings` (Gruppe `community`, Typen/Grenzen), Sprachschlüssel `community.*`, Admin-Katalog-Einträge (ausgeblendet bis Seiten existieren), **Schema v27** (alle 27 Tabellen), Update-Schritt `capabilities_v27` + Rolle `moderator` | Capabilities nur per Update-Schritt, niemand wird ausgesperrt | `schema-v27` (Neuinstallation = Update, Tabellenzahl 115), `settings` | 5 |
+| **C1** | `CoreModuleService`-Eintrag `community`, `FeatureHooks\CommunityHooks`, Core-Hooks `user_deleted` und `user_role_changed` (in `UserService`/`RolesModule`), `Support/Settings` (Gruppe `community`, Typen/Grenzen), Sprachschlüssel `community.*`, Admin-Katalog-Einträge (ausgeblendet bis Seiten existieren), **Schema v27** (alle 27 Tabellen), Update-Schritt `capabilities_v27` + Rolle `moderator` | Capabilities nur per Update-Schritt, niemand wird ausgesperrt | `schema-v27` (Neuinstallation = Update, Tabellenzahl 117), `settings` | 5 |
 | **C2** | Kategorien-/Foren-Baum, Admin „Struktur“ (Drag & Drop **und** Tastatur), Forentypen/-status, Rechte-Matrix mit Vererbung, Forum-Moderatoren, `CommunityAccess` als einzige Entscheidungsstelle | 404 statt 403; Rechte nur über `CommunityAccess` | `access` (Matrix Teil 1) | 8 |
 | **C3** | Themen/Beiträge: erstellen, antworten, zitieren, bearbeiten mit Verlauf, weich löschen; Zähler (`community_user_stats`, Themen-/Forenzähler); Seitennavigation (Keyset statt `OFFSET`); Startseite, Forum, Thema, „Neu/Aktiv/Unbeantwortet“; Permalinks; Gelesen-Status | POST + CSRF + Rate-Limit; Idempotenz bei Doppel-Submit | `content`, `access` | 12 |
 | **C4** | Markdown-Renderer (Link-Allowlist `http`, `https`, `mailto`, relativ), Purifier-Profil `community`, Code-Highlighting, Vorschau-Endpunkt (nur angemeldet), Werkzeugleiste (ES-Modul), lokale Entwürfe | kein Roh-HTML; Ausgabe nur nach `PurifierService`; `rendered_version` | `render`, `xss` (Korpus ≥ 30) | 7 |
@@ -60,7 +60,7 @@ Reihenfolge und Abhängigkeiten: `WP-C0 → C1 → C2 → C3`, danach `C4 · C5 
 
 ### 5. Geplante Datenbanktabellen (Schema v27)
 
-27 Tabellen mit Präfix `cms_`; Einstellungen liegen in `settings` (Gruppe `community`), **keine** eigene Tabelle. Spalten, Indizes und Zähler: [DATA-MODEL.md](DATA-MODEL.md). Gesamtstand v27: 88 + 27 = **115 Tabellen**.
+27 Tabellen mit Präfix `cms_`; Einstellungen liegen in `settings` (Gruppe `community`), **keine** eigene Tabelle. Spalten, Indizes und Zähler: [DATA-MODEL.md](DATA-MODEL.md). Gesamtstand v27: 90 + 27 = **117 Tabellen**.
 
 | Bereich | Tabellen |
 |---|---|

@@ -27,13 +27,13 @@
 
 This file is the **readable structure map**. It answers: where does something live, what does the running CMS load, and which paths matter when you change code.
 
-Product version documented: `4.1.0` (the version constants in code are raised in the release preparation; last published package `4.0.0`). PHP: 8.4.1+. Schema: `v26`.
+Product version in code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 **Deutsch**
 
 Diese Datei ist die **lesbare Strukturkarte**. Sie beantwortet: wo liegt etwas, was lädt das laufende CMS, und welche Pfade zählen bei Änderungen.
 
-Dokumentierte Produktversion: `4.1.0` (die Versionskonstanten im Code werden mit der Release-Vorbereitung gehoben; zuletzt veröffentlichtes Paket `4.0.0`). PHP: 8.4.1+. Schema: `v26`.
+Produktversion im Code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
 
 ### 1.1 Workspace context | Workspace-Kontext
 
@@ -92,6 +92,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/release-3.4.0/` | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release) / Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases) (`php TESTS/release-3.4.0/run.php`) |
 | `TESTS/reusable-blocks/` | EditorJS block templates (4.1.0): block data, usage index, rendering and language, recursion, history, delete warning, search text / EditorJS Block Vorlagen (4.1.0): Blockdaten, Nutzungsindex, Rendern und Sprache, Rekursion, Verlauf, Löschwarnung, Suchtext (`php TESTS/reusable-blocks/run.php [-v]`) |
 | `TESTS/s3-backup/` | offsite backups (4.1.0): SigV4 vectors, S3 client with fake storage, multipart, retention, encryption gate / Offsite-Backups (4.1.0): SigV4-Testvektoren, S3-Client mit Fake-Speicher, Multipart, Aufbewahrung, Verschlüsselungspflicht (`php TESTS/s3-backup/run.php [-v]`) |
+| `TESTS/invoices/` | invoices (4.1.0): numbering, cancellation, mandatory fields, download rights / Rechnungen (4.1.0): Nummernkreis lückenlos (auch parallel), Storno, Pflichtangaben, Download-Rechte, DSGVO-Sperrvermerk (`php TESTS/invoices/run.php [-v]`) |
 | `TESTS/payments/` | payments (4.1.0): Stripe signature, Stripe/Mollie events, checkout amounts, idempotency, renewals / Zahlungen (4.1.0): Stripe-Signatur, Ereignisse, Beträge, Idempotenz, Verlängerung (`php TESTS/payments/run.php [-v]`) |
 | `TESTS/webhooks/` | outgoing webhooks (4.1.0): signature, queue, retries, auto-disable, SSRF targets, retention / ausgehende Webhooks (4.1.0): Signatur, Warteschlange, Wiederholungen, Deaktivieren, Ziele, Löschfrist (`php TESTS/webhooks/run.php [-v]`) |
 | `TESTS/schema-v26/` | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check / Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung (`php TESTS/schema-v26/run.php [-v]`) |

@@ -85,17 +85,23 @@ final class BackupCodesManager
             return false;
         }
 
-        $hashedCodes = $this->getHashedCodes($userId);
-        if (empty($hashedCodes)) {
+        $raw = $this->getRawCodes($userId);
+        $hashedCodes = $raw !== '' ? Json::decodeArray($raw, []) : [];
+        if (!is_array($hashedCodes) || $hashedCodes === []) {
             return false;
         }
 
         foreach ($hashedCodes as $index => $hash) {
-            if (Security::instance()->verifyPassword($code, $hash)) {
-                // Code verbrauchen
+            if (is_string($hash) && Security::instance()->verifyPassword($code, $hash)) {
+                // SEC-410-22: Code atomar verbrauchen (Vergleich-und-Tausch) – zwei gleichzeitige Anfragen mit demselben
+                // Code dürfen nicht beide durchkommen.
                 unset($hashedCodes[$index]);
-                $this->saveHashedCodes($userId, array_values($hashedCodes));
-                return true;
+                $db = Database::instance();
+
+                return $db->execute(
+                    "UPDATE {$db->getPrefix()}user_meta SET meta_value = ? WHERE user_id = ? AND meta_key = ? AND meta_value = ?",
+                    [json_encode(array_values($hashedCodes), JSON_THROW_ON_ERROR), $userId, self::META_KEY, $raw]
+                )->rowCount() === 1;
             }
         }
 
@@ -171,6 +177,17 @@ final class BackupCodesManager
     /**
      * @return array<string> Gehashte Codes
      */
+    private function getRawCodes(int $userId): string
+    {
+        $db = Database::instance();
+        $value = $db->get_var(
+            "SELECT meta_value FROM {$db->getPrefix()}user_meta WHERE user_id = ? AND meta_key = ? LIMIT 1",
+            [$userId, self::META_KEY]
+        );
+
+        return is_string($value) ? $value : '';
+    }
+
     private function getHashedCodes(int $userId): array
     {
         $db = Database::instance();

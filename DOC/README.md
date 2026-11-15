@@ -3,7 +3,7 @@
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Documented core version `4.1.0`, PHP 8.4.1+, schema `v26` (the version constants in [`CMS/core/Version.php`](../CMS/core/Version.php) are raised in the release preparation; last published package `4.0.0`, released 2026-11-12). In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.1.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-15, `stable`), PHP 8.4.1+, schema `v26`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -30,8 +30,8 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 
 ### Eckdaten 4.1.0
 
-- Dokumentierter Stand: Version `4.1.0`, Schema `v26` (88 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
-- Codestand der Marken: `CMS/core/Version.php` zeigt noch `CURRENT = '4.0.0'` (`RELEASE_DATE = '2026-11-12'`), `SchemaManager::SCHEMA_VERSION = 'v25'`; beides sowie `CMS/update.json` hebt die Release-Vorbereitung 4.1.0 (v26-Tabellen und -Spalten werden bereits über `SchemaManager::ensureFeatureSchema()` angelegt)
+- Dokumentierter Stand: Version `4.1.0` (Release `2026-11-15`), Schema `v26` (90 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
+- `CMS/core/Version.php`: `CURRENT = '4.1.0'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v26'`
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
@@ -52,7 +52,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 
 ### Roadmap 4.2.0 / 4.3.0
 
-- **4.1.0** (Schema `v26`): Bereiche 1–5 umgesetzt ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); Rechnungen (5b) offen.
+- **4.1.0** (Schema `v26`): Bereiche 1–5 vollständig umgesetzt, einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); veröffentlicht am 2026-11-15.
 - **4.2.0** (Schema `v27`): Community-Modul (Forum). Umsetzungsfahrplan: [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Planungsset: [workflow/specs/community/README.md](workflow/specs/community/README.md); Fortschritt: [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md).
 - **4.3.0**: zentrale CLI `CMS/cli.php`, Echtzeit-Alerting und Webhook-Ereignis `alert.raised` (verschoben aus 4.1.0, Spezifikation [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
 - Entwicklerübersicht und Planungsabschnitt: [DEVLIST.md](DEVLIST.md) (Abschnitt 31).

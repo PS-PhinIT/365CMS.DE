@@ -137,7 +137,7 @@ final class ProfileLayouts
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
                 self::group('subscriptions', 'Abos', 'credit-card', [
-                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.payments', 'subscriptions.settings',
+                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.invoices', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
                 self::group('tools', 'Werkzeuge', 'tool', [
                     'system.content-exchange', 'content.trash', 'content.changes', 'content.translations',
@@ -211,7 +211,7 @@ final class ProfileLayouts
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
                 self::group('subscriptions', 'Abos', 'credit-card', [
-                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.payments', 'subscriptions.settings',
+                    'subscriptions.packages', 'subscriptions.orders', 'subscriptions.invoices', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
                 self::group('configuration', 'Konfiguration', 'settings', [
                     ...self::settingsGeneralItems(),

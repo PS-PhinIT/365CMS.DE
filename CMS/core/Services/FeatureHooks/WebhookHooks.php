@@ -53,6 +53,9 @@ final class WebhookHooks
         Hooks::addAction('cms_subscription_renewed', static function (mixed $subscriptionId = 0, mixed $userId = 0, mixed $orderId = 0, mixed $periodEnd = 0): void {
             self::dispatch('subscription.renewed', ['subscription_id' => (int) $subscriptionId, 'order_id' => (int) $orderId, 'period_end' => gmdate('c', (int) $periodEnd)]);
         });
+        Hooks::addAction('cms_invoice_created', static function (mixed $invoiceId = 0, mixed $type = '', mixed $orderId = 0): void {
+            self::dispatch('invoice.created', ['invoice_id' => (int) $invoiceId, 'type' => (string) $type, 'order_id' => (int) $orderId]);
+        });
         Hooks::addAction('user_registered', static function (mixed $userId = 0): void {
             self::dispatch('user.registered', ['user_id' => (int) $userId]);
         });

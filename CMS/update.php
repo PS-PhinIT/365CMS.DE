@@ -44,6 +44,8 @@ header('Pragma: no-cache');
 header('X-Robots-Tag: noindex, nofollow');
 
 $auth = Auth::instance();
+// SEC-410-08: Direkt ausgeliefert, also ohne Router – MFA-Zwang und Passwort-Ablauf hier selbst prüfen.
+\CMS\Services\Security\MfaEnforcementService::enforceOnEntryPoint('/update.php');
 if (!$auth->isAdmin() || !$auth->hasCapability('manage_settings')) {
     http_response_code(403);
     header('Content-Type: text/plain; charset=UTF-8');

@@ -154,14 +154,14 @@ Root-Klassen in `CMS/core/`:
 - `PageManager.php`
 - `PluginManager.php`
 - `Router.php`
-- `SchemaManager.php` (Schema `v26` ab 4.1.0, `FEATURE_TABLES_V26`; Konstante `SCHEMA_VERSION` noch `v25` bis zur Release-Vorbereitung)
+- `SchemaManager.php` (`SCHEMA_VERSION = 'v26'`, `FEATURE_TABLES_V26`)
 - `Security.php`
 - `SubscriptionManager.php`
 - `TableOfContents.php`
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT` noch `'4.0.0'`, wird mit der Release-Vorbereitung 4.1.0 gehoben)
+- `Version.php` (`CURRENT = '4.1.0'`)
 - `WP_Error.php`
 
 Subdirectories:
@@ -462,7 +462,7 @@ Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `
 
 New admin pages in 4.1.0 / Neue Admin-Seiten in 4.1.0: `reusable-blocks.php` (EditorJS Block Vorlagen, module `modules/reusable-blocks/ReusableBlocksModule.php`, views `views/reusable-blocks/{index,list,edit}.php`), `backup-settings.php` (+ `views/system/backup-settings.php`), `webhooks.php` (+ `views/system/webhooks.php`), `payments.php` (+ `views/subscriptions/payments.php`), settings tab / Einstellungs-Tab `settings-tabs/sso.php` (+ `views/settings/sso.php`); shared partials / gemeinsame Partials `views/partials/content-workflow-form.php`, `content-workflow-panel.php`, `content-expiry-fields.php`, `partials/plugin-workspace.php`.
 
-New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`; since/seit 4.1.0 `settings-tabs/sso.php` (view/View `views/settings/sso.php`) `reusable-blocks.php` (EditorJS Block Vorlagen, views/Views `views/reusable-blocks/`) `backup-settings.php` (Backup-Einstellungen) `webhooks.php` (Webhooks) and/und `payments.php` (Zahlungen, view/View `views/subscriptions/payments.php`).
+New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`; since/seit 4.1.0 `settings-tabs/sso.php` (view/View `views/settings/sso.php`) `reusable-blocks.php` (EditorJS Block Vorlagen, views/Views `views/reusable-blocks/`) `backup-settings.php` (Backup-Einstellungen) `webhooks.php` (Webhooks) and/und `payments.php` (Zahlungen, view/View `views/subscriptions/payments.php`) and/und `invoices.php` (Rechnungen, view/View `views/subscriptions/invoices.php`).
 
 ---
 

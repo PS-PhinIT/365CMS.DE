@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Snapshot of the runtime state verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation. Release 4.1.0 closes the gaps listed in "In 4.1.0 geschlossene Lücken"; the code's version and schema constants are still `4.0.0` / `v25` until the release preparation, CLI and alerting move to 4.3.0, the community module is planned for 4.2.0 (schema `v27`).
+Snapshot of the runtime state verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation. Release 4.1.0 (version `4.1.0`, schema `v26`) closes the gaps listed in "In 4.1.0 geschlossene Lücken"; CLI and alerting move to 4.3.0, the community module is planned for 4.2.0 (schema `v27`).
 
 ## Deutsch
 
@@ -12,13 +12,13 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 
 | Merkmal | Wert | Quelle |
 |---|---|---|
-| Core-Version | dokumentiert: **`4.1.0`**. Im Code zeigt `Version::CURRENT` noch `4.0.0` (Release `2026-11-12`), die Marke wird mit der Release-Vorbereitung 4.1.0 gehoben | `CMS/core/Version.php`, `CMS/update.json` |
-| Schema | dokumentiert: **`v26`** (88 Tabellen, 12 neu seit v25). Die Konstanten `SchemaManager::SCHEMA_VERSION` / `MigrationManager::SCHEMA_VERSION` stehen bis zur Release-Vorbereitung auf `v25`; die v26-Tabellen und -Spalten legt `SchemaManager::ensureFeatureSchema()` bereits an | `SchemaManager::FEATURE_TABLES_V26`, [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
+| Core-Version | `4.1.0`, Release `2026-11-15`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
+| Schema | `v26` (90 Tabellen: 76 bis `v25` plus 14 neu in `v26`) | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION`, `SchemaManager::FEATURE_TABLES_V26`, [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.1.0 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |
 | Mitgeliefertes Plugin | `cms-importer` 3.0.3 | `CMS/plugins/cms-importer/cms-importer.php` |
-| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026), Abschnitt `4.1.0` (Feature Release, Bereiche 1–5 umgesetzt) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
+| Changelog | Zwischenstände `3.4.01`–`3.4.25`, Release `3.5.0` (14.10.2026), `3.5.1` und Release `3.5.2` (17.10.2026), Release `3.5.3` und `3.5.4` (23.10.2026), Release `3.5.5` und `3.5.6` (08.11.2026), Release `4.0.0` (12.11.2026), Release `4.1.0` (15.11.2026) | `Changelog.md` – 3.5.0 bündelt alle Änderungen seit `3.4.00`, 3.5.2 enthält 3.5.1 |
 
 ### Änderungen seit 3.4.00 (Release 3.5.0, laut Changelog)
 
@@ -104,7 +104,8 @@ Die Härtungspunkte OFFEN-20 bis OFFEN-26 aus dem Folgeaudit vom 2026-11-08 (AEA
 
 | # | Befund (bis 4.0.0) | Behoben in 4.1.0 durch |
 |---|---|---|
-| 28 | Aboverwaltung ohne Zahlungs-Gateway (Bestellungen nur manuell/Rechnung) | Stripe Checkout und Mollie, Webhook-Verifizierung, Idempotenz über `payment_events` ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
+| 28 | Aboverwaltung ohne Zahlungs-Gateway (Bestellungen nur manuell) | Stripe Checkout und Mollie, Webhook-Verifizierung, Idempotenz über `payment_events` ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
+| 28a | Keine Rechnungen mit Nummernkreis | `Payments\InvoiceService`: lückenlose Nummern, unveränderlicher Snapshot, PDF, Storno, DSGVO-Sperrvermerk, Recht `invoices.view` ([INVOICES.md](../admin/subscription/INVOICES.md)) |
 | 29 | Passwortrichtlinie fest verdrahtet (12 Zeichen, vier Klassen), keine Historie, kein Höchstalter, ASCII-Zeichenklassen | `PasswordPolicyService` (konfigurierbar, Unicode, Historie, Höchstalter) |
 | 30 | Kein MFA-Zwang je Rolle, Passkeys ohne Nachweis der User Verification | `MfaEnforcementService`, `Router::enforceAccountGates()`, `passkey_credentials.user_verified` |
 | 31 | Kein Single Sign-on | Microsoft Entra ID (OIDC/PKCE), Zuordnung über `tid`+`oid`, Sperre der lokalen Anmeldung |
@@ -115,7 +116,7 @@ Die Härtungspunkte OFFEN-20 bis OFFEN-26 aus dem Folgeaudit vom 2026-11-08 (AEA
 | 36 | Keine ausgehenden Ereignisse für Fremdsysteme | `WebhookService` (signierte Webhooks, Wiederholungen) |
 | 37 | Inhalte ohne Ablauf- und Prüfdatum | `ContentExpiryService`, Spalten `expires_at`, `review_due_at` |
 
-Weiterhin offen: OFFEN-27 (signierte Update-Pakete, siehe oben); Release-Vorbereitung 4.1.0 (Versions- und Schemamarken im Code, `CMS/update.json`, Release-Pakete); Bereich 6 (CLI, Alerting) in 4.3.0; Community-Modul in 4.2.0.
+Weiterhin offen: OFFEN-27 (signierte Update-Pakete, siehe oben); Bereich 6 (CLI, Alerting) in 4.3.0; Community-Modul in 4.2.0. Das Release-Audit 4.1.0 steht in [../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
 
 ### Grundsatz dieser Dokumentation
 

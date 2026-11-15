@@ -41,6 +41,7 @@ final class WebhookService
         'order.paid' => 'Bestellung bezahlt',
         'order.failed' => 'Zahlung fehlgeschlagen',
         'subscription.renewed' => 'Abo verlängert',
+        'invoice.created' => 'Rechnung erstellt',
     ];
     public const TEST_EVENT = 'webhook.test';
     public const RETRY_MINUTES = [1, 5, 30, 120, 720];

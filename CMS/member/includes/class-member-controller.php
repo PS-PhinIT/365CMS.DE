@@ -1688,6 +1688,11 @@ final class MemberController
         }
 
         if ($action === 'sso_unlink') {
+            // SEC-410-02: Solange die lokale Anmeldung eingeschränkt ist, trennt nur die Administration.
+            if (!EntraSsoService::getInstance()->mayUnlink($userId)) {
+                $this->flash('danger', EntraSsoService::MESSAGES['unlink_blocked']);
+                $this->redirect('/member/security');
+            }
             $unlinked = EntraSsoService::getInstance()->unlink($userId);
             $this->flash($unlinked ? 'success' : 'danger', MemberI18n::t($unlinked ? 'member.security.sso_unlinked' : 'member.security.sso_unlink_failed'));
             $this->redirect('/member/security');

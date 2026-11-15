@@ -205,6 +205,8 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_payment_failed` | Aktion | `int $orderId` (0 bei Abo-Folgezahlung), `string $provider, array $event` (seit 4.1.0) |
 | `cms_subscription_renewed` | Aktion | `int $subscriptionRowId, int $userId, int $renewalOrderId, int $periodEnd` (seit 4.1.0) |
 | `cms_subscription_ended` | Aktion | `int $subscriptionRowId, int $userId, string $provider`; Abo beim Anbieter beendet (seit 4.1.0) |
+| `cms_invoice_created` | Aktion | `int $invoiceId, string $type, int $orderId, int $userId`; nach dem Erstellen einer Rechnung (`invoice`) bzw. Storno-Rechnung (`cancellation`), PDF liegt vor (seit 4.1.0) |
+| `cms_user_deleted` | Aktion | `int $userId`; nach dem endgültigen Löschen eines Kontos (`UserService::deleteUser(…, true)`), z. B. Sperrvermerk für Rechnungen (seit 4.1.0) |
 | `cms_webhook_endpoint_disabled` | Action | `int $endpointId, string $reason`; Empfänger automatisch deaktiviert (410 oder 20 Fehlschläge, seit 4.1.0) |
 | `cms_cron_feeds` / `cms_cron_<name>` | Action | – (über `cron.php --task=…`) |
 

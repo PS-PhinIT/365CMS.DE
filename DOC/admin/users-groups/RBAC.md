@@ -46,7 +46,7 @@ Alle Rollen besitzen `read`, `edit_profile` und `view_content`. Der Alias `admin
 | Identität (seit 4.1.0) | `security.sso` – Tab *Einstellungen → SSO* (Microsoft Entra ID, [../security/SSO-ENTRA.md](../security/SSO-ENTRA.md)); Admin über die Rolle, weitere Rollen nur per Matrix |
 | Backups (seit 4.1.0) | `backups.offsite` – *Backup-Einstellungen* mit S3-Offsite-Ziel ([../system-settings/BACKUP.md](../system-settings/BACKUP.md)) |
 | Webhooks (seit 4.1.0) | `webhooks.manage` – ausgehende Webhooks ([../system-settings/WEBHOOKS.md](../system-settings/WEBHOOKS.md)) |
-| Zahlungen (seit 4.1.0) | `payments.manage` – Stripe/Mollie-Einstellungen und Zahlungsübersicht ([../subscription/PAYMENTS.md](../subscription/PAYMENTS.md)) |
+| Zahlungen (seit 4.1.0) | `payments.manage` – Stripe/Mollie-Einstellungen und Zahlungsübersicht ([../subscription/PAYMENTS.md](../subscription/PAYMENTS.md)); `invoices.view` – Rechnungen aller Kunden ansehen und Storno erstellen ([../subscription/INVOICES.md](../subscription/INVOICES.md)) |
 
 Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden zu `.`).
 

@@ -19,11 +19,11 @@
 
 **English**
 
-Use this index to reach the canonical documents. The documented product version is `4.1.0` (schema `v26`); the version constants in code are raised in the 4.1.0 release preparation (last published package: `4.0.0`). Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Known code/doc gaps are listed in [core/STATUS.md](core/STATUS.md).
+Use this index to reach the canonical documents. Product version in code is `4.1.0` (schema `v26`). Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Known code/doc gaps are listed in [core/STATUS.md](core/STATUS.md).
 
 **Deutsch**
 
-Dieser Index führt zu den kanonischen Dokumenten. Die dokumentierte Produktversion ist `4.1.0` (Schema `v26`); die Versionskonstanten im Code werden mit der Release-Vorbereitung 4.1.0 gehoben (zuletzt veröffentlichtes Paket: `4.0.0`). Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Bekannte Lücken zwischen Code und Doku stehen in [core/STATUS.md](core/STATUS.md).
+Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `4.1.0` (Schema `v26`). Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Bekannte Lücken zwischen Code und Doku stehen in [core/STATUS.md](core/STATUS.md).
 
 | Goal / Ziel | Document / Dokument |
 |---|---|
@@ -54,7 +54,7 @@ Die Core-Dokumente beschreiben Bootstrap, Routing, Schema, Services, Hooks, APIs
 | [core/README.md](core/README.md) | Core documentation entry |
 | [core/ARCHITECTURE.md](core/ARCHITECTURE.md) | Bootstrap, routing, services, modules |
 | [core/CORE-CLASSES.md](core/CORE-CLASSES.md) | Central core classes |
-| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (schema `v26`, 88 tables; `SCHEMA_VERSION` in code `v25` until the release preparation) |
+| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (schema `v26`, 90 tables) |
 | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) | Actions, filters, integration points |
 | [core/API-REFERENCE.md](core/API-REFERENCE.md) | Technical interfaces |
 | [core/SERVICES.md](core/SERVICES.md) | Service layer |
@@ -107,6 +107,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Editorial calendar, expiry and review dates (4.0.0 / 4.1.0) | [admin/pages-posts/EDITORIAL-CALENDAR.md](admin/pages-posts/EDITORIAL-CALENDAR.md) |
 | Outbound webhooks (4.1.0) | [admin/system-settings/WEBHOOKS.md](admin/system-settings/WEBHOOKS.md) |
 | Online payments Stripe / Mollie (4.1.0) | [admin/subscription/PAYMENTS.md](admin/subscription/PAYMENTS.md) |
+| Invoices and credit notes (4.1.0) | [admin/subscription/INVOICES.md](admin/subscription/INVOICES.md) |
 | Roles and capabilities (RBAC) | [admin/users-groups/RBAC.md](admin/users-groups/RBAC.md) |
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
@@ -227,11 +228,11 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 
 **English**
 
-4.1.0 is implemented for areas 1–5 ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md); invoices 5b are not implemented and stay open). Area 6 (central CLI `CMS/cli.php`, real-time alerting, webhook event `alert.raised`) moved to **4.3.0**. **4.2.0** (schema `v27`) is the Community module; its implementation plan is in [workflow/specs/community/](workflow/specs/community/README.md).
+4.1.0 is released with areas 1–5, including invoices ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)). Area 6 (central CLI `CMS/cli.php`, real-time alerting, webhook event `alert.raised`) moved to **4.3.0**. **4.2.0** (schema `v27`) is the Community module; its implementation plan is in [workflow/specs/community/](workflow/specs/community/README.md).
 
 **Deutsch**
 
-4.1.0 ist für die Bereiche 1–5 umgesetzt ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md); die Rechnungen 5b sind nicht umgesetzt und bleiben offen). Bereich 6 (zentrale CLI `CMS/cli.php`, Echtzeit-Alerting, Webhook-Ereignis `alert.raised`) ist auf **4.3.0** verschoben. **4.2.0** (Schema `v27`) ist das Community-Modul; der Umsetzungsfahrplan steht in [workflow/specs/community/](workflow/specs/community/README.md).
+4.1.0 ist mit den Bereichen 1–5 einschließlich Rechnungen veröffentlicht ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)). Bereich 6 (zentrale CLI `CMS/cli.php`, Echtzeit-Alerting, Webhook-Ereignis `alert.raised`) ist auf **4.3.0** verschoben. **4.2.0** (Schema `v27`) ist das Community-Modul; der Umsetzungsfahrplan steht in [workflow/specs/community/](workflow/specs/community/README.md).
 
 | Document / Dokument | Purpose / Zweck |
 |---|---|
@@ -364,6 +365,7 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 
 **`audit/`**
 
+- [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md) – Release-Prüfung 4.1.0
 - [audit/FOLGEAUDIT-2026-11-09.md](audit/FOLGEAUDIT-2026-11-09.md) – Folgeaudit 2026-11-09
 - [audit/FOLGEAUDIT-2026-11-12.md](audit/FOLGEAUDIT-2026-11-12.md) – Folgeaudit 2026-11-12
 - [audit/FUNKTIONEN-VERWEISE.md](audit/FUNKTIONEN-VERWEISE.md) – 365CMS – Gesamtaudit 2026-10-14 | Funktionen und Verweise

@@ -32,6 +32,13 @@ use CMS\Security;
 
 final class AuthManager
 {
+    /** Sekunden, die ein akzeptierter TOTP-Code gesperrt bleibt (Prüffenster ±1 Schritt plus Puffer). */
+    private const TOTP_REPLAY_WINDOW = 120;
+
+    private const PASSKEY_MAX_ATTEMPTS_PER_IP = 20;
+    private const PASSKEY_IP_WINDOW = 900;
+    private const PASSKEY_FAILED_MESSAGE = 'Die Anmeldung mit dem Passkey ist fehlgeschlagen. Bitte erneut versuchen.';
+
     /** Gültigkeit einer ausstehenden Zwei-Faktor-Prüfung nach dem Passwort-Login (Sekunden). */
     private const MFA_PENDING_TTL = 600;
     /** Fehlversuche je Passwort-Login, danach muss das Passwort erneut eingegeben werden. */
@@ -138,9 +145,18 @@ final class AuthManager
     ): bool|string {
         $adapter = $this->passkey();
 
+        // SEC-410-18: Rate-Limit je IP und eine einheitliche Meldung – „nicht gefunden“ und Bibliotheksfehler
+        // verrieten sonst, ob eine Credential-ID existiert. Details stehen im Audit-Log.
+        $clientIp = Security::getClientIp();
+        if (!Security::checkDbRateLimit($clientIp, 'passkey_login', self::PASSKEY_MAX_ATTEMPTS_PER_IP, self::PASSKEY_IP_WINDOW)) {
+            return 'Zu viele Versuche. Bitte in einigen Minuten erneut versuchen.';
+        }
+
         $credential = $adapter->findCredentialById($credentialId);
         if ($credential === null) {
-            return 'Passkey nicht gefunden.';
+            Security::recordDbRateLimitAttempt($clientIp, 'passkey_login');
+
+            return self::PASSKEY_FAILED_MESSAGE;
         }
 
         $result = $adapter->processAuthentication(
@@ -160,7 +176,9 @@ final class AuthManager
                 'user',
                 (int)$credential['user_id']
             );
-            return $result;
+            Security::recordDbRateLimitAttempt($clientIp, 'passkey_login');
+
+            return self::PASSKEY_FAILED_MESSAGE;
         }
 
         // Sign-Counter aktualisieren
@@ -189,6 +207,7 @@ final class AuthManager
             $_SESSION['mfa_pending_remember'] = '0';
             $_SESSION['mfa_pending_since'] = time();
             $_SESSION['mfa_failed_attempts'] = 0;
+            unset($_SESSION[EntraSsoService::SESSION_SSO_PENDING]);
             return 'MFA_REQUIRED';
         }
 
@@ -254,6 +273,7 @@ final class AuthManager
             $_SESSION['mfa_pending_remember'] = '0';
             $_SESSION['mfa_pending_since'] = time();
             $_SESSION['mfa_failed_attempts'] = 0;
+            unset($_SESSION[EntraSsoService::SESSION_SSO_PENDING]);
             return 'MFA_REQUIRED';
         }
 
@@ -322,8 +342,7 @@ final class AuthManager
             // Nur der eigene Eintrag wird zurückgenommen – frühere Fehlversuche bleiben gezählt, sonst
             // setzte eine Anmeldung des Inhabers das Budget eines Angreifers zurück.
             Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
-            $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
-            if ($this->sessionAuth->completeLoginForUserId($userId, $remember)) {
+            if ($this->completePendingLogin($userId)) {
                 return true;
             }
 
@@ -334,8 +353,7 @@ final class AuthManager
         // Dann Backup-Code prüfen
         if ($this->backupCodes()->verify($userId, $code)) {
             Security::releaseDbRateLimitAttempt($clientIp, 'mfa_verify', $accountKey);
-            $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
-            if (!$this->sessionAuth->completeLoginForUserId($userId, $remember)) {
+            if (!$this->completePendingLogin($userId)) {
                 $this->clearMfaPending();
                 return 'Anmeldung konnte nicht abgeschlossen werden.';
             }
@@ -453,7 +471,25 @@ final class AuthManager
 
     private function clearMfaPending(): void
     {
-        unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember'], $_SESSION['mfa_pending_since'], $_SESSION['mfa_failed_attempts']);
+        unset($_SESSION['mfa_pending_user_id'], $_SESSION['mfa_pending_remember'], $_SESSION['mfa_pending_since'], $_SESSION['mfa_failed_attempts'], $_SESSION[EntraSsoService::SESSION_SSO_PENDING]);
+    }
+
+    /**
+     * Sitzung nach bestandener Code-Abfrage anlegen. Kam die Abfrage aus einer Entra-Anmeldung, bleibt die Sitzung
+     * eine SSO-Sitzung (SEC-410-01) – sonst beendete die Sperre „Lokale Anmeldung“ sie mit der nächsten Anfrage.
+     */
+    private function completePendingLogin(int $userId): bool
+    {
+        $fromSso = EntraSsoService::isSsoMfaPending($userId);
+        $remember = (string)($_SESSION['mfa_pending_remember'] ?? '') === '1';
+        if (!$this->sessionAuth->completeLoginForUserId($userId, $remember)) {
+            return false;
+        }
+        if ($fromSso) {
+            EntraSsoService::markSsoSession($userId);
+        }
+
+        return true;
     }
 
     /**
@@ -462,27 +498,48 @@ final class AuthManager
      */
     private function claimTotpCode(int $userId, string $code): bool
     {
+        // SEC-410-15: Alle im Prüffenster akzeptierten Codes merken (nicht nur den letzten) und die Liste per
+        // Vergleich-und-Tausch schreiben – sonst ließe sich Code A nach Code B erneut verwenden, und zwei parallele
+        // Anfragen mit demselben Code kämen beide durch.
         try {
             $db = Database::instance();
+            $prefix = $db->getPrefix();
+            $now = time();
             $hash = hash_hmac('sha256', $userId . ':' . $code, defined('AUTH_KEY') ? (string)AUTH_KEY : 'cms-totp');
-            $stored = (string)($db->get_var(
-                "SELECT meta_value FROM {$db->getPrefix()}user_meta WHERE user_id = ? AND meta_key = 'mfa_last_totp' LIMIT 1",
+            $stored = $db->get_var(
+                "SELECT meta_value FROM {$prefix}user_meta WHERE user_id = ? AND meta_key = 'mfa_last_totp' LIMIT 1",
                 [$userId]
-            ) ?? '');
+            );
 
-            if ($stored !== '' && str_contains($stored, '|')) {
-                [$storedHash, $storedAt] = explode('|', $stored, 2);
-                if (hash_equals($storedHash, $hash) && (int)$storedAt > time() - 120) {
-                    return false;
+            $entries = [];
+            foreach (explode(';', (string) ($stored ?? '')) as $entry) {
+                if (!str_contains($entry, '|')) {
+                    continue;
+                }
+                [$entryHash, $entryAt] = explode('|', $entry, 2);
+                if ((int) $entryAt > $now - self::TOTP_REPLAY_WINDOW) {
+                    if (hash_equals($entryHash, $hash)) {
+                        return false;
+                    }
+                    $entries[] = $entryHash . '|' . (int) $entryAt;
                 }
             }
+            $entries[] = $hash . '|' . $now;
+            $value = implode(';', array_slice($entries, -10));
 
-            $db->execute(
-                "INSERT INTO {$db->getPrefix()}user_meta (user_id, meta_key, meta_value)
-                 VALUES (?, 'mfa_last_totp', ?)
-                 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)",
-                [$userId, $hash . '|' . time()]
-            );
+            if ($stored === null || $stored === false) {
+                $claimed = $db->execute(
+                    "INSERT IGNORE INTO {$prefix}user_meta (user_id, meta_key, meta_value) VALUES (?, 'mfa_last_totp', ?)",
+                    [$userId, $value]
+                )->rowCount() === 1;
+            } else {
+                $claimed = $db->execute(
+                    "UPDATE {$prefix}user_meta SET meta_value = ? WHERE user_id = ? AND meta_key = 'mfa_last_totp' AND meta_value = ?",
+                    [$value, $userId, (string) $stored]
+                )->rowCount() === 1;
+            }
+
+            return $claimed;
         } catch (\Throwable) {
             // Ohne Speicher keine Replay-Sperre, Anmeldung aber nicht blockieren.
         }

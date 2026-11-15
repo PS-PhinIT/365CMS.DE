@@ -25,7 +25,7 @@ This folder documents the runtime core in `CMS/core/`: bootstrap and request lif
 
 ### Kernfakten
 
-- `CMS\Version::CURRENT = '4.0.0'`, Schema `v25`, PHP ≥ 8.4.1.
+- `CMS\Version::CURRENT = '4.1.0'`, Schema `v26`, PHP ≥ 8.4.1.
 - Einstieg `CMS/index.php` → `CMS\Bootstrap` → Modus `cli`/`api`/`admin`/`web` → `CMS\Router`.
 - Routing nach Präfix: `/api` → `ApiRouter`, `/admin` → `AdminRouter`, `/member`/`/dashboard` → `MemberRouter`, Rest → `PublicRouter` + `ThemeRouter`.
 - Erweiterung über `CMS\Hooks`, Plugins (`CMS/plugins/`) und Themes (`CMS/themes/`).

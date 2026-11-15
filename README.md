@@ -48,9 +48,9 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 
 | Key Fact | Details |
 | :--- | :--- |
-| **Core Version** | `4.1.0` (documentation state; schema `v26`). The version constants in [`CMS/core/Version.php`](CMS/core/Version.php), `SchemaManager::SCHEMA_VERSION` and `CMS/update.json` are raised in the 4.1.0 release preparation – the last published package is `4.0.0` (`2026-11-12`) |
+| **Core Version** | `4.1.0` ([`CMS/core/Version.php`](CMS/core/Version.php), released `2026-11-15`, status `stable`) |
 | **PHP Requirement** | `8.4.1+` enforced (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| **Database** | MySQL `8.0+` / MariaDB `10.6+` via PDO (`utf8mb4`), table prefix `cms_`, schema `v26` (88 tables) |
+| **Database** | MySQL `8.0+` / MariaDB `10.6+` via PDO (`utf8mb4`), table prefix `cms_`, schema `v26` (90 tables) |
 | **Architecture** | Modular DI container (`CMS\Container`), specialized routers (`Web`, `Admin`, `Member`, `API`, `CLI`), event-driven hooks |
 | **Frontend & Admin UI** | Tabler-based responsive admin shell, zero-build ES modules (`admin-shell/`, `post-editor/`, `editor-blocks/`), local WOFF2 fonts |
 | **Shipped Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML Importer*) |
@@ -132,7 +132,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Plugin & Theme Development** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operational Workflows** | [`DOC/workflow/`](DOC/workflow/) |
 | **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
-| **Releases & Changelog** | [`RELEASE/README-4.0.0.md`](RELEASE/README-4.0.0.md) · [`Changelog.md`](Changelog.md) |
+| **Releases & Changelog** | [`RELEASE/README-4.1.0.md`](RELEASE/README-4.1.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community module (4.2.0, schema `v27`)](DOC/workflow/specs/community/README.md) · [CLI & alerting (4.3.0)](DOC/workflow/specs/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Community Guidelines** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
 
@@ -167,9 +167,9 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 
 | Eckdaten | Details |
 | :--- | :--- |
-| **Core-Version** | `4.1.0` (Dokumentationsstand; Schema `v26`). Die Versionskonstanten in [`CMS/core/Version.php`](CMS/core/Version.php), `SchemaManager::SCHEMA_VERSION` und `CMS/update.json` werden mit der Release-Vorbereitung 4.1.0 gehoben – das zuletzt veröffentlichte Paket ist `4.0.0` (`2026-11-12`) |
+| **Core-Version** | `4.1.0` ([`CMS/core/Version.php`](CMS/core/Version.php), veröffentlicht `2026-11-15`, Status `stable`) |
 | **PHP-Voraussetzung** | `8.4.1+` erzwungen (`CMS\Version::MIN_PHP`, `CMS_MIN_PHP_VERSION`) |
-| **Datenbank** | MySQL `8.0+` / MariaDB `10.6+` über PDO (`utf8mb4`), Tabellenpräfix `cms_`, Schema `v26` (88 Tabellen) |
+| **Datenbank** | MySQL `8.0+` / MariaDB `10.6+` über PDO (`utf8mb4`), Tabellenpräfix `cms_`, Schema `v26` (90 Tabellen) |
 | **Architektur** | Modularer DI-Container (`CMS\Container`), spezialisierte Router (`Web`, `Admin`, `Member`, `API`, `CLI`), Event-Hooks |
 | **Admin- & Frontend-UI** | Responsive Tabler-Admin-Shell, ES-Module ohne Build-Schritt (`admin-shell/`, `post-editor/`, `editor-blocks/`), lokale WOFF2-Schriften |
 | **Standard-Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML-Importer*) |
@@ -251,7 +251,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Plugin- & Theme-Entwicklung** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operative Workflows** | [`DOC/workflow/`](DOC/workflow/) |
 | **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
-| **Release-Pakete & Changelog** | [`RELEASE/README-4.0.0.md`](RELEASE/README-4.0.0.md) · [`Changelog.md`](Changelog.md) |
+| **Release-Pakete & Changelog** | [`RELEASE/README-4.1.0.md`](RELEASE/README-4.1.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community-Modul (4.2.0, Schema `v27`)](DOC/workflow/specs/community/README.md) · [CLI & Alerting (4.3.0)](DOC/workflow/specs/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Verhaltenskodex** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
 

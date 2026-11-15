@@ -260,6 +260,8 @@ $billing = in_array($billing, ['monthly', 'yearly'], true) ? $billing : 'monthly
 // Services
 $db = Database::instance();
 $auth = Auth::instance();
+// SEC-410-08: Direkt ausgeliefert, also ohne Router – MFA-Zwang und Passwort-Ablauf hier selbst prüfen.
+\CMS\Services\Security\MfaEnforcementService::enforceOnEntryPoint('/order');
 $subManager = SubscriptionManager::instance();
 $coreModuleService = CoreModuleService::getInstance();
 $checkoutSettings = cms_checkout_load_settings($db, [

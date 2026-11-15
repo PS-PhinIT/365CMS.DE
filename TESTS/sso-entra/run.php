@@ -688,6 +688,39 @@ T::run('Sitzung: frische SSO-Anmeldung, Zwischenseite', static function (): void
     T::same(['hop' => '1'], SsoRouter::hopParameters(['code' => 'x"><script>alert(1)</script>', 'state' => ['array'], 'error' => 'Bad Error']), 'Zwischenseite: Werte mit fremden Zeichen fallen weg');
 });
 
+T::run('Audit 4.1.0: SSO-Sitzung nach lokaler Code-Abfrage, Trennen, API-Tokens', static function () use ($root): void {
+    $read = static fn (string $file): string => (string) file_get_contents($root . $file);
+
+    // SEC-410-01: Entra + lokales TOTP → Sitzung bleibt SSO-Sitzung.
+    $_SESSION = [EntraSsoService::SESSION_SSO_PENDING => 7, 'password_change_required' => true];
+    T::check(EntraSsoService::isSsoMfaPending(7) && !EntraSsoService::isSsoMfaPending(8), 'ausstehende Code-Abfrage aus Entra je Konto erkennbar');
+    EntraSsoService::markSsoSession(7);
+    T::same(7, (int) ($_SESSION[EntraSsoService::SESSION_SSO_USER] ?? 0), 'markSsoSession setzt das SSO-Merkmal');
+    T::check(!isset($_SESSION['password_change_required']) && !isset($_SESSION[EntraSsoService::SESSION_SSO_PENDING]), 'markSsoSession entfernt Passwort-Ablauf-Flag und Pending-Merkmal');
+    T::check(EntraSettings::sessionMayContinue(7, 'member', EntraSettings::LOCAL_LOGIN_DISABLED_FOR_LINKED, $_SESSION, static fn (): bool => true), 'verknüpftes Konto bleibt nach SSO + TOTP angemeldet');
+    $_SESSION = [];
+
+    $service = $read('core/Auth/SSO/EntraSsoService.php');
+    T::check(str_contains($service, '$_SESSION[self::SESSION_SSO_PENDING] = $userId;'), 'Entra-Anmeldung mit lokalem TOTP merkt die Herkunft');
+    $manager = $read('core/Auth/AuthManager.php');
+    T::check(str_contains($manager, 'private function completePendingLogin(int $userId): bool') && substr_count($manager, '$this->completePendingLogin($userId)') === 2, 'TOTP und Backup-Code schließen über completePendingLogin ab');
+    T::check(str_contains($manager, 'EntraSsoService::markSsoSession($userId);'), 'nach der Code-Abfrage wird die SSO-Herkunft wiederhergestellt');
+    T::check(substr_count($manager, 'unset($_SESSION[EntraSsoService::SESSION_SSO_PENDING]);') === 2, 'Passkey- und LDAP-Weg verwerfen ein altes SSO-Merkmal');
+
+    // SEC-410-02: Trennen nur, solange die lokale Anmeldung nicht eingeschränkt ist (Admins immer).
+    $controller = $read('member/includes/class-member-controller.php');
+    $unlinkPos = strpos($controller, "if (\$action === 'sso_unlink') {");
+    T::check($unlinkPos !== false && strpos($controller, '->mayUnlink($userId)', $unlinkPos) !== false && strpos($controller, '->mayUnlink($userId)', $unlinkPos) < strpos($controller, '->unlink($userId)', $unlinkPos), 'Mitgliederbereich prüft mayUnlink vor dem Trennen');
+    T::check(str_contains($service, "return \$role === 'admin';") && str_contains($service, 'EntraSettings::enforcedLocalLogin($this->settings())'), 'mayUnlink: nur Admins bei eingeschränkter lokaler Anmeldung');
+
+    // SEC-410-09: API-Tokens tragen die Herkunft und unterliegen den Kontoregeln.
+    $auth = $read('core/Auth.php');
+    T::check(str_contains($auth, 'private static function apiTokenPoliciesAllow(object $user, object $payload): bool'), 'Bearer-Tokens: Kontoregeln geprüft');
+    T::check(substr_count($auth, 'self::apiTokenPoliciesAllow($user, $payload)') === 2, 'Kontoregeln bei Zugriff und Refresh');
+    $api = $read('core/Routing/ApiRouter.php');
+    T::check(str_contains($api, "Auth::apiTokenOriginClaims(\$userId)") && str_contains($api, "'sso' => !empty(\$payload->sso)"), 'Herkunfts-Claims bei Ausstellung und Refresh');
+});
+
 T::run('Einbindung (statisch)', static function () use ($root): void {
     $read = static fn (string $file): string => (string) file_get_contents($root . $file);
 
@@ -718,7 +751,7 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
     T::check(str_contains($service, "Auth::instance()->currentUser()") && str_contains($service, "\$userId !== (int) \$flow['user_id']"), 'Verknüpfen nur für das Konto, das den Vorgang gestartet hat');
 
     $auth = $read('core/Auth.php');
-    T::check(str_contains($auth, "unset(\$_SESSION['auth_sso_mfa_user_id'], \$_SESSION['auth_sso_user_id'], \$_SESSION['auth_sso_at']);"), 'jede Anmeldung setzt SSO-Merkmale zurück');
+    T::check(str_contains($auth, "unset(\$_SESSION['auth_sso_mfa_user_id'], \$_SESSION['auth_sso_user_id'], \$_SESSION['auth_sso_at'], \$_SESSION['auth_sso_mfa_pending_user_id']);"), 'jede Anmeldung setzt SSO-Merkmale zurück');
     // „Lokale Anmeldung“ gilt für jeden Weg an Microsoft vorbei: Passwort, Passkey, LDAP – jeweils nach dem Faktor,
     // vor der TOTP-Abfrage (MFA_REQUIRED) und vor dem Sitzungsaufbau.
     $gateBefore = static function (string $source, string $method, string $call, array $later): bool {

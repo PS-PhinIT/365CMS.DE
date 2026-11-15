@@ -128,7 +128,8 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `MonitoringTrendService` | Verläufe für Monitoring |
 | `ErrorReportService` | Fehlerberichte |
 | `BackupService` | Backups, Restore, Validierung; Ablageort `CMS_BACKUP_PATH` und optionale Verschlüsselung (seit 4.0.0, [../admin/system-settings/BACKUP.md](../admin/system-settings/BACKUP.md)); Hook `cms_backup_created` (seit 4.1.0) |
-| `Payments\PaymentService` (+ `StripeGateway`, `MollieGateway`, `AbstractGateway`, `PaymentGatewayInterface`, `PaymentSettings`) | Zahlungen (seit 4.1.0): Stripe/Mollie-Checkout, signierte Webhooks als einzige Quelle, Idempotenz über `payment_events`, Abo-Aktivierung und -Verlängerung ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
+| `Payments\InvoiceService` | Rechnungen (seit 4.1.0): lückenloser Nummernkreis, Snapshot, PDF im privaten Speicher, Storno, Pflichtangaben § 14 UStG, Sperrvermerk statt Löschung ([INVOICES.md](../admin/subscription/INVOICES.md)) |
+| `Payments\PaymentService` | Zahlungen (seit 4.1.0): Stripe/Mollie-Checkout, signierte Webhooks als einzige Quelle, Idempotenz über `payment_events`, Abo-Aktivierung und -Verlängerung ([PAYMENTS.md](../admin/subscription/PAYMENTS.md)) |
 | `Webhooks\WebhookService` | Ausgehende Webhooks (seit 4.1.0): Empfänger mit verschlüsseltem Geheimnis, Warteschlange `webhook_deliveries`, signierte Zustellung im Cron, Wiederholungen, Deaktivieren bei 410/20 Fehlschlägen ([WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md)) |
 | `Backup\OffsiteBackupService` (+ `S3Client`, `S3Config`, `SigV4Signer`) | Offsite-Kopien auf S3-kompatible Ziele (seit 4.1.0): nur verschlüsselte Backups, Multipart, Status `backup_offsite_uploads`, Nachholen per Cron, Aufbewahrung, Verbindungstest; SigV4 ohne SDK |
 | `UpdateService` | Update-Prüfung und -Installation, Systemvoraussetzungen |

@@ -2,13 +2,13 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "min_php": "8.4.1",
-  "released": "2026-11-12",
-  "schema_version": "v25",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.0.0-update.zip",
+  "released": "2026-11-15",
+  "schema_version": "v26",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.1.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "db1de247e6e706ef7b4c51f939f1807c2948972f6624d5672f94ed8a27bee74c",
-  "notes": "WICHTIG beim Update von 3.5.x: Der Updater von 3.5.x ersetzt die Ordner plugins/ und themes/ vollständig – nachinstallierte Plugins und eigene Themes vorher sichern und danach wieder hochladen (ab 4.0.0 bleiben sie bei Updates erhalten). Release 4.0.0 (12.11.2026): Sicherheits- und Funktionsrelease – bitte zeitnah installieren. Enthält die Korrekturen der Folgeaudits vom 08. und 09.11.2026 (u. a. Host-Header/Cache-Poisoning, MFA-Einrichtung ohne Passwort, Geheimnisse im DSGVO-Export, Installer-Sperre, SVG-Import, Passkeys ohne zweiten Faktor, verschlüsselte Geheimnisse mit CMS_ENCRYPTION_KEY, Backup-Verschlüsselung), die neue Administration (Seitenleiste mit Site-Umschalter und Menü-Profilen, Beitragseditor mit Checkliste, Fokusmodus und Revisionen) sowie Formulare, Downloads, Feed-Aggregator, Newsletter und Knowledgebase im Core (Daten der Plugins cms-contact, cms-downloads, cms-feed, cms-newsletter und cms-knowledgebase werden automatisch übernommen), Redaktionskalender, Papierkorb, Letzte Änderungen, Übersetzungsstatus, Suchindex, Import/Export, Löschfristen, Medien-Werkzeuge, Urheberangaben, Barrierefreiheitserklärung, einstellbare Login-Grenzwerte, Cache & Wartung in der oberen Leiste und Umgebungsinfo. Datenbankschema v25: nach dem Update unter Admin > Updates das Datenbank-Update ausführen; den Cron mindestens stündlich laufen lassen.",
-  "critical": true
+  "checksum_sha256": "bec76f6d7107d00ee43f6c4020bbb339d9dc85dbf984cad8d988b4db0a4bb904",
+  "notes": "WICHTIG beim Update von 3.5.x: Der Updater von 3.5.x ersetzt die Ordner plugins/ und themes/ vollständig – nachinstallierte Plugins und eigene Themes vorher sichern und danach wieder hochladen (ab 4.0.0 bleiben sie erhalten); die Daten der Plugins cms-contact, cms-downloads, cms-feed, cms-newsletter und cms-knowledgebase werden automatisch in den Core übernommen. Release 4.1.0 (15.11.2026): Feature-Release – Passwort-Richtlinie, MFA-Zwang je Rolle, Anmeldung mit Microsoft Entra ID, AVIF-Bilder, Medien-Verwendungsnachweis, Vier-Augen-Prinzip, EditorJS Block Vorlagen, Ablauf- und Prüfdaten, Offsite-Backups (S3), ausgehende Webhooks, Zahlungen über Stripe/Mollie (auch PayPal) und Rechnungen nach § 14 UStG. Datenbankschema v26: nach dem Update unter Admin > Updates das Datenbank-Update ausführen; den Cron mindestens stündlich laufen lassen. Neue Rechte hat zunächst nur die Rolle admin (unter Benutzer > Rollen vergeben).",
+  "critical": false
 }
