@@ -509,6 +509,11 @@ final class PaymentService
         if ($subscription === null) {
             return ['status' => 'failed', 'error' => 'Abo unbekannt.'];
         }
+        // FUN-410-20: Ein gekündigtes oder durch einen Tarifwechsel ersetztes Abo wird nie wieder aktiv; die Abbuchung
+        // beim Anbieter steht am Ereignis, damit sie dort beendet und erstattet werden kann.
+        if (strtolower((string) ($subscription['status'] ?? '')) === 'cancelled') {
+            return ['status' => 'failed', 'error' => 'Verlängerung für ein gekündigtes Abo – das Abo beim Anbieter beenden und die Zahlung prüfen.'];
+        }
         $now = ($this->clock)();
         $current = strtotime((string) ($subscription['current_period_end'] ?? '') . ' UTC') ?: 0;
         $cycle = (string) ($subscription['billing_cycle'] ?? 'monthly');

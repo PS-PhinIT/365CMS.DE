@@ -1146,9 +1146,10 @@ if (!function_exists('meridian_get_picture_sources')) {
         $extension = strtolower((string) pathinfo($sourcePath, PATHINFO_EXTENSION));
 
         // 365CMS 4.1.0: vorhandene AVIF-Fassung (Medien → Einstellungen „AVIF zusätzlich erzeugen“); nie zur Laufzeit erzeugt.
-        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+        // GIF ohne AVIF (statische Fassung würde eine Animation ersetzen); nur Fassungen, die nicht älter als das Original sind.
+        if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
             $avifPath = preg_replace('/\.[a-z0-9]+$/i', '.avif', $sourcePath);
-            if (is_string($avifPath) && $avifPath !== $sourcePath && is_file($avifPath)) {
+            if (is_string($avifPath) && $avifPath !== $sourcePath && is_file($avifPath) && (int) filemtime($avifPath) >= (int) filemtime($sourcePath)) {
                 $avifUrl = meridian_local_path_to_public_url($avifPath);
                 if ($avifUrl !== '') {
                     $result['avif_url'] = meridian_safe_public_media_url($avifUrl, $siteUrl);

@@ -21,6 +21,12 @@ use CMS\Services\SiteTable\SiteTableDisplaySettings;
 
 class TablesModule
 {
+    /**
+     * FUN-410-32: Hub-Sites teilen sich die Tabelle site_tables. Diese Seite arbeitet nur mit Tabellen, die nicht im
+     * Papierkorb liegen – sonst ließe sich eine Hub-Site über ihre ID endgültig löschen oder in eine Tabelle umwandeln.
+     */
+    private const TABLE_SCOPE = "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings_json, '$.content_mode')), 'table') <> 'hub' AND trashed_at IS NULL";
+
     private const MAX_TABLE_NAME_LENGTH = 150;
     private const MAX_DESCRIPTION_LENGTH = 1000;
     private const MAX_COLUMNS = 25;
@@ -79,10 +85,10 @@ class TablesModule
     {
         $search = $this->sanitizeSearchTerm($search);
 
-        $where  = '';
+        $where  = 'WHERE ' . self::TABLE_SCOPE;
         $params = [];
         if ($search !== '') {
-            $where    = 'WHERE table_name LIKE ? OR description LIKE ?';
+            $where   .= ' AND (table_name LIKE ? OR description LIKE ?)';
             $params[] = '%' . \cms_escape_like($search) . '%';
             $params[] = '%' . \cms_escape_like($search) . '%';
         }
@@ -131,7 +137,7 @@ class TablesModule
         $missing = false;
         if ($id !== null) {
             $table = $this->db->get_row(
-                "SELECT * FROM {$this->prefix}site_tables WHERE id = ?",
+                "SELECT * FROM {$this->prefix}site_tables WHERE id = ? AND " . self::TABLE_SCOPE,
                 [$id]
             );
             if ($table) {
@@ -337,9 +343,11 @@ class TablesModule
                     $sql .= ', table_slug = ?';
                     $params[] = $tableSlug;
                 }
-                $sql .= ', updated_at = NOW() WHERE id = ?';
+                $sql .= ', updated_at = NOW() WHERE id = ? AND ' . self::TABLE_SCOPE;
                 $params[] = $id;
-                $this->db->execute($sql, $params);
+                if ($this->db->execute($sql, $params)->rowCount() < 1 && $this->db->get_var("SELECT id FROM {$this->prefix}site_tables WHERE id = ? AND " . self::TABLE_SCOPE, [$id]) === null) {
+                    return ['success' => false, 'error' => 'Tabelle wurde nicht gefunden.'];
+                }
                 return ['success' => true, 'id' => $id, 'message' => 'Tabelle aktualisiert.'];
             } else {
                 $columns = ['table_name', 'description', 'columns_json', 'rows_json', 'settings_json', 'created_at', 'updated_at'];
@@ -377,7 +385,7 @@ class TablesModule
         }
 
         $existingId = $this->db->get_var(
-            "SELECT id FROM {$this->prefix}site_tables WHERE id = ? LIMIT 1",
+            "SELECT id FROM {$this->prefix}site_tables WHERE id = ? AND " . self::TABLE_SCOPE . " LIMIT 1",
             [$id]
         );
 
@@ -386,7 +394,7 @@ class TablesModule
         }
 
         try {
-            $statement = $this->db->execute("DELETE FROM {$this->prefix}site_tables WHERE id = ? LIMIT 1", [$id]);
+            $statement = $this->db->execute("DELETE FROM {$this->prefix}site_tables WHERE id = ? AND " . self::TABLE_SCOPE . " LIMIT 1", [$id]);
             if ($statement->rowCount() < 1) {
                 return ['success' => false, 'error' => 'Tabelle wurde zwischenzeitlich entfernt. Bitte Liste neu laden.'];
             }
@@ -406,7 +414,7 @@ class TablesModule
     public function duplicate(int $id): array
     {
         $source = $this->db->get_row(
-            "SELECT * FROM {$this->prefix}site_tables WHERE id = ?",
+            "SELECT * FROM {$this->prefix}site_tables WHERE id = ? AND " . self::TABLE_SCOPE,
             [$id]
         );
 

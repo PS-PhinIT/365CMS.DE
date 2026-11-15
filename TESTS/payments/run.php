@@ -373,6 +373,11 @@ T::run('Verlängerung und Ende', static function (): void {
     $deleted = pyStripeBody('evt_d', 'customer.subscription.deleted', ['id' => 'sub_1']);
     $f['service']->handleWebhook('stripe', pyStripeHeaders($deleted, PY_NOW + 86400 * 30), $deleted);
     T::same('cancelled', (string) $f['db']->get_var('SELECT status FROM cms_user_subscriptions WHERE provider_subscription_id = ?', ['sub_1']), 'Abo beim Anbieter beendet → gekündigt');
+    // FUN-410-20: Eine spätere Verlängerung reaktiviert das gekündigte Abo nicht.
+    $late = pyStripeBody('evt_late_r', 'invoice.paid', ['id' => 'in_9', 'billing_reason' => 'subscription_cycle', 'subscription' => 'sub_1', 'amount_paid' => 1199, 'currency' => 'eur']);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($late, PY_NOW + 86400 * 30), $late);
+    T::same('cancelled', (string) $f['db']->get_var('SELECT status FROM cms_user_subscriptions WHERE provider_subscription_id = ?', ['sub_1']), 'Verlängerung nach Kündigung bleibt gekündigt');
+    T::same('failed', (string) $f['db']->get_var("SELECT status FROM cms_payment_events WHERE provider_event_id = 'evt_late_r'"), 'und steht als failed am Ereignis');
 });
 
 T::run('Audit 4.1.0: atomarer Zustandswechsel, Wiederholung nach Fehler, Verlängerungsbetrag', static function (): void {

@@ -76,6 +76,8 @@ final class MediaFeatureHooks
             'cms_after_page_copy_de_to_en' => ['page', false],
             'page_deleted' => ['page', true],
             'cms_after_hub_save' => ['hub_site', false],
+            // FUN-410-29: endgültiges Löschen einer Hub-Site (HubSiteTrashProvider) entfernt ihre Verwendungen.
+            'hub_deleted' => ['hub_site', true],
             'cms_after_download_save' => ['download', false],
             'cms_download_trashed' => ['download', false],
             'download_deleted' => ['download', true],

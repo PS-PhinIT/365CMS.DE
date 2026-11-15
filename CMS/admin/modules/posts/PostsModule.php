@@ -1510,6 +1510,13 @@ class PostsModule
         }
         $workflow = ContentWorkflow::instance();
         $userId = $this->currentUserId();
+        // FUN-410-03: Die Freigabe veröffentlicht – dieselbe Checkliste wie beim Speichern und in der Sammelaktion.
+        if ($action === 'approve') {
+            [, $skipped] = $this->partitionPostsByPublishChecklist([$id]);
+            if ($skipped !== []) {
+                return ['success' => false, 'error' => 'Freigabe nicht möglich: Die Veröffentlichungs-Checkliste ist nicht erfüllt (Beitragsbild, Meta-Beschreibung, Kategorie).'];
+            }
+        }
         $result = match ($action) {
             'approve' => $workflow->approve(ContentWorkflow::TYPE_POST, $id, $userId, $comment),
             'return' => $workflow->returnToAuthor(ContentWorkflow::TYPE_POST, $id, $userId, $comment),

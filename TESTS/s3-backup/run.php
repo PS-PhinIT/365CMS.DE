@@ -338,6 +338,10 @@ T::run('Offsite-Dienst: Hook, Nachholen, Fehler', static function (): void {
     T::same('uploaded', (string) $f['db']->get_var('SELECT status FROM cms_backup_offsite_uploads'), 'danach uploaded');
     $f['db']->execute("UPDATE cms_backup_offsite_uploads SET status = 'failed', attempts = 3");
     T::same(['retried' => 0, 'uploaded' => 0], $f['service']->retryPending(), 'nach 3 Versuchen kein weiterer Versuch');
+    // FUN-410-26: Backup ohne Statuszeile (entstanden, als das Ziel unvollständig konfiguriert war) wird nachgeholt.
+    s3MakeBackup($f['root'], 'full_backup_b');
+    T::same(['retried' => 1, 'uploaded' => 1], $f['service']->retryPending(), 'Backup ohne Statuszeile wird nachgeholt');
+    T::same('uploaded', (string) $f['db']->get_var("SELECT status FROM cms_backup_offsite_uploads WHERE backup_name = 'full_backup_b'"), 'und als uploaded geführt');
 });
 
 T::run('Aufbewahrung', static function (): void {

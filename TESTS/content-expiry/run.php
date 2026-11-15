@@ -155,6 +155,15 @@ T::run('Ablauf: nur markieren', static function (): void {
     $f['service']->saveDates('post', 1, '2026-11-15 09:30:00', null);
     T::same(null, $f['db']->get_var('SELECT review_due_at FROM cms_posts WHERE id = 1'), 'Speichern übernimmt auch leere Wiedervorlage');
     T::check($f['db']->get_var('SELECT expiry_notified_at FROM cms_posts WHERE id = 1') !== null, 'unverändertes Ablaufdatum behält die Markierung');
+    // FUN-410-08: Modus „zurückstufen“ – abgelaufen, Entwurf, erneut veröffentlicht mit gleichem Datum → läuft wieder ab.
+    $f['settings'][E::SETTING_ACTION] = 'draft';
+    $f['db']->execute("UPDATE cms_posts SET status = 'draft', expiry_notified_at = '2026-11-15 09:31:00' WHERE id = 1");
+    $f['service']->saveDates('post', 1, '2026-11-15 09:30:00', null);
+    T::check($f['db']->get_var('SELECT expiry_notified_at FROM cms_posts WHERE id = 1') !== null, 'Entwurf: Markierung bleibt (410 möglich)');
+    $f['db']->execute("UPDATE cms_posts SET status = 'published' WHERE id = 1");
+    $f['service']->saveDates('post', 1, '2026-11-15 09:30:00', null);
+    T::same(null, $f['db']->get_var('SELECT expiry_notified_at FROM cms_posts WHERE id = 1'), 'wieder veröffentlicht: Markierung zurückgesetzt, der nächste Lauf stuft erneut zurück');
+    T::check(E::wasExpiredAndUnpublished(['is_active' => '0', 'expiry_notified_at' => '2026-11-15 09:31:00']), 'FUN-410-09: Wissensdatenbank (is_active = 0) gilt als abgelaufen und zurückgestuft');
 });
 
 T::run('Batch-Grenze', static function (): void {

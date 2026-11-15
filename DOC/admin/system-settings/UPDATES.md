@@ -31,7 +31,7 @@
 | Themes (Basis) | `theme_marketplace_url` | `https://365cms.de/marketplace/themes` |
 | Marketplace-Übersicht | `marketplace_public_url` | `https://365cms.de/marketplace-public` |
 | Public Einreichung | `marketplace_submit_url` | `https://365cms.de/marketplace-submit` |
-| Fallback | GitHub-Repository | `PS-easyIT/365CMS.DE` über `api.github.com` |
+| Fallback | GitHub-Repository | `PS-PhinIT/365CMS.DE` über `api.github.com` |
 
 Alle Endpunkte und ihre Defaults sind zentral in `CMS\Services\MarketplaceEndpoints` hinterlegt. Index-Feeds werden geladen, relative Manifest-, Paket- und Asset-Pfade werden gegen die jeweilige Basis-URL aufgelöst. Wird nur Basis oder nur Index angepasst, leitet das System das Gegenstück ab.
 
@@ -48,7 +48,7 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
   "released": "2026-11-15",
   "schema_version": "v26",
   "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.1.0-update.zip",
-  "changelog_url": "https://raw.githubusercontent.com/PS-easyIT/365CMS.DE/main/Changelog.md",
+  "changelog_url": "https://raw.githubusercontent.com/PS-PhinIT/365CMS.DE/main/Changelog.md",
   "checksum_sha256": "<64 Hex-Zeichen>",
   "notes": "…",
   "critical": false

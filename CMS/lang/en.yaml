@@ -1530,6 +1530,7 @@ default:
   "trash.assignment.terms": "Terms and conditions"
   "trash.assignment.revocation": "Cancellation policy"
   "trash.assignment.cancellation": "Contract cancellation page"
+  "trash.assignment.accessibility": "Accessibility statement"
   "trash.confirm.bulk_delete_title": "Delete permanently?"
   "trash.confirm.bulk_delete_message": "The selected items will be deleted permanently, including revisions. This cannot be undone."
   "trash.confirm.bulk_move_title": "Move to trash?"

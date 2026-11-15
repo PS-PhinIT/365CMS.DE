@@ -101,7 +101,7 @@ final class DocumentationModule
         return new DocumentationSyncService(
             $this->repoRoot,
             $this->docsRoot,
-            $constant('CMS_DOCS_SYNC_ZIP_URL', 'https://codeload.github.com/PS-easyIT/365CMS.DE/zip/refs/heads/main'),
+            $constant('CMS_DOCS_SYNC_ZIP_URL', 'https://codeload.github.com/PS-PhinIT/365CMS.DE/zip/refs/heads/main'),
             strtolower($constant('CMS_DOCS_SYNC_BUNDLE_SHA256', '')),
             (int) $constant('CMS_DOCS_SYNC_BUNDLE_FILES', '0'),
             $constant('CMS_DOCS_SYNC_REMOTE', 'origin'),

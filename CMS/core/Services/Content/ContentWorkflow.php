@@ -297,7 +297,11 @@ final class ContentWorkflow
     public function recordBulkTransitions(string $type, array $previousStatuses, string $to, int $userId): void
     {
         foreach ($previousStatuses as $id => $from) {
-            $this->recordTransition($type, (int) $id, $from, $to, $userId);
+            // FUN-410-04: Eine Rückgabe verlangt eine Begründung; die Sammelaktion hat keine – das steht im Verlauf.
+            $comment = $from === ContentStatus::PENDING && $to === ContentStatus::DRAFT
+                ? 'Über die Sammelaktion „Entwurf“ zurückgesetzt (ohne Begründung).'
+                : '';
+            $this->recordTransition($type, (int) $id, $from, $to, $userId, $comment);
         }
     }
 
@@ -450,10 +454,14 @@ final class ContentWorkflow
             return ['success' => false, 'error' => 'Nur Entwürfe können zur Prüfung eingereicht werden.'];
         }
         $table = $this->prefix . self::TABLES[$type];
-        $this->db->execute(
+        $changed = $this->db->execute(
             "UPDATE {$table} SET status = ?, updated_at = ? WHERE id = ? AND status = ?",
             [ContentStatus::PENDING, $this->now(), $id, ContentStatus::DRAFT]
-        );
+        )->rowCount();
+        // FUN-410-11: Status inzwischen geändert (parallele Bearbeitung) → kein Verlauf, keine Benachrichtigung.
+        if ($changed < 1) {
+            return ['success' => false, 'error' => 'Der Status wurde inzwischen geändert. Bitte die Seite neu laden.'];
+        }
         $this->recordTransition($type, $id, $from, ContentStatus::PENDING, $userId, $comment);
 
         return ['success' => true, 'message' => 'Zur Prüfung eingereicht.'];
@@ -606,8 +614,13 @@ final class ContentWorkflow
         if ($row === null || (string) ($row->status ?? '') === ContentStatus::TRASH) {
             return ['success' => false, 'error' => 'Für diesen Inhalt kann kein Vorschau-Link erstellt werden.'];
         }
-        $token = bin2hex(random_bytes(32));
         $now = ($this->clock)();
+        // FUN-410-12: Bereits öffentliche Inhalte brauchen keinen Vorschau-Link (REVIEW.md); geplante schon.
+        $publishedAt = (string) ($row->published_at ?? '');
+        if ((string) ($row->status ?? '') === ContentStatus::PUBLISHED && ($publishedAt === '' || strtotime($publishedAt) <= $now)) {
+            return ['success' => false, 'error' => 'Der Inhalt ist bereits öffentlich – ein Vorschau-Link ist nicht nötig.'];
+        }
+        $token = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', $now + self::PREVIEW_TTL_SECONDS);
         $this->db->execute(
             "INSERT INTO {$this->prefix}content_preview_links (content_type, content_id, token_hash, expires_at, created_by, created_at)

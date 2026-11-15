@@ -215,6 +215,11 @@ final class OffsiteBackupService
         if (isset($list['error'])) {
             return $this->fail($backupName, $list['error']);
         }
+        // FUN-410-24: große Uploads nicht am max_execution_time scheitern lassen (auch aus der Oberfläche).
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+        @ignore_user_abort(true);
         $this->markPending($backupName, $config->prefix);
         $client = ($this->clientFactory)($config);
         $bytes = 0;
@@ -273,15 +278,50 @@ final class OffsiteBackupService
             "SELECT backup_name FROM {$this->prefix}backup_offsite_uploads WHERE target = ? AND status IN ('pending', 'failed') AND attempts < ? ORDER BY updated_at ASC LIMIT 10",
             [self::TARGET, self::MAX_ATTEMPTS]
         ) ?: [];
+        $names = array_map(static fn (object $row): string => (string) $row->backup_name, $rows);
+        // FUN-410-26: Backups, die bei unvollständiger Konfiguration entstanden (ohne Statuszeile), nachholen – die
+        // drei neuesten lokalen Backups ohne Eintrag.
+        foreach ($this->untrackedLocalBackups(3) as $name) {
+            if (!in_array($name, $names, true)) {
+                $names[] = $name;
+            }
+        }
         $uploaded = 0;
-        foreach ($rows as $row) {
-            if (!empty($this->uploadBackup((string) $row->backup_name)['success'])) {
+        foreach ($names as $name) {
+            if (!empty($this->uploadBackup($name)['success'])) {
                 $uploaded++;
             }
         }
         $this->applyRetention();
 
-        return ['retried' => count($rows), 'uploaded' => $uploaded];
+        return ['retried' => count($names), 'uploaded' => $uploaded];
+    }
+
+    /**
+     * Neueste lokale Backups (Verzeichnis mit manifest.json), für die es noch keine Statuszeile gibt.
+     *
+     * @return list<string>
+     */
+    private function untrackedLocalBackups(int $limit): array
+    {
+        $candidates = [];
+        foreach (glob($this->backupRoot . '*/manifest.json') ?: [] as $manifest) {
+            $name = basename(dirname($manifest));
+            if (preg_match(self::NAME_PATTERN, $name) === 1) {
+                $candidates[$name] = (int) (filemtime($manifest) ?: 0);
+            }
+        }
+        if ($candidates === []) {
+            return [];
+        }
+        arsort($candidates);
+        $names = array_slice(array_keys($candidates), 0, max(1, $limit));
+        $known = $this->db->get_col(
+            "SELECT backup_name FROM {$this->prefix}backup_offsite_uploads WHERE target = ? AND backup_name IN (" . implode(',', array_fill(0, count($names), '?')) . ')',
+            array_merge([self::TARGET], $names)
+        ) ?: [];
+
+        return array_values(array_diff($names, array_map('strval', $known)));
     }
 
     // ── Aufbewahrung ────────────────────────────────────────────────────────────────────────────────────────────
