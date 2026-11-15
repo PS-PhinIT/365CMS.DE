@@ -16,7 +16,7 @@
 
 ### v4.1.8 — 15.11.2026 - Patch Release
 
-**Feeds, Wissensdatenbank** · Release-Prüfung 4.1.0, FUN-410-34 und FUN-410-35 (#PRNUM). Kumulatives Paket 4.1.1 bis 4.1.8, Schema bleibt `v26`.
+**Feeds, Wissensdatenbank** · Release-Prüfung 4.1.0, FUN-410-34 und FUN-410-35 ([#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169)). Kumulatives Paket 4.1.1 bis 4.1.8, Schema bleibt `v26`.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
