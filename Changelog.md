@@ -16,7 +16,7 @@
 
 ### v4.1.7 — 15.11.2026 - Patch Release
 
-**Zahlungen: Erstattung, Rückbuchung, Kündigung** · Release-Prüfung 4.1.0, Funktionslücken FUN-410-21 und FUN-410-27 (#PRNUM).
+**Zahlungen: Erstattung, Rückbuchung, Kündigung** · Release-Prüfung 4.1.0, Funktionslücken FUN-410-21 und FUN-410-27 ([#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168)).
 
 Kumulatives Paket 4.1.1 bis 4.1.7. Schema bleibt `v26`. **Stripe:** im Webhook die Ereignisse `charge.refunded` und `charge.dispute.created` ergänzen (*Abos → Zahlungen* listet alle Ereignisse).
 
