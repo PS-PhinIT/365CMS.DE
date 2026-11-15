@@ -73,6 +73,15 @@ CREATE TABLE {p}reusable_block_revisions (
 Tests (`TESTS/reusable-blocks/run.php`): Rendern mit aktuellem Inhalt, Sprache, Rekursion (direkt und über zwei Ebenen),
 gelöschter Block, Sanitizing der Block-Daten (nur `id`), Nutzungsindex nach Speichern, Cache-Invalidierung.
 
+**Umsetzung (15.11.2026)** – Handbuch [BLOCK-TEMPLATES.md](../../../admin/pages-posts/BLOCK-TEMPLATES.md), Tests `TESTS/reusable-blocks`:
+
+- Benennung nach Wunsch des Betreibers: Verwaltung **„EditorJS Block Vorlagen“**, Editor.js-Block **„Vorlagen“** (technisch weiter `reusableBlock`, Route `/admin/reusable-blocks`, Recht `blocks.reusable`).
+- Rekursion: wird schon beim Speichern abgelehnt (Selbsteinbindung, Kreise über beliebig viele Ebenen und beide Sprachen); der Render-Schutz (Wiederholung, Tiefe > 3) bleibt für Altbestand/Importe.
+- Löschen: endgültig, mit Bestätigung (bei verwendeten Vorlagen mit Zahl der Stellen) statt Status `trash`; die Spalte `status` bleibt für einen späteren Papierkorb.
+- Cache: Änderungen leeren den Seiten-Cache und lösen für jeden verknüpften Beitrag bzw. jede Seite – auch über verschachtelte Vorlagen – die Speicher-Hooks aus (Suchindex, Sitemap). Revisionen der Beiträge entstehen dabei nicht.
+- Suche: `SiteSearchService::registerBlockTextResolver()` löst den Verweis auf (Sprache des Index); RSS nutzt den Editor.js-Renderer und ist damit automatisch aufgelöst. Medien in Vorlagen zählen im Verwendungsnachweis bei der Vorlage.
+- Revisionen speichern zusätzlich den Titel.
+
 ### 3c. Ablauf- und Prüfdaten (Content-Expiration & Wiedervorlage)
 
 | Punkt | Festlegung |

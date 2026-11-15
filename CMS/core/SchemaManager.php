@@ -73,6 +73,7 @@ class SchemaManager
         'password_history', 'user_identities',
         'media_usage',
         'content_workflow_events', 'content_preview_links',
+        'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions',
         'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries',
     ];
 
@@ -1494,6 +1495,41 @@ class SchemaManager
                 KEY idx_content_preview_content (content_type, content_id),
                 KEY idx_content_preview_expires (expires_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Vorschau-Links für Entwürfe'",
+
+            // v26: Wiederverwendbare Editor.js-Blöcke (ReusableBlockService, Bereich 3b). Inhalt je Sprache als Editor.js-JSON.
+            'reusable_blocks' => "CREATE TABLE IF NOT EXISTS {$p}reusable_blocks (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(150) NOT NULL,
+                content LONGTEXT NOT NULL,
+                content_en LONGTEXT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                created_by INT UNSIGNED NULL,
+                updated_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                KEY idx_reusable_blocks_status (status, title)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Wiederverwendbare Editor.js-Blöcke'",
+
+            // v26: Wo ist ein Block eingebunden? (Cache-Invalidierung, „Verwendet in“, Löschwarnung)
+            'reusable_block_usage' => "CREATE TABLE IF NOT EXISTS {$p}reusable_block_usage (
+                block_id INT UNSIGNED NOT NULL,
+                content_type VARCHAR(30) NOT NULL,
+                content_id BIGINT UNSIGNED NOT NULL,
+                PRIMARY KEY (block_id, content_type, content_id),
+                KEY idx_reusable_block_usage_content (content_type, content_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Verwendung wiederverwendbarer Blöcke'",
+
+            // v26: Einfacher Verlauf je Block (die letzten 20 Fassungen).
+            'reusable_block_revisions' => "CREATE TABLE IF NOT EXISTS {$p}reusable_block_revisions (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                block_id INT UNSIGNED NOT NULL,
+                title VARCHAR(150) NOT NULL DEFAULT '',
+                content LONGTEXT NOT NULL,
+                content_en LONGTEXT NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                KEY idx_reusable_block_revisions_block (block_id, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Verlauf wiederverwendbarer Blöcke'",
 
             // v26: Offsite-Status je Backup (OffsiteBackupService, S3-kompatibel).
             'backup_offsite_uploads' => "CREATE TABLE IF NOT EXISTS {$p}backup_offsite_uploads (

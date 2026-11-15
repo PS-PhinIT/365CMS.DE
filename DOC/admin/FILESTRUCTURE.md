@@ -19,7 +19,7 @@ CMS/admin/
 ├── modules/                   # Fachlogik je Bereich
 │   ├── comments/  content/  dashboard/  downloads/  feeds/  forms/  hub/
 │   ├── knowledgebase/  landing/  legal/  media/  member/  menus/  newsletter/
-│   ├── pages/  plugins/  posts/  security/  seo/  settings/  subscriptions/
+│   ├── pages/  plugins/  posts/  reusable-blocks/  security/  seo/  settings/  subscriptions/
 │   └── system/  tables/  themes/  toc/  trash/  users/
 ├── partials/                  # header.php, sidebar.php, topbar.php, footer.php,
 │                              # section-page-shell.php, redirect-alias-shell.php,

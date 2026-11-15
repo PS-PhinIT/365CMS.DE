@@ -264,8 +264,8 @@ abstract class AbstractTableSearchProvider implements SearchDocumentProvider, Re
     private function toDocument(array $row, string $locale): SearchDocument
     {
         $title = trim(strip_tags($this->firstValue($row, $this->localizedColumns('title', $locale))));
-        $content = SiteSearchService::plainText($this->firstValue($row, $this->localizedColumns('content', $locale)));
-        $excerpt = SiteSearchService::plainText($this->firstValue($row, $this->localizedColumns('excerpt', $locale)));
+        $content = SiteSearchService::plainText($this->firstValue($row, $this->localizedColumns('content', $locale)), $locale);
+        $excerpt = SiteSearchService::plainText($this->firstValue($row, $this->localizedColumns('excerpt', $locale)), $locale);
         if ($excerpt === '') {
             $excerpt = $content;
         }

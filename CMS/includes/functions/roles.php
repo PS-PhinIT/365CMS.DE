@@ -166,6 +166,7 @@ function cms_get_default_role_definitions(): array {
                 'upload_downloads' => true,
                 'view_download_stats' => true,
                 'manage_feeds' => true,
+                'blocks.reusable' => true,
             ],
         ],
         'editor' => [
@@ -204,6 +205,7 @@ function cms_get_default_role_definitions(): array {
                 'manage_translations' => true,
                 'upload_downloads' => true,
                 'view_form_submissions' => true,
+                'blocks.reusable' => true,
             ],
         ],
         'author' => [
