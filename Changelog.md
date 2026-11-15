@@ -82,7 +82,7 @@ Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 | **4.1.0** | 🛡️ security | Downloads, Admin-JSON (SEC-410-20, -21, -25) | Unbekannte Zugriffsstufen eines Downloads sperren statt freizugeben. Der CSV-Export der Download-Statistik entschärft Formeln. Die JSON-Konfiguration von Cookie-Manager, Datenanfragen und Plugin-Marketplace wird mit `JSON_HEX_TAG` ausgegeben. |
 | **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/security/audit-410.php`; erweitert: `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`. |
 
-#### 🗄️ Release-Prüfung 4.1.0: Datenbank und Upgrade-Pfad (PR #2)
+#### 🗄️ Release-Prüfung 4.1.0: Datenbank und Upgrade-Pfad (PR #2, #162)
 
 Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen MariaDB 10.11 abgeglichen (auch mit dem `sql_mode` von MySQL 8): gleiche Tabellen, Spalten, Typen, Defaults, Indizes und Fremdschlüssel, Daten erhalten, wiederholte Läufe ohne Änderung. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 

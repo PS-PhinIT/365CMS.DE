@@ -15,7 +15,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 | PR | Prüfbereich | Status |
 |----|-------------|--------|
 | #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) | Sicherheit, Kryptografie & Zugriffskontrolle | abgeschlossen: 23 Befunde behoben, 2 bewusst akzeptiert, 1 verworfen, 1 an PR #3 übergeben |
-| #2 | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | abgeschlossen: 3 Befunde behoben, 1 dokumentiert, 1 verworfen (DB-410-01) |
+| #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | abgeschlossen: 3 Befunde behoben, 1 dokumentiert, 1 verworfen (DB-410-01) |
 | #3 | Features & Workflows seit 3.5.0 (Funktionsprüfung) | ausstehend |
 | #4 | Regressionen, Altlasten, PHP 8.4.1+/8.5 | ausstehend |
 | #5 | Performance, Caching, Core Web Vitals | ausstehend |
@@ -200,10 +200,10 @@ Der Ablauf ist als Test-Suite `TESTS/schema-upgrade` festgehalten. Sie ist optio
 
 | ID | Schwere | Bereich | Datei:Zeile | Kurzbeschreibung | Status |
 |----|---------|---------|-------------|------------------|--------|
-| DB-410-02 | HIGH | Erster Request / Verbindungen | `CMS/includes/functions/roles.php:262`, `CMS/core/SchemaManager.php:2511`, `CMS/core/MigrationManager.php:303` | Rekursion im Konstruktor von `Database`: 152 Verbindungen und 7,4 s beim ersten Request nach Installation, Update oder Reparatur, bis „Too many connections“ | [x] Behoben in PR #2 |
+| DB-410-02 | HIGH | Erster Request / Verbindungen | `CMS/includes/functions/roles.php:262`, `CMS/core/SchemaManager.php:2511`, `CMS/core/MigrationManager.php:303` | Rekursion im Konstruktor von `Database`: 152 Verbindungen und 7,4 s beim ersten Request nach Installation, Update oder Reparatur, bis „Too many connections“ | [x] Behoben in PR #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) |
 | DB-410-03 | LOW | Kollation | `CMS/core/SchemaManager.php:117` | Mit 3.5.x oder älter angelegte Tabellen tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci` | Dokumentiert (kein aktiver Fehler, siehe unten) |
-| DB-410-04 | MEDIUM | Datenbank-Update | `CMS/core/DatabaseUpdateRunner.php:205` | Integritätsprüfung vor dem Schreiben der Schema-Marke prüfte nur `ai_quota_usage`; fehlende v25/v26-Tabellen und -Spalten meldeten trotzdem „erfolgreich aktualisiert“ | [x] Behoben in PR #2 |
-| DB-410-05 | MEDIUM | Reparatur | `CMS/core/MigrationManager.php:64`, `:74` | Spalten, die nur der `MigrationManager` anlegt (`login_attempts.action`, `mail_queue.locked_at`, `post_revisions.fingerprint`, `roles.sort_order` …), wurden nach gespeicherter Marke v26 nie mehr ergänzt, auch nicht über *Datenbank-Update* oder *Tabellen reparieren* | [x] Behoben in PR #2 |
+| DB-410-04 | MEDIUM | Datenbank-Update | `CMS/core/DatabaseUpdateRunner.php:205` | Integritätsprüfung vor dem Schreiben der Schema-Marke prüfte nur `ai_quota_usage`; fehlende v25/v26-Tabellen und -Spalten meldeten trotzdem „erfolgreich aktualisiert“ | [x] Behoben in PR #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) |
+| DB-410-05 | MEDIUM | Reparatur | `CMS/core/MigrationManager.php:64`, `:74` | Spalten, die nur der `MigrationManager` anlegt (`login_attempts.action`, `mail_queue.locked_at`, `post_revisions.fingerprint`, `roles.sort_order` …), wurden nach gespeicherter Marke v26 nie mehr ergänzt, auch nicht über *Datenbank-Update* oder *Tabellen reparieren* | [x] Behoben in PR #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) |
 
 ### Details
 
