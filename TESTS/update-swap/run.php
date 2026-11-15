@@ -157,6 +157,59 @@ T::run('Installation ohne plugins/ übernimmt den Paketordner', static function 
     swapTestRemove($base);
 });
 
+T::run('Core-Update auf einem Marketplace-Host lässt marketplace/ unangetastet', static function () use ($installed, $package): void {
+    $base = sys_get_temp_dir() . '/cms-update-swap-' . bin2hex(random_bytes(4));
+    $feed = '{"plugins":[{"slug":"cms-demo","version":"1.2.0","download_url":"https://365cms.de/marketplace/plugins/cms-demo/cms-demo-1.2.0.zip","sha256":"'
+        . str_repeat('a', 64) . '"}]}';
+    $marketplace = [
+        'marketplace/plugins/index.json' => $feed,
+        'marketplace/plugins/cms-demo/cms-demo-1.2.0.zip' => 'PK-plugin-paket',
+        'marketplace/themes/index.json' => '{"themes":[{"slug":"mein-theme","download_url":"x","sha256":"y"}]}',
+        'marketplace/themes/mein-theme/mein-theme-2.0.0.zip' => 'PK-theme-paket',
+        'marketplace/core/365cms/update.json' => '{"version":"4.0.1"}',
+        'marketplace/core/365cms/365CMS-4.0.1-update.zip' => 'PK-core-paket',
+    ];
+    swapTestTree($base . '/target', $installed + $marketplace);
+    swapTestTree($base . '/source', $package);
+
+    $error = swapTestRun($base . '/source', $base . '/target', $base . '/rollback');
+    T::check($error === null, 'Tausch ohne Fehler', $error?->getMessage() ?? '');
+    $after = swapTestRead($base . '/target');
+    T::same('4.0.0', $after['core/Version.php'] ?? null, 'Core-Dateien werden ersetzt');
+    foreach ($marketplace as $path => $content) {
+        T::same($content, $after[$path] ?? null, $path . ' bleibt erhalten');
+    }
+    T::check(!is_dir($base . '/rollback'), 'Rollback-Verzeichnis wird nach Erfolg entfernt (ohne marketplace/ mitzunehmen)');
+
+    swapTestRemove($base);
+});
+
+T::run('Paket mit marketplace/ wird abgelehnt und überschreibt keine Feeds', static function () use ($installed, $package): void {
+    $base = sys_get_temp_dir() . '/cms-update-swap-' . bin2hex(random_bytes(4));
+    swapTestTree($base . '/target', $installed + [
+        'marketplace/plugins/index.json' => '{"plugins":[{"slug":"cms-demo","download_url":"d","sha256":"s"}]}',
+        'marketplace/plugins/cms-demo/cms-demo-1.2.0.zip' => 'PK-plugin-paket',
+    ]);
+    // Platzhalter-Feed ohne download_url/sha256, wie ihn das Update-Paket 4.0.0 ursprünglich mitbrachte.
+    swapTestTree($base . '/source', $package + ['marketplace/plugins/index.json' => '{"plugins":[{"slug":"cms-demo","install_supported":false}]}']);
+    $before = swapTestRead($base . '/target');
+
+    $service = (new ReflectionClass(UpdateService::class))->newInstanceWithoutConstructor();
+    $preflight = null;
+    try {
+        (new ReflectionMethod($service, 'assertInstallSourceSafe'))->invoke($service, $base . '/source', 'core');
+    } catch (Throwable $e) {
+        $preflight = $e;
+    }
+    T::check($preflight instanceof RuntimeException && str_contains($preflight->getMessage(), 'marketplace'), 'Vorprüfung lehnt das Paket vor dem Tausch ab', $preflight?->getMessage() ?? 'kein Fehler');
+
+    $error = swapTestRun($base . '/source', $base . '/target', $base . '/rollback');
+    T::check($error instanceof RuntimeException && str_contains($error->getMessage(), 'marketplace'), 'Tausch lehnt das Paket ebenfalls ab', $error?->getMessage() ?? 'kein Fehler');
+    T::same($before, swapTestRead($base . '/target'), 'Installation inkl. marketplace/ ist danach unverändert');
+
+    swapTestRemove($base);
+});
+
 T::run('Fehler beim Tausch stellt den alten Stand vollständig wieder her', static function () use ($installed, $package): void {
     $base = sys_get_temp_dir() . '/cms-update-swap-' . bin2hex(random_bytes(4));
     swapTestTree($base . '/target', $installed);

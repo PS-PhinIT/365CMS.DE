@@ -42,7 +42,8 @@ release340Assert(str_contains($updatesModule, "'database_status' => \$databaseSt
 release340Assert(str_contains($updatesEntry, "'run_database_update' => true"), 'Admin-Update-Route erlaubt kein Schema-Update.');
 // Die Liste darf wachsen (z. B. 'private' seit 4.0.0); die Pfade aus 3.4.0 müssen enthalten bleiben.
 release340Assert(preg_match('/RUNTIME_CORE_ENTRIES = \[([^\]]*)\]/', $updateService, $runtimeEntriesMatch) === 1, 'UpdateService deklariert keine bewahrten Core-Pfade.');
-foreach (['backups', 'cache', 'config', 'config.php', 'logs', 'uploads'] as $preservedEntry) {
+// 'marketplace' seit 4.1.0: Feeds und Pakete eines Marketplace-Hosts (365cms.de) überstehen das Core-Update.
+foreach (['backups', 'cache', 'config', 'config.php', 'logs', 'marketplace', 'uploads'] as $preservedEntry) {
     release340Assert(str_contains($runtimeEntriesMatch[1], "'" . $preservedEntry . "'"), 'Core-Update-Swap bewahrt ' . $preservedEntry . ' nicht.');
 }
 release340Assert(str_contains($updateService, 'acquireInstallLock'), 'UpdateService serialisiert parallele Installationen nicht.');
@@ -84,7 +85,13 @@ if (class_exists(ZipArchive::class)) {
             for ($index = 0; $index < $zip->numFiles; $index++) {
                 $name = (string) $zip->getNameIndex($index);
                 release340Assert(!str_contains($name, '../') && !str_starts_with($name, '/'), 'Unsicherer ZIP-Pfad: ' . $name);
-                if (preg_match('#/CMS/(config|uploads|cache|logs|backups)/#', $name) !== 1) {
+                // Das Update-Paket legt CMS/ in der Wurzel ab, das Full-Paket unter 365CMS-<version>/.
+                // marketplace/ gehört dem Marketplace-Host: Das Update-Paket darf dessen Feeds und Pakete nicht ersetzen.
+                release340Assert(
+                    $package !== $updateZip || preg_match('#(^|/)CMS/marketplace/#', $name) !== 1,
+                    'Update-Paket enthält marketplace/ und würde die Feeds eines Marketplace-Hosts ersetzen: ' . $name
+                );
+                if (preg_match('#(^|/)CMS/(config|uploads|cache|logs|backups|private)/#', $name) !== 1) {
                     continue;
                 }
                 // Das Full-Paket legt die Laufzeitordner für Neuinstallationen mit Schutzdateien an (Zugriffssperre,

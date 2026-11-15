@@ -4,6 +4,8 @@
 
 This release directory documents the distributable `4.0.0` packages (release date 2026-11-12, database schema `v25`). Both packages contain deployable code only. Installation-specific configuration, uploads, caches, logs and backups are intentionally excluded; the full package ships only the protective `.htaccess`/index files of those directories.
 
+> **Update package repacked on 2026-11-15:** the first `365CMS-4.0.0-update.zip` contained the placeholder feeds `CMS/marketplace/plugins/index.json` and `CMS/marketplace/themes/index.json` and replaced the live marketplace feeds on 365cms.de. The update package now contains no `CMS/marketplace/`; its SHA-256 changed (see `365CMS-4.0.0-SHA256SUMS.txt`). Code and the full package are unchanged. Marketplace hosts: the updater of 3.5.x and 4.0.0 removes `CMS/marketplace/` during an in-app core update; back it up first.
+
 Security and bug-fix release on top of 3.5.6, based on the follow-up audit of 2026-11-08 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 findings, all fixed). A second pass on 2026-11-09 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) implemented the recommendations OFFEN-20 … OFFEN-26 and fixed six further defects that had existed since 3.5.x. The update is marked as critical; install it promptly. The release also ships the redesigned administration described below.
 
 > **Before updating from 3.5.x:** the updater of 3.5.x replaces the folders `CMS/plugins/` and `CMS/themes/` completely. Back up plugins you installed yourself and custom themes before the update and upload them again afterwards. From 4.0.0 on, updates keep them (only the bundled `cms-importer` and `cms-default` are replaced).
@@ -63,6 +65,8 @@ Schema `v25` adds the tables `admin_menu_layouts`, `batch_jobs`, `form_*`, `down
 ## Deutsch
 
 Dieses Release-Verzeichnis dokumentiert die auslieferbaren Pakete `4.0.0` (Release 12.11.2026, Datenbankschema `v25`). Update- und Vollpaket enthalten ausschließlich auslieferbaren Code; installationsspezifische Konfiguration, Uploads, Cache, Logs und Backups sind bewusst ausgeschlossen. Das Vollpaket enthält aus diesen Verzeichnissen nur die schützenden `.htaccess`-/Index-Dateien.
+
+> **Update-Paket am 15.11.2026 neu gepackt:** Das erste `365CMS-4.0.0-update.zip` enthielt die Platzhalter-Feeds `CMS/marketplace/plugins/index.json` und `CMS/marketplace/themes/index.json` und ersetzte damit die echten Marketplace-Feeds auf 365cms.de. Das Update-Paket enthält jetzt kein `CMS/marketplace/` mehr; seine SHA-256 hat sich geändert (siehe `365CMS-4.0.0-SHA256SUMS.txt`). Code und Vollpaket sind unverändert. Marketplace-Hosts: Der Updater von 3.5.x und 4.0.0 entfernt `CMS/marketplace/` beim Core-Update im Admin; den Ordner vorher sichern.
 
 Sicherheits- und Korrekturrelease auf Basis von 3.5.6 nach dem Folgeaudit vom 08.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-08.md`, 44 Befunde, alle behoben). Ein zweiter Durchgang am 09.11.2026 (`DOC/audit/FOLGEAUDIT-2026-11-09.md`) setzt die Empfehlungen OFFEN-20 bis OFFEN-26 um und behebt sechs weitere Fehler, die seit 3.5.x bestanden. Das Update ist als kritisch markiert und sollte zeitnah installiert werden. Installationen mit 3.5.6 zeigen es noch als normales Update an, weil die rote Kennzeichnung kritischer Updates erst mit 4.0.0 kommt. Außerdem enthält das Release die unten beschriebene neue Administration.
 
