@@ -525,6 +525,23 @@ $settingsHeading = $currentTab === 'content' ? 'Beiträge & Sites – Einstellun
                             </label>
                             <small id="settingsContentReviewSecondPersonHint" class="form-hint">Wer einen Beitrag oder eine Seite verfasst oder eingereicht hat, kann ihn nur zur Prüfung einreichen – freigeben muss ein anderes Konto mit Veröffentlichungsrecht. Gilt auch für Admins. Bereits veröffentlichte Inhalte bleiben beim Bearbeiten veröffentlicht.</small>
                         </div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label" for="settingsContentExpiryAction">Bei Ablauf</label>
+                                <select name="content_expiry_action" id="settingsContentExpiryAction" class="form-select" aria-describedby="settingsContentExpiryHint">
+                                    <option value="draft" <?php echo ($s['content_expiry_action'] ?? 'draft') === 'draft' ? 'selected' : ''; ?>>Auf Entwurf zurückstufen</option>
+                                    <option value="mark" <?php echo ($s['content_expiry_action'] ?? 'draft') === 'mark' ? 'selected' : ''; ?>>Sichtbar lassen, nur Hinweis</option>
+                                </select>
+                                <small id="settingsContentExpiryHint" class="form-hint">Gilt für Beiträge und Seiten mit Ablaufdatum; verarbeitet stündlich per Cron.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="settingsContentReviewInterval">Wiedervorlage nach „Geprüft“</label>
+                                <div class="input-group">
+                                    <input type="number" name="content_review_interval" id="settingsContentReviewInterval" class="form-control" min="1" max="60" value="<?php echo (int) ($s['content_review_interval'] ?? 12); ?>">
+                                    <span class="input-group-text">Monate</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

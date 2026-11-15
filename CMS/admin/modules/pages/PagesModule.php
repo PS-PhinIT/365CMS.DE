@@ -450,6 +450,16 @@ class PagesModule
         if ($plannedAtInput['error'] !== null) {
             return ['success' => false, 'error' => (string) $plannedAtInput['error']];
         }
+
+        // Ablauf- und Prüfdaten (4.1.0, 3c): prüfen, gespeichert wird über FeatureHooks\ContentExpiryHooks.
+        foreach ([
+            \CMS\Services\Content\ContentExpiryService::normalizeInput(is_scalar($post['expires_date'] ?? null) ? (string) $post['expires_date'] : '', is_scalar($post['expires_time'] ?? null) ? (string) $post['expires_time'] : '', 'Ablaufdatum'),
+            \CMS\Services\Content\ContentExpiryService::normalizeInput(is_scalar($post['review_due_date'] ?? null) ? (string) $post['review_due_date'] : '', '', 'Wiedervorlage'),
+        ] as $expiryInput) {
+            if ($expiryInput['error'] !== null) {
+                return ['success' => false, 'error' => (string) $expiryInput['error']];
+            }
+        }
         if ($id > 0 && $existingPage === []) {
             return ['success' => false, 'error' => 'Die Seite existiert nicht mehr. Bitte Liste neu laden.'];
         }

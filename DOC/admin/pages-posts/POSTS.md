@@ -159,6 +159,14 @@ Die Beitrags-URL folgt der Struktur aus *Einstellungen → Inhalte* (`setting_po
 
 `cms_posts` (inkl. `title_en`, `slug_en`, `content_en`, `excerpt_en`, `featured_image`, `meta_title`, `meta_description`, `author_display_name`, `author_display_url`, `post_template`, `post_meta_json`, `published_at`, `content_updated_at`), `cms_post_categories`, `cms_post_tags`, `cms_post_tag_rel`, `cms_post_category_rel`, `cms_post_revisions` (seit Schema v24 mit `revision_type`, `fingerprint` und den Spalten für Beitragsbild, Meta-Felder, Kategorie, Tags und Autor-Anzeige, siehe [DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md#schema-v24-400)). Fehlende Spalten werden vom Modul bei Bedarf per `ALTER TABLE` ergänzt (Abwärtskompatibilität mit älteren Installationen).
 
+### Gültigkeit: Ablauf und Wiedervorlage (seit 4.1.0)
+
+Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit“):
+
+- **Ablaufdatum** (Datum, optional Uhrzeit): Ist es erreicht, stuft der stündliche Cron einen veröffentlichten Inhalt auf *Entwurf* zurück (Frontend 404, Sitemap und Suche ohne Eintrag, Cache wird geleert). Mit der Einstellung *Beiträge & Sites → Bei Ablauf: „Sichtbar lassen, nur Hinweis“* bleibt er sichtbar. Der Autor erhält einen Hinweis, Hook `cms_content_expired`. Je Lauf werden höchstens 100 Inhalte je Typ verarbeitet; wer einen zurückgestuften Inhalt wieder veröffentlicht, ohne das Ablaufdatum zu ändern, behält ihn veröffentlicht.
+- **Wiedervorlage** (Datum): keine Statusänderung. Am Stichtag meldet der tägliche Cron den Inhalt einmal (Hinweis an den Autor, Hook `cms_content_review_due`). „Als geprüft markieren“ setzt die nächste Wiedervorlage auf heute + Intervall (*Beiträge & Sites → Wiedervorlage nach „Geprüft“*, Standard 12 Monate).
+- Noch nicht in diesem Lauf: Markierung im Redaktionskalender, Dashboard-Widget „Fällige Prüfungen“, Wissensdatenbank.
+
 ### Hinweise
 
 - Beiträge mit Veröffentlichungsdatum in der Zukunft erscheinen weder im Frontend noch in Archiven, Suche oder Sitemap, bis der Zeitpunkt erreicht ist. Zentral dafür ist der SQL-Helfer `cms_post_publication_where()` (`CMS/includes/functions/options-runtime.php`).

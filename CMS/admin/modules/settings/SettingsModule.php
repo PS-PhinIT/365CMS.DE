@@ -80,6 +80,7 @@ class SettingsModule
         'setting_post_default_status', 'setting_page_editor_width',
         'setting_post_editor_width', 'setting_post_permalink_structure',
         'setting_post_permalink_custom', 'setting_content_review_second_person',
+        'setting_content_expiry_action', 'setting_content_review_interval',
         'routing.category_base_de', 'routing.category_base_en',
         'routing.tag_base_de', 'routing.tag_base_en',
     ];
@@ -93,6 +94,8 @@ class SettingsModule
         'setting_post_permalink_structure',
         'setting_post_permalink_custom',
         'setting_content_review_second_person',
+        'setting_content_expiry_action',
+        'setting_content_review_interval',
         'routing.category_base_de',
         'routing.category_base_en',
         'routing.tag_base_de',
@@ -206,6 +209,8 @@ class SettingsModule
                 'page_default_status'  => $pageDefaultStatus,
                 'post_default_status'  => $postDefaultStatus,
                 'content_review_second_person' => ($settings['setting_content_review_second_person'] ?? '0') === '1',
+                'content_expiry_action' => \CMS\Services\Content\ContentExpiryService::normalizeAction((string) ($settings['setting_content_expiry_action'] ?? 'draft')),
+                'content_review_interval' => \CMS\Services\Content\ContentExpiryService::normalizeInterval($settings['setting_content_review_interval'] ?? 12),
                 'page_editor_width'    => (string)max(320, min(1600, (int)($settings['setting_page_editor_width'] ?? 1050))),
                 'post_editor_width'    => (string)max(320, min(1600, (int)($settings['setting_post_editor_width'] ?? 750))),
                 'post_permalink_structure' => $postPermalinkStructure,
@@ -373,6 +378,8 @@ class SettingsModule
                 'setting_content_review_second_person' => $isContentSettingsSave
                     ? (!empty($post['content_review_second_person']) ? '1' : '0')
                     : (($settings['setting_content_review_second_person'] ?? '0') === '1' ? '1' : '0'),
+                'setting_content_expiry_action' => \CMS\Services\Content\ContentExpiryService::normalizeAction((string) ($isContentSettingsSave ? ($post['content_expiry_action'] ?? 'draft') : ($settings['setting_content_expiry_action'] ?? 'draft'))),
+                'setting_content_review_interval' => (string) \CMS\Services\Content\ContentExpiryService::normalizeInterval($isContentSettingsSave ? ($post['content_review_interval'] ?? 12) : ($settings['setting_content_review_interval'] ?? 12)),
                 'setting_page_editor_width' => (string)max(320, min(1600, (int)($post['page_editor_width'] ?? 1050))),
                 'setting_post_editor_width' => (string)max(320, min(1600, (int)($post['post_editor_width'] ?? 750))),
                 'setting_post_permalink_structure' => $permalinkStructure,

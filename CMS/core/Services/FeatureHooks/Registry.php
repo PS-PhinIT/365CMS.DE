@@ -38,6 +38,7 @@ final class Registry
         MediaFeatureHooks::class,
         ContentWorkflowHooks::class,
         ReusableBlockHooks::class,
+        ContentExpiryHooks::class,
     ];
 
     private static bool $registered = false;
