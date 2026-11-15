@@ -76,6 +76,28 @@ class SchemaManager
         'payment_events', 'invoice_sequences', 'invoices',
     ];
 
+    /**
+     * Spalten, die das Zielschema v26 mindestens braucht (zusätzlich zu FEATURE_TABLES und FEATURE_TABLES_V26).
+     * Grundlage der Integritätsprüfung im Datenbank-Update (DatabaseUpdateRunner, DB-410-04).
+     *
+     * @var array<string, list<string>>
+     */
+    public const REQUIRED_COLUMNS = [
+        'users' => ['password_changed_at'],
+        'passkey_credentials' => ['user_verified'],
+        'posts' => ['title_en', 'content_updated_at', 'author_display_url', 'previous_status', 'trash_slug', 'trashed_at', 'planned_at', 'expires_at', 'review_due_at', 'expiry_notified_at', 'review_notified_at', 'has_locale_de', 'has_locale_en'],
+        'pages' => ['content_updated_at', 'previous_status', 'trash_slug', 'trashed_at', 'planned_at', 'expires_at', 'review_due_at', 'expiry_notified_at', 'review_notified_at'],
+        'kb_entries' => ['expires_at', 'review_due_at'],
+        'orders' => ['provider', 'provider_checkout_id', 'paid_at'],
+        'user_subscriptions' => ['provider', 'provider_subscription_id', 'current_period_end'],
+        'login_attempts' => ['action'],
+        'mail_queue' => ['content_type', 'source', 'max_attempts', 'locked_at', 'last_attempt_at', 'error_category'],
+        'post_revisions' => ['revision_type', 'created_by', 'fingerprint'],
+        'page_revisions' => ['created_by'],
+        'roles' => ['member_dashboard_access', 'sort_order'],
+        'ai_quota_usage' => ['scope_name', 'period_key', 'user_id', 'provider_id', 'request_count', 'character_count'],
+    ];
+
     private Database $db;
     private string $prefix;
     private string $charset;
@@ -2486,7 +2508,7 @@ class SchemaManager
         // v26: posts.publish/pages.publish werden ab 4.1.0 geprüft – Rollen, die heute veröffentlichen, behalten das Recht.
         try {
             if (function_exists('cms_ensure_role_permissions_table')) {
-                cms_ensure_role_permissions_table();
+                cms_ensure_role_permissions_table($this->db);
             }
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {

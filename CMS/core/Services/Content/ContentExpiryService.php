@@ -151,7 +151,11 @@ final class ContentExpiryService
     {
         $value = static fn (string $key): string => (string) (is_array($row) ? ($row[$key] ?? '') : ($row->{$key} ?? ''));
 
-        return $value('expiry_notified_at') !== '' && $value('status') === ContentStatus::DRAFT;
+        // Wissensdatenbank (FUN-410-09): kein Status, sondern is_active.
+        $unpublished = $value('status') === ContentStatus::DRAFT
+            || ($value('status') === '' && $value('is_active') === '0');
+
+        return $value('expiry_notified_at') !== '' && $unpublished;
     }
 
     /**
@@ -170,10 +174,17 @@ final class ContentExpiryService
             return false;
         }
         try {
-            // Ein neues Ablaufdatum setzt die Markierung zurück, damit ein späterer Ablauf erneut meldet.
+            // Ein neues Ablaufdatum setzt die Markierung zurück, damit ein späterer Ablauf erneut meldet. FUN-410-08:
+            // ebenso, wenn der Inhalt wieder veröffentlicht ist – sonst liefe ein erneut veröffentlichter, abgelaufener
+            // Inhalt mit unverändertem Datum nie wieder ab.
+            // Nur im Modus „zurückstufen“: Dort ist ein sichtbarer Inhalt mit Markierung immer wieder veröffentlicht; im
+            // Modus „nur markieren“ bleibt er sichtbar, und die Markierung muss stehen bleiben.
+            $keepWhenLive = self::normalizeAction(($this->setting)(self::SETTING_ACTION, self::ACTION_DRAFT)) === self::ACTION_DRAFT
+                ? 'NOT (' . self::TYPES[$type]['live'] . ')'
+                : '1 = 1';
             $this->db->execute(
                 "UPDATE {$this->prefix}" . self::TYPES[$type]['table'] . "
-                 SET expiry_notified_at = CASE WHEN expires_at <=> ? THEN expiry_notified_at ELSE NULL END,
+                 SET expiry_notified_at = CASE WHEN expires_at <=> ? AND {$keepWhenLive} THEN expiry_notified_at ELSE NULL END,
                      review_notified_at = CASE WHEN review_due_at <=> ? THEN review_notified_at ELSE NULL END,
                      expires_at = ?, review_due_at = ?, updated_at = updated_at
                  WHERE id = ?",
@@ -226,6 +237,10 @@ final class ContentExpiryService
                     }
                     $result['expired']++;
                     $this->runHook($config['hook'], $id, ['status' => ContentStatus::DRAFT, 'expired' => true]);
+                    // FUN-410-13: Statuswechsel wie bei jeder anderen Zurückstufung melden (Webhooks, Verlauf).
+                    if ($type !== 'kb') {
+                        $this->runHook('cms_content_status_changed', $type, $id, ContentStatus::PUBLISHED, ContentStatus::DRAFT);
+                    }
                 } else {
                     $this->db->execute("UPDATE {$this->prefix}{$table} SET expiry_notified_at = ? WHERE id = ?", [$now, $id]);
                     $result['marked']++;

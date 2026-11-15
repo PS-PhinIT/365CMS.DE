@@ -76,4 +76,4 @@ Website:
 https://365cms.de
 
 Repository:
-https://github.com/PS-easyIT/365CMS.DE
+https://github.com/PS-PhinIT/365CMS.DE

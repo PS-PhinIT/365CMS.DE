@@ -242,7 +242,8 @@ final class PublicController
         $publicLang = $this->resolvePublicLanguage();
         $uiText = $this->publicUiText($publicLang);
         if ($entry === null) {
-            $this->renderNotFound($publicLang, $uiText);
+            // FUN-410-09: abgelaufen und deaktiviert → auf Wunsch 410 wie bei Beiträgen und Seiten.
+            $this->renderNotFound($publicLang, $uiText, $this->expiredStatusForSlug($slug));
             return;
         }
 
@@ -345,12 +346,27 @@ final class PublicController
         header('X-Content-Type-Options: nosniff');
     }
 
-    private function renderNotFound(string $publicLang = 'de', ?array $uiText = null): void
+    private function expiredStatusForSlug(string $slug): int
     {
-        http_response_code(404);
+        try {
+            $db = \CMS\Database::instance();
+            $row = $db->get_row(
+                'SELECT is_active, expiry_notified_at FROM ' . $db->getPrefix() . 'kb_entries WHERE slug = ? AND trashed_at IS NULL LIMIT 1',
+                [$slug]
+            );
+
+            return $row !== null ? \CMS\Services\Content\ContentExpiryService::instance()->frontendStatusFor((array) $row) : 404;
+        } catch (\Throwable) {
+            return 404;
+        }
+    }
+
+    private function renderNotFound(string $publicLang = 'de', ?array $uiText = null, int $status = 404): void
+    {
+        http_response_code($status === 410 ? 410 : 404);
         $uiText = $uiText ?? $this->publicUiText($publicLang);
         $theme = \CMS\ThemeManager::instance();
-        $theme->getHeader(['title' => $uiText['not_found_title'], 'error_code' => 404]);
+        $theme->getHeader(['title' => $uiText['not_found_title'], 'error_code' => $status === 410 ? 410 : 404]);
 
         echo '<main class="cms-kb-content cms-kb-content--single"><article class="cms-kb-article"><h1>' . htmlspecialchars($uiText['not_found_title'], ENT_QUOTES, 'UTF-8') . '</h1><p>' . htmlspecialchars($uiText['not_found_body'], ENT_QUOTES, 'UTF-8') . '</p><p><a class="cms-kb-entry__cta" href="' . htmlspecialchars($this->publicUrl('kb', $publicLang), ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($uiText['back_to_kb'], ENT_QUOTES, 'UTF-8') . '</a></p></article></main>';
 

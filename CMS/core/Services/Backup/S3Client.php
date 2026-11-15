@@ -23,6 +23,8 @@ if (!defined('ABSPATH')) {
 final class S3Client
 {
     public const SINGLE_PUT_LIMIT = 64 * 1024 * 1024;
+    public const MAX_PARTS = 10000;
+    public const PART_ATTEMPTS = 3;
     private const MAX_XML_BYTES = 5 * 1024 * 1024;
 
     /** @var \Closure(string, string, array<string, string>, ?string): array{success: bool, status: int, headers: array<string, string>, body: string, error?: string} */
@@ -77,6 +79,8 @@ final class S3Client
             return ['success' => false, 'error' => 'Datei nicht lesbar.'];
         }
         $partSize = $this->config->partSizeMb * 1024 * 1024;
+        // FUN-410-25: S3 erlaubt höchstens 10 000 Teile – sehr große Dateien bekommen größere Teile.
+        $partSize = max($partSize, (int) ceil($size / self::MAX_PARTS));
 
         return $size <= min(self::SINGLE_PUT_LIMIT, max($partSize, 5 * 1024 * 1024))
             ? $this->putObject($key, $localFile, $contentType)
@@ -107,7 +111,11 @@ final class S3Client
                     break;
                 }
                 $partNumber++;
-                $etag = $this->uploadPart($key, $uploadId, $partNumber, $chunk);
+                // FUN-410-25: ein kurzer 5xx/Timeout bricht nicht gleich den ganzen Upload ab.
+                $etag = null;
+                for ($attempt = 1; $attempt <= self::PART_ATTEMPTS && $etag === null; $attempt++) {
+                    $etag = $this->uploadPart($key, $uploadId, $partNumber, $chunk);
+                }
                 if ($etag === null) {
                     $this->abortMultipartUpload($key, $uploadId);
 

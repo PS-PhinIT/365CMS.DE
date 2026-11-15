@@ -127,8 +127,13 @@ final class AvifDerivativeService
     {
         $raw = ($this->optionReader)();
         $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        // FUN-410-16: Noch nie geprüft (Neuinstallation, Update) → einmal proben statt bis zum nächsten Speichern der
+        // Medien-Einstellungen „nicht unterstützt“ zu melden.
+        if (!is_array($decoded)) {
+            $decoded = $this->refreshCapabilities();
+        }
 
-        return is_array($decoded) && ($decoded['avif'] ?? false) === true;
+        return ($decoded['avif'] ?? false) === true;
     }
 
     /**
@@ -192,7 +197,8 @@ final class AvifDerivativeService
             return self::STATUS_SKIPPED;
         }
         $target = self::derivativePath($sourcePath, 'avif');
-        if ($target === '') {
+        if ($target === '' || ($extension === 'gif' && self::isAnimatedGif($sourcePath))) {
+            // FUN-410-15: GD kodiert nur das erste Bild – eine AVIF-Fassung würde die Animation ersetzen.
             return self::STATUS_SKIPPED;
         }
 
@@ -278,6 +284,14 @@ final class AvifDerivativeService
         return array_values(array_filter($paths, static fn (string $path): bool => !$existingOnly || is_file($path)));
     }
 
+    /** Mehr als ein Bild (Graphic Control Extension) → animiert. Liest höchstens 2 MB. */
+    public static function isAnimatedGif(string $path): bool
+    {
+        $data = @file_get_contents($path, false, null, 0, 2 * 1024 * 1024);
+
+        return is_string($data) && preg_match_all('/\x00\x21\xF9\x04/', $data) > 1;
+    }
+
     public static function derivativePath(string $path, string $format): string
     {
         $target = preg_replace('/\.[A-Za-z0-9]+$/', '.' . $format, $path);
@@ -360,17 +374,20 @@ final class AvifDerivativeService
         }
         [$path, $publicUrl] = $local;
         $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
-        if (!in_array($extension, self::SOURCE_EXTENSIONS, true) || !is_file($path)) {
+        // FUN-410-15: GIF ohne <picture>: Fassungen aus GD sind statisch und würden eine Animation ersetzen.
+        if ($extension === 'gif' || !in_array($extension, self::SOURCE_EXTENSIONS, true) || !is_file($path)) {
             return [];
         }
 
+        $sourceTime = (int) (filemtime($path) ?: 0);
         $sources = [];
         foreach (['avif' => 'image/avif', 'webp' => 'image/webp'] as $format => $type) {
             if ($format === $extension) {
                 continue;
             }
             $derivative = self::derivativePath($path, $format);
-            if ($derivative !== '' && is_file($derivative)) {
+            // FUN-410-14: eine ältere Fassung als das Original (Datei ersetzt) zeigte sonst das alte Bild.
+            if ($derivative !== '' && is_file($derivative) && (int) (filemtime($derivative) ?: 0) >= $sourceTime) {
                 $sources[] = ['type' => $type, 'srcset' => (string) self::derivativePath($publicUrl, $format)];
             }
         }

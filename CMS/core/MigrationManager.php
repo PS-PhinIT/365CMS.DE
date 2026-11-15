@@ -57,23 +57,31 @@ class MigrationManager
         }
 
         $schemaManager->createTables();
+
+        // DB-410-05: Die ausdrückliche Reparatur (Datenbank-Update, Diagnose) führt die idempotenten Migrationen auch
+        // bei bereits gespeicherter Zielversion aus – sonst ergänzt sie Spalten, die nur hier angelegt werden
+        // (z. B. login_attempts.action, mail_queue.locked_at), nie wieder.
+        $this->run(true);
     }
 
     /**
      * Führt alle inkrementellen Migrations-SQLs aus.
      * Idempotent: PDOException für bereits vorhandene Spalten / Duplikat-Keys werden ignoriert.
      * Versionsprüfung: läuft nur einmal bis SCHEMA_VERSION erreicht ist (1 DB-Query auf
-     * normalen Requests statt vieler ALTER TABLE Statements).
+     * normalen Requests statt vieler ALTER TABLE Statements). `$force` (nur repairTables()) läuft auch bei
+     * gespeicherter Zielversion.
      */
-    public function run(): void
+    public function run(bool $force = false): void
     {
         $currentVersion = $this->getCurrentVersion();
         if ($currentVersion !== '' && preg_match('/^v\d+$/i', $currentVersion) !== 1) {
             error_log('MigrationManager: Unbekannte Schema-Version wird nicht automatisch überschrieben: ' . $currentVersion);
             return;
         }
-        // Höhere bekannte Schema-Marker dürfen bei älterem Code niemals überschrieben werden.
-        if ($this->compareSchemaVersions($currentVersion, self::SCHEMA_VERSION) >= 0) {
+        // Höhere bekannte Schema-Marker dürfen bei älterem Code niemals überschrieben werden; gleicher Stand nur bei
+        // ausdrücklicher Reparatur ($force).
+        $comparison = $this->compareSchemaVersions($currentVersion, self::SCHEMA_VERSION);
+        if ($comparison > 0 || ($comparison === 0 && !$force)) {
             return;
         }
 
@@ -292,7 +300,7 @@ class MigrationManager
         // anderen Rollen werden sie bewusst nicht automatisch erteilt.
         try {
             if (function_exists('cms_ensure_role_permissions_table')) {
-                cms_ensure_role_permissions_table();
+                cms_ensure_role_permissions_table($this->db);
             }
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {

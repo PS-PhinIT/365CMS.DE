@@ -407,7 +407,7 @@ final class VendorRegistry
     private function getAssetSourceLink(string $package): array
     {
         $links = [
-            'assets-autoload' => ['url' => 'https://github.com/PS-easyIT/365CMS.DE', 'label' => 'GitHub'],
+            'assets-autoload' => ['url' => 'https://github.com/PS-PhinIT/365CMS.DE', 'label' => 'GitHub'],
             'dompdf' => ['url' => 'https://github.com/dompdf/dompdf', 'label' => 'GitHub'],
             'melbahja-seo' => ['url' => 'https://github.com/melbahja/Seo', 'label' => 'GitHub'],
             'symfony/ai-platform' => ['url' => 'https://github.com/symfony/ai', 'label' => 'GitHub'],
@@ -428,9 +428,9 @@ final class VendorRegistry
             'photoswipe' => ['url' => 'https://photoswipe.com/', 'label' => 'Website'],
             'suneditor' => ['url' => 'https://github.com/JiHong88/suneditor', 'label' => 'GitHub'],
             'tabler' => ['url' => 'https://tabler.io/', 'label' => 'Website'],
-            'cms-css' => ['url' => 'https://github.com/PS-easyIT/365CMS.DE', 'label' => 'GitHub'],
-            'cms-js' => ['url' => 'https://github.com/PS-easyIT/365CMS.DE', 'label' => 'GitHub'],
-            'cms-images' => ['url' => 'https://github.com/PS-easyIT/365CMS.DE', 'label' => 'GitHub'],
+            'cms-css' => ['url' => 'https://github.com/PS-PhinIT/365CMS.DE', 'label' => 'GitHub'],
+            'cms-js' => ['url' => 'https://github.com/PS-PhinIT/365CMS.DE', 'label' => 'GitHub'],
+            'cms-images' => ['url' => 'https://github.com/PS-PhinIT/365CMS.DE', 'label' => 'GitHub'],
             'tabler-icons' => ['url' => 'https://tabler.io/icons', 'label' => 'Website'],
             'dompurify' => ['url' => 'https://github.com/cure53/DOMPurify', 'label' => 'GitHub'],
             'bacon/bacon-qr-code' => ['url' => 'https://github.com/Bacon/BaconQrCode', 'label' => 'GitHub'],
@@ -448,7 +448,7 @@ final class VendorRegistry
             'psr/container' => ['url' => 'https://www.php-fig.org/psr/psr-11/', 'label' => 'Website'],
         ];
 
-        return $links[$package] ?? ['url' => 'https://github.com/PS-easyIT/365CMS.DE', 'label' => 'GitHub'];
+        return $links[$package] ?? ['url' => 'https://github.com/PS-PhinIT/365CMS.DE', 'label' => 'GitHub'];
     }
 
     private function isCoreModuleEnabled(string $slug): bool

@@ -82,6 +82,9 @@ final class PostTrashProvider extends AbstractContentTrashProvider
             'comments' => $this->deleteFrom('comments', 'post_id = ?', [$id]),
             'seo_meta' => $this->deleteFrom('seo_meta', 'content_type = ? AND content_id = ?', ['post', $id]),
             'translation_sync' => $this->deleteFrom('translation_sync', 'content_type = ? AND content_id = ?', ['post', $id]),
+            // FUN-410-31: Freigabeverlauf und Vorschau-Links (4.1.0) gehören zum Inhalt.
+            'content_workflow_events' => $this->deleteFrom('content_workflow_events', 'content_type = ? AND content_id = ?', ['post', $id]),
+            'content_preview_links' => $this->deleteFrom('content_preview_links', 'content_type = ? AND content_id = ?', ['post', $id]),
             'post_tag_rel' => $this->deleteFrom('post_tag_rel', 'post_id = ?', [$id]),
             'post_category_rel' => $this->deleteFrom('post_category_rel', 'post_id = ?', [$id]),
             'favorites' => $this->deleteFrom('favorites', 'post_id = ?', [$id]),

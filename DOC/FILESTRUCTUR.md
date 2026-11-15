@@ -73,12 +73,14 @@ Verified top-level entries of this repository:
 | `TESTS/newsletter-member/` | directory | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | directory | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration: `php TESTS/password-policy/run.php [-v]` |
 | `TESTS/release-3.4.0/` | directory | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/release-4.1.0/` | directory | regressions of the 4.1.0 release audit without a database (FUN-410-xx and later findings): `php TESTS/release-4.1.0/run.php [-v]` |
 | `TESTS/reusable-blocks/` | directory | EditorJS block templates: block data, usage index, rendering, recursion, history: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | directory | offsite backups: SigV4, S3 client, multipart, retention: `php TESTS/s3-backup/run.php [-v]` |
 | `TESTS/invoices/` | directory | invoices: `php TESTS/invoices/run.php [-v]` |
 | `TESTS/payments/` | directory | payments: `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | directory | outgoing webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | directory | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check: `php TESTS/schema-v26/run.php [-v]` |
+| `TESTS/schema-upgrade/` | directory | schema upgrade against a real MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): fresh install v26 and updates from 4.0.0 (v25) and 3.5.x (v23) yield identical structure, keep data, are idempotent, one connection on first request: `php TESTS/schema-upgrade/run.php [-v]` |
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
 | `TESTS/sso-entra/` | directory | Entra ID sign-in via OpenID Connect: ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping: `php TESTS/sso-entra/run.php [-v]` |
 | `TESTS/theme-contract/` | directory | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments: `php TESTS/theme-contract/run.php [theme roots …]` |
@@ -129,12 +131,14 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/newsletter-member/` | Verzeichnis | Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | Verzeichnis | Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung: `php TESTS/password-policy/run.php [-v]` |
 | `TESTS/release-3.4.0/` | Verzeichnis | Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/release-4.1.0/` | Verzeichnis | Regressionen der Release-Prüfung 4.1.0 ohne Datenbank (FUN-410-xx und folgende Befunde): `php TESTS/release-4.1.0/run.php [-v]` |
 | `TESTS/reusable-blocks/` | Verzeichnis | EditorJS Block Vorlagen: Blockdaten, Nutzungsindex, Rendern, Rekursion, Verlauf: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | Verzeichnis | Offsite-Backups: SigV4, S3-Client, Multipart, Aufbewahrung: `php TESTS/s3-backup/run.php [-v]` |
 | `TESTS/invoices/` | Verzeichnis | Rechnungen: `php TESTS/invoices/run.php [-v]` |
 | `TESTS/payments/` | Verzeichnis | Zahlungen: `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | Verzeichnis | ausgehende Webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | Verzeichnis | Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung: `php TESTS/schema-v26/run.php [-v]` |
+| `TESTS/schema-upgrade/` | Verzeichnis | Upgrade-Pfad gegen echte MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): Neuinstallation v26 und Updates von 4.0.0 (v25) und 3.5.x (v23) ergeben dieselbe Struktur, erhalten Daten, laufen idempotent, eine Verbindung beim ersten Request: `php TESTS/schema-upgrade/run.php [-v]` |
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
 | `TESTS/sso-entra/` | Verzeichnis | Entra-ID-Anmeldung über OpenID Connect: ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping: `php TESTS/sso-entra/run.php [-v]` |
 | `TESTS/theme-contract/` | Verzeichnis | Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente: `php TESTS/theme-contract/run.php [Theme-Wurzeln …]` |
