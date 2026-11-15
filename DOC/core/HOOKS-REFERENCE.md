@@ -196,6 +196,9 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_cron_mail_queue` | Action | `$context` |
 | `cms_cron_hourly` | Action | – |
 | `cms_cron_daily` | Action | – |
+| `cms_backup_created` | Action | `string $backupName`; nach jedem erfolgreichen vollen oder Datenbank-Backup (seit 4.1.0) |
+| `cms_backup_offsite_uploaded` | Action | `string $backupName, int $bytes`; Offsite-Kopie erfolgreich (seit 4.1.0) |
+| `cms_backup_offsite_failed` | Action | `string $backupName, string $error`; Offsite-Kopie fehlgeschlagen, Fehler ohne Zugangsdaten (seit 4.1.0) |
 | `cms_cron_feeds` / `cms_cron_<name>` | Action | – (über `cron.php --task=…`) |
 
 ### Beispiele
