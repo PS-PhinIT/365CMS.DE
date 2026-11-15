@@ -26,7 +26,6 @@
 
 ### Erwartete Konsolenmeldungen
 
-- `This document requires 'TrustedScript' assignment …` aus `editorjs/image.umd.js`, `link.umd.js` und `attaches.umd.js`: Die Bundles probieren `new Function("return this")` in einem `try`/`catch` und nutzen danach `window`. Die Werkzeuge funktionieren normal.
 - `Executing inline event handler violates … script-src` mit Quelle `purify.min.js`: Chrome meldet `on*`-Attribute, sobald DOMPurify Markup mit Event-Handlern einliest. Der Handler wird nicht ausgeführt, DOMPurify entfernt das Attribut.
 
 ## Website / GitHub
