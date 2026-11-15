@@ -108,14 +108,14 @@ final class ProfileLayouts
                 ]),
                 self::group('media', 'Medien', 'photo', [
                     'media.library', 'media.featured', 'media.categories', 'media.check',
-                    'media.downloads', 'media.tools', 'content.reusable-blocks', 'media.settings',
+                    'media.downloads', 'media.tools', 'media.settings',
                 ]),
                 self::group('pages', 'Seiten', 'file', [
-                    'content.pages', 'content.knowledgebase',
+                    'content.pages',
                 ]),
-                // Für Seiten und Beiträge gemeinsam (Shortcodes, Inhaltsverzeichnis) – eigener Menüpunkt.
+                // Für Seiten und Beiträge gemeinsam (Vorlagen, Knowledgebase, Shortcodes, Inhaltsverzeichnis) – eigener Menüpunkt.
                 self::group('building-blocks', 'Bausteine', 'puzzle', [
-                    'content.hub-sites', 'content.site-tables', 'content.toc',
+                    'content.reusable-blocks', 'content.knowledgebase', 'content.hub-sites', 'content.site-tables', 'content.toc',
                 ]),
                 self::item('content.comments'),
                 self::group('forms', 'Formulare', 'forms', ['content.forms', 'content.form-submissions', 'content.newsletter']),

@@ -15,7 +15,7 @@ Inhalte, die an vielen Stellen gleich aussehen sollen – Kontakt-Box, Hinweis z
 
 ### Verwalten (`/admin/reusable-blocks`)
 
-Menü: *Medien → EditorJS Block Vorlagen* (Profile „Klassisch“ und „Strukturiert“).
+Menü: *Bausteine → EditorJS Block Vorlagen* (Profil „Klassisch“) bzw. *Medien → EditorJS Block Vorlagen* (Profil „Strukturiert“).
 
 | Bereich | Inhalt |
 |---|---|

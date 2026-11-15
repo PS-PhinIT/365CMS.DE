@@ -943,6 +943,11 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     T::same('tools', $classicPositions['seo.redirects'] ?? null, 'classic: Weiterleitungen unter Werkzeuge');
     T::same('tools', $classicPositions['seo.not-found'] ?? null, 'classic: 404-Monitor unter Werkzeuge');
     T::same('Alle Beiträge', am_node($classic, 'content.posts')['label'] ?? null, 'classic: Beschriftung „Alle Beiträge“');
+    T::same(['content.reusable-blocks', 'content.knowledgebase', 'content.hub-sites', 'content.site-tables', 'content.toc'],
+        am_group_items($classic, 'building-blocks'), 'classic: Bausteine mit Vorlagen, Knowledgebase, Hub-Sites, Tabellen, Inhaltsverzeichnis');
+    T::same('Bausteine', am_node($classic, 'building-blocks')['label'] ?? null, 'classic: Gruppe heißt „Bausteine“');
+    T::same(['content.pages'], am_group_items($classic, 'pages'), 'classic: Seiten ohne Knowledgebase');
+    T::check(!in_array('content.reusable-blocks', am_group_items($classic, 'media'), true), 'classic: Vorlagen nicht mehr unter Medien');
 
     $classicLean = $withoutOptional->build($registry, ProfileLayouts::get(ProfileLayouts::CLASSIC), ProfileLayouts::CLASSIC);
     T::same(['dashboard', 'system.updates', 'posts', 'media', 'pages', 'building-blocks', 'content.comments', 'forms', 'design', 'plugins', 'users', 'tools', 'settings', 'health'],
