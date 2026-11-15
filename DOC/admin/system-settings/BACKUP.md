@@ -23,7 +23,7 @@ Backups are created, validated, downloaded, restored and deleted at `/admin/back
 
 `config/` (Zugangsdaten, Schlüssel) ist bewusst **nicht** enthalten – `CMS/config/app.php` und `CMS/config.php` separat und sicher aufbewahren.
 
-### Speicherort (`CMS_BACKUP_PATH`, ab 4.0.0)
+### Speicherort (`CMS_BACKUP_PATH`)
 
 Ohne Angabe liegen Backups wie bisher in `CMS/backups/`. Dieses Verzeichnis liegt im Webroot und ist nur per `.htaccess` (Apache) bzw. eigener Serverregel (nginx) vor direktem Abruf geschützt. Empfohlen ist ein Verzeichnis **außerhalb des Webroots**, eingetragen in `CMS/config/app.php`:
 
@@ -37,7 +37,7 @@ defined('CMS_BACKUP_PATH') || define('CMS_BACKUP_PATH', '../365cms-backups');   
 - Die Karte *Speicherort & Verschlüsselung* zeigt den aktiven Pfad, ob er im Webroot liegt, und wie viele Backups noch im bisherigen Verzeichnis `CMS/backups/` liegen. Diese Altbestände erscheinen nach dem Umstellen nicht mehr in der Liste; bei Bedarf per SFTP/SSH in das neue Verzeichnis verschieben oder löschen.
 - Die Update-Vorprüfung unter *System → Updates* prüft die Schreibrechte des konfigurierten Verzeichnisses. Die Rollback-Snapshots der Performance-Wartung bleiben unter `CMS/backups/performance-rollbacks/`.
 
-### Verschlüsselung (ab 4.0.0)
+### Verschlüsselung
 
 Unter *System → Backup & Restore → Speicherort & Verschlüsselung* lässt sich die Verschlüsselung neuer Backups einschalten (Option `backup_encryption`, Aktion `set_encryption`, Audit-Ereignisse `backup.encryption.enabled`/`backup.encryption.disabled`).
 
@@ -89,7 +89,7 @@ Die Übersicht zeigt bis zu 25 Backups und die letzten 15 Backup-Vorgänge (Hist
 
 Vor 4.0.0 lagen die Grenzen bei 5000 Einträgen und 512 MB; größere Archive, die das CMS selbst erstellt hatte, ließen sich nicht zurückspielen.
 
-### Backup-Einstellungen und Offsite-Ziel (seit 4.1.0)
+### Backup-Einstellungen und Offsite-Ziel
 
 Seite **Backup-Einstellungen** (`/admin/backup-settings`, Menü *Einstellungen*; Link auch auf `/admin/backups`):
 
@@ -103,7 +103,7 @@ Ablauf: Nach jedem erfolgreichen Backup (Hook `cms_backup_created`) werden die *
 
 ### Externe Ziele (Service-API, älter)
 
-`BackupService` bietet weiterhin `emailDatabaseBackup($email)` (SQL per E-Mail) und `uploadToS3($pfad, $s3Config)` (AWS-SDK oder REST, max. 25 MB). Für Offsite-Kopien ist ab 4.1.0 der oben beschriebene Weg vorgesehen.
+`BackupService` bietet weiterhin `emailDatabaseBackup($email)` (SQL per E-Mail) und `uploadToS3($pfad, $s3Config)` (AWS-SDK oder REST, max. 25 MB). Für Offsite-Kopien dient der oben beschriebene Weg.
 
 ### Empfehlungen
 

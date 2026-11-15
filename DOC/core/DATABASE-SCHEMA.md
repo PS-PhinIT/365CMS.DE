@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). This document describes **release 4.1.0 with schema `v26`**. The base schema (90 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`: 76 tables up to `v25` plus 14 new in `v26`. `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version. Schema history: `v24` (4.0.0) adds revision columns to `cms_post_revisions`; `v25` (4.0.0) adds `cms_admin_menu_layouts`, `cms_batch_jobs` and the 30 feature tables of `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash); **`v26` (4.1.0)** adds the fourteen tables of `SchemaManager::FEATURE_TABLES_V26` – `cms_password_history`, `cms_user_identities`, `cms_media_usage`, `cms_content_workflow_events`, `cms_content_preview_links`, `cms_reusable_blocks`, `cms_reusable_block_usage`, `cms_reusable_block_revisions`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries`, `cms_payment_events`, `cms_invoice_sequences`, `cms_invoices` – and the columns `cms_users.password_changed_at`, `cms_passkey_credentials.user_verified`, `expires_at`/`review_due_at`/`expiry_notified_at`/`review_notified_at` on `cms_posts`, `cms_pages` and `cms_kb_entries`, plus payment columns on `cms_orders` and `cms_user_subscriptions`. Existing installations receive all of it through the runtime check `SchemaManager::ensureFeatureSchema()`. Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
+365CMS uses MySQL ≥ 5.7 or a current MariaDB (InnoDB, `utf8mb4`; the update preflight checks the server version ≥ 5.7) through the PDO wrapper `CMS\Database` (native prepared statements, `ATTR_EMULATE_PREPARES = false`). All tables carry the prefix `DB_PREFIX` (default `cms_`). This document describes **release 4.1.0 with schema `v26`**. The base schema (90 tables) is defined in `CMS\SchemaManager::getSchemaQueries()`: 76 tables up to `v25` plus 14 new in `v26`. `CMS\MigrationManager::run()` applies idempotent `CREATE`/`ALTER` migrations once per schema version. Schema history: `v24` adds revision columns to `cms_post_revisions`; `v25` adds `cms_admin_menu_layouts`, `cms_batch_jobs` and the 30 feature tables of `SchemaManager::FEATURE_TABLES` (forms, downloads, feed aggregator, knowledge base, newsletter, translation status, search statistics, media trash); **`v26`** adds the fourteen tables of `SchemaManager::FEATURE_TABLES_V26` – `cms_password_history`, `cms_user_identities`, `cms_media_usage`, `cms_content_workflow_events`, `cms_content_preview_links`, `cms_reusable_blocks`, `cms_reusable_block_usage`, `cms_reusable_block_revisions`, `cms_backup_offsite_uploads`, `cms_webhook_endpoints`, `cms_webhook_deliveries`, `cms_payment_events`, `cms_invoice_sequences`, `cms_invoices` – and the columns `cms_users.password_changed_at`, `cms_passkey_credentials.user_verified`, `expires_at`/`review_due_at`/`expiry_notified_at`/`review_notified_at` on `cms_posts`, `cms_pages` and `cms_kb_entries`, plus payment columns on `cms_orders` and `cms_user_subscriptions`. Existing installations receive all of it through the runtime check `SchemaManager::ensureFeatureSchema()`. Further tables are created on demand by the services and admin modules that own them. Settings use the key/value table `cms_settings`.
 
 ## Deutsch
 
@@ -103,7 +103,7 @@ Fehler werden ohne Zugangsdaten protokolliert; im Debug-Modus erfasst `Debug::qu
 | `admin_menu_layouts` | id, site_key (eindeutig; `''` = global, sonst Site-Schlüssel aus *Einstellungen › MultiSites*), layout_json (MEDIUMTEXT, nur validierte Layouts; `NULL` = zurückgesetzt), version (steigt bei jedem Speichern und Zurücksetzen), updated_by, created_at, updated_at – seit v25, eigene Sidebar-Layouts ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
 | `batch_jobs` | id, job_type, scope_key, status (`pending`, `running`, `done`, `failed`, `cancelled`), total, processed, failed, state_json (Cursor und Optionen), errors_json, message, lock_token, locked_until, created_by, created_at, updated_at, finished_at – seit v25, lange Admin-Aufgaben in Schritten (`BatchJobService`) |
 
-### Schema v25 (4.0.0)
+### Schema v25
 
 | Änderung | Zweck |
 |---|---|
@@ -145,7 +145,7 @@ Geprüft (12.11.2026, MariaDB 10.11): Neuinstallation auf leerer Datenbank und U
 
 Die Definitionen stehen nur in `SchemaManager::getSchemaQueries()` und werden an drei Stellen verwendet: bei der Neuinstallation (Installer und `createTables()`), beim Update (`MigrationManager::run()`, Einträge v25) und als Laufzeitprüfung in `AdminMenu\LayoutRepository` bzw. `BatchJobService` (`Database::runSchemaOnce()`, falls die Migration noch aussteht). Alle Wege nutzen `CREATE TABLE IF NOT EXISTS` und verändern keine bestehenden Daten. `TESTS/admin-menu/run.php` (Teil 7) prüft für beide Tabellen, dass alle drei Wege dieselbe Definition nutzen. Die Papierkorb-Spalten stehen in den `CREATE TABLE`-Anweisungen, als `ALTER TABLE` in den v25-Migrationen und in der Laufzeitprüfung `SchemaManager::ensureTrashColumns()`, die Spalten und Index auch bei Installationen nachträgt, die v25 schon erreicht hatten. Das gewählte Profil steht in der Option `admin_menu_profile`.
 
-### Schema v26 (4.1.0)
+### Schema v26
 
 #### Tabellen aus `FEATURE_TABLES_V26`
 
@@ -155,10 +155,10 @@ Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA
 |---|---|---|
 | `password_history` | id, user_id, password_hash, created_at | frühere bcrypt-Hashes für die Wiederverwendungssperre der Passwort-Richtlinie |
 | `user_identities` | id, user_id, provider, tenant_id, subject, email_at_link, provisioned, linked_at, last_login_at | SSO-Bindungen (Entra ID) – eindeutig über provider + tenant_id + subject (`oid`), nie über Benutzername/E-Mail; keine Tokens |
-| `media_usage` | media_path, content_type, content_id, context, updated_at | Verwendungsnachweis für Medien (seit 4.1.0, Bereich 2b): eine Zeile je Originaldatei, Inhalt und Kontext (`content`, `content_en`, `featured`, `gallery`, `attachment`, `setting`); Primärschlüssel mit Präfix `media_path(191)` |
-| `content_workflow_events` | id, content_type, content_id, locale, action, from_status, to_status, user_id, comment, created_at | Freigabe-Verlauf (seit 4.1.0, Bereich 3a): `submitted`, `approved`, `returned`, `withdrawn`, `comment`, `preview_created`, `preview_revoked`; Index je Inhalt und Zeit |
+| `media_usage` | media_path, content_type, content_id, context, updated_at | Verwendungsnachweis für Medien (Bereich 2b): eine Zeile je Originaldatei, Inhalt und Kontext (`content`, `content_en`, `featured`, `gallery`, `attachment`, `setting`); Primärschlüssel mit Präfix `media_path(191)` |
+| `content_workflow_events` | id, content_type, content_id, locale, action, from_status, to_status, user_id, comment, created_at | Freigabe-Verlauf (Bereich 3a): `submitted`, `approved`, `returned`, `withdrawn`, `comment`, `preview_created`, `preview_revoked`; Index je Inhalt und Zeit |
 | `content_preview_links` | id, content_type, content_id, token_hash, expires_at, created_by, created_at | Vorschau-Links `/preview/<token>` für Entwürfe und eingereichte Inhalte: nur der SHA-256-Hash des Tokens (eindeutig), Ablauf 7 Tage, widerrufbar; abgelaufene Einträge entfernt `cms_cron_daily` |
-| `reusable_blocks` | id, title, content, content_en, status, created_by, updated_by, created_at, updated_at | EditorJS Block Vorlagen (seit 4.1.0, Bereich 3b): Editor.js-JSON je Sprache; eingebunden über den Block „Vorlagen“ (`reusableBlock`, Daten nur `{ "id" }`) |
+| `reusable_blocks` | id, title, content, content_en, status, created_by, updated_by, created_at, updated_at | EditorJS Block Vorlagen (Bereich 3b): Editor.js-JSON je Sprache; eingebunden über den Block „Vorlagen“ (`reusableBlock`, Daten nur `{ "id" }`) |
 | `reusable_block_usage` | block_id, content_type, content_id | Wo ist eine Vorlage eingebunden (`post`, `page`, `reusable_block`)? Für „Verwendet in“, Löschwarnung und das Aktualisieren verknüpfter Inhalte |
 | `reusable_block_revisions` | id, block_id, title, content, content_en, created_by, created_at | Verlauf je Vorlage, die letzten 20 Fassungen |
 | `backup_offsite_uploads` | id, backup_name, target, object_prefix, status, bytes, files, attempts, last_error, uploaded_at, created_at, updated_at | Offsite-Status je Backup (S3-kompatibel) |
@@ -168,12 +168,12 @@ Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA
 | `orders`, `user_subscriptions`: Zahlungsspalten | `orders.provider`, `provider_checkout_id`, `paid_at` (Index `idx_provider_checkout`) · `user_subscriptions.provider`, `provider_subscription_id`, `current_period_end` (Index `idx_provider_sub`) | Zuordnung zu Stripe/Mollie und Laufzeitende bei Verlängerungen |
 | `invoice_sequences` | sequence_key, next_number, updated_at | Rechnungs-Nummernkreise (nie rückwärts) |
 | `invoices` | id, invoice_number, sequence_key, sequence_number, type, order_id, user_id, cancels_invoice_id, issued_at, service_period_start, service_period_end, currency, net_total, tax_total, gross_total, tax_mode, snapshot_json, pdf_path, pdf_sha256, created_by, restricted_at, created_at | Rechnungen/Storno-Rechnungen, unveränderlich, 10 Jahre |
-| `posts`, `pages`, `kb_entries`: `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` (DATETIME NULL), Indizes `idx_expires (status, expires_at)`, `idx_review_due` (Wissensdatenbank: `idx_kb_expires (is_active, expires_at)`, `idx_kb_review_due`) | Ablauf- und Prüfdaten (seit 4.1.0, Bereich 3c, `ContentExpiryService`); die `*_notified_at`-Spalten verhindern Mehrfachmeldungen |
+| `posts`, `pages`, `kb_entries`: `expires_at`, `review_due_at`, `expiry_notified_at`, `review_notified_at` (DATETIME NULL), Indizes `idx_expires (status, expires_at)`, `idx_review_due` (Wissensdatenbank: `idx_kb_expires (is_active, expires_at)`, `idx_kb_review_due`) | Ablauf- und Prüfdaten (Bereich 3c, `ContentExpiryService`); die `*_notified_at`-Spalten verhindern Mehrfachmeldungen |
 | `posts.status`, `pages.status` | neuer Wert `pending` | „Zur Prüfung“ (Vier-Augen-Prinzip) – kein Schemawechsel (`VARCHAR(20)`); nie öffentlich, Frontend-Abfragen bleiben bei `status = 'published'` |
 | `users.password_changed_at` | DATETIME NULL | Passwort-Alter für das optionale Höchstalter; Bestand `NULL` (rechnet ab `created_at`) |
 | `passkey_credentials.user_verified` | TINYINT(1) NULL | UV-Flag der Registrierung; zählt beim MFA-Zwang nur mit `1` |
 
-### Schema v24 (4.0.0)
+### Schema v24
 
 | Änderung | Zweck |
 |---|---|
@@ -219,11 +219,11 @@ Alle Änderungen laufen idempotent über `MigrationManager::run()`.
 | Schlüssel | Inhalt |
 |---|---|
 | `mfa_enabled`, `mfa_secret`, `mfa_pending_secret` | TOTP-Status und -Secrets; die Secrets seit 4.0.0 verschlüsselt (`enc:v2:…`, Kontext Benutzer + Feld), Klartext aus älteren Versionen wird beim Lesen bzw. beim Start migriert |
-| `auth_token_version` | Zähler für „Überall abmelden“ (seit 4.0.0): fließt in den Sitzungs-Fingerabdruck und den `pwf`-Claim der API-Tokens ein |
+| `auth_token_version` | Zähler für „Überall abmelden“: fließt in den Sitzungs-Fingerabdruck und den `pwf`-Claim der API-Tokens ein |
 | `email_verification_token`, `email_verification_expires`, `email_verified_at` | Bestätigung neuer Konten (Token als SHA-256-Hash) bzw. Zeitpunkt der letzten Bestätigung |
 | `pending_email`, `pending_email_token`, `pending_email_expires` | ausstehende E-Mail-Änderung (seit 4.0.0; Token als SHA-256-Hash, 48 Stunden gültig) |
 
-Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.0.0, `AdminUiPreferenceService`) speichert als JSON den eingeklappten Zustand der Seitenleiste (`sidebar_collapsed`), manuell auf- oder zugeklappte Gruppen und Plugin-Einträge (`groups`, höchstens 200 Schlüssel) und den gewählten Site-Kontext (`site`).
+Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (`AdminUiPreferenceService`) speichert als JSON den eingeklappten Zustand der Seitenleiste (`sidebar_collapsed`), manuell auf- oder zugeklappte Gruppen und Plugin-Einträge (`groups`, höchstens 200 Schlüssel) und den gewählten Site-Kontext (`site`).
 
 ### Wichtige Optionen in `cms_settings`
 
@@ -232,9 +232,9 @@ Nicht sicherheitsrelevant, aber ebenfalls je Benutzer: `admin_ui_prefs` (seit 4.
 | `db_schema_version`, `installed_cms_version`, `installed_cms_schema_version` | Versionsstände |
 | `active_plugins` | JSON-Liste aktiver Plugin-Slugs |
 | `active_theme` | aktives Theme |
-| `admin_plugin_site_assignments` | Plugin-Zuweisung je Site (seit 4.0.0): JSON `{"<plugin-slug>": ["<site-key>", …]}`; Plugins ohne Eintrag gelten für alle Sites ([../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)) |
-| `admin_menu_profile` | Profil der Admin-Seitenleiste (seit 4.0.0): `classic` (Standard), `structured` oder `custom`; gesetzt im Installer oder unter *Einstellungen › Admin-Menü* ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
-| `admin_sites` | Site-Liste der Admin-Oberfläche (seit 4.0.0, *Einstellungen › MultiSites*): JSON-Liste mit `key`, `label`, `url`, `accent`, `accent_soft`, `accent_strong`, `hosts`; ohne Option gilt die Haupt-URL der Installation (`SITE_URL`) als einzige Site ([../admin/system-settings/MULTISITES.md](../admin/system-settings/MULTISITES.md)) |
+| `admin_plugin_site_assignments` | Plugin-Zuweisung je Site: JSON `{"<plugin-slug>": ["<site-key>", …]}`; Plugins ohne Eintrag gelten für alle Sites ([../admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md#plugin-zuweisung)) |
+| `admin_menu_profile` | Profil der Admin-Seitenleiste: `classic` (Standard), `structured` oder `custom`; gesetzt im Installer oder unter *Einstellungen › Admin-Menü* ([../admin/ADMIN-MENU.md](../admin/ADMIN-MENU.md)) |
+| `admin_sites` | Site-Liste der Admin-Oberfläche (*Einstellungen › MultiSites*): JSON-Liste mit `key`, `label`, `url`, `accent`, `accent_soft`, `accent_strong`, `hosts`; ohne Option gilt die Haupt-URL der Installation (`SITE_URL`) als einzige Site ([../admin/system-settings/MULTISITES.md](../admin/system-settings/MULTISITES.md)) |
 | `site_name`, `site_url`, `language`, … | allgemeine Einstellungen ([../admin/system-settings/SYSTEM.md](../admin/system-settings/SYSTEM.md)) |
 | `seo_*`, `perf_*`, `firewall_*`, `antispam_*`, `cookie_*`, `member_*`, `legal_*`, `cms_loginpage_*` | Einstellungen der jeweiligen Bereiche |
 | Gruppen über `SettingsService` (`mail`, `core_modules`, `ai.*`, `cron`, …) | gruppierte, teils verschlüsselte Werte (`json:`; Secrets seit 4.0.0 `enc:v2:<alg>:<Schlüssel-ID>:<Daten>` über `CryptoService`, Altwerte `enc:` werden automatisch neu verschlüsselt). Die Gruppe `cron` enthält seit 4.0.0 außerdem `last_run_at`, `last_run_status` (`ok`/`failed`), `last_run_task` und `last_error` des letzten Laufs (Systemhinweise im Admin) |

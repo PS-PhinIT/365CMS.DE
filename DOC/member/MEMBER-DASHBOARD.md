@@ -13,7 +13,7 @@ If `dashboard_enabled` is false, `/member` and `/member/dashboard` redirect dire
 
 ## English — technical reference
 
-| Setting | Runtime meaning (4.0.0) |
+| Setting | Runtime meaning |
 |---|---|
 | `dashboard_enabled` | Enables the dashboard; disabled state redirects to `/member/profile` (`MemberController::getHomePath()`) |
 | `dashboard_greeting`, `dashboard_welcome_text`, `show_welcome` | Greeting (`{name}`), welcome HTML (output through `PurifierService` profile `strict`), visibility |
@@ -41,7 +41,7 @@ Ist das Dashboard abgeschaltet, führen `/member` und `/member/dashboard` mit ei
 
 ### Einstellungen und ihre Wirkung
 
-| Einstellung | Wirkung im Frontend (4.0.0) |
+| Einstellung | Wirkung im Frontend |
 |---|---|
 | `dashboard_enabled` | Dashboard an/aus; aus = Weiterleitung auf `/member/profile` (`MemberController::getHomePath()`) |
 | `dashboard_greeting`, `dashboard_welcome_text`, `show_welcome` | Begrüßung mit `{name}`, Begrüßungstext als bereinigtes HTML (`PurifierService`, Profil `strict`), Sichtbarkeit |

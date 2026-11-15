@@ -41,7 +41,7 @@ Gastbestellungen (ohne Konto) werden bezahlt, aber keinem Konto zugewiesen. Auto
 - Schlüssel verschlüsselt (`SettingsService`), getrennt für Test und Live; die Seite zeigt nur „gesetzt“.
 - Webhooks nach außen (`order.paid`, `order.failed`, `subscription.renewed`) enthalten nur IDs.
 
-### Grenzen (4.1.0)
+### Grenzen
 
 Erstattungen und Kündigungen werden nicht aus dem CMS an den Anbieter gesendet (im Dashboard des Anbieters erledigen; eine Kündigung dort kommt als Ereignis zurück). PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
 

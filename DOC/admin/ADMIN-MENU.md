@@ -108,9 +108,9 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 
 | Classic | Bezeichnung | | Structured | Bezeichnung |
 |---|---|---|---|---|
-| `posts` | **Inhalte** (seit 4.1.0, vorher *Beiträge*; enthält *Beiträge*, *Seiten*, Kategorien, Schlagwörter, Redaktionskalender) | | `content` | Inhalt |
+| `posts` | **Inhalte** (vorher *Beiträge*; enthält *Beiträge*, *Seiten*, Kategorien, Schlagwörter, Redaktionskalender) | | `content` | Inhalt |
 | `media` | Medien | | `media` | Medien |
-| `building-blocks` | **Bausteine** (seit 4.1.0) | | `editorial` | Redaktion |
+| `building-blocks` | **Bausteine** | | `editorial` | Redaktion |
 | `forms` | Formulare | | `ai` | KI-Dienste ¹ |
 | `ai` | KI-Dienste ¹ | | `structure` | Struktur |
 | `design` | Design | | `design` | Design |
@@ -125,7 +125,7 @@ Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können P
 
 ¹ Gruppe eines optionalen Core-Moduls. Ohne aktives Modul ist sie leer und damit ausgeblendet.
 
-**Änderungen der Menügruppen seit 4.1.0:**
+**Menügruppen im Überblick:**
 
 - Profil *Klassisch*: Die frühere Gruppe *Seiten* (nur noch „Alle Seiten“) ist in *Beiträge* aufgegangen; die Gruppe `posts` heißt jetzt **„Inhalte“** (Unterpunkte *Beiträge*, *Seiten*, *Kategorien*, *Schlagwörter*, *Redaktionskalender*).
 - Profil *Klassisch*: Neue Gruppe `building-blocks` **„Bausteine“** (Symbol Puzzle) mit *EditorJS Block Vorlagen* (`content.reusable-blocks`, `/admin/reusable-blocks`), *Knowledgebase*, *Hub-Sites*, *Tabellen* und *Inhaltsverzeichnis*. Diese Punkte gelten für Seiten und Beiträge gemeinsam und standen vorher unter *Seiten* bzw. *Medien*.

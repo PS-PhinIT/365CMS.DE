@@ -9,7 +9,7 @@
 in the current sizes – as a background job with progress, cancel and continuation by the hourly cron when the page is
 closed. The page also holds the output switches for image credits (credit line in captions, Schema.org
 `ImageObject`, prefill from EXIF/IPTC on upload). Author, license, source and “AI-generated” are maintained per image in
-the media library. Since 4.1.0 a second job regenerates AVIF versions (steps of 20 images, kept only if smaller than
+the media library. A second job regenerates AVIF versions (steps of 20 images, kept only if smaller than
 the WebP version of the same size); uploads create them when *Also create AVIF* is on under *Media → Settings*.
 
 ## Deutsch
@@ -34,14 +34,14 @@ die Funktion gesperrt (siehe *Systeminfo → PHP-Erweiterungen*). Die ältere St
 JSON-Endpunkt: `/admin/media-tools-api` (POST, Token `admin_media_tools_api`): `start` (`webp=0|1`; `job=avif` für AVIF),
 `step`, `cancel`, `status` (`job=avif`). Schritte und Abbruch ordnet der Server über den Typ des gespeicherten Auftrags zu.
 
-### Verwendungsindex neu aufbauen (seit 4.1.0)
+### Verwendungsindex neu aufbauen
 
 Karte „Verwendungsindex“: baut den dauerhaften Index (`media_usage`) über alle Inhaltsarten neu auf – Auftrag
 `media_usage`, je Schritt 50 Inhalte, Abbruch, Fortsetzung im stündlichen Cron. Am Ende entfernt der Lauf Einträge von
 Inhalten, die es nicht mehr gibt, und setzt den Merker `media_usage_index_built_at`. Erst danach nutzen Mediathek und
 Papierkorb den Index (siehe [MEDIA.md](MEDIA.md)). API: `start`/`status` mit `job=usage`.
 
-### AVIF-Fassungen (seit 4.1.0)
+### AVIF-Fassungen
 
 **Einstellungen** (*Medien → Einstellungen → Bild-Verarbeitung*): „AVIF zusätzlich erzeugen“ (Standard aus), Qualität
 1–100 (Standard 50), Geschwindigkeit 0–10 (Standard 6). Beim Speichern prüft eine Probe-Kodierung eines 8×8-Bildes, ob die
@@ -90,5 +90,5 @@ Fortsetzung eines offenen Laufs im Cron.
 `CMS/admin/media-tools.php`, `CMS/admin/media-tools-api.php`, `CMS/admin/views/media/tools.php`,
 `CMS/assets/js/admin-media-tools.js`, `CMS/core/Services/Media/ThumbnailRegenerationService.php`,
 `CMS/core/Services/Media/AvifDerivativeService.php`, `CMS/core/Services/Media/AvifRegenerationService.php`,
-`CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php` (4.1.0),
+`CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php`,
 `CMS/core/Services/Media/MediaLicenseService.php`, `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php`

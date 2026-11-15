@@ -6,7 +6,7 @@
 
 A theme is a directory `CMS/themes/<slug>/` with at least `style.css` (header comment) and `index.php` or `functions.php`; `theme.json` declares templates, partials, menu locations and customizer sections, `update.json` the version metadata. `ThemeManager::render($template, $data)` includes `header.php`, `<template>.php` (fallback `index.php`) and `footer.php`; templates receive their data as local variables. Themes must be CSP-compatible (nonce on every inline `<script>`/`<style>`, no inline handlers), fire `head` and `body_end`, escape all output and respect the privacy settings (local fonts, external consent banner).
 
-Since 4.1.0: content images may be wrapped in `<picture>` (AVIF/WebP `<source>` before the original `<img>`; `display: contents`, so child selectors like `figure > img` no longer match – use `figure img`); posts and pages have the extra status `pending` (never public – treat as "not public" in own status lists); plugin admin pages use the workspace partial `admin/partials/plugin-workspace.php` (`CMS_PLUGIN_WORKSPACE_VERSION`) – see [section 9](#9-änderungen-für-themes-in-410).
+Content images may be wrapped in `<picture>` (AVIF/WebP `<source>` before the original `<img>`; `display: contents`, so child selectors like `figure > img` no longer match – use `figure img`); posts and pages have the extra status `pending` (never public – treat as "not public" in own status lists); plugin admin pages use the workspace partial `admin/partials/plugin-workspace.php` (`CMS_PLUGIN_WORKSPACE_VERSION`) – see [section 9](#9-änderungen-für-themes-in-410).
 
 ## Deutsch
 
@@ -136,7 +136,7 @@ Health-Check beim Aktivieren (`ThemeManager::healthCheckTheme()`): `style.css` v
 - **Status `pending`.** Beiträge und Seiten kennen den Status `pending` („Zur Prüfung“, [Vier-Augen-Prinzip](../admin/pages-posts/REVIEW.md)). Er ist nie öffentlich; das Frontend liefert weiter nur `status = 'published'` aus. Themes, die eigene Statuslisten, Badges oder Abfragen führen, behandeln `pending` als „nicht öffentlich“. Vorschau-Links (`/preview/<token>`) rendern Entwürfe und eingereichte Inhalte mit den normalen Theme-Vorlagen – ein Theme braucht dafür keinen Sonderfall.
 - **Abgelaufene Inhalte.** Zurückgestufte Beiträge und Seiten liefern 404 oder (Einstellung) 410 über die normale Fehlerseite des Themes (`error.php`/`404.php`).
 - **EditorJS Block Vorlagen.** Der Block „Vorlagen“ wird serverseitig zu normalem Block-HTML aufgelöst; Themes stylen keine eigene Wrapper-Klasse, sondern die enthaltenen Blöcke.
-- **Plugin-Adminseiten** nutzen den Layout-Vertrag aus `admin/partials/plugin-workspace.php` (`CMS_PLUGIN_WORKSPACE_VERSION`, Container `.cms-plugin-admin-content`, Kurzadresse `/admin/plugins/<plugin>`); das betrifft das Admin-Layout, nicht das Frontend-Theme – Details in [../plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md#plugin-layout-vertrag-400).
+- **Plugin-Adminseiten** nutzen den Layout-Vertrag aus `admin/partials/plugin-workspace.php` (`CMS_PLUGIN_WORKSPACE_VERSION`, Container `.cms-plugin-admin-content`, Kurzadresse `/admin/plugins/<plugin>`); das betrifft das Admin-Layout, nicht das Frontend-Theme – Details in [../plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md#plugin-layout-vertrag).
 
 ### Verwandte Dokumente
 

@@ -100,7 +100,7 @@ Use `add_menu_page()` for a top-level menu and `add_submenu_page()` for child pa
 
 Admin callbacks should render content only. They should use `renderAdminLayoutStart()` and `renderAdminLayoutEnd()` only when the compatibility path requires it, because the router already supplies the current shell for ordinary plugin callbacks.
 
-Sidebar presentation (4.0.0): the registration contract above is unchanged – the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. The admin menu (`CMS\Services\AdminMenu\AdminMenuService`) only reads `get_registered_admin_menus()` and places the entries the same way in every sidebar profile:
+Sidebar presentation: the registration contract above is unchanged – the hook `cms_admin_menu`, the signatures of `add_menu_page()` / `add_submenu_page()` and the call order stay the same, so existing plugins need no changes. The admin menu (`CMS\Services\AdminMenu\AdminMenuService`) only reads `get_registered_admin_menus()` and places the entries the same way in every sidebar profile:
 
 - a menu without submenus becomes a plain link in the collapsed sidebar section "Aktive Plugins" (active plugins) at the end of the sidebar, sorted alphabetically by title;
 - a menu with submenus becomes a group of its own in that section; "Übersicht" is prepended when the top-level slug is not registered as a submenu itself;
@@ -114,7 +114,7 @@ The admin router loads `assets/css/admin-plugins.css` after the plugin styleshee
 
 For path routes (`/admin/plugins/:plugin/:page`) the router sets `$_GET['page']` to the requested page before calling the callback, so dispatchers and the active sidebar entry can rely on it. Pass the active page slug to `renderAdminLayoutStart()`.
 
-#### Plugin layout contract (4.0.0)
+#### Plugin layout contract
 
 Every plugin admin page uses the same two-level structure inside `.cms-plugin-admin-content`:
 
@@ -320,7 +320,7 @@ Für ein Hauptmenü wird `add_menu_page()`, für Unterseiten `add_submenu_page()
 
 Admin-Callbacks rendern ausschließlich Inhalt. `renderAdminLayoutStart()` und `renderAdminLayoutEnd()` werden nur im Kompatibilitätspfad verwendet, weil der Router bei normalen Plugin-Callbacks bereits die aktuelle Shell bereitstellt.
 
-Darstellung in der Seitenleiste (4.0.0): Der Registrierungsvertrag oben bleibt unverändert – Hook `cms_admin_menu`, Signaturen von `add_menu_page()` / `add_submenu_page()` und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. Das Admin-Menü (`CMS\Services\AdminMenu\AdminMenuService`) liest nur `get_registered_admin_menus()` und platziert die Einträge nach dem aktiven Sidebar-Profil:
+Darstellung in der Seitenleiste: Der Registrierungsvertrag oben bleibt unverändert – Hook `cms_admin_menu`, Signaturen von `add_menu_page()` / `add_submenu_page()` und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. Das Admin-Menü (`CMS\Services\AdminMenu\AdminMenuService`) liest nur `get_registered_admin_menus()` und platziert die Einträge nach dem aktiven Sidebar-Profil:
 
 - ein Menü ohne Untermenüs wird ein einfacher Link im eingeklappten Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (alphabetisch nach Titel);
 - ein Menü mit Untermenüs wird dort eine eigene Gruppe; „Übersicht“ wird vorangestellt, wenn der Hauptslug nicht selbst als Untermenü registriert ist;
@@ -334,7 +334,7 @@ Der AdminRouter lädt auf jeder Plugin-Seite `assets/css/admin-plugins.css` nach
 
 Bei Pfad-Routen (`/admin/plugins/:plugin/:page`) setzt der Router vor dem Callback `$_GET['page']` auf die angeforderte Seite, sodass Dispatcher und aktive Sidebar-Markierung sich darauf verlassen können. Den aktiven Seiten-Slug an `renderAdminLayoutStart()` übergeben.
 
-#### Plugin-Layout-Vertrag (4.0.0)
+#### Plugin-Layout-Vertrag
 
 Jede Plugin-Adminseite folgt innerhalb von `.cms-plugin-admin-content` derselben zweistufigen Struktur:
 

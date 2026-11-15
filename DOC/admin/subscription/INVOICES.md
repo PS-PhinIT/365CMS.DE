@@ -92,7 +92,7 @@ Nach dem Erstellen geht eine Mail mit dem PDF als Anhang an die E-Mail der Beste
 - Hook `cms_invoice_created(int $invoiceId, string $type, int $orderId, int $userId)` nach dem Erstellen (`type` = `invoice` | `cancellation`).
 - Seiten: `CMS/admin/invoices.php` → `CMS/admin/views/subscriptions/invoices.php`, `CMS/member/invoices.php`.
 - Tests: `php TESTS/invoices/run.php [-v]`.
-- Nicht in 4.1.0: E-Rechnung (ZUGFeRD/XRechnung).
+- Nicht enthalten: E-Rechnung (ZUGFeRD/XRechnung).
 
 ### Verwandte Dokumente
 

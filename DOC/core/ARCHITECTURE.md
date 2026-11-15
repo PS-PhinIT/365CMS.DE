@@ -71,7 +71,7 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 8. **Frontend-Hooks** (nur `web`): Cookie-Consent, Analytics (consent-gesteuert, CSP-Quellen über `cms_csp_prepare`), Core-Web-Vitals-Skript, PhotoSwipe für Galerien/Hub-Seiten, Hub-Styles.
 9. **Cron-Hooks**: `cms_cron_mail_queue`, `cms_cron_hourly` (Broken-Links, SEO-Trend, Monitoring-Trend, Sicherheitsalarme, IndexNow-Versand), `cms_cron_daily` (Sitemap, Daten-Aufbewahrung über `DataRetentionService`).
 10. **OPcache-Warmup** nach Deployments als Shutdown-Funktion.
-11. **Core-Funktionsbereiche** (seit 4.0.0): `FeatureHooks\Registry::register()` ruft je Bereich `register()` auf (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise). Fehlt eine Klasse oder wirft sie, bleiben die übrigen Bereiche aktiv; der Fehler landet im Kanal `core.features`.
+11. **Core-Funktionsbereiche**: `FeatureHooks\Registry::register()` ruft je Bereich `register()` auf (Routen, Cron, Inhalts-Hooks, Aufbewahrungsregeln, Systemhinweise). Fehlt eine Klasse oder wirft sie, bleiben die übrigen Bereiche aktiv; der Fehler landet im Kanal `core.features`.
 12. `cms_init`, `cms_init_<modus>`.
 
 ### Routing (`CMS\Router`)

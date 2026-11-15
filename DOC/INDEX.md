@@ -102,12 +102,12 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Security | [admin/security/README.md](admin/security/README.md) |
 | Login thresholds and lockout | [admin/security/LOGIN-THRESHOLDS.md](admin/security/LOGIN-THRESHOLDS.md) |
 | Sign-in with Microsoft Entra ID (SSO, 4.1.0) | [admin/security/SSO-ENTRA.md](admin/security/SSO-ENTRA.md) |
-| Four-eyes review, preview links (4.1.0) | [admin/pages-posts/REVIEW.md](admin/pages-posts/REVIEW.md) |
-| EditorJS block templates (4.1.0) | [admin/pages-posts/BLOCK-TEMPLATES.md](admin/pages-posts/BLOCK-TEMPLATES.md) |
+| Four-eyes review, preview links | [admin/pages-posts/REVIEW.md](admin/pages-posts/REVIEW.md) |
+| EditorJS block templates | [admin/pages-posts/BLOCK-TEMPLATES.md](admin/pages-posts/BLOCK-TEMPLATES.md) |
 | Editorial calendar, expiry and review dates (4.0.0 / 4.1.0) | [admin/pages-posts/EDITORIAL-CALENDAR.md](admin/pages-posts/EDITORIAL-CALENDAR.md) |
-| Outbound webhooks (4.1.0) | [admin/system-settings/WEBHOOKS.md](admin/system-settings/WEBHOOKS.md) |
-| Online payments Stripe / Mollie (4.1.0) | [admin/subscription/PAYMENTS.md](admin/subscription/PAYMENTS.md) |
-| Invoices and credit notes (4.1.0) | [admin/subscription/INVOICES.md](admin/subscription/INVOICES.md) |
+| Outbound webhooks | [admin/system-settings/WEBHOOKS.md](admin/system-settings/WEBHOOKS.md) |
+| Online payments Stripe / Mollie | [admin/subscription/PAYMENTS.md](admin/subscription/PAYMENTS.md) |
+| Invoices and credit notes | [admin/subscription/INVOICES.md](admin/subscription/INVOICES.md) |
 | Roles and capabilities (RBAC) | [admin/users-groups/RBAC.md](admin/users-groups/RBAC.md) |
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |

@@ -11,7 +11,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 - Actions: `upload`, `replace_item`, `replace_items`, `create_folder`, `rename_item`, `move_item`, `delete_item`, `bulk_items`, `assign_category`, `add_category`, `delete_category`, `save_settings`, `start/process/cancel_media_processing_job`.
 - Upload batch: max. 20 files and 100 MB per request, file names max. 180 characters.
 - Delivery of protected files goes through `GET /media-file?path=…` (`MediaDeliveryService`).
-- Since 4.1.0: optional AVIF derivatives (`auto_avif`, `AvifDerivativeService`) with `<picture>` output (`display: contents`), deleting an image also removes its generated sizes/WebP/AVIF, and a persistent usage index (`media_usage`, `MediaUsageIndex`, extensible via `cms_register_media_reference_extractors`).
+- Optional AVIF derivatives (`auto_avif`, `AvifDerivativeService`) with `<picture>` output (`display: contents`), deleting an image also removes its generated sizes/WebP/AVIF, and a persistent usage index (`media_usage`, `MediaUsageIndex`, extensible via `cms_register_media_reference_extractors`).
 
 ## Deutsch
 
@@ -23,8 +23,8 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 | Modul | `CMS/admin/modules/media/MediaModule.php` | Listen, Filter, Dateiaktionen, Einstellungen, Verarbeitungsjobs |
 | Views | `CMS/admin/views/media/library.php`, `featured.php`, `check.php`, `categories.php`, `settings.php` | Tabs |
 | Services | `CMS/core/Services/MediaService.php` (Fassade), `Media/MediaRepository.php`, `Media/UploadHandler.php`, `Media/ImageProcessor.php` | Dateisystem, Metadaten, Upload-Validierung, Bildverarbeitung |
-| Nutzung | `CMS/core/Services/MediaUsageService.php` (Fassade), seit 4.1.0 `Media/MediaUsageIndex.php`, `Media/MediaReferenceExtractor.php`, `Media/MediaUsageRebuildService.php`, `Media/Usage/*` | Wo wird eine Datei verwendet (Verwendungsnachweis über alle Inhaltsarten) |
-| AVIF (seit 4.1.0) | `Media/AvifDerivativeService.php`, `Media/AvifRegenerationService.php` | AVIF-Fassungen erzeugen, prüfen und nachgenerieren |
+| Nutzung | `CMS/core/Services/MediaUsageService.php` (Fassade), `Media/MediaUsageIndex.php`, `Media/MediaReferenceExtractor.php`, `Media/MediaUsageRebuildService.php`, `Media/Usage/*` | Wo wird eine Datei verwendet (Verwendungsnachweis über alle Inhaltsarten) |
+| AVIF | `Media/AvifDerivativeService.php`, `Media/AvifRegenerationService.php` | AVIF-Fassungen erzeugen, prüfen und nachgenerieren |
 | Auslieferung | `CMS/core/Services/MediaDeliveryService.php` → `GET /media-file` | Geschützte Dateien, Member-Uploads |
 | Upload-API | `ApiRouter`: `POST /api/upload`, `GET\|POST /api/media` | Editor- und Plugin-Uploads |
 | Metadaten | `CMS/config/media-meta.json` | Kategorien, Tags, Alt-Texte. Schreibzugriffe laufen über `MediaRepository::updateMeta()` unter einer Dateisperre (`media-meta.json.lock`), damit sich parallele Uploads, Papierkorb und Import nicht gegenseitig überschreiben. Je Datei: `getFileMeta()`, `setFileMeta()` (ersetzen/entfernen), `mergeFileMeta()` (einzelne Felder). |
@@ -38,7 +38,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 - **Einzelaktionen:** Upload, Ersetzen (gleicher Dateiname, Verweise bleiben gültig), Umbenennen, Verschieben, Löschen, Kategorie zuweisen.
 - **Sammelaktionen (`bulk_items`):** `delete`, `move`, `assign_category`, `tag_add`, `tag_replace`, `tag_remove`, `tag_clear` (max. 20 Tags à 40 Zeichen), `alt_text_update` (max. 255 Zeichen je Datei).
 
-### Verwendungsnachweis (seit 4.1.0)
+### Verwendungsnachweis
 
 Spalte „Verwendet in“, Filter `usage_filter` und die Löschwarnung im Papierkorb lesen aus dem dauerhaften
 Verwendungsindex (Tabelle `media_usage`), sobald er einmal vollständig aufgebaut ist (*Medien-Werkzeuge →
@@ -49,7 +49,7 @@ Fassungen zählen für ihr Original. Bis zum ersten Aufbau sucht die Mediathek w
 weist beim Filtern darauf hin. Danach hält jedes Speichern den Index aktuell. Die Extraktion übernimmt `Media\MediaUsageIndex` mit `Media\MediaPathNormalizer` (erkannt werden `/uploads/…`, absolute URLs der eigenen Domain, `/media-file?path=…`, `srcset` und CSS-`url()`; fremde Domains zählen nie) und je Inhaltsart einem `Media\MediaReferenceExtractor` (`Usage/ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`). Kontexte der Tabelle `media_usage`: `content`, `content_en`, `featured`, `gallery`, `attachment`, `setting`. Weitere Inhaltsarten melden Plugins über
 die Action `cms_register_media_reference_extractors` an (`$index->register(new MeinExtractor())`).
 
-#### Bilder in Inhalten: AVIF, WebP und `<picture>` (seit 4.1.0)
+#### Bilder in Inhalten: AVIF, WebP und `<picture>`
 
 Ist „AVIF zusätzlich erzeugen“ (`auto_avif`) an, legt der Upload nach der WebP-Fassung je Bildgröße (Original, `-small`, `-medium`, `-large`, `-banner`) eine AVIF-Datei an (`Media\AvifDerivativeService`). Sie bleibt nur, wenn sie kleiner ist als die WebP-Fassung derselben Größe; Bilder über 25 Megapixel werden übersprungen. Beim Speichern prüft eine Probe-Kodierung, ob GD wirklich AVIF schreiben kann (Option `media_capabilities`). Bestehende Bilder holt die Karte „AVIF nachgenerieren“ unter *Medien-Werkzeuge* nach (`Media\AvifRegenerationService`, Auftrag `media_avif`, [MEDIA-TOOLS.md](MEDIA-TOOLS.md)). Nach jeder erzeugten Fassung läuft die Action `cms_media_derivative_created`.
 
@@ -78,7 +78,7 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 | Dateinamen | `sanitize_filenames`, `unique_filenames`, `lowercase_filenames` | an, an, aus |
 | Ablage | `organize_month_year` (Unterordner `JJJJ/MM`) | aus |
 | Bilder | `auto_webp` (WebP-Variante), `strip_exif`, `jpeg_quality` (60–100), `max_width`/`max_height` (bis 8000 px) | an, an, 85, 2560/2560 |
-| | `auto_avif` (AVIF zusätzlich erzeugen, seit 4.1.0), `avif_quality` (1–100), `avif_speed` (0–10) | aus, 50, 6 |
+| | `auto_avif` (AVIF zusätzlich erzeugen), `avif_quality` (1–100), `avif_speed` (0–10) | aus, 50, 6 |
 | Vorschaubilder | `generate_thumbnails`; Größen small 150×150, medium 300×300, large 1024×1024, banner 1200×400 | aus |
 | Sicherheit | `block_dangerous_types`, `validate_image_content`, `require_login_for_upload`, `protect_uploads_dir` | alle an |
 | Mitglieder | `member_uploads_enabled`, `member_max_upload_size` (`5M`), `member_allowed_types` (`image`, `document`), `member_delete_own` | aus |

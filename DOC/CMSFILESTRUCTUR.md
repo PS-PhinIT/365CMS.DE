@@ -168,7 +168,7 @@ Subdirectories:
 
 | Path | Contents / Inhalt |
 |---|---|
-| `core/Auth/` | `AuthManager.php`, `LDAP/LdapAuthProvider.php`, `MFA/BackupCodesManager.php`, `MFA/TotpAdapter.php`, `Passkey/WebAuthnAdapter.php`; since/seit 4.1.0 `SSO/` (Entra ID): `DatabaseIdentityStore.php`, `EntraIdProvider.php`, `EntraSettings.php`, `EntraSsoService.php`, `IdentityLinker.php`, `IdentityStoreInterface.php`, `OidcFlowState.php`, `OidcProviderInterface.php` |
+| `core/Auth/` | `AuthManager.php`, `LDAP/LdapAuthProvider.php`, `MFA/BackupCodesManager.php`, `MFA/TotpAdapter.php`, `Passkey/WebAuthnAdapter.php`; `SSO/` (Entra ID): `DatabaseIdentityStore.php`, `EntraIdProvider.php`, `EntraSettings.php`, `EntraSsoService.php`, `IdentityLinker.php`, `IdentityStoreInterface.php`, `OidcFlowState.php`, `OidcProviderInterface.php` |
 | `core/Contracts/` | interfaces (cache, DB, logger, …) |
 | `core/Http/` | HTTP client / transport |
 | `core/Member/` | `PluginDashboardRegistry.php`, `MemberI18n.php`, `MemberSanitizer.php` (member-area texts and input sanitising / Texte und Eingabebereinigung des Mitgliederbereichs) |
@@ -179,7 +179,7 @@ Service PHP files currently present at `core/Services/` root include: `AdminNavi
 
 Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Content/`, `ContentTypes/`, `Downloads/`, `EditorJs/`, `Exchange/`, `FeatureHooks/`, `Feed/`, `Forms/`, `Knowledgebase/`, `Landing/`, `Legal/`, `Media/`, `Newsletter/`, `Payments/`, `PluginMigration/`, `Retention/`, `ReusableBlocks/`, `Search/`, `Security/`, `SEO/`, `SiteTable/`, `Trash/`, `Webhooks/`.
 
-New in 4.1.0 / Neu in 4.1.0:
+Identität, Medien, Redaktion, Betrieb / Identity, media, editorial, operations:
 
 - `Services/Security/` — `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
 - `Services/Media/` additions — `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
@@ -191,7 +191,7 @@ New in 4.1.0 / Neu in 4.1.0:
 - `Services/FeatureHooks/` additions — `BackupOffsiteHooks`, `ContentExpiryHooks`, `ContentWorkflowHooks`, `ReusableBlockHooks`, `WebhookHooks`
 - `Services/Newsletter/` additions — `NewsletterConsentLog.php`, `NewsletterMemberService.php`
 
-New in 4.0.0 / Neu in 4.0.0:
+Admin-Menü und Erweiterungspunkte / Admin menu and extension points:
 
 - `Services/AdminMenu/` — admin sidebar with profiles / Admin-Sidebar mit Profilen: `AdminMenuItem`, `AdminMenuService`, `BadgeProvider`, `CoreCatalog`, `LayoutRepository`, `LayoutValidator`, `MenuBuilder`, `MenuRegistry`, `ProfileLayouts` (see / siehe [admin/ADMIN-MENU.md](admin/ADMIN-MENU.md))
 - `Services/FeatureHooks/Registry.php`, `Services/PluginMigration/PluginMigrator.php`, `Services/Retention/RetentionRule.php`, `Services/EditorJs/EditorJsBlockRegistry.php`, `Services/ContentTypes/ContentTypeRegistry.php` (+ provider interfaces and value objects / Provider-Schnittstellen und Wertobjekte) — shared extension points / gemeinsame Erweiterungspunkte
@@ -427,7 +427,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 ES modules without build step / ES-Module ohne Build-Schritt (since/seit 4.0.0):
 
 - `admin-shell/`: `api.js`, `dom.js`, `drawer.js`, `recent-links.js`, `shell.js`, `sidebar.js`, `site-switcher.js`, `toolbar.js`, `user-menu.js`
-- `editor-blocks/`: `block-preview.js`, `download-block.js`, `form-block.js`, `reusable-block.js` (since/seit 4.1.0, Block „Vorlagen“)
+- `editor-blocks/`: `block-preview.js`, `download-block.js`, `form-block.js`, `reusable-block.js` (Block „Vorlagen“)
 - `member/`: `media.js`, `passkey.js`, `uploads.js` (loaded on demand by `member-dashboard.js` / bei Bedarf von `member-dashboard.js` geladen)
 - `post-editor/`: `autosave.js`, `checklist.js`, `dialog.js`, `editor.js`, `focus-mode.js`, `revisions.js`
 
@@ -460,9 +460,9 @@ Modulverzeichnisse: `comments`, `content`, `dashboard`, `downloads`, `feeds`, `f
 Einstiegsbeispiele zu Admin-Routen sind `index.php`, `pages.php`, `posts.php`, `media.php`, `users.php`, `plugins.php`, `themes.php`, `cms-loginpage.php`, `cms-logs.php`, `ai-services.php`, `ai-content-creator.php`, `ai-seo-creator.php` sowie die übrigen `CMS/admin/*.php`-Dateien. Neu in 4.0.0: `admin-ui.php` (JSON-Endpunkt der Admin-Shell), `post-editor-api.php` (JSON-Endpunkt des Beitragseditors) und `plugin-assignment.php` (Plugin-Zuweisung je Site, View `views/settings/plugin-assignment.php`). Ebenfalls neu: `multisites.php` (Einstellungsbereich MultiSites, View `views/settings/multisites.php`), `configuration.php` (Kachelseiten `/admin/configuration[?group=…]`, Views `views/configuration/`), `settings-tabs/admin-menu.php` (Einstellungs-Tab „Admin-Menü“ mit dem Sidebar-Editor, Views `views/settings/admin-menu.php` und `views/settings/admin-sidebar-editor.php`), `settings-tabs/feeds.php` (RSS-Einstellungs-Controller und View `views/settings/feeds.php`), `partials/sidebar-nav.php` (Sidebar-Liste, auch für die Vorschau) und `views/settings/partials-tabs.php` (gemeinsame Tab-Leiste der Einstellungsbereiche).
 
 
-New admin pages in 4.1.0 / Neue Admin-Seiten in 4.1.0: `reusable-blocks.php` (EditorJS Block Vorlagen, module `modules/reusable-blocks/ReusableBlocksModule.php`, views `views/reusable-blocks/{index,list,edit}.php`), `backup-settings.php` (+ `views/system/backup-settings.php`), `webhooks.php` (+ `views/system/webhooks.php`), `payments.php` (+ `views/subscriptions/payments.php`), settings tab / Einstellungs-Tab `settings-tabs/sso.php` (+ `views/settings/sso.php`); shared partials / gemeinsame Partials `views/partials/content-workflow-form.php`, `content-workflow-panel.php`, `content-expiry-fields.php`, `partials/plugin-workspace.php`.
+Weitere Admin-Seiten (Vorlagen, Backup, Webhooks, Zahlungen, SSO) / More admin pages (templates, backup, webhooks, payments, SSO): `reusable-blocks.php` (EditorJS Block Vorlagen, module `modules/reusable-blocks/ReusableBlocksModule.php`, views `views/reusable-blocks/{index,list,edit}.php`), `backup-settings.php` (+ `views/system/backup-settings.php`), `webhooks.php` (+ `views/system/webhooks.php`), `payments.php` (+ `views/subscriptions/payments.php`), settings tab / Einstellungs-Tab `settings-tabs/sso.php` (+ `views/settings/sso.php`); shared partials / gemeinsame Partials `views/partials/content-workflow-form.php`, `content-workflow-panel.php`, `content-expiry-fields.php`, `partials/plugin-workspace.php`.
 
-New admin pages in 4.0.0 / Neue Admin-Seiten in 4.0.0: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`; since/seit 4.1.0 `settings-tabs/sso.php` (view/View `views/settings/sso.php`) `reusable-blocks.php` (EditorJS Block Vorlagen, views/Views `views/reusable-blocks/`) `backup-settings.php` (Backup-Einstellungen) `webhooks.php` (Webhooks) and/und `payments.php` (Zahlungen, view/View `views/subscriptions/payments.php`) and/und `invoices.php` (Rechnungen, view/View `views/subscriptions/invoices.php`).
+Admin-Seiten der Core-Funktionen / Admin pages of the core features: `forms.php`, `form-submissions.php`, `downloads.php`, `knowledgebase.php`, `newsletter.php`, `editorial-calendar.php` (+ `editorial-calendar-api.php`), `trash.php`, `content-changes.php`, `translations.php`, `search-index.php` (+ `search-index-api.php`), `content-exchange.php` (+ `content-exchange-api.php`), `data-retention.php`, `media-tools.php` (+ `media-tools-api.php`); settings tabs / Einstellungs-Tabs `settings-tabs/admin-menu.php`, `feeds.php`, `security.php`; since/seit 4.1.0 `settings-tabs/sso.php` (view/View `views/settings/sso.php`) `reusable-blocks.php` (EditorJS Block Vorlagen, views/Views `views/reusable-blocks/`) `backup-settings.php` (Backup-Einstellungen) `webhooks.php` (Webhooks) and/und `payments.php` (Zahlungen, view/View `views/subscriptions/payments.php`) and/und `invoices.php` (Rechnungen, view/View `views/subscriptions/invoices.php`).
 
 ---
 

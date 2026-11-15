@@ -109,7 +109,7 @@ Rückgabe des Handlers: `['success' => bool, 'message' => '…']` bzw. `['succes
 - AJAX an dieselbe URL mit Header `X-Requested-With: XMLHttpRequest` ruft den Callback ohne Layout auf.
 - Eigene Formulare brauchen eigene CSRF-Tokens (`\CMS\Security::instance()->generateToken('mein_plugin')` / `verifyToken()`).
 
-**Darstellung in der Seitenleiste (seit 4.0.0):** Die Registrierung oben bleibt unverändert – Hook-Name, Signaturen und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `AdminMenuService` liest das Ergebnis von `get_registered_admin_menus()` nur aus:
+**Darstellung in der Seitenleiste:** Die Registrierung oben bleibt unverändert – Hook-Name, Signaturen und Aufrufreihenfolge sind dieselben, bestehende Plugins brauchen keine Anpassung. `AdminMenuService` liest das Ergebnis von `get_registered_admin_menus()` nur aus:
 
 - Ein Plugin-Menü ohne Unterseiten wird ein einfacher Link im eingeklappten Abschnitt „Aktive Plugins“ am Ende der Seitenleiste (alphabetisch nach Menütitel).
 - Ein Menü mit Unterseiten wird dort eine eigene Gruppe. Ist der Hauptpunkt nicht selbst als Unterseite registriert, wird „Übersicht“ als erster Eintrag ergänzt.

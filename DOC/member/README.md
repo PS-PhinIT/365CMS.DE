@@ -84,12 +84,12 @@ Alle Formulare senden `POST` an die eigene Seite mit Feld `action` und `csrf_tok
 | Seite | `action` | Wirkung |
 |---|---|---|
 | `/member/profile` | `profile_save` | Stammdaten und aktivierte Profilfelder (inkl. eigener Felder) speichern; Pflichtfelder laut Admin-Konfiguration. Eine neue E-Mail-Adresse verlangt das aktuelle Passwort und gilt seit 4.0.0 erst nach Bestätigung des Links an die neue Adresse ([MEMBER-SECURITY.md](MEMBER-SECURITY.md)) |
-| | `email_change_cancel` | ausstehende Änderung der E-Mail-Adresse verwerfen (seit 4.0.0) |
+| | `email_change_cancel` | ausstehende Änderung der E-Mail-Adresse verwerfen |
 | `/member/security` | `password_change` | Passwort ändern (aktuelles Passwort, Richtlinie: 12 Zeichen + Zeichenklassen), setzt `password_changed_at` |
 | | `totp_start` / `totp_confirm` / `totp_disable` | Authenticator-App einrichten (QR-Code), mit Code bestätigen → Backup-Codes werden einmalig angezeigt; deaktivieren |
 | | `backup_generate` | neue Backup-Codes erzeugen (alte werden ungültig) |
 | | `passkey_register` / `passkey_delete` | Passkey (WebAuthn) hinzufügen bzw. entfernen |
-| | `sessions_revoke_all` | „Überall sonst abmelden“: alle anderen Sitzungen beenden und API-Tokens ungültig machen (aktuelles Passwort, seit 4.0.0) |
+| | `sessions_revoke_all` | „Überall sonst abmelden“: alle anderen Sitzungen beenden und API-Tokens ungültig machen (aktuelles Passwort) |
 | `/member/notifications` | `notifications_save` | E-Mail-Benachrichtigungen (Sicherheit, Updates, Marketing), Browser-/Desktop-/Mobil-Hinweise, Häufigkeit, neue Funktionen/Aktionen |
 | `/member/messages` | `message_send` | Nachricht an Benutzer-ID, Benutzername, E-Mail-Adresse oder Anzeigenamen senden (in dieser Reihenfolge; ein Anzeigename nur, wenn ihn genau ein aktives Konto trägt), Antwort über `parent_id` (Thread) |
 | `/member/media` | `media_folder_create`, `media_folder_delete`, `media_delete`, `media_rename`, `media_move` | eigene Dateien unter `uploads/member/user-<id>/` verwalten; Löschen nur bei `member_delete_own` |

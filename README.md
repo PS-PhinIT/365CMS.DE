@@ -54,7 +54,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Architecture** | Modular DI container (`CMS\Container`), specialized routers (`Web`, `Admin`, `Member`, `API`, `CLI`), event-driven hooks |
 | **Frontend & Admin UI** | Tabler-based responsive admin shell, zero-build ES modules (`admin-shell/`, `post-editor/`, `editor-blocks/`), local WOFF2 fonts |
 | **Shipped Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML Importer*) |
-| **Quality Assurance** | 31 database-free automated test suites (`php TESTS/run-all.php`) + CI security scanning |
+| **Quality Assurance** | 32 database-free automated test suites (`php TESTS/run-all.php`) + CI security scanning |
 
 ---
 
@@ -115,7 +115,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 ├── DOC/                  # Comprehensive bilingual documentation & audit reports
 ├── RELEASE/              # Official release ZIPs (-full, -update) & SHA-256 checksums
 ├── SCREENSHOTS/          # UI & dashboard screenshots
-└── TESTS/                # 31 database-free test suites (php TESTS/run-all.php)
+└── TESTS/                # 32 database-free test suites (php TESTS/run-all.php)
 ```
 
 ---
@@ -173,7 +173,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Architektur** | Modularer DI-Container (`CMS\Container`), spezialisierte Router (`Web`, `Admin`, `Member`, `API`, `CLI`), Event-Hooks |
 | **Admin- & Frontend-UI** | Responsive Tabler-Admin-Shell, ES-Module ohne Build-Schritt (`admin-shell/`, `post-editor/`, `editor-blocks/`), lokale WOFF2-Schriften |
 | **Standard-Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML-Importer*) |
-| **Qualitätssicherung** | 31 datenbankfreie Test-Suiten (`php TESTS/run-all.php`) + automatisierte CI-Sicherheitsprüfungen |
+| **Qualitätssicherung** | 32 datenbankfreie Test-Suiten (`php TESTS/run-all.php`) + automatisierte CI-Sicherheitsprüfungen |
 
 ---
 
@@ -234,7 +234,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 ├── DOC/                  # Umfassende zweisprachige Dokumentation & Audit-Berichte
 ├── RELEASE/              # Offizielle Release-Pakete (-full, -update) & SHA-256-Prüfsummen
 ├── SCREENSHOTS/          # UI- & Dashboard-Screenshots
-└── TESTS/                # 31 datenbankfreie Test-Suiten (php TESTS/run-all.php)
+└── TESTS/                # 32 datenbankfreie Test-Suiten (php TESTS/run-all.php)
 ```
 
 ---

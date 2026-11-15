@@ -38,7 +38,7 @@ Fehlerantworten sind JSON (`{"error":"…"}`) mit passendem HTTP-Status (401, 40
 
 Diese Endpunkte senden `Cache-Control: private`, `X-Robots-Tag: noindex` und verlangen `POST`.
 
-**Admin-Shell und Beitragseditor (seit 4.0.0)** – lesende Aktionen per `GET`, zustandsändernde nur per `POST` mit CSRF-Token (Feld `csrf_token`). Beide verlangen Anmeldung und `isAdmin()`, antworten mit JSON und `X-Robots-Tag: noindex, nofollow, noarchive`. Abgelaufene Tokens ergeben `403` mit `{"success":false,"code":"csrf"}`; das Frontend holt dann über `action=token` ein frisches Token und wiederholt den Aufruf einmal.
+**Admin-Shell und Beitragseditor** – lesende Aktionen per `GET`, zustandsändernde nur per `POST` mit CSRF-Token (Feld `csrf_token`). Beide verlangen Anmeldung und `isAdmin()`, antworten mit JSON und `X-Robots-Tag: noindex, nofollow, noarchive`. Abgelaufene Tokens ergeben `403` mit `{"success":false,"code":"csrf"}`; das Frontend holt dann über `action=token` ein frisches Token und wiederholt den Aufruf einmal.
 
 | Methode & Pfad | Zugriff / CSRF-Aktion | Zweck |
 |---|---|---|

@@ -40,7 +40,7 @@ The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRout
 |---|---|
 | `/api/v1/admin/posts` | `page` (≥1), `limit` (5–100, Standard 20), `status` (`all`, `published`, `scheduled`, `draft`, `private`, `trash`), `search`, `sort` (`title`, `status`, `published_at`, `views`, `updated_at`, `created_at`), `order` |
 | `/api/v1/admin/pages` | `page`, `limit`, `status` (`published`, `draft`, `private`), `search`, `sort` (`title`, `slug`, `status`, `updated_at`, `created_at`), `order` |
-| `/api/v1/admin/users` | `page`, `limit`, `search`, `role` (Rolle, `all` oder `banned`), `status` (`active`, `inactive`, `banned`, seit 4.0.0 auch `unverified`), `sort` (`username`, `email`, `display_name`, `role`, `status`, `created_at`), `order` |
+| `/api/v1/admin/users` | `page`, `limit`, `search`, `role` (Rolle, `all` oder `banned`), `status` (`active`, `inactive`, `banned`, auch `unverified`), `sort` (`username`, `email`, `display_name`, `role`, `status`, `created_at`), `order` |
 | `/api/v1/admin/mail/logs` | `page`, `limit` (10–200), `search`, `status` |
 
 Beiträge enthalten zusätzlich `effective_status` (`scheduled`, wenn `published_at` in der Zukunft liegt).

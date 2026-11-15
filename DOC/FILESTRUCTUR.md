@@ -57,29 +57,29 @@ Verified top-level entries of this repository:
 | `TESTS/ai-policy/` | directory | AI provider policy gates (external data sharing, beta providers, scopes): `php TESTS/ai-policy/run.php` |
 | `TESTS/ai-seo-metadata/` | directory | AI SEO metadata pipeline (normalizing, schema type, robots): `php TESTS/ai-seo-metadata/run.php` |
 | `TESTS/analytics-consent/` | directory | analytics output and CSP only with configured provider and consent: `php TESTS/analytics-consent/run.php` |
-| `TESTS/content-expiry/` | directory | expiry and review dates (4.1.0): `php TESTS/content-expiry/run.php [-v]` |
+| `TESTS/content-expiry/` | directory | expiry and review dates: `php TESTS/content-expiry/run.php [-v]` |
 | `TESTS/content-types/` | directory | content type provider registry test: `php TESTS/content-types/run.php [-v]`; all suites: `php TESTS/run-all.php` (shared runner `TESTS/lib/TestRunner.php`) |
-| `TESTS/content-workflow/` | directory | four-eyes review (4.1.0): publish right, save enforcement, transitions, recipients, preview links, capability migration: `php TESTS/content-workflow/run.php [-v]` |
+| `TESTS/content-workflow/` | directory | four-eyes review: publish right, save enforcement, transitions, recipients, preview links, capability migration: `php TESTS/content-workflow/run.php [-v]` |
 | `TESTS/csp-style-rewriter/` | directory | `InlineStyleRewriter`: `style` attributes to nonce CSS classes: `php TESTS/csp-style-rewriter/run.php` |
 | `TESTS/editorjs-blocks/` | directory | Editor.js block tests: `php TESTS/editorjs-blocks/run.php`, browser part `node TESTS/editorjs-blocks/browser/run.js` |
 | `TESTS/feeds-design/` | directory | feed design tokens, no reading time on overviews: `php TESTS/feeds-design/run.php [-v]` |
 | `TESTS/functions/` | directory | function tests without database: `php TESTS/functions/run.php` |
 | `TESTS/login-showcase/` | directory | login showcase and theme colour import: settings validation, getShowcase() shape, partial escaping, core login view, theme override: `php TESTS/login-showcase/run.php [-v]` |
 | `TESTS/member-area/` | directory | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup: `php TESTS/member-area/run.php [-v]` |
-| `TESTS/media-avif/` | directory | AVIF derivatives (4.1.0): detection, keep-only-if-smaller, pixel budget, `<picture>` markup, deletion, batch steps: `php TESTS/media-avif/run.php [-v]` |
-| `TESTS/media-usage/` | directory | media usage index (4.1.0): extraction, contexts, reindex, unused, rebuild: `php TESTS/media-usage/run.php [-v]` |
-| `TESTS/mfa-enforcement/` | directory | Role-based MFA enforcement and account gate (4.1.0): `php TESTS/mfa-enforcement/run.php` |
+| `TESTS/media-avif/` | directory | AVIF derivatives: detection, keep-only-if-smaller, pixel budget, `<picture>` markup, deletion, batch steps: `php TESTS/media-avif/run.php [-v]` |
+| `TESTS/media-usage/` | directory | media usage index: extraction, contexts, reindex, unused, rebuild: `php TESTS/media-usage/run.php [-v]` |
+| `TESTS/mfa-enforcement/` | directory | Role-based MFA enforcement and account gate: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | directory | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | directory | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration: `php TESTS/password-policy/run.php [-v]` |
 | `TESTS/release-3.4.0/` | directory | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-3.4.0/run.php` |
-| `TESTS/reusable-blocks/` | directory | EditorJS block templates (4.1.0): block data, usage index, rendering, recursion, history: `php TESTS/reusable-blocks/run.php [-v]` |
-| `TESTS/s3-backup/` | directory | offsite backups (4.1.0): SigV4, S3 client, multipart, retention: `php TESTS/s3-backup/run.php [-v]` |
-| `TESTS/invoices/` | directory | invoices (4.1.0): `php TESTS/invoices/run.php [-v]` |
-| `TESTS/payments/` | directory | payments (4.1.0): `php TESTS/payments/run.php [-v]` |
-| `TESTS/webhooks/` | directory | outgoing webhooks (4.1.0): `php TESTS/webhooks/run.php [-v]` |
+| `TESTS/reusable-blocks/` | directory | EditorJS block templates: block data, usage index, rendering, recursion, history: `php TESTS/reusable-blocks/run.php [-v]` |
+| `TESTS/s3-backup/` | directory | offsite backups: SigV4, S3 client, multipart, retention: `php TESTS/s3-backup/run.php [-v]` |
+| `TESTS/invoices/` | directory | invoices: `php TESTS/invoices/run.php [-v]` |
+| `TESTS/payments/` | directory | payments: `php TESTS/payments/run.php [-v]` |
+| `TESTS/webhooks/` | directory | outgoing webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | directory | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check: `php TESTS/schema-v26/run.php [-v]` |
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
-| `TESTS/sso-entra/` | directory | Entra ID sign-in via OpenID Connect (4.1.0): ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping: `php TESTS/sso-entra/run.php [-v]` |
+| `TESTS/sso-entra/` | directory | Entra ID sign-in via OpenID Connect: ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping: `php TESTS/sso-entra/run.php [-v]` |
 | `TESTS/theme-contract/` | directory | theme contract (CSP, layout hooks, versions), optional further theme roots as arguments: `php TESTS/theme-contract/run.php [theme roots …]` |
 | `TESTS/update-swap/` | directory | update directory swap test: `php TESTS/update-swap/run.php` |
 | `.github/` | directory | `CODEOWNERS`, `SECURITY`, `dependabot.yml`, `workflows/security.yml`, `deps/` (dependency manifests for the scans) |
@@ -112,29 +112,29 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/ai-policy/` | Verzeichnis | Freigaben der AI-Provider-Richtlinie (externe Datenweitergabe, Beta-Provider, Scopes): `php TESTS/ai-policy/run.php` |
 | `TESTS/ai-seo-metadata/` | Verzeichnis | AI-SEO-Metadaten-Pipeline (Normalisierung, Schema-Typ, Robots): `php TESTS/ai-seo-metadata/run.php` |
 | `TESTS/analytics-consent/` | Verzeichnis | Analytics-Ausgabe und CSP nur mit konfiguriertem Anbieter und Einwilligung: `php TESTS/analytics-consent/run.php` |
-| `TESTS/content-expiry/` | Verzeichnis | Ablauf- und Prüfdaten (4.1.0): `php TESTS/content-expiry/run.php [-v]` |
+| `TESTS/content-expiry/` | Verzeichnis | Ablauf- und Prüfdaten: `php TESTS/content-expiry/run.php [-v]` |
 | `TESTS/content-types/` | Verzeichnis | Test der Inhaltstyp-Provider-Registry: `php TESTS/content-types/run.php [-v]`; alle Suiten: `php TESTS/run-all.php` (gemeinsamer Runner `TESTS/lib/TestRunner.php`) |
-| `TESTS/content-workflow/` | Verzeichnis | Vier-Augen-Prinzip (4.1.0): Freigaberecht, Durchsetzung beim Speichern, Übergänge, Empfänger, Vorschau-Links, Rechte-Migration: `php TESTS/content-workflow/run.php [-v]` |
+| `TESTS/content-workflow/` | Verzeichnis | Vier-Augen-Prinzip: Freigaberecht, Durchsetzung beim Speichern, Übergänge, Empfänger, Vorschau-Links, Rechte-Migration: `php TESTS/content-workflow/run.php [-v]` |
 | `TESTS/csp-style-rewriter/` | Verzeichnis | `InlineStyleRewriter`: `style`-Attribute zu Nonce-CSS-Klassen: `php TESTS/csp-style-rewriter/run.php` |
 | `TESTS/editorjs-blocks/` | Verzeichnis | Tests der Editor.js-Blöcke: `php TESTS/editorjs-blocks/run.php`, Browser-Teil `node TESTS/editorjs-blocks/browser/run.js` |
 | `TESTS/feeds-design/` | Verzeichnis | Design-Variablen der Feed-Seiten, keine Lesezeit auf Übersichten: `php TESTS/feeds-design/run.php [-v]` |
 | `TESTS/functions/` | Verzeichnis | Funktionstests ohne Datenbank: `php TESTS/functions/run.php` |
 | `TESTS/login-showcase/` | Verzeichnis | Login-Showcase und Theme-Farbimport: Validierung der Einstellungen, Datenform von getShowcase(), Escaping des Partials, Core-Loginseite, Theme-Override: `php TESTS/login-showcase/run.php [-v]` |
 | `TESTS/member-area/` | Verzeichnis | Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit: `php TESTS/member-area/run.php [-v]` |
-| `TESTS/media-avif/` | Verzeichnis | AVIF-Derivate (4.1.0): Erkennung, „nur wenn kleiner“, Pixel-Budget, `<picture>`-Markup, Löschen, Batch-Schritte: `php TESTS/media-avif/run.php [-v]` |
-| `TESTS/media-usage/` | Verzeichnis | Verwendungsnachweis für Medien (4.1.0): Extraktion, Kontexte, Neuindizieren, ungenutzt, Neuaufbau: `php TESTS/media-usage/run.php [-v]` |
-| `TESTS/mfa-enforcement/` | Verzeichnis | Rollenbasierter MFA-Zwang und Konto-Weiche (4.1.0): `php TESTS/mfa-enforcement/run.php` |
+| `TESTS/media-avif/` | Verzeichnis | AVIF-Derivate: Erkennung, „nur wenn kleiner“, Pixel-Budget, `<picture>`-Markup, Löschen, Batch-Schritte: `php TESTS/media-avif/run.php [-v]` |
+| `TESTS/media-usage/` | Verzeichnis | Verwendungsnachweis für Medien: Extraktion, Kontexte, Neuindizieren, ungenutzt, Neuaufbau: `php TESTS/media-usage/run.php [-v]` |
+| `TESTS/mfa-enforcement/` | Verzeichnis | Rollenbasierter MFA-Zwang und Konto-Weiche: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | Verzeichnis | Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | Verzeichnis | Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung: `php TESTS/password-policy/run.php [-v]` |
 | `TESTS/release-3.4.0/` | Verzeichnis | Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-3.4.0/run.php` |
-| `TESTS/reusable-blocks/` | Verzeichnis | EditorJS Block Vorlagen (4.1.0): Blockdaten, Nutzungsindex, Rendern, Rekursion, Verlauf: `php TESTS/reusable-blocks/run.php [-v]` |
-| `TESTS/s3-backup/` | Verzeichnis | Offsite-Backups (4.1.0): SigV4, S3-Client, Multipart, Aufbewahrung: `php TESTS/s3-backup/run.php [-v]` |
-| `TESTS/invoices/` | Verzeichnis | Rechnungen (4.1.0): `php TESTS/invoices/run.php [-v]` |
-| `TESTS/payments/` | Verzeichnis | Zahlungen (4.1.0): `php TESTS/payments/run.php [-v]` |
-| `TESTS/webhooks/` | Verzeichnis | ausgehende Webhooks (4.1.0): `php TESTS/webhooks/run.php [-v]` |
+| `TESTS/reusable-blocks/` | Verzeichnis | EditorJS Block Vorlagen: Blockdaten, Nutzungsindex, Rendern, Rekursion, Verlauf: `php TESTS/reusable-blocks/run.php [-v]` |
+| `TESTS/s3-backup/` | Verzeichnis | Offsite-Backups: SigV4, S3-Client, Multipart, Aufbewahrung: `php TESTS/s3-backup/run.php [-v]` |
+| `TESTS/invoices/` | Verzeichnis | Rechnungen: `php TESTS/invoices/run.php [-v]` |
+| `TESTS/payments/` | Verzeichnis | Zahlungen: `php TESTS/payments/run.php [-v]` |
+| `TESTS/webhooks/` | Verzeichnis | ausgehende Webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | Verzeichnis | Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung: `php TESTS/schema-v26/run.php [-v]` |
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
-| `TESTS/sso-entra/` | Verzeichnis | Entra-ID-Anmeldung über OpenID Connect (4.1.0): ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping: `php TESTS/sso-entra/run.php [-v]` |
+| `TESTS/sso-entra/` | Verzeichnis | Entra-ID-Anmeldung über OpenID Connect: ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping: `php TESTS/sso-entra/run.php [-v]` |
 | `TESTS/theme-contract/` | Verzeichnis | Theme-Vertrag (CSP, Layout-Hooks, Versionen), optional weitere Theme-Wurzeln als Argumente: `php TESTS/theme-contract/run.php [Theme-Wurzeln …]` |
 | `TESTS/update-swap/` | Verzeichnis | Test des Verzeichnistauschs beim Update: `php TESTS/update-swap/run.php` |
 | `.github/` | Verzeichnis | `CODEOWNERS`, `SECURITY`, `dependabot.yml`, `workflows/security.yml`, `deps/` (Abhängigkeitsmanifeste für die Scans) |

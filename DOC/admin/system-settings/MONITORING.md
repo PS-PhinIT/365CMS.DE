@@ -68,7 +68,7 @@ Optionen: `--task=<all|mail-queue|hourly|daily|feeds|cms_cron_…>`, `--limit=1.
 
 Seit 4.0.0 hält `CronRunnerService` den letzten Lauf in der Einstellungsgruppe `cron` fest: `last_run_at` (Unix-Zeit), `last_run_status` (`ok`/`failed`), `last_run_task` und `last_error` (fehlgeschlagene Schritte bzw. Ausnahmeklasse, max. 300 Zeichen). Ein Lauf gilt als fehlgeschlagen, wenn ein Schritt `success: false` meldet oder eine Ausnahme auftritt.
 
-### Systemhinweise in der Seitenleiste (seit 4.0.0)
+### Systemhinweise in der Seitenleiste
 
 Administratoren mit `manage_system` sehen am Avatar im Fußbereich der Seitenleiste einen Hinweispunkt, sobald mindestens ein Hinweis vorliegt; ein Klick öffnet die Liste mit Links. Ohne Hinweise wird kein Punkt angezeigt. Die Daten liefert `AdminNoticeService` über `GET /admin/admin-ui?action=notices` (5 Minuten gecacht, das Ergebnis der Plugin-Update-Prüfung 1 Stunde; siehe [../ADMIN-API-AJAX.md](../ADMIN-API-AJAX.md)). Ein behobener Zustand, etwa nach einem neuen Backup, verschwindet daher erst nach Ablauf des Caches.
 
