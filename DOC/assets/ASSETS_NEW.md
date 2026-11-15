@@ -1,5 +1,5 @@
 # ASSETS NEW – Integrationsdoku für neue Kandidaten
-> **Stand:** 2026-10-04 | **Version:** 3.5.0 | **Status:** Aktuell
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktuell
 
 ## Inhaltsverzeichnis
 - <a>Überblick</a>

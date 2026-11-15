@@ -1,6 +1,8 @@
-> **Website:** [365CMS.DE](https://365cms.de/) | **Version:** 4.0.0
-> **Datum:** 2026-09-06 | **Status:** Stable – **Zuletzt aktualisiert am:** 2026-11-14 (TODO-MEMBERDASHBOARD-V4: eine Weiterleitung bei abgeschaltetem Dashboard, Login-Weiterleitung des Controllers über `CmsAuthPageService`, POST-Aktionen für Favoriten und Benachrichtigungen)
-> **Kurzbeschreibung:** Routenreferenz für authentifizierte Member-Seiten, Theme-Overrides, Plugin-Dispatch, Weiterleitungen, Nutzungs-Tracking und 404-Fallbacks. Sie entspricht dem Stand von `MemberRouter.php` in Version 4.0.0.
+# 365CMS – Projektdokumentation | Abschnitt: Mitglieder-Routen
+
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
+> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-14 (TODO-MEMBERDASHBOARD-V4: eine Weiterleitung bei abgeschaltetem Dashboard, Login-Weiterleitung des Controllers über `CmsAuthPageService`, POST-Aktionen für Favoriten und Benachrichtigungen)
+> **Kurzbeschreibung:** Routenreferenz für authentifizierte Member-Seiten, Theme-Overrides, Plugin-Dispatch, Weiterleitungen, Nutzungs-Tracking und 404-Fallbacks. Sie entspricht dem Stand von `MemberRouter.php` in Version 4.1.0.
 
 # 365CMS Member Routes
 

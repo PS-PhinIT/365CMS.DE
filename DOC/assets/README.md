@@ -1,5 +1,5 @@
 # 365CMS Asset-Dokumentation
-> **Stand:** 2026-11-13 | **Version:** 4.0.0 | **Status:** Aktuell | **Update:** 2026-11-13
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktuell | **Update:** 2026-11-15
 
 ## Inhaltsverzeichnis
 - <a>Tabellarische Übersicht</a>

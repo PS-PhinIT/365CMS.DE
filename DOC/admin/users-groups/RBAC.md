@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Rollen & Rechte (RBAC)
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/roles` (Alt-Route `/admin/rbac` leitet um) | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_roles`
 
 ## English (summary)

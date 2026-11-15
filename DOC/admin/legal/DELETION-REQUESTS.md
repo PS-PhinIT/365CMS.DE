@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Löschanträge (Art. 17 DSGVO)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/data-requests` (Bereich „Löschung“; `/admin/deletion-requests` leitet um) | **Capability:** `manage_settings` | **Core-Modul:** `legal`
 
 ## English (summary)

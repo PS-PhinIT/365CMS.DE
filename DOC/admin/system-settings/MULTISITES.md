@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – MultiSites (Admin-Kontext je Domain)
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/multisites` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_multisites`
 
 ## English (summary)

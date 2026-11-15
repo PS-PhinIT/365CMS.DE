@@ -1,5 +1,7 @@
 # Interne Bild-Assets
 
+> **English summary:** `CMS/assets/images/` holds the productive 365CMS image resources. Details in German below.
+
 > **Stand:** 2026-09-06 | **CMS-Version:** 3.5.0 | **Status:** Aktuell
 
 ## Kurzbeschreibung

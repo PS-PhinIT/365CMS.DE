@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Core – Implementierungsstatus
 
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Schema:** v25 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **Status:** Stable
 
 ## English (summary)
 

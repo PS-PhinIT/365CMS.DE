@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Design-Einstellungen (Alt-Route)
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Legacy-Weiterleitung
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Legacy-Weiterleitung
 
 ## English (summary)
 

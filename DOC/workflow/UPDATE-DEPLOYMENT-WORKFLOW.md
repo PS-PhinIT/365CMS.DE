@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Update und Deployment
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Quellen:** `CMS/admin/updates.php`, `CMS/admin/modules/system/UpdatesModule.php`, `CMS/core/Services/UpdateService.php`, `CMS/core/Services/BackupService.php`, `CMS/core/Services/OpcacheWarmupService.php`, `CMS/core/SchemaManager.php`, `CMS/install.php`, `CMS/install/`, `CMS/update.json`
 
 ## English (summary)

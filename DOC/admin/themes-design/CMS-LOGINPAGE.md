@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – CMS-Loginseite
 
-> **Stand:** 2026-11-14 | **Version:** 4.0.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Route:** `/admin/cms-loginpage` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_cms_loginpage`
 
 ## English (summary)

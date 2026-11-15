@@ -1,5 +1,8 @@
 # TNTSearch
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** TNTSearch provides the full-text search of 365CMS. Details in German below.
+
 ## Kurzbeschreibung
 
 `TNTSearch` stellt die Volltextsuche von 365CMS bereit.

@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: DEVLIST
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -284,7 +284,7 @@ Login-Branding / öffentliche Auth-Seiten: Admin-Route `/admin/cms-loginpage` un
 - Wrapper: `CMS/core/Database.php` (PDO, singleton, `get_instance()` alias for plugins)
 - Prefix: `DB_PREFIX` (default `cms_`)
 - Charset: `DB_CHARSET` (default `utf8mb4`)
-- Schema create: `SchemaManager` (`SCHEMA_VERSION = 'v25'`)
+- Schema create: `SchemaManager` (Schema `v26` ab 4.1.0; Konstante `SCHEMA_VERSION` bis zur Release-Vorbereitung noch `v25`)
 - Incremental: `MigrationManager`, `DatabaseUpdateRunner`
 
 Installer and admin updater show installed vs. target core and schema versions. Schema markers must not be rolled back through the admin updater. Table `ai_quota_usage` belongs to `v22`.
@@ -298,7 +298,7 @@ Authoritative table docs: [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md).
 - Wrapper: `CMS/core/Database.php` (PDO, Singleton, Alias `get_instance()` für Plugins)
 - Präfix: `DB_PREFIX` (Standard `cms_`)
 - Zeichensatz: `DB_CHARSET` (Standard `utf8mb4`)
-- Schema-Anlage: `SchemaManager` (`SCHEMA_VERSION = 'v25'`)
+- Schema-Anlage: `SchemaManager` (Schema `v26` ab 4.1.0; Konstante `SCHEMA_VERSION` bis zur Release-Vorbereitung noch `v25`)
 - Inkrementell: `MigrationManager`, `DatabaseUpdateRunner`
 
 Installer und Admin-Updater zeigen installierte und Ziel-Versionen. Schema-Marker dürfen über den Admin-Updater nicht zurückgesetzt werden. Tabelle `ai_quota_usage` gehört zu `v22`.
@@ -695,7 +695,7 @@ Working model for this project:
 
 **Repo ↔ runtime file under `CMS/` ↔ deploy ↔ live check**
 
-Version source of truth: `CMS/core/Version.php` (`4.0.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version. Every PR gets its own version: new `Changelog.md` heading `### vX.Y.Z — DD.MM.YYYY` (no "unreleased" sections or `–` placeholders in the version column), `Version::CURRENT`, both `update.json` files and the release packages `RELEASE/365CMS-X.Y.Z-{update,full}.zip` with SHA-256 are updated in the same PR.
+Version source of truth: `CMS/core/Version.php` (`4.0.0` until the 4.1.0 release preparation raises it). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, the release manifests under `RELEASE/` and the newest `Changelog.md` heading must show the same version. Every PR gets its own version: new `Changelog.md` heading `### vX.Y.Z — DD.MM.YYYY` (no "unreleased" sections or `–` placeholders in the version column), `Version::CURRENT`, both `update.json` files and the release packages `RELEASE/365CMS-X.Y.Z-{update,full}.zip` with SHA-256 are updated in the same PR.
 
 **Deutsch**
 
@@ -707,4 +707,4 @@ Arbeitsmodell dieses Projekts:
 
 **Repo ↔ Runtime-Datei unter `CMS/` ↔ Deploy ↔ Live-Prüfung**
 
-Versionsquelle: `CMS/core/Version.php` (`4.0.0`). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.
+Versionsquelle: `CMS/core/Version.php` (`4.0.0`, bis die Release-Vorbereitung 4.1.0 sie hebt). `CMS/update.json`, `CMS/marketplace/core/365cms/update.json`, die Release-Manifeste unter `RELEASE/` und die oberste Überschrift in `Changelog.md` müssen dieselbe Version zeigen. Jeder PR erhält eine eigene Version: neue Überschrift `### vX.Y.Z — TT.MM.JJJJ` in `Changelog.md` (keine Abschnitte „Unveröffentlicht“ und keine `–`-Platzhalter in der Versionsspalte); `Version::CURRENT`, beide `update.json` und die Release-Pakete `RELEASE/365CMS-X.Y.Z-{update,full}.zip` samt SHA-256 werden im selben PR angepasst.

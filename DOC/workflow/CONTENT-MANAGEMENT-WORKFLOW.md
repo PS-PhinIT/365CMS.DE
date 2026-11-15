@@ -1,5 +1,5 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Content Management
-> **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 > **Quellen:** `CMS/admin/pages.php`, `CMS/admin/posts.php`, `CMS/admin/modules/pages/PagesModule.php`, `CMS/admin/modules/posts/PostsModule.php`, `CMS/admin/views/pages/`, `CMS/admin/views/posts/`, `CMS/core/PageManager.php`, `CMS/core/Services/EditorJsService.php`, `CMS/core/Services/PostPublishChecklistService.php`, `CMS/core/Services/PostRevisionService.php`, `CMS/includes/functions/options-runtime.php`
 
 ## English (summary)

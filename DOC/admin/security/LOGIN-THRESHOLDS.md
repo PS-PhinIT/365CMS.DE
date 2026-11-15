@@ -1,6 +1,6 @@
 # 365CMS – Admin: Login & Sperren
 
-> **Stand:** 2026-11-14 | **Version:** 4.0.0 (Abschnitte „seit 4.1.0“: in Entwicklung) | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 
 ## English (summary)
 

@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Admin – Theme-Verwaltung & Theme-Marktplatz
 
-> **Stand:** 2026-10-02 | **Version:** 3.5.0 | **Status:** Stable
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
 > **Routen:** `/admin/themes`, `/admin/theme-marketplace` | **Capability:** `manage_settings` | **CSRF-Aktionen:** `admin_themes`, `admin_theme_marketplace`
 
 ## English (summary)

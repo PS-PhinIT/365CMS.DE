@@ -1,5 +1,8 @@
 # Interne JavaScript-Assets
 
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **English summary:** `CMS/assets/js/` holds internal 365CMS scripts for the admin, frontend helpers and integrations (plus ES modules without a build step). Details in German below.
+
 ## Kurzbeschreibung
 
 Der Ordner `CMS/assets/js/` enthält interne 365CMS-Skripte für Admin, Frontend-Helfer und Integrationen.

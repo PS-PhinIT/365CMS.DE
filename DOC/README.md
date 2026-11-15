@@ -1,9 +1,9 @@
 # 365CMS – Projektdokumentation | Abschnitt: README
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Stable | **Update:** 2026-11-09
+> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.0.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-12, `stable`), PHP 8.4.1+, schema `v25`. In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Documented core version `4.1.0`, PHP 8.4.1+, schema `v26` (the version constants in [`CMS/core/Version.php`](../CMS/core/Version.php) are raised in the release preparation; last published package `4.0.0`, released 2026-11-12). In October 2026 every document under `DOC/` was reviewed against the 3.4 code: admin, core, member, theme, plugin, AI and workflow docs were rewritten or extended, and code/doc discrepancies were collected in [core/STATUS.md](core/STATUS.md) under "Bekannte Lücken". Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -28,10 +28,10 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | Dateien/Struktur sucht | [FILELIST.md](FILELIST.md) · [FILESTRUCTUR.md](FILESTRUCTUR.md) · [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) · [DEVLIST.md](DEVLIST.md) |
 | alle Dokumente sehen wollt | [INDEX.md](INDEX.md) |
 
-### Eckdaten 4.0.0
+### Eckdaten 4.1.0
 
-- `CMS/core/Version.php`: `CURRENT = '4.0.0'`, `RELEASE_DATE = '2026-11-12'`, `STATUS = 'stable'`
-- `SchemaManager::SCHEMA_VERSION = 'v25'`, Tabellenpräfix `cms_`
+- Dokumentierter Stand: Version `4.1.0`, Schema `v26` (88 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
+- Codestand der Marken: `CMS/core/Version.php` zeigt noch `CURRENT = '4.0.0'` (`RELEASE_DATE = '2026-11-12'`), `SchemaManager::SCHEMA_VERSION = 'v25'`; beides sowie `CMS/update.json` hebt die Release-Vorbereitung 4.1.0 (v26-Tabellen und -Spalten werden bereits über `SchemaManager::ensureFeatureSchema()` angelegt)
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten

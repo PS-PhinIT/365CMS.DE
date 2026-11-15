@@ -1,6 +1,8 @@
 # Symfony Translation
 
-> **Stand:** 2026-10-04 | **Version:** 8.1.5 | **Status:** Aktiv
+> **English summary:** Symfony Translation handles internationalization (`lang/de.yaml`, `lang/en.yaml`). Details in German below.
+
+> **Stand:** 2026-11-15 | **Version:** 8.1.5 | **Status:** Aktiv
 
 ## Kurzbeschreibung
 
