@@ -14,6 +14,101 @@
 
 ---
 
+### v4.1.5 — 15.11.2026 - Patch Release
+
+**Performance, Caching, Core Web Vitals** · Release-Prüfung 4.1.0, PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166), Zwischenstand).
+
+#### Hinweise zum Update von 4.1.0
+
+- Das Paket 4.1.5 enthält alle Patch-Releases 4.1.1 bis 4.1.5. Es gibt kein eigenes Paket je Zwischenversion.
+- Sicherheitskorrekturen aus 4.1.1 und 4.1.4: Das Update wird für alle 4.1.0-Installationen empfohlen (`critical`).
+- Das Datenbankschema bleibt **v26**. Der Laufzeit-Abgleich stellt beim ersten Aufruf nach dem Update einmalig `posts.tags` und `post_revisions.tags` auf `TEXT` um (4.1.4). Ein manuelles Datenbank-Update ist nicht nötig.
+- Neue Aufbewahrungsregeln (*Datenaufbewahrung*): erledigte Mail-Jobs nach 30 Tagen, Mail-Protokoll nach 90 Tagen, Feature-Telemetrie nach 180 Tagen. Der tägliche Cron löscht beim ersten Lauf ältere Bestände blockweise.
+- Eigene Assets tragen jetzt `?v=`. Bilder unter `uploads/` sind nicht mehr ein Jahr `immutable` (1 Tag, danach Revalidierung). Wer Nginx nutzt: die neuen Regeln in `DOC/INSTALLATION.md` übernehmen.
+
+Messung (312 Beiträge, MariaDB): Monitor-Seiten 5–8 s → unter 0,1 s, `/admin/updates` 1,1 s → 0,1 s, Beitragsliste 98 → 36 Abfragen. Anonyme Beitragsseiten sind wieder cachebar. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`, Abschnitt PR #5.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.5** | 🟠 perf | Monitoring / Updates (PERF-410-01, -03, -39) | Monitor-Seiten rufen die eigene Website nicht mehr bei jedem Aufruf ab. Antwortzeit und Health-Check kommen aus dem Cache (10 min) oder dem stündlichen Cron-Snapshot; „Jetzt messen“ misst frisch mit 2 s Verbindungs-Timeout. Plugin-, Theme- und Core-Updateprüfungen werden 6 h zwischengespeichert, Fehlschläge 15 min. Die DNS-Vorabauflösung wird je Host gemerkt. |
+| **4.1.5** | 🔴 fix | Cache (PERF-410-02, -13, -15, -33, -34, -35) | Speichern leert nur noch die Inhalts-Caches, nicht mehr Schema- und Plattform-Flags, die Update-Sperre oder fremde APCu-Schlüssel (bisher lief danach der volle Schema-Abgleich), auch bei „Datei-Cache leeren“. ETag und Last-Modified hängen an einer seitenweiten Inhaltsversion: kein 304 mit veralteten Menüs oder Einstellungen. Feed-304 funktioniert hinter Kompression. Eigene Assets sind versioniert, `uploads/` ist nicht mehr `immutable`. |
+| **4.1.5** | 🟠 perf | Frontend / Cachebarkeit (PERF-410-14) | Das Kommentarformular erhält für anonyme Besucher ein zustandsloses, signiertes Token (24 h, an den Beitrag gebunden). Beitragsseiten starten keine Session mehr und werden wieder `public` ausgeliefert. Für angemeldete Konten gilt weiter das Session-Token; Honeypot, Mindestzeit und Flood-Limit bleiben. |
+| **4.1.5** | 🟠 perf | Core Web Vitals (PERF-410-19 … -23, -36 … -38) | DOMPurify lädt per `defer`, die CSP-Runtime steht inline. PhotoSwipe lädt nur bei passenden Bildern. Keine WebP-Umwandlung beim Rendern. `fetchpriority=high` nur noch für das wichtigste Bild. Inhaltsbilder mit `width`/`height`. `srcset` aus vorhandenen Bildgrößen. Kleinere Inline-CSS. Nginx-Anleitung mit Kompression und Cache-Regeln. |
+| **4.1.5** | 🟠 perf | Admin / Abfragen (PERF-410-07 … -12, -28 … -31) | Der Menü-Editor baut den Spiegel nur bei Abweichung neu, in einer Transaktion (bisher Löschen und Neuschreiben aller Menüs bei jedem Aufruf). Schema-Prüfungen der Beitrags- und Seitenmodule laufen einmal statt bei jedem Request. Standardkategorien kommen aus einer Abfrage. Profilfelder, Kategorienliste, Badges, Diagnose (ohne `CHECK TABLE` beim Aufruf), Einstellungsgruppen und Tabellenprüfungen sind ohne Wiederholungsabfragen. |
+| **4.1.5** | 🟠 perf | Blockierende Arbeit (PERF-410-16 … -18, -40 … -42) | Der Login wartet nicht mehr per `sleep()` (bis 30 s): Die Wartezeit wird als Freigabe in der Session vergeben, Konten bleiben nicht aussperrbar. Bestellbestätigungen gehen über die Mail-Queue, SMTP hat einen Timeout. Lange, nur lesende Admin-Arbeit gibt die Session-Sperre frei. Medienstatistik und Cron-Status werden gecacht. IndexNow blockiert das Speichern nicht mehr. |
+| **4.1.5** | 🔴 fix | Mail, Cron, Backup (PERF-410-04 … -06, -24, -25, -43 … -45) | Löschfristen für `mail_queue` (30 Tage), `mail_log` (90 Tage) und `feature_usage` (180 Tage). Transaktionsmails (Passwort-Reset u. a.) gehen vor Newsletter und Digests raus. Das Datenbank-Backup streamt ungepuffert statt ganze Tabellen in den Speicher zu laden. Web-Cron mit Zeitbudget und eigener Sperre für die Mail-Queue. Aufbewahrung holt bei großen Beständen auf. Seitenrevisionen sind auf 30 je Seite begrenzt. |
+| **4.1.5** | 🟠 perf | Sitemaps, Medien (PERF-410-26, -27, -32) | Sitemap-Bundle mit Sperre und atomarem Schreiben. EN-Sitemaps ohne Inhaltsspalten und ohne Abfrage je Eintrag. Neuaufbau von Thumbnails/AVIF nicht mehr still bei 5 000 Bildern gekappt. |
+| **4.1.5** | ⬜ chore | Tests | `TESTS/release-4.1.0` um sechs Dateien `perf-*.php` erweitert (528 Prüfungen). |
+| **4.1.5** | ⬜ chore | Release | `Version::CURRENT` 4.1.5. `CMS/update.json` und `CMS/marketplace/core/365cms/update.json` mit Version 4.1.5, `schema_version` `v26`, `critical: true` und neuer Prüfsumme. Pakete `RELEASE/365CMS-4.1.5-full.zip` und `-update.zip` mit `-SHA256SUMS.txt`, `-update.json` und `README-4.1.5.md`. |
+
+### v4.1.4 — 15.11.2026 - Patch Release
+
+**Regressionen, Altlasten, PHP 8.4/8.5** · Release-Prüfung 4.1.0, PR #4 ([#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165)).
+
+CI-Wächter für PHP 8.4/8.5, deterministischer Scan aller 895 PHP-Dateien ohne Befund, Laufzeitprüfung gegen MariaDB. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.4** | 🛡️ security | Beiträge / Zugriff (SEC-410-27, -28) | „DE → EN kopieren“ prüft den Besitz des Beitrags und verlangt Schreibrecht. Ohne Veröffentlichungsrecht bleiben Termin und Status eines geplanten Beitrags beim Speichern unverändert. |
+| **4.1.4** | ⬜ chore | CI / PHP 8.4 und 8.5 (#164) | Der Lint scheitert an Deprecations und Warnings aus eigenem Code (bisher nur Syntaxfehler). In allen Test-Suiten zählen PHP-Meldungen aus eigenem Code als Fehler. |
+| **4.1.4** | 🔴 fix | PHP 8.5 / Bibliotheken (FUN-410-40) | Kein `curl_close()` mehr in `melbahja/seo` und `lbuchs/webauthn` (seit PHP 8.5 veraltet); lokale Anpassung in `DOC/assets` vermerkt. |
+| **4.1.4** | 🔴 fix | Editor (FUN-410-41 … -45) | Die Editorbreite für Seiten wirkt. Der Prüfpunkt „Downloads“ gilt auch bei Sammel-Veröffentlichung, Wiederherstellen und im Kalender. Autosave legt keine Slug-Weiterleitungen mehr an, und nie öffentliche Beiträge erhalten keine. Schlagwörter in Beiträgen und Revisionen sind `TEXT` (bisher bei 500 Zeichen abgeschnitten). Der Revisionsvergleich von Seiten führt Vorlage und Zusatzfelder einmal. |
+| **4.1.4** | 🔴 fix | SEO-Schalter (FUN-410-46, -47) | „Archive/Tags noindex“, „Pagination-SEO“, „Weiterleitung bei Slug-Änderung“, „Self-referencing Canonical“ und „Person / Author“ wirken. Entfernt, weil ohne Funktion: FAQ/HowTo/Review/Event, Pinterest Rich Pins, „Breadcrumbs aktiv“ (doppelt) und „Bild-Alt-Texte verpflichtend“. |
+| **4.1.4** | 🔴 fix | Formulare (FUN-410-48) | Das Rechen-Captcha funktioniert mit verzögertem Sitzungsstart; bisher scheiterte die erste Absendung jedes neuen Besuchers. |
+| **4.1.4** | 🔴 fix | Sitemaps (FUN-410-49, -51 … -53) | Die EN-Sitemaps beachten `noindex` und fremde Canonicals. Die Bild-Sitemap nimmt das Beitragsbild, wenn kein OG-Bild gesetzt ist. Sitemap-Einstellungen und live gegangene geplante Beiträge verwerfen das gespeicherte Bundle. |
+| **4.1.4** | 🔴 fix | Einstellungen ohne Wirkung (FUN-410-50, -56) | „Beiträge pro Seite“ gilt für Blog, Kategorie-, Schlagwort- und Autorenarchiv. Das nie ausgegebene Feld „Google Analytics / Tag Manager ID“ ist entfernt; Tracking-IDs liegen unter *SEO › Analytics*. |
+| **4.1.4** | 🔴 fix | Admin / Module (FUN-410-57 … -60) | „Marketplace anzeigen“ aus sperrt auch die Marketplace-Seiten und blendet die Buttons aus. `/admin/payments` und `/admin/invoices` prüfen das Kernmodul. „Design-Einstellungen“ führt zum Theme-Editor. Die Import-Slug-Reparatur findet den Parser unter `CMS/plugins/`. |
+| **4.1.4** | 🔴 fix | DSGVO, OPcache, Plugin-API (FUN-410-36, -54, -55) | Ein DSGVO-Löschantrag entfernt Feed-Digests an die Adresse und das Feed-Abo. OPcache-Ausschlüsse gelten relativ zur Installation (bisher wärmte eine Installation unter `/…/test/…` nichts vor). `PageManager::deletePage()` verschiebt in den Papierkorb statt direkt zu löschen. |
+| **4.1.4** | ⬜ chore | Tests | `TESTS/release-4.1.0` um die Befunde aus PR #4 erweitert. |
+
+### v4.1.3 — 15.11.2026 - Patch Release
+
+**Funktionen** · Release-Prüfung 4.1.0, PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)).
+
+Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends gegen MariaDB ohne PHP-Fehler; dazu eine statische Prüfung aller 4.1.0-Funktionen. Nachweise und offene Funktionslücken: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.3** | 🔴 fix | Updates / Repository (FUN-410-01) | Update-Prüfung (Rückfall über GitHub), Doku-Sync und Changelog-Link zeigen auf `PS-PhinIT/365CMS.DE` statt auf die alte Adresse `PS-easyIT/365CMS.DE`. `Http\Client` folgt keinen Weiterleitungen, deshalb schlugen diese Abrufe fehl. Ein gespeicherter Altwert wird umgestellt. |
+| **4.1.3** | 🔴 fix | Redaktion / Freigabe (FUN-410-02 … -04, -11 … -13) | „Freigeben“ prüft die Veröffentlichungs-Checkliste. Beim Einschalten von „Veröffentlichung braucht eine zweite Person“ warnt das CMS, wenn weniger als zwei Konten veröffentlichen dürfen. Die Sammelaktion „Entwurf“ für eingereichte Inhalte ist im Verlauf erkennbar. Einreichen prüft den Zustandswechsel. Vorschau-Links gibt es nur für noch nicht öffentliche Inhalte. Das Zurückstufen durch Ablauf meldet den Statuswechsel. |
+| **4.1.3** | 🔴 fix | Redaktion / Block-Vorlagen (FUN-410-05, -06) | Mehr als drei Ebenen werden schon beim Speichern abgelehnt (bisher fehlten sie still im Frontend). Das Löschen einer Vorlage aktualisiert auch mittelbar verknüpfte Inhalte. |
+| **4.1.3** | 🔴 fix | Redaktion / Ablaufdaten (FUN-410-08, -09) | Ein abgelaufener, wieder veröffentlichter Inhalt läuft erneut ab (bisher nie). Die Einstellung „410 Gone“ gilt auch für Wissensdatenbank-Einträge. |
+| **4.1.3** | 🔴 fix | Medien / AVIF (FUN-410-14 … -16) | Der Papierkorb nimmt AVIF-Fassungen mit (bisher blieben sie öffentlich liegen). `<picture>` gibt keine Fassung aus, die älter als das Original ist. GIFs behalten ihre Animation (keine statische AVIF-/WebP-Quelle). Die AVIF-Unterstützung wird ohne gespeichertes Ergebnis einmal geprüft, statt bis zum Speichern der Medien-Einstellungen auszufallen. |
+| **4.1.3** | 🔴 fix | Zahlungen, Webhooks, Offsite (FUN-410-20, -22 … -26) | Eine Verlängerung reaktiviert kein gekündigtes Abo mehr. Ein fehlgeschlagenes Webhook-Testereignis wird nicht wiederholt. Offene Zustellungen eines abgeschalteten Empfängers werden aufgegeben. Offsite-Uploads laufen ohne Zeitlimit, versuchen jedes Teil bis zu dreimal, halten die Grenze von 10 000 Teilen ein und holen Backups nach, die bei unvollständiger Konfiguration entstanden. |
+| **4.1.3** | 🔴 fix | Papierkorb, Tabellen (FUN-410-29 … -32) | Endgültig gelöschte Hub-Sites verlassen den Verwendungsindex der Medien. Die Seite der Barrierefreiheitserklärung ist gegen endgültiges Löschen geschützt. Freigabeverlauf und Vorschau-Links werden mitgelöscht. Die Seite *Tabellen* kann keine Hub-Sites mehr laden, löschen oder umwandeln; ihre Liste filtert in SQL. |
+| **4.1.3** | ⬜ chore | Tests | Neu: `TESTS/release-4.1.0`. Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`. |
+
+### v4.1.2 — 15.11.2026 - Patch Release
+
+**Datenbank und Upgrade-Pfad** · Release-Prüfung 4.1.0, PR #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)).
+
+Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen MariaDB 10.11 abgeglichen (auch mit dem `sql_mode` von MySQL 8): gleiche Tabellen, Spalten, Typen, Defaults, Indizes und Fremdschlüssel, Daten erhalten, wiederholte Läufe ohne Änderung. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.2** | 🔴 fix | Datenbank / erster Request (DB-410-02) | Der erste Request nach Installation, Core-Update oder „Tabellen reparieren“ öffnete bis zu 152 Datenbankverbindungen und brauchte rund 7 s, bis der Server „Too many connections“ meldete: Die Schemaprüfung im Konstruktor von `Database` rief über `cms_ensure_role_permissions_table()` erneut `Database::instance()` auf. Die Funktion nimmt jetzt die Verbindung entgegen; der Request öffnet eine Verbindung. Eingeführt in der 4.1.0-Entwicklung (auch in den bis dahin gepackten 4.1.0-Paketen), 4.0.0 ist nicht betroffen. |
+| **4.1.2** | 🔴 fix | Updates / Datenbank-Update (DB-410-04, DB-410-05) | Das Datenbank-Update prüft vor dem Schreiben der Schema-Marke alle Feature-Tabellen (v25/v26) und die Pflichtspalten (`SchemaManager::REQUIRED_COLUMNS`, `posts.status` als VARCHAR); fehlende Elemente stehen auf *Admin → Updates*. Bisher genügte die Tabelle `ai_quota_usage`. „Datenbank-Update“ und „Tabellen reparieren“ führen die idempotenten Migrationen auch bei gespeicherter Marke v26 aus und ergänzen damit Spalten wie `login_attempts.action` oder `mail_queue.locked_at` wieder. |
+| **4.1.2** | 🔵 docs | Datenbank / Kollation (DB-410-03) | Hinweis: Tabellen aus Installationen bis 3.5.x tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci`. Der Core vergleicht keine Textspalten über diese Grenze; eigene Plugins sollten bei solchen JOINs `COLLATE utf8mb4_unicode_ci` angeben. Keine automatische Konvertierung. |
+| **4.1.2** | ⬜ chore | Tests | Neu: `TESTS/schema-upgrade` (optional mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst übersprungen): Neuinstallation und Upgrades gegen eine echte MySQL/MariaDB. Erweitert: `TESTS/schema-v26`, `TESTS/release-3.4.0`. |
+
+### v4.1.1 — 15.11.2026 - Patch Release
+
+**Sicherheit** · Release-Prüfung 4.1.0, PR #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)).
+
+Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.1.1** | 🔴 fix | Konten / Entra ID mit lokalem TOTP (SEC-410-01) | Nach der Anmeldung mit Microsoft ohne MFA-Nachweis und anschließender lokaler Code-Abfrage gilt die Sitzung weiter als SSO-Sitzung. Bisher entfernte der Sitzungsaufbau das SSO-Merkmal; bei „Lokale Anmeldung: nur Microsoft für verknüpfte Konten“ bzw. „nur Admins“ wurden betroffene Konten mit der nächsten Anfrage abgemeldet und konnten sich nicht anmelden. |
+| **4.1.1** | 🛡️ security | Konten / Verknüpfung trennen (SEC-410-02) | Solange die lokale Anmeldung eingeschränkt ist, trennt nur ein Admin die Verknüpfung mit Microsoft. Bisher konnte ein Konto die Sperre durch Selbst-Trennung umgehen. |
+| **4.1.1** | 🛡️ security | Konten / Einstiegsdateien und API-Tokens (SEC-410-08, SEC-410-09) | MFA-Zwang und Passwort-Ablauf gelten auch für die direkt ausgelieferten Dateien `update.php` und `orders.php` (`MfaEnforcementService::enforceOnEntryPoint()`). Bearer-Tokens und Refresh werden abgelehnt, sobald für das Konto MFA-Zwang ohne Faktor, ein abgelaufenes Passwort oder die Sperre „Lokale Anmeldung“ gilt; Tokens tragen dafür die Herkunft der Sitzung (`sso`, `smfa`). |
+| **4.1.1** | 🛡️ security | Konten / Faktoren und Passwörter (SEC-410-15 … -19, -22, -23) | TOTP-Codes werden für das ganze Prüffenster gesperrt, Backup-Codes und Reset-Links atomar eingelöst. Passkey-Login mit Rate-Limit (20 Fehlversuche je IP in 15 Minuten), Challenge höchstens 5 Minuten gültig, einheitlicher Fehlermeldung; die Herkunftsprüfung der gebündelten WebAuthn-Bibliothek verlangt die exakte RP-ID oder eine Subdomain. Ein Passwort nur aus Leerzeichen umgeht in der Benutzerverwaltung nicht mehr die Richtlinie. Der Installer prüft die Zeichenklassen der Standard-Richtlinie und schreibt `password_changed_at` und den ersten Historien-Eintrag. |
+| **4.1.1** | 🔴 fix | Zahlungen / Webhooks (SEC-410-03 … -05) | „Bezahlt“ wird per bedingtem `UPDATE` gesetzt, ein zweites Ereignis aktiviert das Abo nicht erneut. Interne Fehler rollen die Verarbeitung zurück und antworten mit 500, damit Stripe/Mollie erneut zustellen (bisher blieb die Bestellung offen, weil die Wiederholung als Duplikat galt). Verlängerungen mit abweichendem Betrag oder abweichender Währung stehen sichtbar am Ereignis. |
+| **4.1.1** | 🔴 fix | Backups / Offsite-Aufbewahrung, Verschlüsselung (SEC-410-07, SEC-410-12) | Die Aufbewahrung löscht nur Backups, die die Installation selbst hochgeladen hat; fremde Objekte unter demselben Präfix bleiben stehen. Der Schalter „Backup-Verschlüsselung“ auf *Backup-Einstellungen* funktioniert (bisher immer „Keine Berechtigung“). |
+| **4.1.1** | 🛡️ security | Redaktion / Freigaberecht (SEC-410-13, SEC-410-14, SEC-410-24) | „privat → veröffentlicht“ verlangt das Freigaberecht, auch in der Sammelaktion. Im Redaktionskalender verlangen „Termin ändern“ und „sofort veröffentlichen“ eines geplanten Beitrags `posts.publish`/`pages.publish`. Kategorien speichern und löschen nur mit `edit_all_posts` oder `manage_settings`. |
+| **4.1.1** | 🛡️ security | Downloads, Admin-JSON (SEC-410-20, -21, -25) | Unbekannte Zugriffsstufen eines Downloads sperren statt freizugeben. Der CSV-Export der Download-Statistik entschärft Formeln. Die JSON-Konfiguration von Cookie-Manager, Datenanfragen und Plugin-Marketplace wird mit `JSON_HEX_TAG` ausgegeben. |
+| **4.1.1** | ⬜ chore | Tests | Neu: `TESTS/security/audit-410.php`; erweitert: `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`. |
+
 ### v4.1.0 — 15.11.2026 - Feature Release
 
 Version 4.1.0 setzt die Roadmap aus `DOC/workflow/specs/v4.1/` um (Nachweise: `PROGRESS.md`): Bereich 1 – Identität (konfigurierbare Passwort-Richtlinie, rollenbasierter MFA-Zwang, Anmeldung mit Microsoft Entra ID), Bereich 2 (AVIF-Fassungen, Verwendungsnachweis für Medien), Bereich 3 (Vier-Augen-Prinzip, EditorJS Block Vorlagen, Ablauf- und Prüfdaten), Bereich 4 (Offsite-Backups, ausgehende Webhooks) und Bereich 5 (Zahlungen über Stripe/Mollie, Rechnungen nach § 14 UStG). Bereich 6 (CLI, Alerting) folgt mit 4.3.0. **Datenbankschema v26:** nach dem Update unter *Admin → Updates* das Datenbank-Update ausführen; den Cron mindestens stündlich laufen lassen. Vergleichsstand ist 4.0.0.
@@ -66,66 +161,6 @@ Version 4.1.0 setzt die Roadmap aus `DOC/workflow/specs/v4.1/` um (Nachweise: `P
 | **4.1.0** | 🛡️ security | Inhalte / Freigaberecht serverseitig | Das Freigaberecht wird beim Speichern geprüft, nicht nur in der Oberfläche – auch nach den Filtern `cms_prepare_post_save_payload`/`cms_prepare_page_save_payload`, im Autosave (`/admin/post-editor-api`) und in der Sammelaktion. Vorschau-Links: 256-Bit-Token, gespeichert wird nur der SHA-256-Hash; Ausgabe mit `noindex`, `no-store` und `Referrer-Policy: no-referrer`; unbekannte, abgelaufene und widerrufene Links sowie Inhalte im Papierkorb liefern dieselbe 404-Seite. |
 | **4.1.0** | 🛡️ security | Backups / Offsite nur verschlüsselt | Offsite werden nur Backups kopiert, deren Manifest eine Verschlüsselung nennt und deren Dateien alle mit `CMSENC2` beginnen. Der geheime Schlüssel wird verschlüsselt gespeichert, nie angezeigt und erscheint nicht in Fehlermeldungen; Anfragen laufen über `Http\Client` (SSRF-Schutz), ein privater Host nur nach ausdrücklicher Freigabe genau dieses Hosts; S3-Antworten werden ohne DOCTYPE/Entitäten gelesen; Präfix und Backup-Namen werden streng geprüft. |
 | **4.1.0** | 🛡️ security | Webhooks / Ziele und Geheimnisse | Nur HTTPS-Ziele ohne interne Hosts, private IPs oder Zugangsdaten; Zustellung über `Http\Client` (SSRF-Schutz, DNS-Pinning), Timeout 10 s, Antwort höchstens 64 KB. Geheimnis verschlüsselt (Bindung je Empfänger), nie in Listen, Formularen oder Protokoll. Nutzdaten mit IDs statt personenbezogener Daten. 410 oder 20 Fehlschläge in Folge deaktivieren den Empfänger. |
-
-#### 🛡️ Release-Prüfung 4.1.0 – Sicherheit (PR #1, #158)
-
-Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
-
-| Version | Typ | Bereich | Beschreibung |
-|---------|-----|---------|--------------|
-| **4.1.0** | 🔴 fix | Konten / Entra ID mit lokalem TOTP (SEC-410-01) | Nach der Anmeldung mit Microsoft ohne MFA-Nachweis und anschließender lokaler Code-Abfrage gilt die Sitzung weiter als SSO-Sitzung. Bisher entfernte der Sitzungsaufbau das SSO-Merkmal; bei „Lokale Anmeldung: nur Microsoft für verknüpfte Konten“ bzw. „nur Admins“ wurden betroffene Konten mit der nächsten Anfrage abgemeldet und konnten sich nicht anmelden. |
-| **4.1.0** | 🛡️ security | Konten / Verknüpfung trennen (SEC-410-02) | Solange die lokale Anmeldung eingeschränkt ist, trennt nur ein Admin die Verknüpfung mit Microsoft. Bisher konnte ein Konto die Sperre durch Selbst-Trennung umgehen. |
-| **4.1.0** | 🛡️ security | Konten / Einstiegsdateien und API-Tokens (SEC-410-08, SEC-410-09) | MFA-Zwang und Passwort-Ablauf gelten auch für die direkt ausgelieferten Dateien `update.php` und `orders.php` (`MfaEnforcementService::enforceOnEntryPoint()`). Bearer-Tokens und Refresh werden abgelehnt, sobald für das Konto MFA-Zwang ohne Faktor, ein abgelaufenes Passwort oder die Sperre „Lokale Anmeldung“ gilt; Tokens tragen dafür die Herkunft der Sitzung (`sso`, `smfa`). |
-| **4.1.0** | 🛡️ security | Konten / Faktoren und Passwörter (SEC-410-15 … -19, -22, -23) | TOTP-Codes werden für das ganze Prüffenster gesperrt, Backup-Codes und Reset-Links atomar eingelöst. Passkey-Login mit Rate-Limit (20 Fehlversuche je IP in 15 Minuten), Challenge höchstens 5 Minuten gültig, einheitlicher Fehlermeldung; die Herkunftsprüfung der gebündelten WebAuthn-Bibliothek verlangt die exakte RP-ID oder eine Subdomain. Ein Passwort nur aus Leerzeichen umgeht in der Benutzerverwaltung nicht mehr die Richtlinie. Der Installer prüft die Zeichenklassen der Standard-Richtlinie und schreibt `password_changed_at` und den ersten Historien-Eintrag. |
-| **4.1.0** | 🔴 fix | Zahlungen / Webhooks (SEC-410-03 … -05) | „Bezahlt“ wird per bedingtem `UPDATE` gesetzt, ein zweites Ereignis aktiviert das Abo nicht erneut. Interne Fehler rollen die Verarbeitung zurück und antworten mit 500, damit Stripe/Mollie erneut zustellen (bisher blieb die Bestellung offen, weil die Wiederholung als Duplikat galt). Verlängerungen mit abweichendem Betrag oder abweichender Währung stehen sichtbar am Ereignis. |
-| **4.1.0** | 🔴 fix | Backups / Offsite-Aufbewahrung, Verschlüsselung (SEC-410-07, SEC-410-12) | Die Aufbewahrung löscht nur Backups, die die Installation selbst hochgeladen hat; fremde Objekte unter demselben Präfix bleiben stehen. Der Schalter „Backup-Verschlüsselung“ auf *Backup-Einstellungen* funktioniert (bisher immer „Keine Berechtigung“). |
-| **4.1.0** | 🛡️ security | Redaktion / Freigaberecht (SEC-410-13, SEC-410-14, SEC-410-24) | „privat → veröffentlicht“ verlangt das Freigaberecht, auch in der Sammelaktion. Im Redaktionskalender verlangen „Termin ändern“ und „sofort veröffentlichen“ eines geplanten Beitrags `posts.publish`/`pages.publish`. Kategorien speichern und löschen nur mit `edit_all_posts` oder `manage_settings`. |
-| **4.1.0** | 🛡️ security | Downloads, Admin-JSON (SEC-410-20, -21, -25) | Unbekannte Zugriffsstufen eines Downloads sperren statt freizugeben. Der CSV-Export der Download-Statistik entschärft Formeln. Die JSON-Konfiguration von Cookie-Manager, Datenanfragen und Plugin-Marketplace wird mit `JSON_HEX_TAG` ausgegeben. |
-| **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/security/audit-410.php`; erweitert: `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`. |
-
-#### 🗄️ Release-Prüfung 4.1.0: Datenbank und Upgrade-Pfad (PR #2, #162)
-
-Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen MariaDB 10.11 abgeglichen (auch mit dem `sql_mode` von MySQL 8): gleiche Tabellen, Spalten, Typen, Defaults, Indizes und Fremdschlüssel, Daten erhalten, wiederholte Läufe ohne Änderung. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
-
-| Version | Typ | Bereich | Beschreibung |
-|---------|-----|---------|--------------|
-| **4.1.0** | 🔴 fix | Datenbank / erster Request (DB-410-02) | Der erste Request nach Installation, Core-Update oder „Tabellen reparieren“ öffnete bis zu 152 Datenbankverbindungen und brauchte rund 7 s, bis der Server „Too many connections“ meldete: Die Schemaprüfung im Konstruktor von `Database` rief über `cms_ensure_role_permissions_table()` erneut `Database::instance()` auf. Die Funktion nimmt jetzt die Verbindung entgegen; der Request öffnet eine Verbindung. Eingeführt in der 4.1.0-Entwicklung (auch in den bis dahin gepackten 4.1.0-Paketen), 4.0.0 ist nicht betroffen. |
-| **4.1.0** | 🔴 fix | Updates / Datenbank-Update (DB-410-04, DB-410-05) | Das Datenbank-Update prüft vor dem Schreiben der Schema-Marke alle Feature-Tabellen (v25/v26) und die Pflichtspalten (`SchemaManager::REQUIRED_COLUMNS`, `posts.status` als VARCHAR); fehlende Elemente stehen auf *Admin → Updates*. Bisher genügte die Tabelle `ai_quota_usage`. „Datenbank-Update“ und „Tabellen reparieren“ führen die idempotenten Migrationen auch bei gespeicherter Marke v26 aus und ergänzen damit Spalten wie `login_attempts.action` oder `mail_queue.locked_at` wieder. |
-| **4.1.0** | 🔵 docs | Datenbank / Kollation (DB-410-03) | Hinweis: Tabellen aus Installationen bis 3.5.x tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci`. Der Core vergleicht keine Textspalten über diese Grenze; eigene Plugins sollten bei solchen JOINs `COLLATE utf8mb4_unicode_ci` angeben. Keine automatische Konvertierung. |
-| **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/schema-upgrade` (optional mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst übersprungen): Neuinstallation und Upgrades gegen eine echte MySQL/MariaDB. Erweitert: `TESTS/schema-v26`, `TESTS/release-3.4.0`. |
-
-#### 🧩 Release-Prüfung 4.1.0: Funktionen (PR #3, #163)
-
-Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends gegen MariaDB ohne PHP-Fehler; dazu eine statische Prüfung aller 4.1.0-Funktionen. Nachweise und offene Funktionslücken: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
-
-| Version | Typ | Bereich | Beschreibung |
-|---------|-----|---------|--------------|
-| **4.1.0** | 🔴 fix | Updates / Repository (FUN-410-01) | Update-Prüfung (Rückfall über GitHub), Doku-Sync und Changelog-Link zeigen auf `PS-PhinIT/365CMS.DE` statt auf die alte Adresse `PS-easyIT/365CMS.DE`. `Http\Client` folgt keinen Weiterleitungen, deshalb schlugen diese Abrufe fehl. Ein gespeicherter Altwert wird umgestellt. |
-| **4.1.0** | 🔴 fix | Redaktion / Freigabe (FUN-410-02 … -04, -11 … -13) | „Freigeben“ prüft die Veröffentlichungs-Checkliste. Beim Einschalten von „Veröffentlichung braucht eine zweite Person“ warnt das CMS, wenn weniger als zwei Konten veröffentlichen dürfen. Die Sammelaktion „Entwurf“ für eingereichte Inhalte ist im Verlauf erkennbar. Einreichen prüft den Zustandswechsel. Vorschau-Links gibt es nur für noch nicht öffentliche Inhalte. Das Zurückstufen durch Ablauf meldet den Statuswechsel. |
-| **4.1.0** | 🔴 fix | Redaktion / Block-Vorlagen (FUN-410-05, -06) | Mehr als drei Ebenen werden schon beim Speichern abgelehnt (bisher fehlten sie still im Frontend). Das Löschen einer Vorlage aktualisiert auch mittelbar verknüpfte Inhalte. |
-| **4.1.0** | 🔴 fix | Redaktion / Ablaufdaten (FUN-410-08, -09) | Ein abgelaufener, wieder veröffentlichter Inhalt läuft erneut ab (bisher nie). Die Einstellung „410 Gone“ gilt auch für Wissensdatenbank-Einträge. |
-| **4.1.0** | 🔴 fix | Medien / AVIF (FUN-410-14 … -16) | Der Papierkorb nimmt AVIF-Fassungen mit (bisher blieben sie öffentlich liegen). `<picture>` gibt keine Fassung aus, die älter als das Original ist. GIFs behalten ihre Animation (keine statische AVIF-/WebP-Quelle). Die AVIF-Unterstützung wird ohne gespeichertes Ergebnis einmal geprüft, statt bis zum Speichern der Medien-Einstellungen auszufallen. |
-| **4.1.0** | 🔴 fix | Zahlungen, Webhooks, Offsite (FUN-410-20, -22 … -26) | Eine Verlängerung reaktiviert kein gekündigtes Abo mehr. Ein fehlgeschlagenes Webhook-Testereignis wird nicht wiederholt. Offene Zustellungen eines abgeschalteten Empfängers werden aufgegeben. Offsite-Uploads laufen ohne Zeitlimit, versuchen jedes Teil bis zu dreimal, halten die Grenze von 10 000 Teilen ein und holen Backups nach, die bei unvollständiger Konfiguration entstanden. |
-| **4.1.0** | 🔴 fix | Papierkorb, Tabellen (FUN-410-29 … -32) | Endgültig gelöschte Hub-Sites verlassen den Verwendungsindex der Medien. Die Seite der Barrierefreiheitserklärung ist gegen endgültiges Löschen geschützt. Freigabeverlauf und Vorschau-Links werden mitgelöscht. Die Seite *Tabellen* kann keine Hub-Sites mehr laden, löschen oder umwandeln; ihre Liste filtert in SQL. |
-| **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/release-4.1.0`. Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`. |
-
-#### 🧰 Release-Prüfung 4.1.0: Regressionen, Altlasten, PHP 8.4/8.5 (PR #4, #164, #165)
-
-CI-Wächter für PHP 8.4/8.5, deterministischer Scan aller 895 PHP-Dateien ohne Befund, Laufzeitprüfung gegen MariaDB. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
-
-| Version | Typ | Bereich | Beschreibung |
-|---------|-----|---------|--------------|
-| **4.1.0** | 🛡️ security | Beiträge / Zugriff (SEC-410-27, -28) | „DE → EN kopieren“ prüft den Besitz des Beitrags und verlangt Schreibrecht. Ohne Veröffentlichungsrecht bleiben Termin und Status eines geplanten Beitrags beim Speichern unverändert. |
-| **4.1.0** | ⬜ chore | CI / PHP 8.4 und 8.5 (#164) | Der Lint scheitert an Deprecations und Warnings aus eigenem Code (bisher nur Syntaxfehler). In allen Test-Suiten zählen PHP-Meldungen aus eigenem Code als Fehler. |
-| **4.1.0** | 🔴 fix | PHP 8.5 / Bibliotheken (FUN-410-40) | Kein `curl_close()` mehr in `melbahja/seo` und `lbuchs/webauthn` (seit PHP 8.5 veraltet); lokale Anpassung in `DOC/assets` vermerkt. |
-| **4.1.0** | 🔴 fix | Editor (FUN-410-41 … -45) | Die Editorbreite für Seiten wirkt. Der Prüfpunkt „Downloads“ gilt auch bei Sammel-Veröffentlichung, Wiederherstellen und im Kalender. Autosave legt keine Slug-Weiterleitungen mehr an, und nie öffentliche Beiträge erhalten keine. Schlagwörter in Beiträgen und Revisionen sind `TEXT` (bisher bei 500 Zeichen abgeschnitten). Der Revisionsvergleich von Seiten führt Vorlage und Zusatzfelder einmal. |
-| **4.1.0** | 🔴 fix | SEO-Schalter (FUN-410-46, -47) | „Archive/Tags noindex“, „Pagination-SEO“, „Weiterleitung bei Slug-Änderung“, „Self-referencing Canonical“ und „Person / Author“ wirken. Entfernt, weil ohne Funktion: FAQ/HowTo/Review/Event, Pinterest Rich Pins, „Breadcrumbs aktiv“ (doppelt) und „Bild-Alt-Texte verpflichtend“. |
-| **4.1.0** | 🔴 fix | Formulare (FUN-410-48) | Das Rechen-Captcha funktioniert mit verzögertem Sitzungsstart; bisher scheiterte die erste Absendung jedes neuen Besuchers. |
-| **4.1.0** | 🔴 fix | Sitemaps (FUN-410-49, -51 … -53) | Die EN-Sitemaps beachten `noindex` und fremde Canonicals. Die Bild-Sitemap nimmt das Beitragsbild, wenn kein OG-Bild gesetzt ist. Sitemap-Einstellungen und live gegangene geplante Beiträge verwerfen das gespeicherte Bundle. |
-| **4.1.0** | 🔴 fix | Einstellungen ohne Wirkung (FUN-410-50, -56) | „Beiträge pro Seite“ gilt für Blog, Kategorie-, Schlagwort- und Autorenarchiv. Das nie ausgegebene Feld „Google Analytics / Tag Manager ID“ ist entfernt; Tracking-IDs liegen unter *SEO › Analytics*. |
-| **4.1.0** | 🔴 fix | Admin / Module (FUN-410-57 … -60) | „Marketplace anzeigen“ aus sperrt auch die Marketplace-Seiten und blendet die Buttons aus. `/admin/payments` und `/admin/invoices` prüfen das Kernmodul. „Design-Einstellungen“ führt zum Theme-Editor. Die Import-Slug-Reparatur findet den Parser unter `CMS/plugins/`. |
-| **4.1.0** | 🔴 fix | DSGVO, OPcache, Plugin-API (FUN-410-36, -54, -55) | Ein DSGVO-Löschantrag entfernt Feed-Digests an die Adresse und das Feed-Abo. OPcache-Ausschlüsse gelten relativ zur Installation (bisher wärmte eine Installation unter `/…/test/…` nichts vor). `PageManager::deletePage()` verschiebt in den Papierkorb statt direkt zu löschen. |
-| **4.1.0** | ⬜ chore | Tests | `TESTS/release-4.1.0` um die Befunde aus PR #4 erweitert. |
 
 #### 🔴 Fehlerbehebungen
 

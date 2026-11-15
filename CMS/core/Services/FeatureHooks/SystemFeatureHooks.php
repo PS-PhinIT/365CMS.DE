@@ -51,6 +51,8 @@ final class SystemFeatureHooks
     {
         DataRetentionService::registerRule(CommentIpRetention::rule());
         // Release-Prüfung 4.1.0 (PERF, batch:0): erledigte Mail-Queue-Jobs (30 Tage) und Mail-Protokoll (90 Tage).
+        // Release-Prüfung 4.1.0 (PERF, batch:10): Aufbewahrung der Feature-Telemetrie (cms_feature_usage).
+        \CMS\Services\FeatureUsageService::registerRetentionRule();
         foreach (MailRetention::rules() as $rule) {
             DataRetentionService::registerRule($rule);
         }
