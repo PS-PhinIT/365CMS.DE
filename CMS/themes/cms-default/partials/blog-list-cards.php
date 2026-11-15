@@ -33,7 +33,6 @@ if (empty($listPosts)) {
         $iDate    = !empty($item->published_at ?? $item->created_at ?? '')
                     ? time_ago($item->published_at ?? $item->created_at)
                     : '';
-        $iRead    = !empty($item->read_time) ? $item->read_time . ' Min.' : '5 Min.';
         $iImageReference = (string) ($item->featured_image ?? '');
         $iImage = function_exists('meridian_get_picture_sources')
             ? meridian_get_picture_sources($iImageReference, null, 320, 218)
@@ -81,9 +80,7 @@ if (empty($listPosts)) {
             <div class="art-meta">
                 <?php if ($iDate): ?>
                 <time><?php echo $iDate; ?></time>
-                <span class="dot"></span>
                 <?php endif; ?>
-                <span class="read-t"><?php echo $iRead; ?></span>
                 <?php echo meridian_post_update_badge($item); ?>
             </div>
         </div>

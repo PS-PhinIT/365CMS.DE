@@ -34,6 +34,7 @@ $pCat = trim((string) ($post->category_name ?? 'Blog'));
 $pCatSlug = trim((string) ($post->category_slug ?? 'blog'));
 $pReadMinutes = !empty($post->read_time) ? max(1, (int) $post->read_time) : meridian_reading_time($pContent);
 $pRead = meridian_t('theme.post.reading_time', ['{minutes}' => $pReadMinutes]);
+$pShowRead = (bool) meridian_setting('blog', 'show_reading_time', true);
 $pTags = $post->tags ?? [];
 $pFeaturedImageReference = (string) ($post->featured_image ?? '');
 $pFeaturedImage = function_exists('meridian_get_picture_sources')
@@ -125,8 +126,10 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
       <div class="post-hero__intro">
         <div class="post-hero__eyebrow">
           <a href="<?php echo htmlspecialchars(meridian_archive_url('category', (string) ($pCatSlug)), ENT_QUOTES, 'UTF-8'); ?>" class="post-hero__category"><?php echo htmlspecialchars($pCat, ENT_QUOTES, 'UTF-8'); ?></a>
+          <?php if ($pShowRead): ?>
           <span class="post-hero__sep">•</span>
           <span class="post-hero__reading"><?php echo htmlspecialchars($pRead, ENT_QUOTES, 'UTF-8'); ?></span>
+          <?php endif; ?>
         </div>
 
         <h1 class="post-hero__title"><?php echo $pTitle; ?></h1>
@@ -168,10 +171,12 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
           <span class="post-stat-card__label"><?php echo esc_html(meridian_t('theme.post.category')); ?></span>
           <span class="post-stat-card__value"><?php echo htmlspecialchars($pCat, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
+        <?php if ($pShowRead): ?>
         <div class="post-stat-card__item">
           <span class="post-stat-card__label"><?php echo esc_html(meridian_t('theme.post.reading_label')); ?></span>
           <span class="post-stat-card__value"><?php echo htmlspecialchars($pRead, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
+        <?php endif; ?>
         <?php if ($pDate !== ''): ?>
         <div class="post-stat-card__item">
           <span class="post-stat-card__label"><?php echo esc_html(meridian_t('theme.post.as_of')); ?></span>

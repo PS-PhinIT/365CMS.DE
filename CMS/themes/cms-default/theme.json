@@ -510,7 +510,7 @@
           "label": "Lesezeit anzeigen",
           "type": "checkbox",
           "default": true,
-          "description": "Geschätzte Lesezeit bei Artikeln anzeigen"
+          "description": "Geschätzte Lesezeit im einzelnen Beitrag anzeigen (nie auf Übersichtsseiten)"
         },
         "show_author": {
           "label": "Autor anzeigen",
