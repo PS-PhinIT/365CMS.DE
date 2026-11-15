@@ -66,8 +66,8 @@ Die Pakete von 4.1.0 und 4.1.5 bis 4.1.7 bleiben zur Nachvollziehbarkeit im Verz
 
 ### Bereitstellung
 
-1. Das Updatepaket unter `https://365cms.de/marketplace/core/365cms/365CMS-4.1.8-update.zip` bereitstellen.
-2. `CMS/marketplace/core/365cms/update.json` an denselben Marketplace-Pfad legen. **Erst danach** wird das Update den Installationen angeboten.
+1. Das Updatepaket liegt fertig unter `CMS/marketplace/core/365cms/365CMS-4.1.8-update.zip` (identisch mit `RELEASE/365CMS-4.1.8-update.zip`). Ein Marketplace-Host liefert es unter `https://365cms.de/marketplace/core/365cms/365CMS-4.1.8-update.zip` aus.
+2. `CMS/marketplace/core/365cms/update.json` liegt im selben Ordner. Erst wenn beide auf dem Host liegen, wird das Update den Installationen angeboten. Das Paket zuerst hochladen, danach das Manifest.
 
 Der Core-Swap bewahrt `config/`, `config.php`, `uploads/`, `cache/`, `logs/`, `backups/`, `private/` und `marketplace/`.
 
