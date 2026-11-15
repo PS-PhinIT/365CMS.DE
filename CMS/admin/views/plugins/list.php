@@ -8,6 +8,7 @@ $plugins = $d['plugins'] ?? [];
 $stats   = $d['stats'] ?? [];
 $activeCount = (int)($stats['active'] ?? 0);
 $pluginMarketplaceUrl = '/admin/plugin-marketplace';
+$marketplaceEnabled = \CMS\Services\AdminMenu\AdminMenuService::getInstance()->isMarketplaceEnabled();
 ?>
 
 <div class="page-header d-print-none">
@@ -22,10 +23,12 @@ $pluginMarketplaceUrl = '/admin/plugin-marketplace';
                 </div>
             </div>
             <div class="admin-section-toolbar__actions">
+                <?php if ($marketplaceEnabled): ?>
                 <a href="<?php echo htmlspecialchars($pluginMarketplaceUrl); ?>" class="btn btn-primary btn-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
                     Plugin installieren
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -173,12 +176,14 @@ require __DIR__ . '/../partials/flash-alert.php';
                 <h3 class="card-title">Schnellzugriff</h3>
             </div>
             <div class="card-body d-flex flex-column gap-3">
+                <?php if ($marketplaceEnabled): ?>
                 <div class="text-secondary small">
                     Installiere neue Erweiterungen im Marktplatz und verwalte hier den aktiven Laufzeitstatus.
                 </div>
                 <a href="<?php echo htmlspecialchars($pluginMarketplaceUrl); ?>" class="btn btn-outline-primary btn-sm w-100">
                     Zum Plugin-Marktplatz
                 </a>
+                <?php endif; ?>
                 <div class="alert alert-info mb-0">
                     <div class="fw-semibold mb-1">Hinweis</div>
                     <div class="small">Mitgelieferte System-Plugins sind deaktivierbar, aber nicht löschbar.</div>

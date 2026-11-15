@@ -64,8 +64,10 @@ $resolvePreviewColor = static function (array $theme): string {
                 </div>
             </div>
             <div class="admin-section-toolbar__actions">
+                <?php if (\CMS\Services\AdminMenu\AdminMenuService::getInstance()->isMarketplaceEnabled()): ?>
                 <a href="/admin/theme-marketplace" class="btn btn-outline-primary btn-sm">Marketplace</a>
-                <a href="/admin/theme-settings" class="btn btn-outline-secondary btn-sm">Design-Einstellungen</a>
+                <?php endif; ?>
+                <a href="/admin/theme-editor" class="btn btn-outline-secondary btn-sm">Design-Einstellungen</a>
             </div>
         </div>
     </div>

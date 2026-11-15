@@ -57,7 +57,7 @@ Importregeln:
 
 ### Automatische Weiterleitungen
 
-Ist unter *SEO → Technisches SEO* `auto_redirect_slug` aktiv, legt `RedirectService::createAutomaticRedirect()` bei einer Slug-Änderung von Seiten/Beiträgen eine 301-Regel vom alten auf den neuen Pfad an (Notiz „Automatisch bei Slug-Änderung angelegt“).
+Ist unter *SEO → Technisches SEO* `auto_redirect_slug` aktiv (Standard), legt `RedirectService::createAutomaticRedirect()` bei einer Slug-Änderung von Seiten/Beiträgen eine 301-Regel vom alten auf den neuen Pfad an (Notiz „Automatisch bei Slug-Änderung angelegt“). Beiträge erhalten die Regel nur, wenn sie öffentlich waren, und nie beim Autosave. Bis 4.1.0 wurde der Schalter nicht ausgewertet (Regeln entstanden immer).
 
 ### 404-Monitor (`/admin/not-found-monitor`)
 

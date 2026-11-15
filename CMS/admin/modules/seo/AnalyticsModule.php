@@ -81,8 +81,8 @@ class AnalyticsModule
             'users'    => (int)$this->db->get_var("SELECT COUNT(*) FROM {$this->prefix}users"),
         ];
 
-        // Google Analytics Setting
-        $gaId = $this->db->get_row("SELECT option_value FROM {$this->prefix}settings WHERE option_name = 'google_analytics'");
+        // GA4-ID aus SEO › Analytics (das frühere Feld „google_analytics“ der allgemeinen Einstellungen wurde nie ausgegeben).
+        $gaId = $this->db->get_row("SELECT option_value FROM {$this->prefix}settings WHERE option_name = 'seo_analytics_ga4_id'");
 
         return [
             'stats'         => $stats,

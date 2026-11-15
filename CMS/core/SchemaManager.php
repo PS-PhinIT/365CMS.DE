@@ -478,7 +478,7 @@ class SchemaManager
                 post_template VARCHAR(80) DEFAULT NULL,
                 post_meta_json TEXT DEFAULT NULL,
                 category_id INT UNSIGNED DEFAULT NULL,
-                tags VARCHAR(500) COMMENT 'Kommagetrennte Tags',
+                tags TEXT COMMENT 'Kommagetrennte Tags',
                 views INT UNSIGNED DEFAULT 0,
                 allow_comments TINYINT(1) NOT NULL DEFAULT 1,
                 meta_title VARCHAR(255),
@@ -522,7 +522,7 @@ class SchemaManager
                 status VARCHAR(20) DEFAULT NULL,
                 category_id INT UNSIGNED DEFAULT NULL,
                 category_name VARCHAR(150) DEFAULT NULL,
-                tags VARCHAR(500) DEFAULT NULL,
+                tags TEXT DEFAULT NULL,
                 author_id INT UNSIGNED DEFAULT NULL,
                 author_display_name VARCHAR(150) DEFAULT NULL,
                 author_display_url VARCHAR(500) DEFAULT NULL,
@@ -2012,6 +2012,7 @@ class SchemaManager
         $this->ensurePostLocaleColumns();
         $this->ensureTrashColumns();
         $this->ensurePostStatusColumn();
+        $this->ensureTagsTextColumns();
         $this->ensureReferencedColumns();
         $this->ensureFeatureSchema();
         $this->repairViewCounterUpdatedAt();
@@ -2662,6 +2663,25 @@ class SchemaManager
             $this->db->getPdo()->exec("UPDATE {$table} SET status = 'draft' WHERE status = ''");
         } catch (\Throwable $e) {
             error_log('SchemaManager::ensurePostStatusColumn() failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+        }
+    }
+
+    /**
+     * FUN-410-44: Schlagwörter in Beiträgen und Revisionen als TEXT (bisher VARCHAR(500)): Beim Wiederherstellen
+     * einer Revision entstand sonst ein abgeschnittenes Schlagwort, und die übrigen gingen verloren.
+     */
+    private function ensureTagsTextColumns(): void
+    {
+        foreach (['posts' => "COMMENT 'Kommagetrennte Tags'", 'post_revisions' => 'DEFAULT NULL'] as $table => $suffix) {
+            try {
+                $stmt = $this->db->getPdo()->query("SHOW COLUMNS FROM {$this->prefix}{$table} LIKE 'tags'");
+                $column = $stmt instanceof \PDOStatement ? $stmt->fetch(PDO::FETCH_ASSOC) : false;
+                if (is_array($column) && str_starts_with(strtolower((string) ($column['Type'] ?? '')), 'varchar')) {
+                    $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}{$table} MODIFY COLUMN tags TEXT {$suffix}");
+                }
+            } catch (\Throwable $e) {
+                error_log('SchemaManager::ensureTagsTextColumns() failed: ' . $this->sanitizeDiagnosticText($e->getMessage()));
+            }
         }
     }
 

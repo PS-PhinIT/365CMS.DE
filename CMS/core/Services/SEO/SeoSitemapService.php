@@ -448,8 +448,13 @@ final class SeoSitemapService
             }
 
             $seoMeta = $this->metaService->getContentMeta('page', (int) ($row->id ?? 0));
+            $path = $localization->buildLocalizedPath('/' . ltrim($slug, '/'), 'en');
+            // FUN-410-49: noindex und Canonical gelten wie in den deutschen Sitemaps (Vergleich mit absoluter URL).
+            if (!$this->isIndexableSitemapEntry(['robots_index' => (bool) ($seoMeta['robots_index'] ?? true), 'canonical_url' => (string) ($seoMeta['canonical_url'] ?? '')], rtrim((string) SITE_URL, '/') . '/' . ltrim($path, '/'))) {
+                continue;
+            }
             $entries[] = [
-                'url' => $localization->buildLocalizedPath('/' . ltrim($slug, '/'), 'en'),
+                'url' => $path,
                 'lastmod' => (string) ($row->updated_at ?? date(DATE_W3C)),
                 'priority' => $seoMeta['sitemap_priority'] !== '' ? $seoMeta['sitemap_priority'] : $settings['pages_priority'],
                 'changefreq' => $seoMeta['sitemap_changefreq'] !== '' ? $seoMeta['sitemap_changefreq'] : $settings['pages_changefreq'],
@@ -482,8 +487,13 @@ final class SeoSitemapService
             }
 
             $seoMeta = $this->metaService->getContentMeta('post', (int) ($row->id ?? 0));
+            $path = PermalinkService::getInstance()->buildPostPath($postData, 'en');
+            // FUN-410-49: wie oben.
+            if (!$this->isIndexableSitemapEntry(['robots_index' => (bool) ($seoMeta['robots_index'] ?? true), 'canonical_url' => (string) ($seoMeta['canonical_url'] ?? '')], rtrim((string) SITE_URL, '/') . '/' . ltrim($path, '/'))) {
+                continue;
+            }
             $entries[] = [
-                'url' => PermalinkService::getInstance()->buildPostPath($postData, 'en'),
+                'url' => $path,
                 'lastmod' => (string) ($row->updated_at ?? date(DATE_W3C)),
                 'priority' => $seoMeta['sitemap_priority'] !== '' ? $seoMeta['sitemap_priority'] : $settings['posts_priority'],
                 'changefreq' => $seoMeta['sitemap_changefreq'] !== '' ? $seoMeta['sitemap_changefreq'] : $settings['posts_changefreq'],
@@ -573,7 +583,11 @@ final class SeoSitemapService
         ) ?: [];
 
         foreach ($pages as $page) {
-            $image = trim((string) ($page->og_image ?? $page->featured_image ?? ''));
+            // FUN-410-51: og_image ist nach dem Speichern im Editor '' (nicht NULL) – dann das Beitragsbild.
+            $image = trim((string) ($page->og_image ?? ''));
+            if ($image === '') {
+                $image = trim((string) ($page->featured_image ?? ''));
+            }
             if ($image === '') {
                 continue;
             }
@@ -597,7 +611,11 @@ final class SeoSitemapService
         ) ?: [];
 
         foreach ($posts as $post) {
-            $image = trim((string) ($post->og_image ?? $post->featured_image ?? ''));
+            // FUN-410-51: og_image ist nach dem Speichern im Editor '' (nicht NULL) – dann das Beitragsbild.
+            $image = trim((string) ($post->og_image ?? ''));
+            if ($image === '') {
+                $image = trim((string) ($post->featured_image ?? ''));
+            }
             if ($image === '') {
                 continue;
             }

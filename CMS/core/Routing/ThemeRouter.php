@@ -734,7 +734,7 @@ final class ThemeRouter
         $prefix = $db->getPrefix();
         $locale = $this->getResolvedContentLocale();
         $localeFilter = $this->buildPostLocaleAvailabilityExpression('p', $locale);
-        $perPage = 9;
+        $perPage = $this->configuredPostsPerPage(9);
         $total = (int)$db->get_var("SELECT COUNT(*) FROM {$prefix}posts p WHERE " . \cms_post_publication_where('p') . " AND {$localeFilter}");
         // Auf die letzte Seite begrenzen: Riesige ?p=-Werte liefen sonst als Float-OFFSET ins SQL (Syntaxfehler, HTTP 500).
         $page = min(max(1, (int)($_GET['p'] ?? 1)), max(1, (int)ceil($total / $perPage)));
@@ -792,7 +792,7 @@ final class ThemeRouter
 
         $query = trim(Request::stringFromGet('q'));
         $page = max(1, (int) ($_GET['page'] ?? $_GET['p'] ?? 1));
-        $perPage = 10;
+        $perPage = $this->configuredPostsPerPage(10);
 
         $categoryIds = $this->archiveRepository->getCategoryArchiveIds((int) ($category->id ?? 0));
         if ($categoryIds === []) {
@@ -904,7 +904,7 @@ final class ThemeRouter
         $locale = $this->getResolvedContentLocale();
         $query = trim(Request::stringFromGet('q'));
         $page = max(1, (int) ($_GET['page'] ?? $_GET['p'] ?? 1));
-        $perPage = 10;
+        $perPage = $this->configuredPostsPerPage(10);
 
         $tagRow = $db->get_row(
             "SELECT id, name, slug, slug_en
@@ -1114,7 +1114,7 @@ final class ThemeRouter
         $db = Database::instance();
         $prefix = $db->getPrefix();
         $locale = $this->getResolvedContentLocale();
-        $perPage = 10;
+        $perPage = $this->configuredPostsPerPage(10);
         $authorId = (int)($author['id'] ?? 0);
         $localeFilter = $this->buildPostLocaleAvailabilityExpression('p', $locale);
 
@@ -1551,6 +1551,20 @@ final class ThemeRouter
     /**
      * SQL-Ausdruck für den sprachabhängigen Kategorie-Slug in Beitragslisten.
      */
+    /**
+     * „Beiträge pro Seite“ aus den allgemeinen Einstellungen (Blog, Kategorie-, Tag- und Autorenarchiv).
+     * Ohne gespeicherten Wert bleibt die bisherige Vorgabe der jeweiligen Ansicht.
+     */
+    private function configuredPostsPerPage(int $fallback): int
+    {
+        $value = function_exists('get_option') ? trim((string) get_option('posts_per_page', '')) : '';
+        if ($value === '' || !ctype_digit($value)) {
+            return $fallback;
+        }
+
+        return max(1, min(100, (int) $value));
+    }
+
     private function categorySlugSelectExpression(string $locale, string $alias = 'c'): string
     {
         return $locale === 'en'

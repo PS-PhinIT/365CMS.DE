@@ -482,7 +482,13 @@ final class OpcacheWarmupService
 
     private function isExcludedPath(string $normalizedPath): bool
     {
-        $haystack = strtolower($normalizedPath);
+        // FUN-410-54: nur den Teil unterhalb von ABSPATH vergleichen – sonst schloss eine Installation unter
+        // /…/test/… oder /…/cache/… alle Dateien aus.
+        $relative = DIRECTORY_SEPARATOR . ltrim(str_replace('/', DIRECTORY_SEPARATOR, $this->toRelativePath($normalizedPath)), DIRECTORY_SEPARATOR);
+        if (str_ends_with($normalizedPath, DIRECTORY_SEPARATOR) && !str_ends_with($relative, DIRECTORY_SEPARATOR)) {
+            $relative .= DIRECTORY_SEPARATOR;
+        }
+        $haystack = strtolower($relative);
         foreach (self::EXCLUDED_SEGMENTS as $segment) {
             if (str_contains($haystack, strtolower($this->normalizePath($segment)))) {
                 return true;

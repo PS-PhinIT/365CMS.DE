@@ -213,12 +213,20 @@ class PageManager
     }
     
     /**
-     * Delete Page
+     * Seite löschen (öffentliche API für Plugins): verschiebt in den Papierkorb.
+     *
+     * Release-Prüfung 4.1.0 (FUN-410-36): bisher ein direktes DELETE ohne Papierkorb, ohne Lösch-Hooks und ohne
+     * Aufräumen der Verwendungsindizes. Endgültiges Löschen läuft über den Papierkorb (Admin oder TrashService).
      */
     public function deletePage(int $id): bool
     {
-        $stmt = $this->db->prepare("DELETE FROM {$this->prefix}pages WHERE id = ?");
-        return $stmt->execute([$id]);
+        if ($id <= 0) {
+            return false;
+        }
+
+        $userId = (int) (Auth::getCurrentUser()->id ?? 0);
+
+        return (new \CMS\Services\Trash\PageTrashProvider($this->db))->trash($id, $userId)->ok;
     }
 
     /**

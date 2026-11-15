@@ -44,17 +44,12 @@ final class SeoSuiteModule
 		'seo_social_brand_name' => '',
 		'seo_social_facebook_page' => '',
 		'seo_social_twitter_profile' => '',
-		'seo_social_pinterest_rich_pins' => '0',
 	];
 
 	private const SCHEMA_DEFAULTS = [
 		'seo_schema_organization_enabled' => '1',
 		'seo_schema_breadcrumb_enabled' => '1',
 		'seo_schema_person_enabled' => '1',
-		'seo_schema_faq_enabled' => '1',
-		'seo_schema_howto_enabled' => '1',
-		'seo_schema_review_enabled' => '1',
-		'seo_schema_event_enabled' => '1',
 		'seo_schema_org_name' => '',
 		'seo_schema_org_logo' => '',
 	];
@@ -62,8 +57,6 @@ final class SeoSuiteModule
 	private const TECHNICAL_DEFAULTS = [
 		'seo_technical_auto_redirect_slug' => '1',
 		'seo_technical_hreflang_enabled' => '1',
-		'seo_technical_breadcrumbs_enabled' => '1',
-		'seo_technical_image_alt_required' => '1',
 		'seo_technical_noindex_archives' => '0',
 		'seo_technical_noindex_tags' => '0',
 		'seo_technical_pagination_rel' => '1',
@@ -372,7 +365,6 @@ final class SeoSuiteModule
 			'seo_social_brand_name' => trim((string)($post['brand_name'] ?? '')),
 			'seo_social_facebook_page' => $this->normalizeOptionalUrl((string)($post['facebook_page'] ?? ''), false),
 			'seo_social_twitter_profile' => trim((string)($post['twitter_profile'] ?? '')),
-			'seo_social_pinterest_rich_pins' => !empty($post['pinterest_rich_pins']) ? '1' : '0',
 		]);
 
 		return ['success' => true, 'message' => 'Social-Media-Defaults gespeichert.'];
@@ -384,10 +376,6 @@ final class SeoSuiteModule
 			'seo_schema_organization_enabled' => !empty($post['organization_enabled']) ? '1' : '0',
 			'seo_schema_breadcrumb_enabled' => !empty($post['breadcrumb_enabled']) ? '1' : '0',
 			'seo_schema_person_enabled' => !empty($post['person_enabled']) ? '1' : '0',
-			'seo_schema_faq_enabled' => !empty($post['faq_enabled']) ? '1' : '0',
-			'seo_schema_howto_enabled' => !empty($post['howto_enabled']) ? '1' : '0',
-			'seo_schema_review_enabled' => !empty($post['review_enabled']) ? '1' : '0',
-			'seo_schema_event_enabled' => !empty($post['event_enabled']) ? '1' : '0',
 			'seo_schema_org_name' => trim((string)($post['org_name'] ?? '')),
 			'seo_schema_org_logo' => $this->normalizeOptionalUrl((string)($post['org_logo'] ?? ''), true),
 		]);
@@ -400,8 +388,6 @@ final class SeoSuiteModule
 		$this->persistSettings([
 			'seo_technical_auto_redirect_slug' => !empty($post['auto_redirect_slug']) ? '1' : '0',
 			'seo_technical_hreflang_enabled' => !empty($post['hreflang_enabled']) ? '1' : '0',
-			'seo_technical_breadcrumbs_enabled' => !empty($post['breadcrumbs_enabled']) ? '1' : '0',
-			'seo_technical_image_alt_required' => !empty($post['image_alt_required']) ? '1' : '0',
 			'seo_technical_noindex_archives' => !empty($post['noindex_archives']) ? '1' : '0',
 			'seo_technical_noindex_tags' => !empty($post['noindex_tags']) ? '1' : '0',
 			'seo_technical_pagination_rel' => !empty($post['pagination_rel']) ? '1' : '0',
@@ -638,6 +624,9 @@ final class SeoSuiteModule
 			'seo_sitemap_news_publication_name' => trim((string)($post['news_publication_name'] ?? '365CMS')),
 			'seo_sitemap_news_language' => $this->normalizeLanguageCode((string)($post['news_language'] ?? 'de')),
 		]);
+
+		// FUN-410-52: neue Einstellungen gelten sofort, nicht erst nach dem nächsten Neuaufbau.
+		$this->seoService->invalidateSavedSitemaps();
 
 		return ['success' => true, 'message' => 'Sitemap-Einstellungen gespeichert.'];
 	}
@@ -891,6 +880,8 @@ final class SeoSuiteModule
 			'sitemap_changefreq' => $this->normalizeSitemapChangefreq((string)($post['sitemap_changefreq'] ?? ''), ''),
 			'hreflang_group' => (string)($post['hreflang_group'] ?? ''),
 		]);
+		// FUN-410-52: noindex, Canonical und Priorität wirken auf die gespeicherten Sitemaps.
+		$this->seoService->invalidateSavedSitemaps();
 
 		return ['success' => true, 'message' => 'SEO-Daten wurden aktualisiert.'];
 	}
@@ -1260,7 +1251,7 @@ final class SeoSuiteModule
 				'schema_mode' => 'Melbahja\\Seo\\Schema + Thing',
 				'breadcrumbs_enabled' => !empty($settings['seo_schema_breadcrumb_enabled']),
 			],
-			'supported_types' => ['Article', 'BlogPosting', 'WebPage', 'BreadcrumbList', 'Organization', 'Person', 'FAQPage', 'HowTo', 'Review', 'Event'],
+			'supported_types' => array_merge(\CMS\Services\SEO\SeoSchemaRenderer::SUPPORTED_TYPES, ['Person']),
 			'examples' => array_slice($auditRows, 0, 8),
 		];
 	}

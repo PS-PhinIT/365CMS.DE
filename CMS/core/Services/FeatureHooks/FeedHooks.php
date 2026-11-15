@@ -74,6 +74,22 @@ final class FeedHooks
             });
         }, 40);
 
+        // DSGVO-Löschung: E-Mail-Digests der Person und ihr Feed-Abo entfernen (Release-Prüfung 4.1.0, FUN-410-55).
+        Hooks::addAction('dsgvo_delete_data', static function (mixed $userId = null, mixed $email = null): void {
+            self::guard('DSGVO-Löschung', static function () use ($userId, $email): void {
+                $repository = AggregatorRepository::getInstance();
+                if (!$repository->isReady()) {
+                    return;
+                }
+                if (is_string($email) && trim($email) !== '') {
+                    $repository->deleteDigestsByEmail($email);
+                }
+                if (is_numeric($userId) && (int) $userId > 0) {
+                    $repository->deleteSubscription((int) $userId);
+                }
+            });
+        });
+
         FeedMemberSection::register();
     }
 

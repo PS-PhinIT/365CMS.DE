@@ -93,7 +93,7 @@ Alle Formulare tragen das CSRF-Token der Aktion `admin_pages`. Bei Validierungsf
 
 ### Frontend
 
-Veröffentlichte Seiten werden über `PublicRouter` unter `/<slug>` bzw. `/en/<slug_en>` ausgeliefert. `PageManager::search()` liefert für leere Suchbegriffe seit 3.4.06 keine Treffer mehr. Shortcodes wie `[site-table id="…"]` und `[hub-site id="…"]` im Inhalt werden von `SiteTableService` ersetzt.
+Veröffentlichte Seiten werden über `PublicRouter` unter `/<slug>` bzw. `/en/<slug_en>` ausgeliefert. `PageManager::search()` liefert für leere Suchbegriffe seit 3.4.06 keine Treffer mehr. `PageManager::deletePage()` (Plugin-API) verschiebt seit 4.1.0 in den Papierkorb, mit denselben Hooks wie die Admin-Aktion; bis dahin löschte die Methode direkt ohne Papierkorb und Aufräumen. Shortcodes wie `[site-table id="…"]` und `[hub-site id="…"]` im Inhalt werden von `SiteTableService` ersetzt.
 
 Bei `ThemeManager::render('page', …)` löst der neue `PageTemplateService` die gespeicherte ID auf und stellt validierte Zusatzfelder unter `page['meta']` bereit. Unbekannte/fehlende Vorlagen, etwa nach einem Theme-Wechsel, fallen mit Protokollierung auf das Standardlayout zurück. Explizite Plugin-Template-Overrides bleiben bestehen. Schema und Revisions-Snapshots enthalten die neuen Felder; Bestandsinstallationen erhalten idempotente Kompatibilitätsmigrationen. Migration und Rendering wurden bislang nur isoliert mit Datenbank-Doubles geprüft, nicht gegen eine laufende Installation.
 

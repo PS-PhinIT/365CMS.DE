@@ -80,7 +80,9 @@ final class FormSpamGuard
     {
         $a = random_int(1, 9);
         $b = random_int(1, 9);
-        if (session_status() === PHP_SESSION_ACTIVE) {
+        // FUN-410-48: Bei verzögertem Sitzungsstart (Lazy Sessions) ist die Sitzung beim Rendern noch nicht aktiv.
+        // Wie Security::generateToken() direkt schreiben – der verzögerte Start übernimmt die Werte.
+        if (session_status() === PHP_SESSION_ACTIVE || \CMS\Security::isSessionDeferred()) {
             $_SESSION[self::CAPTCHA_SESSION][$formKey] = ['answer' => $a + $b, 'time' => time()];
         }
 

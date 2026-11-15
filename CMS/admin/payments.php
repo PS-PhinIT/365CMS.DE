@@ -20,7 +20,9 @@ use CMS\Services\Payments\PaymentSettings;
 
 function cms_admin_payments_can_access(): bool
 {
-    return Auth::instance()->isAdmin() && Auth::instance()->hasCapability('payments.manage');
+    // Release-Prüfung 4.1.0 (FUN-410-59): wie Bestellungen/Pakete nur bei aktivem Kernmodul (Menü blendet die Seite sonst aus).
+    return Auth::instance()->isAdmin() && Auth::instance()->hasCapability('payments.manage')
+        && \CMS\Services\CoreModuleService::getInstance()->isAdminPageEnabled('payments');
 }
 
 if (!cms_admin_payments_can_access()) {
