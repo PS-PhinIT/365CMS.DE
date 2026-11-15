@@ -5132,7 +5132,7 @@
     }
 
     function patchEmbedServiceTemplates(embedClass) {
-        if (!embedClass || embedClass.__cmsTemplatesPatched || typeof embedClass.prepare !== 'function') {
+        if (embedClass.__cmsTemplatesPatched || typeof embedClass.prepare !== 'function') {
             return;
         }
 
