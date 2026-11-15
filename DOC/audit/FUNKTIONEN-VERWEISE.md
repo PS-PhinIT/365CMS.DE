@@ -1,6 +1,6 @@
 # 365CMS – Gesamtaudit 2026-10-14 | Funktionen und Verweise
 
-> Übersicht: [README.md](README.md) · Vorheriger Stand: [../checks/FUNKTIONEN.md](../checks/FUNKTIONEN.md), [../checks/VERWEISE.md](../checks/VERWEISE.md)
+> Übersicht: [README.md](README.md)
 
 ## English (summary)
 

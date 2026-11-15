@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Admin-Sidebar-Menü mit Profilen
 > **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** In Umsetzung | **Update:** 2026-11-10
-> **Fortschritt:** [PROGRESS.md](PROGRESS.md) · **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
+> **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)
 

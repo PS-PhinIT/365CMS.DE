@@ -1,7 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Plugin-Entwicklung
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-14 (Plugin-Layout-Vertrag; Abgleich mit `PluginManager`, `AdminRouter`, `PluginDashboardRegistry`, `Security`, `AdminMenuService`, `AdminNavigationService`, `PluginSiteAssignmentService`)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 
 # 365CMS Plugin Development

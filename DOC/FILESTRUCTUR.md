@@ -175,7 +175,6 @@ Subfolders (all present):
 | `DOC/ai/` | AI concept docs |
 | `DOC/assets/` | asset / vendor docs (`ASSET.md`, `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` live **here**) |
 | `DOC/audit/` | follow-up audits |
-| `DOC/checks/` | code audit 2026-10-03 |
 | `DOC/core/` | core documentation |
 | `DOC/member/` | member documentation |
 | `DOC/plugins/` | plugin documentation |
@@ -187,7 +186,7 @@ Broken historical links (do **not** use):
 - `DOC/ASSET.md` — actual path is `DOC/assets/ASSET.md`
 - `DOC/ASSETS_NEW.md` — actual path is `DOC/assets/ASSETS_NEW.md`
 - `DOC/ASSETS_OwnAssets.md` — actual path is `DOC/assets/ASSETS_OwnAssets.md`
-- `DOC/checks/` — code audit 2026-10-03 (`README.md`, `SECURITY.md`, `PERFORMANCE.md`, `FUNKTIONEN.md`, `VERWEISE.md`); `AUDIT/` — not present in this repository
+- `AUDIT/` — not present in this repository
 - `DOC/_cms_inventory_current.txt` — file does not exist
 
 **Deutsch**
@@ -212,7 +211,6 @@ Unterordner (alle vorhanden):
 | `DOC/ai/` | AI-Konzeptdokumente |
 | `DOC/assets/` | Asset-/Vendor-Dokumente (`ASSET.md`, `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` liegen **hier**) |
 | `DOC/audit/` | Folgeaudits |
-| `DOC/checks/` | Code-Audit 2026-10-03 |
 | `DOC/core/` | Core-Dokumentation |
 | `DOC/member/` | Member-Dokumentation |
 | `DOC/plugins/` | Plugin-Dokumentation |
@@ -224,7 +222,7 @@ Historisch kaputte Links (nicht verwenden):
 - `DOC/ASSET.md` — tatsächlicher Pfad: `DOC/assets/ASSET.md`
 - `DOC/ASSETS_NEW.md` — tatsächlicher Pfad: `DOC/assets/ASSETS_NEW.md`
 - `DOC/ASSETS_OwnAssets.md` — tatsächlicher Pfad: `DOC/assets/ASSETS_OwnAssets.md`
-- `DOC/checks/` — Code-Audit 2026-10-03 (`README.md`, `SECURITY.md`, `PERFORMANCE.md`, `FUNKTIONEN.md`, `VERWEISE.md`); `AUDIT/` — in diesem Repository nicht vorhanden
+- `AUDIT/` — in diesem Repository nicht vorhanden
 - `DOC/_cms_inventory_current.txt` — Datei existiert nicht
 
 ---

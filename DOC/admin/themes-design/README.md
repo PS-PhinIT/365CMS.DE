@@ -25,7 +25,7 @@ This folder documents the admin area **Themes & Design** (*Themes & Gestaltung*)
 
 | Alte Route | Ziel |
 |---|---|
-| `/admin/design-settings` | `/admin/theme-editor` ([DESIGN-SETTINGS.md](DESIGN-SETTINGS.md)) |
+| `/admin/design-settings` | `/admin/theme-editor` ([EDITOR.md](EDITOR.md)) |
 | `/admin/theme-settings` | `/admin/settings` |
 | `/admin/theme-customizer` | `/admin/theme-editor` |
 | `/admin/menus` | `/admin/menu-editor` |

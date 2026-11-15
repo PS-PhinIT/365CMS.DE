@@ -1,7 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Mitgliederbereich
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-09 (Sicherheitsaudit 4.0.0: Nachrichten-Empfänger, Datenexport, eigene Bestellungen; Folgeaudit: E-Mail-Änderung mit Bestätigung, „Überall sonst abmelden“)
 > **Kurzbeschreibung:** Vollständige Referenz des privaten Member-Bereichs mit Seiten, Routing, Einstellungen, Erweiterungspunkten, Sicherheit und Fallbacks. Die Angaben entsprechen dem Code-Stand von Version 4.1.0.
 
 # 365CMS Member Area

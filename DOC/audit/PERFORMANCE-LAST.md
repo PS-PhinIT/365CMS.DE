@@ -1,6 +1,6 @@
 # 365CMS – Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
 
-> Übersicht: [README.md](README.md) · Vorheriger Stand: [../checks/PERFORMANCE.md](../checks/PERFORMANCE.md)
+> Übersicht: [README.md](README.md)
 
 ## English (summary)
 

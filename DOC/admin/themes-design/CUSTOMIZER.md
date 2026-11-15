@@ -48,4 +48,4 @@ Ein Theme stellt seinen Customizer bereit, indem es `admin/customizer.php` mitli
 
 ### Verwandte Dokumente
 
-[EDITOR.md](EDITOR.md) · [FONTS.md](FONTS.md) · [DESIGN-SETTINGS.md](DESIGN-SETTINGS.md) · [../../theme/DESIGN-SYSTEM.md](../../theme/DESIGN-SYSTEM.md)
+[EDITOR.md](EDITOR.md) · [FONTS.md](FONTS.md) · [../../theme/DESIGN-SYSTEM.md](../../theme/DESIGN-SYSTEM.md)

@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Klarstellungen zu den Specs
 > **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Verbindlich | **Update:** 2026-11-10
-> **Gilt für:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-INTEGRATION.md](PLUGIN-INTEGRATION.md) · [ROADMAP-15-FEATURES.md](ROADMAP-15-FEATURES.md) · Fortschritt: [PROGRESS.md](PROGRESS.md)
+> **Gilt für:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-PARITY.md](PLUGIN-PARITY.md) · [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md)
 
 ## English (summary)
 
@@ -72,7 +72,7 @@ Downloads und Formulare können später eigene Provider anmelden, ohne dass der 
 
 ### 6. Arbeitsweise
 
-- Die Specs liegen vollständig unter `DOC/workflow/specs/`. Den Status je Punkt führt [PROGRESS.md](PROGRESS.md).
+- Die Specs liegen vollständig unter `DOC/workflow/specs/`. Den Stand der Umsetzung zeigt das Release 4.0.0 im Changelog.
 - Reihenfolge der Umsetzung:
   1. Admin-Menü fertigstellen
   2. Plugin-Integration

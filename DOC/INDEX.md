@@ -35,7 +35,7 @@ Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code is
 | Installation | [INSTALLATION.md](INSTALLATION.md) |
 | Root README | [../README.md](../README.md) |
 | Changelog | [../Changelog.md](../Changelog.md) |
-| Status / known gaps | [core/STATUS.md](core/STATUS.md), [checks/README.md](checks/README.md), [audit/README.md](audit/README.md) |
+| Status / known gaps | [core/STATUS.md](core/STATUS.md), [audit/README.md](audit/README.md) |
 
 ---
 
@@ -206,7 +206,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | Area / Bereich | Documents / Dokumente |
 |---|---|
 | Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md), [assets/ASSETS_NEW.md](assets/ASSETS_NEW.md), [assets/ASSETS_OwnAssets.md](assets/ASSETS_OwnAssets.md) |
-| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions, backups, status displays): [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md); code audit 2026-10-03: [checks/README.md](checks/README.md) ([security](checks/SECURITY.md), [performance](checks/PERFORMANCE.md), [functions](checks/FUNKTIONEN.md), [references](checks/VERWEISE.md)); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
+| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions, backups, status displays): [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md); release audit 4.1.0: [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
 | Workflows | [workflow/](workflow/) |
 
 ### Workflows
@@ -218,8 +218,6 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | [UPDATE-DEPLOYMENT-WORKFLOW.md](workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) | CMS update, SHA-256 verification, deployment |
 | [MARKETPLACE-WORKFLOW.md](workflow/MARKETPLACE-WORKFLOW.md) | Install plugin / theme from marketplace |
 | [API-INTEGRATION-WORKFLOW.md](workflow/API-INTEGRATION-WORKFLOW.md) | JSON endpoints, custom routes via `register_routes`, JWT note |
-| [NEWSLETTER-PLUGIN-WORKFLOW.md](workflow/NEWSLETTER-PLUGIN-WORKFLOW.md) | Double opt-in, campaigns, GDPR (integration roadmap, not shipped) |
-| [FORUM-PLUGIN-WORKFLOW.md](workflow/FORUM-PLUGIN-WORKFLOW.md) | Threads, moderation, full-text search (superseded by the Community module plan) |
 | [specs/community/](workflow/specs/community/README.md) | Community module (forum) – plan: features, architecture, data model, permissions & moderation, workflows, security & privacy, theme/UI, migration from cms-forum, roadmap, test plan / Community-Modul (Forum) – Planung |
 
 ---
@@ -328,7 +326,6 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 
 - [admin/themes-design/CUSTOMIZER.md](admin/themes-design/CUSTOMIZER.md) – Admin – Theme-Customizer
 - [admin/themes-design/DASHBOARD-WIDGETS.md](admin/themes-design/DASHBOARD-WIDGETS.md) – Admin – Dashboard-Widgets
-- [admin/themes-design/DESIGN-SETTINGS.md](admin/themes-design/DESIGN-SETTINGS.md) – Admin – Design-Einstellungen (Alt-Route)
 - [admin/themes-design/EDITOR.md](admin/themes-design/EDITOR.md) – Admin – Theme-Explorer (Dateieditor)
 - [admin/themes-design/FONTS.md](admin/themes-design/FONTS.md) – Admin – Schriftverwaltung
 - [admin/themes-design/MARKETPLACE.md](admin/themes-design/MARKETPLACE.md) – Admin – Theme-Verwaltung & Theme-Marktplatz
@@ -373,20 +370,13 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 - [audit/PERFORMANCE-LAST.md](audit/PERFORMANCE-LAST.md) – 365CMS – Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
 - [audit/PRUEFKATALOG.md](audit/PRUEFKATALOG.md) – 365CMS – Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
 - [audit/SICHERHEIT.md](audit/SICHERHEIT.md) – 365CMS – Gesamtaudit 2026-10-14 | Sicherheit
-- [audit/TODO-MEMBERDASHBOARD-V4.md](audit/TODO-MEMBERDASHBOARD-V4.md) – ToDo-Plan Memberdashboard, Newsletter-Widget und Login-Showcase
 
-**`checks/`**
-
-- [checks/FOLGEAUDIT-2026-10-07.md](checks/FOLGEAUDIT-2026-10-07.md) – Audit 2026-10-07
 
 **`workflow/specs/`**
 
 - [workflow/specs/ADMIN-MENU-PROFILE.md](workflow/specs/ADMIN-MENU-PROFILE.md) – Workflow – Spec: Admin-Sidebar-Menü mit Profilen
 - [workflow/specs/KLARSTELLUNGEN.md](workflow/specs/KLARSTELLUNGEN.md) – Workflow – Klarstellungen zu den Specs
-- [workflow/specs/PLUGIN-INTEGRATION.md](workflow/specs/PLUGIN-INTEGRATION.md) – Workflow – Spec: Plugin-Integration (cms-feed, cms-downloads, cms-contact)
 - [workflow/specs/PLUGIN-PARITY.md](workflow/specs/PLUGIN-PARITY.md) – 365CMS – Paritäts-Checkliste der in den Core integrierten Plugins
-- [workflow/specs/PROGRESS.md](workflow/specs/PROGRESS.md) – Workflow – Umsetzungsfortschritt Release 4.0.0
-- [workflow/specs/ROADMAP-15-FEATURES.md](workflow/specs/ROADMAP-15-FEATURES.md) – Workflow – Spec: Roadmap – 15 Funktionen in 4 Arbeitspaketen
 - [workflow/specs/ROADMAP-CONTENT-PLATFORM.md](workflow/specs/ROADMAP-CONTENT-PLATFORM.md) – 365CMS – Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
 - [workflow/specs/community/ARCHITECTURE.md](workflow/specs/community/ARCHITECTURE.md) – Community – Architektur
 - [workflow/specs/community/DATA-MODEL.md](workflow/specs/community/DATA-MODEL.md) – Community – Datenmodell

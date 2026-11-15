@@ -18,7 +18,7 @@ Die Prüfpunkte wurden aus folgenden öffentlichen Checklisten zusammengestellt 
 | SpotDev – „Website Audit Checklist“ – <https://www.spotdev.co.uk/> | Technik, SEO, Geschwindigkeit, Sicherheit, Inhalte |
 | Optimum Web – „Website Security Audit Checklist“ – <https://www.optimum-web.com/> | Server-Härtung, Updates, Backups, Zugriffskontrolle, Logging |
 | OpenSense Labs – „CMS Audit Checklist“ – <https://opensenselabs.com/> | CMS-spezifisch: Rollen, Plugins, Inhalte, Performance, Barrierefreiheit |
-| Vorgänger-Audits – [../checks/README.md](../checks/README.md), [../checks/FOLGEAUDIT-2026-10-07.md](../checks/FOLGEAUDIT-2026-10-07.md) | Nachprüfung bereits behobener Punkte, Nummernkreise |
+| Vorgänger-Audits vom 2026-10-03 bis 2026-10-07 | Nachprüfung bereits behobener Punkte, Nummernkreise |
 
 ### Prüfpunkte und Abdeckung
 

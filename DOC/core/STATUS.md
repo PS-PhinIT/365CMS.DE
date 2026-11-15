@@ -25,7 +25,7 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Version | Schwerpunkt |
 |---|---|
 | 3.4.13 | Offene Audit-Punkte und Laufzeittests: Rate-Limits bei abweichender MySQL-Zeitzone, Kontaktformular-POST, Sprachspalten `posts` bei Neuinstallation, Options-Cache `OptionStore`, Schema v23 (Index `posts(status, published_at)`), JWT-API opt-in, Doku-Sync-UI, WP-Asset-Funktionen, CSRF für Plugin-Member-Bereiche, Kontakt-Rate-Limit, Google Fonts standardmäßig aus, toter Code entfernt |
-| 3.4.12 | Audit 2026-10-03: Wartungsmodus, `/order`, `/health`, Config-Speichern, Upload-/Proxy-/Registrierungs-Härtung, Theme-Abfragen, Doku-Links – siehe [../checks/README.md](../checks/README.md) |
+| 3.4.12 | Audit 2026-10-03: Wartungsmodus, `/order`, `/health`, Config-Speichern, Upload-/Proxy-/Registrierungs-Härtung, Theme-Abfragen, Doku-Links |
 | 3.4.11 | PageSpeed: DOMPurify per `defer`, OPcache-Deploy-Prüfung gedrosselt |
 | 3.4.10 | Editor.js: Zitate/Media-Text im Purifier, klassenbasiertes CSS |
 | 3.4.09 | Dokumentation vollständig gegen 3.4-Code abgeglichen |
@@ -66,7 +66,7 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 
 ### Bekannte Lücken und Inkonsistenzen (Stand 2026-11-15)
 
-Nachgeprüft im Audit vom 2026-10-03 ([../checks/README.md](../checks/README.md)), ergänzt in den Folgeaudits vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)) und 2026-11-09 ([../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
+Nachgeprüft im Audit vom 2026-10-03, ergänzt in den Folgeaudits vom 2026-11-08 ([../audit/FOLGEAUDIT-2026-11-08.md](../audit/FOLGEAUDIT-2026-11-08.md)) und 2026-11-09 ([../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md)). Behobene Punkte bleiben zur Nachvollziehbarkeit stehen.
 
 | # | Befund | Auswirkung | Fundstelle | Status |
 |---|---|---|---|---|
@@ -124,4 +124,4 @@ Dokumentiert wird nur, was im ausgelieferten Code nachvollziehbar ist. Pfade, Kl
 
 ### Verwandte Dokumente
 
-[README.md](README.md) · [../README.md](../README.md) · [../checks/README.md](../checks/README.md) · [../../Changelog.md](../../Changelog.md)
+[README.md](README.md) · [../README.md](../README.md) · [../../Changelog.md](../../Changelog.md)

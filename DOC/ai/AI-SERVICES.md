@@ -1,7 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: KI-Dienste
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-09 (Abgleich mit 4.0.0: Secrets über `CryptoService`; zuvor 2026-10-02 Quellcode-Abgleich: Provider-Klassen, Quota-Tabelle, Editor-Einbindung)
 > **Kurzbeschreibung:** Complete user and technical documentation for the protected 365CMS AI Services, including administration, translation, content drafts, SEO metadata, provider policies, quotas, security, and integration assets.
 
 # 365CMS AI Services

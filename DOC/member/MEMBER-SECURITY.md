@@ -1,7 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Mitglieder-Sicherheit
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-14 (TODO-MEMBERDASHBOARD-V4: ein CSRF-Token je Aktion und Seitenaufruf, Passwortbestätigung für Löschantrag und Passkey-Entfernen, Eingabeprüfung der Profilfelder, Login-Weiterleitung über `CmsAuthPageService`)
 > **Kurzbeschreibung:** Sicherheitsreferenz für Authentifizierung, CSRF, Capabilities, privates Caching, benutzerbezogene Medien, sichere Ausgabe und die Trennung von Member- und Admin-Bereich. Sie entspricht der Implementierung von Version 4.1.0.
 
 # 365CMS Member Security

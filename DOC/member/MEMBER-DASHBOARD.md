@@ -1,7 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Mitglieder-Dashboard
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Historie:** Erstellt 2026-09-06; zuletzt inhaltlich abgeglichen: 2026-11-14 (Umsetzung TODO-MEMBERDASHBOARD-V4, Pakete 1 und 2: wirksame Layout-Einstellungen, NotificationService, Favoriten, Sprachdateien, Barrierefreiheit)
 > **Kurzbeschreibung:** Referenz für Dashboard-Runtime, Bereiche, Widgets, Reihenfolge, Plugin-Integration, Benachrichtigungen, Favoriten und Sprachtexte des Core-Mitgliederbereichs in Version 4.1.0.
 
 # 365CMS Member Dashboard

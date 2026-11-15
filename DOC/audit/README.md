@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Gesamtaudit 2026-10-14
 
-> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml` | Vorherige Audits: [../checks/README.md](../checks/README.md)
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml`
 
 > **Neuestes Audit:** [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) – Folgeaudit zu 3.5.6 (Sicherheit, Bibliotheken, Funktionen, Backups und Statusanzeigen), alle 44 Befunde in 4.0.0 behoben
 
@@ -39,7 +39,6 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md) | Folgeaudit vom 2026-11-09: Umsetzung OFFEN-20 bis OFFEN-26, Regressionsprüfung (SEC-48, FUN-55 bis FUN-62, BP-10) |
 | [FOLGEAUDIT-2026-11-12.md](FOLGEAUDIT-2026-11-12.md) | Prüfprotokoll der Code-, Sicherheits- und Architekturprüfung des Stands 4.0.0: Changelog (CL-001 bis CL-233), weitere Prüfbereiche je Pull Request |
 | [RELEASE-AUDIT-4.1.0-2026-11-15.md](RELEASE-AUDIT-4.1.0-2026-11-15.md) | Release- und Code-Abnahmeprüfung 4.1.0 (Linie 3.5.0 → 4.1.0, Schema v23 → v26), je Prüfbereich ein Pull Request: SEC-410 (Sicherheit), DB-410, FUN-410, PERF-410, DOC-410 |
-| [TODO-MEMBERDASHBOARD-V4.md](TODO-MEMBERDASHBOARD-V4.md) | ToDo-Plan zum Stand 4.0.0 vom 2026-11-14: Memberdashboard im Core (MD), Newsletter-Widget (NL), Oberfläche und Barrierefreiheit (UI), Theme `cms-phinit` (PH), Login-Showcase (LS), Tests und Doku (QA) |
 
 Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Offene Empfehlungen tragen `OFFEN-xx`.
 

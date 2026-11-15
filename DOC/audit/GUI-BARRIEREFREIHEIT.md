@@ -1,6 +1,6 @@
 # 365CMS – Gesamtaudit 2026-10-14 | GUI und Barrierefreiheit
 
-> Übersicht: [README.md](README.md) · Vorheriger Stand: A11Y-01 bis A11Y-04 in [../checks/FOLGEAUDIT-2026-10-07.md](../checks/FOLGEAUDIT-2026-10-07.md)
+> Übersicht: [README.md](README.md)
 
 ## English (summary)
 

@@ -131,7 +131,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Admin Guide & Menu Profiles** | [`DOC/admin/GUIDE.md`](DOC/admin/GUIDE.md) · [`DOC/admin/ADMIN-MENU.md`](DOC/admin/ADMIN-MENU.md) |
 | **Plugin & Theme Development** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operational Workflows** | [`DOC/workflow/`](DOC/workflow/) |
-| **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
+| **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) |
 | **Releases & Changelog** | [`RELEASE/README-4.1.0.md`](RELEASE/README-4.1.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community module (4.2.0, schema `v27`)](DOC/workflow/specs/community/README.md) · [CLI & alerting (4.3.0)](DOC/workflow/specs/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Community Guidelines** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
@@ -250,7 +250,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Admin-Leitfaden & Menü-Profile** | [`DOC/admin/GUIDE.md`](DOC/admin/GUIDE.md) · [`DOC/admin/ADMIN-MENU.md`](DOC/admin/ADMIN-MENU.md) |
 | **Plugin- & Theme-Entwicklung** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operative Workflows** | [`DOC/workflow/`](DOC/workflow/) |
-| **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) · [`DOC/checks/README.md`](DOC/checks/README.md) |
+| **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) |
 | **Release-Pakete & Changelog** | [`RELEASE/README-4.1.0.md`](RELEASE/README-4.1.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community-Modul (4.2.0, Schema `v27`)](DOC/workflow/specs/community/README.md) · [CLI & Alerting (4.3.0)](DOC/workflow/specs/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Verhaltenskodex** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |

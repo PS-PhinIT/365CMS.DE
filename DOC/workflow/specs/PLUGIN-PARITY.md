@@ -1,6 +1,6 @@
 # 365CMS – Paritäts-Checkliste der in den Core integrierten Plugins
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Gehört zu:** [PLUGIN-INTEGRATION.md](PLUGIN-INTEGRATION.md), PROGRESS-Zeile B0
+> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Gehört zu:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)
 

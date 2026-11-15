@@ -1,6 +1,6 @@
 # 365CMS – Projektdokumentation | Abschnitt: Workflow – Spec: Community-Modul (Forum)
 > **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** Planung · noch kein Code · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Update:** 2026-11-15
-> **Ersetzt:** [FORUM-PLUGIN-WORKFLOW.md](../../FORUM-PLUGIN-WORKFLOW.md) (Integrationsfahrplan aus 3.5.0) · **Muster:** [PLUGIN-INTEGRATION.md](../PLUGIN-INTEGRATION.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
+> **Ersetzt:** den früheren Integrationsfahrplan für das Plugin `cms-forum` · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
 
