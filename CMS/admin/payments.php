@@ -21,7 +21,7 @@ use CMS\Services\Payments\PaymentSettings;
 function cms_admin_payments_can_access(): bool
 {
     // Release-Prüfung 4.1.0 (FUN-410-59): wie Bestellungen/Pakete nur bei aktivem Kernmodul (Menü blendet die Seite sonst aus).
-    return Auth::instance()->isAdmin() && Auth::instance()->hasCapability('payments.manage')
+    return Auth::instance()->hasCapability('payments.manage') && \CMS\Services\AdminMenu\DelegatedAdminAccess::canAccess('payments', 'payments.manage')
         && \CMS\Services\CoreModuleService::getInstance()->isAdminPageEnabled('payments');
 }
 

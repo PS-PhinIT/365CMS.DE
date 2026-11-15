@@ -80,7 +80,9 @@ final class AdminRouter
 
     public function renderAdminPage(string $page): void
     {
-        if (!Auth::instance()->isAdmin()) {
+        // Release-Prüfung 4.1.0 (SEC-410-26): delegierbare Seiten (Zahlungen, Rechnungen, Block-Vorlagen, Webhooks)
+        // auch für Rollen mit der jeweiligen Capability; alle anderen Seiten bleiben Admins vorbehalten.
+        if (!Auth::instance()->isAdmin() && !\CMS\Services\AdminMenu\DelegatedAdminAccess::routerAllows($page)) {
             $this->redirectUnauthorized();
             return;
         }

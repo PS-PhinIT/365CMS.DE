@@ -765,6 +765,8 @@ class ThemeManager
             $this->themePath = $resolvedThemeDirectory . '/';
             $this->loadedThemeSlug = null;
             $this->resetAvailableThemesCache();
+            // Release-Prüfung 4.1.0 (FUN-410-19): Theme-Wechsel indiziert die Theme-Medien neu.
+            Hooks::doAction('cms_theme_customizer_saved', $theme, 'switch', '');
 
             return true;
         } catch (\Exception $e) {

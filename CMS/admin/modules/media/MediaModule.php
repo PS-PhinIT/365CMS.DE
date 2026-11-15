@@ -1044,6 +1044,11 @@ class MediaModule
         $parentPath = $this->resolveParentPathFromActionPath($normalizedPath);
         $targetPath = ltrim(($parentPath !== '' ? $parentPath . '/' : '') . $sanitizedName, '/');
 
+        $inUse = $this->mediaUsageBlocker($normalizedPath);
+        if ($inUse !== null) {
+            return ['success' => false, 'error' => $inUse];
+        }
+
         $result = $this->service->renameItem($normalizedPath, $sanitizedName);
         if ($result instanceof WP_Error) {
             return $this->buildGenericFailureFromWpError($result, [
@@ -1117,6 +1122,11 @@ class MediaModule
                 'message' => 'Element befindet sich bereits am gewünschten Ziel.',
                 'details' => ['Pfad: ' . $normalizedPath],
             ];
+        }
+
+        $inUse = $this->mediaUsageBlocker($normalizedPath);
+        if ($inUse !== null) {
+            return ['success' => false, 'error' => $inUse];
         }
 
         $result = $this->service->moveFile($normalizedPath, $targetPath);
@@ -2243,6 +2253,11 @@ class MediaModule
                 'status' => 'skipped',
                 'detail' => $selectedPath . ' ist bereits am gewünschten Ziel.',
             ];
+        }
+
+        $inUse = $this->mediaUsageBlocker($selectedPath);
+        if ($inUse !== null) {
+            return ['status' => 'skipped', 'detail' => $selectedPath . ': ' . $inUse];
         }
 
         $result = $this->service->moveFile($selectedPath, $targetPath);
@@ -3673,4 +3688,34 @@ class MediaModule
             $failedCount > 0 ? 'warning' : 'info'
         );
     }
+
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-17): Verwendete Dateien (oder Ordner mit verwendeten Dateien) werden nicht
+     * umbenannt oder verschoben. Verweise in Inhalten würden sonst ins Leere zeigen (404); fehlende Dateien unter
+     * uploads/ beantwortet der Webserver direkt, eine Weiterleitung des CMS greift dort nicht.
+     */
+    private function mediaUsageBlocker(string $path): ?string
+    {
+        $clean = trim(str_replace('\\', '/', $path), '/');
+        if ($clean === '') {
+            return null;
+        }
+        try {
+            $db = \CMS\Database::instance();
+            if (!$db->tableExists('media_usage')) {
+                return null;
+            }
+            $count = (int) $db->get_var(
+                "SELECT COUNT(DISTINCT CONCAT(content_type, ':', content_id)) FROM {$db->getPrefix()}media_usage WHERE media_path = ? OR media_path LIKE ?",
+                [$clean, addcslashes($clean, '%_\\') . '/%']
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $count > 0
+            ? sprintf('Wird in %d Inhalt(en) verwendet und kann deshalb nicht umbenannt oder verschoben werden (Verweise würden ins Leere zeigen). Unter „Verwendung“ sind die Inhalte aufgeführt.', $count)
+            : null;
+    }
+
 }

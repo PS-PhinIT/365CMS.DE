@@ -869,9 +869,12 @@ class CMS_Importer_Admin
             $result['imported'],
             $result['skipped'],
             $result['errors'],
-            $result['images_downloaded'] > 0
+            ($result['images_downloaded'] > 0
                 ? ', ' . $result['images_downloaded'] . ' Bilder heruntergeladen'
-                : ''
+                : '')
+            . (($result['images_deferred'] ?? 0) > 0
+                ? ', ' . (int) $result['images_deferred'] . ' Bilder bleiben extern verlinkt (Zeitbudget oder nicht erreichbarer Host)'
+                : '')
         );
 
         $details = [];

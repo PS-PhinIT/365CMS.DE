@@ -177,6 +177,11 @@ class CMS_Importer_Service
     private int    $skipped           = 0;
     private int    $errors            = 0;
     private int    $images_downloaded = 0;
+    /** Release-Prüfung 4.1.0 (PERF-410-47): Bilder, die wegen Zeitbudget oder gestörtem Host entfernt blieben. */
+    private int    $images_deferred = 0;
+    private float  $image_budget_started = 0.0;
+    /** @var array<string, int> Fehlschläge je Host */
+    private array  $image_host_failures = [];
     private int    $comments_total    = 0;
     private int    $comments_imported = 0;
     private int    $comments_skipped  = 0;
@@ -293,6 +298,7 @@ class CMS_Importer_Service
             'skip_reasons'      => $this->skip_reasons,
             'errors'            => $this->errors,
             'images_downloaded' => $this->images_downloaded,
+            'images_deferred'   => $this->images_deferred,
             'comments_total'    => $this->comments_total,
             'comments_imported' => $this->comments_imported,
             'comments_skipped'  => $this->comments_skipped,
@@ -1135,8 +1141,17 @@ class CMS_Importer_Service
                 continue;
             }
 
+            // Release-Prüfung 4.1.0 (PERF-410-47): Downloads laufen im Import-Request. Ein Zeitbudget je Lauf
+            // (Filter cms_importer_image_budget_seconds, Standard 120 s) und das Überspringen gestörter Hosts
+            // halten ihn begrenzt; übersprungene Bilder bleiben als entfernte Adresse im Inhalt.
+            $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+            if ($this->image_budget_exhausted() || ($this->image_host_failures[$host] ?? 0) >= 2) {
+                $this->images_deferred++;
+                continue;
+            }
             $content = $this->fetch_remote_file($url);
             if ($content === null) {
+                $this->image_host_failures[$host] = ($this->image_host_failures[$host] ?? 0) + 1;
                 continue;
             }
 
@@ -1158,6 +1173,22 @@ class CMS_Importer_Service
         ];
     }
 
+    private function image_budget_exhausted(): bool
+    {
+        if ($this->image_budget_started <= 0.0) {
+            $this->image_budget_started = microtime(true);
+            if (function_exists('set_time_limit')) {
+                @set_time_limit(max(180, (int) ini_get('max_execution_time')));
+            }
+        }
+        $budget = 120.0;
+        if (class_exists('CMS\\Hooks')) {
+            $budget = (float) \CMS\Hooks::applyFilters('cms_importer_image_budget_seconds', $budget);
+        }
+
+        return $budget > 0 && microtime(true) - $this->image_budget_started >= $budget;
+    }
+
     /**
      * Lädt eine Remote-Bild-URL über den zentralen Core-HTTP-Client herunter.
      * Erzwingt TLS-Prüfung, SSRF-Schutz, Größenlimit und zulässige Bild-Content-Types.
@@ -1170,8 +1201,8 @@ class CMS_Importer_Service
 
         $response = \CMS\Http\Client::getInstance()->get($url, [
             'userAgent' => 'CMS-Importer/' . CMS_IMPORTER_VERSION,
-            'timeout' => 20,
-            'connectTimeout' => 5,
+            'timeout' => 10,
+            'connectTimeout' => 4,
             'maxBytes' => 10 * 1024 * 1024,
             'allowedContentTypes' => ['image/'],
         ]);
@@ -1297,6 +1328,9 @@ class CMS_Importer_Service
         $this->skipped           = 0;
         $this->errors            = 0;
         $this->images_downloaded = 0;
+        $this->images_deferred   = 0;
+        $this->image_budget_started = 0.0;
+        $this->image_host_failures = [];
         $this->comments_total    = 0;
         $this->comments_imported = 0;
         $this->comments_skipped  = 0;

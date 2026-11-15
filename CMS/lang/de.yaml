@@ -2269,6 +2269,7 @@ default:
   "media_tools.avif.done": "AVIF-Fassungen erzeugt."
   "media_tools.avif.cancel_title": "AVIF nachgenerieren abbrechen?"
   "media_tools.avif.cancel_message": "Der Lauf wird abgebrochen. Bereits erzeugte AVIF-Fassungen bleiben erhalten."
+  "media_tools.avif.aborted": "beim letzten Lauf abgebrochen (Speicher- oder Zeitlimit), übersprungen"
   "media_tools.avif.summary": "Bilder mit neuer AVIF-Fassung: %d · übersprungen: %d · fehlgeschlagen: %d"
   "media_tools.usage.title": "Verwendungsindex"
   "media_tools.usage.intro": "Hält fest, wo jede Datei verwendet wird: Beiträge, Seiten, Hub-Sites, Downloads, Formulare und Theme-Einstellungen. Die Mediathek (Spalte, Filter „ungenutzt“) und die Löschwarnung im Papierkorb nutzen den Index, sobald er einmal vollständig aufgebaut ist. Danach hält jedes Speichern ihn aktuell."

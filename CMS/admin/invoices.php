@@ -22,7 +22,7 @@ use CMS\Services\Payments\InvoiceService;
 function cms_admin_invoices_can_access(): bool
 {
     // Release-Prüfung 4.1.0 (FUN-410-59): wie Bestellungen/Pakete nur bei aktivem Kernmodul (Menü blendet die Seite sonst aus).
-    return Auth::instance()->isAdmin() && Auth::instance()->hasCapability('invoices.view')
+    return Auth::instance()->hasCapability('invoices.view') && \CMS\Services\AdminMenu\DelegatedAdminAccess::canAccess('invoices', 'invoices.view')
         && \CMS\Services\CoreModuleService::getInstance()->isAdminPageEnabled('invoices');
 }
 
