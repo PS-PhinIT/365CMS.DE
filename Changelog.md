@@ -65,7 +65,7 @@ Version 4.1.0 setzt die Roadmap aus `DOC/workflow/specs/v4.1/` um (Nachweise: `P
 | **4.1.0** | 🛡️ security | Backups / Offsite nur verschlüsselt | Offsite werden nur Backups kopiert, deren Manifest eine Verschlüsselung nennt und deren Dateien alle mit `CMSENC2` beginnen. Der geheime Schlüssel wird verschlüsselt gespeichert, nie angezeigt und erscheint nicht in Fehlermeldungen; Anfragen laufen über `Http\Client` (SSRF-Schutz), ein privater Host nur nach ausdrücklicher Freigabe genau dieses Hosts; S3-Antworten werden ohne DOCTYPE/Entitäten gelesen; Präfix und Backup-Namen werden streng geprüft. |
 | **4.1.0** | 🛡️ security | Webhooks / Ziele und Geheimnisse | Nur HTTPS-Ziele ohne interne Hosts, private IPs oder Zugangsdaten; Zustellung über `Http\Client` (SSRF-Schutz, DNS-Pinning), Timeout 10 s, Antwort höchstens 64 KB. Geheimnis verschlüsselt (Bindung je Empfänger), nie in Listen, Formularen oder Protokoll. Nutzdaten mit IDs statt personenbezogener Daten. 410 oder 20 Fehlschläge in Folge deaktivieren den Empfänger. |
 
-#### 🛡️ Release-Prüfung 4.1.0 – Sicherheit (PR #1)
+#### 🛡️ Release-Prüfung 4.1.0 – Sicherheit (PR #1, #158)
 
 Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 
