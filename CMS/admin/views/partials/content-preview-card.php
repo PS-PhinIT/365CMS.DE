@@ -44,7 +44,7 @@ $socialImageVisible = !empty($previewCard['socialImageVisible']);
 
         <div>
             <div class="text-uppercase text-secondary small mb-2">Google Mobile</div>
-            <div class="border rounded p-3 bg-light" style="max-width: 26rem;">
+            <div class="border rounded p-3 bg-light cms-seo-preview-card__serp">
                 <div class="small text-success mb-1 cms-seo-preview-card__text" data-seo-preview-bind="serp-url"><?php echo htmlspecialchars((string)($previewCard['serpUrl'] ?? '')); ?></div>
                 <div class="fw-semibold text-primary mb-1 cms-seo-preview-card__text" data-seo-preview-bind="serp-title"><?php echo htmlspecialchars((string)($previewCard['serpTitle'] ?? '')); ?></div>
                 <div class="small text-secondary cms-seo-preview-card__text" data-seo-preview-bind="serp-description"><?php echo htmlspecialchars((string)($previewCard['serpDescription'] ?? '')); ?></div>
@@ -58,7 +58,7 @@ $socialImageVisible = !empty($previewCard['socialImageVisible']);
                      data-seo-preview-bind="social-image"
                      src="<?php echo htmlspecialchars((string)($previewCard['socialImage'] ?? '')); ?>"
                      alt=""
-                     style="display:<?php echo $socialImageVisible ? 'block' : 'none'; ?>; width:100%; height:160px; object-fit:cover;">
+                     class="cms-seo-preview-card__social-image"<?php echo $socialImageVisible ? '' : ' hidden'; ?>>
                 <div class="p-3">
                     <div class="text-uppercase text-secondary small mb-1">facebook / x</div>
                     <div id="<?php echo htmlspecialchars((string)($previewCard['socialTitleId'] ?? '')); ?>" data-seo-preview-bind="social-title" class="fw-semibold mb-1 cms-seo-preview-card__text"><?php echo htmlspecialchars((string)($previewCard['socialTitle'] ?? '')); ?></div>

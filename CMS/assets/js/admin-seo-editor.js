@@ -181,6 +181,7 @@
             }
 
             element.src = resolved;
+            element.hidden = !resolved;
             element.style.display = resolved ? 'block' : 'none';
         });
     }

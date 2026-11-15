@@ -282,6 +282,10 @@ final class EditorJsHtmlSanitizer
                 $element->setAttribute('class', 'tg-spoiler');
             }
 
+            // Bewusst weiter als style-Attribut: Text- und Markerfarben wählen Redakteure frei (Farbwähler des
+            // textColor-Tools), dafür gibt es keine feste Klassenliste. Die Produktiv-CSP blockiert das Attribut
+            // (style-src-attr); vollständige HTML-Antworten wandelt CMS\Http\InlineStyleRewriter in Nonce-Klassen um.
+            // Nur color/background-color mit geprüften Werten (sanitizeColorStyle) bleiben erhalten.
             $style = self::sanitizeColorStyle((string) ($originalAttributes['style'] ?? ''));
             if ($style !== '') {
                 $element->setAttribute('style', $style);

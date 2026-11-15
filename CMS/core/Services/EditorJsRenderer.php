@@ -196,7 +196,6 @@ final class EditorJsRenderer
 
         $attributes = [];
         $classes = [];
-        $styles = [];
         $anchor = $this->sanitizeAnchorTune($tunes['anchor'] ?? null);
         $textVariant = $this->sanitizeTextVariantTune($tunes['textVariant'] ?? null);
         $indentLevel = $this->sanitizeIndentLevel($tunes['indentTune'] ?? null);
@@ -216,10 +215,10 @@ final class EditorJsRenderer
             $classes[] = 'editorjs-indent';
             $classes[] = 'editorjs-indent--' . $indentLevel;
             $attributes[] = 'data-editorjs-indent="' . $indentLevel . '"';
-            $styles[] = 'margin-left:' . ($indentLevel * 1.5) . 'rem';
+            // Einzug über .editorjs-indent--N in editorjs-content.css (CSP: keine style-Attribute).
         }
 
-        if ($attributes === [] && $classes === [] && $styles === []) {
+        if ($attributes === [] && $classes === []) {
             return $html;
         }
 
@@ -233,18 +232,6 @@ final class EditorJsRenderer
                 $html = (string) preg_replace('/^(<[^>]+\sclass=")([^"]*)(")/i', '$1$2 ' . $classValue . '$3', $html, 1);
             } else {
                 $html = (string) preg_replace('/^<([a-z][a-z0-9:-]*)(\s[^>]*)?>/i', '<$1$2 class="' . $classValue . '">', $html, 1);
-            }
-        }
-
-        if ($styles !== []) {
-            $styleValue = htmlspecialchars(implode(';', $styles), ENT_QUOTES, 'UTF-8');
-            if (preg_match('/^<[^>]+\sstyle="[^"]*"/i', $html) === 1) {
-                $html = (string) preg_replace_callback('/^(<[^>]+\sstyle=")([^"]*)(")/i', static function (array $matches) use ($styleValue): string {
-                    $existingStyle = rtrim(trim($matches[2]), ';');
-                    return $matches[1] . ($existingStyle !== '' ? $existingStyle . ';' : '') . $styleValue . $matches[3];
-                }, $html, 1);
-            } else {
-                $html = (string) preg_replace('/^<([a-z][a-z0-9:-]*)(\s[^>]*)?>/i', '<$1$2 style="' . $styleValue . '">', $html, 1);
             }
         }
 
@@ -365,7 +352,6 @@ final class EditorJsRenderer
         $alignment = (string)($data['alignment'] ?? 'left');
         $spacing = (string)($data['spacing'] ?? 'normal');
         $classes = ['editorjs-block', $baseClass];
-        $styles = [];
 
         if (!in_array($alignment, ['left', 'center', 'right', 'justify'], true)) {
             $alignment = 'left';
@@ -376,20 +362,9 @@ final class EditorJsRenderer
 
         $classes[] = $baseClass . '--align-' . $alignment;
         $classes[] = $baseClass . '--spacing-' . $spacing;
-        $styles[] = 'text-align:' . $alignment;
-        $styles[] = '--cms-editorjs-space-before:0rem';
-        $styles[] = '--cms-editorjs-space-after:' . match ($spacing) {
-            'compact' => '0.25rem',
-            'relaxed' => '1rem',
-            'loose' => '1.6rem',
-            default => '0.65rem',
-        };
-        $styles[] = 'margin-top:0';
-        $styles[] = 'margin-bottom:var(--cms-editorjs-space-after)';
-        $styles[] = 'margin-block-start:0';
-        $styles[] = 'margin-block-end:var(--cms-editorjs-space-after)';
 
-        return ' class="' . htmlspecialchars(implode(' ', $classes), ENT_QUOTES, 'UTF-8') . '" data-cms-editorjs-spacing="' . htmlspecialchars($spacing, ENT_QUOTES, 'UTF-8') . '" data-cms-editorjs-align="' . htmlspecialchars($alignment, ENT_QUOTES, 'UTF-8') . '" style="' . htmlspecialchars(implode(';', $styles), ENT_QUOTES, 'UTF-8') . '"';
+        // Ausrichtung und Abstand kommen aus den Modifier-Klassen in editorjs-content.css (CSP: keine style-Attribute).
+        return ' class="' . htmlspecialchars(implode(' ', $classes), ENT_QUOTES, 'UTF-8') . '" data-cms-editorjs-spacing="' . htmlspecialchars($spacing, ENT_QUOTES, 'UTF-8') . '" data-cms-editorjs-align="' . htmlspecialchars($alignment, ENT_QUOTES, 'UTF-8') . '"';
     }
 
     /** @param array<string,mixed> $data */
@@ -644,8 +619,6 @@ final class EditorJsRenderer
         $borderStyle = (string) ($data['borderStyle'] ?? (!empty($data['withBorder']) ? 'thin' : 'none'));
         $imageFit = $this->normalizeImageFit($data['imageFit'] ?? $data['objectFit'] ?? $data['fit'] ?? 'contain', 'contain');
         $maxHeight = $this->normalizeImageMaxHeight($data['maxHeight'] ?? $data['imageMaxHeight'] ?? $data['max_height'] ?? 0);
-        $figureStyles = [];
-        $imageStyles = ['display:block', 'height:auto!important', 'box-sizing:border-box'];
 
         if (!in_array($alignment, ['left', 'center', 'right'], true)) {
             $alignment = 'center';
@@ -657,11 +630,12 @@ final class EditorJsRenderer
             $borderStyle = !empty($data['withBorder']) ? 'thin' : 'none';
         }
 
+        // Darstellung ausschließlich über Klassen und data-Attribute (editorjs-content.css):
+        // Die Produktiv-CSP blockiert style-Attribute (style-src-attr).
         $classes[] = 'editorjs-image--align-' . $alignment;
         $classes[] = 'editorjs-image--' . $size;
         $classes[] = 'editorjs-image--fit-' . $imageFit;
         $classes[] = 'editorjs-image--max-height-' . $maxHeight;
-        $figureStyles[] = '--cms-editorjs-image-fit:' . $imageFit;
 
         if ($borderStyle !== 'none') {
             $classes[] = 'editorjs-image--border';
@@ -669,61 +643,17 @@ final class EditorJsRenderer
         }
         if (!empty($data['withBackground'])) {
             $classes[] = 'editorjs-image--background';
-            $figureStyles[] = 'padding:1rem';
-            $figureStyles[] = 'background:#f8fafc';
-            $figureStyles[] = 'border-radius:16px';
         }
         if ($size === 'full' || !empty($data['stretched'])) {
             $classes[] = 'editorjs-image--stretched';
         }
         if (array_key_exists('rounded', $data) ? !empty($data['rounded']) : false) {
             $classes[] = 'editorjs-image--rounded';
-            $imageStyles[] = 'border-radius:12px';
         }
         if (!empty($data['shadow'])) {
             $classes[] = 'editorjs-image--shadow';
-            $imageStyles[] = 'box-shadow:0 18px 40px rgba(15,23,42,.16)';
         }
 
-        if ($size === 'full') {
-            $imageStyles[] = 'width:100%!important';
-            $imageStyles[] = 'max-width:100%!important';
-        } elseif ($size === 'wide') {
-            $imageStyles[] = 'width:min(100%,var(--cms-editorjs-image-wide-width,1000px))!important';
-            $imageStyles[] = 'max-width:100%!important';
-        } else {
-            $imageStyles[] = 'width:var(--cms-editorjs-image-normal-width,auto)!important';
-            $imageStyles[] = 'max-width:100%!important';
-        }
-        $imageStyles[] = 'object-fit:' . $imageFit . '!important';
-        if ($maxHeight > 0) {
-            $imageStyles[] = 'max-height:' . $maxHeight . 'px!important';
-            if (in_array($imageFit, ['cover', 'fill'], true)) {
-                $imageStyles[] = 'height:' . $maxHeight . 'px!important';
-            }
-        }
-
-        if ($alignment === 'left') {
-            $figureStyles[] = 'text-align:left';
-            $imageStyles[] = 'margin-left:0';
-            $imageStyles[] = 'margin-right:auto';
-        } elseif ($alignment === 'right') {
-            $figureStyles[] = 'text-align:right';
-            $imageStyles[] = 'margin-left:auto';
-            $imageStyles[] = 'margin-right:0';
-        } else {
-            $figureStyles[] = 'text-align:center';
-            $imageStyles[] = 'margin-left:auto';
-            $imageStyles[] = 'margin-right:auto';
-        }
-
-        $borderWidths = ['thin' => '1px', 'medium' => '2px', 'thick' => '4px'];
-        if (isset($borderWidths[$borderStyle])) {
-            $imageStyles[] = 'border:' . $borderWidths[$borderStyle] . ' solid #cbd5e1!important';
-        }
-
-        $styleAttr = $figureStyles !== [] ? ' style="' . htmlspecialchars(implode(';', $figureStyles), ENT_QUOTES, 'UTF-8') . '"' : '';
-        $imageStyleAttr = ' style="' . htmlspecialchars(implode(';', $imageStyles), ENT_QUOTES, 'UTF-8') . '"';
         $dataAttributes = ' data-align="' . htmlspecialchars($alignment, ENT_QUOTES, 'UTF-8') . '"'
             . ' data-size="' . htmlspecialchars($size, ENT_QUOTES, 'UTF-8') . '"'
             . ' data-border="' . htmlspecialchars($borderStyle, ENT_QUOTES, 'UTF-8') . '"'
@@ -736,8 +666,8 @@ final class EditorJsRenderer
         $isGeneratedCaption = $caption !== '' && $this->isGeneratedFilenameCaption($caption, $imageUrl);
         $altText = $isGeneratedCaption ? '' : $caption;
 
-        $html = '<figure class="' . implode(' ', $classes) . '"' . $dataAttributes . $styleAttr . '>';
-        $html .= $this->wrapPicture($imageUrl, '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $imageStyleAttr . $this->getLazyLoadingAttribute() . '>');
+        $html = '<figure class="' . implode(' ', $classes) . '"' . $dataAttributes . '>';
+        $html .= $this->wrapPicture($imageUrl, '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $this->getLazyLoadingAttribute() . '>');
         $html .= $this->renderImageFigcaption(
             !$isGeneratedCaption ? $caption : '',
             $imageUrl,
@@ -838,8 +768,8 @@ final class EditorJsRenderer
             . ' data-style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '"';
 
         if ($style === 'line') {
-            $attributes .= ' data-line-width="' . $lineWidth . '" data-line-thickness="' . $lineThickness . '"'
-                . ' style="' . htmlspecialchars('--cms-editorjs-delimiter-width:' . $lineWidth . '%;--cms-editorjs-delimiter-thickness:' . $lineThickness . 'px', ENT_QUOTES, 'UTF-8') . '"';
+            // Breite/Stärke über .editorjs-delimiter--width-N / --thickness-N (Presets, editorjs-content.css).
+            $attributes .= ' data-line-width="' . $lineWidth . '" data-line-thickness="' . $lineThickness . '"';
             return '<div' . $attributes . '><hr aria-hidden="true"></div>';
         }
 
@@ -862,10 +792,11 @@ final class EditorJsRenderer
         if ($embedUrl !== '') {
             $width = max(200, min(1920, (int)($data['width'] ?? 640)));
             $height = max(120, min(1080, (int)($data['height'] ?? 360)));
-            $ratio = round(($height / max(1, $width)) * 100, 4);
-
+            // Seitenverhältnis ohne style-Attribut (CSP style-src-attr): Ein unsichtbares <canvas width height>
+            // hat genau dieses Verhältnis als natürliche Größe und spannt den Rahmen auf (editorjs-content.css).
             return '<figure class="editorjs-block editorjs-embed">'
-                . '<div class="editorjs-embed__frame" style="padding-top:' . $ratio . '%;">'
+                . '<div class="editorjs-embed__frame editorjs-embed__frame--sized" data-width="' . $width . '" data-height="' . $height . '">'
+                . '<canvas class="editorjs-embed__sizer" width="' . $width . '" height="' . $height . '" aria-hidden="true"></canvas>'
                 . '<iframe src="' . htmlspecialchars($embedUrl, ENT_QUOTES, 'UTF-8') . '" title="' . htmlspecialchars(strip_tags($label), ENT_QUOTES, 'UTF-8') . '" loading="lazy" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="strict-origin-when-cross-origin"></iframe>'
                 . '</div>'
                 . ($caption !== '' ? '<figcaption>' . $caption . '</figcaption>' : '')
@@ -889,9 +820,17 @@ final class EditorJsRenderer
             $height = max(0, min(200, $height));
         }
 
-        $style = 'display:block;clear:both;width:100%;height:' . $height . 'px!important;min-height:' . $height . 'px!important;margin:0!important;padding:0!important;line-height:0;font-size:0;overflow:hidden;box-sizing:border-box';
+        // Höhe über [data-height="N"] (Presets) bzw. Ziffernklassen für freie Werte 0–200 (editorjs-content.css);
+        // die Produktiv-CSP blockiert style-Attribute (style-src-attr).
+        $classes = ['editorjs-block', 'editorjs-spacer'];
+        if (!in_array($height, $allowedHeights, true)) {
+            $classes[] = 'editorjs-spacer--custom';
+            $classes[] = 'editorjs-spacer--h100-' . intdiv($height, 100);
+            $classes[] = 'editorjs-spacer--h10-' . intdiv($height % 100, 10);
+            $classes[] = 'editorjs-spacer--h1-' . ($height % 10);
+        }
 
-        return '<div class="editorjs-block editorjs-spacer" aria-hidden="true" role="presentation" data-height="' . $height . '" style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '"><span class="editorjs-spacer__marker" aria-hidden="true">&#8203;</span></div>';
+        return '<div class="' . implode(' ', $classes) . '" aria-hidden="true" role="presentation" data-height="' . $height . '"><span class="editorjs-spacer__marker" aria-hidden="true">&#8203;</span></div>';
     }
 
     /** @param array<string,mixed> $data */
@@ -938,15 +877,6 @@ final class EditorJsRenderer
             'bottom', 'end', 'flex-end' => 'bottom',
             'top', 'start', 'flex-start' => 'top',
             default => 'top',
-        };
-    }
-
-    private function mediaTextAlignItems(string $verticalAlignment): string
-    {
-        return match ($verticalAlignment) {
-            'center' => 'center',
-            'bottom' => 'flex-end',
-            default => 'flex-start',
         };
     }
 
@@ -1108,23 +1038,18 @@ final class EditorJsRenderer
         if ($heading !== '') {
             $classes[] = 'editorjs-media-text--has-heading';
         }
-        $alignItems = $this->mediaTextAlignItems($verticalAlignment);
-        $style = '--cms-editorjs-media-text-image-width:' . $imageWidth . '%;--cms-editorjs-media-text-image-fit:' . $imageFit . ';--cms-editorjs-media-text-align-items:' . $alignItems . ';--cms-editorjs-media-text-spacing-top:' . $spacingTop . 'px;--cms-editorjs-media-text-spacing-bottom:' . $spacingBottom . 'px;--cms-editorjs-space-before:' . $spacingTop . 'px;--cms-editorjs-space-after:' . $spacingBottom . 'px;display:flex;flex-wrap:wrap;align-items:' . $alignItems . ';gap:24px;margin:' . $spacingTop . 'px 0 ' . $spacingBottom . 'px;padding:' . ($showBorder ? '16px' : '0') . ';padding-top:' . ($showBorder && $heading !== '' ? '0' : ($showBorder ? '16px' : '0')) . ';border:' . ($showBorder ? '1px solid rgba(100,116,139,.32)' : '0 solid transparent') . ';border-radius:2px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;';
-        $mediaStyle = 'margin:0;flex:0 0 var(--cms-editorjs-media-text-image-width);width:var(--cms-editorjs-media-text-image-width);min-width:0;max-width:var(--cms-editorjs-media-text-image-width);box-sizing:border-box;';
-        $contentStyle = 'flex:1 1 0;min-width:0;box-sizing:border-box;';
-        $headingStyle = 'flex:0 0 ' . ($showBorder ? 'calc(100% + 32px)' : '100%') . ';order:-2;margin:' . ($showBorder ? '0 -16px 8px' : '0 0 8px') . ';padding:' . ($showBorder ? '9px 16px' : '0') . ';border-bottom:' . ($showBorder ? '1px solid rgba(100,116,139,.22)' : '0') . ';border-radius:' . ($showBorder ? '2px 2px 0 0' : '0') . ';background:' . ($showBorder ? 'var(--bg-secondary,#f8fafc)' : 'transparent') . ';color:var(--text-primary,#0f172a);font-size:var(--fs-h4,1.125rem);font-weight:700;line-height:1.3;box-sizing:border-box;';
-
-        $html = '<section class="' . htmlspecialchars(implode(' ', $classes), ENT_QUOTES, 'UTF-8') . '" data-image-position="' . htmlspecialchars($imagePosition, ENT_QUOTES, 'UTF-8') . '" data-image-width="' . htmlspecialchars($imageWidth, ENT_QUOTES, 'UTF-8') . '" data-image-fit="' . htmlspecialchars($imageFit, ENT_QUOTES, 'UTF-8') . '" data-vertical-alignment="' . htmlspecialchars($verticalAlignment, ENT_QUOTES, 'UTF-8') . '" data-spacing-top="' . $spacingTop . '" data-spacing-bottom="' . $spacingBottom . '" style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '">';
+        // Layout über die Modifier-Klassen in editorjs-content.css (CSP: keine style-Attribute).
+        $html = '<section class="' . htmlspecialchars(implode(' ', $classes), ENT_QUOTES, 'UTF-8') . '" data-image-position="' . htmlspecialchars($imagePosition, ENT_QUOTES, 'UTF-8') . '" data-image-width="' . htmlspecialchars($imageWidth, ENT_QUOTES, 'UTF-8') . '" data-image-fit="' . htmlspecialchars($imageFit, ENT_QUOTES, 'UTF-8') . '" data-vertical-alignment="' . htmlspecialchars($verticalAlignment, ENT_QUOTES, 'UTF-8') . '" data-spacing-top="' . $spacingTop . '" data-spacing-bottom="' . $spacingBottom . '">';
         if ($heading !== '') {
-            $html .= '<h4 class="editorjs-media-text__heading" style="' . htmlspecialchars($headingStyle, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</h4>';
+            $html .= '<h4 class="editorjs-media-text__heading">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</h4>';
         }
         if ($imageUrl !== '') {
-            $html .= '<figure class="editorjs-media-text__media" style="' . htmlspecialchars($mediaStyle, ENT_QUOTES, 'UTF-8') . '">';
+            $html .= '<figure class="editorjs-media-text__media">';
             $html .= $this->wrapPicture($imageUrl, '<img class="editorjs-media-text__image" src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . $alt . '"' . $this->getLazyLoadingAttribute() . '>');
             $html .= '</figure>';
         }
 
-        $html .= '<div class="editorjs-media-text__content" style="' . htmlspecialchars($contentStyle, ENT_QUOTES, 'UTF-8') . '">';
+        $html .= '<div class="editorjs-media-text__content">';
         $html .= $textHtml !== '' ? $textHtml : '<p></p>';
         $html .= '</div>';
         $html .= '</section>';
