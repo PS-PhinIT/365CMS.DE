@@ -72,11 +72,22 @@ class UpdateService
     private const CACHE_DURATION = 3600; // 1 hour
     /** Cache-Eintrag der Core-Update-Prüfung (auch vom Update-Badge im Admin-Menü gelesen). */
     public const CORE_UPDATE_CACHE_KEY = 'core_update_check';
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:1): Plugin- und Theme-Prüfungen liegen wie die Core-Prüfung in
+     * cms_cache. Der Schlüssel enthält die installierten Versionen, ein Update oder eine Installation
+     * invalidiert ihn damit von selbst. Fehlgeschlagene Abrufe werden nur kurz gemerkt.
+     */
+    public const PLUGIN_UPDATE_CACHE_PREFIX = 'plugin_updates_';
+    public const THEME_UPDATE_CACHE_PREFIX = 'theme_updates_';
+    private const REMOTE_CHECK_CACHE_DURATION = 21600; // 6 Stunden
+    private const REMOTE_CHECK_FAILURE_CACHE_DURATION = 900; // 15 Minuten
 
     /** Aktive Konfiguration (aus DB oder Fallback) */
     private string $githubRepo;
     private string $githubApi;
     private string $coreUpdateUrl;
+    /** Release-Prüfung 4.1.0 (PERF, blocking:1): true, sobald ein Remote-Abruf der laufenden Prüfung scheiterte. */
+    private bool $remoteFetchFailed = false;
     
     /**
      * Singleton instance
@@ -131,13 +142,13 @@ class UpdateService
     /**
      * Check for CMS core updates via GitHub
      */
-    public function checkCoreUpdates(): array
+    public function checkCoreUpdates(?bool $forceRefresh = null): array
     {
         $currentVersion = CMS_VERSION ?? Version::CURRENT;
         
         // Check cache first
         $cacheKey = self::CORE_UPDATE_CACHE_KEY;
-        $cached = $this->getCache($cacheKey);
+        $cached = $this->shouldForceRemoteRefresh($forceRefresh) ? null : $this->getCache($cacheKey);
         
         if ($cached !== null) {
             return $cached;
@@ -183,7 +194,7 @@ class UpdateService
         
         if (!$release) {
             // No release found, return current version
-            return [
+            $result = [
                 'current_version' => $currentVersion,
                 'latest_version' => $currentVersion,
                 'update_available' => false,
@@ -191,6 +202,11 @@ class UpdateService
                 'release_date' => '',
                 'download_url' => '',
             ];
+            // Release-Prüfung 4.1.0 (PERF, blocking:1): Ausfall beider Quellen kurz merken, statt bei jedem
+            // Seitenaufruf erneut Marketplace und GitHub abzufragen.
+            $this->setCache($cacheKey, $result, self::REMOTE_CHECK_FAILURE_CACHE_DURATION);
+
+            return $result;
         }
         
         $latestVersion = ltrim($release['tag_name'] ?? $currentVersion, 'v');
@@ -224,10 +240,21 @@ class UpdateService
     /**
      * Check for plugin updates
      */
-    public function checkPluginUpdates(): array
+    public function checkPluginUpdates(?bool $forceRefresh = null): array
     {
         $pluginManager = PluginManager::instance();
         $plugins = $pluginManager->getAvailablePlugins();
+
+        // Release-Prüfung 4.1.0 (PERF, blocking:1): Ergebnis je installiertem Versionsstand cachen.
+        $cacheKey = self::buildPluginUpdateCacheKey($this->collectInstalledPluginVersions($plugins), MarketplaceEndpoints::pluginIndexUrl());
+        if (!$this->shouldForceRemoteRefresh($forceRefresh)) {
+            $cached = $this->getCache($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $this->remoteFetchFailed = false;
         $catalog = $this->loadPluginMarketplaceCatalog();
         
         $updates = [];
@@ -278,26 +305,143 @@ class UpdateService
                 'manual_reason' => $this->buildIntegrityAwareMarketplaceReason($downloadUrl, $sha256, $purchaseUrl, $isPaid, 'Plugin'),
             ];
         }
+
+        $this->setCache(
+            $cacheKey,
+            $updates,
+            $this->remoteFetchFailed ? self::REMOTE_CHECK_FAILURE_CACHE_DURATION : self::REMOTE_CHECK_CACHE_DURATION
+        );
         
         return $updates;
     }
-    
+
     /**
-     * Check for theme updates
+     * Release-Prüfung 4.1.0 (PERF, blocking:1): Nur gecachte Ergebnisse lesen, ohne Remote-Abruf (Warnzentrale).
+     * null, wenn für den aktuellen Versionsstand noch keine Prüfung im Cache liegt.
      */
-    public function checkThemeUpdates(): array
+    public function getCachedPluginUpdates(): ?array
+    {
+        $plugins = PluginManager::instance()->getAvailablePlugins();
+
+        return $this->getCache(self::buildPluginUpdateCacheKey($this->collectInstalledPluginVersions($plugins), MarketplaceEndpoints::pluginIndexUrl()));
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, blocking:1): Nur gecachte Core-Prüfung lesen, ohne Remote-Abruf. */
+    public function getCachedCoreUpdates(): ?array
+    {
+        return $this->getCache(self::CORE_UPDATE_CACHE_KEY);
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, blocking:1): Nur gecachte Theme-Prüfung lesen, ohne Remote-Abruf. */
+    public function getCachedThemeUpdates(): ?array
+    {
+        $themeState = $this->readActiveThemeState();
+        if ($themeState === null) {
+            return [];
+        }
+
+        return $this->getCache(self::buildThemeUpdateCacheKey($themeState['slug'], (string) $themeState['version'], MarketplaceEndpoints::themeIndexUrl()));
+    }
+
+    /**
+     * @param array<string, string> $installedVersions Ordner => installierte Version
+     */
+    public static function buildPluginUpdateCacheKey(array $installedVersions, string $registryUrl): string
+    {
+        ksort($installedVersions);
+
+        return self::PLUGIN_UPDATE_CACHE_PREFIX . sha1((string) json_encode([
+            defined('CMS_VERSION') ? (string) CMS_VERSION : Version::CURRENT,
+            $registryUrl,
+            $installedVersions,
+        ]));
+    }
+
+    public static function buildThemeUpdateCacheKey(string $themeSlug, string $themeVersion, string $catalogUrl): string
+    {
+        return self::THEME_UPDATE_CACHE_PREFIX . sha1((string) json_encode([
+            defined('CMS_VERSION') ? (string) CMS_VERSION : Version::CURRENT,
+            $catalogUrl,
+            $themeSlug,
+            $themeVersion,
+        ]));
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:1): Ohne ausdrückliche Vorgabe lesen schreibende Anfragen (POST:
+     * „Jetzt prüfen“, Installationen) immer frisch, Seitenaufrufe nutzen den Cache.
+     */
+    private function shouldForceRemoteRefresh(?bool $forceRefresh): bool
+    {
+        if ($forceRefresh !== null) {
+            return $forceRefresh;
+        }
+
+        return PHP_SAPI !== 'cli' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST';
+    }
+
+    /**
+     * @param array<string|int, mixed> $plugins
+     * @return array<string, string>
+     */
+    private function collectInstalledPluginVersions(array $plugins): array
+    {
+        $versions = [];
+        foreach ($plugins as $folder => $plugin) {
+            if (IntegratedPluginService::isIntegrated((string) $folder)) {
+                continue;
+            }
+
+            $versions[(string) $folder] = is_array($plugin) ? (string) ($plugin['version'] ?? '1.0.0') : '1.0.0';
+        }
+
+        return $versions;
+    }
+
+    /** @return array{slug:string,version:string,data:array<string,mixed>}|null */
+    private function readActiveThemeState(): ?array
     {
         $themeSlug = ThemeManager::instance()->getActiveThemeSlug();
         $themeDir = rtrim((string) THEME_PATH, '/\\') . DIRECTORY_SEPARATOR . $themeSlug;
         $themeJsonFile = $themeDir . DIRECTORY_SEPARATOR . 'theme.json';
 
         if (!file_exists($themeJsonFile)) {
-            return [];
+            return null;
         }
 
         $themeData = Json::decodeArray((string) file_get_contents($themeJsonFile), []);
+
+        return [
+            'slug' => $themeSlug,
+            'version' => (string) ($themeData['version'] ?? '1.0.0'),
+            'data' => $themeData,
+        ];
+    }
+    
+    /**
+     * Check for theme updates
+     */
+    public function checkThemeUpdates(?bool $forceRefresh = null): array
+    {
+        $themeState = $this->readActiveThemeState();
+        if ($themeState === null) {
+            return [];
+        }
+
+        $themeSlug = $themeState['slug'];
+        $themeData = $themeState['data'];
         $currentVersion = $themeData['version'] ?? '1.0.0';
 
+        // Release-Prüfung 4.1.0 (PERF, blocking:1): Ergebnis je Theme-Version cachen.
+        $cacheKey = self::buildThemeUpdateCacheKey($themeSlug, (string) $themeState['version'], MarketplaceEndpoints::themeIndexUrl());
+        if (!$this->shouldForceRemoteRefresh($forceRefresh)) {
+            $cached = $this->getCache($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $this->remoteFetchFailed = false;
         $localUpdateData = [];
         $catalog = $this->loadThemeMarketplaceCatalog();
         $catalogEntry = $catalog[$themeSlug] ?? [];
@@ -317,7 +461,7 @@ class UpdateService
         $purchaseUrl = $this->resolveAllowedUpdateUrl((string) ($updateInfo['purchase_url'] ?? ''));
         $isPaid = $this->normalizeBooleanValue($updateInfo['is_paid'] ?? false);
         
-        return [
+        $result = [
             'slug' => $themeSlug,
             'current_version' => $currentVersion,
             'latest_version' => $latestVersion,
@@ -334,11 +478,20 @@ class UpdateService
             'install_supported' => $downloadUrl !== '' && $sha256 !== '',
             'manual_reason' => $this->buildIntegrityAwareMarketplaceReason($downloadUrl, $sha256, $purchaseUrl, $isPaid, 'Theme'),
         ];
+
+        $this->setCache(
+            $cacheKey,
+            $result,
+            $this->remoteFetchFailed ? self::REMOTE_CHECK_FAILURE_CACHE_DURATION : self::REMOTE_CHECK_CACHE_DURATION
+        );
+
+        return $result;
     }
 
     private function fetchMarketplaceJson(string $url, int $maxBytes = 1048576): ?array
     {
         if (!$this->isAllowedSensitiveRemoteUrl($url) || !$this->isSafeExternalUrl($url)) {
+            $this->remoteFetchFailed = true;
             return null;
         }
 
@@ -352,10 +505,14 @@ class UpdateService
         ]);
 
         if (!$response['success']) {
+            $this->remoteFetchFailed = true;
             return null;
         }
 
         $data = Json::decode((string) ($response['body'] ?? ''), true, null);
+        if (!is_array($data)) {
+            $this->remoteFetchFailed = true;
+        }
 
         return is_array($data) ? $data : null;
     }
@@ -889,41 +1046,14 @@ class UpdateService
     }
 
     /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:2): nutzt die gemerkte Auflösung des HTTP-Clients. Die Vorabprüfung
+     * und das Pinning im Client lösen denselben Host damit nur noch einmal je Prozess und Minute auf.
+     *
      * @return string[]
      */
     private function resolveHostIps(string $host): array
     {
-        if (filter_var($host, FILTER_VALIDATE_IP)) {
-            return [$host];
-        }
-
-        $ips = [];
-
-        if (function_exists('dns_get_record')) {
-            $records = @dns_get_record($host, DNS_A | DNS_AAAA);
-            if (is_array($records)) {
-                foreach ($records as $record) {
-                    $ip = trim((string) ($record['ip'] ?? $record['ipv6'] ?? ''));
-                    if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) {
-                        $ips[] = $ip;
-                    }
-                }
-            }
-        }
-
-        if ($ips === [] && function_exists('gethostbynamel')) {
-            $fallbackRecords = @gethostbynamel($host);
-            if (is_array($fallbackRecords)) {
-                foreach ($fallbackRecords as $ip) {
-                    $ip = trim((string) $ip);
-                    if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) {
-                        $ips[] = $ip;
-                    }
-                }
-            }
-        }
-
-        return array_values(array_unique($ips));
+        return HttpClient::resolveHostAddresses($host);
     }
 
     /**
@@ -944,6 +1074,7 @@ class UpdateService
             Logger::instance()->withChannel('updates.service')->warning('Plugin/theme update URL was blocked by SSRF guard.', [
                 'url' => $url,
             ]);
+            $this->remoteFetchFailed = true;
             return null;
         }
 
@@ -961,10 +1092,15 @@ class UpdateService
                 'url' => $url,
                 'error' => (string) ($response['error'] ?? 'unbekannt'),
             ]);
+            $this->remoteFetchFailed = true;
             return null;
         }
 
         $data = Json::decode((string) ($response['body'] ?? ''), true, null);
+        if (!is_array($data)) {
+            // Release-Prüfung 4.1.0 (PERF, blocking:1): Fehlschlag nur kurz cachen.
+            $this->remoteFetchFailed = true;
+        }
 
         return is_array($data) ? $data : null;
     }
@@ -1780,10 +1916,10 @@ class UpdateService
     /**
      * Set cache data
      */
-    private function setCache(string $key, array $data): bool
+    private function setCache(string $key, array $data, ?int $ttl = null): bool
     {
         try {
-            $expiresAt = date('Y-m-d H:i:s', time() + self::CACHE_DURATION);
+            $expiresAt = date('Y-m-d H:i:s', time() + ($ttl ?? self::CACHE_DURATION));
             
             // Delete existing cache
             $stmt = $this->db->prepare("DELETE FROM {$this->db->getPrefix()}cache WHERE cache_key = ?");

@@ -926,13 +926,13 @@ final class PublicRouter
             'comment_anonymous' => !empty($_POST['comment_anonymous']),
         ];
 
-        if ($postId <= 0 || !Security::instance()->verifyToken($this->requestString($_POST['csrf_token'] ?? '', 128), 'comment_' . $postId)) {
+        $currentUser = Auth::getCurrentUser();
+        if ($postId <= 0 || !$this->verifyCommentToken($this->requestString($_POST['csrf_token'] ?? '', 128), $postId, isset($currentUser->id) && (int) $currentUser->id > 0)) {
             $this->flashCommentFormState($postId, 'error', 'Sicherheitsüberprüfung fehlgeschlagen.', $commentFormValues);
             $this->router->redirect($redirectTarget);
             return;
         }
 
-        $currentUser = Auth::getCurrentUser();
         $isAnonymousComment = isset($currentUser->id) && !empty($_POST['comment_anonymous']);
         $result = Services\CommentService::getInstance()->createPendingComment(
             $postId,
@@ -951,6 +951,30 @@ final class PublicRouter
         }
 
         $this->router->redirect($redirectTarget);
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:2): Angemeldete Nutzer brauchen weiterhin das sitzungsgebundene
+     * Einmal-Token. Für anonyme Besucher gilt zusätzlich das zustandslose, signierte Token aus blog-single.php
+     * (HMAC über Beitrags-ID und Ausgabezeit, höchstens 24 Stunden alt, an genau diesen Beitrag gebunden).
+     * Honeypot, Mindestzeit, Flood-Limit und AntiSpam prüft CommentService unverändert.
+     */
+    private function verifyCommentToken(string $token, int $postId, bool $isLoggedIn): bool
+    {
+        if ($postId <= 0 || $token === '') {
+            return false;
+        }
+
+        if ($isLoggedIn) {
+            return Security::instance()->verifyToken($token, 'comment_' . $postId);
+        }
+
+        if (Services\Forms\FormSpamGuard::verifyTimestamp($token, 'comment-post|' . $postId) !== null) {
+            return true;
+        }
+
+        // Ältere, noch offene Formulare mit Sitzungs-Token (vor dem Update gerendert) bleiben gültig.
+        return Security::instance()->verifyToken($token, 'comment_' . $postId);
     }
 
     public function renderCookiePreferencesPage(): void

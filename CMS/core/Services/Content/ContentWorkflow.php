@@ -569,9 +569,12 @@ final class ContentWorkflow
                 $this->logWarning('Wartende Inhalte konnten nicht gelesen werden.', $e);
                 continue;
             }
+            // Release-Prüfung 4.1.0 (PERF, db:3): letzte Einreichungen aller wartenden Inhalte in einer Abfrage
+            // statt einer Abfrage je Inhalt (Admin-Badges laufen bei jedem Admin-Aufruf).
+            $submissions = $this->lastSubmissions($type, array_map(static fn (object $row): int => (int) ($row->id ?? 0), $rows));
             foreach ($rows as $row) {
                 $id = (int) ($row->id ?? 0);
-                $submission = $this->lastSubmission($type, $id);
+                $submission = $submissions[$id] ?? ['user_id' => 0, 'created_at' => ''];
                 $item = [
                     'type' => $type,
                     'id' => $id,
@@ -822,6 +825,43 @@ final class ContentWorkflow
         }
 
         return ['user_id' => (int) ($row->user_id ?? 0), 'created_at' => (string) ($row->created_at ?? '')];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:3): letzte Einreichung je Inhalt für viele Inhalte eines Typs, gleiche
+     * Reihenfolge wie lastSubmission() (neueste zuerst, bei Gleichstand höchste ID). Fehlende Inhalte fehlen im
+     * Ergebnis; bei einem Datenbankfehler ist das Ergebnis leer.
+     *
+     * @param list<int> $ids
+     * @return array<int, array{user_id: int, created_at: string}>
+     */
+    private function lastSubmissions(string $type, array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter($ids, static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->get_results(
+                "SELECT content_id, user_id, created_at FROM {$this->prefix}content_workflow_events
+                 WHERE content_type = ? AND action = ? AND content_id IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
+                 ORDER BY created_at DESC, id DESC",
+                array_merge([$type, self::ACTION_SUBMITTED], $ids)
+            ) ?: [];
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            $contentId = (int) ($row->content_id ?? 0);
+            if ($contentId > 0 && !isset($result[$contentId])) {
+                $result[$contentId] = ['user_id' => (int) ($row->user_id ?? 0), 'created_at' => (string) ($row->created_at ?? '')];
+            }
+        }
+
+        return $result;
     }
 
     /** Wer hat den Inhalt zuletzt zur Prüfung eingereicht? 0 = nie eingereicht. */

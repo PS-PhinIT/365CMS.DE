@@ -13,13 +13,13 @@ The monitoring pages are tiles in the category *Monitore*: on the **Website-Zust
 
 | Route | Inhalt | Aktionen |
 |---|---|---|
-| `/admin/monitor-response-time` | Antwortzeit der Startseite und Verlauf, Schwellwert `monitor_response_threshold_ms` (Standard 800 ms) | – |
+| `/admin/monitor-response-time` | Antwortzeit der Startseite und Verlauf, Schwellwert `monitor_response_threshold_ms` (Standard 800 ms). Seit 4.1.0 ohne Loopback bei jedem Aufruf: Wert aus dem Cache (10 min), sonst aus dem stündlichen Snapshot (max. 2 h), sonst einmal live gemessen. Auf `php -S` ohne `PHP_CLI_SERVER_WORKERS` „nicht messbar“ | „Jetzt messen“ (`?measure=now`) |
 | `/admin/monitor-cron-status` | Letzte Läufe je Task, Cron-URL/CLI-Befehl, Verlauf | `run_cron_direct`, `run_cron_loopback` |
 | `/admin/monitor-disk-usage` | Belegung von Uploads, Cache, Logs, Backups, Datenbank; Schwellwert `monitor_disk_threshold_percent` (85 %) | – |
 | `/admin/monitor-scheduled-tasks` | Registrierte `cms_cron_*`-Hooks und Zeitpläne | – |
-| `/admin/monitor-health-check` | Gesamtprüfung (Datenbank, Dateisystem, PHP, Sicherheit, Performance über `StatusService`), optional Abfrage eines externen Health-Endpunkts | – |
+| `/admin/monitor-health-check` | Gesamtprüfung (Datenbank, Dateisystem, PHP, Sicherheit, Performance über `StatusService`), optional Abfrage eines externen Health-Endpunkts. Antwortzeit und Health-Endpunkt nutzen dieselben Cache-Werte (10 min) wie die Warnzentrale | „Jetzt prüfen“ (`?measure=now`) |
 | `/admin/monitor-email-alerts` | Alarm-E-Mails für Monitoring und Sicherheit | `save_monitoring_alerts`, `send_monitoring_test_email` |
-| `/admin/monitor-warnings` | **Warnzentrale**: gesammelte Warnungen aus allen Bereichen | `ignore_warning_center_warning`, `snooze_warning_center_warning` (1/3/7/14/30 Tage), `restore_warning_center_warning` |
+| `/admin/monitor-warnings` | **Warnzentrale**: gesammelte Warnungen aus allen Bereichen. Update-Warnungen lesen seit 4.1.0 nur die zwischengespeicherten Update-Prüfungen (kein Remote-Abruf), der Medien-Scan gilt 30 min | `ignore_warning_center_warning`, `snooze_warning_center_warning` (1/3/7/14/30 Tage), `restore_warning_center_warning` |
 
 ### E-Mail-Benachrichtigungen
 

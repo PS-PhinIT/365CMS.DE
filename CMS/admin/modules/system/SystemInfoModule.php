@@ -11,8 +11,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use CMS\CacheManager;
 use CMS\Database;
 use CMS\Http\Client as HttpClient;
+use CMS\Http\SessionLock;
 use CMS\SchemaManager;
 use CMS\Services\CronRunnerService;
 use CMS\Services\CronExpressionAdapter;
@@ -38,6 +40,30 @@ class SystemInfoModule
     private const WARNING_CENTER_SETTINGS_KEY = 'states';
     private const WARNING_CENTER_MAX_REASON_LENGTH = 240;
     private const WARNING_CENTER_SNOOZE_DAYS = [1, 3, 7, 14, 30];
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:0): Loopback-Messungen (Antwortzeit, Health-Endpunkt) werden
+     * zwischengespeichert, statt bei jedem Seitenaufruf die eigene Website abzufragen. Eine frische Messung
+     * gibt es über „Jetzt messen“ (?measure=now). Hourly-Snapshots aus dem Cron gelten bis zu zwei Stunden.
+     */
+    private const RESPONSE_TIME_CACHE_KEY = 'system_monitor_response_time';
+    private const HEALTH_ENDPOINT_CACHE_KEY_PREFIX = 'system_monitor_health_endpoint_';
+    private const LOOPBACK_CACHE_TTL = 600;
+    private const LOOPBACK_SNAPSHOT_MAX_AGE = 7200;
+    private const LOOPBACK_CONNECT_TIMEOUT = 2;
+    /** Release-Prüfung 4.1.0 (PERF, blocking:10): Cron-Hook-Zuordnung je Code-Stand cachen. */
+    private const CRON_HOOK_MAP_CACHE_KEY = 'system_monitor_cron_hook_map';
+    private const CRON_HOOK_MAP_CACHE_TTL = 3600;
+    private const CRON_HOOK_SCAN_SKIP_TOP_LEVEL = ['uploads', 'cache', 'backups', 'logs'];
+    private const CRON_HOOK_SCAN_SKIP_ANY_LEVEL = ['assets', 'vendor'];
+    /** Release-Prüfung 4.1.0 (PERF, blocking:9): Ergebnis des Medien-Scans für die Warnzentrale cachen. */
+    private const WARNING_CENTER_MEDIA_CACHE_KEY = 'system_warning_center_media_metrics';
+    private const WARNING_CENTER_MEDIA_CACHE_TTL = 1800;
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:3): Bereiche mit langsamer, nur lesender Datensammlung. Für sie
+     * wird die Session-Sperre während des Ladens freigegeben, damit parallele Tabs und AJAX nicht warten.
+     */
+    private const SESSION_RELEASE_SECTIONS = ['info', 'warnings', 'assets', 'response-time', 'disk', 'scheduled-tasks', 'health-check', 'cron'];
 
     private const MONITOR_DEFAULTS = [
         'monitor_email_notifications_enabled' => '0',
@@ -98,6 +124,17 @@ class SystemInfoModule
 
     public function getSectionData(string $section): array
     {
+        // Release-Prüfung 4.1.0 (PERF, blocking:3): CSRF-Token und Flash-Meldung hat die Section-Shell bereits
+        // vorher erzeugt bzw. gelesen. Die Datensammlung selbst schreibt nicht in die Session.
+        if (in_array($section, self::SESSION_RELEASE_SECTIONS, true)) {
+            return SessionLock::withoutLock(fn (): array => $this->buildSectionData($section));
+        }
+
+        return $this->buildSectionData($section);
+    }
+
+    private function buildSectionData(string $section): array
+    {
         return match ($section) {
             'info' => $this->getInfoData(),
             'diagnose' => $this->getDiagnosticsData(),
@@ -106,10 +143,10 @@ class SystemInfoModule
             'logs' => $this->getLogsData($_GET['log_file'] ?? null),
             'response-time' => [
                 'monitoring' => [
-                    'response_time' => $responseTime = $this->measureResponseTime(SITE_URL),
+                    'response_time' => $responseTime = $this->getResponseTimeMeasurement($this->isLiveMeasurementRequested()),
                 ],
                 'email_alerts' => $this->getMonitoringSettings(),
-                'trend_history' => MonitoringTrendService::getInstance()->buildResponseTimeTrendData($responseTime),
+                'trend_history' => MonitoringTrendService::getInstance()->buildResponseTimeTrendData(!empty($responseTime['skipped']) ? [] : $responseTime),
             ],
             'disk' => [
                 'disk' => $diskUsage = $this->getDiskUsageData(),
@@ -119,7 +156,7 @@ class SystemInfoModule
                 'scheduled_tasks' => $this->getScheduledTasksData(),
             ],
             'health-check' => [
-                'health' => $this->getHealthChecksData(),
+                'health' => $this->getHealthChecksData($this->isLiveMeasurementRequested()),
             ],
             'email-alerts' => [
                 'email_alerts' => $this->getMonitoringSettings(),
@@ -1162,9 +1199,18 @@ class SystemInfoModule
                 );
             }
 
-            $mediaSection = $module->getSectionData('media');
-            $media = is_array($mediaSection['media'] ?? null) ? $mediaSection['media'] : [];
-            $oversizedImages = (int)($media['oversized_images'] ?? 0);
+            // Release-Prüfung 4.1.0 (PERF, blocking:9): Der Medien-Scan öffnet jedes Bild (getimagesize). Für die
+            // Warnzentrale genügt das Ergebnis der letzten 30 Minuten.
+            $mediaCache = CacheManager::instance();
+            $cachedMedia = $mediaCache->get(self::WARNING_CENTER_MEDIA_CACHE_KEY);
+            if (is_array($cachedMedia) && array_key_exists('oversized_images', $cachedMedia)) {
+                $oversizedImages = (int) $cachedMedia['oversized_images'];
+            } else {
+                $mediaSection = $module->getSectionData('media');
+                $media = is_array($mediaSection['media'] ?? null) ? $mediaSection['media'] : [];
+                $oversizedImages = (int)($media['oversized_images'] ?? 0);
+                $mediaCache->set(self::WARNING_CENTER_MEDIA_CACHE_KEY, ['oversized_images' => $oversizedImages], self::WARNING_CENTER_MEDIA_CACHE_TTL);
+            }
             if ($oversizedImages > 0) {
                 $warnings[] = $this->buildWarningCenterEntry(
                     'performance.media.oversized-images',
@@ -1359,6 +1405,15 @@ class SystemInfoModule
         try {
             require_once __DIR__ . '/UpdatesModule.php';
             $module = new UpdatesModule();
+            // Release-Prüfung 4.1.0 (PERF, blocking:1): Die Warnzentrale liest nur die zwischengespeicherten
+            // Update-Prüfungen und löst selbst keine Remote-Abrufe aus. Fehlt eine Prüfung im Cache, gilt sie als
+            // „keine Updates bekannt“, bis /admin/updates oder die Systemhinweise sie wieder befüllen.
+            $updateService = UpdateService::getInstance();
+            $module->hydrateUpdateSnapshot([
+                'core' => $updateService->getCachedCoreUpdates() ?? [],
+                'plugins' => $updateService->getCachedPluginUpdates() ?? [],
+                'theme' => $updateService->getCachedThemeUpdates() ?? [],
+            ]);
             $data = $module->getData();
             $core = is_array($data['core'] ?? null) ? $data['core'] : [];
             $plugins = is_array($data['plugins'] ?? null) ? $data['plugins'] : [];
@@ -1942,54 +1997,8 @@ class SystemInfoModule
 
     private function getCronData(): array
     {
-        $scanRoots = [
-            ABSPATH,
-            dirname(ABSPATH) . '-PLUGINS',
-        ];
         $cronFilePath = ABSPATH . 'cron.php';
-        $hooks = [];
-
-        foreach ($scanRoots as $root) {
-            if (!is_dir($root)) {
-                continue;
-            }
-
-            try {
-                $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
-                foreach ($iterator as $file) {
-                    if (!$file->isFile() || strtolower($file->getExtension()) !== 'php') {
-                        continue;
-                    }
-
-                    $path = $file->getPathname();
-                    if (str_contains($path, DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR) || str_contains($path, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR)) {
-                        continue;
-                    }
-
-                    $content = @file_get_contents($path);
-                    if ($content === false) {
-                        continue;
-                    }
-
-                    if (preg_match_all("/'(cms_cron_[a-z_]+)'/i", $content, $matches) > 0) {
-                        foreach (array_unique($matches[1]) as $hook) {
-                            $hooks[$hook][] = $this->normalizeDisplayedPath($path);
-                        }
-                    }
-                }
-            } catch (\Throwable) {
-            }
-        }
-
-        ksort($hooks);
-        $mappedHooks = [];
-        foreach ($hooks as $hook => $files) {
-            $mappedHooks[] = [
-                'hook' => $hook,
-                'files' => array_values(array_unique($files)),
-                'occurrences' => count($files),
-            ];
-        }
+        $mappedHooks = $this->getCronHookMap();
 
         $queueConfig = MailQueueService::getInstance()->getConfiguration();
         $scheduleExpression = trim(SettingsService::getInstance()->getString('cron', 'hourly_expression', '0 * * * *'));
@@ -2055,6 +2064,130 @@ class SystemInfoModule
                 'loopback_url' => $cronBaseUrl,
             ],
         ];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:10): Zuordnung cms_cron_*-Hook => Dateien. Das Ergebnis ändert
+     * sich nur mit dem Code-Stand und wird deshalb je Signatur (CMS-Version, Verzeichnis-Zeitstempel von Core
+     * und Plugins) eine Stunde gecacht. Laufzeitverzeichnisse (uploads, cache, backups, logs) sowie assets und
+     * vendor werden gar nicht erst durchlaufen; deren PHP-Dateien wurden schon bisher nicht ausgewertet bzw.
+     * enthalten keinen Code-Bestand.
+     *
+     * @return list<array{hook:string,files:list<string>,occurrences:int}>
+     */
+    private function getCronHookMap(): array
+    {
+        $scanRoots = [
+            ABSPATH,
+            dirname(ABSPATH) . '-PLUGINS',
+        ];
+
+        $signature = $this->buildCronHookMapSignature($scanRoots);
+        $cache = CacheManager::instance();
+        $cached = $cache->get(self::CRON_HOOK_MAP_CACHE_KEY);
+        if (is_array($cached) && ($cached['signature'] ?? '') === $signature && is_array($cached['hooks'] ?? null)) {
+            return $cached['hooks'];
+        }
+
+        $hooks = [];
+
+        foreach ($scanRoots as $root) {
+            if (!is_dir($root)) {
+                continue;
+            }
+
+            try {
+                $rootPath = rtrim($root, '/\\');
+                $directoryIterator = new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS);
+                $filter = new \RecursiveCallbackFilterIterator(
+                    $directoryIterator,
+                    static function (\SplFileInfo $entry) use ($rootPath): bool {
+                        return !self::shouldSkipCronHookScanDirectory($entry, $rootPath);
+                    }
+                );
+                $iterator = new \RecursiveIteratorIterator($filter);
+                foreach ($iterator as $file) {
+                    if (!$file->isFile() || strtolower($file->getExtension()) !== 'php') {
+                        continue;
+                    }
+
+                    $path = $file->getPathname();
+                    if (str_contains($path, DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR) || str_contains($path, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR)) {
+                        continue;
+                    }
+
+                    $content = @file_get_contents($path);
+                    if ($content === false) {
+                        continue;
+                    }
+
+                    if (preg_match_all("/'(cms_cron_[a-z_]+)'/i", $content, $matches) > 0) {
+                        foreach (array_unique($matches[1]) as $hook) {
+                            $hooks[$hook][] = $this->normalizeDisplayedPath($path);
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        ksort($hooks);
+        $mappedHooks = [];
+        foreach ($hooks as $hook => $files) {
+            $mappedHooks[] = [
+                'hook' => $hook,
+                'files' => array_values(array_unique($files)),
+                'occurrences' => count($files),
+            ];
+        }
+
+        $cache->set(self::CRON_HOOK_MAP_CACHE_KEY, ['signature' => $signature, 'hooks' => $mappedHooks], self::CRON_HOOK_MAP_CACHE_TTL);
+
+        return $mappedHooks;
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, blocking:10): Verzeichnisse, die der Hook-Scan nicht betritt. */
+    public static function shouldSkipCronHookScanDirectory(\SplFileInfo $entry, string $rootPath): bool
+    {
+        if (!$entry->isDir()) {
+            return false;
+        }
+
+        $name = $entry->getFilename();
+        if (in_array($name, self::CRON_HOOK_SCAN_SKIP_ANY_LEVEL, true)) {
+            return true;
+        }
+
+        return in_array($name, self::CRON_HOOK_SCAN_SKIP_TOP_LEVEL, true)
+            && rtrim($entry->getPath(), '/\\') === rtrim($rootPath, '/\\');
+    }
+
+    /** @param list<string> $scanRoots */
+    private function buildCronHookMapSignature(array $scanRoots): string
+    {
+        $parts = [defined('CMS_VERSION') ? (string) CMS_VERSION : ''];
+        $directories = [
+            ABSPATH,
+            ABSPATH . 'core',
+            ABSPATH . 'core/Services',
+            ABSPATH . 'includes',
+            ABSPATH . 'admin',
+            ABSPATH . 'plugins',
+        ];
+        foreach ($scanRoots as $root) {
+            $directories[] = $root;
+        }
+        foreach ([ABSPATH . 'plugins', dirname(ABSPATH) . '-PLUGINS'] as $pluginRoot) {
+            foreach (glob(rtrim($pluginRoot, '/\\') . '/*', GLOB_ONLYDIR) ?: [] as $pluginDir) {
+                $directories[] = $pluginDir;
+            }
+        }
+
+        foreach (array_unique($directories) as $directory) {
+            $parts[] = $directory . '@' . (is_dir($directory) ? (string) @filemtime($directory) : '-');
+        }
+
+        return sha1(implode('|', $parts));
     }
 
     /** @return array{timestamp:string,age_minutes:?int,is_due:bool,next_due_in_seconds:?int,status_label:string,schedule_expression:string,scheduler:string} */
@@ -2358,13 +2491,14 @@ class SystemInfoModule
         ];
     }
 
-    private function getHealthChecksData(): array
+    private function getHealthChecksData(bool $forceLive = false): array
     {
         $settings = $this->getMonitoringSettings();
-        $response = $this->measureResponseTime(SITE_URL);
+        // Release-Prüfung 4.1.0 (PERF, blocking:0): gecachte bzw. Snapshot-Werte statt Loopback bei jedem Aufruf.
+        $response = $this->getResponseTimeMeasurement($forceLive);
         $disk = $this->getDiskUsageData();
         $db = $this->getDatabaseStatusSafe();
-        $healthEndpoint = $this->probeHealthEndpoint($settings);
+        $healthEndpoint = $this->getHealthEndpointProbe($settings, $forceLive);
         $cacheWritable = is_writable(ABSPATH . 'cache');
         $uploadsWritable = is_writable(ABSPATH . 'uploads');
         $logsWritable = is_dir($this->service->getConfiguredLogDirectory()) && is_writable($this->service->getConfiguredLogDirectory());
@@ -2374,7 +2508,7 @@ class SystemInfoModule
             ['label' => 'Cache-Verzeichnis', 'passed' => $cacheWritable, 'detail' => $cacheWritable ? 'Beschreibbar' : 'Nicht beschreibbar'],
             ['label' => 'Uploads-Verzeichnis', 'passed' => $uploadsWritable, 'detail' => $uploadsWritable ? 'Beschreibbar' : 'Nicht beschreibbar'],
             ['label' => 'Logs-Verzeichnis', 'passed' => $logsWritable, 'detail' => $logsWritable ? 'Beschreibbar' : 'Nicht beschreibbar'],
-            ['label' => 'Response Time', 'passed' => empty($response['error']) && ((int)($response['duration_ms'] ?? 0) <= (int)$settings['monitor_response_threshold_ms']), 'detail' => empty($response['error']) ? ((int)$response['duration_ms']) . ' ms' : (string)$response['error']],
+            ['label' => 'Response Time', 'passed' => !empty($response['skipped']) || (empty($response['error']) && ((int)($response['duration_ms'] ?? 0) <= (int)$settings['monitor_response_threshold_ms'])), 'detail' => !empty($response['skipped']) ? (string)($response['note'] ?? '') : (empty($response['error']) ? ((int)$response['duration_ms']) . ' ms' : (string)$response['error'])],
             ['label' => 'Disk-Auslastung', 'passed' => ($disk['used_percent'] ?? 0) < (float)$settings['monitor_disk_threshold_percent'], 'detail' => ($disk['used_percent'] ?? null) !== null ? ((string)$disk['used_percent']) . '%' : 'Unbekannt'],
             ['label' => 'Health-Endpunkt', 'passed' => !empty($healthEndpoint['passed']), 'detail' => (string)($healthEndpoint['detail'] ?? 'Nicht geprüft')],
         ];
@@ -2391,7 +2525,178 @@ class SystemInfoModule
             'passed' => $passed,
             'total' => count($checks),
             'endpoint' => $healthEndpoint,
+            'response_time' => $response,
         ];
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, blocking:0): „Jetzt messen“ per GET-Parameter (nur lesende Messung). */
+    private function isLiveMeasurementRequested(): bool
+    {
+        return (string) ($_GET['measure'] ?? '') === 'now';
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:0): Der eingebaute PHP-Server (php -S) bedient ohne
+     * PHP_CLI_SERVER_WORKERS nur eine Anfrage gleichzeitig. Ein Loopback auf die eigene Website wartet dort
+     * immer bis zum Timeout und meldet einen falschen Fehler.
+     */
+    public static function isLoopbackUnavailable(string $sapi = PHP_SAPI, mixed $workers = null): bool
+    {
+        if ($sapi !== 'cli-server') {
+            return false;
+        }
+
+        $workers ??= getenv('PHP_CLI_SERVER_WORKERS');
+
+        return (int) $workers <= 1;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:0): Antwortzeit aus Cache (10 min), sonst aus dem letzten
+     * Monitoring-Snapshot des Crons (max. 2 h), sonst live gemessen und gecacht.
+     *
+     * @return array{url:string,duration_ms:int,status_code:int,error:?string,skipped:bool,source:string,measured_at:string,note:string}
+     */
+    private function getResponseTimeMeasurement(bool $forceLive = false): array
+    {
+        $url = (string) SITE_URL;
+
+        if (self::isLoopbackUnavailable()) {
+            return [
+                'url' => $url,
+                'duration_ms' => 0,
+                'status_code' => 0,
+                'error' => null,
+                'skipped' => true,
+                'source' => 'skipped',
+                'measured_at' => '',
+                'note' => 'Auf dem PHP-Entwicklungsserver (php -S) ohne PHP_CLI_SERVER_WORKERS nicht messbar.',
+            ];
+        }
+
+        $cache = CacheManager::instance();
+        if (!$forceLive) {
+            $cached = $cache->get(self::RESPONSE_TIME_CACHE_KEY);
+            if (is_array($cached) && (string) ($cached['url'] ?? '') === $url) {
+                return $this->normalizeResponseTimeMeasurement($cached, 'cache');
+            }
+
+            $snapshot = $this->loadLatestResponseTimeSnapshot($url);
+            if ($snapshot !== null) {
+                return $snapshot;
+            }
+        }
+
+        $measurement = $this->measureResponseTime($url);
+        $measurement['measured_at'] = date('Y-m-d H:i:s');
+        $cache->set(self::RESPONSE_TIME_CACHE_KEY, $measurement, self::LOOPBACK_CACHE_TTL);
+
+        return $this->normalizeResponseTimeMeasurement($measurement, 'live');
+    }
+
+    /** @return array{url:string,duration_ms:int,status_code:int,error:?string,skipped:bool,source:string,measured_at:string,note:string} */
+    private function normalizeResponseTimeMeasurement(array $measurement, string $source): array
+    {
+        $measuredAt = (string) ($measurement['measured_at'] ?? '');
+        $notes = [
+            'live' => 'Gerade live gemessen.',
+            'cache' => 'Zwischengespeicherte Messung' . ($measuredAt !== '' ? ' vom ' . $measuredAt : '') . '.',
+            'snapshot' => 'Aus dem letzten stündlichen Monitoring-Snapshot' . ($measuredAt !== '' ? ' vom ' . $measuredAt : '') . '.',
+        ];
+        $error = $measurement['error'] ?? null;
+
+        return [
+            'url' => (string) ($measurement['url'] ?? SITE_URL),
+            'duration_ms' => (int) ($measurement['duration_ms'] ?? 0),
+            'status_code' => (int) ($measurement['status_code'] ?? 0),
+            'error' => $error === null || $error === '' ? null : (string) $error,
+            'skipped' => false,
+            'source' => $source,
+            'measured_at' => $measuredAt,
+            'note' => $notes[$source] ?? '',
+        ];
+    }
+
+    private function loadLatestResponseTimeSnapshot(string $url): ?array
+    {
+        try {
+            $db = Database::instance();
+            $row = $db->get_row(
+                "SELECT captured_at, response_time_ms, response_status_code, response_has_error
+                 FROM {$db->getPrefix()}monitoring_trends
+                 WHERE response_time_ms IS NOT NULL
+                 ORDER BY captured_hour DESC
+                 LIMIT 1"
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (!is_object($row)) {
+            return null;
+        }
+
+        $capturedAt = (string) ($row->captured_at ?? '');
+        $capturedTs = $capturedAt !== '' ? strtotime($capturedAt) : false;
+        if ($capturedTs === false || (time() - $capturedTs) > self::LOOPBACK_SNAPSHOT_MAX_AGE) {
+            return null;
+        }
+
+        return $this->normalizeResponseTimeMeasurement([
+            'url' => $url,
+            'duration_ms' => (int) ($row->response_time_ms ?? 0),
+            'status_code' => (int) ($row->response_status_code ?? 0),
+            'error' => !empty($row->response_has_error) ? 'Fehler im letzten Monitoring-Snapshot (Cron).' : null,
+            'measured_at' => $capturedAt,
+        ], 'snapshot');
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:0): Health-Endpunkt nur bei Bedarf live prüfen, sonst das
+     * Ergebnis der letzten Prüfung (10 min) verwenden.
+     *
+     * @param array<string,string> $settings
+     * @return array{enabled:bool,passed:bool,path:string,url:string,status:int,duration_ms:int,error:?string,detail:string}
+     */
+    private function getHealthEndpointProbe(array $settings, bool $forceLive = false): array
+    {
+        $enabled = ($settings['monitor_health_endpoint_enabled'] ?? '0') === '1';
+        if (!$enabled) {
+            return $this->probeHealthEndpoint($settings);
+        }
+
+        $path = $this->normalizeHealthEndpointPath($settings['monitor_health_endpoint_path'] ?? '/health');
+        $url = $this->buildSiteRelativeUrl($path);
+        if ($url === '') {
+            return $this->probeHealthEndpoint($settings);
+        }
+
+        if (self::isLoopbackUnavailable()) {
+            return [
+                'enabled' => true,
+                'passed' => true,
+                'path' => $path,
+                'url' => $url,
+                'status' => 0,
+                'duration_ms' => 0,
+                'error' => null,
+                'detail' => $path . ' · Auf dem PHP-Entwicklungsserver (php -S) nicht prüfbar',
+            ];
+        }
+
+        $cache = CacheManager::instance();
+        $cacheKey = self::HEALTH_ENDPOINT_CACHE_KEY_PREFIX . md5($url);
+        if (!$forceLive) {
+            $cached = $cache->get($cacheKey);
+            if (is_array($cached) && (string) ($cached['url'] ?? '') === $url) {
+                return $cached;
+            }
+        }
+
+        $result = $this->probeHealthEndpoint($settings);
+        $cache->set($cacheKey, $result, self::LOOPBACK_CACHE_TTL);
+
+        return $result;
     }
 
     /**
@@ -2434,7 +2739,7 @@ class SystemInfoModule
         $response = HttpClient::getInstance()->get($url, [
             'userAgent' => '365CMS-HealthMonitor/1.0',
             'timeout' => 5,
-            'connectTimeout' => 3,
+            'connectTimeout' => self::LOOPBACK_CONNECT_TIMEOUT,
             'maxBytes' => 128 * 1024,
             'allowPrivateHosts' => true,
             'allowUnresolvedHosts' => true,
@@ -2467,7 +2772,7 @@ class SystemInfoModule
         $response = HttpClient::getInstance()->get($url, [
             'userAgent' => '365CMS-Monitor/1.0',
             'timeout' => 5,
-            'connectTimeout' => 3,
+            'connectTimeout' => self::LOOPBACK_CONNECT_TIMEOUT,
             'maxBytes' => 256 * 1024,
             'allowPrivateHosts' => true,
         ]);

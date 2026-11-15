@@ -20,6 +20,8 @@ if (!defined('ABSPATH')) {
 class CacheManager implements CacheInterface
 {
     private static ?self $instance = null;
+    /** Release-Prüfung 4.1.0 (PERF, cache:0): Namensraum der eigenen APCu-Schlüssel, Grundlage für clear(). */
+    private const APCU_PREFIX = '365cms:';
     private string $cacheDir;
     private bool $useLiteSpeed;
 
@@ -230,18 +232,19 @@ class CacheManager implements CacheInterface
     public function clear(): bool
     {
         // L1: APCu löschen
+        // Release-Prüfung 4.1.0 (PERF, cache:0): nur der eigene Namensraum 365cms:, nicht der ganze APCu-Pool.
         if ($this->useApcu) {
-            apcu_clear_cache();
+            $this->clearApcuNamespace();
         }
 
         // L2: File-Cache löschen
-        $files   = glob($this->cacheDir . '*') ?: [];
+        // Release-Prüfung 4.1.0 (PERF, cache:0): nur eigene Einträge (<sha512>.cache). Schema-, Plattform- und
+        // Laufzeit-Flags, Sperrdateien und session_gc_lifetime.cache bleiben erhalten, sonst läuft beim nächsten
+        // Request der komplette Schema-Abgleich erneut (ohne Sperre, bei jedem parallelen Request).
         $success = true;
-        foreach ($files as $file) {
-            if (is_file($file)) {
-                if (!unlink($file)) { // M-03: kein @, is_file vorher geprüft
-                    $success = false;
-                }
+        foreach ($this->ownCacheFiles() as $file) {
+            if (!unlink($file)) { // M-03: kein @, is_file vorher geprüft
+                $success = false;
             }
         }
 
@@ -249,6 +252,10 @@ class CacheManager implements CacheInterface
         if ($this->useLiteSpeed) {
             header('X-LiteSpeed-Purge: *');
         }
+
+        // Release-Prüfung 4.1.0 (PERF, cache:1): Inhaltsänderung, also neue ETags/Last-Modified für alle Seiten.
+        self::bumpSiteContentVersion();
+
         return $success;
     }
 
@@ -317,11 +324,10 @@ class CacheManager implements CacheInterface
         
         // 1. File-based Cache
         try {
-            $files = glob($this->cacheDir . '*') ?: [];
+            // Release-Prüfung 4.1.0 (PERF, cache:0): wie clear() nur eigene Cache-Dateien, keine Flags oder Sperren.
             $count = 0;
-            foreach ($files as $file) {
-                if (is_file($file)) {
-                    unlink($file);
+            foreach ($this->ownCacheFiles() as $file) {
+                if (unlink($file)) {
                     $count++;
                 }
             }
@@ -347,7 +353,8 @@ class CacheManager implements CacheInterface
         // 3. APCu (User-Cache)
         if (function_exists('apcu_clear_cache')) {
             try {
-                apcu_clear_cache();
+                // Release-Prüfung 4.1.0 (PERF, cache:0): nur CMS-Schlüssel, Einträge anderer Anwendungen im Pool bleiben.
+                $this->clearApcuNamespace();
                 $report['apcu'] = true;
                 $report['details']['apcu'] = 'Erfolgreich geleert';
             } catch (\Exception $e) {
@@ -369,6 +376,9 @@ class CacheManager implements CacheInterface
         $report['stat_cache'] = true;
         $report['details']['stat_cache'] = 'Erfolgreich geleert';
         
+        // Release-Prüfung 4.1.0 (PERF, cache:1): wie clear(), öffentliche Seiten bekommen neue Validatoren.
+        self::bumpSiteContentVersion();
+
         // 6. LiteSpeed Cache
         if ($this->useLiteSpeed) {
             header('X-LiteSpeed-Purge: *');
@@ -616,9 +626,16 @@ class CacheManager implements CacheInterface
         header('Last-Modified: ' . $lastModifiedHeader);
 
         $ifNoneMatch = trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
-        if ($ifNoneMatch !== '' && $ifNoneMatch === $etag) {
-            $this->sendNotModified();
-            return false;
+        // Release-Prüfung 4.1.0 (PERF, cache:6): Listen, W/ und die Endung -gzip/-br von mod_deflate/mod_brotli
+        // erkennen. Liegt If-None-Match vor, entscheidet allein das ETag (RFC 9110, 13.1.3): sonst lieferte ein
+        // passendes If-Modified-Since trotz geändertem ETag (z. B. neue CMS-Version) weiter 304.
+        if ($ifNoneMatch !== '') {
+            if (self::etagMatches($ifNoneMatch, $etag)) {
+                $this->sendNotModified();
+                return false;
+            }
+
+            return true;
         }
 
         $ifModifiedSince = trim((string)($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? ''));
@@ -631,6 +648,91 @@ class CacheManager implements CacheInterface
         }
 
         return true;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:6): Prüft einen If-None-Match-Header gegen ein starkes ETag.
+     * Akzeptiert "*", kommagetrennte Listen, schwache Validatoren (W/) und die Endungen, die mod_deflate
+     * und mod_brotli beim Komprimieren an das ETag hängen ("<etag>-gzip", "-br", "-deflate").
+     */
+    public static function etagMatches(string $ifNoneMatch, string $etag): bool
+    {
+        $normalize = static function (string $value): string {
+            $value = trim($value);
+            if (str_starts_with($value, 'W/')) {
+                $value = substr($value, 2);
+            }
+
+            return (string) preg_replace('/-(?:gzip|br|deflate|zstd)"$/', '"', $value);
+        };
+
+        $expected = $normalize($etag);
+        if ($expected === '' || $expected === '""') {
+            return false;
+        }
+
+        foreach (explode(',', $ifNoneMatch) as $candidate) {
+            $candidate = trim($candidate);
+            if ($candidate === '*') {
+                return true;
+            }
+            if ($candidate !== '' && hash_equals($expected, $normalize($candidate))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, cache:1): Option mit dem Zeitpunkt der letzten seitenweiten Änderung. */
+    public const SITE_CONTENT_VERSION_OPTION = 'site_content_version';
+
+    private static int $siteContentVersionBumpedAt = 0;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:1): Unix-Zeit der letzten Änderung, die jede öffentliche Seite betreffen
+     * kann (Einstellungen, Menüs, Theme, Plugins, wiederverwendbare Blöcke, Inhalte in Listen). Fließt in ETag und
+     * Last-Modified der Seiten ein, damit nach solchen Änderungen kein 304 mit altem Rahmen ausgeliefert wird.
+     * Gelesen über den OptionStore (Autoload-Option, keine zusätzliche Abfrage).
+     */
+    public static function siteContentVersion(): int
+    {
+        try {
+            $value = Services\OptionStore::getInstance()->get(self::SITE_CONTENT_VERSION_OPTION, '0');
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        return max(0, (int) $value);
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:1): Setzt die seitenweite Inhaltsversion auf jetzt (höchstens einmal
+     * je Sekunde und Request). Aufrufer: clear()/clearAll() nach Inhaltsänderungen und Bootstrap nach
+     * schreibenden Admin-Anfragen.
+     */
+    public static function bumpSiteContentVersion(): void
+    {
+        $now = time();
+        if (self::$siteContentVersionBumpedAt === $now) {
+            return;
+        }
+        self::$siteContentVersionBumpedAt = $now;
+
+        try {
+            if (!class_exists(Database::class)) {
+                return;
+            }
+            $db = Database::instance();
+            $value = (string) $now;
+            $db->execute(
+                "INSERT INTO {$db->getPrefix()}settings (option_name, option_value, autoload) VALUES (?, ?, 1)
+                 ON DUPLICATE KEY UPDATE option_value = IF(CAST(option_value AS UNSIGNED) < ?, ?, option_value)",
+                [self::SITE_CONTENT_VERSION_OPTION, $value, $now, $value]
+            );
+        } catch (\Throwable) {
+            // Ohne Datenbank (Installer, CLI-Wartung) bleibt die Version unverändert.
+        }
     }
 
     /**
@@ -672,6 +774,49 @@ class CacheManager implements CacheInterface
         }
     }
 
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:0): Dateien, die dieser Cache selbst schreibt (getCacheFile()).
+     * Alles andere im Verzeichnis cache/ (db_*.flag, platform_ok_*.flag, theme_scan_*.ok, .update.lock,
+     * opcache-warmup.*, session_gc_lifetime.cache, Unterordner) gehört anderen Diensten.
+     *
+     * @return list<string>
+     */
+    private function ownCacheFiles(): array
+    {
+        $files = [];
+        foreach (glob($this->cacheDir . '*.cache') ?: [] as $file) {
+            if (self::isOwnCacheFileName(basename($file)) && is_file($file) && !is_link($file)) {
+                $files[] = $file;
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:0): true nur für Dateinamen aus getCacheFile() (128 Hex-Zeichen + .cache).
+     */
+    public static function isOwnCacheFileName(string $basename): bool
+    {
+        return preg_match('/^[0-9a-f]{128}\.cache$/D', $basename) === 1;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:0): löscht nur die Schlüssel mit Präfix 365cms: (siehe apcuKey()).
+     * Ohne APCUIterator (sehr alte APCu-Versionen) bleibt es beim bisherigen vollständigen Leeren.
+     */
+    private function clearApcuNamespace(): void
+    {
+        if (class_exists('APCUIterator') && function_exists('apcu_delete')) {
+            apcu_delete(new \APCUIterator('/^' . preg_quote(self::APCU_PREFIX, '/') . '/', defined('APC_ITER_KEY') ? APC_ITER_KEY : 2));
+            return;
+        }
+
+        if (function_exists('apcu_clear_cache')) {
+            apcu_clear_cache();
+        }
+    }
+
     private function getCacheFile(string $key): string
     {
         return $this->cacheDir . hash('sha512', $key) . '.cache';
@@ -683,6 +828,6 @@ class CacheManager implements CacheInterface
      */
     private function apcuKey(string $key): string
     {
-        return '365cms:' . hash('sha256', $key);
+        return self::APCU_PREFIX . hash('sha256', $key);
     }
 }

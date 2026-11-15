@@ -276,6 +276,10 @@ AddDefaultCharset UTF-8
     # Statische Bild-Assets – 1 Jahr, immutable (nie geändert ohne neuen Namen)
     <FilesMatch "\.(jpg|jpeg|gif|png|webp|avif|ico|svg)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
+        # Release-Prüfung 4.1.0 (PERF, cache:4/cwv:3): Medien unter uploads/ behalten beim Ersetzen
+        # (Mediathek: Datei ersetzen) dieselbe URL samt WebP/AVIF-Fassungen. Deshalb hier nicht immutable,
+        # sondern 1 Tag frisch und danach Revalidierung per ETag/Last-Modified (im Hintergrund bis 7 Tage).
+        Header set Cache-Control "public, max-age=86400, stale-while-revalidate=604800" env=CMS_UPLOAD_REQUEST
     </FilesMatch>
 
     # Schriften – 1 Jahr

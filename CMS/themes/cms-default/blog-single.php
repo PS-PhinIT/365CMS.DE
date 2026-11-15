@@ -203,7 +203,8 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
     </figure>
     <?php endif; ?>
 
-    <div class="post-body post-body--detail">
+    <?php // Release-Prüfung 4.1.0 (PERF, cwv:2): data-photoswipe, damit die für Beiträge geladene Lightbox den Inhalt auch findet. ?>
+    <div class="post-body post-body--detail" data-photoswipe>
       <?php echo $pContent; // Content is trusted ?>
     </div>
 
@@ -249,8 +250,9 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
                 ? htmlspecialchars($rExcerptRaw, ENT_QUOTES, 'UTF-8')
                 : esc_html(meridian_t('theme.post.related_more'));
             $rImageRef = (string) ($rp['featured_image'] ?? '');
-            $rPicture = function_exists('meridian_get_picture_sources')
-                ? meridian_get_picture_sources($rImageRef, null, 720, 405)
+            // Release-Prüfung 4.1.0 (PERF, cwv:8): Breiten-srcset aus vorhandenen Bildgrößen, sonst wie bisher.
+            $rPicture = function_exists('meridian_get_responsive_picture_sources')
+                ? meridian_get_responsive_picture_sources($rImageRef, null, 720, 405)
                 : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 720, 'height' => 405];
             $rImageDimensions = function_exists('meridian_image_dimension_attributes')
                 ? meridian_image_dimension_attributes($rImageRef, 720, 405)
@@ -260,13 +262,13 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
           <?php if ($rPicture['url'] !== ''): ?>
           <a href="<?php echo htmlspecialchars($rLink, ENT_QUOTES, 'UTF-8'); ?>" class="related-card__media">
             <picture>
-              <?php if (($rPicture['avif_url'] ?? '') !== ''): ?>
-              <source srcset="<?php echo htmlspecialchars($rPicture['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+              <?php if (($rPicture['avif_url'] ?? '') !== '' && meridian_picture_source_attributes($rPicture, 'avif', '(max-width: 520px) calc(100vw - 2rem), (max-width: 720px) 50vw, 300px') !== ''): ?>
+              <source<?php echo meridian_picture_source_attributes($rPicture, 'avif', '(max-width: 520px) calc(100vw - 2rem), (max-width: 720px) 50vw, 300px'); ?> type="image/avif">
               <?php endif; ?>
-              <?php if ($rPicture['webp_url'] !== ''): ?>
-              <source srcset="<?php echo htmlspecialchars($rPicture['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
+              <?php if ($rPicture['webp_url'] !== '' && meridian_picture_source_attributes($rPicture, 'webp', '(max-width: 520px) calc(100vw - 2rem), (max-width: 720px) 50vw, 300px') !== ''): ?>
+              <source<?php echo meridian_picture_source_attributes($rPicture, 'webp', '(max-width: 520px) calc(100vw - 2rem), (max-width: 720px) 50vw, 300px'); ?> type="image/webp">
               <?php endif; ?>
-              <img src="<?php echo htmlspecialchars($rPicture['url'], ENT_QUOTES, 'UTF-8'); ?>"
+              <img src="<?php echo htmlspecialchars($rPicture['url'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo function_exists('meridian_picture_img_srcset_attributes') ? meridian_picture_img_srcset_attributes($rPicture, '(max-width: 520px) calc(100vw - 2rem), (max-width: 720px) 50vw, 300px') : ''; ?>
                    alt="<?php echo $rTitle; ?>"
                    <?php echo function_exists('meridian_image_loading_attributes') ? meridian_image_loading_attributes(false) : 'loading="lazy" decoding="async"'; ?>
                    <?php echo $rImageDimensions; ?>>
@@ -342,7 +344,12 @@ $relatedPosts = ($showRelated && function_exists('meridian_get_related_posts'))
         <h3><?php echo esc_html(meridian_t('theme.comments.form_title')); ?></h3>
         <?php
           $commentCsrf = '';
-          if (class_exists('\\CMS\\Security')) {
+          // Release-Prüfung 4.1.0 (PERF, cache:2): Anonyme Besucher erhalten ein zustandsloses, signiertes Token
+          // (HMAC über Beitrags-ID und Ausgabezeit), damit die Beitragsansicht keine Session startet und öffentlich
+          // cachebar bleibt. Angemeldete Nutzer behalten das sitzungsgebundene CSRF-Token.
+          if (!$isLoggedInCommentAuthor && class_exists('\\CMS\\Services\\Forms\\FormSpamGuard')) {
+              $commentCsrf = \CMS\Services\Forms\FormSpamGuard::timestampToken('comment-post|' . (int) ($post->id ?? 0));
+          } elseif (class_exists('\\CMS\\Security')) {
               $commentCsrf = \CMS\Security::instance()->generateToken('comment_' . ($post->id ?? 0));
           }
         ?>

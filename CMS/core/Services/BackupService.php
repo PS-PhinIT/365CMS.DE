@@ -345,20 +345,35 @@ class BackupService
             $writer("DROP TABLE IF EXISTS {$quotedTable};\n");
             $writer($create['Create Table'] . ";\n\n");
 
-            $dataStmt = $this->db->query("SELECT * FROM {$quotedTable}");
-            $wroteRows = false;
             // Generierte Spalten (z. B. posts.has_locale_*) berechnet die Datenbank selbst;
             // Werte dafür lehnt MySQL beim Restore ab.
+            // Release-Prüfung 4.1.0 (PERF, batch:3): vor der Datenabfrage ermitteln, denn solange das ungepufferte
+            // Ergebnis offen ist, darf auf derselben Verbindung keine weitere Abfrage laufen.
             $generatedColumns = array_flip($this->getGeneratedColumns($table));
+            $wroteRows = false;
 
-            while ($row = $dataStmt->fetch(\PDO::FETCH_ASSOC)) {
-                if ($generatedColumns !== []) {
-                    $row = array_diff_key($row, $generatedColumns);
+            // Release-Prüfung 4.1.0 (PERF, batch:3): Zeilen ungepuffert streamen, statt die ganze Tabelle im
+            // PHP-Speicher zu puffern (mysqlnd zählt den Puffer zum memory_limit). Das Dump-Format bleibt gleich;
+            // PDO::quote() in createSqlValueLiteral() arbeitet clientseitig und ist dabei erlaubt.
+            $restoreBuffering = $this->disableBufferedQueries();
+            $dataStmt = null;
+            try {
+                $dataStmt = $this->db->query("SELECT * FROM {$quotedTable}");
+                while ($row = $dataStmt->fetch(\PDO::FETCH_ASSOC)) {
+                    if ($generatedColumns !== []) {
+                        $row = array_diff_key($row, $generatedColumns);
+                    }
+                    $columns = implode(', ', array_map(fn (string $column): string => $this->quoteSqlIdentifier($column), array_keys($row)));
+                    $values = array_map(fn ($value) => $this->createSqlValueLiteral($value), array_values($row));
+                    $writer("INSERT INTO {$quotedTable} ({$columns}) VALUES (" . implode(', ', $values) . ");\n");
+                    $wroteRows = true;
                 }
-                $columns = implode(', ', array_map(fn (string $column): string => $this->quoteSqlIdentifier($column), array_keys($row)));
-                $values = array_map(fn ($value) => $this->createSqlValueLiteral($value), array_values($row));
-                $writer("INSERT INTO {$quotedTable} ({$columns}) VALUES (" . implode(', ', $values) . ");\n");
-                $wroteRows = true;
+            } finally {
+                // Offenes Ergebnis immer schließen (auch wenn der Writer wirft), danach Pufferung wiederherstellen.
+                if ($dataStmt instanceof \PDOStatement) {
+                    $dataStmt->closeCursor();
+                }
+                $restoreBuffering();
             }
 
             if ($wroteRows) {
@@ -367,6 +382,38 @@ class BackupService
         }
 
         $writer("SET FOREIGN_KEY_CHECKS=1;\n");
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:3): Schaltet auf MySQL/MariaDB ungepufferte Abfragen ein und liefert eine
+     * Funktion, die den vorherigen Zustand wiederherstellt. Andere Treiber (z. B. SQLite in Tests) bleiben unverändert.
+     *
+     * @return \Closure(): void
+     */
+    private function disableBufferedQueries(): \Closure
+    {
+        try {
+            $pdo = $this->db->getPdo();
+            if ($pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) !== 'mysql') {
+                return static function (): void {
+                };
+            }
+
+            $attribute = \CMS\Database::mysqlAttribute('ATTR_USE_BUFFERED_QUERY');
+            $previous = (bool) $pdo->getAttribute($attribute);
+            $pdo->setAttribute($attribute, false);
+
+            return static function () use ($pdo, $attribute, $previous): void {
+                try {
+                    $pdo->setAttribute($attribute, $previous);
+                } catch (\Throwable) {
+                    // Wiederherstellen darf das Backup nicht abbrechen.
+                }
+            };
+        } catch (\Throwable) {
+            return static function (): void {
+            };
+        }
     }
 
     /**

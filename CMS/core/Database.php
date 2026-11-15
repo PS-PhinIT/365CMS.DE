@@ -26,6 +26,15 @@ class Database implements DatabaseInterface
     public string $prefix = 'cms_';
     public string $last_error = '';
     private ?\PDOStatement $lastStatement = null;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:3): Request-Cache für tableExists()/columnExists().
+     * Gemerkt werden nur positive Ergebnisse (eine Tabelle, die über rohes PDO angelegt wird, bleibt so
+     * sofort sichtbar); CREATE/ALTER/DROP/RENAME über diese Klasse leeren den Cache in noteWrite().
+     *
+     * @var array<string, true>
+     */
+    private array $schemaExistsCache = [];
     
     /**
      * Singleton instance
@@ -176,14 +185,24 @@ class Database implements DatabaseInterface
     private function noteWrite(string $sql): void
     {
         $head = strtoupper(substr(ltrim($sql), 0, 7));
+        // Release-Prüfung 4.1.0 (PERF, db:3): Schemaänderungen verwerfen den Request-Cache der Existenzprüfungen.
+        if ($this->schemaExistsCache !== [] && preg_match('/^(?:CREATE|ALTER|DROP|RENAME)\b/', $head) === 1) {
+            $this->schemaExistsCache = [];
+            return;
+        }
         if (!str_starts_with($head, 'INSERT') && !str_starts_with($head, 'UPDATE')
             && !str_starts_with($head, 'DELETE') && !str_starts_with($head, 'REPLACE')) {
             return;
         }
 
-        if (preg_match('/`?' . preg_quote($this->prefix, '/') . 'settings`?(?![a-z0-9_])/i', $sql) === 1
-            && class_exists(Services\OptionStore::class, false)) {
-            Services\OptionStore::getInstance()->flush();
+        if (preg_match('/`?' . preg_quote($this->prefix, '/') . 'settings`?(?![a-z0-9_])/i', $sql) === 1) {
+            if (class_exists(Services\OptionStore::class, false)) {
+                Services\OptionStore::getInstance()->flush();
+            }
+            // Release-Prüfung 4.1.0 (PERF, db:7): Request-Cache von SettingsService::getGroup() ebenso verwerfen.
+            if (class_exists(Services\SettingsService::class, false)) {
+                Services\SettingsService::flushGroupCache();
+            }
         }
 
         // RSS-Feed-Cache (Services\FeedService::serveRssFeed) auch bei Massenänderungen und Taxonomie-Pflege
@@ -191,6 +210,8 @@ class Database implements DatabaseInterface
         if (preg_match('/`?' . preg_quote($this->prefix, '/') . '(?:posts|post_categories|post_category_rel|post_tags|post_tag_rel)`?(?![a-z0-9_])/i', $sql) === 1
             && preg_match('/^\s*UPDATE\s+\S+\s+SET\s+views\s*=\s*views\s*\+\s*1\s*(?:,\s*updated_at\s*=\s*updated_at\s*)?WHERE/i', $sql) !== 1) {
             Services\FeedService::invalidatePublicFeedCache();
+            // Release-Prüfung 4.1.0 (PERF, db:8): gecachte Kategorie-/Schlagwort-Übersichten der Theme-Sidebar verwerfen.
+            Routing\ThemeArchiveRepository::invalidateOverviewCache();
         }
     }
 
@@ -481,13 +502,24 @@ class Database implements DatabaseInterface
             return false;
         }
 
-        return (int)($this->get_var(
+        // Release-Prüfung 4.1.0 (PERF, db:3): je Request nur einmal information_schema fragen (nur Treffer gemerkt).
+        $cacheKey = 't:' . $table;
+        if (isset($this->schemaExistsCache[$cacheKey])) {
+            return true;
+        }
+
+        $exists = (int)($this->get_var(
             'SELECT COUNT(*)
              FROM information_schema.TABLES
              WHERE TABLE_SCHEMA = DATABASE()
                AND TABLE_NAME = ?',
             [$table]
         ) ?? 0) > 0;
+        if ($exists) {
+            $this->schemaExistsCache[$cacheKey] = true;
+        }
+
+        return $exists;
     }
 
     /**
@@ -499,7 +531,13 @@ class Database implements DatabaseInterface
             return false;
         }
 
-        return (int)($this->get_var(
+        // Release-Prüfung 4.1.0 (PERF, db:3): Request-Cache wie bei tableExists().
+        $cacheKey = 'c:' . $table . '.' . strtolower($column);
+        if (isset($this->schemaExistsCache[$cacheKey])) {
+            return true;
+        }
+
+        $exists = (int)($this->get_var(
             'SELECT COUNT(*)
              FROM information_schema.COLUMNS
              WHERE TABLE_SCHEMA = DATABASE()
@@ -507,6 +545,20 @@ class Database implements DatabaseInterface
                AND COLUMN_NAME = ?',
             [$table, $column]
         ) ?? 0) > 0;
+        if ($exists) {
+            $this->schemaExistsCache[$cacheKey] = true;
+        }
+
+        return $exists;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:3): verwirft den Request-Cache der Existenzprüfungen, z. B. nach
+     * Schemaänderungen über getPdo()->exec(), die noteWrite() nicht sieht.
+     */
+    public function flushSchemaCache(): void
+    {
+        $this->schemaExistsCache = [];
     }
 
     /**

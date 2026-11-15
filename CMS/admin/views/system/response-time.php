@@ -90,7 +90,16 @@ $renderSparkline = static function (array $points, string $strokeColor, string $
 				<div class="page-pretitle">Diagnose</div>
 				<h2 class="page-title">Response-Time Monitoring</h2>
 				<div class="text-secondary mt-1">Misst die aktuelle Antwortzeit der Hauptseite gegen die gespeicherte Schwelle und zeigt zusätzlich eine stündlich verdichtete Trendhistorie.</div>
+				<?php /* Release-Prüfung 4.1.0 (PERF, blocking:0): Herkunft der Messung und explizite Live-Messung. */ ?>
+				<?php if ((string)($response['note'] ?? '') !== ''): ?>
+					<div class="text-secondary small mt-1"><?php echo htmlspecialchars((string)$response['note']); ?></div>
+				<?php endif; ?>
 			</div>
+			<?php if (empty($response['skipped'])): ?>
+				<div class="col-auto ms-auto d-print-none">
+					<a href="?measure=now" class="btn btn-outline-primary">Jetzt messen</a>
+				</div>
+			<?php endif; ?>
 		</div>
 	</div>
 </div>
@@ -121,7 +130,11 @@ $renderSparkline = static function (array $points, string $strokeColor, string $
 				<div class="card">
 					<div class="card-body">
 						<div class="subheader">Ergebnis</div>
-						<div class="h1 mb-0 <?php echo empty($response['error']) ? 'text-success' : 'text-danger'; ?>"><?php echo empty($response['error']) ? 'OK' : 'Fehler'; ?></div>
+						<?php if (!empty($response['skipped'])): ?>
+							<div class="h1 mb-0 text-secondary">Nicht messbar</div>
+						<?php else: ?>
+							<div class="h1 mb-0 <?php echo empty($response['error']) ? 'text-success' : 'text-danger'; ?>"><?php echo empty($response['error']) ? 'OK' : 'Fehler'; ?></div>
+						<?php endif; ?>
 					</div>
 				</div>
 			</div>
@@ -184,6 +197,10 @@ $renderSparkline = static function (array $points, string $strokeColor, string $
 					<tr>
 						<td class="text-muted w-25">URL</td>
 						<td class="text-break"><?php echo htmlspecialchars((string)($response['url'] ?? '')); ?></td>
+					</tr>
+					<tr>
+						<td class="text-muted">Messzeitpunkt</td>
+						<td><?php echo htmlspecialchars((string)($response['measured_at'] ?? '') !== '' ? (string)$response['measured_at'] : '–'); ?></td>
 					</tr>
 					<tr>
 						<td class="text-muted">Fehler</td>

@@ -49,6 +49,8 @@ final class WebhookService
     public const RESPONSE_LIMIT = 65536;
     public const TIMEOUT = 10;
     public const USER_AGENT = '365CMS-Webhooks/1.0';
+    /** Release-Prüfung 4.1.0 (PERF, batch:4): höchstens so viele Sekunden Zustellung je Cron-Lauf. */
+    public const DELIVER_TIME_BUDGET_SECONDS = 20.0;
 
     private static ?self $instance = null;
 
@@ -313,22 +315,52 @@ final class WebhookService
      *
      * @return array{delivered: int, failed: int, dead: int}
      */
-    public function deliverDue(int $limit = 50): array
+    public function deliverDue(int $limit = 50, ?float $timeBudgetSeconds = null): array
     {
         $result = ['delivered' => 0, 'failed' => 0, 'dead' => 0];
         $rows = $this->db->get_results(
-            "SELECT d.id FROM {$this->prefix}webhook_deliveries d
+            "SELECT d.id, d.endpoint_id FROM {$this->prefix}webhook_deliveries d
              JOIN {$this->prefix}webhook_endpoints e ON e.id = d.endpoint_id AND e.is_active = 1
              WHERE d.status = 'pending' AND d.next_attempt_at <= ?
              ORDER BY d.next_attempt_at ASC, d.id ASC LIMIT " . max(1, min(500, $limit)),
             [$this->now()]
         ) ?: [];
+        // Release-Prüfung 4.1.0 (PERF, batch:4): Zeitbudget je Lauf (Rest bleibt fällig für den nächsten Cron) und
+        // keine weiteren Versuche an Empfänger, die während dieses Laufs deaktiviert wurden (410, 20 Fehlschläge).
+        $budget = $timeBudgetSeconds ?? self::DELIVER_TIME_BUDGET_SECONDS;
+        $startedAt = microtime(true);
+        $disabledEndpoints = [];
         foreach ($rows as $row) {
+            if (microtime(true) - $startedAt >= $budget) {
+                break;
+            }
+            $endpointId = (int) ($row->endpoint_id ?? 0);
+            if (isset($disabledEndpoints[$endpointId])) {
+                continue;
+            }
             $outcome = $this->deliver((int) $row->id);
             $result[$outcome] = ($result[$outcome] ?? 0) + 1;
+            if ($outcome !== 'delivered' && !$this->isEndpointActive($endpointId)) {
+                $disabledEndpoints[$endpointId] = true;
+            }
         }
 
         return $result;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:4): Ist der Empfänger (noch) aktiv? Nur nach einem Fehlschlag abgefragt.
+     */
+    private function isEndpointActive(int $endpointId): bool
+    {
+        if ($endpointId <= 0) {
+            return false;
+        }
+
+        return (int) $this->db->get_var(
+            "SELECT is_active FROM {$this->prefix}webhook_endpoints WHERE id = ? LIMIT 1",
+            [$endpointId]
+        ) === 1;
     }
 
     /**

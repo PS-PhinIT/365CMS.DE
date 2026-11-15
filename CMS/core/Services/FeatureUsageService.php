@@ -12,7 +12,9 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\Database;
+use CMS\Hooks;
 use CMS\Logger;
+use CMS\Services\Retention\RetentionRule;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -21,6 +23,15 @@ if (!defined('ABSPATH')) {
 final class FeatureUsageService
 {
     private const THROTTLE_SECONDS = 900;
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:10): Schlüssel der Aufbewahrungsregel für cms_feature_usage. */
+    public const RETENTION_KEY = 'feature_usage';
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:10): Standardfrist in Tagen (Filter `cms_feature_usage_retention_days`, 0 = nie). */
+    public const DEFAULT_RETENTION_DAYS = 180;
+
+    private const PRUNE_BLOCK = 5000;
+    private const PRUNE_MAX_BLOCKS = 200;
 
     private static ?self $instance = null;
     private Database $db;
@@ -38,7 +49,104 @@ final class FeatureUsageService
     private function __construct()
     {
         $this->db = Database::instance();
-        $this->createUsageTable();
+        // Release-Prüfung 4.1.0 (PERF, db:4): CREATE TABLE IF NOT EXISTS nur einmal je Codestand statt bei jedem
+        // Admin-/Member-Aufruf; fehlt die Tabelle trotz Flag, legt trackFeatureUsage() sie beim Fehler erneut an.
+        $ran = false;
+        $this->db->runSchemaOnce('feature_usage', __FILE__, function () use (&$ran): bool {
+            $ran = true;
+            $this->createUsageTable();
+
+            return $this->tableReady;
+        });
+        if (!$ran) {
+            $this->tableReady = true;
+        }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:10): registriert die Aufbewahrungsregel für cms_feature_usage
+     * (Aufruf aus einem `cms_init`-Hook, siehe DataRetentionService::registerRule()).
+     */
+    public static function registerRetentionRule(): void
+    {
+        DataRetentionService::registerRule(self::retentionRule());
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:10): Regel für die tägliche Datenaufbewahrung. Die Closures erzeugen den
+     * Dienst erst beim Lauf, die Registrierung selbst kostet keine Datenbankabfrage.
+     */
+    public static function retentionRule(): RetentionRule
+    {
+        $translate = static function (string $key, string $fallback): string {
+            $text = function_exists('__') ? (string) __($key) : '';
+
+            return $text !== '' && $text !== $key ? $text : $fallback;
+        };
+
+        return new RetentionRule(
+            self::RETENTION_KEY,
+            $translate('feature_usage.retention_label', 'Funktionsnutzung (Telemetrie)'),
+            $translate('feature_usage.retention_description', 'Tageswerte genutzter Admin-/Member-Funktionen je Sitzung. Frist per Filter cms_feature_usage_retention_days anpassbar.'),
+            static fn (): int => self::retentionDays(),
+            static fn (): int => self::getInstance()->countDue(),
+            static fn (): int => self::getInstance()->prune(),
+        );
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:10): wirksame Frist in Tagen, 0 = nie löschen, sonst mindestens 7. */
+    public static function retentionDays(): int
+    {
+        $days = class_exists(Hooks::class)
+            ? Hooks::applyFilters('cms_feature_usage_retention_days', self::DEFAULT_RETENTION_DAYS)
+            : self::DEFAULT_RETENTION_DAYS;
+        $days = is_numeric($days) ? (int) $days : self::DEFAULT_RETENTION_DAYS;
+
+        return $days <= 0 ? 0 : max(7, min(3650, $days));
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:10): Trockenlauf, Zeilen außerhalb der Frist (über idx_last_used_at). */
+    public function countDue(): int
+    {
+        $days = self::retentionDays();
+        if ($days <= 0 || !$this->tableReady) {
+            return 0;
+        }
+
+        return (int) ($this->db->get_var(
+            "SELECT COUNT(*) FROM {$this->db->getPrefix()}feature_usage WHERE last_used_at < ?",
+            [$this->retentionCutoff($days)]
+        ) ?? 0);
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:10): löscht Zeilen außerhalb der Frist blockweise. */
+    public function prune(): int
+    {
+        $days = self::retentionDays();
+        if ($days <= 0 || !$this->tableReady) {
+            return 0;
+        }
+
+        $cutoff = $this->retentionCutoff($days);
+        $block = self::PRUNE_BLOCK;
+        $deleted = 0;
+        for ($i = 0; $i < self::PRUNE_MAX_BLOCKS; $i++) {
+            $rows = $this->db->execute(
+                "DELETE FROM {$this->db->getPrefix()}feature_usage WHERE last_used_at < ? LIMIT {$block}",
+                [$cutoff]
+            )->rowCount();
+            $deleted += $rows;
+            if ($rows < $block) {
+                break;
+            }
+        }
+
+        return $deleted;
+    }
+
+    private function retentionCutoff(int $days): string
+    {
+        return date('Y-m-d 00:00:00', strtotime('-' . $days . ' days'));
     }
 
     public function trackFeatureUsage(
@@ -125,6 +233,10 @@ final class FeatureUsageService
 
             return true;
         } catch (\Throwable $e) {
+            // Release-Prüfung 4.1.0 (PERF, db:4): Schema-Flag vorhanden, Tabelle aber entfernt: einmal neu anlegen.
+            if ($this->isMissingTableError($e)) {
+                $this->createUsageTable();
+            }
             Logger::instance()->withChannel('feature-usage')->warning('Feature usage could not be tracked.', [
                 'feature_key' => $featureKey,
                 'feature_area' => $featureArea,
@@ -339,6 +451,18 @@ final class FeatureUsageService
             ]);
             $this->tableReady = false;
         }
+    }
+
+    private function isMissingTableError(\Throwable $e): bool
+    {
+        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+            $message = $current->getMessage();
+            if (str_contains($message, '42S02') || str_contains($message, '1146')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isThrottled(string $throttleKey): bool

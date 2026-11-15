@@ -57,16 +57,22 @@ if ($logoImageUrl === '' && $logoUrl !== '') {
 $logoDimensionAttributes = $logoUrl !== '' && function_exists('meridian_image_dimension_attributes')
   ? meridian_image_dimension_attributes($logoUrl)
   : '';
+// Release-Prüfung 4.1.0 (PERF, cwv:6): Logo eager, aber ohne fetchpriority=high, damit das LCP-Bild die Priorität behält.
 $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
-  ? meridian_image_loading_attributes(true)
+  ? meridian_image_loading_attributes(true, false)
   : 'loading="eager" decoding="async"';
+// Release-Prüfung 4.1.0 (PERF, cwv:6): Logo im versteckten Mobil-Panel ohne Vorrang laden (gleiche URL, aus dem Cache).
+$mobileLogoLoadingAttributes = function_exists('meridian_image_loading_attributes')
+  ? meridian_image_loading_attributes(false)
+  : 'decoding="async"';
 
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars($currentLocale, ENT_QUOTES, 'UTF-8'); ?>">
 <head>
     <meta charset="UTF-8">
-    <?= function_exists('cms_csp_runtime_tags') ? cms_csp_runtime_tags() : '' ?>
+    <?php // Release-Prüfung 4.1.0 (PERF, cwv:0): DOMPurify per defer, Runtime inline, also nicht render-blockierend. Das Theme weist HTML erst per defer oder in Event-Handlern zu. ?>
+    <?= function_exists('cms_csp_runtime_tags') ? cms_csp_runtime_tags(true) : '' ?>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php
     // Seitentitel ermitteln
@@ -280,7 +286,7 @@ $logoLoadingAttributes = function_exists('meridian_image_loading_attributes')
   <div class="mobile-nav-header">
     <a href="<?php echo SITE_URL; ?>/" class="site-logo" aria-label="<?php echo esc_attr(meridian_t('theme.header.home_aria', ['{name}' => (string) $logoText])); ?>" style="text-decoration:none;">
       <?php if ($logoType === 'image' && $logoImageUrl): ?>
-        <img src="<?php echo htmlspecialchars($logoImageUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($logoText); ?>" <?php echo $logoDimensionAttributes; ?> <?php echo $logoLoadingAttributes; ?> style="max-height:32px;width:auto;">
+        <img src="<?php echo htmlspecialchars($logoImageUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($logoText); ?>" <?php echo $logoDimensionAttributes; ?> <?php echo $mobileLogoLoadingAttributes; ?> style="max-height:32px;width:auto;">
       <?php else: ?>
         <span class="logo-word" style="font-size:1rem;"><?php echo htmlspecialchars($logoText); ?></span>
         <span class="logo-dot"></span>

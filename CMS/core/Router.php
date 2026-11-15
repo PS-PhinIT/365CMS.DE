@@ -887,10 +887,30 @@ class Router
             return true;
         }
 
+        // Release-Prüfung 4.1.0 (PERF, cache:1): Menüs, Theme, Einstellungen, Plugins und wiederverwendbare Blöcke
+        // ändern den Seitenrahmen, ohne updated_at der Seite zu berühren. Die seitenweite Inhaltsversion und die
+        // CMS-Version fließen deshalb in ETag und Last-Modified ein, sonst bekämen Browser und CDNs nach Ablauf von
+        // max-age weiter 304 mit altem Rahmen.
+        $lastModifiedTs = strtotime($lastModified);
+        if ($lastModifiedTs === false || $lastModifiedTs <= 0) {
+            return true;
+        }
+        $siteVersion = CacheManager::siteContentVersion();
+
         return CacheManager::instance()->sendConditionalHeaders(
-            $type . ':' . $resourceId . ':' . $locale,
-            $lastModified
+            self::buildPublicPageValidatorKey($type, $resourceId, $locale, $siteVersion),
+            max($lastModifiedTs, $siteVersion)
         );
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:1): Schlüssel für das ETag öffentlicher Seiten und Hub-Sites.
+     */
+    public static function buildPublicPageValidatorKey(string $type, int $resourceId, string $locale, int $siteVersion): string
+    {
+        return $type . ':' . $resourceId . ':' . $locale
+            . '|' . (defined('CMS_VERSION') ? (string) CMS_VERSION : '')
+            . '|' . $siteVersion;
     }
 
     private function buildLocalizedPagePath(array $page, string $locale): string

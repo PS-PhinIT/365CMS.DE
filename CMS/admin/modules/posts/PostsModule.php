@@ -156,18 +156,23 @@ class PostsModule
         $this->db     = Database::instance();
         $this->prefix = $this->db->getPrefix();
         $this->categoryViewModelBuilder = new PostsCategoryViewModelBuilder();
-        $this->ensureColumns();
-        $this->ensureCategoryColumns();
-        $this->ensureTagColumns();
-        $this->ensurePostCategoryRelationTable();
-        $this->ensurePostRevisionTable();
+        // Release-Prüfung 4.1.0 (PERF, db:1): Schemaprüfungen (rund 30 SHOW COLUMNS, 2 CREATE TABLE) nur einmal
+        // je Dateistand statt bei jeder Anfrage; der Merker entsteht nur, wenn alle Schritte fehlerfrei waren.
+        $this->db->runSchemaOnce('posts_module_schema', __FILE__, function (): bool {
+            $ok = $this->ensureColumns();
+            $ok = $this->ensureCategoryColumns() && $ok;
+            $ok = $this->ensureTagColumns() && $ok;
+            $ok = $this->ensurePostCategoryRelationTable() && $ok;
+
+            return $this->ensurePostRevisionTable() && $ok;
+        });
         $this->ensureDefaultCategories();
     }
 
     /**
      * Ergänzt fehlende Beitrags-Spalten in Altinstallationen.
      */
-    private function ensureColumns(): void
+    private function ensureColumns(): bool
     {
         $columns = [
             'slug_en' => "ALTER TABLE {$this->prefix}posts ADD COLUMN slug_en VARCHAR(255) DEFAULT NULL AFTER slug",
@@ -184,6 +189,7 @@ class PostsModule
             'content_updated_at' => "ALTER TABLE {$this->prefix}posts ADD COLUMN content_updated_at DATETIME DEFAULT NULL AFTER published_at",
         ];
 
+        $ok = true;
         foreach ($columns as $column => $sql) {
             try {
                 $stmt = $this->db->query("SHOW COLUMNS FROM {$this->prefix}posts LIKE '{$column}'");
@@ -191,15 +197,18 @@ class PostsModule
                     $this->db->query($sql);
                 }
             } catch (\Throwable $e) {
+                $ok = false;
                 Logger::instance()->withChannel('admin.posts')->warning('Beitrags-Spalte konnte nicht automatisch ergänzt werden.', [
                     'column' => $column,
                     'exception' => $e->getMessage(),
                 ]);
             }
         }
+
+        return $ok;
     }
 
-    private function ensureCategoryColumns(): void
+    private function ensureCategoryColumns(): bool
     {
         $columns = [
             'slug_en' => "ALTER TABLE {$this->prefix}post_categories ADD COLUMN slug_en VARCHAR(100) DEFAULT NULL AFTER slug",
@@ -208,6 +217,7 @@ class PostsModule
             'replacement_category_id' => "ALTER TABLE {$this->prefix}post_categories ADD COLUMN replacement_category_id INT UNSIGNED DEFAULT NULL AFTER sort_order",
         ];
 
+        $ok = true;
         foreach ($columns as $column => $sql) {
             try {
                 $stmt = $this->db->query("SHOW COLUMNS FROM {$this->prefix}post_categories LIKE '{$column}'");
@@ -215,23 +225,27 @@ class PostsModule
                     $this->db->query($sql);
                 }
             } catch (\Throwable $e) {
+                $ok = false;
                 Logger::instance()->withChannel('admin.posts')->warning('Beitrags-Kategoriespalte konnte nicht automatisch ergänzt werden.', [
                     'column' => $column,
                     'exception' => $e->getMessage(),
                 ]);
             }
         }
+
+        return $ok;
     }
 
     /**
      * Ergänzt fehlende Tag-Spalten in Altinstallationen.
      */
-    private function ensureTagColumns(): void
+    private function ensureTagColumns(): bool
     {
         $columns = [
             'slug_en' => "ALTER TABLE {$this->prefix}post_tags ADD COLUMN slug_en VARCHAR(100) DEFAULT NULL AFTER slug",
         ];
 
+        $ok = true;
         foreach ($columns as $column => $sql) {
             try {
                 $stmt = $this->db->query("SHOW COLUMNS FROM {$this->prefix}post_tags LIKE '{$column}'");
@@ -239,15 +253,18 @@ class PostsModule
                     $this->db->query($sql);
                 }
             } catch (\Throwable $e) {
+                $ok = false;
                 Logger::instance()->withChannel('admin.posts')->warning('Beitrags-Tagspalte konnte nicht automatisch ergänzt werden.', [
                     'column' => $column,
                     'exception' => $e->getMessage(),
                 ]);
             }
         }
+
+        return $ok;
     }
 
-    private function ensurePostCategoryRelationTable(): void
+    private function ensurePostCategoryRelationTable(): bool
     {
         try {
             $this->db->query(
@@ -266,10 +283,14 @@ class PostsModule
             Logger::instance()->withChannel('admin.posts')->warning('Beitrags-Kategorie-Relationstabelle konnte nicht automatisch angelegt werden.', [
                 'exception' => $e->getMessage(),
             ]);
+
+            return false;
         }
+
+        return true;
     }
 
-    private function ensurePostRevisionTable(): void
+    private function ensurePostRevisionTable(): bool
     {
         try {
             $this->db->query(
@@ -326,12 +347,28 @@ class PostsModule
             Logger::instance()->withChannel('admin.posts')->warning('Beitrags-Revisionsschema konnte nicht automatisch sichergestellt werden.', [
                 'exception' => $e->getMessage(),
             ]);
+
+            return false;
         }
+
+        return true;
     }
 
     private function ensureDefaultCategories(): void
     {
         try {
+            // Release-Prüfung 4.1.0 (PERF, db:1): alle Standard-Slugs mit einer Abfrage laden statt je Kategorie
+            // eine (rund 30 SELECTs je Anfrage). Die Prüfung selbst bleibt je Anfrage, damit gelöschte
+            // Standardkategorien wie bisher wieder angelegt werden.
+            $slugs = [];
+            foreach (self::DEFAULT_CATEGORY_TREES as $tree) {
+                $slugs[] = (string) ($tree['root']['slug'] ?? '');
+                foreach (array_keys((array) ($tree['children'] ?? [])) as $childSlug) {
+                    $slugs[] = (string) $childSlug;
+                }
+            }
+            $rowsBySlug = $this->getDefaultCategoryRows($slugs);
+
             foreach (self::DEFAULT_CATEGORY_TREES as $tree) {
                 $root = (array) ($tree['root'] ?? []);
                 $rootSlug = (string) ($root['slug'] ?? '');
@@ -342,7 +379,7 @@ class PostsModule
                     continue;
                 }
 
-                $rootRow = $this->getDefaultCategoryRow($rootSlug);
+                $rootRow = $rowsBySlug[self::defaultCategorySlugKey($rootSlug)] ?? null;
                 $rootId = (int) ($rootRow['id'] ?? 0);
 
                 if ($rootId <= 0) {
@@ -358,10 +395,11 @@ class PostsModule
                         [$rootName, $rootSortOrder, $rootId]
                     );
                 }
+                $rowsBySlug[self::defaultCategorySlugKey($rootSlug)] = ['id' => $rootId, 'name' => $rootName, 'parent_id' => null, 'sort_order' => $rootSortOrder];
 
                 $sortOrder = $rootSortOrder + 10;
                 foreach ((array) ($tree['children'] ?? []) as $slug => $name) {
-                    $categoryRow = $this->getDefaultCategoryRow((string) $slug);
+                    $categoryRow = $rowsBySlug[self::defaultCategorySlugKey((string) $slug)] ?? null;
                     $categoryId = (int) ($categoryRow['id'] ?? 0);
 
                     if ($categoryId <= 0) {
@@ -369,12 +407,14 @@ class PostsModule
                             "INSERT INTO {$this->prefix}post_categories (name, slug, parent_id, sort_order) VALUES (?, ?, ?, ?)",
                             [(string) $name, (string) $slug, $rootId, $sortOrder]
                         );
+                        $categoryId = (int) $this->db->lastInsertId();
                     } elseif (!$this->defaultCategoryMatches($categoryRow, (string) $name, $rootId, $sortOrder)) {
                         $this->db->execute(
                             "UPDATE {$this->prefix}post_categories SET name = ?, parent_id = ?, sort_order = ? WHERE id = ?",
                             [(string) $name, $rootId, $sortOrder, $categoryId]
                         );
                     }
+                    $rowsBySlug[self::defaultCategorySlugKey((string) $slug)] = ['id' => $categoryId, 'name' => (string) $name, 'parent_id' => $rootId, 'sort_order' => $sortOrder];
 
                     $sortOrder += 10;
                 }
@@ -387,26 +427,49 @@ class PostsModule
     }
 
     /**
-     * @return array{id:int,name:string,parent_id:?int,sort_order:int}|null
+     * Release-Prüfung 4.1.0 (PERF, db:1): lädt die Zeilen aller übergebenen Slugs mit einer Abfrage.
+     *
+     * @param list<string> $slugs
+     * @return array<string,array{id:int,name:string,parent_id:?int,sort_order:int}> Schlüssel: defaultCategorySlugKey()
      */
-    private function getDefaultCategoryRow(string $slug): ?array
+    private function getDefaultCategoryRows(array $slugs): array
     {
-        $row = $this->db->get_row(
-            "SELECT id, name, parent_id, sort_order FROM {$this->prefix}post_categories WHERE slug = ? LIMIT 1",
-            [$slug]
-        );
-        if ($row === null) {
-            return null;
+        $slugs = array_values(array_unique(array_filter($slugs, static fn (string $slug): bool => $slug !== '')));
+        if ($slugs === []) {
+            return [];
         }
 
-        $row = (array) $row;
+        $rows = $this->db->get_results(
+            "SELECT id, slug, name, parent_id, sort_order FROM {$this->prefix}post_categories WHERE slug IN ("
+            . implode(',', array_fill(0, count($slugs), '?')) . ') ORDER BY id ASC',
+            $slugs
+        ) ?: [];
 
-        return [
-            'id' => (int) ($row['id'] ?? 0),
-            'name' => (string) ($row['name'] ?? ''),
-            'parent_id' => isset($row['parent_id']) ? (int) $row['parent_id'] : null,
-            'sort_order' => (int) ($row['sort_order'] ?? 0),
-        ];
+        $rowsBySlug = [];
+        foreach ($rows as $row) {
+            $row = (array) $row;
+            $key = self::defaultCategorySlugKey((string) ($row['slug'] ?? ''));
+            if ($key === '' || isset($rowsBySlug[$key])) {
+                continue;
+            }
+
+            $rowsBySlug[$key] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'name' => (string) ($row['name'] ?? ''),
+                'parent_id' => isset($row['parent_id']) ? (int) $row['parent_id'] : null,
+                'sort_order' => (int) ($row['sort_order'] ?? 0),
+            ];
+        }
+
+        return $rowsBySlug;
+    }
+
+    /**
+     * Vergleichsschlüssel wie die Spaltenkollation (utf8mb4_unicode_ci): Groß/Klein und Leerzeichen am Ende egal.
+     */
+    private static function defaultCategorySlugKey(string $slug): string
+    {
+        return strtolower(rtrim($slug, ' '));
     }
 
     /**
@@ -668,17 +731,26 @@ class PostsModule
      */
     public function getCategoryAdminData(): array
     {
+        // Release-Prüfung 4.1.0 (PERF, db:6): Zählung einmal vorab gruppiert statt einer korrelierten Unterabfrage
+        // je Kategorie (das OR über zwei Tabellen verhinderte jeden Index). Gleiche Bedeutung: verschiedene Beiträge
+        // je Kategorie über Hauptkategorie und Zuordnungstabelle, ohne Statusfilter, nur vorhandene Beiträge.
         $categories = $this->db->get_results(
             "SELECT c.id, c.name, c.slug, c.slug_en, c.description, c.parent_id, c.sort_order, c.replacement_category_id,
-                    (
-                        SELECT COUNT(DISTINCT p2.id)
-                        FROM {$this->prefix}posts p2
-                        LEFT JOIN {$this->prefix}post_category_rel pcr2 ON pcr2.post_id = p2.id
-                        WHERE p2.category_id = c.id OR pcr2.category_id = c.id
-                    ) AS assigned_post_count
+                    COALESCE(x.assigned_post_count, 0) AS assigned_post_count
              FROM {$this->prefix}post_categories c
-             LEFT JOIN {$this->prefix}posts p ON p.category_id = c.id
-               GROUP BY c.id, c.name, c.slug, c.slug_en, c.description, c.parent_id, c.sort_order, c.replacement_category_id
+             LEFT JOIN (
+                 SELECT u.category_id, COUNT(DISTINCT u.post_id) AS assigned_post_count
+                 FROM (
+                     SELECT p.id AS post_id, p.category_id
+                     FROM {$this->prefix}posts p
+                     WHERE p.category_id IS NOT NULL
+                     UNION
+                     SELECT pcr.post_id, pcr.category_id
+                     FROM {$this->prefix}post_category_rel pcr
+                     INNER JOIN {$this->prefix}posts p3 ON p3.id = pcr.post_id
+                 ) u
+                 GROUP BY u.category_id
+             ) x ON x.category_id = c.id
              ORDER BY c.sort_order ASC, c.name ASC"
         ) ?: [];
 

@@ -163,8 +163,13 @@ class SystemService {
     
     /**
      * Check all CMS database tables
+     *
+     * Release-Prüfung 4.1.0 (PERF, db:5): Standard ist eine einzige information_schema-Abfrage für alle Tabellen
+     * (Existenz, geschätzte Zeilenzahl, Größe) ohne COUNT(*) und ohne CHECK TABLE, damit ein GET der Diagnose keine
+     * großen Tabellen scannt oder sperrt. Mit $deep = true (ausdrückliche Systemprüfung) laufen wie bisher exakte
+     * Zählung und CHECK TABLE je Tabelle; die Aktion „Tabellen reparieren“ führt CHECK TABLE ohnehin selbst aus.
      */
-    public function checkDatabaseTables(): array {
+    public function checkDatabaseTables(bool $deep = false): array {
         $pdo = $this->db->getConnection();
         $prefix = $this->db->getPrefix();
         
@@ -210,7 +215,26 @@ class SystemService {
         ];
         
         $table_status = [];
-        
+
+        // Release-Prüfung 4.1.0 (PERF, db:5): Kennzahlen aller Tabellen in einem Rundlauf.
+        $meta = [];
+        $metaError = null;
+        try {
+            $names = array_map(static fn (string $table): string => $prefix . $table, array_keys($tables));
+            $stmt = $pdo->prepare(
+                'SELECT TABLE_NAME AS table_name, TABLE_ROWS AS table_rows, DATA_LENGTH + INDEX_LENGTH AS size
+                 FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME IN (' . implode(',', array_fill(0, count($names), '?')) . ')'
+            );
+            $stmt->execute($names);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $meta[strtolower((string) ($row['table_name'] ?? ''))] = $row;
+            }
+        } catch (\Exception $e) {
+            $metaError = $e->getMessage();
+        }
+
         foreach ($tables as $table => $label) {
             $full_table = $prefix . $table;
             $status = [
@@ -220,54 +244,55 @@ class SystemService {
                 'rows' => 0,
                 'size' => 0,
                 'status' => 'OK',
-                'error' => null
+                'error' => null,
+                // Release-Prüfung 4.1.0 (PERF, db:5): ohne $deep ist rows ein Schätzwert und CHECK TABLE lief nicht.
+                'rows_approximate' => !$deep,
+                'checked' => $deep,
             ];
-            
-            try {
-                // Check if table exists
-                if ($this->db->tableExists($full_table)) {
-                    $status['exists'] = true;
+
+            if ($metaError !== null) {
+                $status['error'] = $metaError;
+                $status['status'] = 'Error';
+                $table_status[] = $status;
+                continue;
+            }
+
+            $info = $meta[strtolower($full_table)] ?? null;
+            if ($info === null) {
+                $status['status'] = 'Missing';
+                $status['error'] = 'Tabelle existiert nicht';
+                $table_status[] = $status;
+                continue;
+            }
+
+            $status['exists'] = true;
+            $status['rows'] = (int) ($info['table_rows'] ?? 0);
+            $status['size'] = (int) ($info['size'] ?? 0);
+
+            if ($deep) {
+                try {
                     $quotedFullTable = $this->quoteIdentifier($full_table);
-                    
+
                     // Count rows
                     $result = $pdo->query("SELECT COUNT(*) as total FROM {$quotedFullTable}");
                     if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
                         $status['rows'] = (int)($row['total'] ?? 0);
                     }
-                    
-                    // Get table size
-                    $stmt = $pdo->prepare("
-                        SELECT 
-                            data_length + index_length as size
-                        FROM information_schema.TABLES 
-                        WHERE table_schema = ?
-                        AND table_name = ?
-                    ");
-                    $stmt->execute([(string) DB_NAME, $full_table]);
-                    $result = $stmt;
-                    
-                    if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
-                        $status['size'] = (int)($row['size'] ?? 0);
-                    }
-                    
+
                     // Check table status
                     $result = $pdo->query("CHECK TABLE {$quotedFullTable}");
                     if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
                         $status['status'] = $row['Msg_text'] ?? 'OK';
                     }
-                } else {
-                    $status['status'] = 'Missing';
-                    $status['error'] = 'Tabelle existiert nicht';
+                } catch (\Exception $e) {
+                    $status['error'] = $e->getMessage();
+                    $status['status'] = 'Error';
                 }
-                
-            } catch (\Exception $e) {
-                $status['error'] = $e->getMessage();
-                $status['status'] = 'Error';
             }
-            
+
             $table_status[] = $status;
         }
-        
+
         return $table_status;
     }
     
@@ -1036,7 +1061,8 @@ class SystemService {
         return [
             'system_info' => $this->getSystemInfo(),
             'database_status' => $this->getDatabaseStatus(),
-            'table_status' => $this->checkDatabaseTables(),
+            // Release-Prüfung 4.1.0 (PERF, db:5): ausdrückliche Systemprüfung, daher mit COUNT(*) und CHECK TABLE.
+            'table_status' => $this->checkDatabaseTables(true),
             'file_permissions' => $this->checkFilePermissions(),
             'directory_sizes' => $this->getDirectorySizes(),
             'cms_statistics' => $this->getCMSStatistics(),

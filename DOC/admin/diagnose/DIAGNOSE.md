@@ -5,7 +5,7 @@
 
 ## English (summary)
 
-Diagnostic screens are rendered by `CMS/admin/system-monitor-page.php` (sections `diagnose`, `assets`, `logs`, …) and `CMS/admin/logs-page.php` (logs), both backed by `CMS/admin/modules/system/SystemInfoModule.php`. They show database/table state, runtime telemetry, vendor/asset inventory, error reports and log files, and offer maintenance actions (clear cache, optimise/repair/create tables, export a diagnostic report). Operational logs are daily files `CMS/logs/<channel>-YYYY-MM-DD.log` written by `CMS\Logger`; security/business events are stored in `cms_audit_log` by `CMS\AuditLogger`.
+Diagnostic screens are rendered by `CMS/admin/system-monitor-page.php` (sections `diagnose`, `assets`, `logs`, …) and `CMS/admin/logs-page.php` (logs), both backed by `CMS/admin/modules/system/SystemInfoModule.php`. They show database/table state, runtime telemetry, vendor/asset inventory, error reports and log files, and offer maintenance actions (clear cache, optimise/repair/create tables, export a diagnostic report). Since 4.1.0 the table list on `/admin/diagnose` shows estimated row counts from `information_schema` and runs no `COUNT(*)` or `CHECK TABLE` on page load; the explicit "repair tables" action performs `CHECK TABLE`. Operational logs are daily files `CMS/logs/<channel>-YYYY-MM-DD.log` written by `CMS\Logger`; security/business events are stored in `cms_audit_log` by `CMS\AuditLogger`.
 
 ## Deutsch
 
@@ -14,7 +14,7 @@ Diagnostic screens are rendered by `CMS/admin/system-monitor-page.php` (sections
 | Anzeige | Inhalt |
 |---|---|
 | Datenbankstatus | Verbindung, Server-Version, Größe, Zeichensatz |
-| Tabellen | alle CMS-Tabellen mit Zeilen, Größe, Overhead, Engine; fehlende Tabellen werden markiert |
+| Tabellen | alle CMS-Tabellen mit geschätzter Zeilenzahl (≈, aus `information_schema`) und Größe; fehlende Tabellen werden markiert. Seit 4.1.0 läuft beim Öffnen der Seite kein `COUNT(*)` und kein `CHECK TABLE` mehr (Status „Nicht geprüft“), damit große Tabellen nicht gescannt oder gesperrt werden |
 | Berechtigungen | Schreibrechte kritischer Verzeichnisse |
 | Runtime-Telemetrie | PHP-Version, Speicherlimit, OPcache, Ausführungszeit |
 | Fehlerreports | letzte 15 Einträge aus `cms_error_reports` |
@@ -24,7 +24,7 @@ Diagnostic screens are rendered by `CMS/admin/system-monitor-page.php` (sections
 | `clear_cache` | Datei-/APCu-Cache leeren |
 | `optimize_db` | `OPTIMIZE TABLE` für CMS-Tabellen |
 | `create_tables` | fehlende Tabellen aus `SchemaManager` anlegen |
-| `repair_tables` | Tabellen reparieren und idempotente Migrationen ausführen |
+| `repair_tables` | jede Tabelle mit `CHECK TABLE` prüfen und nur auffällige reparieren (ausdrückliche Tabellenprüfung; kann bei großen Tabellen dauern) |
 | `export_diagnostic_report` | Diagnosebericht (System, Datenbank, letzte Logs) als Datei herunterladen: zum Weitergeben an den Support |
 | `clear_error_reports` | Fehlerreports löschen |
 

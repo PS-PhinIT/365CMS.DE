@@ -18,6 +18,115 @@ if (!defined('ABSPATH')) {
 final class ThemeArchiveRepository
 {
     /**
+     * Release-Prüfung 4.1.0 (PERF, db:8): Cache-Schlüssel der Kategorie- und Schlagwort-Übersichten.
+     * Je Schlüssel liegt eine Map „Locale|Ausdruck-Hash“ => {until, items}; die URLs werden beim Lesen gebaut.
+     */
+    public const OVERVIEW_CACHE_KEYS = [
+        'category' => 'theme_archive_overview_category',
+        'tag' => 'theme_archive_overview_tag',
+    ];
+
+    /** Release-Prüfung 4.1.0 (PERF, db:8): Höchstalter eines Eintrags in Sekunden (Schreibzugriffe über rohes PDO). */
+    public const OVERVIEW_CACHE_TTL = 600;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:8): verwirft die gecachten Übersichten. Database::noteWrite() ruft das bei
+     * Schreibzugriffen auf posts/post_categories/post_category_rel/post_tags/post_tag_rel auf.
+     */
+    public static function invalidateOverviewCache(): void
+    {
+        if (!defined('ABSPATH')) {
+            return;
+        }
+
+        try {
+            $cache = \CMS\CacheManager::instance();
+            foreach (self::OVERVIEW_CACHE_KEYS as $key) {
+                $cache->delete($key);
+            }
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:8): liefert die Übersicht aus dem Cache oder berechnet sie neu.
+     * Ein Eintrag gilt höchstens OVERVIEW_CACHE_TTL Sekunden und nie über die nächste geplante Veröffentlichung
+     * hinaus, damit zeitgesteuerte Beiträge wie bisher pünktlich mitzählen.
+     *
+     * @param \Closure(): array<int,array<string,mixed>> $compute Übersicht ohne `url`
+     * @return array<int,array<string,mixed>>
+     */
+    private function cachedOverview(string $kind, string $locale, string $localeAvailabilityExpression, \Closure $compute): array
+    {
+        $cacheKey = self::OVERVIEW_CACHE_KEYS[$kind];
+        $entryKey = $locale . '|' . md5($localeAvailabilityExpression);
+        $now = time();
+        $cache = null;
+        $stored = [];
+
+        try {
+            $cache = \CMS\CacheManager::instance();
+            $stored = $cache->get($cacheKey, []);
+            $stored = is_array($stored) ? $stored : [];
+        } catch (\Throwable) {
+            $cache = null;
+        }
+
+        $entry = $stored[$entryKey] ?? null;
+        if (is_array($entry) && (int) ($entry['until'] ?? 0) > $now && is_array($entry['items'] ?? null)) {
+            $items = $entry['items'];
+        } else {
+            $items = $compute();
+            if ($cache !== null) {
+                $until = $now + self::OVERVIEW_CACHE_TTL;
+                $nextPublication = $this->nextScheduledPublication();
+                if ($nextPublication !== null) {
+                    $until = min($until, $nextPublication);
+                }
+                if ($until > $now) {
+                    foreach ($stored as $key => $value) {
+                        if (!is_array($value) || (int) ($value['until'] ?? 0) <= $now) {
+                            unset($stored[$key]);
+                        }
+                    }
+                    $stored[$entryKey] = ['until' => $until, 'items' => $items];
+                    try {
+                        $cache->set($cacheKey, $stored, max(1, max(array_map(static fn (array $value): int => (int) $value['until'], $stored)) - $now));
+                    } catch (\Throwable) {
+                    }
+                }
+            }
+        }
+
+        $type = $kind === 'category' ? 'category' : 'tag';
+        foreach ($items as &$item) {
+            $item['url'] = \cms_get_archive_url($type, (string) ($item['slug'] ?? ''), $locale);
+        }
+        unset($item);
+
+        return array_values($items);
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:8): Zeitpunkt der nächsten geplanten Veröffentlichung (Unix-Zeit) oder null.
+     */
+    private function nextScheduledPublication(): ?int
+    {
+        try {
+            $db = Database::instance();
+            $next = $db->get_var(
+                "SELECT MIN(published_at) FROM {$db->getPrefix()}posts WHERE status = 'published' AND published_at > ?",
+                [date('Y-m-d H:i:s')]
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $timestamp = is_string($next) && $next !== '' ? strtotime($next) : false;
+
+        return $timestamp !== false ? (int) $timestamp : null;
+    }
+    /**
      * @return array<int,int>
      */
     public function getCategoryArchiveIds(int $categoryId): array
@@ -60,6 +169,16 @@ final class ThemeArchiveRepository
      * @return array<int,array<string,mixed>>
      */
     public function getPublishedCategoryOverview(string $locale, string $localeAvailabilityExpression): array
+    {
+        // Release-Prüfung 4.1.0 (PERF, db:8): nicht bei jedem Sidebar-Aufruf alle veröffentlichten Beiträge lesen.
+        return $this->cachedOverview('category', $locale, $localeAvailabilityExpression,
+            fn (): array => $this->computeCategoryOverview($locale, $localeAvailabilityExpression));
+    }
+
+    /**
+     * @return array<int,array<string,mixed>> Übersicht ohne `url`
+     */
+    private function computeCategoryOverview(string $locale, string $localeAvailabilityExpression): array
     {
         $db = Database::instance();
         $prefix = $db->getPrefix();
@@ -128,7 +247,6 @@ final class ThemeArchiveRepository
                 'slug' => $localizedSlug,
                 'description' => trim((string) ($category->description ?? '')),
                 'count' => $count,
-                'url' => \cms_get_archive_url('category', $localizedSlug, $locale),
             ];
         }
 
@@ -148,6 +266,16 @@ final class ThemeArchiveRepository
      * @return array<int,array<string,mixed>>
      */
     public function getPublishedTagOverview(string $locale, string $localeAvailabilityExpression): array
+    {
+        // Release-Prüfung 4.1.0 (PERF, db:8): Schlagwortwolke aus dem Cache statt Vollscan je Seitenaufruf.
+        return $this->cachedOverview('tag', $locale, $localeAvailabilityExpression,
+            fn (): array => $this->computeTagOverview($locale, $localeAvailabilityExpression));
+    }
+
+    /**
+     * @return array<int,array<string,mixed>> Übersicht ohne `url`
+     */
+    private function computeTagOverview(string $locale, string $localeAvailabilityExpression): array
     {
         $db = Database::instance();
         $prefix = $db->getPrefix();
@@ -219,7 +347,6 @@ final class ThemeArchiveRepository
                 'slug' => $localizedSlug,
                 'description' => '',
                 'count' => $count,
-                'url' => \cms_get_archive_url('tag', $localizedSlug, $locale),
             ];
         }
 

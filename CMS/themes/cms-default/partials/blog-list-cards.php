@@ -34,8 +34,9 @@ if (empty($listPosts)) {
                     ? time_ago($item->published_at ?? $item->created_at)
                     : '';
         $iImageReference = (string) ($item->featured_image ?? '');
-        $iImage = function_exists('meridian_get_picture_sources')
-            ? meridian_get_picture_sources($iImageReference, null, 320, 218)
+        // Release-Prüfung 4.1.0 (PERF, cwv:8): Breiten-srcset aus vorhandenen Bildgrößen, sonst wie bisher.
+        $iImage = function_exists('meridian_get_responsive_picture_sources')
+            ? meridian_get_responsive_picture_sources($iImageReference, null, 320, 218)
             : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 320, 'height' => 218];
         $iImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($iImageReference, 320, 218)
@@ -45,13 +46,13 @@ if (empty($listPosts)) {
         <?php if ($iImage['url'] !== ''): ?>
         <a href="<?php echo htmlspecialchars(meridian_post_url($item), ENT_QUOTES, 'UTF-8'); ?>" class="art-thumb">
             <picture>
-                <?php if (($iImage['avif_url'] ?? '') !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($iImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php if (($iImage['avif_url'] ?? '') !== '' && meridian_picture_source_attributes($iImage, 'avif', '100px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($iImage, 'avif', '100px'); ?> type="image/avif">
                 <?php endif; ?>
-                <?php if ($iImage['webp_url'] !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($iImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
+                <?php if ($iImage['webp_url'] !== '' && meridian_picture_source_attributes($iImage, 'webp', '100px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($iImage, 'webp', '100px'); ?> type="image/webp">
                 <?php endif; ?>
-                <img src="<?php echo htmlspecialchars($iImage['url'], ENT_QUOTES, 'UTF-8'); ?>"
+                <img src="<?php echo htmlspecialchars($iImage['url'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo function_exists('meridian_picture_img_srcset_attributes') ? meridian_picture_img_srcset_attributes($iImage, '100px') : ''; ?>
                      alt="<?php echo $iTitle; ?>"
                      <?php echo function_exists('meridian_image_loading_attributes') ? meridian_image_loading_attributes(false) : 'loading="lazy" decoding="async"'; ?>
                      <?php echo $iImageDimensions; ?>>

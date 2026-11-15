@@ -392,6 +392,34 @@ location ~* ^/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|
 
 Nginx evaluates regex locations in order: keep these rules above your `location ~ \.php$` FastCGI handler and the `cache/optimized-assets` rule before the generic private-path rule.
 
+Compression and browser caching: on Apache, `.htaccess` enables Brotli/Deflate and sets `Cache-Control`/`Expires`. Nginx ignores both, and stock Nginx compresses only `text/html` and sends no `Cache-Control` for static files. Without the following rules `style.css` is sent as about 97 KB instead of about 17 KB, and every page view revalidates each asset. Put the compression directives in the `server` (or `http`) block and use the two cache locations in place of the single `try_files $uri =404;` location above:
+
+```nginx
+gzip on;
+gzip_vary on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_types text/css application/javascript text/javascript application/json image/svg+xml application/xml text/xml text/plain font/ttf font/otf;
+# With ngx_brotli installed:
+# brotli on;
+# brotli_types text/css application/javascript text/javascript application/json image/svg+xml application/xml text/xml text/plain font/ttf font/otf;
+
+# Theme, plugin and core assets carry ?v=<version>: cache for a year.
+location ~* ^/(?:assets|themes|plugins)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot)$ {
+    try_files $uri =404;
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+}
+
+# Uploads keep their URL when a file is replaced: short lifetime, never immutable.
+location ~* ^/uploads/.+\.(?:png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip|css|js)$ {
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=86400, stale-while-revalidate=604800" always;
+}
+```
+
+`add_header` inside a location replaces all `add_header` directives inherited from the `server` block. If you set security headers there, repeat them in these locations. The hashed files under `cache/optimized-assets/` may also get `expires 1y;` in their own location.
+
 **Deutsch**
 
 ### Apache
@@ -445,6 +473,34 @@ location ~* ^/(?:assets|themes|plugins|uploads)/.+\.(?:css|js|mjs|map|png|jpe?g|
 ```
 
 Nginx prüft Regex-Locations in Reihenfolge: Diese Regeln über dem `location ~ \.php$`-FastCGI-Handler platzieren und die `cache/optimized-assets`-Regel vor der allgemeinen Sperrregel.
+
+Komprimierung und Browser-Cache: Unter Apache aktiviert die `.htaccess` Brotli/Deflate und setzt `Cache-Control`/`Expires`. Nginx wertet beides nicht aus, und ein Standard-Nginx komprimiert nur `text/html` und sendet für statische Dateien kein `Cache-Control`. Ohne die folgenden Regeln geht `style.css` mit rund 97 KB statt rund 17 KB über die Leitung, und jeder Seitenaufruf prüft jedes Asset erneut. Die Komprimierung gehört in den `server`- (oder `http`-)Block, die beiden Cache-Locations ersetzen die einzelne `try_files $uri =404;`-Location oben:
+
+```nginx
+gzip on;
+gzip_vary on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_types text/css application/javascript text/javascript application/json image/svg+xml application/xml text/xml text/plain font/ttf font/otf;
+# Mit installiertem ngx_brotli:
+# brotli on;
+# brotli_types text/css application/javascript text/javascript application/json image/svg+xml application/xml text/xml text/plain font/ttf font/otf;
+
+# Theme-, Plugin- und Core-Assets tragen ?v=<Version>: ein Jahr cachen.
+location ~* ^/(?:assets|themes|plugins)/.+\.(?:css|js|mjs|map|png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot)$ {
+    try_files $uri =404;
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+}
+
+# Uploads behalten beim Ersetzen ihre URL: kurze Laufzeit, nie immutable.
+location ~* ^/uploads/.+\.(?:png|jpe?g|gif|webp|avif|svg|ico|bmp|woff2?|ttf|otf|eot|mp4|webm|mp3|ogg|wav|pdf|zip|css|js)$ {
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=86400, stale-while-revalidate=604800" always;
+}
+```
+
+`add_header` in einer Location ersetzt alle aus dem `server`-Block geerbten `add_header`-Anweisungen. Wer dort Sicherheits-Header setzt, muss sie in diesen Locations wiederholen. Die Hash-Dateien unter `cache/optimized-assets/` dürfen in ihrer eigenen Location zusätzlich `expires 1y;` erhalten.
 
 ---
 

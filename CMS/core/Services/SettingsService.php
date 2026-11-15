@@ -32,9 +32,27 @@ class SettingsService
     private string $prefix;
     private CryptoService $crypto;
 
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:7): Request-Cache für getGroup(), nur im Prozess (enthält ggf. entschlüsselte Werte).
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    private array $groupCache = [];
+
     public static function getInstance(): self
     {
         return self::$instance ??= new self();
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:7): verwirft den Gruppen-Cache. Database::noteWrite() ruft das bei jedem
+     * Schreibzugriff auf die Tabelle `settings` auf, set()/forget() zusätzlich direkt.
+     */
+    public static function flushGroupCache(): void
+    {
+        if (self::$instance !== null) {
+            self::$instance->groupCache = [];
+        }
     }
 
     private function __construct()
@@ -112,6 +130,11 @@ class SettingsService
         $group = $this->sanitizeSegment($group);
         $prefix = $group . '.';
 
+        // Release-Prüfung 4.1.0 (PERF, db:7): je Request höchstens eine LIKE-Abfrage pro Gruppe.
+        if (isset($this->groupCache[$group])) {
+            return $this->groupCache[$group];
+        }
+
         try {
             $rows = $this->db->get_results(
                 "SELECT option_name, option_value FROM {$this->prefix}settings WHERE option_name LIKE ? ORDER BY option_name ASC",
@@ -143,6 +166,8 @@ class SettingsService
             }
         }
 
+        $this->groupCache[$group] = $result;
+
         return $result;
     }
 
@@ -151,6 +176,8 @@ class SettingsService
         $optionName = $this->buildOptionName($group, $key);
         $storedValue = $this->encodeValue($value, $encrypted, $optionName);
         $autoload = $autoload === 1 ? 1 : 0;
+        // Release-Prüfung 4.1.0 (PERF, db:7): Gruppen-Cache auch bei fehlgeschlagenem Schreiben verwerfen.
+        $this->groupCache = [];
 
         try {
             $this->db->execute(
@@ -189,6 +216,8 @@ class SettingsService
     public function forget(string $group, string $key): bool
     {
         $optionName = $this->buildOptionName($group, $key);
+        // Release-Prüfung 4.1.0 (PERF, db:7): Gruppen-Cache verwerfen.
+        $this->groupCache = [];
 
         try {
             $this->db->execute(

@@ -201,7 +201,9 @@ final class FeedService
         if ($cachedMtime !== false && $cachedMtime > time() - self::PUBLIC_FEED_CACHE_TTL) {
             $cached = @file_get_contents($cacheFile);
             if (is_string($cached) && $cached !== '') {
-                $this->sendRssResponse($cached, $cachedMtime);
+                // Release-Prüfung 4.1.0 (PERF, cache:6): Last-Modified aus dem Inhalt (lastBuildDate), nicht aus dem
+                // Zeitpunkt des Cache-Neuaufbaus, der sich alle 5 Minuten änderte.
+                $this->sendRssResponse($cached, self::resolveFeedLastModified(self::extractLastBuildDate($cached), $cachedMtime));
             }
         }
 
@@ -247,7 +249,10 @@ final class FeedService
         $xml .= '  <description>' . $this->escapeXml($siteDescription) . "</description>\n";
         $xml .= '  <language>' . $this->escapeXml($language) . "</language>\n";
         $xml .= '  <atom:link href="' . $this->escapeXml($feedUrl) . '" rel="self" type="application/rss+xml" />' . "\n";
-        $xml .= '  <lastBuildDate>' . gmdate(DATE_RSS) . "</lastBuildDate>\n";
+        // Release-Prüfung 4.1.0 (PERF, cache:6): lastBuildDate = jüngste Änderung der enthaltenen Beiträge. Mit der
+        // Uhrzeit des Aufbaus änderten sich ETag und Last-Modified bei jedem Neuaufbau, auch ohne neue Beiträge.
+        $newestItem = self::newestFeedItemTimestamp($posts);
+        $xml .= '  <lastBuildDate>' . gmdate(DATE_RSS, $newestItem > 0 ? $newestItem : time()) . "</lastBuildDate>\n";
 
         foreach ($posts as $postRow) {
             $postData = $localization->localizePost((array) $postRow, $locale);
@@ -307,7 +312,56 @@ final class FeedService
             }
         }
 
-        $this->sendRssResponse($xml, time());
+        $this->sendRssResponse($xml, self::resolveFeedLastModified($newestItem, time()));
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:6): Jüngster Zeitstempel (updated_at, published_at, created_at) der Beiträge.
+     *
+     * @param array<int, object|array<string, mixed>> $posts
+     */
+    public static function newestFeedItemTimestamp(array $posts): int
+    {
+        $newest = 0;
+        foreach ($posts as $post) {
+            $row = (array) $post;
+            foreach (['updated_at', 'published_at', 'created_at'] as $field) {
+                $value = trim((string) ($row[$field] ?? ''));
+                if ($value === '') {
+                    continue;
+                }
+                $timestamp = strtotime($value);
+                if ($timestamp !== false && $timestamp > $newest) {
+                    $newest = $timestamp;
+                }
+            }
+        }
+
+        return $newest;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:6): lastBuildDate eines gespeicherten Feeds (0 = nicht lesbar).
+     */
+    public static function extractLastBuildDate(string $xml): int
+    {
+        if (preg_match('#<lastBuildDate>([^<]{1,64})</lastBuildDate>#', $xml, $match) !== 1) {
+            return 0;
+        }
+        $timestamp = strtotime(html_entity_decode($match[1], ENT_QUOTES | ENT_XML1, 'UTF-8'));
+
+        return $timestamp !== false && $timestamp > 0 ? $timestamp : 0;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:6): Last-Modified = jüngster Beitrag oder letzte seitenweite Änderung
+     * (z. B. Feed-Einstellungen, gelöschte Beiträge); $fallback nur, wenn beides fehlt.
+     */
+    private static function resolveFeedLastModified(int $newestItem, int $fallback): int
+    {
+        $lastModified = max($newestItem, \CMS\CacheManager::siteContentVersion());
+
+        return $lastModified > 0 ? $lastModified : $fallback;
     }
 
     /**
@@ -553,13 +607,9 @@ final class FeedService
         $ifNoneMatch = trim((string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
         $notModified = false;
         if ($ifNoneMatch !== '') {
-            foreach (explode(',', $ifNoneMatch) as $candidate) {
-                $candidate = trim($candidate);
-                if ($candidate === '*' || hash_equals($etag, preg_replace('/^W\//', '', $candidate) ?? $candidate)) {
-                    $notModified = true;
-                    break;
-                }
-            }
+            // Release-Prüfung 4.1.0 (PERF, cache:6): mod_deflate/mod_brotli hängen -gzip/-br an das ETag, das Feedreader
+            // zurückschicken. Ohne Normalisierung passte es nie, und jede Abfrage bekam den vollen Feed.
+            $notModified = \CMS\CacheManager::etagMatches($ifNoneMatch, $etag);
         } elseif (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
             $since = strtotime((string) $_SERVER['HTTP_IF_MODIFIED_SINCE']);
             $notModified = $since !== false && $lastModified <= $since;

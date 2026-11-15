@@ -18,6 +18,8 @@ $bootstrapProfile = is_array($runtime['bootstrap'] ?? null) ? $runtime['bootstra
 
 $missingCount = 0;
 $errorCount = 0;
+// Release-Prüfung 4.1.0 (PERF, db:5): Die Ansicht führt kein CHECK TABLE mehr aus, Zeilen sind Schätzwerte.
+$tablesChecked = false;
 foreach ($tables as $tableInfo) {
     if (!is_array($tableInfo)) {
         continue;
@@ -25,6 +27,9 @@ foreach ($tables as $tableInfo) {
 
     if (empty($tableInfo['exists'])) {
         $missingCount++;
+    }
+    if (!array_key_exists('checked', $tableInfo) || !empty($tableInfo['checked'])) {
+        $tablesChecked = true;
     }
 
     $status = (string)($tableInfo['status'] ?? 'OK');
@@ -75,7 +80,7 @@ foreach ($tables as $tableInfo) {
         <div class="row row-deck row-cards mb-4">
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="subheader">DB-Status</div><div class="h1 mb-0 <?php echo !empty($database['connected']) ? 'text-success' : 'text-danger'; ?>"><?php echo !empty($database['connected']) ? 'Online' : 'Offline'; ?></div></div></div></div>
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="subheader">Fehlende Tabellen</div><div class="h1 mb-0 text-danger"><?php echo $missingCount; ?></div></div></div></div>
-            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="subheader">Tabellen mit Problemen</div><div class="h1 mb-0 text-warning"><?php echo $errorCount; ?></div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="subheader">Tabellen mit Problemen</div><div class="h1 mb-0 text-warning"><?php echo $errorCount; ?></div><?php if (!$tablesChecked && $tables !== []): ?><div class="text-secondary small mt-1">ohne CHECK TABLE, Prüfung über „Tabellen reparieren“</div><?php endif; ?></div></div></div>
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="subheader">CMS-Tabellen</div><div class="h1 mb-0"><?php echo htmlspecialchars((string)($database['cms_tables'] ?? '-')); ?></div></div></div></div>
         </div>
 
@@ -159,7 +164,7 @@ foreach ($tables as $tableInfo) {
                     <div class="card-body d-flex flex-column gap-3">
                         <div>
                             <div class="fw-semibold">Schema prüfen</div>
-                            <div class="text-secondary small">Erkennt fehlende Tabellen und stößt bei Bedarf die Schema-Erstellung erneut an.</div>
+                            <div class="text-secondary small">Erkennt fehlende Tabellen und stößt bei Bedarf die Schema-Erstellung erneut an. „Tabellen reparieren“ prüft jede Tabelle mit CHECK TABLE und repariert nur auffällige; das kann bei großen Tabellen dauern und sie kurz sperren.</div>
                         </div>
                         <form method="post">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken ?? ''); ?>">
@@ -405,11 +410,15 @@ foreach ($tables as $tableInfo) {
                                         <tr>
                                             <td><code><?php echo htmlspecialchars(is_string($name) ? $name : (string)($info['name'] ?? '')); ?></code></td>
                                             <td><span class="badge bg-<?php echo !empty($info['exists']) ? 'success' : 'danger'; ?>-lt"><?php echo !empty($info['exists']) ? 'Ja' : 'Nein'; ?></span></td>
-                                            <td><?php echo htmlspecialchars((string)($info['rows'] ?? '-')); ?></td>
+                                            <td><?php echo (!empty($info['rows_approximate']) && !empty($info['exists']) ? '<span class="text-secondary" title="Schätzwert aus information_schema">≈ </span>' : '') . htmlspecialchars((string)($info['rows'] ?? '-')); ?></td>
                                             <td><?php echo htmlspecialchars((string)($info['size'] ?? '-')); ?></td>
                                             <td>
                                                 <?php $status = (string)($info['status'] ?? 'unknown'); ?>
-                                                <span class="badge bg-<?php echo strtolower($status) === 'ok' ? 'success' : 'warning'; ?>-lt"><?php echo htmlspecialchars($status); ?></span>
+                                                <?php if (array_key_exists('checked', $info) && empty($info['checked']) && strtolower($status) === 'ok'): ?>
+                                                    <span class="badge bg-secondary-lt" title="CHECK TABLE läuft nur über „Tabellen reparieren“">Nicht geprüft</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-<?php echo strtolower($status) === 'ok' ? 'success' : 'warning'; ?>-lt"><?php echo htmlspecialchars($status); ?></span>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

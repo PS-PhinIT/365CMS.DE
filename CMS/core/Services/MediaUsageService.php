@@ -89,9 +89,10 @@ final class MediaUsageService
     {
         $usageMap = [];
 
+        // Release-Prüfung 4.1.0 (PERF, db:9): nur Beitragsbild-Spalten statt content/content_en (LONGTEXT) laden.
         $this->collectFeaturedUsages(
             $usageMap,
-            $this->fetchPosts(),
+            $this->fetchFeaturedRows('posts', true),
             'post',
             'Beitrag',
             '/admin/posts?action=edit&id='
@@ -99,7 +100,7 @@ final class MediaUsageService
 
         $this->collectFeaturedUsages(
             $usageMap,
-            $this->fetchPages(),
+            $this->fetchFeaturedRows('pages', true),
             'page',
             'Seite',
             '/admin/pages?action=edit&id='
@@ -122,9 +123,10 @@ final class MediaUsageService
     {
         $items = [];
 
+        // Release-Prüfung 4.1.0 (PERF, db:9): ohne LONGTEXT-Spalten; auch Inhalte ohne Beitragsbild bleiben in der Liste.
         $this->collectFeaturedContentItems(
             $items,
-            $this->fetchPosts(),
+            $this->fetchFeaturedRows('posts', false),
             'post',
             'Beitrag',
             '/admin/posts?action=edit&id='
@@ -132,7 +134,7 @@ final class MediaUsageService
 
         $this->collectFeaturedContentItems(
             $items,
-            $this->fetchPages(),
+            $this->fetchFeaturedRows('pages', false),
             'page',
             'Seite',
             '/admin/pages?action=edit&id='
@@ -168,6 +170,25 @@ final class MediaUsageService
         }
 
         return array_keys($normalized);
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:9): Zeilen für Beitragsbild-Ansichten ohne content/content_en.
+     * Mit $onlyWithImage nur Zeilen mit gesetztem Beitragsbild (für die Verwendungs-Map, die leere Werte ohnehin
+     * überspringt).
+     *
+     * @param 'posts'|'pages' $table
+     * @return array<int, object>
+     */
+    private function fetchFeaturedRows(string $table, bool $onlyWithImage): array
+    {
+        $table = $table === 'pages' ? 'pages' : 'posts';
+        $where = $onlyWithImage ? " WHERE featured_image IS NOT NULL AND featured_image <> ''" : '';
+
+        return $this->db->get_results(
+            "SELECT id, title, slug, featured_image
+             FROM {$this->prefix}{$table}{$where}"
+        ) ?: [];
     }
 
     /**

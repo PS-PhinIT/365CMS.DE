@@ -17,6 +17,12 @@ if (!defined('ABSPATH')) {
 
 class PageManager
 {
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:9): Höchstzahl gespeicherter Revisionen je Seite, wie bei Beiträgen
+     * (PostRevisionService::MAX_REVISIONS_PER_POST). Ältere Snapshots werden nach jedem Speichern entfernt.
+     */
+    public const MAX_REVISIONS_PER_PAGE = 30;
+
     private static ?self $instance = null;
     private Database $db;
     private string $prefix;
@@ -359,7 +365,38 @@ class PageManager
             $params[] = $currentUserId > 0 ? $currentUserId : null;
         }
 
-        return $stmt->execute($params);
+        if (!$stmt->execute($params)) {
+            return false;
+        }
+
+        $this->pruneRevisions($pageId);
+
+        return true;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:9): Behält nur die letzten MAX_REVISIONS_PER_PAGE Revisionen einer
+     * Seite (über idx_page_id). Ein Fehler beim Aufräumen bricht das Speichern nicht ab.
+     */
+    private function pruneRevisions(int $pageId): void
+    {
+        try {
+            $oldestKeptId = (int) $this->db->get_var(
+                "SELECT id FROM {$this->prefix}page_revisions WHERE page_id = ? ORDER BY id DESC LIMIT 1 OFFSET " . (self::MAX_REVISIONS_PER_PAGE - 1),
+                [$pageId]
+            );
+            if ($oldestKeptId > 0) {
+                $this->db->execute(
+                    "DELETE FROM {$this->prefix}page_revisions WHERE page_id = ? AND id < ?",
+                    [$pageId, $oldestKeptId]
+                );
+            }
+        } catch (\Throwable $e) {
+            \CMS\Logger::instance()->withChannel('admin.pages')->warning('Alte Seitenrevisionen konnten nicht bereinigt werden.', [
+                'page_id' => $pageId,
+                'exception' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
