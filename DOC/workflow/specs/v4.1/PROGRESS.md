@@ -26,7 +26,7 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 | 6b | Alerting | ➡️ | **verschoben auf 4.3.0** (Entscheidung 15.11.2026), samt Webhook-Ereignis `alert.raised` und Hook `cms_alert_raised` |
 | S | Schema v26 (gemeinsam) | ✅ | Marke `v26` in `SchemaManager` und `MigrationManager` (Schritt v26: Tabellen `FEATURE_TABLES_V26`, Spalten der Bereiche 3c und 5a, `capabilities_v26` = Übernahme von `posts.publish`/`pages.publish`; neue Rechte hat nur „admin“), `Version::CURRENT = 4.1.0` (15.11.2026), Marketplace-Manifest und Release-Pakete in `RELEASE/`; `TESTS/schema-v26`, `TESTS/release-3.4.0` |
 
-### Nachträge aus dem Betrieb (15.11.2026, noch offen)
+### Rückmeldungen aus dem Betrieb (15.11.2026), alle umgesetzt
 
 | # | Wunsch | Status |
 |---|---|---|
