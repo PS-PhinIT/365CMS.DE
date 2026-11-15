@@ -59,7 +59,7 @@ Mit 4.1.0 werden `posts.publish` und `pages.publish` erstmals geprüft. Damit ni
 ### Grenzen
 
 - Import (*Inhalte & Daten*) übernimmt den Status der Datei unverändert; „Als Entwurf importieren“ verhindert veröffentlichte Importe.
-- Änderungen an bereits veröffentlichten Inhalten werden nicht erneut geprüft (keine „Revision zur Prüfung“).
+- Änderungen an bereits veröffentlichten Inhalten werden bewusst nicht erneut geprüft (Entscheidung vom 15.11.2026): Die Freigabe gilt für das Veröffentlichen. Was sich danach geändert hat, zeigen die Revisionen.
 - Downloads, Wissensdatenbank und Newsletter haben keinen Freigabe-Ablauf.
 
 ### Technik
