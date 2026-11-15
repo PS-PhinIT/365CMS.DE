@@ -1566,7 +1566,8 @@ final class PerformanceModule
 
         $count = 0;
         foreach (glob($cacheDir . '*') ?: [] as $file) {
-            if (is_link($file)) {
+            // Release-Prüfung 4.1.0 (PERF, cache:0): nur eigene Cache-Einträge, nie Schema-/Plattform-Flags oder die Update-Sperre.
+            if (is_link($file) || !\CMS\CacheManager::isOwnCacheFileName(basename($file))) {
                 continue;
             }
 

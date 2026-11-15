@@ -323,28 +323,57 @@ class DashboardService {
     }
     
     /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:9): Cache-Schlüssel und Gültigkeit der Medien-Statistik. Uploads und
+     * Löschungen können den Eintrag über invalidateMediaStatsCache() sofort verwerfen.
+     */
+    public const MEDIA_STATS_CACHE_KEY = 'dashboard_media_stats';
+    private const MEDIA_STATS_CACHE_TTL = 900;
+
+    /**
      * Medien-Statistiken
      */
     public function getMediaStats(): array {
-        // Disk usage
-        $upload_dir = ABSPATH . '/uploads';
-        $total_size = 0;
-        $file_count = 0;
-        
-        if (is_dir($upload_dir)) {
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($upload_dir, \RecursiveDirectoryIterator::SKIP_DOTS)
-            );
-            
-            foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    $total_size += $file->getSize();
-                    $file_count++;
-                }
-            }
+        // Release-Prüfung 4.1.0 (PERF, blocking:9): Der Verzeichnislauf über uploads/ kostet auf großen Sites
+        // hunderte Millisekunden bis Sekunden. Ergebnis 15 Minuten zwischenspeichern.
+        $cache = \CMS\CacheManager::instance();
+        $cached = $cache->get(self::MEDIA_STATS_CACHE_KEY);
+        if (is_array($cached) && isset($cached['types'], $cached['total_size']) && is_array($cached['types'])) {
+            return $cached;
         }
-        
-        // Dateitypen-Verteilung
+
+        $computed = self::computeMediaStats(ABSPATH . '/uploads');
+        $stats = [
+            'total' => $computed['total'],
+            'total_files' => $computed['total_files'],
+            'total_size' => $computed['total_size'],
+            'total_size_mb' => $computed['total_size_mb'],
+            'total_size_formatted' => $this->formatBytes((int) $computed['total_size']),
+            'types' => $computed['types'],
+        ];
+        $cache->set(self::MEDIA_STATS_CACHE_KEY, $stats, self::MEDIA_STATS_CACHE_TTL);
+
+        return $stats;
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, blocking:9): Medien-Statistik nach Upload oder Löschung verwerfen. */
+    public static function invalidateMediaStatsCache(): void
+    {
+        try {
+            \CMS\CacheManager::instance()->delete(self::MEDIA_STATS_CACHE_KEY);
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:9): Größe, Anzahl und Typverteilung in einem einzigen
+     * Verzeichnislauf (bisher zwei Läufe mit identischem Ergebnis). Ohne total_size_formatted.
+     *
+     * @return array{total:int,total_files:int,total_size:int,total_size_mb:float,types:array<string,int>}
+     */
+    public static function computeMediaStats(string $uploadDir): array
+    {
+        $totalSize = 0;
+        $fileCount = 0;
         $types = [
             'images' => 0,
             'videos' => 0,
@@ -352,15 +381,20 @@ class DashboardService {
             'archives' => 0,
             'other' => 0
         ];
-        
-        if (is_dir($upload_dir)) {
-            $files = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($upload_dir, \RecursiveDirectoryIterator::SKIP_DOTS)
+
+        if (is_dir($uploadDir)) {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($uploadDir, \RecursiveDirectoryIterator::SKIP_DOTS)
             );
-            
-            foreach ($files as $file) {
-                if (!$file->isFile()) continue;
-                
+
+            foreach ($iterator as $file) {
+                if (!$file->isFile()) {
+                    continue;
+                }
+
+                $totalSize += $file->getSize();
+                $fileCount++;
+
                 $ext = strtolower($file->getExtension());
                 if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])) {
                     $types['images']++;
@@ -375,13 +409,12 @@ class DashboardService {
                 }
             }
         }
-        
+
         return [
-            'total' => $file_count,
-            'total_files' => $file_count,
-            'total_size' => $total_size,
-            'total_size_mb' => round($total_size / 1048576, 2),
-            'total_size_formatted' => $this->formatBytes($total_size),
+            'total' => $fileCount,
+            'total_files' => $fileCount,
+            'total_size' => $totalSize,
+            'total_size_mb' => round($totalSize / 1048576, 2),
             'types' => $types
         ];
     }

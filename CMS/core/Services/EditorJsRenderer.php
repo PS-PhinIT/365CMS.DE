@@ -27,6 +27,12 @@ final class EditorJsRenderer
     private ?int $eagerImageCount = null;
     private int $renderDepth = 0;
     private int $renderedImageCount = 0;
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cwv:7): Bildmaße lokaler Uploads je Request gemerkt (Pfad => [Breite, Höhe] oder null).
+     *
+     * @var array<string, array{0:int,1:int}|null>
+     */
+    private static array $imageDimensionCache = [];
 
     public static function getInstance(): self
     {
@@ -667,7 +673,9 @@ final class EditorJsRenderer
         $altText = $isGeneratedCaption ? '' : $caption;
 
         $html = '<figure class="' . implode(' ', $classes) . '"' . $dataAttributes . '>';
-        $html .= $this->wrapPicture($imageUrl, '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $this->getLazyLoadingAttribute() . '>');
+        // Release-Prüfung 4.1.0 (PERF, cwv:7): width/height gegen Layout-Verschiebung (gespeicherte Blockdaten nur ohne Zuschnitt).
+        $storedDimensions = $imageUrl === $this->normalizeRenderableAssetUrl((string)($file['url'] ?? $data['url'] ?? ''), true) ? $file : [];
+        $html .= $this->wrapPicture($imageUrl, '<img src="' . htmlspecialchars($imageUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars(strip_tags($altText), ENT_QUOTES, 'UTF-8') . '"' . $this->getImageDimensionAttributes($imageUrl, $storedDimensions) . $this->getLazyLoadingAttribute() . '>');
         $html .= $this->renderImageFigcaption(
             !$isGeneratedCaption ? $caption : '',
             $imageUrl,
@@ -735,7 +743,8 @@ final class EditorJsRenderer
 
         $html = '<div class="editorjs-block editorjs-link"><a href="' . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">';
         if ($image !== '') {
-            $html .= '<div class="editorjs-link__image"><img src="' . htmlspecialchars($image, ENT_QUOTES, 'UTF-8') . '" alt=""' . $this->getLazyLoadingAttribute() . '></div>';
+            // Release-Prüfung 4.1.0 (PERF, cwv:6/cwv:7): Vorschaubild nie eager/fetchpriority=high (zählt nicht zum Eager-Budget), Maße für lokale Uploads.
+            $html .= '<div class="editorjs-link__image"><img src="' . htmlspecialchars($image, ENT_QUOTES, 'UTF-8') . '" alt=""' . $this->getImageDimensionAttributes($image) . $this->getLazyLoadingAttribute(false) . '></div>';
         }
         $html .= '<div class="editorjs-link__content"><strong>' . $title . '</strong>';
         if ($description !== '') {
@@ -1376,7 +1385,8 @@ final class EditorJsRenderer
 
             $caption = $this->sanitizeInline((string)($item['caption'] ?? ''));
             $html .= '<figure class="editorjs-carousel__item">';
-            $html .= '<img src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt=""' . $this->getLazyLoadingAttribute() . '>';
+            // Release-Prüfung 4.1.0 (PERF, cwv:7): width/height für lokale Uploads gegen Layout-Verschiebung.
+            $html .= '<img src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt=""' . $this->getImageDimensionAttributes($url, $item) . $this->getLazyLoadingAttribute() . '>';
             $html .= $this->renderImageFigcaption(
                 $caption !== '' && !$this->isGeneratedFilenameCaption($caption, $url) ? $caption : '',
                 $url,
@@ -1468,7 +1478,8 @@ final class EditorJsRenderer
                 continue;
             }
 
-            $html .= '<img src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '" alt="Zeichnung"' . $this->getLazyLoadingAttribute() . '>';
+            // Release-Prüfung 4.1.0 (PERF, cwv:7): width/height aus den Blockdaten oder für lokale Uploads.
+            $html .= '<img src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '" alt="Zeichnung"' . $this->getImageDimensionAttributes($src, $image) . $this->getLazyLoadingAttribute() . '>';
         }
         $html .= '</div>';
 
@@ -1488,10 +1499,82 @@ final class EditorJsRenderer
         }
     }
 
-    private function getLazyLoadingAttribute(): string
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cwv:7): ` width="…" height="…"` für ein Inhaltsbild, damit der Browser vor dem
+     * Dekodieren Platz reserviert. Quellen: positive Maße aus den Blockdaten, sonst getimagesize() der lokalen
+     * Upload-Datei (je Request gemerkt). Externe URLs, data:-URLs und nicht lesbare Dateien bleiben ohne Angabe.
+     *
+     * @param array<string,mixed> $stored
+     */
+    private function getImageDimensionAttributes(string $url, array $stored = []): string
+    {
+        $dimensions = self::resolveImageDimensions($url, $stored);
+
+        return $dimensions === null ? '' : ' width="' . $dimensions[0] . '" height="' . $dimensions[1] . '"';
+    }
+
+    /**
+     * @param array<string,mixed> $stored
+     * @return array{0:int,1:int}|null
+     */
+    public static function resolveImageDimensions(string $url, array $stored = []): ?array
+    {
+        $storedWidth = $stored['width'] ?? null;
+        $storedHeight = $stored['height'] ?? null;
+        if (is_numeric($storedWidth) && is_numeric($storedHeight)) {
+            $width = (int) $storedWidth;
+            $height = (int) $storedHeight;
+            if ($width > 0 && $height > 0 && $width <= 20000 && $height <= 20000) {
+                return [$width, $height];
+            }
+        }
+
+        $url = trim($url);
+        if ($url === '' || str_starts_with(strtolower($url), 'data:')) {
+            return null;
+        }
+
+        try {
+            $local = \CMS\Services\Media\AvifDerivativeService::getInstance()->urlToLocalPath($url);
+        } catch (\Throwable) {
+            return null;
+        }
+        if ($local === null) {
+            return null;
+        }
+
+        $path = $local[0];
+        if (array_key_exists($path, self::$imageDimensionCache)) {
+            return self::$imageDimensionCache[$path];
+        }
+
+        $dimensions = null;
+        if (is_file($path) && is_readable($path)) {
+            $info = @getimagesize($path);
+            if (is_array($info) && (int) ($info[0] ?? 0) > 0 && (int) ($info[1] ?? 0) > 0) {
+                $dimensions = [(int) $info[0], (int) $info[1]];
+            }
+        }
+
+        if (count(self::$imageDimensionCache) >= 512) {
+            self::$imageDimensionCache = [];
+        }
+
+        return self::$imageDimensionCache[$path] = $dimensions;
+    }
+
+    /**
+     * @param bool $countsTowardEager Release-Prüfung 4.1.0 (PERF, cwv:6): false für Nebenbilder wie Link-Vorschauen,
+     *                                die weder eager laden noch das Eager-Budget verbrauchen.
+     */
+    private function getLazyLoadingAttribute(bool $countsTowardEager = true): string
     {
         if (!$this->isLazyLoadingEnabled()) {
             return '';
+        }
+
+        if (!$countsTowardEager) {
+            return ' loading="lazy" decoding="async"';
         }
 
         $this->renderedImageCount++;

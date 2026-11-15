@@ -35,6 +35,14 @@ class MemberDashboardModule
     private string $prefix;
     private Logger $logger;
 
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:2): gültige Profilfeld-Schlüssel je Anfrage einmal ermitteln.
+     * Wird bei jedem Schreiben einer Einstellung verworfen.
+     *
+     * @var array<string,true>|null
+     */
+    private ?array $validProfileFieldKeys = null;
+
     private const SETTINGS_KEYS = [
         'member_dashboard_enabled',
         'member_registration_enabled',
@@ -919,8 +927,12 @@ class MemberDashboardModule
                 return $result;
             }
 
+            // Release-Prüfung 4.1.0 (PERF, db:2): Fehlzahlen aller Felder in einem Durchlauf über users
+            // statt einer COUNT-Abfrage je Feld; bei einem Fehler zählt jedes Feld wie bisher einzeln.
+            $missingCounts = $this->getProfileFieldMissingCounts(array_map('strval', array_keys($profileFieldDefinitions)));
+
             foreach (array_keys($profileFieldDefinitions) as $fieldKey) {
-                $fieldSummary = $this->getProfileFieldMissingSummary((string)$fieldKey);
+                $fieldSummary = $this->getProfileFieldMissingSummary((string)$fieldKey, $missingCounts[(string)$fieldKey] ?? null);
                 $result['fields'][$fieldKey]['missing_count'] = $fieldSummary['missing_count'];
                 $result['fields'][$fieldKey]['missing_samples'] = $fieldSummary['missing_samples'];
             }
@@ -944,11 +956,18 @@ class MemberDashboardModule
     }
 
     /** @return array{missing_count:int,missing_samples:array<int,array{id:int,label:string,email:string}>} */
-    private function getProfileFieldMissingSummary(string $fieldKey): array
+    private function getProfileFieldMissingSummary(string $fieldKey, ?int $knownMissingCount = null): array
     {
         $fieldKey = $this->normalizeProfileFieldKey($fieldKey);
         if ($fieldKey === '') {
             return ['missing_count' => 0, 'missing_samples' => []];
+        }
+
+        if ($knownMissingCount !== null) {
+            return [
+                'missing_count' => $knownMissingCount,
+                'missing_samples' => $this->getProfileFieldMissingSamples([$fieldKey], 8),
+            ];
         }
 
         try {
@@ -983,6 +1002,71 @@ class MemberDashboardModule
         } catch (\Throwable) {
             return ['missing_count' => 0, 'missing_samples' => []];
         }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, db:2): zählt fehlende Werte aller Felder mit einer Abfrage.
+     * Gleiche Bedeutung wie getProfileFieldMissingSummary(): aktive Benutzer ohne nicht leeren Wert.
+     *
+     * @param list<string> $fieldKeys
+     * @return array<string,int> leer bei einem Fehler (dann zählt der Aufrufer je Feld)
+     */
+    private function getProfileFieldMissingCounts(array $fieldKeys): array
+    {
+        $columns = [];
+        $params = [];
+        $keys = [];
+        foreach ($fieldKeys as $fieldKey) {
+            $fieldKey = $this->normalizeProfileFieldKey($fieldKey);
+            if ($fieldKey === '' || isset($keys[$fieldKey])) {
+                continue;
+            }
+
+            $alias = 'c' . count($keys);
+            $keys[$fieldKey] = $alias;
+            if (in_array($fieldKey, ['username', 'email'], true)) {
+                $columns[] = "COALESCE(SUM(CASE WHEN u.{$fieldKey} IS NULL OR TRIM(u.{$fieldKey}) = '' THEN 1 ELSE 0 END), 0) AS {$alias}";
+                continue;
+            }
+
+            $columns[] = "COALESCE(SUM(CASE WHEN NOT EXISTS (
+                    SELECT 1
+                      FROM {$this->prefix}user_meta um
+                     WHERE um.user_id = u.id
+                       AND um.meta_key = ?
+                       AND TRIM(um.meta_value) <> ''
+                ) THEN 1 ELSE 0 END), 0) AS {$alias}";
+            $params[] = $fieldKey;
+        }
+
+        if ($columns === []) {
+            return [];
+        }
+
+        try {
+            $row = $this->db->get_row(
+                'SELECT ' . implode(', ', $columns) . " FROM {$this->prefix}users u WHERE u.status = 'active'",
+                $params
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if ($row === null) {
+            return [];
+        }
+
+        $row = (array) $row;
+        $counts = [];
+        foreach ($keys as $fieldKey => $alias) {
+            if (!array_key_exists($alias, $row)) {
+                return [];
+            }
+
+            $counts[$fieldKey] = (int) $row[$alias];
+        }
+
+        return $counts;
     }
 
     /** @param array<int,string> $selectedFields */
@@ -1094,10 +1178,15 @@ class MemberDashboardModule
     {
         $fieldKey = trim($fieldKey);
 
-        $settings = $this->loadSettingsMap();
-        $customFields = \CMS\Json::decodeArray($settings['member_custom_profile_fields'] ?? null, []);
+        // Release-Prüfung 4.1.0 (PERF, db:2): vorher lud jeder Aufruf alle member_%-Einstellungen neu
+        // (rund 40 LIKE-Abfragen auf der Profilfeld-Seite), jetzt nur der erste je Anfrage.
+        if ($this->validProfileFieldKeys === null) {
+            $settings = $this->loadSettingsMap();
+            $customFields = \CMS\Json::decodeArray($settings['member_custom_profile_fields'] ?? null, []);
+            $this->validProfileFieldKeys = array_fill_keys(array_map('strval', array_keys($this->getProfileFieldDefinitions($customFields))), true);
+        }
 
-        return isset($this->getProfileFieldDefinitions($customFields)[$fieldKey]) ? $fieldKey : '';
+        return isset($this->validProfileFieldKeys[$fieldKey]) ? $fieldKey : '';
     }
 
     private function getAvailableRoles(): array
@@ -1181,6 +1270,9 @@ class MemberDashboardModule
 
     private function upsertSetting(string $key, string $value, bool $exists = false): void
     {
+        // Release-Prüfung 4.1.0 (PERF, db:2): zwischengespeicherte Profilfeld-Schlüssel nach jedem Schreiben verwerfen.
+        $this->validProfileFieldKeys = null;
+
         if ($exists) {
             $this->db->execute(
                 "UPDATE {$this->prefix}settings SET option_value = ? WHERE option_name = ?",

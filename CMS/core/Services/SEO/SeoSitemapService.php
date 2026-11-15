@@ -58,7 +58,11 @@ final class SeoSitemapService
 
         $path = ABSPATH . $fileName;
         if (!is_file(ABSPATH . 'sitemap.xml') && is_writable(ABSPATH)) {
-            $this->saveSitemapBundle();
+            // Release-Prüfung 4.1.0 (PERF, cache:5): nur ein Request erzeugt das Bundle, parallele Anfragen warten
+            // kurz auf dessen Ergebnis. Ist es danach noch nicht da, wird ohne Speichern dynamisch gerendert.
+            if (!$this->saveSitemapBundleOnce()) {
+                return $this->renderSitemapFile($fileName);
+            }
         }
 
         if (is_file($path) && is_readable($path)) {
@@ -153,10 +157,81 @@ final class SeoSitemapService
     {
         $this->lastSitemapError = null;
 
+        // Release-Prüfung 4.1.0 (PERF, cache:5): Cron und Admin warten auf einen laufenden Neuaufbau, statt parallel
+        // dieselben Dateien zu schreiben.
+        $lock = $this->openSitemapLock();
+        if ($lock !== null) {
+            flock($lock, LOCK_EX);
+        }
+
         try {
-            $service = $this->buildSitemapService(ABSPATH);
+            return $this->writeSitemapBundle();
+        } finally {
+            $this->releaseSitemapLock($lock);
+        }
+    }
+
+    /** Release-Prüfung 4.1.0 (PERF, cache:5): Höchstwartezeit auf einen parallelen Neuaufbau (Mikrosekunden). */
+    private const SITEMAP_LOCK_WAIT_US = 10_000_000;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:5): Erzeugt das Bundle für Frontend-Anfragen höchstens einmal gleichzeitig.
+     * Wer die Sperre nicht bekommt, wartet (begrenzt) auf den Neuaufbau des anderen Requests.
+     *
+     * @return bool true = sitemap.xml liegt jetzt vor
+     */
+    private function saveSitemapBundleOnce(): bool
+    {
+        $lock = $this->openSitemapLock();
+        if ($lock === null) {
+            // Ohne Sperrdatei (cache/ nicht beschreibbar) wie bisher direkt erzeugen.
+            return $this->saveSitemapBundle() && is_file(ABSPATH . 'sitemap.xml');
+        }
+
+        try {
+            if (flock($lock, LOCK_EX | LOCK_NB)) {
+                clearstatcache(true, ABSPATH . 'sitemap.xml');
+                if (!is_file(ABSPATH . 'sitemap.xml')) {
+                    $this->lastSitemapError = null;
+                    $this->writeSitemapBundle();
+                }
+
+                return is_file(ABSPATH . 'sitemap.xml');
+            }
+
+            $waited = 0;
+            while ($waited < self::SITEMAP_LOCK_WAIT_US) {
+                usleep(100_000);
+                $waited += 100_000;
+                if (flock($lock, LOCK_SH | LOCK_NB)) {
+                    break;
+                }
+            }
+
+            clearstatcache(true, ABSPATH . 'sitemap.xml');
+            return is_file(ABSPATH . 'sitemap.xml');
+        } finally {
+            $this->releaseSitemapLock($lock);
+        }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:5): Schreibt das Bundle zuerst in ein Arbeitsverzeichnis unter cache/ und
+     * benennt die Dateien dann einzeln um (sitemap.xml zuletzt). Crawler sehen so nie halb geschriebene oder
+     * vorab gelöschte Teil-Sitemaps; Teile, die das neue Bundle nicht mehr enthält, werden danach entfernt.
+     */
+    private function writeSitemapBundle(): bool
+    {
+        $buildDir = null;
+
+        try {
+            $buildDir = $this->createSitemapBuildDirectory();
+            $service = $this->buildSitemapService($buildDir ?? ABSPATH);
             $this->registerSitemapContent($service);
             $service->generate();
+            if ($buildDir !== null) {
+                $this->publishSitemapBuild($buildDir);
+            }
             $this->pingSearchEngines();
 
             return true;
@@ -166,6 +241,88 @@ final class SeoSitemapService
                 'exception' => $e,
             ]);
             return false;
+        } finally {
+            if ($buildDir !== null) {
+                $this->deleteDirectory($buildDir);
+            }
+        }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:5): Arbeitsverzeichnis auf demselben Dateisystem wie der Web-Root,
+     * damit rename() atomar ersetzt. null = nicht möglich, dann wird wie bisher direkt in ABSPATH geschrieben.
+     */
+    private function createSitemapBuildDirectory(): ?string
+    {
+        $cacheDir = ABSPATH . 'cache';
+        if ((!is_dir($cacheDir) && !@mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) || !is_writable($cacheDir)) {
+            return null;
+        }
+
+        try {
+            $suffix = bin2hex(random_bytes(6));
+        } catch (\Throwable) {
+            $suffix = uniqid('', false);
+        }
+
+        $dir = $cacheDir . DIRECTORY_SEPARATOR . 'sitemap-build-' . $suffix;
+
+        return @mkdir($dir, 0755) || is_dir($dir) ? $dir : null;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cache:5): Teil-Sitemaps zuerst, Index zuletzt, danach veraltete Teile entfernen.
+     */
+    private function publishSitemapBuild(string $buildDir): void
+    {
+        $built = [];
+        foreach (self::SITEMAP_FILES as $file) {
+            if ($file !== 'sitemap.xml' && is_file($buildDir . DIRECTORY_SEPARATOR . $file)) {
+                $built[] = $file;
+            }
+        }
+        if (!is_file($buildDir . DIRECTORY_SEPARATOR . 'sitemap.xml')) {
+            throw new \RuntimeException('Sitemap-Index fehlt im Arbeitsverzeichnis.');
+        }
+        $built[] = 'sitemap.xml';
+
+        foreach ($built as $file) {
+            if (!@rename($buildDir . DIRECTORY_SEPARATOR . $file, ABSPATH . $file)) {
+                throw new \RuntimeException('Sitemap-Datei konnte nicht ersetzt werden: ' . $file);
+            }
+        }
+
+        foreach (self::SITEMAP_FILES as $file) {
+            $path = ABSPATH . $file;
+            if (!in_array($file, $built, true) && is_file($path) && is_writable($path)) {
+                @unlink($path);
+            }
+        }
+    }
+
+    /**
+     * @return resource|null
+     */
+    private function openSitemapLock()
+    {
+        $cacheDir = ABSPATH . 'cache';
+        if (!is_dir($cacheDir) && !@mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) {
+            return null;
+        }
+
+        $handle = @fopen($cacheDir . DIRECTORY_SEPARATOR . 'sitemap.lock', 'c');
+
+        return is_resource($handle) ? $handle : null;
+    }
+
+    /**
+     * @param resource|null $lock
+     */
+    private function releaseSitemapLock($lock): void
+    {
+        if (is_resource($lock)) {
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
     }
 
@@ -432,7 +589,9 @@ final class SeoSitemapService
         ]];
 
         $rows = $this->db->get_results(
-            "SELECT id, slug, slug_en, title_en, content_en, updated_at
+            // Release-Prüfung 4.1.0 (PERF, batch:6): ohne content_en, die Bedingung im WHERE genügt (gleiche Zeilen,
+            // aber keine EN-Seiteninhalte mehr im Speicher).
+            "SELECT id, slug, slug_en, title_en, updated_at
              FROM {$this->prefix}pages
              WHERE status = 'published'
                AND CHAR_LENGTH(TRIM(COALESCE(title_en, ''))) > 0
@@ -440,6 +599,9 @@ final class SeoSitemapService
              ORDER BY title_en ASC"
         ) ?: [];
 
+        // Release-Prüfung 4.1.0 (PERF, batch:6): SEO-Metadaten in einer Abfrage wie bei den deutschen Sitemaps,
+        // statt einer seo_meta-Abfrage je Eintrag.
+        $seoMetaMap = $rows !== [] ? $this->loadSitemapSeoMeta('page') : [];
         foreach ($rows as $row) {
             $page = (array) $row;
             $slug = $localization->resolveLocalizedSlug($page, 'en');
@@ -447,7 +609,7 @@ final class SeoSitemapService
                 continue;
             }
 
-            $seoMeta = $this->metaService->getContentMeta('page', (int) ($row->id ?? 0));
+            $seoMeta = $seoMetaMap[(int) ($row->id ?? 0)] ?? self::DEFAULT_SITEMAP_META;
             $path = $localization->buildLocalizedPath('/' . ltrim($slug, '/'), 'en');
             // FUN-410-49: noindex und Canonical gelten wie in den deutschen Sitemaps (Vergleich mit absoluter URL).
             if (!$this->isIndexableSitemapEntry(['robots_index' => (bool) ($seoMeta['robots_index'] ?? true), 'canonical_url' => (string) ($seoMeta['canonical_url'] ?? '')], rtrim((string) SITE_URL, '/') . '/' . ltrim($path, '/'))) {
@@ -471,7 +633,8 @@ final class SeoSitemapService
     {
         $settings = $this->metaService->getSitemapSettings();
         $rows = $this->db->get_results(
-            "SELECT id, slug, slug_en, title_en, content_en, excerpt_en, updated_at, published_at, created_at
+            // Release-Prüfung 4.1.0 (PERF, batch:6): ohne content_en/excerpt_en, für Slug und Pfad genügen Titel, Slugs und Datum.
+            "SELECT id, slug, slug_en, title_en, updated_at, published_at, created_at
              FROM {$this->prefix}posts
              WHERE " . \cms_post_publication_where() . "
                AND CHAR_LENGTH(TRIM(COALESCE(title_en, ''))) > 0
@@ -480,13 +643,15 @@ final class SeoSitemapService
         ) ?: [];
 
         $entries = [];
+        // Release-Prüfung 4.1.0 (PERF, batch:6): eine seo_meta-Abfrage für alle Beiträge statt einer je Eintrag.
+        $seoMetaMap = $rows !== [] ? $this->loadSitemapSeoMeta('post') : [];
         foreach ($rows as $row) {
             $postData = \CMS\Services\ContentLocalizationService::getInstance()->localizePost((array) $row, 'en');
             if (trim((string) ($postData['slug'] ?? '')) === '') {
                 continue;
             }
 
-            $seoMeta = $this->metaService->getContentMeta('post', (int) ($row->id ?? 0));
+            $seoMeta = $seoMetaMap[(int) ($row->id ?? 0)] ?? self::DEFAULT_SITEMAP_META;
             $path = PermalinkService::getInstance()->buildPostPath($postData, 'en');
             // FUN-410-49: wie oben.
             if (!$this->isIndexableSitemapEntry(['robots_index' => (bool) ($seoMeta['robots_index'] ?? true), 'canonical_url' => (string) ($seoMeta['canonical_url'] ?? '')], rtrim((string) SITE_URL, '/') . '/' . ltrim($path, '/'))) {

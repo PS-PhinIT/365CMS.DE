@@ -67,6 +67,9 @@ Eigene App-Registrierung (Client-Credentials) für Graph-Zugriffe, z. B. durch M
 - **Verarbeitung:** `cron.php --task=mail-queue` (CLI) oder Web-Cron mit Token. Die Seite zeigt die fertige CLI-Zeile und die Web-Cron-URL; als Token-Header wird `X-CMS-Cron-Token` empfohlen. Die Option `regenerate_queue_cron_token` erzeugt beim Speichern (`save_queue`) einen neuen Token.
 - `run_queue_now` verarbeitet fällige Jobs sofort, `release_queue_stale` gibt hängende Jobs (älter als Lock-Timeout) frei, `enqueue_queue_test` legt eine Test-Mail in die Queue.
 - Fehlgeschlagene Jobs werden mit Fehlerkategorie und empfohlener Wartezeit erneut eingeplant, bis `queue_max_attempts` erreicht ist.
+- **Reihenfolge (seit 4.1.0):** Fällige Jobs aus dem Massenversand (Quellen `newsletter` und `cms-feed-digest`, `MailQueueService::BULK_SOURCES`) werden erst nach allen anderen fälligen Jobs versendet. Passwort-Reset, Registrierung, E-Mail-Änderung und MFA-Hinweise warten so nicht hinter einer laufenden Kampagne; innerhalb jeder Gruppe gilt weiter die Reihenfolge nach Fälligkeit.
+- **Aufbewahrung (seit 4.1.0):** Versendete und endgültig fehlgeschlagene Jobs werden nach 30 Tagen gelöscht (Regel `mail_queue`), Einträge des Mail-Protokolls nach 90 Tagen (Regel `mail_log`); offene Jobs bleiben. Fristen über den Filter `cms_mail_retention_days`, Übersicht unter Recht → Löschfristen.
+- **Cron-Sperre (seit 4.1.0):** Die Queue hat eine eigene Sperre (`cache/.cron-mail.lock`). Läuft gerade eine lange stündliche oder tägliche Aufgabe (`cache/.cron-run.lock`), verarbeitet ein Aufruf mit `task=mail-queue` oder `task=all` trotzdem die Queue und überspringt den Rest.
 
 ### Für Entwickler
 

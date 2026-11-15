@@ -21,6 +21,7 @@ use CMS\Logger;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\Smtp\Auth\XOAuth2Authenticator;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
@@ -35,6 +36,8 @@ class MailService
     private const MAX_SUBJECT_LENGTH = 255;
     private const MAX_BODY_LENGTH = 200000;
     private const MAX_ERROR_LENGTH = 500;
+    /** Release-Prüfung 4.1.0 (PERF, blocking:5): Obergrenze in Sekunden für SMTP-Verbindung und jedes Lesen. */
+    public const SMTP_TIMEOUT_SECONDS = 15.0;
     private const BLOCKED_HEADER_NAMES = [
         'to',
         'subject',
@@ -507,6 +510,14 @@ class MailService
             (int) $config['smtp_port'],
             $encryption === 'ssl'
         );
+
+        // Release-Prüfung 4.1.0 (PERF, blocking:5): Ohne explizites Timeout nutzt der SocketStream
+        // default_socket_timeout (meist 60 s) für Verbindungsaufbau und jedes Lesen. Ein nicht erreichbarer
+        // SMTP-Server blockiert Checkout, Registrierung oder Queue-Lauf damit höchstens SMTP_TIMEOUT_SECONDS.
+        $stream = $transport->getStream();
+        if ($stream instanceof SocketStream) {
+            $stream->setTimeout(self::SMTP_TIMEOUT_SECONDS);
+        }
 
         if ($encryption === 'tls') {
             $transport->setRequireTls(true);

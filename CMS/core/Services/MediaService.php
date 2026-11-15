@@ -21,6 +21,23 @@ class MediaService {
     private const BLOCKED_UPLOAD_EXTENSIONS = ['svg'];
     private const FEATURED_REPLACEMENT_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico'];
     private const DERIVATIVE_PROCESSING_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:5): Obergrenze wie ThumbnailRegenerationService::MAX_IMAGES (20 000).
+     * Bisher kappte die Sammlung still bei 5 000 Originalen, die Hinweisanzeige rechnete aber mit 20 000.
+     */
+    private const DERIVATIVE_CANDIDATE_MAX = 20000;
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:5): Gültigkeit des Request-Zwischenspeichers der Kandidatenliste (Sekunden). */
+    private const DERIVATIVE_CANDIDATE_MEMO_TTL = 10;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:5): Kandidatenliste je Limit, damit die Medien-Werkzeuge (Thumbnails und
+     * AVIF) den Upload-Baum pro Aufruf nur einmal durchlaufen. Upload und Löschen verwerfen den Eintrag.
+     *
+     * @var array<int, array{at:int, paths:list<string>}>
+     */
+    private array $derivativeCandidateMemo = [];
     private const GENERATED_VARIANT_SUFFIXES = ['small', 'medium', 'large', 'banner'];
     private const DUPLICATE_HASH_MAX_BYTES = 268435456;
     private const DEFAULT_PUBLIC_UPLOAD_CACHE_TTL = 604800;
@@ -1530,6 +1547,8 @@ class MediaService {
      * Upload a file
      */
     public function uploadFile(array $file, string $targetPath = '', ?array $validationSettings = null, bool $preserveOriginalImage = false): string|WP_Error {
+        // Release-Prüfung 4.1.0 (PERF, batch:5): neue Datei, gemerkte Kandidatenliste verwerfen.
+        $this->derivativeCandidateMemo = [];
         $settings = $this->getSettings();
         $result = $this->uploadHandler->uploadFile(
             $file,
@@ -1714,6 +1733,8 @@ class MediaService {
      * Delete an item (file or folder)
      */
     public function deleteItem(string $path): bool|WP_Error {
+        // Release-Prüfung 4.1.0 (PERF, batch:5): gelöschte Datei, gemerkte Kandidatenliste verwerfen.
+        $this->derivativeCandidateMemo = [];
         // 4.1.0 (2a): erzeugte Fassungen (Größen, WebP, AVIF) eines Bildes mit entfernen. Vor dem Löschen ermitteln,
         // weil dafür Zeitstempel und Metadaten der Quelle gebraucht werden.
         $derivatives = $this->collectDerivativesForDeletion($path);
@@ -1873,7 +1894,12 @@ class MediaService {
      */
     public function collectImageDerivativeProcessingCandidates(int $limit = 1000): array
     {
-        $limit = max(1, min(5000, $limit));
+        $limit = max(1, min(self::DERIVATIVE_CANDIDATE_MAX, $limit));
+        $memo = $this->derivativeCandidateMemo[$limit] ?? null;
+        if ($memo !== null && time() - $memo['at'] <= self::DERIVATIVE_CANDIDATE_MEMO_TTL) {
+            return $memo['paths'];
+        }
+
         $root = rtrim($this->uploadPath, '/\\');
         if (!is_dir($root) || !is_readable($root)) {
             return [];
@@ -1904,12 +1930,14 @@ class MediaService {
             }
 
             $absolutePath = $item->getPathname();
-            if (!is_readable($absolutePath)) {
+            // Release-Prüfung 4.1.0 (PERF, batch:5): Endung und Derivat-Namen zuerst prüfen (reine Zeichenkettenprüfung),
+            // is_readable() nur noch für echte Kandidaten statt für jede der 6 bis 7 Derivatdateien je Original.
+            $extension = strtolower((string) pathinfo($absolutePath, PATHINFO_EXTENSION));
+            if (!in_array($extension, self::DERIVATIVE_PROCESSING_IMAGE_EXTENSIONS, true) || $this->isGeneratedDerivativeVariant($absolutePath)) {
                 continue;
             }
 
-            $extension = strtolower((string) pathinfo($absolutePath, PATHINFO_EXTENSION));
-            if (!in_array($extension, self::DERIVATIVE_PROCESSING_IMAGE_EXTENSIONS, true) || $this->isGeneratedDerivativeVariant($absolutePath)) {
+            if (!is_readable($absolutePath)) {
                 continue;
             }
 
@@ -1930,7 +1958,10 @@ class MediaService {
 
         sort($paths, SORT_NATURAL);
 
-        return array_values(array_unique($paths));
+        $paths = array_values(array_unique($paths));
+        $this->derivativeCandidateMemo[$limit] = ['at' => time(), 'paths' => $paths];
+
+        return $paths;
     }
 
     /**

@@ -41,8 +41,11 @@ All performance screens are rendered by `CMS/admin/performance-page.php` with th
 
 - `CMS\CacheManager` arbeitet mit Dateicache in `CMS/cache/` und: falls verfügbar, **APCu** als schneller L1-Cache.
 - `clear_all_cache` leert Datei- und APCu-Cache (`CacheManager::clearAll()`); `clear_file_cache` nur die Dateien in `CMS/cache/`.
+- `CacheManager::clear()` (automatisch nach dem Speichern von Inhalten, Admin-Toolbar) und `clearAll()` löschen nur die eigenen Einträge (`<sha512>.cache`) und die APCu-Schlüssel mit Präfix `365cms:`. Schema- und Laufzeit-Flags (`db_*.flag`, `platform_ok_*.flag`), Sperrdateien und Einträge anderer Anwendungen im APCu-Pool bleiben erhalten. Zum erneuten Schema-Abgleich dient weiterhin `SchemaManager::clearFlag()`.
 - `clear_opcache` setzt den PHP-OPcache zurück, `warmup_opcache` kompiliert die meistgenutzten Dateien vor (`OpcacheWarmupService`; wird nach Deployments auch automatisch angestoßen).
 - Antwort-Header steuert `CacheManager::sendResponseHeaders()` (`public`/`private`, ETag/Last-Modified über `sendConditionalHeaders()`).
+- ETag und Last-Modified öffentlicher Seiten und Hub-Sites enthalten neben `updated_at` die CMS-Version und die seitenweite Inhaltsversion (Option `site_content_version`, Unix-Zeit). Sie steigt nach jeder schreibenden Admin-Anfrage (Einstellungen, Menüs, Theme, Plugins), nach `CacheManager::clear()`/`clearAll()`, nach dem Speichern oder Löschen von Inhalten und bei geplanten Veröffentlichungen. Browser und CDNs bekommen danach kein 304 mit altem Seitenrahmen mehr. Liegt `If-None-Match` vor, entscheidet nur das ETag (auch mit Endung `-gzip`/`-br` von mod_deflate/mod_brotli).
+- Statische Bilder unter `uploads/` sind nicht mehr `immutable` (1 Tag, danach Revalidierung), weil „Datei ersetzen“ die URL beibehält. Eigene CSS/JS-Dateien unter `assets/` werden über `cms_asset_url()` versioniert und bleiben ein Jahr `immutable`.
 
 ### Medien-Optimierung
 

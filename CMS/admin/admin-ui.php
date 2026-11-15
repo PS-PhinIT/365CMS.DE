@@ -55,6 +55,13 @@ switch ($action) {
             $cmsAdminUiRespond(403, ['success' => false, 'error' => 'Systemhinweise sind nur für Administratoren sichtbar.']);
         }
 
+        // Release-Prüfung 4.1.0 (PERF, blocking:3): Die Hinweise lesen nur und antworten danach sofort. Läuft der
+        // 5-Minuten-Cache ab, folgen Remote-Update-Prüfungen; ohne Session-Sperre warten Seitenaufrufe und andere
+        // AJAX-Anfragen desselben Benutzers nicht darauf.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         try {
             $result = AdminNoticeService::getInstance()->getNotices();
         } catch (\Throwable $e) {

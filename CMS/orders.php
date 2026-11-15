@@ -129,10 +129,18 @@ function cms_checkout_send_confirmation(string $email, string $orderNumber, stri
 
     $sent = false;
     try {
-        $mail = \CMS\Services\MailService::getInstance();
-        $sent = $mail->sendPlain($email, 'Ihre Bestellung ' . $orderNumber, implode("\n", $lines));
+        // Release-Prüfung 4.1.0 (PERF, blocking:5): Versand über cms_mail(), damit die Mails bei aktiver
+        // Mail-Queue (Standard) eingereiht werden, statt den Checkout mit zwei SMTP-Sitzungen zu blockieren.
+        // Ohne Queue versendet cms_mail() wie bisher direkt.
+        $plainHeaders = ['Content-Type' => 'text/plain; charset=UTF-8'];
+        $sendPlain = static function (string $to, string $subject, string $body) use ($plainHeaders): bool {
+            return function_exists('cms_mail')
+                ? cms_mail($to, $subject, $body, $plainHeaders)
+                : \CMS\Services\MailService::getInstance()->sendPlain($to, $subject, $body);
+        };
+        $sent = $sendPlain($email, 'Ihre Bestellung ' . $orderNumber, implode("\n", $lines));
         if (defined('ADMIN_EMAIL') && filter_var((string) ADMIN_EMAIL, FILTER_VALIDATE_EMAIL)) {
-            $mail->sendPlain((string) ADMIN_EMAIL, 'Neue Bestellung ' . $orderNumber, implode("\n", array_merge(['Neue Bestellung über den Checkout:', '', 'Kunde: ' . $email], array_slice($lines, 4, 4))));
+            $sendPlain((string) ADMIN_EMAIL, 'Neue Bestellung ' . $orderNumber, implode("\n", array_merge(['Neue Bestellung über den Checkout:', '', 'Kunde: ' . $email], array_slice($lines, 4, 4))));
         }
     } catch (\Throwable $e) {
         Logger::instance()->withChannel('orders.checkout')->warning('Bestellbestätigung konnte nicht versendet werden.', [

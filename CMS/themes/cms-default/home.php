@@ -208,8 +208,9 @@ $numRecent        = count($recentSidebar);
     <?php foreach ($articleList as $post): ?>
     <?php
         $articleImageReference = (string) ($post->featured_image ?? '');
-        $articleImage = function_exists('meridian_get_picture_sources')
-            ? meridian_get_picture_sources($articleImageReference, null, 320, 218)
+        // Release-Prüfung 4.1.0 (PERF, cwv:8): Breiten-srcset aus vorhandenen Bildgrößen, sonst wie bisher.
+        $articleImage = function_exists('meridian_get_responsive_picture_sources')
+            ? meridian_get_responsive_picture_sources($articleImageReference, null, 320, 218)
             : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 320, 'height' => 218];
         $articleImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($articleImageReference, 320, 218)
@@ -219,13 +220,13 @@ $numRecent        = count($recentSidebar);
         <div class="art-thumb">
             <?php if ($articleImage['url'] !== ''): ?>
             <picture>
-                <?php if (($articleImage['avif_url'] ?? '') !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($articleImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php if (($articleImage['avif_url'] ?? '') !== '' && meridian_picture_source_attributes($articleImage, 'avif', '100px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($articleImage, 'avif', '100px'); ?> type="image/avif">
                 <?php endif; ?>
-                <?php if ($articleImage['webp_url'] !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($articleImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
+                <?php if ($articleImage['webp_url'] !== '' && meridian_picture_source_attributes($articleImage, 'webp', '100px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($articleImage, 'webp', '100px'); ?> type="image/webp">
                 <?php endif; ?>
-                <img src="<?php echo htmlspecialchars($articleImage['url'], ENT_QUOTES, 'UTF-8'); ?>"
+                <img src="<?php echo htmlspecialchars($articleImage['url'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo function_exists('meridian_picture_img_srcset_attributes') ? meridian_picture_img_srcset_attributes($articleImage, '100px') : ''; ?>
                      alt="<?php echo htmlspecialchars($post->title); ?>"
                      <?php echo function_exists('meridian_image_loading_attributes') ? meridian_image_loading_attributes(false) : 'loading="lazy" decoding="async"'; ?>
                      <?php echo $articleImageDimensions; ?>>
@@ -262,8 +263,9 @@ $numRecent        = count($recentSidebar);
     <?php foreach ($cardPosts as $post): ?>
     <?php
         $cardImageReference = (string) ($post->featured_image ?? '');
-        $cardImage = function_exists('meridian_get_picture_sources')
-            ? meridian_get_picture_sources($cardImageReference, null, 960, 560)
+        // Release-Prüfung 4.1.0 (PERF, cwv:8): Breiten-srcset aus vorhandenen Bildgrößen, sonst wie bisher.
+        $cardImage = function_exists('meridian_get_responsive_picture_sources')
+            ? meridian_get_responsive_picture_sources($cardImageReference, null, 960, 560)
             : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 960, 'height' => 560];
         $cardImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($cardImageReference, 960, 560)
@@ -273,13 +275,13 @@ $numRecent        = count($recentSidebar);
         <div class="card-thumb" style="background:<?php echo meridian_cat_gradient($post->category_name ?? ''); ?>">
             <?php if ($cardImage['url'] !== ''): ?>
             <picture>
-                <?php if (($cardImage['avif_url'] ?? '') !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($cardImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php if (($cardImage['avif_url'] ?? '') !== '' && meridian_picture_source_attributes($cardImage, 'avif', '(max-width: 720px) calc(100vw - 2rem), 360px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($cardImage, 'avif', '(max-width: 720px) calc(100vw - 2rem), 360px'); ?> type="image/avif">
                 <?php endif; ?>
-                <?php if ($cardImage['webp_url'] !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($cardImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
+                <?php if ($cardImage['webp_url'] !== '' && meridian_picture_source_attributes($cardImage, 'webp', '(max-width: 720px) calc(100vw - 2rem), 360px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($cardImage, 'webp', '(max-width: 720px) calc(100vw - 2rem), 360px'); ?> type="image/webp">
                 <?php endif; ?>
-                <img src="<?php echo htmlspecialchars($cardImage['url'], ENT_QUOTES, 'UTF-8'); ?>"
+                <img src="<?php echo htmlspecialchars($cardImage['url'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo function_exists('meridian_picture_img_srcset_attributes') ? meridian_picture_img_srcset_attributes($cardImage, '(max-width: 720px) calc(100vw - 2rem), 360px') : ''; ?>
                      alt="<?php echo htmlspecialchars($post->title); ?>"
                      <?php echo function_exists('meridian_image_loading_attributes') ? meridian_image_loading_attributes(false) : 'loading="lazy" decoding="async"'; ?>
                      <?php echo $cardImageDimensions; ?>>

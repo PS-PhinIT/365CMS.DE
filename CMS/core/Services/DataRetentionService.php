@@ -55,8 +55,16 @@ final class DataRetentionService
         'audit_log' => 'created_at',
     ];
 
-    private const DELETE_BATCH_SIZE = 5000;
+    public const DELETE_BATCH_SIZE = 5000;
     private const MAX_BATCHES_PER_RUN = 40;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:8): Nach den garantierten MAX_BATCHES_PER_RUN Blöcken wird weiter
+     * gelöscht, solange das Zeitbudget je Tabelle reicht, damit große Rückstände (z. B. page_views auf stark
+     * besuchten Seiten) aufgeholt werden. MAX_BATCHES_HARD begrenzt einen Lauf trotzdem (10 Mio. Zeilen).
+     */
+    public const PRUNE_TIME_BUDGET_SECONDS = 20.0;
+    private const MAX_BATCHES_HARD = 2000;
 
     /** Option mit Zeitpunkt und Ergebnis des letzten Laufs (JSON). */
     public const LAST_RUN_OPTION = 'data_retention_last_run';
@@ -479,26 +487,63 @@ final class DataRetentionService
 
     private function pruneTable(string $table, string $column, int $retentionDays): int
     {
-        $deleted = 0;
-
         try {
-            for ($batch = 0; $batch < self::MAX_BATCHES_PER_RUN; $batch++) {
-                $stmt = $this->db->execute(
-                    "DELETE FROM {$this->prefix}{$table} WHERE {$column} < (NOW() - INTERVAL ? DAY) LIMIT " . self::DELETE_BATCH_SIZE,
-                    [$retentionDays]
-                );
-                $affected = $stmt->rowCount();
-                $deleted += $affected;
-                if ($affected < self::DELETE_BATCH_SIZE) {
-                    break;
-                }
-            }
+            return $this->deleteInBatches($table, "{$column} < (NOW() - INTERVAL ? DAY)", [$retentionDays]);
         } catch (\Throwable $e) {
             // Tabelle fehlt (Modul nie aktiv) oder ist gesperrt – beim nächsten Lauf erneut versuchen.
             $this->logFailure($table, $e);
         }
 
+        return 0;
+    }
+
+    /**
+     * Löscht Zeilen von `{prefix}{$table}`, die `$where` erfüllen, in Blöcken zu DELETE_BATCH_SIZE.
+     *
+     * Release-Prüfung 4.1.0 (PERF, batch:8): Mindestens MAX_BATCHES_PER_RUN Blöcke wie bisher, danach weiter,
+     * bis PRUNE_TIME_BUDGET_SECONDS verbraucht sind (höchstens MAX_BATCHES_HARD Blöcke). Auch für registrierte
+     * Regeln nutzbar (z. B. Mail-Queue und Mail-Protokoll); Fehler werden an den Aufrufer weitergegeben.
+     *
+     * @param string       $table  Tabellenname ohne Präfix, `[a-z0-9_]`
+     * @param string       $where  vertrauenswürdige Bedingung mit Platzhaltern
+     * @param list<mixed>  $params Werte der Platzhalter
+     */
+    public function deleteInBatches(string $table, string $where, array $params = [], ?float $timeBudgetSeconds = null): int
+    {
+        if (preg_match('/^[a-z0-9_]+$/', $table) !== 1) {
+            throw new \InvalidArgumentException('Ungültiger Tabellenname für die Datenaufbewahrung: ' . $table);
+        }
+
+        $budget = $timeBudgetSeconds ?? self::PRUNE_TIME_BUDGET_SECONDS;
+        $startedAt = microtime(true);
+        $deleted = 0;
+        $sql = "DELETE FROM {$this->prefix}{$table} WHERE {$where} LIMIT " . self::DELETE_BATCH_SIZE;
+
+        for ($batch = 1; $batch <= self::MAX_BATCHES_HARD; $batch++) {
+            $affected = $this->db->execute($sql, $params)->rowCount();
+            $deleted += $affected;
+            if ($affected < self::DELETE_BATCH_SIZE) {
+                break;
+            }
+            if (!self::shouldContinueBatches($batch, microtime(true) - $startedAt, $budget)) {
+                break;
+            }
+        }
+
         return $deleted;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:8): Entscheidet nach einem vollen Block, ob weiter gelöscht wird:
+     * immer bis MAX_BATCHES_PER_RUN, danach nur innerhalb des Zeitbudgets und unter MAX_BATCHES_HARD.
+     */
+    public static function shouldContinueBatches(int $batchesDone, float $elapsedSeconds, float $budgetSeconds = self::PRUNE_TIME_BUDGET_SECONDS): bool
+    {
+        if ($batchesDone >= self::MAX_BATCHES_HARD) {
+            return false;
+        }
+
+        return $batchesDone < self::MAX_BATCHES_PER_RUN || $elapsedSeconds < $budgetSeconds;
     }
 
     /**

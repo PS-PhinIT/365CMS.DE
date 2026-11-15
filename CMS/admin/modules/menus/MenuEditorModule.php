@@ -258,7 +258,8 @@ class MenuEditorModule
             return;
         }
 
-        $this->ensureTables();
+        // Release-Prüfung 4.1.0 (PERF, db:0): CREATE TABLE nur einmal je Dateistand statt bei jedem Aufruf.
+        $this->db->runSchemaOnce('menu_editor', __FILE__, fn (): bool => $this->ensureTables());
         $this->syncThemeMenus();
         $this->bootstrapped = true;
     }
@@ -537,10 +538,120 @@ class MenuEditorModule
     {
         $items = ThemeManager::instance()->getMenu($location);
 
-        $this->db->execute("DELETE FROM {$this->prefix}menu_items WHERE menu_id = ?", [$menuId]);
+        // Release-Prüfung 4.1.0 (PERF, db:0): Spiegel nur neu aufbauen, wenn er vom Theme-Menü abweicht.
+        // Sonst schrieb jeder Aufruf des Menü-Editors alle Einträge neu (DELETE plus INSERT je Eintrag),
+        // und die Zeilen-IDs, die der Editor gerade ausgeliefert hatte, waren beim nächsten Aufruf verbraucht.
+        $existingRows = $this->db->get_results(
+            "SELECT id, parent_id, title, url, target, icon, position FROM {$this->prefix}menu_items WHERE menu_id = ? ORDER BY position ASC, id ASC",
+            [$menuId]
+        ) ?: [];
+        if (self::mirrorMatchesThemeItems(self::flattenThemeItems($items), $existingRows)) {
+            return;
+        }
 
-        $position = 0;
-        $this->insertThemeItemsRecursive($menuId, $items, 0, $position);
+        // Release-Prüfung 4.1.0 (PERF, db:0): Neuaufbau eines Menüs atomar, damit parallele Aufrufe
+        // weder ein leeres noch ein doppelt befülltes Menü sehen.
+        $pdo = $this->db->getPdo();
+        $ownTransaction = !$pdo->inTransaction();
+        if ($ownTransaction) {
+            $pdo->beginTransaction();
+        }
+
+        try {
+            $this->db->execute("DELETE FROM {$this->prefix}menu_items WHERE menu_id = ?", [$menuId]);
+
+            $position = 0;
+            $this->insertThemeItemsRecursive($menuId, $items, 0, $position);
+
+            if ($ownTransaction) {
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Flache Sollliste des Spiegels in derselben Reihenfolge und mit denselben Regeln wie
+     * insertThemeItemsRecursive(): parent = Index des Elterneintrags in der Liste, -1 = oberste Ebene.
+     *
+     * @param array<int|string,mixed> $items
+     * @return list<array{parent:int,title:string,url:string,target:string,icon:string}>
+     */
+    public static function flattenThemeItems(array $items, int $parentIndex = -1, array &$rows = []): array
+    {
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $title = trim((string)($item['label'] ?? $item['title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+
+            $index = count($rows);
+            $rows[] = [
+                'parent' => $parentIndex,
+                'title' => $title,
+                'url' => trim((string)($item['url'] ?? '#')),
+                'target' => ((string)($item['target'] ?? '_self')) === '_blank' ? '_blank' : '_self',
+                'icon' => trim((string)($item['icon'] ?? '')),
+            ];
+
+            $children = is_array($item['children'] ?? null) ? $item['children'] : [];
+            if ($children !== []) {
+                self::flattenThemeItems($children, $index, $rows);
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Vergleicht die gespeicherten Zeilen (sortiert nach position) mit der Sollliste aus flattenThemeItems().
+     *
+     * @param list<array{parent:int,title:string,url:string,target:string,icon:string}> $desired
+     * @param array<int,object|array<string,mixed>> $existingRows
+     */
+    public static function mirrorMatchesThemeItems(array $desired, array $existingRows): bool
+    {
+        if (count($desired) !== count($existingRows)) {
+            return false;
+        }
+
+        $indexById = [];
+        foreach (array_values($existingRows) as $index => $row) {
+            $row = (array) $row;
+            $indexById[(int) ($row['id'] ?? 0)] = $index;
+        }
+
+        foreach (array_values($existingRows) as $index => $row) {
+            $row = (array) $row;
+            $expected = $desired[$index] ?? null;
+            if ($expected === null || (int) ($row['position'] ?? -1) !== $index) {
+                return false;
+            }
+
+            $parentId = (int) ($row['parent_id'] ?? 0);
+            $parentIndex = $parentId === 0 ? -1 : ($indexById[$parentId] ?? -2);
+
+            if (
+                $parentIndex !== $expected['parent']
+                || (string) ($row['title'] ?? '') !== $expected['title']
+                || (string) ($row['url'] ?? '') !== $expected['url']
+                || (string) ($row['target'] ?? '') !== $expected['target']
+                || (string) ($row['icon'] ?? '') !== $expected['icon']
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -965,7 +1076,7 @@ class MenuEditorModule
     /**
      * Tabellen anlegen
      */
-    private function ensureTables(): void
+    private function ensureTables(): bool
     {
         try {
             $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS {$this->prefix}menus (
@@ -988,7 +1099,10 @@ class MenuEditorModule
                 INDEX idx_parent (parent_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         } catch (\Throwable $e) {
-            // Tabellen existieren bereits
+            // Tabellen existieren bereits; ohne Erfolgsmeldung wird die Prüfung beim nächsten Aufruf wiederholt.
+            return false;
         }
+
+        return true;
     }
 }

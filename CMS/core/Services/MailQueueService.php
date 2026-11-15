@@ -26,6 +26,26 @@ class MailQueueService
     private const DEFAULT_RATE_LIMIT_PER_MINUTE = 8;
     private const MAX_SUBJECT_LENGTH = 255;
 
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:1): Quellen für Massenversand (Newsletter, Feed-Digest). Ihre Jobs werden
+     * erst nach allen anderen fälligen Jobs abgearbeitet, damit Passwort-Reset, Registrierung, E-Mail-Änderung
+     * und MFA-Hinweise nicht hinter einer laufenden Kampagne warten. Die Werte entsprechen
+     * NewsletterMailer::MAIL_SOURCE und DigestMailer::MAIL_SOURCE.
+     */
+    public const BULK_SOURCES = ['newsletter', 'cms-feed-digest'];
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:0): Standardfrist für erledigte Jobs (versendet oder endgültig
+     * fehlgeschlagen). Offene und laufende Jobs werden nie gelöscht.
+     */
+    public const RETENTION_DAYS = 30;
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:0): Bedingung für löschbare Jobs: nur versendete oder endgültig
+     * fehlgeschlagene, älter als die Frist (über den Index idx_created_at).
+     */
+    private const PRUNABLE_WHERE = "status IN ('sent', 'failed') AND created_at < (NOW() - INTERVAL ? DAY)";
+
     private static ?self $instance = null;
 
     private Database $db;
@@ -547,15 +567,46 @@ class MailQueueService
      */
     private function getDueJobs(int $limit): array
     {
+        // Release-Prüfung 4.1.0 (PERF, batch:1): Massenversand (BULK_SOURCES) nach hinten sortieren, sonst FIFO wie bisher.
+        $bulkPlaceholders = implode(', ', array_fill(0, count(self::BULK_SOURCES), '?'));
+
         return $this->db->get_results(
             "SELECT *
              FROM {$this->prefix}mail_queue
              WHERE status = 'pending'
                AND (available_at IS NULL OR available_at <= ?)
-             ORDER BY COALESCE(available_at, created_at) ASC, id ASC
+             ORDER BY (source IN ({$bulkPlaceholders})) ASC, COALESCE(available_at, created_at) ASC, id ASC
              LIMIT ?",
-            [date('Y-m-d H:i:s'), $limit]
+            array_merge([date('Y-m-d H:i:s')], self::BULK_SOURCES, [$limit])
         ) ?: [];
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:0): Trockenlauf der Aufbewahrungsregel `mail_queue`.
+     */
+    public function countPrunableJobs(int $retentionDays): int
+    {
+        if ($retentionDays <= 0) {
+            return 0;
+        }
+
+        return (int) $this->db->get_var(
+            "SELECT COUNT(*) FROM {$this->prefix}mail_queue WHERE " . self::PRUNABLE_WHERE,
+            [$retentionDays]
+        );
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:0): Löscht versendete und endgültig fehlgeschlagene Jobs samt Body
+     * blockweise (DataRetentionService::deleteInBatches). Offene und laufende Jobs bleiben unberührt.
+     */
+    public function pruneFinishedJobs(int $retentionDays): int
+    {
+        if ($retentionDays <= 0) {
+            return 0;
+        }
+
+        return DataRetentionService::getInstance()->deleteInBatches('mail_queue', self::PRUNABLE_WHERE, [$retentionDays]);
     }
 
     private function claimJob(int $jobId): bool

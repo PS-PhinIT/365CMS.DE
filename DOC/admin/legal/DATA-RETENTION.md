@@ -25,6 +25,11 @@ where the data lives; comment IP retention is configured on this page.
 | Formulareingänge | `forms.submissions` | 365 Tage (je Formular änderbar) | Löschen samt Dateien | Formulare → Einstellungen |
 | Papierkorb | `trash` | 30 Tage | Endgültig löschen (verwendete Medien bleiben) | Papierkorb |
 | Kommentar-IP-Adressen | `comment_ips` | nie | Kürzen (letzter Block 0) oder entfernen | diese Seite |
+| Mail-Queue (erledigte Jobs) | `mail_queue` | 30 Tage | Löschen (nur versendet oder endgültig fehlgeschlagen, offene Jobs bleiben) | Filter `cms_mail_retention_days` |
+| Mail-Protokoll | `mail_log` | 90 Tage | Löschen | Filter `cms_mail_retention_days` |
+
+Gelöscht wird in Blöcken zu 5 000 Zeilen: je Tabelle und Lauf mindestens 40 Blöcke, danach weiter, solange das
+Zeitbudget von 20 Sekunden reicht (höchstens 2 000 Blöcke). Große Rückstände werden so in wenigen Läufen abgebaut.
 
 ### Seite `/admin/data-retention`
 

@@ -302,9 +302,11 @@ main.site-main       { padding: 0 !important; margin: 0 !important; }
         <div class="lp-hero__inner" style="position:relative;z-index:1;">
 
             <?php if ($lpHasLogoImage): ?>
+            <?php // Release-Prüfung 4.1.0 (PERF, cwv:7): Maße gegen Layout-Verschiebung über der H1; width/height:auto erhält das Seitenverhältnis unter max-height. ?>
             <img src="<?php echo $lpLogoUrlEscaped; ?>"
                  alt="<?php echo $safe($lpTitle); ?>"
-                 style="max-height:<?php echo $logoMaxH;?>;margin:0 auto <?php echo $logoMarginB;?>;display:block;">
+                 <?php echo function_exists('meridian_image_dimension_attributes') ? meridian_image_dimension_attributes($lpLogoUrl) : ''; ?>
+                 style="max-height:<?php echo $logoMaxH;?>;margin:0 auto <?php echo $logoMarginB;?>;display:block;width:auto;height:auto;max-width:100%;">
             <?php endif; ?>
 
             <div style="position:relative;display:inline-block;max-width:100%;">
@@ -440,9 +442,26 @@ main.site-main       { padding: 0 !important; margin: 0 !important; }
             <div class="card">
                 <div class="card-thumb" style="background:<?php echo meridian_cat_gradient($post->category_name ?? ''); ?>">
                     <?php if ($post->featured_image): ?>
+                    <?php
+                    // Release-Prüfung 4.1.0 (PERF, cwv:8): AVIF/WebP, Breiten-srcset aus vorhandenen Bildgrößen und Maße wie in den übrigen Karten.
+                    $lpCardImage = function_exists('meridian_get_responsive_picture_sources')
+                        ? meridian_get_responsive_picture_sources((string) $post->featured_image, null, 960, 560)
+                        : ['url' => ''];
+                    $lpCardSizes = '(max-width: 720px) calc(100vw - 2rem), 360px';
+                    ?>
+                    <?php if (($lpCardImage['url'] ?? '') !== ''): ?>
+                    <picture>
+                        <?php echo meridian_picture_source_tags($lpCardImage, $lpCardSizes); ?>
+                        <img src="<?php echo htmlspecialchars((string) $lpCardImage['url'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo meridian_picture_img_srcset_attributes($lpCardImage, $lpCardSizes); ?>
+                             alt="<?php echo htmlspecialchars($post->title); ?>"
+                             <?php echo meridian_image_dimension_attributes((string) $post->featured_image, 960, 560); ?>
+                             loading="lazy" decoding="async">
+                    </picture>
+                    <?php else: ?>
                     <img src="<?php echo htmlspecialchars($post->featured_image); ?>"
                          alt="<?php echo htmlspecialchars($post->title); ?>"
                          loading="lazy">
+                    <?php endif; ?>
                     <?php endif; ?>
                     <?php if ($post->category_name): ?>
                     <span class="card-cat"><?php echo htmlspecialchars($post->category_name); ?></span>

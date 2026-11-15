@@ -53,7 +53,7 @@ Den vollen Schutz gegen das Ausprobieren von Adressen gibt es nur mit aktiver E-
 |---|---|---|
 | Max. Fehlversuche | `MAX_LOGIN_ATTEMPTS` in `config/app.php` | 5 |
 | Sperrdauer | `LOGIN_TIMEOUT` | 300 s |
-| Verzögerung je Konto | `Auth::accountFailureDelaySeconds()` (Aktion `login_account`) | nach 5 Fehlversuchen in 15 min: 1, 2, 4, 8, 16, max. 30 s je weiterem Versuch, unabhängig von der IP; ein richtiges Passwort setzt den Zähler zurück |
+| Verzögerung je Konto | `Auth::accountFailureDelaySeconds()` (Aktion `login_account`) | nach 5 Fehlversuchen in 15 min: 1, 2, 4, 8, 16, max. 30 s je weiterem Versuch, unabhängig von der IP; ein richtiges Passwort setzt den Zähler zurück. Seit 4.1.0 ohne `sleep()`: Der erste Versuch startet die Wartezeit in der eigenen Session und antwortet sofort mit „Bitte versuchen Sie es in N Sekunden erneut.“, nach Ablauf ist genau eine Passwortprüfung frei (10 Minuten gültig). Dritte können diese Freigabe nicht verschieben |
 | Passwort-Mindestlänge | `Auth::PASSWORD_POLICY_MIN_LENGTH` | 12 |
 | Zeichenklassen | `Auth::getPasswordPolicyDefinition()` | Groß-, Kleinbuchstabe, Ziffer, Sonderzeichen |
 | Session Admin | Option `perf_session_timeout_admin` | 8 Stunden |

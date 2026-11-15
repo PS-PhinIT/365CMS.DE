@@ -149,4 +149,12 @@ T::run('PR #4: verwaiste Einstellungen und Verweise (FUN-410-48/50/54–60)', st
     T::check(str_contains($pm, 'PageTrashProvider($this->db))->trash($id, $userId)->ok') && !str_contains($pm, 'DELETE FROM {$this->prefix}pages WHERE id = ?'), 'PageManager::deletePage() verschiebt in den Papierkorb');
 });
 
+// Release-Prüfung 4.1.0, PR #5 (Performance): Regressionen je Umsetzungs-Cluster.
+foreach (['admin', 'core', 'cache', 'blocking', 'frontend', 'batch'] as $perfCluster) {
+    $perfFile = __DIR__ . '/perf-' . $perfCluster . '.php';
+    if (is_file($perfFile)) {
+        require $perfFile;
+    }
+}
+
 T::finish();

@@ -53,8 +53,9 @@ $svgs = [
                     ? time_ago($item->published_at ?? $item->created_at)
                     : '';
         $gImageReference = (string) ($item->featured_image ?? '');
-        $gImage = function_exists('meridian_get_picture_sources')
-            ? meridian_get_picture_sources($gImageReference, null, 960, 560)
+        // Release-Prüfung 4.1.0 (PERF, cwv:8): Breiten-srcset aus vorhandenen Bildgrößen, sonst wie bisher.
+        $gImage = function_exists('meridian_get_responsive_picture_sources')
+            ? meridian_get_responsive_picture_sources($gImageReference, null, 960, 560)
             : ['url' => '', 'avif_url' => '', 'webp_url' => '', 'width' => 960, 'height' => 560];
         $gImageDimensions = function_exists('meridian_image_dimension_attributes')
             ? meridian_image_dimension_attributes($gImageReference, 960, 560)
@@ -66,13 +67,13 @@ $svgs = [
         <?php if ($gImage['url'] !== ''): ?>
         <a href="<?php echo htmlspecialchars(meridian_post_url($item), ENT_QUOTES, 'UTF-8'); ?>" class="card-thumb" style="background:<?php echo $grad; ?>;">
             <picture>
-                <?php if (($gImage['avif_url'] ?? '') !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($gImage['avif_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/avif">
+                <?php if (($gImage['avif_url'] ?? '') !== '' && meridian_picture_source_attributes($gImage, 'avif', '(max-width: 720px) calc(100vw - 2rem), 360px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($gImage, 'avif', '(max-width: 720px) calc(100vw - 2rem), 360px'); ?> type="image/avif">
                 <?php endif; ?>
-                <?php if ($gImage['webp_url'] !== ''): ?>
-                <source srcset="<?php echo htmlspecialchars($gImage['webp_url'], ENT_QUOTES, 'UTF-8'); ?>" type="image/webp">
+                <?php if ($gImage['webp_url'] !== '' && meridian_picture_source_attributes($gImage, 'webp', '(max-width: 720px) calc(100vw - 2rem), 360px') !== ''): ?>
+                <source<?php echo meridian_picture_source_attributes($gImage, 'webp', '(max-width: 720px) calc(100vw - 2rem), 360px'); ?> type="image/webp">
                 <?php endif; ?>
-                <img src="<?php echo htmlspecialchars($gImage['url'], ENT_QUOTES, 'UTF-8'); ?>"
+                <img src="<?php echo htmlspecialchars($gImage['url'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo function_exists('meridian_picture_img_srcset_attributes') ? meridian_picture_img_srcset_attributes($gImage, '(max-width: 720px) calc(100vw - 2rem), 360px') : ''; ?>
                      alt="<?php echo $gTitle; ?>"
                      <?php echo function_exists('meridian_image_loading_attributes') ? meridian_image_loading_attributes(false) : 'loading="lazy" decoding="async"'; ?>
                      <?php echo $gImageDimensions; ?>

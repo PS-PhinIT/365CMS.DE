@@ -759,7 +759,8 @@ class Bootstrap
                     return;
                 }
 
-                $href = htmlspecialchars(SITE_URL . '/assets/photoswipe/photoswipe.css', ENT_QUOTES, 'UTF-8');
+                // Release-Prüfung 4.1.0 (PERF, cache:7/cwv:3): versioniert, .htaccess cacht CSS/JS ein Jahr immutable.
+                $href = htmlspecialchars(cms_asset_url('photoswipe/photoswipe.css'), ENT_QUOTES, 'UTF-8');
                 echo '<link rel="stylesheet" href="' . $href . '">' . "\n";
             }, 30);
 
@@ -784,8 +785,10 @@ class Bootstrap
 
                 $editorJsContentStylesRendered = true;
                 $href = htmlspecialchars(cms_asset_url('css/editorjs-content.css'), ENT_QUOTES, 'UTF-8');
-                $criticalCss = '.editorjs-block{--cms-editorjs-default-space-after:1.1rem;--cms-editorjs-space-before:0rem;--cms-editorjs-space-after:var(--cms-editorjs-default-space-after);box-sizing:border-box;display:block;max-width:100%;margin-block-start:var(--cms-editorjs-space-before)!important;margin-block-end:var(--cms-editorjs-space-after)!important}.editorjs-block+.editorjs-block:not(.editorjs-media-text),.editorjs-block:first-child:not(.editorjs-media-text){margin-block-start:0!important}.editorjs-block:last-child:not(.editorjs-media-text){margin-block-end:0!important}.editorjs-image img,.editorjs-gallery img,.editorjs-carousel img,.editorjs-drawing img,.editorjs-media-text img{box-sizing:border-box;max-width:100%!important;height:auto!important}.editorjs-block.editorjs-media-text{--cms-editorjs-media-text-align-items:flex-start;--cms-editorjs-media-text-spacing-top:10px;--cms-editorjs-media-text-spacing-bottom:10px;--cms-editorjs-space-before:var(--cms-editorjs-media-text-spacing-top);--cms-editorjs-space-after:var(--cms-editorjs-media-text-spacing-bottom);display:flex;flex-wrap:wrap;align-items:var(--cms-editorjs-media-text-align-items,flex-start)!important;gap:1.5rem;margin-block-start:var(--cms-editorjs-media-text-spacing-top)!important;margin-block-end:var(--cms-editorjs-media-text-spacing-bottom)!important}.editorjs-block.editorjs-media-text[data-spacing-top="0"],.editorjs-block.editorjs-media-text--spacing-top-0{--cms-editorjs-media-text-spacing-top:0px;--cms-editorjs-space-before:0px;margin-block-start:0!important}.editorjs-block.editorjs-media-text[data-spacing-top="5"],.editorjs-block.editorjs-media-text--spacing-top-5{--cms-editorjs-media-text-spacing-top:5px;--cms-editorjs-space-before:5px;margin-block-start:5px!important}.editorjs-block.editorjs-media-text[data-spacing-top="10"],.editorjs-block.editorjs-media-text--spacing-top-10{--cms-editorjs-media-text-spacing-top:10px;--cms-editorjs-space-before:10px;margin-block-start:10px!important}.editorjs-block.editorjs-media-text[data-spacing-top="15"],.editorjs-block.editorjs-media-text--spacing-top-15{--cms-editorjs-media-text-spacing-top:15px;--cms-editorjs-space-before:15px;margin-block-start:15px!important}.editorjs-block.editorjs-media-text[data-spacing-top="20"],.editorjs-block.editorjs-media-text--spacing-top-20{--cms-editorjs-media-text-spacing-top:20px;--cms-editorjs-space-before:20px;margin-block-start:20px!important}.editorjs-block.editorjs-media-text[data-spacing-top="30"],.editorjs-block.editorjs-media-text--spacing-top-30{--cms-editorjs-media-text-spacing-top:30px;--cms-editorjs-space-before:30px;margin-block-start:30px!important}.editorjs-block.editorjs-media-text[data-spacing-top="40"],.editorjs-block.editorjs-media-text--spacing-top-40{--cms-editorjs-media-text-spacing-top:40px;--cms-editorjs-space-before:40px;margin-block-start:40px!important}.editorjs-block.editorjs-media-text[data-spacing-top="60"],.editorjs-block.editorjs-media-text--spacing-top-60{--cms-editorjs-media-text-spacing-top:60px;--cms-editorjs-space-before:60px;margin-block-start:60px!important}.editorjs-block.editorjs-media-text[data-spacing-top="80"],.editorjs-block.editorjs-media-text--spacing-top-80{--cms-editorjs-media-text-spacing-top:80px;--cms-editorjs-space-before:80px;margin-block-start:80px!important}.editorjs-block.editorjs-media-text[data-spacing-top="100"],.editorjs-block.editorjs-media-text--spacing-top-100{--cms-editorjs-media-text-spacing-top:100px;--cms-editorjs-space-before:100px;margin-block-start:100px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="0"],.editorjs-block.editorjs-media-text--spacing-bottom-0{--cms-editorjs-media-text-spacing-bottom:0px;--cms-editorjs-space-after:0px;margin-block-end:0!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="5"],.editorjs-block.editorjs-media-text--spacing-bottom-5{--cms-editorjs-media-text-spacing-bottom:5px;--cms-editorjs-space-after:5px;margin-block-end:5px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="10"],.editorjs-block.editorjs-media-text--spacing-bottom-10{--cms-editorjs-media-text-spacing-bottom:10px;--cms-editorjs-space-after:10px;margin-block-end:10px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="15"],.editorjs-block.editorjs-media-text--spacing-bottom-15{--cms-editorjs-media-text-spacing-bottom:15px;--cms-editorjs-space-after:15px;margin-block-end:15px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="20"],.editorjs-block.editorjs-media-text--spacing-bottom-20{--cms-editorjs-media-text-spacing-bottom:20px;--cms-editorjs-space-after:20px;margin-block-end:20px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="30"],.editorjs-block.editorjs-media-text--spacing-bottom-30{--cms-editorjs-media-text-spacing-bottom:30px;--cms-editorjs-space-after:30px;margin-block-end:30px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="40"],.editorjs-block.editorjs-media-text--spacing-bottom-40{--cms-editorjs-media-text-spacing-bottom:40px;--cms-editorjs-space-after:40px;margin-block-end:40px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="60"],.editorjs-block.editorjs-media-text--spacing-bottom-60{--cms-editorjs-media-text-spacing-bottom:60px;--cms-editorjs-space-after:60px;margin-block-end:60px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="80"],.editorjs-block.editorjs-media-text--spacing-bottom-80{--cms-editorjs-media-text-spacing-bottom:80px;--cms-editorjs-space-after:80px;margin-block-end:80px!important}.editorjs-block.editorjs-media-text[data-spacing-bottom="100"],.editorjs-block.editorjs-media-text--spacing-bottom-100{--cms-editorjs-media-text-spacing-bottom:100px;--cms-editorjs-space-after:100px;margin-block-end:100px!important}.editorjs-media-text--image-right{flex-direction:row-reverse}.editorjs-block.editorjs-media-text.editorjs-media-text--valign-top,.editorjs-block.editorjs-media-text[data-vertical-alignment="top"]{--cms-editorjs-media-text-align-items:flex-start}.editorjs-block.editorjs-media-text.editorjs-media-text--valign-center,.editorjs-block.editorjs-media-text[data-vertical-alignment="center"]{--cms-editorjs-media-text-align-items:center}.editorjs-block.editorjs-media-text.editorjs-media-text--valign-bottom,.editorjs-block.editorjs-media-text[data-vertical-alignment="bottom"]{--cms-editorjs-media-text-align-items:flex-end}.editorjs-block.editorjs-media-text.editorjs-media-text--image-width-33{--cms-editorjs-media-text-image-width:33%}.editorjs-block.editorjs-media-text.editorjs-media-text--image-width-40{--cms-editorjs-media-text-image-width:40%}.editorjs-block.editorjs-media-text.editorjs-media-text--image-width-50{--cms-editorjs-media-text-image-width:50%}.editorjs-table{overflow-x:auto}.editorjs-spacer{--cms-editorjs-space-after:0rem;--cms-editorjs-spacer-height:40px;display:block!important;clear:both;width:100%;height:var(--cms-editorjs-spacer-height)!important;min-height:var(--cms-editorjs-spacer-height)!important;margin:0!important;padding:0!important;line-height:0;font-size:0;overflow:hidden}';
-                $criticalCss .= '.editorjs-spacer[data-height="0"]{--cms-editorjs-spacer-height:0px}.editorjs-spacer[data-height="8"]{--cms-editorjs-spacer-height:8px}.editorjs-spacer[data-height="10"]{--cms-editorjs-spacer-height:10px}.editorjs-spacer[data-height="15"]{--cms-editorjs-spacer-height:15px}.editorjs-spacer[data-height="16"]{--cms-editorjs-spacer-height:16px}.editorjs-spacer[data-height="24"]{--cms-editorjs-spacer-height:24px}.editorjs-spacer[data-height="25"]{--cms-editorjs-spacer-height:25px}.editorjs-spacer[data-height="32"]{--cms-editorjs-spacer-height:32px}.editorjs-spacer[data-height="40"]{--cms-editorjs-spacer-height:40px}.editorjs-spacer[data-height="48"]{--cms-editorjs-spacer-height:48px}.editorjs-spacer[data-height="56"]{--cms-editorjs-spacer-height:56px}.editorjs-spacer[data-height="60"]{--cms-editorjs-spacer-height:60px}.editorjs-spacer[data-height="64"]{--cms-editorjs-spacer-height:64px}.editorjs-spacer[data-height="72"]{--cms-editorjs-spacer-height:72px}.editorjs-spacer[data-height="75"]{--cms-editorjs-spacer-height:75px}.editorjs-spacer[data-height="80"]{--cms-editorjs-spacer-height:80px}.editorjs-spacer[data-height="96"]{--cms-editorjs-spacer-height:96px}.editorjs-spacer[data-height="100"]{--cms-editorjs-spacer-height:100px}.editorjs-spacer[data-height="120"]{--cms-editorjs-spacer-height:120px}.editorjs-spacer[data-height="140"]{--cms-editorjs-spacer-height:140px}.editorjs-spacer[data-height="150"]{--cms-editorjs-spacer-height:150px}.editorjs-spacer[data-height="160"]{--cms-editorjs-spacer-height:160px}.editorjs-spacer[data-height="180"]{--cms-editorjs-spacer-height:180px}.editorjs-spacer[data-height="200"]{--cms-editorjs-spacer-height:200px}';
+                // Release-Prüfung 4.1.0 (PERF, cwv:1): nur noch die Regeln, die editorjs-content.css nicht selbst
+                // (mit gleichem Selektor und danach im Kaskadenverlauf) festlegt. Die übrigen rund 8 KB doppelten die
+                // Datei, die direkt danach render-blockierend geladen wird, und wurden mit jeder HTML-Antwort neu übertragen.
+                $criticalCss = '.editorjs-block:last-child:not(.editorjs-media-text){margin-block-end:0!important}.editorjs-block.editorjs-media-text{--cms-editorjs-media-text-align-items:flex-start;--cms-editorjs-media-text-spacing-top:10px;--cms-editorjs-media-text-spacing-bottom:10px;--cms-editorjs-space-before:var(--cms-editorjs-media-text-spacing-top);--cms-editorjs-space-after:var(--cms-editorjs-media-text-spacing-bottom);display:flex;flex-wrap:wrap;align-items:var(--cms-editorjs-media-text-align-items,flex-start)!important;margin-block-start:var(--cms-editorjs-media-text-spacing-top)!important;margin-block-end:var(--cms-editorjs-media-text-spacing-bottom)!important}';
                 echo '<style id="cms-editorjs-critical-css" ' . \CMS\Security::instance()->nonceAttr() . '>' . $criticalCss . '</style>' . "\n";
                 echo '<link rel="stylesheet" href="' . $href . '">' . "\n";
             }, 95);
@@ -885,7 +888,10 @@ class Bootstrap
                     return;
                 }
 
-                echo '<script type="module" src="' . SITE_URL . '/assets/js/photoswipe-init.js"></script>' . "\n";
+                // Release-Prüfung 4.1.0 (PERF, cache:7/cwv:3): versioniert wie hub-sites.css (?v=), sonst behalten
+                // wiederkehrende Besucher das alte Init-Modul ein Jahr lang. Die Bibliothek wird per import.meta.url
+                // aufgelöst, die Query stört dabei nicht.
+                echo '<script type="module" src="' . htmlspecialchars(cms_asset_url('js/photoswipe-init.js'), ENT_QUOTES, 'UTF-8') . '"></script>' . "\n";
             }, 10);
         }
 
@@ -927,6 +933,8 @@ class Bootstrap
                     );
                     if ($live !== null && $live !== false) {
                         Services\SEOService::getInstance()->invalidateSavedSitemaps();
+                        // Release-Prüfung 4.1.0 (PERF, cache:1): neu live gegangene Beiträge erscheinen in Listen anderer Seiten.
+                        CacheManager::bumpSiteContentVersion();
                     }
                 }
                 update_option('sitemap_scheduled_check_at', $now);
@@ -941,7 +949,25 @@ class Bootstrap
                     Services\SEOService::getInstance()->invalidateSavedSitemaps();
                 } catch (\Throwable) {
                 }
+                // Release-Prüfung 4.1.0 (PERF, cache:1): Beitragslisten und Navigation anderer Seiten ändern sich mit,
+                // auch bei Speichern über API oder Cron (ohne schreibende Admin-Anfrage).
+                CacheManager::bumpSiteContentVersion();
             }, 90);
+        }
+        // Release-Prüfung 4.1.0 (PERF, cache:1): Seitenweite Änderungen ohne eigene Inhalts-Hooks (Einstellungen,
+        // Menüs, Theme und Customizer, Plugins, Cookie-Banner, Rechtstexte) laufen über schreibende Admin-Anfragen.
+        // Nach deren Abschluss bekommt jede öffentliche Seite neue Validatoren (ETag/Last-Modified).
+        if ($this->mode === 'admin'
+            && !in_array(strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')), ['GET', 'HEAD', 'OPTIONS'], true)) {
+            register_shutdown_function(static function (): void {
+                try {
+                    $status = http_response_code();
+                    if (($status === false || $status < 400) && Auth::isLoggedIn()) {
+                        CacheManager::bumpSiteContentVersion();
+                    }
+                } catch (\Throwable) {
+                }
+            });
         }
         // IndexNow (Opt-in unter SEO → Suchmaschinen): gespeicherte, öffentliche Inhalte vormerken und nach der
         // Antwort melden; fehlgeschlagene Meldungen wiederholt der stündliche Cron.

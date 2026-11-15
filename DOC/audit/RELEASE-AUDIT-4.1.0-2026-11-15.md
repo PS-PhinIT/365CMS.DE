@@ -10,6 +10,19 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 | Schweregrade | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
 | ID-Schema | `SEC-410-xx` (Sicherheit), `DB-410-xx` (Schema/Migration), `FUN-410-xx` (Funktion), `PERF-410-xx` (Performance), `DOC-410-xx` (Doku/Release) |
 
+## Versionen
+
+Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.5-*`).
+
+| Version | Prüfbereich | Pull Requests |
+|---------|-------------|---------------|
+| 4.1.1 | PR #1: Sicherheit, Kryptografie & Zugriffskontrolle | [#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158) |
+| 4.1.2 | PR #2: Datenbank-Schema, Migrationen & Upgrade-Pfad | [#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162) |
+| 4.1.3 | PR #3: Features & Workflows seit 3.5.0 | [#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163) |
+| 4.1.4 | PR #4: Regressionen, Altlasten, PHP 8.4.1+/8.5 | [#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165) |
+| 4.1.5 | PR #5: Performance, Caching, Core Web Vitals (Zwischenstand) | [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166) |
+| 4.1.6 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
+
 ## Prüfbereiche und Status
 
 | PR | Prüfbereich | Status |
@@ -18,7 +31,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 | #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | abgeschlossen: 3 Befunde behoben, 1 dokumentiert, 1 verworfen (DB-410-01) |
 | #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) | Features & Workflows seit 3.5.0 (Funktionsprüfung) | abgeschlossen: 24 Befunde behoben, 12 offen (Funktionslücken, Entscheidung in PR #6), 2 akzeptiert, 1 verworfen |
 | #4 ([#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165)) | Regressionen, Altlasten, PHP 8.4.1+/8.5 | abgeschlossen: CI-Wächter für 8.4/8.5, 24 Befunde behoben (2 SEC, 22 FUN inkl. FUN-410-36 aus PR #3), 0 verworfen |
-| #5 | Performance, Caching, Core Web Vitals | ausstehend |
+| #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166), Zwischenstand) | Performance, Caching, Core Web Vitals | Zwischenstand: 45 Befunde behoben, 4 offen (Entscheidung PR #6), Gesamt-Review und Folgearbeiten ausstehend |
 | #6 | Tests, Dokumentation, Release-Fertigstellung | ausstehend |
 
 ## Methodik
@@ -70,7 +83,7 @@ Querverweise in andere Prüfbereiche:
 | ID | Schwere | Datei:Zeile | Kurzbeschreibung | Status |
 |----|---------|-------------|------------------|--------|
 | DB-410-01 | – | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish`, Neuinstallation angeblich nicht | Verworfen in PR #2 (Laufzeittest: beide Wege identisch, siehe unten) |
-| DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [ ] Offen → PR #6 |
+| DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): neue Pakete 4.1.5 mit Manifest und Prüfsummen; die 4.1.0-Pakete bleiben zur Nachvollziehbarkeit liegen |
 | DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 (mit PR #2: 33) aus; `DOC/FILESTRUCTUR.md` in PR #2 bereits korrigiert | [ ] Offen → PR #6 |
 
 ### Details
@@ -210,7 +223,7 @@ Der Ablauf ist als Test-Suite `TESTS/schema-upgrade` festgehalten. Sie ist optio
 #### DB-410-02 (HIGH): Verbindungsrekursion beim ersten Request
 
 - **Ursache:** `Database::__construct()` ruft `SchemaManager::createTables()` auf; ohne Flag-Datei laufen `MigrationManager::run()` und `ensureFeatureSchema()`. Beide rufen seit 4.1.0 (Bereich 3a, PR #147) `cms_ensure_role_permissions_table()` auf, das `Database::instance()` nutzt. Weil die Instanz erst nach dem Konstruktor gesetzt wird, baut jeder Aufruf eine neue Verbindung und startet die Schemaprüfung erneut, bis der Server `Too many connections` meldet.
-- **Gemessen:** 152 Verbindungen und 7,4 s für einen Request (`max_connections = 151`). Betroffen ist jeder erste Request nach Neuinstallation, Core-Update (neue Flag-Datei) und „Tabellen reparieren“. Auf Shared Hosting mit `max_user_connections` von 10–25 scheitern dabei auch gleichzeitige Besucher. Das ausgelieferte 4.0.0 ist nicht betroffen; die bereits gepackten 4.1.0-Pakete schon (DOC-410-02, Neupacken in PR #6).
+- **Gemessen:** 152 Verbindungen und 7,4 s für einen Request (`max_connections = 151`). Betroffen ist jeder erste Request nach Neuinstallation, Core-Update (neue Flag-Datei) und „Tabellen reparieren“. Auf Shared Hosting mit `max_user_connections` von 10–25 scheitern dabei auch gleichzeitige Besucher. Das ausgelieferte 4.0.0 ist nicht betroffen; die bereits gepackten 4.1.0-Pakete schon (DOC-410-02, ersetzt durch die Pakete 4.1.5).
 - **Behebung:** `cms_ensure_role_permissions_table(?Database $db = null)`; `SchemaManager` und `MigrationManager` übergeben ihre Verbindung. Danach: 1 Verbindung, 0,09 s.
 
 #### DB-410-04 (MEDIUM): Integritätsprüfung des Datenbank-Updates
@@ -315,7 +328,7 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 | FUN-410-38 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:592` | `renewalFailed` meldet `order.failed` mit `order_id: 0`; ohne bezahlte Vorlage entsteht keine Folgebestellung/Rechnung | [ ] Offen → Entscheidung PR #6 |
 | FUN-410-39 | – | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:316` | Doppelzustellung bei überlappendem Cron | Verworfen (wie SEC-410-06: `CronRunnerService` hält `flock`) |
 
-Querverweis: **PERF-410-01 → PR #5:** *Monitor → Health-Check/Antwortzeit/Warnungen* brauchen 5–8 s je Aufruf (blockierende HTTP-Prüfungen im Web-Request).
+Querverweis (behoben in PR #5, [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): **PERF-410-01:** *Monitor → Health-Check/Antwortzeit/Warnungen* brauchen 5–8 s je Aufruf (blockierende HTTP-Prüfungen im Web-Request).
 
 ### Details zu den behobenen Befunden
 
@@ -482,3 +495,138 @@ FUN-410-36 aus PR #3 (`PageManager::deletePage()`) ist ebenfalls in PR #4 behobe
 - `php TESTS/run-all.php` mit MariaDB: 35 Suiten, 0 fehlgeschlagen (`schema-upgrade` 30/30, `release-4.1.0` 165/165).
 - Erweitert: `TESTS/release-4.1.0` um fünf Blöcke für alle Befunde aus PR #4.
 - Laufzeit: betroffene Admin-Seiten und Frontend mit 200 ohne PHP-Meldung; 15/15 HTTP-Funktionsprüfungen; `deletePage()` und DSGVO-Löschung im App-Kontext.
+
+---
+
+## PR #5: Performance, Caching & Core Web Vitals (Zwischenstand)
+
+Zwischen-PR [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166). Der abschließende Teil folgt in einem weiteren PR: skeptischer Gesamt-Review des Diffs und die unter „Folgearbeiten“ genannten Punkte.
+
+### Vorgehen
+
+1. **Laufzeit-Basismessung:**
+   - Umgebung: MariaDB 10.11, PHP-Entwicklungsserver.
+   - Testdaten: 312 Beiträge, 51 Seiten, 912 Kommentare, 8 Kategorien, 40 Schlagwörter.
+   - Abgerufen: alle 166 Routen (Admin, Mitgliederbereich, Frontend), je zweimal (warm).
+   - Je Request erfasst: Zeit, Anzahl der Abfragen, doppelte Abfragen, langsamste Abfragen, Spitzenspeicher. Die Instrumentierung von `Database` lief nur in der Testkopie.
+   - Anonyme Frontend-Aufrufe: Header (`Cache-Control`, `ETag`, `Set-Cookie`) und 304-Verhalten geprüft.
+2. **Statische Durchsicht** in fünf Strängen:
+   - Stränge: DB-Abfragen, Caching, blockierende Arbeit im Request, Core Web Vitals, Cron/Batch.
+   - Jeder Befund wurde adversarial verifiziert: 61 gemeldet, 49 bestätigt, 12 verworfen.
+3. **Umsetzung** in sechs dateidisjunkten Clustern, je Cluster mit eigenen Regressionstests (`TESTS/release-4.1.0/perf-*.php`).
+
+### Befundübersicht
+
+| ID | Schwere | Bereich | Datei:Zeile | Kurzbeschreibung | Status |
+|----|---------|---------|-------------|------------------|--------|
+| PERF-410-01 | HIGH | Blockierende Arbeit | `CMS/admin/modules/system/SystemInfoModule.php:2463` | Monitor-Seiten (Warnungen, Health-Check, Antwortzeit) rufen die eigene Website synchron per Loopback ab (5 s Timeout): 5–8 s je Aufruf | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-02 | HIGH | Caching | `CMS/core/CacheManager.php:238` | Speichern eines Beitrags oder einer Seite leert das ganze `cache/` und APCu, einschließlich der Schema-Flags; die nächsten Requests laufen den vollen Schema-Abgleich | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-03 | HIGH | Blockierende Arbeit | `CMS/core/Services/UpdateService.php:227` | `/admin/updates` und Monitor-Warnungen laden Plugin-/Theme-Katalog und Update-Adressen bei jedem Aufruf ohne Cache | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-04 | HIGH | Cron/Batch | `CMS/core/Services/MailQueueService.php:582` | `mail_queue` behält jede versendete und fehlgeschlagene Mail (mit HTML) für immer; `mail_log` ohne Löschfrist | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-05 | HIGH | Cron/Batch | `CMS/core/Services/CmsAuthPageService.php:710` | Passwort-Reset und andere Transaktionsmails warten hinter Newsletter-/Digest-Massenversand (8 Mails/min); Links laufen vor der Zustellung ab | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-06 | HIGH | Cron/Batch | `CMS/core/Services/BackupService.php:348` | Datenbank-Backup lädt jede Tabelle vollständig in den PHP-Speicher (gepuffertes `SELECT *`) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-07 | MEDIUM | DB-Abfragen | `CMS/admin/modules/menus/MenuEditorModule.php:540` | `GET /admin/menu-editor` löscht und schreibt alle Menüeinträge aller Positionen neu (Schreiben beim Lesen, IDs ändern sich) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-08 | MEDIUM | DB-Abfragen | `CMS/admin/modules/posts/PostsModule.php:395` | Beitrags-/Seitenmodul: bei jedem Request rund 31 `SHOW COLUMNS`, 2 `CREATE TABLE` und 21–30 Kategorieabfragen | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-09 | MEDIUM | DB-Abfragen | `CMS/admin/modules/member/MemberDashboardModule.php:1097` | Profilfelder-Seite lädt alle `member_%`-Einstellungen je Feldprüfung neu (42×) und zählt je Feld zweimal über `users` | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-10 | MEDIUM | DB-Abfragen | `CMS/core/Services/SystemService.php:254` | `/admin/diagnose`: `COUNT(*)`, `CHECK TABLE` und zwei information_schema-Abfragen je Tabelle (31 Tabellen) bei jedem Aufruf | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-11 | MEDIUM | DB-Abfragen | `CMS/admin/modules/posts/PostsModule.php:672` | Kategorienliste: korrelierte Unterabfrage mit OR über einen Join je Kategorie, ohne Index nutzbar | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-12 | MEDIUM | DB-Abfragen | `CMS/core/Services/MediaUsageService.php:179` | Beitragsbild-Übersichten laden `content`/`content_en` (LONGTEXT) aller Beiträge und Seiten, nur um `featured_image` zu lesen | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-13 | MEDIUM | Caching | `CMS/core/Router.php:886` | ETag/Last-Modified von Seiten hängen nur an `updated_at` der Seite: 304 trotz geänderter Menüs, Einstellungen oder Theme | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-14 | MEDIUM | Caching | `CMS/themes/cms-default/blog-single.php:346` | CSRF-Token des Kommentarformulars startet bei jedem anonymen Beitragsaufruf eine Session: Beiträge nie cachebar, Session-Dateien wachsen | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-15 | MEDIUM | Caching | `CMS/core/Services/MediaService.php:1599` | Ersetzte Bilder behalten die URL, `uploads/` wird aber ein Jahr `immutable` ausgeliefert | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-16 | MEDIUM | Blockierende Arbeit | `CMS/admin/admin-ui.php:59` | Lange Admin-Requests halten die Session-Sperre und blockieren andere Tabs und AJAX desselben Admins | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-17 | MEDIUM | Blockierende Arbeit | `CMS/core/Auth.php:1106` | Login wartet per `sleep()` bis zu 30 s vor der Passwortprüfung (Worker und Session blockiert) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-18 | MEDIUM | Blockierende Arbeit | `CMS/orders.php:133` | Checkout und Registrierung senden SMTP synchron im Frontend-Request, ohne Timeout | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-19 | MEDIUM | Core Web Vitals | `CMS/themes/cms-default/header.php:69` | DOMPurify (29,8 KB) und CSP-Runtime (7,7 KB) blockieren als erste Skripte im `<head>` jeder Frontend-Seite das Rendern | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-20 | MEDIUM | Core Web Vitals | `CMS/assets/js/photoswipe-init.js:19` | PhotoSwipe (7 KB CSS + 68,6 KB ESM) lädt auf jedem Beitrag, auch ohne passenden Container | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-21 | MEDIUM | Core Web Vitals | `CMS/themes/cms-default/functions.php:1177` | WebP-Umwandlung mit GD während des HTML-Renderns, ohne Aktualitätsprüfung | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-22 | MEDIUM | Core Web Vitals | `CMS/core/Services/EditorJsRenderer.php:670` | EditorJS-Bilder ohne `width`/`height`: Layout-Verschiebungen (CLS) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-23 | MEDIUM | Core Web Vitals | `CMS/themes/cms-default/partials/home-landing.php:443` | Vorschaubilder laden immer das Original: kein `srcset`/`sizes`, erzeugte Größen ungenutzt | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-24 | MEDIUM | Cron/Batch | `CMS/core/Services/CronRunnerService.php:345` | Web-Cron ohne Zeitbudget: drei Medien-Budgets à 45 s überschreiten `max_execution_time`; `hourly_last_run` wird erst am Ende gesetzt | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-25 | MEDIUM | Cron/Batch | `CMS/core/Services/CronRunnerService.php:76` | Eine globale Cron-Sperre für alles: lange stündliche/tägliche Aufgaben blockieren die minütliche Mail-Queue | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-26 | MEDIUM | Cron/Batch | `CMS/core/Services/MediaService.php:1876` | Thumbnail-/AVIF-Neuaufbau still bei 5 000 Originalen gekappt; Medienwerkzeuge durchlaufen `uploads/` je GET zweimal | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-27 | MEDIUM | Cron/Batch | `CMS/core/Services/SEO/SeoSitemapService.php:489` | EN-Sitemaps laden alle `content_en`-Texte und fragen `seo_meta` je Eintrag ab, nach jedem Speichern im Frontend-Request | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-28 | LOW | DB-Abfragen | `CMS/core/Services/Content/ContentWorkflow.php:574` | Admin-Badges je Request: N+1 je wartendem Inhalt und ungecachte information_schema-Prüfungen | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-29 | LOW | DB-Abfragen | `CMS/core/Services/FeatureUsageService.php:334` | Feature-Telemetrie führt bei jedem Admin-/Mitglieder-Request `CREATE TABLE IF NOT EXISTS` aus | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-30 | LOW | DB-Abfragen | `CMS/core/Services/SettingsService.php:116` | `SettingsService::getGroup()` ohne Request-Cache: wiederholte `cms_settings LIKE ?`-Abfragen | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-31 | LOW | DB-Abfragen | `CMS/core/Routing/ThemeArchiveRepository.php:158` | Tag-Wolke und Kategoriezählung durchlaufen bei jedem Blog-/Archivaufruf alle veröffentlichten Beiträge | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-32 | LOW | Caching | `CMS/core/Services/SEO/SeoSitemapService.php:60` | Sitemap-Bundle ohne Sperre und nicht atomar: Crawler-Ansturm, leere Teil-Sitemaps für eine Stunde gespeichert | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-33 | LOW | Caching | `CMS/core/Services/FeedService.php:563` | Feed-304 hinter der Apache-Kompression wirkungslos (If-Modified-Since wird bei vorhandenem If-None-Match übersprungen) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-34 | LOW | Caching | `CMS/core/Bootstrap.php:888` | Eigene Frontend-Assets ohne Version, `.htaccess` markiert CSS/JS ein Jahr `immutable` | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-35 | LOW | Core Web Vitals | `CMS/core/Bootstrap.php:888` | Unversionierte Asset-URLs mit einem Jahr `immutable`: Updates erreichen wiederkehrende Besucher nicht | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-36 | LOW | Core Web Vitals | `CMS/core/Bootstrap.php:778` | `editorjs-content.css` (44,9 KB) plus 8,8 KB Inline-Kopie derselben Regeln auf jeder Frontend-Seite | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-37 | LOW | Core Web Vitals | `CMS/themes/cms-default/header.php:61` | `fetchpriority=high` auf dem Logo (zweimal) und bis zu drei Bildern je Beitrag verwässert den LCP-Hinweis | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-38 | LOW | Core Web Vitals | `DOC/INSTALLATION.md:357` | Nginx-Anleitung ohne Kompression und Cache-Regeln für statische Assets | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-39 | LOW | Blockierende Arbeit | `CMS/core/Http/Client.php:487` | DNS-Vorabauflösung (SSRF-Schutz) nicht durch die curl-Timeouts begrenzt, doppelt je Update-Request, nicht gemerkt | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-40 | LOW | Blockierende Arbeit | `CMS/core/Services/DashboardService.php:328` | Dashboard und Mediathek durchlaufen `uploads/` rekursiv ohne Cache; `getimagesize()` je Bild in den Monitor-Warnungen | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-41 | LOW | Blockierende Arbeit | `CMS/admin/modules/system/SystemInfoModule.php:1958` | Cron-Status und Scheduled Tasks lesen bei jedem Aufruf alle PHP-Dateien der Installation | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-42 | LOW | Blockierende Arbeit | `CMS/core/Services/IndexingService.php:745` | IndexNow blockiert die Speicherantwort auf SAPIs ohne `fastcgi_finish_request` (20 s je Block) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-43 | LOW | Cron/Batch | `CMS/core/Services/DataRetentionService.php:57` | Aufbewahrung löscht höchstens 200 000 Zeilen je Tabelle und Tag; große Sites holen nie auf | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-44 | LOW | Cron/Batch | `CMS/core/PageManager.php:176` | `page_revisions` ohne Obergrenze je Seite (Beiträge: 30) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-45 | LOW | Cron/Batch | `CMS/core/Services/FeatureUsageService.php:312` | Wachsende Tabellen ohne Löschfrist (`feature_usage`); DDL bei jeder Instanziierung | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)) |
+| PERF-410-46 | LOW | Blockierende Arbeit | `CMS/admin/modules/feeds/FeedAggregatorModule.php:247` | Feed-Aggregator: Admin-Aktionen holen bis zu 25 Feeds nacheinander im POST-Request | [ ] Offen → Entscheidung PR #6 |
+| PERF-410-47 | LOW | Blockierende Arbeit | `CMS/plugins/cms-importer/includes/class-importer.php:1138` | Importer lädt jedes entfernte Bild nacheinander im Import-POST (20 s Timeout je Bild, ohne Zeitbudget) | [ ] Offen → Entscheidung PR #6 |
+| PERF-410-48 | LOW | Blockierende Arbeit | `CMS/core/Services/MediaService.php:1129` | Bild-Upload erzeugt Thumbnails, WebP und AVIF aller Größen synchron im Upload-Request | [ ] Offen → Entscheidung PR #6 |
+| PERF-410-49 | MEDIUM | Cron/Batch | `plugins/cms-importer/includes/class-admin.php:794` | WXR-Import komplett in einem Web-Request (ganzes DOM, Bilddownloads, ohne Zeitbudget und Fortsetzung) | [ ] Offen → Entscheidung PR #6 |
+
+### Messung vorher/nachher
+
+Gleiche Testkopie und gleiche Daten, zweiter (warmer) Lauf des Crawls:
+
+| Route | vorher | nachher |
+|-------|--------|---------|
+| `/admin/monitor-warnings` | 8 158 ms, 64 Abfragen | 100 ms, 57 Abfragen |
+| `/admin/monitor-health-check` | 5 080 ms | 78 ms |
+| `/admin/monitor-response-time` | 5 073 ms | 73 ms |
+| `/admin/updates` | 1 149 ms | 100 ms |
+| `/admin/posts` | 98 Abfragen | 36 Abfragen |
+| `/admin/post-categories`, `/admin/post-tags` | je 82 Abfragen | je 20 Abfragen |
+| `/admin/member-dashboard-profile-fields` | 90 Abfragen | 38 Abfragen |
+| `/admin/pages` | 58 Abfragen | 35 Abfragen |
+| `/admin/diagnose` | 50 Abfragen | 19 Abfragen |
+| `/admin/menu-editor` | 55 Abfragen, davon 26 Schreibzugriffe | 36 Abfragen, keine Schreibzugriffe |
+| `/` (anonym, warm) | 17 Abfragen | 15 Abfragen |
+| `/blog/<beitrag>` (anonym) | Session-Cookie, `private, no-store` | kein Cookie, `public, max-age=300` |
+
+Die Antwortzeiten des Frontends liegen unverändert bei 70–110 ms. Die Streuung kommt vom Entwicklungsserver. Status-Codes aller 166 Routen sind unverändert, ohne PHP-Meldungen im Inhalt oder im Fehlerlog. Ein Kommentar über das echte Formular als anonymer Besucher kommt ohne Session an (Status `pending`).
+
+### Details
+
+- **PERF-410-01 (PERF-410-01):** Antwortzeit und Health-Endpunkt kommen aus dem Cache (10 min). Fehlt der Cache, gilt der stündliche Cron-Snapshot (höchstens 2 h alt). Erst danach wird einmal live gemessen und gecacht. „Jetzt messen“ erzwingt eine frische Messung, der Verbindungs-Timeout sinkt auf 2 s.
+- **PERF-410-02:** `CacheManager::clear()`/`clearAll()` löschen nur eigene Einträge (`<sha512>.cache`) und APCu-Schlüssel mit Präfix `365cms:`. Schema- und Plattform-Flags sowie die Update-Sperre bleiben. Dasselbe gilt jetzt für „Datei-Cache leeren“ unter *Performance*.
+- **PERF-410-13:** ETag und Last-Modified öffentlicher Seiten enthalten die CMS-Version und eine seitenweite Inhaltsversion (`site_content_version`). Sie steigt nach schreibenden Admin-Anfragen (Einstellungen, Menüs, Theme), beim Speichern oder Löschen von Inhalten und bei geplanten Veröffentlichungen. Liegt `If-None-Match` vor, entscheidet nur das ETag.
+- **PERF-410-14:** Anonyme Besucher erhalten im Kommentarformular ein zustandsloses, signiertes Token (HMAC über Beitrags-ID und Ausgabezeit, mit Ablauf). Für angemeldete Konten gilt weiter das Session-CSRF-Token. Honeypot und Zeitprüfung bleiben.
+- **PERF-410-17:** Die Anmeldeverzögerung je Konto arbeitet ohne `sleep()`. Der erste Versuch startet die Wartezeit als Freigabe in der eigenen Session und antwortet sofort mit der Wartezeit. Danach ist genau eine Passwortprüfung frei. Dritte können die Freigabe nicht verschieben, Konten bleiben nicht aussperrbar.
+- **PERF-410-04/PERF-410-45:** neue Aufbewahrungsregeln für `mail_queue` (nur erledigte Jobs, 30 Tage), `mail_log` (90 Tage) und `feature_usage` (180 Tage), blockweise gelöscht. Sie erscheinen unter *Datenaufbewahrung*.
+- **PERF-410-06:** Das Backup streamt jede Tabelle ungepuffert. Das Dump-Format ist unverändert, `s3-backup` und `update-swap` sind grün.
+- **PERF-410-25:** getrennte Sperren `.cron-run.lock` (Hooks, stündlich, täglich, Feeds) und `.cron-mail.lock` (Mail-Queue).
+
+### Offen (Entscheidung PR #6)
+
+PERF-410-46, PERF-410-47, PERF-410-48 und PERF-410-49 verlangen eine asynchrone Verarbeitung: Feed-Abruf im Admin, Bilddownloads und WXR-Import des Importers, Bildverarbeitung beim Upload. Dafür braucht es eine Job-Warteschlange mit Fortsetzung, also eine Architekturentscheidung statt eines Fixes. Bis dahin bleiben die Abläufe wie in 4.0.
+
+### Folgearbeiten für den abschließenden Teil von PR #5
+
+Die Umsetzungs-Cluster haben Punkte außerhalb ihrer Dateien gemeldet. Sie sind nicht Teil dieses Zwischenstands:
+
+- **Theme:** `meridian_load_categories()` auf die gecachte Kategorieübersicht umstellen.
+- **Bootstrap:** den Rückfall auf `cms_csp_runtime_tags(true)` setzen und `photoswipe.css` nur bei Bedarf einbinden.
+- **Updates und Marketplace:** `refreshUpdateSnapshot()` erzwingt die Prüfung ausdrücklich. GET-Pfade laufen über `SessionLock::withoutLock()`, Fehlschläge des Katalogs werden kurz gecacht.
+- **Monitoring:** `MonitoringTrendService::measureResponseTime()` überspringt den Loopback, wenn er nicht verfügbar ist.
+- **Medien:**
+  - Den Cache der Medienstatistik bei Upload und Löschen verwerfen.
+  - Fortsetzungsbasierter Neuaufbau (Cursor statt Pfadliste).
+  - Medien-Budgets im Cron am Restbudget ausrichten.
+- **Sonstiges:**
+  - Retry der Offsite-Uploads je Tageslauf begrenzen.
+  - `deliverDue()` nur einmal je Cron-Lauf.
+  - DNS-Vorabauflösung in `FeedService` über `Http\Client` teilen.
+  - Sprachschlüssel für die neuen Aufbewahrungsregeln.
+- **Optional (nicht empfohlen):** Index auf `users.status`. Nahezu alle Konten sind aktiv, die gebündelte Zählung entfernt die Scans ohnehin.
+- **Produktentscheidung:** `generate_thumbnails` standardmäßig an, damit die neuen `srcset` greifen. Bis dahin gelten sie nur nach dem Neuaufbau der Bildgrößen.
+
+### Verifikation Zwischenstand
+
+- `php -l` (mit `error_reporting=-1`) über alle geänderten und neuen PHP-Dateien ohne Fehler.
+- `php TESTS/run-all.php` mit MariaDB: 35 Suiten, 0 fehlgeschlagen. `release-4.1.0` hat jetzt 528 Prüfungen, darunter sechs neue Dateien `perf-*.php`.
+- Laufzeitmessung vorher/nachher wie oben, Kommentar-Rundlauf als anonymer Besucher.

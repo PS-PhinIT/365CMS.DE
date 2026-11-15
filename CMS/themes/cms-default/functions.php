@@ -1157,30 +1157,21 @@ if (!function_exists('meridian_get_picture_sources')) {
             }
         }
 
-        if (!in_array($extension, ['jpg', 'jpeg', 'png'], true) || !class_exists('\\CMS\\Services\\ImageService')) {
+        // Release-Prüfung 4.1.0 (PERF, cwv:4): Keine WebP-Erzeugung mehr beim Rendern (GD-Dekodierung je Bild und Request).
+        // Genutzt wird nur eine vorhandene WebP-Fassung, die nicht älter als das Original ist (wie bei AVIF oben).
+        // Fehlende Fassungen entstehen beim Upload (Medien-Einstellung „auto_webp“) oder per Stapelverarbeitung.
+        if (!in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
             return $result;
         }
 
         try {
-            $imageService = \CMS\Services\ImageService::getInstance();
-            $imageInfo = $imageService->getInfo();
-
-            if (!$imageService->isAvailable() || empty($imageInfo['webp_support'])) {
-                return $result;
-            }
-
             $webpPath = preg_replace('/\.[a-z0-9]+$/i', '.webp', $sourcePath);
-            if (!is_string($webpPath) || $webpPath === '' || $webpPath === $sourcePath) {
+            if (!is_string($webpPath) || $webpPath === '' || $webpPath === $sourcePath || !is_file($webpPath)) {
                 return $result;
             }
 
-            if (!is_file($webpPath)) {
-                $generatedPath = $imageService->convertToWebP($sourcePath, 78, false);
-                if (!is_string($generatedPath) || !is_file($generatedPath)) {
-                    return $result;
-                }
-
-                $webpPath = $generatedPath;
+            if ((int) filemtime($webpPath) < (int) filemtime($sourcePath)) {
+                return $result;
             }
 
             $sourceSize = (int) (filesize($sourcePath) ?: 0);
@@ -1200,6 +1191,152 @@ if (!function_exists('meridian_get_picture_sources')) {
         }
 
         return $result;
+    }
+}
+
+if (!function_exists('meridian_get_responsive_picture_sources')) {
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cwv:8): Wie meridian_get_picture_sources(), zusätzlich mit Breiten-srcsets aus bereits
+     * erzeugten Größen (`-small`, `-medium`, `-large`, `-banner`, Medien-Einstellung „Thumbnails erzeugen“ bzw.
+     * Stapelverarbeitung „Bildgrößen neu erzeugen“). Es wird nie zur Laufzeit skaliert; berücksichtigt werden nur
+     * Dateien, die nicht älter als das Original sind. Ohne erzeugte Größen bleiben die srcset-Felder leer und die
+     * Ausgabe entspricht der bisherigen.
+     *
+     * @return array{url:string,avif_url:string,webp_url:string,width:int,height:int,srcset:string,webp_srcset:string,avif_srcset:string}
+     */
+    function meridian_get_responsive_picture_sources(?string $reference, ?string $siteUrl = null, int $fallbackWidth = 0, int $fallbackHeight = 0): array
+    {
+        static $variantWidthCache = [];
+
+        $result = meridian_get_picture_sources($reference, $siteUrl, $fallbackWidth, $fallbackHeight);
+        $result['srcset'] = '';
+        $result['webp_srcset'] = '';
+        $result['avif_srcset'] = '';
+
+        if ($result['url'] === '') {
+            return $result;
+        }
+
+        $sourcePath = meridian_get_local_image_path($reference);
+        if ($sourcePath === '' || !is_file($sourcePath)) {
+            return $result;
+        }
+
+        $extension = strtolower((string) pathinfo($sourcePath, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            return $result;
+        }
+
+        $sourceTime = (int) (filemtime($sourcePath) ?: 0);
+        $directory = dirname($sourcePath);
+        $filename = (string) pathinfo($sourcePath, PATHINFO_FILENAME);
+        // Echte Breite des Originals (nicht die Ersatzbreite des Templates), sonst stimmt der w-Deskriptor nicht.
+        $originalSize = meridian_get_image_dimensions($reference);
+        $originalWidth = (int) ($originalSize['width'] ?? 0);
+        $formats = [
+            'srcset' => [$extension, $result['url']],
+            'webp_srcset' => ['webp', (string) ($result['webp_url'] ?? '')],
+            'avif_srcset' => ['avif', (string) ($result['avif_url'] ?? '')],
+        ];
+
+        foreach ($formats as $key => [$format, $originalUrl]) {
+            $candidates = [];
+            foreach (['small', 'medium', 'large', 'banner'] as $suffix) {
+                $variantPath = $directory . DIRECTORY_SEPARATOR . $filename . '-' . $suffix . '.' . $format;
+                if (!is_file($variantPath) || (int) (filemtime($variantPath) ?: 0) < $sourceTime) {
+                    continue;
+                }
+                if (!array_key_exists($variantPath, $variantWidthCache)) {
+                    $variantSize = @getimagesize($variantPath);
+                    $variantWidthCache[$variantPath] = is_array($variantSize) ? max(0, (int) ($variantSize[0] ?? 0)) : 0;
+                }
+                $variantWidth = $variantWidthCache[$variantPath];
+                if ($variantWidth <= 0 || ($originalWidth > 0 && $variantWidth >= $originalWidth) || isset($candidates[$variantWidth])) {
+                    continue;
+                }
+                $variantUrl = meridian_local_path_to_public_url($variantPath);
+                if ($variantUrl === '') {
+                    continue;
+                }
+                $candidates[$variantWidth] = meridian_safe_public_media_url($variantUrl, $siteUrl) . ' ' . $variantWidth . 'w';
+            }
+
+            if ($candidates === [] || $originalUrl === '' || $originalWidth <= 0) {
+                continue;
+            }
+
+            ksort($candidates);
+            $candidates[$originalWidth] = $originalUrl . ' ' . $originalWidth . 'w';
+            $result[$key] = implode(', ', $candidates);
+        }
+
+        return $result;
+    }
+}
+
+if (!function_exists('meridian_picture_source_attributes')) {
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cwv:8): ` srcset="…"` (bei Breiten-srcset mit `sizes`) für die AVIF- bzw.
+     * WebP-`<source>`; leer, wenn die Quelle entfallen soll. Gibt es nur kleinere Größen im Originalformat, aber
+     * keine in AVIF/WebP, entfällt die moderne Quelle: Sonst lüde der Browser statt einer kleinen Größe die volle
+     * AVIF/WebP-Fassung.
+     *
+     * @param array<string, mixed> $image Ergebnis von meridian_get_responsive_picture_sources() oder meridian_get_picture_sources()
+     */
+    function meridian_picture_source_attributes(array $image, string $format, string $sizes): string
+    {
+        if (!in_array($format, ['avif', 'webp'], true)) {
+            return '';
+        }
+
+        $srcset = (string) ($image[$format . '_srcset'] ?? '');
+        if ($srcset !== '') {
+            return ' srcset="' . htmlspecialchars($srcset, ENT_QUOTES, 'UTF-8') . '" sizes="' . htmlspecialchars($sizes, ENT_QUOTES, 'UTF-8') . '"';
+        }
+
+        $single = (string) ($image[$format . '_url'] ?? '');
+        if ($single === '' || (string) ($image['srcset'] ?? '') !== '') {
+            return '';
+        }
+
+        return ' srcset="' . htmlspecialchars($single, ENT_QUOTES, 'UTF-8') . '"';
+    }
+}
+
+if (!function_exists('meridian_picture_source_tags')) {
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cwv:8): AVIF- und WebP-`<source>`-Tags über meridian_picture_source_attributes().
+     *
+     * @param array<string, mixed> $image Ergebnis von meridian_get_responsive_picture_sources()
+     */
+    function meridian_picture_source_tags(array $image, string $sizes): string
+    {
+        $html = '';
+        foreach (['avif' => 'image/avif', 'webp' => 'image/webp'] as $format => $type) {
+            $attributes = meridian_picture_source_attributes($image, $format, $sizes);
+            if ($attributes !== '') {
+                $html .= '<source' . $attributes . ' type="' . $type . '">' . "\n";
+            }
+        }
+
+        return $html;
+    }
+}
+
+if (!function_exists('meridian_picture_img_srcset_attributes')) {
+    /**
+     * Release-Prüfung 4.1.0 (PERF, cwv:8): ` srcset="…" sizes="…"` für das `<img>`, nur wenn erzeugte Größen existieren.
+     *
+     * @param array<string, mixed> $image Ergebnis von meridian_get_responsive_picture_sources()
+     */
+    function meridian_picture_img_srcset_attributes(array $image, string $sizes): string
+    {
+        $srcset = (string) ($image['srcset'] ?? '');
+        if ($srcset === '') {
+            return '';
+        }
+
+        return ' srcset="' . htmlspecialchars($srcset, ENT_QUOTES, 'UTF-8') . '" sizes="' . htmlspecialchars($sizes, ENT_QUOTES, 'UTF-8') . '"';
     }
 }
 

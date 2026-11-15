@@ -81,17 +81,19 @@ class PagesModule
         $this->db          = Database::instance();
         $this->prefix      = $this->db->getPrefix();
         $this->pageManager = PageManager::instance();
-        $this->ensureCategoryColumns();
+        // Release-Prüfung 4.1.0 (PERF, db:1): SHOW COLUMNS nur einmal je Dateistand statt bei jeder Anfrage.
+        $this->db->runSchemaOnce('pages_module_schema', __FILE__, fn (): bool => $this->ensureCategoryColumns());
         $this->ensureDefaultCategories();
     }
 
-    private function ensureCategoryColumns(): void
+    private function ensureCategoryColumns(): bool
     {
         $columns = [
             'parent_id' => "ALTER TABLE {$this->prefix}post_categories ADD COLUMN parent_id INT UNSIGNED DEFAULT NULL AFTER description",
             'sort_order' => "ALTER TABLE {$this->prefix}post_categories ADD COLUMN sort_order INT DEFAULT 0 AFTER parent_id",
         ];
 
+        $ok = true;
         foreach ($columns as $column => $sql) {
             try {
                 $stmt = $this->db->query("SHOW COLUMNS FROM {$this->prefix}post_categories LIKE '{$column}'");
@@ -99,18 +101,28 @@ class PagesModule
                     $this->db->query($sql);
                 }
             } catch (\Throwable $e) {
+                $ok = false;
                 Logger::instance()->withChannel('admin.pages')->warning('Zusätzliche Kategorien-Spalte konnte nicht sichergestellt werden.', [
                     'column' => $column,
                     'exception' => $e->getMessage(),
                 ]);
             }
         }
+
+        return $ok;
     }
 
     private function ensureDefaultCategories(): void
     {
         try {
-            $rootRow = $this->getDefaultCategoryRow((string) self::DEFAULT_MS365_ROOT['slug']);
+            // Release-Prüfung 4.1.0 (PERF, db:1): alle Standard-Slugs mit einer Abfrage laden statt je Kategorie
+            // eine (21 SELECTs je Anfrage). Die Prüfung selbst bleibt je Anfrage, damit gelöschte
+            // Standardkategorien wie bisher wieder angelegt werden.
+            $rowsBySlug = $this->getDefaultCategoryRows(array_merge(
+                [(string) self::DEFAULT_MS365_ROOT['slug']],
+                array_map('strval', array_keys(self::DEFAULT_MS365_CHILD_CATEGORIES))
+            ));
+            $rootRow = $rowsBySlug[self::defaultCategorySlugKey((string) self::DEFAULT_MS365_ROOT['slug'])] ?? null;
             $rootId = (int) ($rootRow['id'] ?? 0);
 
             if ($rootId <= 0) {
@@ -133,7 +145,7 @@ class PagesModule
 
             $sortOrder = 20;
             foreach (self::DEFAULT_MS365_CHILD_CATEGORIES as $slug => $name) {
-                $categoryRow = $this->getDefaultCategoryRow((string) $slug);
+                $categoryRow = $rowsBySlug[self::defaultCategorySlugKey((string) $slug)] ?? null;
                 $categoryId = (int) ($categoryRow['id'] ?? 0);
 
                 if ($categoryId <= 0) {
@@ -158,26 +170,49 @@ class PagesModule
     }
 
     /**
-     * @return array{id:int,name:string,parent_id:?int,sort_order:int}|null
+     * Release-Prüfung 4.1.0 (PERF, db:1): lädt die Zeilen aller übergebenen Slugs mit einer Abfrage.
+     *
+     * @param list<string> $slugs
+     * @return array<string,array{id:int,name:string,parent_id:?int,sort_order:int}> Schlüssel: defaultCategorySlugKey()
      */
-    private function getDefaultCategoryRow(string $slug): ?array
+    private function getDefaultCategoryRows(array $slugs): array
     {
-        $row = $this->db->get_row(
-            "SELECT id, name, parent_id, sort_order FROM {$this->prefix}post_categories WHERE slug = ? LIMIT 1",
-            [$slug]
-        );
-        if ($row === null) {
-            return null;
+        $slugs = array_values(array_unique(array_filter($slugs, static fn (string $slug): bool => $slug !== '')));
+        if ($slugs === []) {
+            return [];
         }
 
-        $row = (array) $row;
+        $rows = $this->db->get_results(
+            "SELECT id, slug, name, parent_id, sort_order FROM {$this->prefix}post_categories WHERE slug IN ("
+            . implode(',', array_fill(0, count($slugs), '?')) . ') ORDER BY id ASC',
+            $slugs
+        ) ?: [];
 
-        return [
-            'id' => (int) ($row['id'] ?? 0),
-            'name' => (string) ($row['name'] ?? ''),
-            'parent_id' => isset($row['parent_id']) ? (int) $row['parent_id'] : null,
-            'sort_order' => (int) ($row['sort_order'] ?? 0),
-        ];
+        $rowsBySlug = [];
+        foreach ($rows as $row) {
+            $row = (array) $row;
+            $key = self::defaultCategorySlugKey((string) ($row['slug'] ?? ''));
+            if ($key === '' || isset($rowsBySlug[$key])) {
+                continue;
+            }
+
+            $rowsBySlug[$key] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'name' => (string) ($row['name'] ?? ''),
+                'parent_id' => isset($row['parent_id']) ? (int) $row['parent_id'] : null,
+                'sort_order' => (int) ($row['sort_order'] ?? 0),
+            ];
+        }
+
+        return $rowsBySlug;
+    }
+
+    /**
+     * Vergleichsschlüssel wie die Spaltenkollation (utf8mb4_unicode_ci): Groß/Klein und Leerzeichen am Ende egal.
+     */
+    private static function defaultCategorySlugKey(string $slug): string
+    {
+        return strtolower(rtrim($slug, ' '));
     }
 
     /**

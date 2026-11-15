@@ -10,6 +10,16 @@ if (!defined('ABSPATH')) {
 final class Client
 {
     private static ?self $instance = null;
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:2): DNS-Auflösungen je Host für den laufenden Prozess merken. Die
+     * Vorabauflösung liegt außerhalb der cURL-Timeouts und lief sonst mehrfach je Anfrage für denselben Host.
+     * Die kurze Gültigkeit hält lang laufende CLI-Prozesse (Cron, Queue) aktuell.
+     *
+     * @var array<string, array{ips: list<string>, at: int}>
+     */
+    private static array $resolvedHostCache = [];
+    private const RESOLVED_HOST_CACHE_TTL = 60;
+    private const RESOLVED_HOST_CACHE_LIMIT = 64;
 
     public static function getInstance(): self
     {
@@ -477,10 +487,54 @@ final class Client
      */
     private function resolveHostIps(string $host): array
     {
+        return self::resolveHostAddresses($host);
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:2): Gemeinsame, gemerkte Auflösung (A/AAAA, Fallback
+     * gethostbynamel) für Client und UpdateService. Auch leere Ergebnisse werden kurz gemerkt, damit ein
+     * langsamer oder nicht erreichbarer Resolver nicht bei jedem Aufruf erneut wartet.
+     *
+     * @return list<string>
+     */
+    public static function resolveHostAddresses(string $host): array
+    {
+        $host = strtolower(trim($host));
+        if ($host === '') {
+            return [];
+        }
+
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             return [$host];
         }
 
+        $now = time();
+        $cached = self::$resolvedHostCache[$host] ?? null;
+        if ($cached !== null && ($now - $cached['at']) < self::RESOLVED_HOST_CACHE_TTL) {
+            return $cached['ips'];
+        }
+
+        $ips = self::lookupHostIps($host);
+        if (count(self::$resolvedHostCache) >= self::RESOLVED_HOST_CACHE_LIMIT) {
+            self::$resolvedHostCache = array_slice(self::$resolvedHostCache, -(self::RESOLVED_HOST_CACHE_LIMIT - 1), null, true);
+        }
+        unset(self::$resolvedHostCache[$host]);
+        self::$resolvedHostCache[$host] = ['ips' => $ips, 'at' => $now];
+
+        return $ips;
+    }
+
+    /** Leert den Auflösungsspeicher (Tests, lang laufende Prozesse). */
+    public static function clearResolvedHostCache(): void
+    {
+        self::$resolvedHostCache = [];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function lookupHostIps(string $host): array
+    {
         $ips = [];
 
         if (function_exists('dns_get_record')) {

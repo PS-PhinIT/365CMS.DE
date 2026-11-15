@@ -38,6 +38,13 @@ class Auth
     private const ACCOUNT_FAILURE_FREE_ATTEMPTS = 5;
     private const ACCOUNT_FAILURE_MAX_DELAY = 30;
     /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:4): Session-Schlüssel der Wartefreigaben je Konto, deren Gültigkeit
+     * nach Ablauf der Wartezeit (Sekunden) und die Höchstzahl gemerkter Freigaben je Session.
+     */
+    private const ACCOUNT_DELAY_SESSION_KEY = 'auth_account_delay_tickets';
+    private const ACCOUNT_DELAY_TICKET_TTL = 600;
+    private const ACCOUNT_DELAY_TICKET_LIMIT = 20;
+    /**
      * login_attempts.action für befristet reservierte Benutzernamen (Registrierung mit bereits vergebener
      * Adresse). 24 Stunden: Ältere Einträge entfernt die Bereinigung in Security::checkDbRateLimit().
      */
@@ -399,7 +406,13 @@ class Auth
         // Folgeaudit OFFEN-25: zusätzlich zum IP-Limit wachsende Verzögerung je Konto. Keine harte
         // Sperre, damit Dritte ein Konto nicht aussperren können; unbekannte Namen verhalten sich gleich.
         $accountKey = $user ? 'uid:' . (int) $user->id : 'login:' . mb_strtolower($username, 'UTF-8');
-        $this->delayRepeatedAccountFailures($accountKey, $username);
+        // Release-Prüfung 4.1.0 (PERF, blocking:4): kein sleep() im Request mehr. Die Wartezeit läuft als
+        // Freigabe in der eigenen Session ab, der Worker ist sofort frei. Dritte können diese Freigabe nicht
+        // verschieben, Konten bleiben also nicht aussperrbar (OFFEN-25, SEC-64).
+        $accountDelayMessage = $this->delayRepeatedAccountFailures($accountKey, $username);
+        if ($accountDelayMessage !== null) {
+            return $accountDelayMessage;
+        }
         
         if (!$user) {
             // Gleiche Laufzeit wie bei falschem Passwort, damit Benutzernamen nicht per Timing erkennbar sind.
@@ -1088,22 +1101,97 @@ class Auth
         return min(self::ACCOUNT_FAILURE_MAX_DELAY, 2 ** min(5, $failures - self::ACCOUNT_FAILURE_FREE_ATTEMPTS));
     }
 
-    private function delayRepeatedAccountFailures(string $accountKey, string $loginIdentifier): void
+    /**
+     * Release-Prüfung 4.1.0 (PERF, blocking:4): Entscheidet über eine Wartefreigabe je Konto, ohne den Request
+     * schlafen zu lassen. Ohne gültige Freigabe beginnt die Wartezeit jetzt (not_before = jetzt + Verzögerung),
+     * ein früherer Versuch verschiebt sie nicht. Nach Ablauf gilt die Freigabe einmalig ACCOUNT_DELAY_TICKET_TTL
+     * Sekunden lang für genau eine Passwortprüfung. Das entspricht der bisherigen Wartezeit vor der Prüfung.
+     *
+     * @return array{allow:bool,not_before:?int,wait:int}
+     */
+    public static function resolveAccountDelayTicket(?int $notBefore, int $now, int $delay, int $ticketTtl = self::ACCOUNT_DELAY_TICKET_TTL): array
+    {
+        if ($delay <= 0) {
+            return ['allow' => true, 'not_before' => null, 'wait' => 0];
+        }
+
+        if ($notBefore !== null && $now >= $notBefore && $now <= $notBefore + $ticketTtl) {
+            return ['allow' => true, 'not_before' => null, 'wait' => 0];
+        }
+
+        if ($notBefore === null || $now > $notBefore + $ticketTtl) {
+            $notBefore = $now + $delay;
+        }
+
+        return ['allow' => false, 'not_before' => $notBefore, 'wait' => max(1, $notBefore - $now)];
+    }
+
+    /**
+     * Wartezeit nach wiederholten Fehlversuchen für ein Konto. Liefert null, wenn die Passwortprüfung jetzt
+     * laufen darf, sonst die Meldung mit der verbleibenden Wartezeit.
+     */
+    private function delayRepeatedAccountFailures(string $accountKey, string $loginIdentifier): ?string
     {
         $failures = Security::countDbIdentifierAttempts($accountKey, self::ACCOUNT_FAILURE_ACTION, self::ACCOUNT_FAILURE_WINDOW);
         $delay = self::accountFailureDelaySeconds($failures);
         if ($delay <= 0) {
-            return;
+            return null;
         }
 
-        if (function_exists('cms_log')) {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            // Ohne Session lässt sich keine Freigabe merken: bisheriges Verhalten (Wartezeit vor der Prüfung).
+            if (function_exists('cms_log')) {
+                cms_log('notice', "Login um {$delay} s verzögert: {$failures} Fehlversuche für '{$loginIdentifier}' in 15 Minuten", [
+                    'category' => 'auth',
+                    'username' => $loginIdentifier,
+                ]);
+            }
+
+            sleep($delay);
+
+            return null;
+        }
+
+        $now = time();
+        $ticketId = hash('sha256', $accountKey);
+        $tickets = is_array($_SESSION[self::ACCOUNT_DELAY_SESSION_KEY] ?? null) ? $_SESSION[self::ACCOUNT_DELAY_SESSION_KEY] : [];
+        $tickets = array_filter(
+            $tickets,
+            static fn (mixed $notBefore): bool => is_int($notBefore) && $now <= $notBefore + self::ACCOUNT_DELAY_TICKET_TTL
+        );
+        $current = isset($tickets[$ticketId]) ? (int) $tickets[$ticketId] : null;
+        $decision = self::resolveAccountDelayTicket($current, $now, $delay);
+
+        if ($decision['allow']) {
+            unset($tickets[$ticketId]);
+        } else {
+            $tickets[$ticketId] = (int) $decision['not_before'];
+            if (count($tickets) > self::ACCOUNT_DELAY_TICKET_LIMIT) {
+                asort($tickets);
+                $tickets = array_slice($tickets, -self::ACCOUNT_DELAY_TICKET_LIMIT, null, true);
+            }
+        }
+
+        if ($tickets === []) {
+            unset($_SESSION[self::ACCOUNT_DELAY_SESSION_KEY]);
+        } else {
+            $_SESSION[self::ACCOUNT_DELAY_SESSION_KEY] = $tickets;
+        }
+
+        if ($decision['allow']) {
+            return null;
+        }
+
+        $wait = (int) $decision['wait'];
+        if ($current === null && function_exists('cms_log')) {
             cms_log('notice', "Login um {$delay} s verzögert: {$failures} Fehlversuche für '{$loginIdentifier}' in 15 Minuten", [
                 'category' => 'auth',
                 'username' => $loginIdentifier,
             ]);
         }
 
-        sleep($delay);
+        return 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es in ' . $wait
+            . ($wait === 1 ? ' Sekunde' : ' Sekunden') . ' erneut.';
     }
 
     private function recordAccountLoginFailure(string $accountKey): void

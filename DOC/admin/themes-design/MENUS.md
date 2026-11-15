@@ -53,6 +53,7 @@ Der Editor bietet eine Auswahlliste aller veröffentlichten Seiten an (Seiten-Pi
 1. `cms_menus` (`id`, `name`, `location`) und `cms_menu_items` werden vom Modul bei Bedarf angelegt.
 2. Nach `save_items` schreibt das Modul die normalisierten Einträge zusätzlich über `ThemeManager::saveMenu()` nach `menu_<location>`.
 3. Themes lesen mit `ThemeManager::instance()->getMenu('primary')`. Für `primary` gibt es den Fallback auf die alte Option `site_menu`.
+4. Beim Aufruf des Editors gleicht das Modul `cms_menu_items` mit `menu_<location>` ab. Seit 4.1.0 baut es den Spiegel nur neu auf, wenn Einträge, Reihenfolge oder Verschachtelung abweichen, und dann für jedes Menü in einer Transaktion. Unveränderte Menüs behalten ihre Zeilen-IDs.
 
 ### Verwandte Dokumente
 

@@ -733,7 +733,7 @@ final class IndexingService
     /**
      * Sendet die Warteschlange am Ende des aktuellen Requests – nach Abschluss der Antwort, sofern der Server
      * das unterstützt (PHP-FPM/LiteSpeed), damit das Speichern im Admin nicht auf die Suchmaschine wartet.
-     * Schlägt die Übermittlung fehl, wiederholt der stündliche Cron sie.
+     * Ohne diese Möglichkeit übernimmt der stündliche Cron die Übermittlung. Schlägt sie fehl, wiederholt der Cron sie.
      */
     public function scheduleIndexNowQueueFlush(): void
     {
@@ -748,10 +748,19 @@ final class IndexingService
                     session_write_close();
                 }
 
+                // Release-Prüfung 4.1.0 (PERF, blocking:11): Ohne fastcgi_finish_request/litespeed_finish_request
+                // (mod_php, CGI, php -S) würde der Browser auf den IndexNow-POST warten. Dann bleibt die bereits
+                // persistierte Warteschlange für den stündlichen runScheduledIndexNowFlush() liegen. In der CLI wartet
+                // kein Client, dort bleibt die sofortige Übermittlung erhalten.
+                $responseFinished = PHP_SAPI === 'cli';
                 if (function_exists('fastcgi_finish_request')) {
-                    fastcgi_finish_request();
+                    $responseFinished = fastcgi_finish_request();
                 } elseif (function_exists('litespeed_finish_request')) {
-                    litespeed_finish_request();
+                    $responseFinished = litespeed_finish_request();
+                }
+
+                if (!$responseFinished) {
+                    return;
                 }
 
                 $this->flushIndexNowQueue('auto');

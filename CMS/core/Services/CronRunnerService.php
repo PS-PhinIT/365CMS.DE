@@ -17,6 +17,24 @@ final class CronRunnerService
     private const DAILY_CRON_EXPRESSION = '15 2 * * *';
 
     /**
+     * Release-Prüfung 4.1.0 (PERF, batch:4): getrennte Sperren je Aufgabenfamilie. `.cron-run.lock` schützt
+     * Hooks, stündliche, tägliche und Feed-Aufgaben; `.cron-mail.lock` nur die Verarbeitung der Mail-Queue. Ist
+     * die Lauf-Sperre durch eine lange Aufgabe belegt, verarbeitet ein Mail-Queue-Aufruf trotzdem die Queue.
+     */
+    private const RUN_LOCK_FILE = '.cron-run.lock';
+    private const MAIL_LOCK_FILE = '.cron-mail.lock';
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:2): Zeitbudget je Abschnitt (Mail-Queue, stündlich, täglich) bei Web-Cron,
+     * damit max_execution_time (Standard 30 s) die Medien-Budgets der stündlichen Hooks nicht mit einem Fatal Error
+     * abbricht. Ein höheres Limit des Servers bleibt erhalten, 0 (unbegrenzt) ebenfalls.
+     */
+    public const WEB_TIME_LIMIT_SECONDS = 300;
+
+    /** Release-Prüfung 4.1.0 (PERF, batch:2): Ende des aktuellen Zeitbudgets (microtime), null = unbegrenzt. */
+    private static ?float $deadline = null;
+
+    /**
      * @return list<string>
      */
     public function getSupportedTasks(): array
@@ -31,6 +49,47 @@ final class CronRunnerService
 
     private function __construct()
     {
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:2): Verbleibende Sekunden des aktuellen Cron-Zeitbudgets, null = unbegrenzt
+     * (CLI oder max_execution_time 0). Hooks mit eigenen Budgets (z. B. Medien-Regeneration) können sich daran halten.
+     */
+    public static function remainingSeconds(): ?float
+    {
+        return self::$deadline !== null ? max(0.0, self::$deadline - microtime(true)) : null;
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:2): Neues Zeitbudget für einen Cron-Abschnitt (nur Web-SAPI).
+     * Liefert das gesetzte Limit in Sekunden, 0 = unbegrenzt bzw. unverändert.
+     */
+    public static function resolveWebTimeLimit(int $currentLimit, int $minimum = self::WEB_TIME_LIMIT_SECONDS): int
+    {
+        return $currentLimit <= 0 ? 0 : max($minimum, $currentLimit);
+    }
+
+    private function extendTimeLimitForWeb(): void
+    {
+        if (PHP_SAPI === 'cli') {
+            return;
+        }
+
+        if (function_exists('ignore_user_abort')) {
+            @ignore_user_abort(true);
+        }
+
+        $limit = self::resolveWebTimeLimit((int) ini_get('max_execution_time'));
+        if ($limit <= 0) {
+            self::$deadline = null;
+
+            return;
+        }
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($limit);
+        }
+        self::$deadline = microtime(true) + $limit;
     }
 
     /**
@@ -72,35 +131,29 @@ final class CronRunnerService
             ];
         }
 
-        $lockHandle = $this->acquireLock();
+        $isMailQueueTask = in_array($task, ['mail-queue', 'cms_cron_mail_queue'], true);
+        $isAllTask = $task === 'all';
+
+        // Release-Prüfung 4.1.0 (PERF, batch:2): Web-Cron gegen max_execution_time und Verbindungsabbruch absichern.
+        $this->extendTimeLimitForWeb();
+
+        $lockHandle = $this->acquireLock(self::RUN_LOCK_FILE);
         if ($lockHandle === false) {
             // Sperrdatei nicht anlegbar: nicht als „bereits aktiv“ melden, sonst laufen Aufgaben unbemerkt nie.
             $this->recordRunStatus(false, $task, 'Sperrdatei nicht anlegbar');
-            $lockError = function_exists('__') ? (string) __('cron.runner.lock_unavailable') : '';
 
-            return [
-                'success' => false,
-                'task' => $task,
-                'mode' => $mode,
-                'source' => $source,
-                'result' => $result,
-                'error_code' => 'lock_unavailable',
-                'error' => $lockError !== '' && $lockError !== 'cron.runner.lock_unavailable'
-                    ? $lockError
-                    : 'Cron-Sperrdatei konnte nicht angelegt werden. Details wurden intern protokolliert.',
-            ];
+            return $this->lockUnavailableResponse($task, $mode, $source, $result);
         }
 
         if ($lockHandle === null) {
-            return [
-                'success' => false,
-                'task' => $task,
-                'mode' => $mode,
-                'source' => $source,
-                'result' => $result,
-                'error_code' => 'lock_active',
-                'error' => 'Cron-Lauf bereits aktiv.',
-            ];
+            // Release-Prüfung 4.1.0 (PERF, batch:4): Lange stündliche/tägliche Läufe blockieren die Mail-Queue nicht
+            // mehr; ein Mail-Queue-Aufruf verarbeitet die Queue unter eigener Sperre und überspringt den Rest.
+            // Direkte Läufe aus dem Admin melden weiterhin „bereits aktiv“, damit keine Teilausführung als Erfolg gilt.
+            if (($isMailQueueTask || $isAllTask) && !str_starts_with($mode, 'admin')) {
+                return $this->runMailQueueOnly($task, $limit, $force, $mode, $source, $result);
+            }
+
+            return $this->lockActiveResponse($task, $mode, $source, $result);
         }
 
         try {
@@ -108,21 +161,16 @@ final class CronRunnerService
 
             $queue = MailQueueService::getInstance();
             $settings = SettingsService::getInstance();
-            $isMailQueueTask = in_array($task, ['mail-queue', 'cms_cron_mail_queue'], true);
             $isHourlyTask = in_array($task, ['hourly', 'cms_cron_hourly'], true);
             $isDailyTask = in_array($task, ['daily', 'cms_cron_daily'], true);
             $isFeedTask = in_array($task, ['feeds', 'cms_cron_feeds'], true);
-            $isAllTask = $task === 'all';
             $shouldRunLegacyHourlyBridge = $task === 'mail-queue'
                 && $settings->getBool('cron', 'mail_queue_triggers_hourly', true);
             $shouldRunLegacyDailyBridge = $task === 'mail-queue'
                 && $settings->getBool('cron', 'mail_queue_triggers_daily', true);
 
             if ($isMailQueueTask || $isAllTask) {
-                $result['mail_queue'] = $queue->handleCronHook([
-                    'limit' => $limit,
-                    'force' => $force,
-                ]);
+                $result['mail_queue'] = $this->processMailQueueLocked($queue, $limit, $force);
 
                 Hooks::doAction('cms_cron_mail_queue', [
                     'limit' => $limit,
@@ -134,6 +182,7 @@ final class CronRunnerService
             }
 
             if ($isHourlyTask || $isAllTask || $shouldRunLegacyHourlyBridge) {
+                $this->extendTimeLimitForWeb();
                 $result['hourly'] = $this->runHourlyHooks($settings, $force);
                 if ($shouldRunLegacyHourlyBridge && is_array($result['hourly'])) {
                     $result['hourly']['compatibility_mode'] = 'mail_queue_triggers_hourly';
@@ -141,6 +190,7 @@ final class CronRunnerService
             }
 
             if ($isDailyTask || $isAllTask || $shouldRunLegacyDailyBridge) {
+                $this->extendTimeLimitForWeb();
                 $result['daily'] = $this->runDailyHooks($settings, $force);
                 if ($shouldRunLegacyDailyBridge && is_array($result['daily'])) {
                     $result['daily']['compatibility_mode'] = 'mail_queue_triggers_daily';
@@ -150,10 +200,7 @@ final class CronRunnerService
             if (is_array($result['hourly'])
                 && !empty($result['hourly']['executed'])
                 && ($queue->isEnabled() || $force)) {
-                $result['mail_queue_after_hourly'] = $queue->handleCronHook([
-                    'limit' => $limit,
-                    'force' => $force,
-                ]);
+                $result['mail_queue_after_hourly'] = $this->processMailQueueLocked($queue, $limit, $force);
             }
 
             // Die Feed-Abruf-Queue des Cores hängt an `cms_cron_mail_queue`/`cms_cron_hourly` (FeatureHooks\FeedHooks)
@@ -236,6 +283,134 @@ final class CronRunnerService
     }
 
     /**
+     * Release-Prüfung 4.1.0 (PERF, batch:4): Nur die Mail-Queue verarbeiten, während ein anderer Cron-Lauf die
+     * Lauf-Sperre hält. Hooks, stündliche und tägliche Aufgaben folgen im nächsten freien Lauf.
+     *
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function runMailQueueOnly(string $task, ?int $limit, bool $force, string $mode, string $source, array $result): array
+    {
+        $mailLock = $this->acquireLock(self::MAIL_LOCK_FILE);
+        if ($mailLock === false) {
+            return $this->lockUnavailableResponse($task, $mode, $source, $result);
+        }
+        if ($mailLock === null) {
+            return $this->lockActiveResponse($task, $mode, $source, $result);
+        }
+
+        try {
+            Bootstrap::instance();
+            $result['mail_queue'] = MailQueueService::getInstance()->handleCronHook([
+                'limit' => $limit,
+                'force' => $force,
+            ]);
+
+            return [
+                'success' => !is_array($result['mail_queue']) || !array_key_exists('success', $result['mail_queue']) || !empty($result['mail_queue']['success']),
+                'task' => $task,
+                'mode' => $mode,
+                'source' => $source,
+                'result' => $result,
+                'mail_queue_only' => true,
+                'notice' => 'Cron-Lauf bereits aktiv: nur die Mail-Queue wurde verarbeitet.',
+            ];
+        } catch (\Throwable $e) {
+            \CMS\Logger::instance()->withChannel('cron')->error('Cron mail queue run failed.', [
+                'exception_class' => get_class($e),
+                'exception_message' => $this->truncateForLog($e->getMessage()),
+                'task' => $task,
+                'mode' => $mode,
+                'source' => $source,
+            ]);
+
+            return [
+                'success' => false,
+                'task' => $task,
+                'mode' => $mode,
+                'source' => $source,
+                'result' => $result,
+                'error_code' => 'exception',
+                'error' => 'Cron-Lauf fehlgeschlagen. Details wurden intern protokolliert.',
+            ];
+        } finally {
+            $this->releaseLock($mailLock);
+        }
+    }
+
+    /**
+     * Release-Prüfung 4.1.0 (PERF, batch:4): Mail-Queue unter der Mail-Sperre verarbeiten. Verarbeitet gerade ein
+     * paralleler Aufruf die Queue, wird übersprungen (die Jobs bleiben fällig); ohne anlegbare Sperrdatei wie bisher.
+     *
+     * @return array<string, mixed>
+     */
+    private function processMailQueueLocked(MailQueueService $queue, ?int $limit, bool $force): array
+    {
+        $mailLock = $this->acquireLock(self::MAIL_LOCK_FILE);
+        if ($mailLock === null) {
+            return [
+                'success' => true,
+                'skipped' => true,
+                'message' => 'Mail-Queue wird gerade von einem parallelen Cron-Lauf verarbeitet.',
+                'worker' => 'cron',
+                'claimed' => 0,
+                'sent' => 0,
+                'retried' => 0,
+                'failed_final' => 0,
+                'released_stale' => 0,
+                'processed' => 0,
+            ];
+        }
+
+        try {
+            return $queue->handleCronHook([
+                'limit' => $limit,
+                'force' => $force,
+            ]);
+        } finally {
+            $this->releaseLock($mailLock === false ? null : $mailLock);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function lockUnavailableResponse(string $task, string $mode, string $source, array $result): array
+    {
+        $lockError = function_exists('__') ? (string) __('cron.runner.lock_unavailable') : '';
+
+        return [
+            'success' => false,
+            'task' => $task,
+            'mode' => $mode,
+            'source' => $source,
+            'result' => $result,
+            'error_code' => 'lock_unavailable',
+            'error' => $lockError !== '' && $lockError !== 'cron.runner.lock_unavailable'
+                ? $lockError
+                : 'Cron-Sperrdatei konnte nicht angelegt werden. Details wurden intern protokolliert.',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function lockActiveResponse(string $task, string $mode, string $source, array $result): array
+    {
+        return [
+            'success' => false,
+            'task' => $task,
+            'mode' => $mode,
+            'source' => $source,
+            'result' => $result,
+            'error_code' => 'lock_active',
+            'error' => 'Cron-Lauf bereits aktiv.',
+        ];
+    }
+
+    /**
      * Letzten Cron-Lauf für Systemhinweise festhalten (Gruppe `cron`: last_run_at/_status/_task/last_error).
      */
     private function recordRunStatus(bool $success, string $task, string $error): void
@@ -286,10 +461,10 @@ final class CronRunnerService
      *
      * @return resource|false|null Handle; false = Sperrdatei nicht anlegbar (protokolliert); null = Sperre belegt
      */
-    private function acquireLock()
+    private function acquireLock(string $lockName = self::RUN_LOCK_FILE)
     {
         $lockDirectory = rtrim((string) ABSPATH, '/\\') . DIRECTORY_SEPARATOR . 'cache';
-        $lockFile = $lockDirectory . DIRECTORY_SEPARATOR . '.cron-run.lock';
+        $lockFile = $lockDirectory . DIRECTORY_SEPARATOR . $lockName;
         $lockHandle = (is_dir($lockDirectory) || @mkdir($lockDirectory, 0755, true) || is_dir($lockDirectory))
             ? @fopen($lockFile, 'c+')
             : false;
@@ -342,10 +517,13 @@ final class CronRunnerService
             ];
         }
 
-        Hooks::doAction('cms_cron_hourly');
-
+        // Release-Prüfung 4.1.0 (PERF, batch:2): Zeitpunkt vor den Hooks festhalten. Bricht ein Hook mit einem Fatal
+        // Error (z. B. max_execution_time) ab, gilt der Lauf trotzdem als erfolgt; sonst liefe die ganze stündliche
+        // Kette über die Mail-Queue-Brücke jede Minute erneut.
         $executedAt = date('Y-m-d H:i:s');
         $settings->set('cron', 'hourly_last_run', $executedAt, false, 0);
+
+        Hooks::doAction('cms_cron_hourly');
 
         return [
             'success' => true,
@@ -453,6 +631,11 @@ final class CronRunnerService
             ];
         }
 
+        // Release-Prüfung 4.1.0 (PERF, batch:2): wie stündlich vor den Hooks festhalten (Fatal Error oder Ausnahme
+        // führen nicht mehr zur Wiederholung jede Minute, sondern zum nächsten regulären Termin).
+        $executedAt = date('Y-m-d H:i:s');
+        $settings->set('cron', 'daily_last_run', $executedAt, false, 0);
+
         try {
             Hooks::doAction('cms_cron_daily');
         } catch (\Throwable $e) {
@@ -470,9 +653,6 @@ final class CronRunnerService
                 'scheduler' => $isDueResult['scheduler'],
             ];
         }
-
-        $executedAt = date('Y-m-d H:i:s');
-        $settings->set('cron', 'daily_last_run', $executedAt, false, 0);
 
         return [
             'success' => true,
