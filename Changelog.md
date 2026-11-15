@@ -93,7 +93,7 @@ Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen
 | **4.1.0** | 🔵 docs | Datenbank / Kollation (DB-410-03) | Hinweis: Tabellen aus Installationen bis 3.5.x tragen die Server-Standardkollation (MariaDB `utf8mb4_general_ci`, MySQL 8 `utf8mb4_0900_ai_ci`), neue Tabellen `utf8mb4_unicode_ci`. Der Core vergleicht keine Textspalten über diese Grenze; eigene Plugins sollten bei solchen JOINs `COLLATE utf8mb4_unicode_ci` angeben. Keine automatische Konvertierung. |
 | **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/schema-upgrade` (optional mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst übersprungen): Neuinstallation und Upgrades gegen eine echte MySQL/MariaDB. Erweitert: `TESTS/schema-v26`, `TESTS/release-3.4.0`. |
 
-#### 🧩 Release-Prüfung 4.1.0: Funktionen (PR #3)
+#### 🧩 Release-Prüfung 4.1.0: Funktionen (PR #3, #163)
 
 Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends gegen MariaDB ohne PHP-Fehler; dazu eine statische Prüfung aller 4.1.0-Funktionen. Nachweise und offene Funktionslücken: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 
