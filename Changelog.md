@@ -109,7 +109,7 @@ Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends 
 | **4.1.0** | 🔴 fix | Papierkorb, Tabellen (FUN-410-29 … -32) | Endgültig gelöschte Hub-Sites verlassen den Verwendungsindex der Medien. Die Seite der Barrierefreiheitserklärung ist gegen endgültiges Löschen geschützt. Freigabeverlauf und Vorschau-Links werden mitgelöscht. Die Seite *Tabellen* kann keine Hub-Sites mehr laden, löschen oder umwandeln; ihre Liste filtert in SQL. |
 | **4.1.0** | ⬜ chore | Tests | Neu: `TESTS/release-4.1.0`. Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`. |
 
-#### 🧰 Release-Prüfung 4.1.0: Regressionen, Altlasten, PHP 8.4/8.5 (PR #4, #164, #PRNUM)
+#### 🧰 Release-Prüfung 4.1.0: Regressionen, Altlasten, PHP 8.4/8.5 (PR #4, #164, #165)
 
 CI-Wächter für PHP 8.4/8.5, deterministischer Scan aller 895 PHP-Dateien ohne Befund, Laufzeitprüfung gegen MariaDB. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 
