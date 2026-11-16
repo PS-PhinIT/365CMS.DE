@@ -538,4 +538,18 @@ T::run('Release-Prüfung 4.1.0: Erstattung, Rückbuchung, Kündigung beim Anbiet
     T::check(str_contains($member, "verifyCsrf('subscription_cancel')") && str_contains($member, 'name="confirm_cancel"') && !str_contains($member, 'onsubmit='), 'Mitglieder-Kündigung: CSRF, Bestätigung, ohne Inline-Skript (CSP)');
 });
 
+T::run('FUN-410-38: fehlgeschlagene Verlängerung nennt die Bestellung', static function (): void {
+    $f = pyFixture();
+    $id = pyOrder($f['db'], ['provider' => 'stripe', 'provider_checkout_id' => 'cs_rf38']);
+    $paid = pyStripeBody('evt_p38', 'checkout.session.completed', ['id' => 'cs_rf38', 'payment_status' => 'paid', 'amount_total' => 1199, 'currency' => 'eur', 'metadata' => ['order_id' => (string) $id], 'subscription' => 'sub_fail38']);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($paid), $paid);
+    $seen = new \ArrayObject();
+    Hooks::addAction('cms_payment_failed', static function (int $orderId, string $provider, array $event) use ($seen): void {
+        $seen[] = [$orderId, !empty($event['renewal'])];
+    });
+    $fail = pyStripeBody('evt_f38', 'invoice.payment_failed', ['id' => 'in_f38', 'subscription' => 'sub_fail38', 'amount_due' => 1199, 'amount_paid' => 0, 'currency' => 'eur']);
+    $f['service']->handleWebhook('stripe', pyStripeHeaders($fail), $fail);
+    T::same([[$id, true]], $seen->getArrayCopy(), 'cms_payment_failed mit der Bestellung des Abos und renewal=true');
+});
+
 T::finish();
