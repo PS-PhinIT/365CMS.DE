@@ -554,13 +554,32 @@ final class PaymentService
      * @param array<string, mixed> $event
      * @param array<string, mixed> $subscription
      */
+    /**
+     * Release-Prüfung 4.1.0 (FUN-410-38): Vorlage für Folgebestellungen. Zuerst die letzte bezahlte Bestellung beim
+     * Anbieter, sonst die letzte bezahlte oder erstattete Bestellung des Pakets (z. B. nach Anbieterwechsel).
+     *
+     * @param array<string, mixed> $subscription
+     * @return array<string, mixed>|null
+     */
+    private function renewalTemplate(string $provider, array $subscription): ?array
+    {
+        $userId = (int) $subscription['user_id'];
+        $planId = (int) $subscription['plan_id'];
+
+        return $this->findOrder("user_id = ? AND plan_id = ? AND provider = ? AND status = 'paid' ORDER BY id DESC", [$userId, $planId, $provider])
+            ?? $this->findOrder("user_id = ? AND plan_id = ? AND status IN ('paid', 'refunded') ORDER BY id DESC", [$userId, $planId]);
+    }
+
     private function createRenewalOrder(string $provider, array $event, array $subscription, int $now, string &$mismatch = ''): int
     {
-        $template = $this->findOrder(
-            "user_id = ? AND plan_id = ? AND provider = ? AND status = 'paid' ORDER BY id DESC",
-            [(int) $subscription['user_id'], (int) $subscription['plan_id'], $provider]
-        );
+        $template = $this->renewalTemplate($provider, $subscription);
         if ($template === null) {
+            // FUN-410-38: ohne Vorlage keine Folgebestellung und keine Rechnung; sichtbar machen statt still.
+            Logger::instance()->withChannel('payments')->warning('Verlängerung ohne Vorlagebestellung: keine Folgebestellung/Rechnung erzeugt.', [
+                'subscription' => (int) $subscription['id'], 'provider' => $provider, 'event' => (string) ($event['event_id'] ?? ''),
+            ]);
+            Hooks::doAction('cms_subscription_renewal_unbilled', (int) $subscription['id'], (int) $subscription['user_id'], $provider, $event);
+
             return 0;
         }
         $copy = array_intersect_key($template, array_flip([
@@ -602,12 +621,17 @@ final class PaymentService
      */
     private function renewalFailed(string $provider, array $event): array
     {
-        if ($this->subscriptionFor($provider, (string) $event['subscription_id']) === null) {
+        $subscription = $this->subscriptionFor($provider, (string) $event['subscription_id']);
+        if ($subscription === null) {
             return ['status' => 'failed', 'error' => 'Abo unbekannt.'];
         }
-        Hooks::doAction('cms_payment_failed', 0, $provider, $event);
+        // Release-Prüfung 4.1.0 (FUN-410-38): Hook mit der letzten Bestellung des Abos statt order_id 0, damit
+        // Empfänger (Mail, Webhooks) Kunde und Paket zuordnen können; `renewal` kennzeichnet die Verlängerung.
+        $template = $this->renewalTemplate($provider, $subscription);
+        $orderId = $template !== null ? (int) $template['id'] : 0;
+        Hooks::doAction('cms_payment_failed', $orderId, $provider, $event + ['renewal' => true, 'subscription_row_id' => (int) $subscription['id']]);
 
-        return ['status' => 'processed'];
+        return ['status' => 'processed', 'order_id' => $orderId];
     }
 
     /**
