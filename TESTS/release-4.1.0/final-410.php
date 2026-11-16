@@ -81,3 +81,10 @@ T::run('FUN-410-10: Zurückziehen benachrichtigt die Prüfenden', static functio
     $wf = $src('core/Services/Content/ContentWorkflow.php');
     T::check(str_contains($wf, "self::ACTION_WITHDRAWN => 'cms_content_withdrawn',") && str_contains($wf, "Zurückgezogen: %s „%s“"), 'eigener Hook und Benachrichtigung');
 });
+
+T::run('FUN-410-33: Importer-Zurücksetzen räumt abhängige Daten auf', static function () use ($src): void {
+    $cleanup = $src('plugins/cms-importer/includes/trait-admin-cleanup.php');
+    T::check(str_contains($cleanup, "foreach (['media_usage', 'reusable_block_usage', 'content_workflow_events', 'content_preview_links'] as \$dependent) {"), 'Verwendungsnachweis, Block-Vorlagen, Freigabeverlauf und Vorschau-Links für post/page');
+    T::check(str_contains($cleanup, "foreach (['post_category_rel', 'post_revisions', 'page_revisions', 'comments'] as \$dependent) {"), 'Kategorien, Revisionen und Kommentare');
+    T::check(str_contains($cleanup, "\\CMS\\CacheManager::instance()->clear();") && str_contains($cleanup, "doAction('cms_importer_content_reset')"), 'Cache, Sitemaps und Hook');
+});

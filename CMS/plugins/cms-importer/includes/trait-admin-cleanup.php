@@ -114,8 +114,36 @@ trait CMS_Importer_Admin_Cleanup_Trait
             if ($this->has_table($db, $p . 'import_items')) {
                 $removedMappings = (int) ($db->execute("DELETE FROM {$p}import_items WHERE target_type IN ('post', 'page')")?->rowCount() ?? 0);
             }
+
+            // Release-Prüfung 4.1.0 (FUN-410-33): Das Zurücksetzen löscht ohne die Lösch-Hooks einzelner Inhalte. Damit
+            // keine verwaisten Verweise bleiben (Verwendungsnachweis, Block-Vorlagen, Freigabeverlauf, Vorschau-Links,
+            // Kategorien, Revisionen, Kommentare), werden die abhängigen Zeilen hier mitgelöscht.
+            foreach (['media_usage', 'reusable_block_usage', 'content_workflow_events', 'content_preview_links'] as $dependent) {
+                if ($this->has_table($db, $p . $dependent)) {
+                    $db->execute("DELETE FROM {$p}{$dependent} WHERE content_type IN ('post', 'page')");
+                }
+            }
+            foreach (['post_category_rel', 'post_revisions', 'page_revisions', 'comments'] as $dependent) {
+                if ($this->has_table($db, $p . $dependent)) {
+                    $db->execute("DELETE FROM {$p}{$dependent}");
+                }
+            }
         } catch (\Throwable $e) {
             return ['Bereinigung von Beiträgen/Seiten fehlgeschlagen: ' . $e->getMessage(), 'error', null];
+        }
+
+        // FUN-410-33: Caches und Sitemaps verwerfen; Erweiterungen können über den Hook eigene Daten bereinigen.
+        try {
+            if (class_exists('CMS\\CacheManager')) {
+                \CMS\CacheManager::instance()->clear();
+            }
+            if (class_exists('CMS\\Services\\SEOService')) {
+                \CMS\Services\SEOService::getInstance()->invalidateSavedSitemaps();
+            }
+            if (class_exists('CMS\\Hooks')) {
+                \CMS\Hooks::doAction('cms_importer_content_reset');
+            }
+        } catch (\Throwable) {
         }
 
         $remainingPosts = $this->count_table_rows($db, $p . 'posts');
