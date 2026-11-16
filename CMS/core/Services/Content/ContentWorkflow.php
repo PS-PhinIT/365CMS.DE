@@ -178,7 +178,7 @@ final class ContentWorkflow
     public static function recipientIds(string $action, string $type, array $users, callable $roleCan, int $actorId, int $authorId, int $submitterId): array
     {
         $ids = [];
-        if ($action === self::ACTION_SUBMITTED) {
+        if ($action === self::ACTION_SUBMITTED || $action === self::ACTION_WITHDRAWN) {
             $capability = self::capabilityFor($type);
             foreach ($users as $user) {
                 $id = (int) ($user->id ?? 0);
@@ -351,6 +351,8 @@ final class ContentWorkflow
             self::ACTION_SUBMITTED => 'cms_content_submitted',
             self::ACTION_APPROVED => 'cms_content_approved',
             self::ACTION_RETURNED => 'cms_content_returned',
+            // Release-Prüfung 4.1.0 (FUN-410-10): Zurückziehen hat einen eigenen Hook und benachrichtigt die Prüfenden.
+            self::ACTION_WITHDRAWN => 'cms_content_withdrawn',
             default => '',
         };
         if ($hook !== '') {
@@ -886,7 +888,7 @@ final class ContentWorkflow
 
     private function notify(string $action, string $type, int $id, string $title, int $actorId, int $authorId, int $submitterId, string $comment): void
     {
-        if (!in_array($action, [self::ACTION_SUBMITTED, self::ACTION_APPROVED, self::ACTION_RETURNED], true)) {
+        if (!in_array($action, [self::ACTION_SUBMITTED, self::ACTION_APPROVED, self::ACTION_RETURNED, self::ACTION_WITHDRAWN], true)) {
             return;
         }
         try {
@@ -903,11 +905,13 @@ final class ContentWorkflow
             $subject = match ($action) {
                 self::ACTION_SUBMITTED => sprintf('Zur Prüfung: %s „%s“', $label, $title),
                 self::ACTION_APPROVED => sprintf('Freigegeben: %s „%s“', $label, $title),
+                self::ACTION_WITHDRAWN => sprintf('Zurückgezogen: %s „%s“', $label, $title),
                 default => sprintf('Zurückgegeben: %s „%s“', $label, $title),
             };
             $message = match ($action) {
                 self::ACTION_SUBMITTED => sprintf('%s „%s“ wartet auf eine Prüfung.', $label, $title),
                 self::ACTION_APPROVED => sprintf('%s „%s“ wurde freigegeben.', $label, $title),
+                self::ACTION_WITHDRAWN => sprintf('%s „%s“ wurde zurückgezogen und wartet nicht mehr auf eine Prüfung.', $label, $title),
                 default => sprintf('%s „%s“ wurde zur Überarbeitung zurückgegeben.', $label, $title),
             };
             $comment = self::cleanComment($comment);

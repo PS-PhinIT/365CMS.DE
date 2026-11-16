@@ -71,3 +71,13 @@ T::run('FUN-410-34/35: Wissensdatenbank-Import, Feed-Aufbewahrung', static funct
     $method = new \ReflectionMethod(\CMS\Services\Feed\AggregatorSettings::class, 'intInRange');
     T::same([0, 7, 7, 30], [$method->invoke(null, 'item_retention_days', 0, 30), $method->invoke(null, 'item_retention_days', 1, 30), $method->invoke(null, 'item_retention_days', 6, 30), $method->invoke(null, 'item_retention_days', 30, 30)], 'Werte 0, 1, 6, 30 ergeben 0, 7, 7, 30');
 });
+
+T::run('FUN-410-10: Zurückziehen benachrichtigt die Prüfenden', static function () use ($src): void {
+    $users = [(object) ['id' => 1, 'role' => 'admin'], (object) ['id' => 2, 'role' => 'editor'], (object) ['id' => 3, 'role' => 'author']];
+    $can = static fn (string $role, string $cap): bool => in_array($role, ['admin', 'editor'], true);
+    $ids = \CMS\Services\Content\ContentWorkflow::recipientIds(\CMS\Services\Content\ContentWorkflow::ACTION_WITHDRAWN, \CMS\Services\Content\ContentWorkflow::TYPE_POST, $users, $can, 3, 3, 3);
+    sort($ids);
+    T::same([1, 2], $ids, 'Prüfende mit Freigaberecht, nicht die zurückziehende Person');
+    $wf = $src('core/Services/Content/ContentWorkflow.php');
+    T::check(str_contains($wf, "self::ACTION_WITHDRAWN => 'cms_content_withdrawn',") && str_contains($wf, "Zurückgezogen: %s „%s“"), 'eigener Hook und Benachrichtigung');
+});
