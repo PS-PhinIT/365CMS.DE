@@ -45,6 +45,9 @@ final class PaymentService
 
     private static ?self $instance = null;
 
+    /** Release-Prüfung 4.1.0 (FUN-410-37): Anbieter-Abo, das nach dem Commit angelegt wird. @var array<int, mixed>|null */
+    private ?array $pendingRecurring = null;
+
     /** Release-Prüfung 4.1.0 (FUN-410-21): Anbieter-Abo, das gerade zugewiesen wird (nicht beenden). */
     public static string $assigningProviderSubscriptionId = '';
 
@@ -292,12 +295,15 @@ final class PaymentService
         // internen Fehler bleibt nichts halb verbucht, und die Wiederholung des Anbieters verarbeitet das Ereignis neu.
         $pdo = $this->transactionPdo();
         $ownTransaction = $pdo !== null && !$pdo->inTransaction() && $pdo->beginTransaction();
+        $this->pendingRecurring = null;
         try {
             $outcome = $this->process($provider, $event);
             if ($ownTransaction) {
                 $pdo->commit();
             }
         } catch (\Throwable $e) {
+            // FUN-410-37: Nach einem Rollback wird kein Anbieter-Abo angelegt (die Wiederholung legt es dann an).
+            $this->pendingRecurring = null;
             if ($ownTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
@@ -311,6 +317,10 @@ final class PaymentService
             }
 
             return 'error';
+        }
+        $recurringError = $this->runPendingRecurring();
+        if ($recurringError !== '') {
+            $outcome['error'] = trim((string) ($outcome['error'] ?? '') . ' ' . $recurringError);
         }
         $this->db->update('payment_events', [
             'status' => $outcome['status'],
@@ -434,15 +444,16 @@ final class PaymentService
         $subscriptionId = (string) ($event['subscription_id'] ?? '');
         $error = '';
         $interval = self::interval($cycle);
+        $deferRecurring = null;
         if ($subscriptionId === '' && $interval !== '' && $this->settings->recurring() && ($gateway = $this->gateway($provider)) !== null) {
-            $result = $gateway->activateRecurring($event, $order, $this->recurringContext($provider) + [
+            // Release-Prüfung 4.1.0 (FUN-410-37): Das Anbieter-Abo (Mollie) entsteht erst nach dem Commit. Innerhalb
+            // der Transaktion angelegt, blieb es nach einem Rollback bestehen und die Wiederholung legte ein zweites an.
+            $deferRecurring = [$gateway, $event, $order, $this->recurringContext($provider) + [
                 'interval' => $interval,
                 'start_date' => $periodEnd !== null ? gmdate('Y-m-d', $periodEnd) : '',
                 'webhook_url' => '',
                 'description' => 'Abo',
-            ]);
-            $subscriptionId = (string) ($result['subscription_id'] ?? '');
-            $error = $result['success'] ? '' : 'Automatische Verlängerung nicht eingerichtet: ' . (string) ($result['error'] ?? '');
+            ]];
         }
         $rowId = (int) $this->db->get_var(
             "SELECT id FROM {$this->prefix}user_subscriptions WHERE user_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
@@ -454,6 +465,9 @@ final class PaymentService
                 'provider_subscription_id' => $subscriptionId !== '' ? mb_substr($subscriptionId, 0, 255) : null,
                 'current_period_end' => $periodEnd !== null ? gmdate('Y-m-d H:i:s', $periodEnd) : null,
             ], ['id' => $rowId]);
+        }
+        if ($deferRecurring !== null) {
+            $this->pendingRecurring = [...$deferRecurring, $rowId];
         }
 
         return $error;
@@ -627,6 +641,28 @@ final class PaymentService
         Hooks::doAction('cms_subscription_ended', (int) $subscription['id'], (int) $subscription['user_id'], $provider);
 
         return ['status' => 'processed'];
+    }
+
+    /** FUN-410-37: das vorgemerkte Anbieter-Abo nach dem Commit anlegen; Rückgabe: Fehlertext oder ''. */
+    private function runPendingRecurring(): string
+    {
+        $pending = $this->pendingRecurring;
+        $this->pendingRecurring = null;
+        if ($pending === null) {
+            return '';
+        }
+        [$gateway, $event, $order, $context, $rowId] = $pending;
+        try {
+            $result = $gateway->activateRecurring($event, $order, $context);
+        } catch (\Throwable $e) {
+            $result = ['success' => false, 'error' => $e->getMessage()];
+        }
+        $subscriptionId = (string) ($result['subscription_id'] ?? '');
+        if (!empty($result['success']) && $subscriptionId !== '' && (int) $rowId > 0) {
+            $this->db->update('user_subscriptions', ['provider_subscription_id' => mb_substr($subscriptionId, 0, 255)], ['id' => (int) $rowId]);
+        }
+
+        return !empty($result['success']) ? '' : 'Automatische Verlängerung nicht eingerichtet: ' . (string) ($result['error'] ?? '');
     }
 
     /**
