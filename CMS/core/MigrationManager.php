@@ -264,9 +264,18 @@ class MigrationManager
             "ALTER TABLE `{$p}user_subscriptions` ADD INDEX `idx_provider_sub` (`provider`, `provider_subscription_id`)"
         );
 
+        // v27 (4.2.0, Community): Bündelung von Benachrichtigungen („3 neue Antworten in …“) braucht einen Gruppenschlüssel
+        // und einen Zähler an der Core-Tabelle notifications. Bestandszeilen: kein Schlüssel, Zähler 1.
+        array_push(
+            $migrations,
+            "ALTER TABLE `{$p}notifications` ADD COLUMN `group_key` VARCHAR(120) DEFAULT NULL",
+            "ALTER TABLE `{$p}notifications` ADD COLUMN `event_count` INT UNSIGNED NOT NULL DEFAULT 1",
+            "ALTER TABLE `{$p}notifications` ADD INDEX `idx_user_group` (`user_id`, `group_key`, `is_read`)"
+        );
+
         // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –
         // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge. v26 ergänzt die Tabellen von
-        // 4.1.0, v27 die 27 Tabellen des Community-Moduls (4.2.0); bestehende Tabellen erhalten in v27 keine neuen Spalten.
+        // 4.1.0, v27 die 27 Tabellen des Community-Moduls (4.2.0).
         $schemaQueries = SchemaManager::getSchemaQueries($p, $charset);
         foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27) as $featureTable) {
             if (isset($schemaQueries[$featureTable])) {

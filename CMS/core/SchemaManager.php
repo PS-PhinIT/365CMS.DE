@@ -98,7 +98,7 @@ class SchemaManager
 
     /**
      * Spalten, die das Zielschema mindestens braucht (zusätzlich zu den Tabellen aus FEATURE_TABLES, FEATURE_TABLES_V26 und
-     * FEATURE_TABLES_V27; v27 ergänzt keine Spalten an bestehenden Tabellen).
+     * FEATURE_TABLES_V27; v27 ergänzt nur `notifications.group_key` und `notifications.event_count`).
      * Grundlage der Integritätsprüfung im Datenbank-Update (DatabaseUpdateRunner, DB-410-04).
      *
      * @var array<string, list<string>>
@@ -112,6 +112,7 @@ class SchemaManager
         'orders' => ['provider', 'provider_checkout_id', 'paid_at'],
         'user_subscriptions' => ['provider', 'provider_subscription_id', 'current_period_end'],
         'login_attempts' => ['action'],
+        'notifications' => ['group_key', 'event_count'],
         'mail_queue' => ['content_type', 'source', 'max_attempts', 'locked_at', 'last_attempt_at', 'error_category'],
         'post_revisions' => ['revision_type', 'created_by', 'fingerprint'],
         'page_revisions' => ['created_by'],
@@ -848,12 +849,15 @@ class SchemaManager
                 title VARCHAR(255) DEFAULT NULL,
                 message TEXT,
                 url VARCHAR(500) DEFAULT NULL COMMENT 'Ziel-Link (optional)',
+                group_key VARCHAR(120) DEFAULT NULL COMMENT 'Bündelung gleichartiger Hinweise, z. B. community:topic:12',
+                event_count INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Anzahl gebündelter Ereignisse',
                 is_read TINYINT(1) NOT NULL DEFAULT 0,
                 read_at TIMESTAMP NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_is_read (is_read),
                 INDEX idx_type (type),
                 INDEX idx_user_created (user_id, created_at),
+                INDEX idx_user_group (user_id, group_key, is_read),
                 INDEX idx_created_at (created_at),
                 FOREIGN KEY (user_id) REFERENCES {$p}users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Member-Benachrichtigungen'",
@@ -1820,6 +1824,7 @@ class SchemaManager
                 last_poster_id INT UNSIGNED NULL,
                 version INT UNSIGNED NOT NULL DEFAULT 1,
                 trashed_at DATETIME NULL,
+                trashed_by INT UNSIGNED NULL,
                 previous_status VARCHAR(20) NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1930,7 +1935,8 @@ class SchemaManager
                 notified_at DATETIME NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, target_type, target_id),
-                KEY idx_community_subscriptions_target (target_type, target_id, mode)
+                KEY idx_community_subscriptions_target (target_type, target_id, mode),
+                KEY idx_community_subscriptions_mode (mode, user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Abonnements'",
 
             // v27: Lesestatus je Mitglied und Thema (Löschfrist über updated_at).
@@ -2074,6 +2080,7 @@ class SchemaManager
                 handled_at DATETIME NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 KEY idx_community_reports_open (status, created_at),
+                KEY idx_community_reports_handled (status, handled_at),
                 KEY idx_community_reports_target (target_type, target_id, status),
                 KEY idx_community_reports_forum (forum_id, status, created_at),
                 KEY idx_community_reports_reporter (reporter_id, target_type, target_id)
@@ -2983,6 +2990,26 @@ class SchemaManager
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {
             error_log(sprintf('SchemaManager::ensureFeatureSchema(capabilities) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
+        }
+
+        // v27: Bündelung von Benachrichtigungen (Community: „3 neue Antworten in …“): Gruppenschlüssel und Zähler an der
+        // Core-Tabelle notifications.
+        $this->ensureColumnExists(
+            $this->prefix . 'notifications',
+            'group_key',
+            "ALTER TABLE {$this->prefix}notifications ADD COLUMN group_key VARCHAR(120) DEFAULT NULL"
+        );
+        $this->ensureColumnExists(
+            $this->prefix . 'notifications',
+            'event_count',
+            "ALTER TABLE {$this->prefix}notifications ADD COLUMN event_count INT UNSIGNED NOT NULL DEFAULT 1"
+        );
+        if (!isset($this->loadIndexes($this->prefix . 'notifications')['idx_user_group'])) {
+            try {
+                $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}notifications ADD INDEX idx_user_group (user_id, group_key, is_read)");
+            } catch (\Throwable $e) {
+                error_log(sprintf('SchemaManager::ensureFeatureSchema(notifications.idx_user_group) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
+            }
         }
 
         // v27 (capabilities_v27): Rechte `community.*` und die Standardrolle „moderator“, einmalig (Marker in settings).

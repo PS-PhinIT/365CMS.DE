@@ -265,7 +265,8 @@ T::run('Indizes', static function () use ($queries): void {
         'community_read_states' => ['idx_community_read_states_cleanup' => ['updated_at']],
         'community_attachments' => ['idx_community_attachments_post' => ['post_id', 'created_at']],
         'community_drafts' => ['idx_community_drafts_updated' => ['updated_at']],
-        'community_reports' => ['idx_community_reports_open' => ['status', 'created_at'], 'idx_community_reports_forum' => ['forum_id', 'status', 'created_at']],
+        'community_reports' => ['idx_community_reports_open' => ['status', 'created_at'], 'idx_community_reports_handled' => ['status', 'handled_at'], 'idx_community_reports_forum' => ['forum_id', 'status', 'created_at']],
+        'community_subscriptions' => ['idx_community_subscriptions_target' => ['target_type', 'target_id', 'mode'], 'idx_community_subscriptions_mode' => ['mode', 'user_id']],
         'community_warnings' => ['idx_community_warnings_user' => ['user_id', 'expires_at'], 'idx_community_warnings_expires' => ['expires_at']],
         'community_bans' => ['idx_community_bans_user' => ['user_id', 'lifted_at', 'ends_at']],
         'community_moderation_log' => ['idx_community_moderation_log_time' => ['created_at'], 'idx_community_moderation_log_actor' => ['actor_id', 'created_at']],
@@ -288,7 +289,7 @@ T::run('Indizes', static function () use ($queries): void {
 
 T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void {
     $expected = [
-        'community_topics' => ['id', 'forum_id', 'user_id', 'title', 'slug', 'status', 'moved_to_topic_id', 'moved_expires_at', 'is_pinned', 'pinned_until', 'is_announcement', 'is_locked', 'locked_until', 'slow_mode_seconds', 'prefix', 'first_post_id', 'solution_post_id', 'solved_at', 'solved_by', 'has_poll', 'has_attachments', 'reply_count', 'view_count', 'reaction_count', 'last_post_id', 'last_post_at', 'last_poster_id', 'version', 'trashed_at', 'previous_status', 'created_at', 'updated_at'],
+        'community_topics' => ['id', 'forum_id', 'user_id', 'title', 'slug', 'status', 'moved_to_topic_id', 'moved_expires_at', 'is_pinned', 'pinned_until', 'is_announcement', 'is_locked', 'locked_until', 'slow_mode_seconds', 'prefix', 'first_post_id', 'solution_post_id', 'solved_at', 'solved_by', 'has_poll', 'has_attachments', 'reply_count', 'view_count', 'reaction_count', 'last_post_id', 'last_post_at', 'last_poster_id', 'version', 'trashed_at', 'trashed_by', 'previous_status', 'created_at', 'updated_at'],
         'community_posts' => ['id', 'topic_id', 'forum_id', 'user_id', 'is_first_post', 'status', 'status_reason', 'format', 'body', 'body_html', 'rendered_version', 'quote_of_post_id', 'edit_count', 'edited_at', 'edited_by', 'edit_reason', 'reaction_count', 'ip_hash', 'created_at', 'updated_at'],
         'community_bans' => ['id', 'user_id', 'scope', 'reason', 'internal_note', 'issued_by', 'starts_at', 'ends_at', 'lifted_at', 'lifted_by', 'created_at'],
         'community_redirects' => ['source_type', 'source_key', 'target_type', 'target_id', 'created_at'],
@@ -301,7 +302,24 @@ T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void 
     foreach (V27_TABLES as $table) {
         $total += count(v27Columns((string) $queries[$table]));
     }
-    T::same(267, $total, 'insgesamt 267 Spalten in den 27 Tabellen');
+    T::same(268, $total, 'insgesamt 268 Spalten in den 27 Tabellen');
+});
+
+T::run('Core-Tabelle notifications: Gruppenschlüssel und Zähler (Bündelung)', static function () use ($queries, $migrationSource, $schemaSource): void {
+    $sql = (string) $queries['notifications'];
+    T::check(preg_match('/\n\s+group_key VARCHAR\(120\) DEFAULT NULL/', $sql) === 1, 'notifications.group_key in der Neuinstallation (eigene Zeile)');
+    T::check(preg_match('/\n\s+event_count INT UNSIGNED NOT NULL DEFAULT 1/', $sql) === 1, 'notifications.event_count in der Neuinstallation (NOT NULL mit Default)');
+    T::check(str_contains($sql, 'INDEX idx_user_group (user_id, group_key, is_read)'), 'Index idx_user_group (user_id, group_key, is_read): ungelesener Hinweis eines Mitglieds mit Gruppenschlüssel');
+    T::check(str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD COLUMN `group_key` VARCHAR(120) DEFAULT NULL')
+        && str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD COLUMN `event_count` INT UNSIGNED NOT NULL DEFAULT 1')
+        && str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD INDEX `idx_user_group` (`user_id`, `group_key`, `is_read`)'), 'Update ergänzt Spalten und Index (Bestandszeilen: kein Schlüssel, Zähler 1)');
+    T::check(str_contains($schemaSource, 'ALTER TABLE {$this->prefix}notifications ADD COLUMN group_key VARCHAR(120) DEFAULT NULL')
+        && str_contains($schemaSource, 'ALTER TABLE {$this->prefix}notifications ADD COLUMN event_count INT UNSIGNED NOT NULL DEFAULT 1')
+        && str_contains($schemaSource, 'ALTER TABLE {$this->prefix}notifications ADD INDEX idx_user_group (user_id, group_key, is_read)'), 'Laufzeitprüfung ergänzt Spalten und Index');
+    T::same(['group_key', 'event_count'], SchemaManager::REQUIRED_COLUMNS['notifications'] ?? null, 'Datenbank-Update prüft die Spalten (REQUIRED_COLUMNS)');
+    foreach (['title', 'message', 'url'] as $unchanged) {
+        T::check(isset(v27Columns($sql)[$unchanged]), "notifications.{$unchanged} unverändert vorhanden");
+    }
 });
 
 T::run('Rechte: Katalog und Standards (CommunityCapabilities)', static function () use ($src): void {

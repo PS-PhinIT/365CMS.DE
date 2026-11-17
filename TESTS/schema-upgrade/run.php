@@ -160,6 +160,12 @@ try {
             $pdo->exec("INSERT INTO `{$db}`.cms_posts (title, slug, content, status, author_id, created_at, published_at)
                         VALUES ('Alt veröffentlicht', 'alt-1', '{}', 'published', 1, NOW(), NULL), ('Alt Papierkorb', 'alt-2', '{}', 'trash', 1, NOW(), NULL)");
 
+            // v27 ergänzt notifications um group_key und event_count: eine vorhandene Zeile bekommt keinen Schlüssel und den
+            // Zähler 1 (Fremdschlüssel ausgeschaltet, weil der Ausgangsstand keinen Benutzer mit dieser ID hat).
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+            $pdo->exec("INSERT INTO `{$db}`.cms_notifications (user_id, type, title, message) VALUES (1, 'system', 'Alt-Hinweis', 'vor v27')");
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
             // capabilities_v27 überschreibt nie: ein vorher ausdrücklich entzogenes Recht und eine bereits vorhandene
             // Rolle „moderator“ bleiben, wie sie sind.
             // role_permissions legt erst der Core der jeweiligen Version an (4.0.0: lazy); gleiche Definition wie roles.php.
@@ -181,6 +187,10 @@ try {
             T::same(1, $granted['editor']['community.participate'] ?? null, 'editor: community.participate vergeben');
             T::same(0, (int) $pdo->query("SELECT COUNT(*) FROM `{$db}`.cms_role_permissions WHERE role = 'moderator' AND capability = 'read'")->fetchColumn(), 'vorhandene Rolle moderator erhält keine Grundrechte nachgetragen');
 
+            $notification = $pdo->query("SELECT group_key, event_count FROM `{$db}`.cms_notifications WHERE title = 'Alt-Hinweis'")->fetch(PDO::FETCH_ASSOC);
+            T::same(['group_key' => null, 'event_count' => '1'], is_array($notification) ? array_map(static fn ($v) => $v === null ? null : (string) $v, $notification) : null, 'notifications: Bestandszeile ohne Gruppenschlüssel, Zähler 1');
+            T::same(3, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = " . $pdo->quote($db) . " AND TABLE_NAME = 'cms_notifications' AND INDEX_NAME = 'idx_user_group'")->fetchColumn(), 'notifications: Index idx_user_group (user_id, group_key, is_read) vorhanden');
+
             $upgraded = $structure($db);
             T::same([], array_values(array_diff($freshStructure, $upgraded)), 'nichts fehlt gegenüber der Neuinstallation');
             T::same([], array_values(array_diff($upgraded, $freshStructure)), 'nichts Zusätzliches gegenüber der Neuinstallation');
@@ -198,7 +208,7 @@ try {
     }
 
     T::run('Reparatur fehlender Tabellen und Spalten (DB-410-05, v27)', static function () use ($pdo, $step, $tmp, $fresh, $structure, $freshStructure): void {
-        foreach (['cms_login_attempts DROP INDEX idx_ip_action, DROP INDEX idx_action, DROP COLUMN action', 'cms_mail_queue DROP INDEX idx_locked_at, DROP COLUMN locked_at', 'cms_post_revisions DROP COLUMN fingerprint', 'cms_orders DROP INDEX idx_provider_checkout, DROP COLUMN provider'] as $alter) {
+        foreach (['cms_login_attempts DROP INDEX idx_ip_action, DROP INDEX idx_action, DROP COLUMN action', 'cms_mail_queue DROP INDEX idx_locked_at, DROP COLUMN locked_at', 'cms_post_revisions DROP COLUMN fingerprint', 'cms_orders DROP INDEX idx_provider_checkout, DROP COLUMN provider', 'cms_notifications DROP INDEX idx_user_group, DROP COLUMN group_key, DROP COLUMN event_count'] as $alter) {
             $pdo->exec("ALTER TABLE `{$fresh}`.{$alter}");
         }
         $pdo->exec("DROP TABLE `{$fresh}`.cms_webhook_deliveries");
@@ -206,6 +216,7 @@ try {
         $missing = $step($tmp . '/v41', $fresh, 'status')['missing'] ?? [];
         T::check(in_array('table:webhook_deliveries', $missing, true) && in_array('column:login_attempts.action', $missing, true), 'DB-410-04: Integritätsprüfung erkennt fehlende Tabelle und Spalte');
         T::check(in_array('table:community_reports', $missing, true), 'v27: Integritätsprüfung erkennt eine fehlende Community-Tabelle');
+        T::check(in_array('column:notifications.group_key', $missing, true) && in_array('column:notifications.event_count', $missing, true), 'v27: Integritätsprüfung erkennt die fehlenden Spalten an notifications');
         $update = $step($tmp . '/v41', $fresh, 'update');
         T::check(!empty($update['success']), 'Datenbank-Update repariert', (string) ($update['message'] ?? ''));
         T::same([], $step($tmp . '/v41', $fresh, 'status')['missing'] ?? ['?'], 'danach vollständig');
