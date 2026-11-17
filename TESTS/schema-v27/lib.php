@@ -42,23 +42,31 @@ function v27CanonDefault(mixed $default): ?string
 /**
  * Zerlegt den CREATE-TABLE-Text einer Tabelle in die kanonische Form.
  *
- * @return array{columns: list<array{0: string, 1: string, 2: string, 3: ?string, 4: bool}>, primary: list<string>, indexes: array<string, array{unique: bool, columns: list<string>}>, columnCollations: list<string>}
- *         Spalten als [Name, Typ, 'YES'|'NO' (NULL erlaubt), Default, AUTO_INCREMENT]
+ * @return array{columns: list<array{0: string, 1: string, 2: string, 3: ?string, 4: bool}>, primary: list<string>, indexes: array<string, array{unique: bool, columns: list<string>}>, columnCollations: list<string>, unclassified: list<string>}
+ *         Spalten als [Name, Typ, 'YES'|'NO' (NULL erlaubt), Default, AUTO_INCREMENT]; `unclassified` = Zeilen, die weder
+ *         Spalte noch Primärschlüssel noch Index sind (z. B. CHECK, FULLTEXT, GENERATED, Backticks, Tabellenoptionen im Rumpf)
  */
 function v27ParseCreate(string $sql): array
 {
     $columns = [];
     $primary = [];
     $collations = [];
+    $unclassified = [];
     foreach (explode("\n", $sql) as $line) {
         $line = rtrim(trim($line), ',');
+        if ($line === '' || str_starts_with($line, 'CREATE TABLE IF NOT EXISTS ') || str_starts_with($line, ')')) {
+            continue;
+        }
         if (preg_match('/^PRIMARY KEY\s*\((.+)\)$/i', $line, $m) === 1) {
             $primary = array_map('trim', explode(',', $m[1]));
             continue;
         }
+        if (preg_match('/^(?:UNIQUE\s+)?(?:KEY|INDEX)\s+[a-z0-9_]+\s*\(.+\)$/i', $line) === 1) {
+            continue; // Indizes: weiter unten
+        }
         if (preg_match('/^([a-z_][a-z0-9_]*)\s+((?:[A-Za-z]+)(?:\(\d+(?:,\d+)?\))?(?:\s+UNSIGNED)?)(.*)$/i', $line, $m) !== 1
-            || in_array(strtoupper($m[1]), ['CREATE', 'PRIMARY', 'UNIQUE', 'KEY', 'INDEX', 'CONSTRAINT', 'FOREIGN', 'ENGINE'], true)
-            || str_starts_with($line, ')')) {
+            || in_array(strtoupper($m[1]), ['CREATE', 'PRIMARY', 'UNIQUE', 'KEY', 'INDEX', 'CONSTRAINT', 'FOREIGN', 'ENGINE', 'FULLTEXT', 'SPATIAL', 'CHECK', 'GENERATED'], true)) {
+            $unclassified[] = $line;
             continue;
         }
         [$name, $type, $rest] = [$m[1], $m[2], (string) $m[3]];
@@ -79,13 +87,13 @@ function v27ParseCreate(string $sql): array
     }
 
     $indexes = [];
-    preg_match_all('/^\s*(UNIQUE KEY|KEY|INDEX)\s+([a-z0-9_]+)\s*\((.+)\),?\s*$/mi', $sql, $matches, PREG_SET_ORDER);
+    preg_match_all('/^\s*((?:UNIQUE\s+)?(?:KEY|INDEX))\s+([a-z0-9_]+)\s*\((.+)\),?\s*$/mi', $sql, $matches, PREG_SET_ORDER);
     foreach ($matches as $match) {
         $indexes[$match[2]] = ['unique' => stripos($match[1], 'UNIQUE') === 0, 'columns' => array_map('trim', explode(',', $match[3]))];
     }
     ksort($indexes);
 
-    return ['columns' => $columns, 'primary' => $primary, 'indexes' => $indexes, 'columnCollations' => $collations];
+    return ['columns' => $columns, 'primary' => $primary, 'indexes' => $indexes, 'columnCollations' => $collations, 'unclassified' => $unclassified];
 }
 
 /**

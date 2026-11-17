@@ -31,7 +31,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 ### Eckdaten 4.1.0
 
 - Dokumentierter Stand: Version `4.1.0` (Release `2026-11-15`), Schema `v26` (90 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
-- `CMS/core/Version.php`: `CURRENT = '4.1.0'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v26'` (Entwicklungsstand 4.2.0: `v27`)
+- `CMS/core/Version.php`: `CURRENT = '4.1.8'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v26'` (Entwicklungsstand 4.2.0: `v27`)
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten

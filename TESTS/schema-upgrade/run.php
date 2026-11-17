@@ -247,6 +247,24 @@ try {
         $repaired = $structure($fresh);
         T::same([], array_values(array_diff($freshStructure, $repaired)), 'Tabellen, Spalten und Indizes wiederhergestellt');
     });
+    // Updater ohne Funktionsdateien (CMS/update.php lädt includes/functions nicht), role_permissions fehlt (4.0.0 legt sie erst
+    // beim ersten Lesen an): Beide Rechte-Schritte (v26 und v27) legen die Tabelle selbst an und laufen ohne Fehler im Log durch.
+    T::run('Update ohne Funktionsdateien und ohne role_permissions (CMS/update.php)', static function () use ($createDb, $step, $tmp, $prefix, $pdo, $sources, $compareGolden, $communityCapabilities): void {
+        $db = $prefix . 'nofn';
+        $createDb($db);
+        $old = $step($sources['4.0.0 (v25)'], $db, 'install');
+        T::same([], $old['install_errors'] ?? ['?'], '4.0.0: Ausgangsstand installiert');
+        $pdo->exec("DROP TABLE IF EXISTS `{$db}`.cms_role_permissions");
+        $update = $step($tmp . '/v41', $db, 'update_nofn');
+        T::check(!empty($update['success']), 'Datenbank-Update ohne includes/functions meldet Erfolg', (string) ($update['message'] ?? ''));
+        T::same([], $update['errors'] ?? ['?'], 'keine Fehlerzeilen im Log (Tabelle wird vor dem v26-Schritt angelegt)');
+        T::same(1, (int) $pdo->query("SELECT COUNT(*) FROM `{$db}`.cms_settings WHERE option_name = 'capabilities_v27'")->fetchColumn(), 'Marker capabilities_v27 gesetzt');
+        T::same(9, (int) $pdo->query("SELECT COUNT(*) FROM `{$db}`.cms_role_permissions WHERE capability LIKE 'community.%'")->fetchColumn(), '9 Zeilen community.*');
+        T::same(['author:posts.publish', 'editor:pages.publish', 'editor:posts.publish'], $pdo->query("SELECT CONCAT(role, ':', capability) FROM `{$db}`.cms_role_permissions WHERE capability NOT LIKE 'community.%' ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN), 'der v26-Schritt (Veröffentlichen) lief ebenfalls');
+        T::same([], $step($tmp . '/v41', $db, 'status')['missing'] ?? ['?'], 'Integritätsprüfung: nichts fehlt');
+        $compareGolden($pdo, $db);
+    });
+
     // Kollation: die Community-Tabellen tragen utf8mb4_unicode_ci unabhängig vom Standard der Datenbank (utf8mb4_general_ci hier).
     T::run('Kollation der Community-Tabellen unabhängig vom Standard der Datenbank', static function () use ($pdo, $prefix, $repo): void {
         if (!defined('ABSPATH')) {

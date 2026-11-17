@@ -142,7 +142,7 @@ final class CommunityCapabilities
             return [];
         }
 
-        self::ensurePermissionsTable($db, $permissions);
+        self::ensurePermissionsTable($db);
 
         $granted = [];
         foreach (self::DEFAULT_GRANTS as $role => $capabilities) {
@@ -171,14 +171,11 @@ final class CommunityCapabilities
      * `includes/functions/roles.php`, die hier nicht verfügbar sein muss (`update.php` lädt `includes/functions` nicht);
      * `TESTS/schema-v27` vergleicht beide Texte.
      */
-    private static function ensurePermissionsTable(Database $db, string $table): void
+    public static function ensurePermissionsTable(Database $db): void
     {
-        try {
-            $db->get_var("SELECT 1 FROM {$table} LIMIT 1");
-
+        $table = $db->getPrefix() . 'role_permissions';
+        if ($db->tableExists($table)) {
             return;
-        } catch (\Throwable) {
-            // Tabelle fehlt (oder ist nicht lesbar): anlegen; schlägt auch das fehl, meldet der Aufrufer den Fehler.
         }
 
         $db->execute("CREATE TABLE IF NOT EXISTS {$table} (

@@ -7,7 +7,7 @@
 
 Roles and capabilities are managed at `/admin/roles` (`CMS/admin/roles.php` → `CMS/admin/modules/users/RolesModule.php` → `CMS/admin/views/users/roles.php`). Default role definitions live in `CMS/includes/functions/roles.php` (`cms_get_default_role_definitions()`); overrides are stored in `cms_role_permissions`. `Auth::hasCapability()` grants every capability to role `admin`; other roles are resolved via `cms_load_role_capabilities()`.
 
-**Important:** the admin area itself requires role `admin` (`Auth::isAdmin()` in `AdminRouter`). Capabilities of other roles therefore apply to the member area, the API, plugins and frontend features, not to `/admin`.
+**Important:** the admin area itself requires role `admin` (`Auth::isAdmin()` in `AdminRouter`). Capabilities of other roles therefore apply to the member area, the API, plugins and frontend features, not to `/admin`; the only exception are the few pages listed in `DelegatedAdminAccess::PAGES` (payments, invoices, reusable blocks, webhooks), which the role `moderator` cannot open.
 
 ## Deutsch
 

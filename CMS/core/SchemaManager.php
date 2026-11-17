@@ -2987,6 +2987,8 @@ class SchemaManager
         try {
             if (function_exists('cms_ensure_role_permissions_table')) {
                 cms_ensure_role_permissions_table($this->db);
+            } else {
+                \CMS\Services\Community\Support\CommunityCapabilities::ensurePermissionsTable($this->db);
             }
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {

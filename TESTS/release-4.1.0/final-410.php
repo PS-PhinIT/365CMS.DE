@@ -63,6 +63,10 @@ T::run('DOC-410-01: Anzahl der Test-Suiten im Changelog', static function () use
     $suites = count(glob(dirname($root) . '/TESTS/*/run.php') ?: []);
     T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 35 Suiten aus: zu den 32 aus 4.1.0'), '4.1.5 nennt 35 Suiten (Stand des Releases)');
     T::check($suites >= 35, "seit 4.1.5 sind keine Suiten weggefallen ({$suites})");
+    // Der laufende Entwicklungsabschnitt nennt die aktuelle Zahl (4.2.0: schema-v27 kam hinzu).
+    if (preg_match('/^### v4\.2\.0\b.*?(?=^### v)/ms', $changelog, $section) === 1) {
+        T::check(str_contains($section[0], "`php TESTS/run-all.php` führt {$suites} Suiten aus"), "v4.2.0 nennt die aktuelle Suitenzahl ({$suites})");
+    }
 });
 
 T::run('FUN-410-34/35: Wissensdatenbank-Import, Feed-Aufbewahrung', static function () use ($src): void {

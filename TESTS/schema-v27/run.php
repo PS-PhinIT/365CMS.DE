@@ -148,6 +148,11 @@ function v27Database(): Database
         {
             return 'cms_';
         }
+
+        public function tableExists(string $table): bool
+        {
+            return (bool) $this->sqlite->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = " . $this->sqlite->quote($table))->fetchColumn();
+        }
     };
 }
 
@@ -320,6 +325,9 @@ T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku
         T::same($expected['primary'], $ddl['primary'], "{$table}: Primärschlüssel entspricht dem Snapshot");
         T::same($expected['indexes'], $ddl['indexes'], "{$table}: Indizes (Name, UNIQUE, Spalten in Reihenfolge) entsprechen dem Snapshot");
         T::same([], $ddl['columnCollations'], "{$table}: keine Kollation an Spalten");
+        T::same([], $ddl['unclassified'], "{$table}: jede Zeile des Rumpfs ist Spalte, Primärschlüssel oder Index (kein CHECK, FULLTEXT, GENERATED, ON UPDATE-Sonderfall)");
+        T::check(!preg_match('/ON UPDATE|\bCHECK\b|\bGENERATED\b|\bFULLTEXT\b|\bSPATIAL\b|`|\bCHARACTER SET\b|\bROW_FORMAT\b|\bPARTITION\b/i', (string) $queries[$table]), "{$table}: kein ON UPDATE, CHECK, GENERATED, FULLTEXT, Backtick, Zeichensatz an Spalten, ROW_FORMAT oder PARTITION");
+        T::check(preg_match("/\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Community: [^']+'\s*$/", (string) $queries[$table]) === 1, "{$table}: Tabellenkopf genau ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Community: …'");
         $totalIndexes += count($expected['indexes']);
 
         // Doku (HANDOFF §3) == Snapshot, in beide Richtungen und mit Typ, NULL, Default und Indexspalten.
@@ -421,6 +429,10 @@ T::run('Rechte: Katalog und Standards (CommunityCapabilities)', static function 
         T::same($allowedElevated, array_values(array_intersect(Caps::ELEVATED, (array) ($fallback[$role] ?? []))), "UserService::DEFAULT_ROLE_CAPABILITIES: {$role} hat nur die vorgesehenen erhöhten Community-Rechte");
     }
     T::check(in_array('moderator', \CMS\Auth\SSO\IdentityLinker::PRIVILEGED_ROLES, true), 'IdentityLinker::PRIVILEGED_ROLES enthält moderator (keine automatische Entra-Verknüpfung per E-Mail)');
+    // Zweite Sicherung neben EntraSettings::normalize(): auch nicht normalisierte Einstellungen machen moderator nicht zur Standardrolle.
+    T::same('member', \CMS\Auth\SSO\IdentityLinker::syncTarget('subscriber', null, ['default_role' => 'moderator']), 'IdentityLinker::syncTarget: Standardrolle moderator fällt auf member zurück');
+    T::same('editor', \CMS\Auth\SSO\IdentityLinker::syncTarget('subscriber', null, ['default_role' => 'editor']), 'IdentityLinker::syncTarget: andere Standardrollen bleiben');
+    T::same('moderator', \CMS\Auth\SSO\IdentityLinker::syncTarget('member', 'moderator', ['default_role' => 'member']), 'ausdrückliches Mapping auf moderator bleibt möglich');
     $users = $src('core/Services/UserService.php');
     T::check(preg_match('/REGISTRATION_BLOCKED_CAPABILITIES = \[(.*?)\];/s', $users, $blocked) === 1, 'UserService::REGISTRATION_BLOCKED_CAPABILITIES lesbar');
     foreach (Caps::ELEVATED as $capability) {
