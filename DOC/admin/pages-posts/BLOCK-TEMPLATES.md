@@ -37,6 +37,8 @@ Im Block gibt es außerdem:
 - **Vorlage bearbeiten**: öffnet die Vorlage in einem neuen Tab (mit `blocks.reusable`).
 - **In normale Blöcke umwandeln**: ersetzt den Verweis durch eine Kopie der Blöcke in der Sprache des Editors. Die Verknüpfung endet; spätere Änderungen an der Vorlage erscheinen hier nicht mehr.
 
+> **Wo der Block fehlt:** Der Nutzungsindex („Verwendet in“, Löschwarnung, Neuindizieren) kennt Beiträge, Seiten und andere Vorlagen. Im Editor der **Wissensdatenbank** und der **Hub-Sites** steht „Vorlagen“ deshalb seit 4.1.9 nicht in der Block-Auswahl. Bereits eingefügte Blöcke bleiben erhalten und werden weiter ausgegeben, tauchen aber nicht unter „Verwendet in“ auf.
+
 ### Was nach einer Änderung passiert
 
 - Der Seiten-Cache wird geleert.

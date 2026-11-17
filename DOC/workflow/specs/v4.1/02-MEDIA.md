@@ -89,6 +89,6 @@ Speichern/Löschen, „Ungenutzt“ korrekt, Löschwarnung, keine Treffer für f
 | Hooks | Neu: `cms_after_form_save`, `cms_form_deleted`, `cms_theme_customizer_saved` (Theme: einmal je Anfrage neu indizieren). Hub-Sites lösen beim endgültigen Löschen keinen Hook aus; ihre Zeilen werden nicht mehr angezeigt (Inhalt fehlt) und beim nächsten Neuaufbau entfernt. Papierkorb zählt weiter als Verwendung. |
 | Downloads | Dateiversionen liegen im privaten Speicher, nicht in der Mediathek; erfasst werden Titelbild und Beschreibungen. |
 | Wiederverwendbare Blöcke, Community | folgen mit Bereich 3 bzw. 4.2 als eigene Extraktoren. |
-| Capability | Die Medien-Werkzeuge verlangen weiter `manage_media`; `media.tools` folgt mit dem Update-Schritt `capabilities_v26`. |
+| Capability | Die Medien-Werkzeuge verlangen weiter `manage_media`. Eine eigene Capability `media.tools` wurde in 4.1.0 nicht eingeführt (und deshalb auch nicht durch `capabilities_v26` vergeben). |
 | `unusedMedia()` | arbeitet auf einer übergebenen Pfadliste (die Mediathek listet Dateien aus dem Dateisystem). |
 

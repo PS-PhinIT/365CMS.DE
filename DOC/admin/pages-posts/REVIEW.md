@@ -26,7 +26,7 @@ Admins haben in 365CMS alle Rechte. Solange nur Admins den Admin-Bereich nutzen,
 - **Kopfleiste (Beiträge):** Wer nicht selbst veröffentlichen darf, sieht statt „Planen“/„Veröffentlichen“ den Knopf **„Zur Prüfung einreichen“** (bzw. „Erneut einreichen“). Er speichert die Änderungen und reicht ein; ein eingetragenes Veröffentlichungsdatum bleibt für die Freigabe stehen.
 - **Statusfeld:** neuer Wert „Zur Prüfung“; „Veröffentlicht“ und „Privat“ sind ohne Recht deaktiviert.
 - **Bereich „Freigabe“** (Beiträge: Einstellungsspalte; Seiten: Karte „Veröffentlichung“): aktueller Status, Kommentarfeld, Knöpfe **Freigeben** und **Zurückgeben** (nur für Konten, die freigeben dürfen), **Kommentar senden**, Vorschau-Links und der **Verlauf** (Einreichen, Freigeben, Zurückgeben mit Begründung, Zurückziehen, Kommentare, Vorschau-Links; neueste zuerst).
-- **Zurückgeben** verlangt eine Begründung und setzt den Status auf Entwurf. Zieht die Autorin eine Einreichung selbst zurück (Status „Entwurf“ speichern), steht „Einreichung zurückgezogen“ im Verlauf.
+- **Zurückgeben** verlangt eine Begründung und setzt den Status auf Entwurf. Zieht die Autorin eine Einreichung selbst zurück (Status „Entwurf“ speichern), steht „Einreichung zurückgezogen“ im Verlauf. Seit 4.1.9 löst das den Hook `cms_content_withdrawn` aus und benachrichtigt die Prüfenden (In-App und Mail), damit die Einreichung nicht weiter in ihrer Liste „Zur Prüfung“ erwartet wird.
 - **Freigeben** setzt `published`; liegt das Datum in der Zukunft, ist der Beitrag danach geplant. Freigeben kann man auch über „Veröffentlichen“ in der Kopfleiste (speichert zusätzlich die Änderungen) oder über die Sammelaktion.
 
 ### Listen, Dashboard, Menü
@@ -70,7 +70,7 @@ Mit 4.1.0 werden `posts.publish` und `pages.publish` erstmals geprüft. Damit ni
 | `CMS\Services\Content\ContentWorkflow` | `canPublish()`, `resolveSaveStatus()`, `submit()`, `approve()`, `returnToAuthor()`, `addComment()`, `history()`, `pendingItems()`, Vorschau-Links, `migrateCapabilities()` |
 | `FeatureHooks\ContentWorkflowHooks` | Badges, Aufräumen der Vorschau-Links |
 | Tabellen | `cms_content_workflow_events`, `cms_content_preview_links` ([DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md)) |
-| Hooks | `cms_content_submitted`, `cms_content_approved`, `cms_content_returned` ([HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md)) |
+| Hooks | `cms_content_submitted`, `cms_content_approved`, `cms_content_returned`, `cms_content_withdrawn` ([HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md)) |
 | Tests | `php TESTS/content-workflow/run.php` |
 
 ### Verwandte Dokumente

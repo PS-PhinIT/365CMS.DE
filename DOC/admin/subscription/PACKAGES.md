@@ -58,7 +58,9 @@ Die Seite zeigt alle Pakete mit Preisen, Limits, Status (aktiv/inaktiv), Hervorh
 | Erinnerung vor Ablauf (Tage) / E-Mail | `notification_before_expiry`, `notification_email` | 7 / leer |
 | AGB-Seite / Widerrufsseite | `terms_page_id`, `cancellation_page_id` |: (Seiten-ID aus `cms_pages`) |
 
-> **Hinweis:** Stripe und PayPal werden im Checkout als Zahlungsart angeboten, eine Zahlungsabwicklung (Gateway-Anbindung) ist im Core nicht enthalten. Bestellungen werden mit Status `pending` angelegt und in `/admin/orders` manuell auf `paid` gesetzt.
+> **Zahlungen:** Seit 4.1.0 bindet der Core **Stripe** und **Mollie** (PayPal läuft über Mollie) an, siehe [PAYMENTS.md](PAYMENTS.md). Bezahlt wird nur per verifiziertem Webhook. Bestellungen per Rechnung bleiben `pending`, bis sie in `/admin/orders` manuell auf `paid` gesetzt werden.
+>
+> **Kulanzzeit (`grace_period_days`, wirksam seit 4.1.9):** Sie gilt für Abos mit wiederkehrender Zahlung beim Anbieter, solange sie nicht gekündigt sind: Bleibt die Verlängerung aus (z. B. verspäteter Webhook oder Wiederholung der Abbuchung), behält das Mitglied den Zugang bis zu so viele Tage über das Laufzeitende hinaus, bis die Zahlung eingeht. Gekündigte, erstattete, per Rechnung bezahlte und manuell zugewiesene Abos enden mit ihrem Laufzeitende. Der Wert 0 schaltet die Kulanzzeit ab.
 
 ### Verwandte Dokumente
 

@@ -50,6 +50,13 @@ Kündigungen gehen seit 4.1.7 vom CMS an den Anbieter (Stripe: Abo löschen bzw.
 - **Kündigung durch Mitglieder:** unter *Mitgliederbereich → Abo* mit Bestätigung. Das Abo bleibt bis zum Ende der bezahlten Periode (`end_date`) aktiv, danach endet der Zugang. Hook `cms_subscription_cancelled_by_member`.
 - Schlägt der Aufruf beim Anbieter fehl, wird das protokolliert (Kanal `payments`) und das Mitglied erhält eine Fehlermeldung. Dann im Dashboard des Anbieters kündigen.
 
+Bleibt die Verlängerung eines Abos mit wiederkehrender Zahlung beim Anbieter aus (verspäteter Webhook, Wiederholung der Abbuchung), behält das Mitglied den Zugang bis zu `grace_period_days` Tage über das Laufzeitende hinaus (Standard 3, siehe [PACKAGES.md](PACKAGES.md)); die Seite *Mitgliederbereich → Abo* zeigt „Nächste Verlängerung“ nur für solche Abos, sonst „Läuft bis“. Abos per Rechnung, gekündigte und erstattete Abos enden mit `end_date` (seit 4.1.9).
+
+Verlängerungen und Anbieter-Abos (seit 4.1.9):
+- **Mollie-Abo:** Es entsteht erst nach dem Abschluss der Datenbank-Transaktion der Erstzahlung. Bricht die Verarbeitung ab und der Anbieter wiederholt das Ereignis, entsteht dadurch kein zweites Abo.
+- **Fehlgeschlagene Verlängerung:** `cms_payment_failed` nennt die letzte Bestellung des Abos (`order_id` im Webhook-Ereignis `order.failed`) statt 0.
+- **Folgebestellung:** Vorlage ist die letzte bezahlte Bestellung beim selben Anbieter, sonst die letzte bezahlte oder erstattete Bestellung des Pakets. Gibt es keine, bleibt die Verlängerung verbucht, es entsteht aber keine Folgebestellung und keine Rechnung; das steht im Log (Kanal `payments`), und der Hook `cms_subscription_renewal_unbilled` wird ausgelöst.
+
 PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
 
 ### Technik

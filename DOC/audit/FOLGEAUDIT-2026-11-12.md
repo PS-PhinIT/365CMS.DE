@@ -36,8 +36,8 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 | 3 | Fehlende Funktionen und unvollständige Logik | FUN-63 … FUN-94 | #122 | erledigt, FUN-86 offen (Entscheidung) |
 | 4 | Fehlende oder falsche Verweise | REF-16 … REF-39 | #123 | erledigt |
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN-95 … FUN-124 | #136 | erledigt |
-| 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | offen |
-| 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | offen |
+| 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | nicht als eigener Bereich durchgeführt; aufgegangen im Prüfbereich PR #5 des [Release-Audits 4.1.0](RELEASE-AUDIT-4.1.0-2026-11-15.md) (PERF-410-01 … -49) |
+| 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | nicht durchgeführt; Altlasten und Regressionen deckt das [Release-Audit 4.1.0](RELEASE-AUDIT-4.1.0-2026-11-15.md) ab (PR #4), ein PSR-12-Lauf und die Prüfung von Beispielkonfiguration und Sicherheits-Headern stehen aus |
 
 ### 1. Changelog 4.0.0
 
@@ -427,7 +427,7 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 | FUN-83 | `CMS/core/Services/Exchange/TaxonomyExchangeProvider.php:123` | 🟡 | Import: Kategorie-Hierarchie geht verloren, wenn die Oberkategorie eine höhere ID hat als die Unterkategorie. Korrektur: Ist die Oberkategorie beim Import noch nicht zugeordnet, wird parent_id nicht mehr auf NULL gesetzt, sondern weggelassen und im ImportContext vorgemerkt (Namensraum category_parent_pending, übersteht Stapelgrenzen). Sobald die Oberkategorie importiert ist: angelegt, überschrieben oder übersprungen –, wird parent_id per UPDATE nachgetragen, ohne Selbstbezug. | [x] Behoben in PR #122 |
 | FUN-84 | `CMS/core/Services/Trash/TrashService.php:285` | 🟡 | Automatisches Leeren des Papierkorbs bleibt stehen, wenn die 200 ältesten abgelaufenen Einträge Warnungen haben. Korrektur: purgeExpired() liest je Typ in mehreren Durchgängen weiter (neue private Methode purgeProvider()). Übersprungene und fehlgeschlagene IDs werden gemerkt, der nächste Abruf erhöht das Limit um deren Anzahl, sodass dahinterliegende Einträge nachrücken. | [x] Behoben in PR #122 |
 | FUN-85 | `CMS/core/Services/EditorialCalendarService.php:627` | 🟡 | Redaktionskalender meldet Erfolg, auch wenn das Verschieben keine Zeile geändert hat. Korrektur: move() wertet das Ergebnis des UPDATE aus. Bei 0 geänderten Zeilen wird der Eintrag nachgeladen; ist er weg oder hat einen anderen Status, endet der Aufruf mit HTTP 409 und Code state_changed, bevor Audit-Eintrag und Hook laufen. | [x] Behoben in PR #122 |
-| FUN-86 | `CMS/admin/trash.php:21` | 🟡 | Neue Capabilities sind für Nicht-Administratoren wirkungslos: jede Admin-Seite verlangt zusätzlich die Rolle „admin“. Bestand in 3.5.6. Grundsatzentscheidung (Zugang zum Adminbereich für weitere Rollen), keine Änderung; siehe *Offene Entscheidung*. | [ ] Offen: Entscheidung des Maintainers, Übergabe an Prüfbereich 7 |
+| FUN-86 | `CMS/admin/trash.php:21` | 🟡 | Neue Capabilities sind für Nicht-Administratoren wirkungslos: jede Admin-Seite verlangt zusätzlich die Rolle „admin“. Bestand in 3.5.6. Grundsatzentscheidung (Zugang zum Adminbereich für weitere Rollen), keine Änderung; siehe *Offene Entscheidung*. | [ ] Offen: Entscheidung des Maintainers; teilweise gelöst in 4.1.6 (SEC-410-26 im [Release-Audit 4.1.0](RELEASE-AUDIT-4.1.0-2026-11-15.md)): Zahlungen, Rechnungen, Block-Vorlagen und Webhooks lassen sich über ihre Capability an Nicht-Admins vergeben, alle übrigen Admin-Seiten bleiben Admins vorbehalten |
 | FUN-87 | `CMS/core/Services/Downloads/DownloadFrontendController.php:96` | 🟡 | Abruf-Rate-Limit zählt jede Range-Folgeanfrage und HEAD mit: Fortsetzbare Downloads enden mit HTTP 429. Korrektur: Im bestätigten Umfang: Folgeanfragen (Range ab Byte > 0, HEAD) zählen nicht mehr gegen das Abruf-Limit, bleiben aber begrenzt. Die Erkennung liegt in DownloadFrontendController::isFollowUpRequest() und wird von count() und deliver() genutzt. | [x] Behoben in PR #122 |
 | FUN-88 | `CMS/core/Services/IntegratedPluginService.php:349` | 🟡 | Hinweis „seine Daten wurden übernommen“ erscheint unabhängig vom Stand der Datenübernahme; fehlgeschlagene Übernahme bleibt unsichtbar. Korrektur: Der Systemhinweis unterscheidet jetzt den Stand der Datenübernahme: übernommen (info, bisheriger Text), läuft noch (info), mit Lücken übernommen (warning) und fehlgeschlagen (warning, auch nach Ablauf der 30 Tage). runPendingMigrations() vermerkt eine Ausnahme des Migrators als error im Zustand und leert den Hinweis-Cache, wenn sich der Stand ändert. | [x] Behoben in PR #122 (teilweise, siehe Grenzen) |
 | FUN-89 | `CMS/core/Services/Newsletter/NewsletterRepository.php:250` | 🟡 | Newsletter: Anmeldung einer noch unbestätigten Adresse meldet bei abgeschaltetem Double-Opt-In „angemeldet“, der Abonnent bleibt aber „pending“. Korrektur: Der „pending“-Zweig in subscribe() greift nur noch bei aktivem Double-Opt-In. Ist es abgeschaltet, fällt ein unbestätigter Eintrag in den vorhandenen Aktualisierungspfad und wird wie eine Neuanmeldung aktiviert (status active, confirmed_at, neue Einwilligung, Hook cms_newsletter_subscribed). | [x] Behoben in PR #122 |
@@ -660,7 +660,7 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 
 | ID | Fundstelle | Schwere | Beschreibung | Status |
 |---|---|---|---|---|
-| – | – | – | Prüfung steht aus (PR 6) | – |
+| – | – | – | nicht als eigener Bereich durchgeführt; siehe Release-Audit 4.1.0, PR #5 | – |
 
 ### 7. Best Practices, Code-Qualität und Abschlussprüfung
 
@@ -674,4 +674,4 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 
 | ID | Fundstelle | Schwere | Beschreibung | Status |
 |---|---|---|---|---|
-| – | – | – | Prüfung steht aus (PR 7) | – |
+| – | – | – | nicht durchgeführt (PSR-12, Beispielkonfiguration, Sicherheits-Header); siehe Übersicht oben | – |

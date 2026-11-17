@@ -79,6 +79,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_content_expired` | Action | `string $type, int $id, string $action` (`draft`/`mark`); Inhalt abgelaufen (Cron stündlich) |
 | `cms_content_review_due` | Action | `string $type, int $id`; Wiedervorlage fällig, einmal je Termin (Cron täglich) |
 | `cms_content_returned` | Action | `string $type, int $id, int $userId, string $comment`; eingereichter Inhalt mit Begründung zurückgegeben |
+| `cms_content_withdrawn` | Action | `string $type, int $id, int $userId, string $comment`; Einreichung zurückgezogen (seit 4.1.9; die Prüfenden werden benachrichtigt) |
 
 ### Lokalisierung, Hub-Sites, Tabellen
 
@@ -202,9 +203,11 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_content_status_changed` | Action | `string $type, int $id, string $from, string $to, int $userId`; jeder Statuswechsel von Beiträgen/Seiten beim Speichern, in der Freigabe und in Sammelaktionen |
 | `cms_webhook_event` | Filter | `array<string,string> $events`; weitere Webhook-Ereignisse `bereich.aktion => Bezeichnung` |
 | `cms_payment_succeeded` | Aktion | `int $orderId, string $provider, array $event`; Bestellung per Anbieter-Webhook bezahlt |
-| `cms_payment_failed` | Aktion | `int $orderId` (0 bei Abo-Folgezahlung), `string $provider, array $event` |
+| `cms_payment_failed` | Aktion | `int $orderId` (bei fehlgeschlagener Abo-Verlängerung seit 4.1.9 die letzte Bestellung des Abos, nur ohne Vorlage 0), `string $provider, array $event` (bei Verlängerungen mit `renewal => true`, `subscription_row_id`) |
 | `cms_subscription_renewed` | Aktion | `int $subscriptionRowId, int $userId, int $renewalOrderId, int $periodEnd` |
 | `cms_subscription_ended` | Aktion | `int $subscriptionRowId, int $userId, string $provider`; Abo beim Anbieter beendet |
+| `cms_subscription_renewal_unbilled` | Aktion | `int $subscriptionRowId, int $userId, string $provider, array $event`; Verlängerung verbucht, aber keine Folgebestellung/Rechnung möglich (keine bezahlte oder erstattete Vorlagebestellung; seit 4.1.9) |
+| `cms_subscription_cancelled_by_member` | Aktion | `int $subscriptionRowId, int $userId`; Mitglied hat gekündigt, Zugang bis Periodenende (seit 4.1.7) |
 | `cms_invoice_created` | Aktion | `int $invoiceId, string $type, int $orderId, int $userId`; nach dem Erstellen einer Rechnung (`invoice`) bzw. Storno-Rechnung (`cancellation`), PDF liegt vor |
 | `cms_user_deleted` | Aktion | `int $userId`; nach dem endgültigen Löschen eines Kontos (`UserService::deleteUser(…, true)`), z. B. Sperrvermerk für Rechnungen |
 | `cms_webhook_endpoint_disabled` | Action | `int $endpointId, string $reason`; Empfänger automatisch deaktiviert (410 oder 20 Fehlschläge) |

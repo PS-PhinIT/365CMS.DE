@@ -5,6 +5,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 | Feld | Wert |
 |------|------|
 | Stand | `main` @ `a437675` (Release-Kandidat 4.1.0, Schema v26) |
+| Abschluss | 2026-11-17: 145 Befunde, 136 behoben, 4 verworfen, 3 akzeptiert, 1 dokumentiert, 1 offen (PERF-410-49); siehe „PR #6: Audit-Abschluss und Abschlussbilanz“ |
 | Baseline Tests | `php TESTS/run-all.php`: 32 Suiten, 0 fehlgeschlagen |
 | PHP (Prüfumgebung) | 8.3.6 CLI |
 | Schweregrade | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
@@ -12,7 +13,7 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 
 ## Versionen
 
-Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten Version (`RELEASE/365CMS-4.1.8-*`).
+Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten gepackten Version (`RELEASE/365CMS-4.1.8-*`).
 
 | Version | Prüfbereich | Pull Requests |
 |---------|-------------|---------------|
@@ -24,7 +25,7 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 | 4.1.6 | Entscheidungen: FUN-410-17/18/19, SEC-410-26, PERF-410-46 … -49, DOC-410-01 | [#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167) |
 | 4.1.7 | Zahlungen: FUN-410-21, FUN-410-27 | [#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168) |
 | 4.1.8 | FUN-410-34 (verworfen), FUN-410-35 | [#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169) |
-| 4.1.9 ff. | Abschluss PR #5, PR #6: Tests, Dokumentation, Release-Fertigstellung | ausstehend |
+| 4.1.9 | Abschluss (PR #6, in der Planung „PR #0“): FUN-410-07, -10, -28, -33, -37, -38, DOC-410-03 | [#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170) (FUN-410-10), [#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171) (FUN-410-38), [#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172) (FUN-410-37), [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173) (FUN-410-33), [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174) (Rest, Bilanz). Der Quelltext liegt auf `main`; ein Paket 4.1.9 wurde nicht gebaut (`Version::CURRENT` bleibt 4.1.8) |
 
 ## Prüfbereiche und Status
 
@@ -32,10 +33,10 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 |----|-------------|--------|
 | #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)) | Sicherheit, Kryptografie & Zugriffskontrolle | abgeschlossen: 23 Befunde behoben, 2 bewusst akzeptiert, 1 verworfen, 1 an PR #3 übergeben |
 | #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)) | Datenbank-Schema, Migrationen & Upgrade-Pfad (`v23 → v25 → v26`) | abgeschlossen: 3 Befunde behoben, 1 dokumentiert, 1 verworfen (DB-410-01) |
-| #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) | Features & Workflows seit 3.5.0 (Funktionsprüfung) | abgeschlossen: 24 Befunde behoben, 12 offen (Funktionslücken, Entscheidung in PR #6), 2 akzeptiert, 1 verworfen |
+| #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) | Features & Workflows seit 3.5.0 (Funktionsprüfung) | abgeschlossen: 39 Befunde (FUN-410-01 … -39), davon 37 behoben und 2 verworfen (-34, -39); die ursprünglich offenen Funktionslücken sind in 4.1.6 bis 4.1.9 geschlossen |
 | #4 ([#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165)) | Regressionen, Altlasten, PHP 8.4.1+/8.5 | abgeschlossen: CI-Wächter für 8.4/8.5, 24 Befunde behoben (2 SEC, 22 FUN inkl. FUN-410-36 aus PR #3), 0 verworfen |
-| #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166), Zwischenstand) | Performance, Caching, Core Web Vitals | Zwischenstand: 47 Befunde behoben, 1 akzeptiert, 1 offen (PERF-410-49, WXR-Import getrennt); dazu FUN-410-17/18/19, SEC-410-26 und DOC-410-01 behoben; Gesamt-Review und Folgearbeiten ausstehend |
-| #6 | Tests, Dokumentation, Release-Fertigstellung | ausstehend |
+| #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166), Zwischenstand) | Performance, Caching, Core Web Vitals | abgeschlossen bis auf PERF-410-49: 49 Befunde (PERF-410-01 … -49), davon 47 behoben, 1 akzeptiert (-46) und 1 offen (-49, WXR-Import, bewusst getrennt); dazu FUN-410-17/18/19, SEC-410-26 und DOC-410-01 behoben. Folgearbeiten ohne Befund-ID: siehe „Abschlussbilanz“ |
+| #6 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)) | Abschluss: offene Funktionslücken, Tests, Dokumentation, Abschlussbilanz | abgeschlossen: siehe „PR #6: Audit-Abschluss und Abschlussbilanz“ |
 
 ## Methodik
 
@@ -88,6 +89,7 @@ Querverweise in andere Prüfbereiche:
 | DB-410-01 | – | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish`, Neuinstallation angeblich nicht | Verworfen in PR #2 (Laufzeittest: beide Wege identisch, siehe unten) |
 | DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): neue Pakete 4.1.5 mit Manifest und Prüfsummen; die 4.1.0-Pakete bleiben zur Nachvollziehbarkeit liegen |
 | DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 (mit PR #2: 33) aus; `DOC/FILESTRUCTUR.md` in PR #2 bereits korrigiert | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)): 4.1.0-Eintrag auf 32 korrigiert, 4.1.5 nennt 35 |
+| DOC-410-03 | LOW | `DOC/workflow/specs/v4.1/SCHEMA-v26.md:20`, `01-IDENTITY.md:254`, `02-MEDIA.md:92`, `Changelog.md` (v4.1.0, „Hinweise zum Update“) | Spezifikation und Changelog versprachen, `capabilities_v26` vergebe `security.sso` und `media.tools` an Standardrollen (mit Marker in `settings`). Umgesetzt ist nur die Übernahme von `posts.publish`/`pages.publish` (ohne Marker); `media.tools` gibt es nicht, die übrigen neuen Rechte hat bewusst nur „admin“ | [x] Behoben in 4.1.9 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)): Dokumente an das Verhalten angepasst, Kommentar im `MigrationManager` korrigiert |
 
 ### Details
 
@@ -297,10 +299,10 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 | FUN-410-04 | LOW | Freigabe / Sammelaktion | `CMS/core/Services/Content/ContentWorkflow.php:300` | Sammelaktion „Entwurf“ setzt eingereichte Inhalte ohne Begründung zurück und erschien als begründete Rückgabe | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163), Vermerk im Verlauf) |
 | FUN-410-05 | MEDIUM | Block-Vorlagen | `CMS/core/Services/ReusableBlocks/ReusableBlockService.php:483` | Verschachtelungsgrenze (3) nur beim Rendern: tiefere Ebenen fehlten im Frontend still | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-06 | MEDIUM | Block-Vorlagen | `CMS/core/Services/ReusableBlocks/ReusableBlockService.php:564` | Löschen einer Vorlage aktualisierte nur direkte Verwendungen, nicht mittelbare (Beitrag → B → A) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-07 | MEDIUM | Block-Vorlagen | `CMS/core/Services/EditorJs/EditorJsAssetService.php:89`, `CMS/assets/js/editor-init.js:27` | Werkzeug „Vorlagen“ steht in jedem Editor.js-Editor (auch Wissensdatenbank, Hub-Sites); dort wird keine Verwendung erfasst (keine Löschwarnung, kein Neuindizieren) | [ ] Offen → Entscheidung PR #6 |
+| FUN-410-07 | MEDIUM | Block-Vorlagen | `CMS/core/Services/EditorJs/EditorJsAssetService.php:89`, `CMS/assets/js/editor-init.js:27` | Werkzeug „Vorlagen“ steht in jedem Editor.js-Editor (auch Wissensdatenbank, Hub-Sites); dort wird keine Verwendung erfasst (keine Löschwarnung, kein Neuindizieren) | [x] Behoben in 4.1.9 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)): „Vorlagen“ fehlt in der Block-Auswahl und Schnellwahl der Editoren für Wissensdatenbank und Hub-Sites; vorhandene Blöcke bleiben ladbar |
 | FUN-410-08 | MEDIUM | Ablaufdaten | `CMS/core/Services/Content/ContentExpiryService.php:177` | Abgelaufen, zurückgestuft und mit gleichem Datum wieder veröffentlicht → lief nie wieder ab | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-09 | MEDIUM | Ablaufdaten / Wissensdatenbank | `CMS/core/Services/Content/ContentExpiryService.php:154`, `CMS/core/Services/Knowledgebase/Http/PublicController.php:245` | Einstellung 410 griff für Wissensdatenbank-Einträge nie | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-10 | LOW | Freigabe | `CMS/core/Services/Content/ContentWorkflow.php:350` | „Zurückgezogen“ löst keinen eigenen Hook aus; Prüfende werden nicht benachrichtigt | [ ] Offen → Entscheidung PR #6 |
+| FUN-410-10 | LOW | Freigabe | `CMS/core/Services/Content/ContentWorkflow.php:350` | „Zurückgezogen“ löst keinen eigenen Hook aus; Prüfende werden nicht benachrichtigt | [x] Behoben in 4.1.9 ([#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170)): Hook `cms_content_withdrawn`, Benachrichtigung der Prüfenden |
 | FUN-410-11 | LOW | Freigabe | `CMS/core/Services/Content/ContentWorkflow.php:461` | `submit()` prüfte den Zustandswechsel nicht (Verlauf und Benachrichtigung trotz parallelem Statuswechsel) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-12 | LOW | Vorschau-Links | `CMS/core/Services/Content/ContentWorkflow.php:618` | Vorschau-Links auch für bereits öffentliche Inhalte (nur die Oberfläche verhinderte es) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-13 | LOW | Ablaufdaten | `CMS/core/Services/Content/ContentExpiryService.php:240` | Zurückstufen durch Ablauf meldete `cms_content_status_changed` nicht (Webhooks, Verlauf) | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
@@ -318,17 +320,17 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 | FUN-410-25 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/S3Client.php:82`, `:114` | Ein kurzer Fehler eines Teils brach den ganzen Multipart-Upload ab; keine Grenze von 10 000 Teilen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-26 | MEDIUM | Offsite-Backups | `CMS/core/Services/Backup/OffsiteBackupService.php:282` | Backups, die bei unvollständiger Konfiguration entstanden, wurden nach der Korrektur nie hochgeladen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-27 | HIGH | Zahlungen | `CMS/core/Services/Payments/StripeGateway.php:160`, `MollieGateway.php:122` | Erstattungen und Rückbuchungen erreichen nie den Status `refunded` (kein Abo-Ende, keine Stornorechnung) | [x] Behoben in 4.1.7 ([#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168)): Stripe `charge.refunded`/`charge.dispute.created`, Mollie `amountRefunded`/`amountChargedBack` → `refunded`, Stornorechnung, Abo-Ende |
-| FUN-410-28 | MEDIUM | Zahlungen / Mitglieder | `CMS/core/SubscriptionManager.php:184`, `:396` | Keine Kulanzzeit bis zum Eingang der Verlängerung; `current_period_end` wird nicht angezeigt; „Nächste Verlängerung“ auch für Rechnungs-Abos | [ ] Offen → Entscheidung PR #6 |
+| FUN-410-28 | MEDIUM | Zahlungen / Mitglieder | `CMS/core/SubscriptionManager.php:184`, `:396` | Keine Kulanzzeit bis zum Eingang der Verlängerung; `current_period_end` wird nicht angezeigt; „Nächste Verlängerung“ auch für Rechnungs-Abos | [x] Behoben in 4.1.9 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)): Kulanzzeit für Abos mit Anbieter-Verlängerung, `current_period_end` in der Anzeige, „Nächste Verlängerung“ nur bei Anbieter-Verlängerung |
 | FUN-410-29 | MEDIUM | Papierkorb / Medien | `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php:79` | Endgültig gelöschte Hub-Sites blieben im Verwendungsindex der Medien | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-30 | MEDIUM | Papierkorb / Recht | `CMS/core/Services/Trash/PageTrashProvider.php:31` | Seite der Barrierefreiheitserklärung war nicht gegen endgültiges Löschen geschützt | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-31 | LOW | Papierkorb | `CMS/core/Services/Trash/PostTrashProvider.php:85`, `PageTrashProvider.php:125` | Freigabeverlauf und Vorschau-Links blieben nach dem Löschen stehen | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
 | FUN-410-32 | MEDIUM | Tabellen / Hub-Sites | `CMS/admin/modules/tables/TablesModule.php:25` | Seite „Tabellen“ lud, löschte und duplizierte über die ID auch Hub-Sites (endgültig, am Papierkorb vorbei); Liste filterte erst nach `LIMIT 200` | [x] Behoben in PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)) |
-| FUN-410-33 | MEDIUM | Plugin cms-importer | `CMS/plugins/cms-importer/includes/trait-admin-cleanup.php:99` | „Zurücksetzen“ löscht Beiträge/Seiten ohne Lösch-Hooks (Verwendungsindizes veraltet) | [ ] Offen → Entscheidung PR #6 |
+| FUN-410-33 | MEDIUM | Plugin cms-importer | `CMS/plugins/cms-importer/includes/trait-admin-cleanup.php:99` | „Zurücksetzen“ löscht Beiträge/Seiten ohne Lösch-Hooks (Verwendungsindizes veraltet) | [x] Behoben in 4.1.9 ([#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173)): abhängige Daten, Caches und Sitemaps, Hook `cms_importer_content_reset` |
 | FUN-410-34 | LOW | Wissensdatenbank | `CMS/core/Services/Knowledgebase/Repository/EntryRepository.php:1217` | CSV-Import aktualisiert Einträge im Papierkorb | Verworfen bei Nachprüfung in 4.1.8 ([#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169)): `importPresetEntries()` überspringt Einträge im Papierkorb (`EntryRepository.php:909`, schon vor Prüfbeginn); Regressionstest ergänzt |
 | FUN-410-35 | LOW | Feeds | `CMS/core/Services/Feed/AggregatorSettings.php:288` | Aufbewahrung unter 7 Tagen leert wöchentliche Digests | [x] Behoben in 4.1.8 ([#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169)): 1–6 Tage werden auf 7 angehoben, 0 = nie löschen |
 | FUN-410-36 | LOW | Altlast | `CMS/core/PageManager.php:218` | `PageManager::deletePage()` ohne Papierkorb und Hooks, ohne Aufrufer | [x] Behoben in PR #4 ([#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165), verschiebt in den Papierkorb) |
-| FUN-410-37 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:427` | Mollie-Abo wird innerhalb der Transaktion angelegt; ein Rollback danach kann zu einem zweiten Abo führen | [ ] Offen → Entscheidung PR #6 |
-| FUN-410-38 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:592` | `renewalFailed` meldet `order.failed` mit `order_id: 0`; ohne bezahlte Vorlage entsteht keine Folgebestellung/Rechnung | [ ] Offen → Entscheidung PR #6 |
+| FUN-410-37 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:427` | Mollie-Abo wird innerhalb der Transaktion angelegt; ein Rollback danach kann zu einem zweiten Abo führen | [x] Behoben in 4.1.9 ([#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172)): Mollie-Abo entsteht erst nach dem Commit |
+| FUN-410-38 | LOW | Zahlungen | `CMS/core/Services/Payments/PaymentService.php:592` | `renewalFailed` meldet `order.failed` mit `order_id: 0`; ohne bezahlte Vorlage entsteht keine Folgebestellung/Rechnung | [x] Behoben in 4.1.9 ([#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171)): `order_id` der Bestellung des Abos, Vorlage mit Rückfall, Warnung und Hook ohne Vorlage |
 | FUN-410-39 | – | Webhooks | `CMS/core/Services/Webhooks/WebhookService.php:316` | Doppelzustellung bei überlappendem Cron | Verworfen (wie SEC-410-06: `CronRunnerService` hält `flock`) |
 
 Querverweis (behoben in PR #5, [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): **PERF-410-01:** *Monitor → Health-Check/Antwortzeit/Warnungen* brauchen 5–8 s je Aufruf (blockierende HTTP-Prüfungen im Web-Request).
@@ -358,7 +360,9 @@ Querverweis (behoben in PR #5, [#166](https://github.com/PS-PhinIT/365CMS.DE/pul
   - Der Cron holt die drei neuesten lokalen Backups ohne Statuszeile nach.
 - **FUN-410-32:** Laden, Speichern, Löschen und Duplizieren gelten nur für Zeilen mit `content_mode <> 'hub'` und `trashed_at IS NULL`. Der Filter läuft in SQL vor dem `LIMIT`.
 
-### Offen: Funktionslücken mit Entscheidungsbedarf
+### Funktionslücken mit Entscheidungsbedarf (Stand 15.11.2026, inzwischen geschlossen)
+
+Status am Ende der Prüfung: FUN-410-17/18/19, -21 und -27 in 4.1.6/4.1.7 behoben, FUN-410-10, -33, -37 und -38 in 4.1.9 (PR [#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170) bis [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173)), FUN-410-07 und -28 im Abschluss-PR (siehe „PR #6“). Der ursprüngliche Text bleibt zur Nachvollziehbarkeit stehen.
 
 Diese Punkte sind keine Regressionen, sondern unvollständige Funktionen. Sie brauchen eine Produktentscheidung, weil der Umbau über einen Fix hinausgeht. Die Entscheidung fällt mit der Release-Freigabe in PR #6: umsetzen, auf 4.1.1 verschieben oder in den Release-Notizen als Einschränkung nennen.
 
@@ -490,7 +494,7 @@ FUN-410-36 aus PR #3 (`PageManager::deletePage()`) ist ebenfalls in PR #4 behobe
   - Alle 136 Admin-Einstiegsdateien sind im Katalog oder dokumentierte Aliase/Endpunkte, alle Alias- und Legacy-Ziele existieren.
   - Alle fest verdrahteten `/admin/…`-, `/member/…`- und `/api/v1/…`-Verweise in PHP und JS haben eine Datei oder Route. Weiterleitungen in `ThemeRouter` und Downloads stimmen.
 - **Verwaiste Einstellungen:** Benachrichtigungseinstellungen im Mitgliederbereich sind als „noch nicht angebunden“ gekennzeichnet. Die Medien-Performance-Schalter sind angebunden.
-- **Hinweis:** `CMS/core/Services/ContentLanguageCopyService.php` hat keinen Aufrufer (toter Code, Verhalten wie 3.5.0); Entfernen mit PR #6 prüfen.
+- **Hinweis:** `CMS/core/Services/ContentLanguageCopyService.php` hat keinen Aufrufer (toter Code, Verhalten wie 3.5.0). Entscheidung im Abschluss: bleibt bestehen, weil der Dienst in `DOC/core/SERVICES.md` als Dienst für Plugins geführt wird (wie `PageManager::deletePage()`); ein Entfernen gehört in ein Major-Release.
 
 ### Verifikation PR #4
 
@@ -570,7 +574,7 @@ Zwischen-PR [#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166). Der abschli
 | PERF-410-46 | LOW | Blockierende Arbeit | `CMS/admin/modules/feeds/FeedAggregatorModule.php:247` | Feed-Aggregator: Admin-Aktionen holen bis zu 25 Feeds nacheinander im POST-Request | Akzeptiert (Entscheidung 15.11.2026: höchstens 25 Feeds je Admin-Aktion sind vertretbar) |
 | PERF-410-47 | LOW | Blockierende Arbeit | `CMS/plugins/cms-importer/includes/class-importer.php:1138` | Importer lädt jedes entfernte Bild nacheinander im Import-POST (20 s Timeout je Bild, ohne Zeitbudget) | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)): 10 s je Bild, Zeitbudget 120 s je Lauf (Filter `cms_importer_image_budget_seconds`), gestörte Hosts übersprungen; übrige Bilder bleiben extern verlinkt und werden gemeldet |
 | PERF-410-48 | LOW | Blockierende Arbeit | `CMS/core/Services/MediaService.php:1129` | Bild-Upload erzeugt Thumbnails, WebP und AVIF aller Größen synchron im Upload-Request | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)): AVIF-Kodierung nach der Antwort (FPM/LiteSpeed), Thumbnails und WebP weiter sofort |
-| PERF-410-49 | MEDIUM | Cron/Batch | `plugins/cms-importer/includes/class-admin.php:794` | WXR-Import komplett in einem Web-Request (ganzes DOM, Bilddownloads, ohne Zeitbudget und Fortsetzung) | [ ] Offen, eigener Punkt (Entscheidung 15.11.2026: WXR-Import getrennt betrachten) |
+| PERF-410-49 | MEDIUM | Cron/Batch | `plugins/cms-importer/includes/class-admin.php:794` | WXR-Import komplett in einem Web-Request (ganzes DOM, Bilddownloads, ohne Zeitbudget und Fortsetzung) | [ ] Offen, bewusst nicht Teil dieses Abschlusses (Entscheidung 15.11.2026: WXR-Import getrennt betrachten); bekannte Einschränkung, siehe „Abschlussbilanz“ |
 
 ### Messung vorher/nachher
 
@@ -640,3 +644,119 @@ Die Umsetzungs-Cluster haben Punkte außerhalb ihrer Dateien gemeldet. Sie sind 
 - `php -l` (mit `error_reporting=-1`) über alle geänderten und neuen PHP-Dateien ohne Fehler.
 - `php TESTS/run-all.php` mit MariaDB: 35 Suiten, 0 fehlgeschlagen. `release-4.1.0` hat jetzt 552 Prüfungen, darunter sechs neue Dateien `perf-*.php` und `final-410.php`.
 - Laufzeitmessung vorher/nachher wie oben, Kommentar-Rundlauf als anonymer Besucher.
+
+---
+
+## PR #6: Audit-Abschluss und Abschlussbilanz (2026-11-17)
+
+Abschluss-Pull-Request [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174); in der Planung der 4.2.0-Arbeiten „PR #0“ genannt. Er schließt den Prüflauf 4.1.0 ab, bevor die Entwicklung von 4.2.0 (Schema v27) beginnt. Es ist keine neue Prüfung, sondern Abarbeiten der offenen Punkte, Angleich von Protokoll und Changelog und die Bilanz.
+
+### Vorgehen
+
+1. Alle Protokolle (`RELEASE-AUDIT-4.1.0`, `FOLGEAUDIT-2026-10-14`, `-11-08`, `-11-09`, `-11-12`) und `DOC/workflow/specs/v4.1/PROGRESS.md` nach `[ ] Offen`, `OFFEN-xx` und „ausstehend“ durchsucht; jeden Treffer am Code geprüft.
+2. Protokollstand gegen `main` abgeglichen. FUN-410-10, -33, -37 und -38 waren am 16.11.2026 bereits umgesetzt (PR [#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170) bis [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173)); Protokoll und Changelog führten sie noch als offen.
+3. Die zwei verbliebenen Funktionslücken umgesetzt (FUN-410-07, FUN-410-28), je mit Regressionstest und Laufzeitprüfung (MariaDB 10.11 bzw. Chromium).
+4. Schema-Marke v26 und Rechte-Übernahme `capabilities_v26` geprüft; die dabei gefundene Abweichung zwischen Spezifikation und Umsetzung als DOC-410-03 korrigiert.
+5. Abschlussbilanz erstellt.
+
+### Details
+
+#### FUN-410-07 (MEDIUM): „Vorlagen“ in Wissensdatenbank und Hub-Sites
+
+- **Ursache:** Das Werkzeug „Vorlagen“ (`reusableBlock`) steht über die `EditorJsBlockRegistry` in jedem Editor.js-Editor. Den Nutzungsindex (`reusable_block_usage`) pflegt `ReusableBlockHooks` nur für Beiträge und Seiten. In der Wissensdatenbank und in Hub-Sites fehlten daher „Verwendet in“, Löschwarnung und Neuindizierung.
+- **Behebung (Variante „ausblenden“):**
+  - `editor-init.js` registriert das Werkzeug in Editoren innerhalb von `.editorjs-wrap--cms-knowledgebase` und `.hub-editorjs-holder` ohne `toolbox`: Es erscheint nicht in der Block-Auswahl.
+  - `EditorJsAssetService` lässt die Schnellwahl „Vorlagen“ im Wissensdatenbank-Editor weg.
+  - Das Werkzeug bleibt registriert. Bereits eingefügte Blöcke laden und gehen beim Speichern nicht verloren (ein Werkzeug ganz zu entfernen, würde sie verwerfen).
+- **Prüfung im Browser** (Chromium, Prüfstand mit den ausgelieferten Editor-Bundles und `editor-init.js`; je Editor ein Dokument mit einem Block `reusableBlock` und `id` 7):
+
+  | Editor | Einträge in der Block-Auswahl | „Vorlagen“ | Block nach dem Speichern |
+  |--------|-------------------------------|-----------|--------------------------|
+  | Beitrag/Seite (`default`) | 21 | ja | `reusableBlock:7` erhalten |
+  | Block-Vorlage (`cms-reusable-block`) | 21 | ja (verschachtelte Vorlagen bleiben möglich) | erhalten |
+  | Wissensdatenbank (`cms-knowledgebase`) | 20 | nein | erhalten |
+  | Hub-Site (`hub-editorjs-holder`) | 20 | nein | erhalten |
+
+  Gegenprobe mit dem alten `editor-init.js`: alle vier Editoren bieten „Vorlagen“ an.
+- **Grenzen:** Einfügen über die Block-Zwischenablage oder einen Import bleibt möglich; dort fehlt der Index weiter. Die Alternative, den Index um `kb` und `hub_site` zu erweitern, wurde nicht umgesetzt. Nicht im Browser geprüft: der echte Seiten-Rundlauf (Anmeldung, Formular); der Prüfstand lädt dieselben Skripte ohne Server.
+- **Tests:** `TESTS/release-4.1.0/closure-410.php`.
+
+#### FUN-410-28 (MEDIUM): Kulanzzeit und Anzeige der Verlängerung
+
+- **Ursache:** `getUserSubscription()` sperrte ein Abo sofort mit `end_date`; kam die Verlängerung des Anbieters Minuten oder Stunden später (Webhook-Verzug, Wiederholung der Abbuchung), verlor das Mitglied kurz den Zugang. Die Einstellung „Kulanzzeit nach Ablauf“ (`grace_period_days`, Standard 3) wirkte nirgends, der Hinweis nannte sie trotzdem. Zusätzlich zeigte das Mitglied „Nächste Verlängerung“ auch für Abos per Rechnung und manuell zugewiesene Abos, obwohl dort nichts verlängert wird, und `current_period_end` wurde nie angezeigt.
+- **Behebung:**
+  - `getUserSubscription()`: Abos mit wiederkehrender Zahlung beim Anbieter (`provider_subscription_id` gesetzt), nicht gekündigt (`cancelled_at` leer) und mit Status `active` behalten den Zugang bis zu `grace_period_days` Tage über `end_date` hinaus. Kulanzzeit 0 schaltet das ab. Gekündigte, erstattete, per Rechnung bezahlte und manuell zugewiesene Abos enden mit `end_date`.
+  - `getSubscriptionRenewalNotice()`: Fälligkeit zuerst aus `current_period_end`, dann wie bisher. „Nächste Verlängerung“ nur bei Anbieter-Verlängerung (nicht gekündigt, nicht `lifetime`, Schalter „Automatische Verlängerung“ an). Der Satz zur Kulanzzeit erscheint nur dort, wo sie wirkt; bei Rechnungs-Abos entfällt die bisherige, wirkungslose Angabe.
+- **Laufzeitprüfung** (MariaDB 10.11, echte Abfrage aus `getUserSubscription()`, 11 Fälle): laufendes Abo und `lifetime` → Zugang; Rechnungs-Abo 1 Tag abgelaufen → kein Zugang; Anbieter-Abo 1 Tag und 71 Stunden überfällig → Zugang; Anbieter-Abo 4 Tage überfällig → kein Zugang; gekündigt, ohne Abo-ID, Status `cancelled` oder `expired` → kein Zugang; Kulanzzeit 0 → kein Zugang. Gegenprobe ohne die Änderung: die zwei Kulanz-Fälle schlagen fehl.
+- **Verhaltensänderung für Bestandsinstallationen:** Mit Stripe- oder Mollie-Abos gilt jetzt die eingestellte Kulanzzeit (Standard 3 Tage). Wer das nicht will, setzt sie unter *Abos → Pakete* auf 0.
+- **Grenzen:** Die Admin-Übersichten (`getRenewalOverview()`, Benutzer- und Gruppenlisten) rechnen weiter mit `COALESCE(next_billing_date, end_date)` und kennen die Kulanzzeit nicht. Die Ereignisse beim Anbieter werden nicht verändert.
+- **Tests:** `TESTS/release-4.1.0/closure-410.php` (Hinweis, Quelltext der Abfrage).
+
+#### FUN-410-10, -33, -37, -38 (bereits in PR #170 bis #173 umgesetzt, hier nachgetragen)
+
+- **FUN-410-10** ([#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170)): Zurückziehen einer Einreichung löst `cms_content_withdrawn` aus und benachrichtigt die Prüfenden (In-App und Mail).
+- **FUN-410-38** ([#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171)): `cms_payment_failed` und Webhook `order.failed` tragen bei fehlgeschlagener Verlängerung die letzte Bestellung des Abos statt 0. Vorlage für Folgebestellungen: letzte bezahlte Bestellung beim Anbieter, sonst letzte bezahlte oder erstattete Bestellung des Pakets. Ohne Vorlage: Warnung im Log (Kanal `payments`) und Hook `cms_subscription_renewal_unbilled`.
+- **FUN-410-37** ([#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172)): Das Mollie-Abo entsteht erst nach dem Commit der Transaktion. Nach einem Rollback legt die Wiederholung des Ereignisses das Abo an, es gibt kein zweites. Schlägt der Aufruf beim Anbieter nach dem Commit fehl, steht der Fehler am Ereignis.
+- **FUN-410-33** ([#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173)): „Zurücksetzen“ im Importer löscht abhängige Daten mit (Verwendungsnachweis, Block-Vorlagen-Nutzung, Freigabeverlauf, Vorschau-Links, Kategoriezuordnung, Revisionen, Kommentare), verwirft Cache und gespeicherte Sitemaps und löst `cms_importer_content_reset` aus.
+- **Aufräumen im Abschluss:** `PaymentService::createRenewalOrder()` trug nach FUN-410-38 zwei hintereinander stehende Doc-Blöcke; der verwaiste ist entfernt.
+
+#### DOC-410-03 (LOW): `capabilities_v26` in Spezifikation und Changelog
+
+- **Befund:** `SCHEMA-v26.md` (Punkt 5), `01-IDENTITY.md` und `02-MEDIA.md` sowie der Changelog 4.1.0 („Hinweise zum Update“) beschrieben `capabilities_v26` als einmaligen Schritt mit Marker in `settings`, der neue Rechte an Standardrollen vergibt (`security.sso`, `media.tools`). Umgesetzt ist etwas anderes: `ContentWorkflow::migrateCapabilities()` überträgt nur `posts.publish`/`pages.publish` (Redakteur, Autor), ohne Marker, idempotent über vorhandene Zeilen in `role_permissions`. Die Capability `media.tools` gibt es nicht (die Medien-Werkzeuge verlangen `manage_media`). `security.sso`, `backups.offsite`, `webhooks.manage`, `payments.manage` und `invoices.view` hat bewusst nur „admin“; `blocks.reusable` gehört zu den Standardrechten von „editor“.
+- **Bewertung:** kein Code-Fehler. Fehlende Migrationen gibt es nicht, weil die übrigen Rechte nicht vergeben werden sollen (so auch in den Hinweisen des Update-Manifests). Die Dokumente waren falsch.
+- **Behebung:** `SCHEMA-v26.md`, `01-IDENTITY.md`, `02-MEDIA.md`, Changelog 4.1.0 und der Kommentar in `MigrationManager::run()` beschreiben jetzt das tatsächliche Verhalten.
+- **Tests:** `TESTS/release-4.1.0/closure-410.php` („Schema- und Rechte-Marker v26“).
+
+### Prüfung der v26-Marker und der Rechte-Übernahme
+
+| Prüfpunkt | Ergebnis |
+|-----------|----------|
+| `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION` | beide `v26` |
+| Neuinstallation | Marke `v26` nach `install.php`-Ablauf, alle `FEATURE_TABLES_V26`, Pflichtspalten und `posts.status` VARCHAR(20) vorhanden (`TESTS/schema-upgrade`, MariaDB 10.11.14) |
+| Upgrade 4.0.0 (v25) → 4.1.x | gleiche Struktur wie Neuinstallation, Daten erhalten, wiederholte Läufe ohne Änderung; auch mit dem `sql_mode` von MySQL 8 |
+| Reparatur bei gespeicherter Marke v26 | fehlende Spalten (`login_attempts.action`, `mail_queue.locked_at` …) werden ergänzt (DB-410-05) |
+| `capabilities_v26` | läuft in `MigrationManager::run()` (Upgrade) und `SchemaManager::ensureFeatureSchema()` (Neuinstallation); Redakteur erhält `posts.publish`/`pages.publish`, Autor `posts.publish`; ein entzogenes Recht bleibt entzogen (DB-410-01) |
+| Ausstehende v26-Marker | keine. Offene Punkte zu v26 gibt es nicht; Schema v27 (4.2.0) ist nicht Teil dieses Abschlusses |
+
+**Grenze:** Der Upgrade-Pfad von 3.5.x (Schema v23) konnte nicht erneut laufen, weil der Git-Tag `V3.5.00` im Klon fehlt; die Suite meldet dann 20 statt 30 Prüfungen. Der Pfad wurde in PR #2 und PR #4 mit 30/30 geprüft; die Changelog-Einträge 4.1.5 bis 4.1.9 nennen keine Schemaänderung.
+
+### Abschlussbilanz
+
+Alle Befunde des Prüflaufs 4.1.0 (Stand 2026-11-17, gezählt aus den Befundtabellen dieses Protokolls):
+
+| Kennung | gemeldet | behoben | verworfen | akzeptiert | dokumentiert | offen |
+|---------|---------:|--------:|----------:|-----------:|-------------:|------:|
+| `SEC-410` (Sicherheit) | 28 | 25 | 1 | 2 | 0 | 0 |
+| `DB-410` (Schema, Migration) | 5 | 3 | 1 | 0 | 1 | 0 |
+| `FUN-410` (Funktion) | 60 | 58 | 2 | 0 | 0 | 0 |
+| `PERF-410` (Performance) | 49 | 47 | 0 | 1 | 0 | 1 |
+| `DOC-410` (Doku, Release) | 3 | 3 | 0 | 0 | 0 | 0 |
+| **Summe** | **145** | **136** | **4** | **3** | **1** | **1** |
+
+- **Verworfen (4):** SEC-410-06, DB-410-01, FUN-410-34, FUN-410-39. Jeder Treffer ist am Code oder zur Laufzeit widerlegt.
+- **Akzeptiert (3):** SEC-410-10 (Fail-open bei nicht lesbaren MFA-Einstellungen), SEC-410-11 (Forwarded-Proto ohne Trusted Proxy), PERF-410-46 (bis zu 25 Feeds je Admin-Aktion).
+- **Dokumentiert (1):** DB-410-03 (gemischte Kollation nach Upgrade von 3.5.x).
+- **Offen (1):** PERF-410-49 (WXR-Import).
+
+Nach Schweregrad: 0 CRITICAL, 13 HIGH (alle behoben: SEC-410-01, DB-410-02, DOC-410-02, FUN-410-14, -20, -21, -27 und PERF-410-01 bis -06), 58 MEDIUM, 71 LOW und 3 ohne Einstufung (verworfen). Das einzige offene Element, PERF-410-49, ist MEDIUM.
+
+### Offene Punkte und bekannte Einschränkungen
+
+- **PERF-410-49 (MEDIUM): WXR-Import in einem Request.** Bewusst nicht Teil des Abschlusses (Entscheidung 15.11.2026: getrennt betrachten). Der Import des Plugins `cms-importer` liest die ganze WXR-Datei als DOM, lädt Bilder nacheinander und läuft ohne Fortsetzung. Bilder haben seit 4.1.6 ein Zeitbudget von 120 s. **Einschränkung für Betreiber:** sehr große Exporte vor dem Import in mehrere WXR-Dateien teilen oder `max_execution_time` erhöhen. Lösung wäre ein Import als Auftrag mit Fortsetzung (`BatchJobService`) und braucht eine eigene Planung.
+- **Aus älteren Audits, weiter offen auf Wunsch des Maintainers:** `OFFEN-27` (Signatur der Core-Updatepakete, nur SHA-256 aus derselben Quelle; `FOLGEAUDIT-2026-11-09.md`).
+- **FUN-86 (`FOLGEAUDIT-2026-11-12.md`):** teilweise gelöst durch SEC-410-26. Vier Seiten (Zahlungen, Rechnungen, Block-Vorlagen, Webhooks) lassen sich über ihre Capability an Nicht-Admins vergeben. Alle übrigen Admin-Seiten verlangen weiter die Rolle „admin“; das öffnet nur eine Grundsatzentscheidung zum Adminbereich.
+- **`FOLGEAUDIT-2026-11-12.md`, Bereiche 6 und 7:** als „offen“ geführt. Bereich 6 (Geschwindigkeit) ist im Prüflauf 4.1.0 (PR #5) aufgegangen. Bereich 7 (Best Practices: PSR-12, Beispielkonfiguration, Sicherheits-Header) wurde nicht separat geprüft; der Prüflauf 4.1.0 deckt Altlasten und Regressionen ab (PR #4), aber keinen PSR-12-Lauf.
+- **Folgearbeiten aus PR #5 ohne Befund-ID** (Liste unter „Folgearbeiten für den abschließenden Teil von PR #5“). Stichprobe am Code am 2026-11-17:
+  - umgesetzt: `photoswipe.css` nur bei Bedarf.
+  - nicht umgesetzt: `meridian_load_categories()` fragt die Kategorien direkt ab; der Rückfall in `Bootstrap` ruft `cms_csp_runtime_tags()` ohne `true`; `MonitoringTrendService::measureResponseTime()` überspringt den Loopback nicht; `WebhookService::deliverDue()` läuft je Cron-Lauf zweimal (Mail-Queue- und stündlicher Hook); `generate_thumbnails` ist weiter standardmäßig aus (Produktentscheidung offen).
+  - nicht einzeln nachgeprüft: Verwerfen der Medienstatistik bei Upload und Löschen, Cursor-Neuaufbau und Restbudget im Cron, Retry-Begrenzung der Offsite-Uploads je Tageslauf (begrenzt ist die Gesamtzahl der Versuche: `MAX_ATTEMPTS` 3), DNS-Vorabauflösung in `FeedService`, Sprachschlüssel der Aufbewahrungsregeln.
+  - Bewertung: Optimierungen ohne Fehlverhalten; sie gehen in den Backlog und gelten nicht als offene Befunde.
+- **Release-Paket 4.1.9:** Der Quelltext mit den Korrekturen dieses Abschlusses liegt auf `main`, ein Paket wurde nicht gebaut (`Version::CURRENT`, Manifeste und `RELEASE/` bleiben bei 4.1.8; `TESTS/release-3.4.0` prüft das Paket zur aktuellen Version). Das Paket entsteht mit dem nächsten Release.
+
+### Verifikation (PR #6)
+
+- `php -l` über alle geänderten PHP-Dateien (`MigrationManager.php`, `SubscriptionManager.php`, `PaymentService.php`, `EditorJsAssetService.php`, `TESTS/release-4.1.0/closure-410.php`, `TESTS/release-4.1.0/run.php`): ohne Fehler. `node --check` für `editor-init.js`: ohne Fehler.
+- `php TESTS/run-all.php`: 35 Suiten, 0 fehlgeschlagen. `release-4.1.0` hat jetzt 593 Prüfungen (neu: `closure-410.php`).
+- Mit MariaDB 10.11.14: `CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-upgrade/run.php` 20 bestanden, auch mit `CMS_TEST_SQL_MODE` = MySQL-8-Standard (Pfad 3.5.x: siehe Grenze oben).
+- Laufzeit: Kulanzzeit, 11 Fälle gegen die echte Abfrage; Editor im Browser, vier Editoren, jeweils mit Gegenprobe (siehe Details).
+- Grenzen: PHP 8.3.6 (nicht 8.4/8.5), keine Läufe gegen Stripe, Mollie, Entra ID oder S3; MySQL 8 selbst nicht getestet.

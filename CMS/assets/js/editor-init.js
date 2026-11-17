@@ -5185,6 +5185,33 @@
         return pluginClass;
     }
 
+    // Release-Prüfung 4.1.0 (FUN-410-07): Der Nutzungsindex der Block-Vorlagen kennt Beiträge, Seiten und Vorlagen.
+    // In den Editoren der Wissensdatenbank und der Hub-Sites würde eine Vorlage ohne Löschwarnung und Neuindizierung
+    // eingebunden. Dort fehlt „Vorlagen“ in der Block-Auswahl; bereits vorhandene Blöcke bleiben ladbar und gehen beim
+    // Speichern nicht verloren.
+    var REUSABLE_BLOCK_TOOL = 'reusableBlock';
+    var REUSABLE_BLOCK_EXCLUDED_HOLDERS = '.editorjs-wrap--cms-knowledgebase, .hub-editorjs-holder';
+
+    function supportsReusableBlockInsert(holder) {
+        if (!holder || typeof holder.closest !== 'function') {
+            return true;
+        }
+
+        return holder.closest(REUSABLE_BLOCK_EXCLUDED_HOLDERS) === null;
+    }
+
+    function withoutToolbox(ToolClass) {
+        if (typeof ToolClass !== 'function') {
+            return ToolClass;
+        }
+
+        return class extends ToolClass {
+            static get toolbox() {
+                return undefined;
+            }
+        };
+    }
+
     function addTool(tools, toolName, definition, required) {
         var toolClass = required ? resolveToolClass(toolName) : tryResolveToolClass(toolName);
 
@@ -5396,7 +5423,7 @@
         };
     }
 
-    function buildTools(uploadUrl, csrfToken, options) {
+    function buildTools(uploadUrl, csrfToken, options, holder) {
         var tools = {};
         var inlineToolbar = false;
         var resolvedOptions = options && typeof options === 'object' ? options : {};
@@ -5566,7 +5593,14 @@
 
         EXTRA_BLOCKS.forEach(function (block) {
             var definition = block.definition && typeof block.definition === 'object' ? block.definition : {};
-            tools[block.name] = Object.assign(withBlockTunes(definition, availableBlockTunes), { class: block.toolClass });
+            var toolClass = block.toolClass;
+
+            // Release-Prüfung 4.1.0 (FUN-410-07): „Vorlagen“ nur dort einfügbar, wo der Nutzungsindex die Verwendung kennt.
+            if (block.name === REUSABLE_BLOCK_TOOL && !supportsReusableBlockInsert(holder)) {
+                toolClass = withoutToolbox(toolClass);
+            }
+
+            tools[block.name] = Object.assign(withBlockTunes(definition, availableBlockTunes), { class: toolClass });
         });
 
         return tools;
@@ -5666,7 +5700,7 @@
         }
 
         normalizedData = normalizeInitialData(initialData);
-        tools = buildTools(uploadUrl, csrfToken, resolvedOptions);
+        tools = buildTools(uploadUrl, csrfToken, resolvedOptions, holder);
         holder.dataset.editorState = 'loading';
         holder.setAttribute('role', holder.getAttribute('role') || 'region');
         holder.setAttribute('aria-label', holder.getAttribute('aria-label') || 'Block-Editor');

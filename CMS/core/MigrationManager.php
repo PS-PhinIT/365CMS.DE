@@ -295,9 +295,11 @@ class MigrationManager
         }
 
         // v26 (capabilities_v26): posts.publish/pages.publish werden ab 4.1.0 geprüft – Rollen, die bisher
-        // veröffentlichen durften, behalten das Recht. Die übrigen neuen Rechte (security.sso, blocks.reusable,
-        // backups.offsite, webhooks.manage, payments.manage, invoices.view) hat nur „admin“ (alle Rechte);
-        // anderen Rollen werden sie bewusst nicht automatisch erteilt.
+        // veröffentlichen durften, behalten das Recht. Die übrigen neuen Rechte (security.sso, backups.offsite,
+        // webhooks.manage, payments.manage, invoices.view) hat nur „admin“ (alle Rechte); anderen Rollen werden sie
+        // bewusst nicht automatisch erteilt. Ausnahme: `blocks.reusable` gehört zu den Standardrechten von „editor“
+        // (`cms_get_default_role_definitions()`); die Standardrechte ergänzen die gespeicherte Matrix, ein Eintrag in
+        // `role_permissions` ist dafür nicht nötig (ein ausdrücklicher Entzug mit granted = 0 bleibt wirksam).
         try {
             if (function_exists('cms_ensure_role_permissions_table')) {
                 cms_ensure_role_permissions_table($this->db);
