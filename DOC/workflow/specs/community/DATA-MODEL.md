@@ -5,8 +5,8 @@
 ## English (summary)
 
 Database design of the Community module: 27 tables with prefix `community_`, created by
-`Community\Database\Installer` through `SchemaManager` (schema v27, idempotent, one definition shared by fresh
-install, update and runtime check). It lists columns, keys and indexes, denormalised counters and their maintenance,
+`SchemaManager::getSchemaQueries()` (schema v27, idempotent, one definition shared by fresh
+install, update and runtime check; there is no separate installer class). It lists columns, keys and indexes, denormalised counters and their maintenance,
 status values, what is reused from existing core tables (users, roles, user_groups, notifications, messages,
 favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin tables (`{prefix}cmsforum_*`).
 
@@ -21,7 +21,7 @@ favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin 
 - Keine Fremdschlüssel-Constraints (wie im übrigen Core); Konsistenz über Dienste und den Reparatur-Job.
 - **Keine Site-Spalten** ([KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3).
 - Weiches Löschen über `status`, endgültiges Löschen nur über Papierkorb, Löschfristen oder DSGVO.
-- Jede Tabelle in einer einzigen Definition (`Installer::tables()`), genutzt von Neuinstallation, Update und Laufzeitprüfung (wie `admin_menu_layouts` in v25).
+- Jede Tabelle in einer einzigen Definition (umgesetzt in `SchemaManager::getSchemaQueries()`, nicht in einem `Installer`), genutzt von Neuinstallation, Update und Laufzeitprüfung (wie `admin_menu_layouts` in v25).
 - Benutzer, Rollen, Gruppen, Benachrichtigungen, Nachrichten, Favoriten und Mails bleiben in den **Core-Tabellen**; das Modul legt dafür keine eigenen Tabellen an.
 
 ### 2. Übersicht

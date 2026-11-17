@@ -1946,6 +1946,7 @@ class SchemaManager
                 last_read_post_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, topic_id),
+                KEY idx_community_read_states_topic (topic_id),
                 KEY idx_community_read_states_cleanup (updated_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Lesestatus je Thema'",
 

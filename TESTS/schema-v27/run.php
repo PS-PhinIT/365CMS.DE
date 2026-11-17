@@ -14,6 +14,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
+require_once __DIR__ . '/lib.php';
 T::$verbose = in_array('-v', $argv ?? [], true);
 
 $root = dirname(__DIR__, 2) . '/CMS/';
@@ -124,6 +125,10 @@ function v27Database(): Database
 
         public function execute(string $sql, array $params = []): \PDOStatement
         {
+            if (preg_match('/^\s*CREATE TABLE IF NOT EXISTS (cms_role_permissions) \(/', $sql) === 1) {
+                // MySQL-Definition der Tabelle als SQLite-Äquivalent (die MySQL-Syntax prüft schema-upgrade gegen MariaDB).
+                $sql = 'CREATE TABLE IF NOT EXISTS cms_role_permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT NOT NULL, capability TEXT NOT NULL, granted INTEGER NOT NULL DEFAULT 0, UNIQUE (role, capability))';
+            }
             $sql = str_replace('INSERT IGNORE INTO', 'INSERT OR IGNORE INTO', $sql);
             $sql = str_replace('ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)', 'ON CONFLICT(option_name) DO UPDATE SET option_value = excluded.option_value', $sql);
             $stmt = $this->sqlite->prepare($sql);
@@ -178,7 +183,7 @@ T::run('Die 27 Tabellen', static function () use ($queries, $migrationSource, $s
         T::check($sql !== '', "Definition für {$table} vorhanden (Neuinstallation)");
         T::check(str_contains($sql, "CREATE TABLE IF NOT EXISTS cms_{$table} ("), "{$table}: idempotentes CREATE mit Präfix");
         T::check(str_contains($sql, 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'), "{$table}: InnoDB, utf8mb4, feste Kollation utf8mb4_unicode_ci");
-        T::check(!preg_match('/\bJSON\b(?!_)/', $sql), "{$table}: kein Spaltentyp JSON (LONGTEXT *_json, MariaDB)");
+        T::check(!preg_match('/\bJSON\b(?!_)/i', $sql), "{$table}: kein Spaltentyp JSON (LONGTEXT *_json, MariaDB)");
         T::check(!preg_match('/FOREIGN\s+KEY|REFERENCES\s/i', $sql), "{$table}: keine Fremdschlüssel (Konsistenz über die Dienste, wie der übrige Core)");
         T::check(!preg_match('/legacy_|bbcode/i', $sql), "{$table}: keine legacy_*-Spalten und kein BBCode (E6: keine Datenübernahme aus cms-forum)");
         T::check(str_contains($sql, "COMMENT='Community: "), "{$table}: Tabellenkommentar");
@@ -195,11 +200,15 @@ T::run('Strict-Mode: keine NOT-NULL-Spalte ohne Default', static function () use
     foreach (V27_TABLES as $table) {
         foreach (v27Columns((string) $queries[$table]) as $column => $definition) {
             $checked++;
+            T::check(!preg_match("/DEFAULT\s+'0000-00-00/", $definition), "{$table}.{$column}: kein Null-Datum als Default (NO_ZERO_DATE)", $definition);
+            T::check(!preg_match('/\bCOLLATE\b/i', $definition), "{$table}.{$column}: keine eigene Kollation an der Spalte (gilt die der Tabelle: utf8mb4_unicode_ci)", $definition);
             if (stripos($definition, 'AUTO_INCREMENT') !== false) {
                 continue;
             }
             if (stripos($definition, 'NOT NULL') !== false) {
-                T::check(stripos($definition, ' DEFAULT ') !== false, "{$table}.{$column}: NOT NULL hat einen Default", $definition);
+                // Ein Default im COMMENT zählt nicht.
+                $withoutComment = (string) preg_replace("/\\s+COMMENT\\s+'(?:[^']|'')*'/i", '', $definition);
+                T::check(stripos($withoutComment, ' DEFAULT ') !== false, "{$table}.{$column}: NOT NULL hat einen Default", $definition);
             }
             // MySQL < 8.0.13 kennt keinen Default für TEXT/BLOB: solche Spalten sind NULL-fähig.
             if (preg_match('/^(?:TINY|MEDIUM|LONG)?(?:TEXT|BLOB)\b/i', $definition) === 1) {
@@ -220,11 +229,11 @@ T::run('Indizes', static function () use ($queries): void {
         $sql = (string) $queries[$table];
         $columns = v27Columns($sql);
         $indexes = v27Indexes($sql);
-        T::check(preg_match('/(PRIMARY KEY|AUTO_INCREMENT PRIMARY KEY)/', $sql) === 1, "{$table}: hat einen Primärschlüssel");
+        T::check(preg_match('/PRIMARY KEY/', $sql) === 1, "{$table}: hat einen Primärschlüssel");
         foreach ($indexes as $name => $index) {
             T::check(strlen($name) <= 64, "{$table}.{$name}: Bezeichner höchstens 64 Zeichen");
             T::check(str_starts_with($name, $index['unique'] ? 'uq_' : 'idx_') && str_contains($name, substr($table, 10)), "{$table}.{$name}: Name nach Schema uq_/idx_ + Tabelle");
-            T::check(!isset($names[$name]), "{$table}.{$name}: Indexname im ganzen Schema eindeutig (wie v26)");
+            T::check(!isset($names[$name]), "{$table}.{$name}: Indexname unter den 27 Tabellen eindeutig (wie v26)");
             $names[$name] = true;
             $bytes = 0;
             foreach ($index['columns'] as $part) {
@@ -262,7 +271,7 @@ T::run('Indizes', static function () use ($queries): void {
             'idx_community_posts_forum_time' => ['forum_id', 'status', 'created_at'],
             'idx_community_posts_created' => ['created_at'],
         ],
-        'community_read_states' => ['idx_community_read_states_cleanup' => ['updated_at']],
+        'community_read_states' => ['idx_community_read_states_topic' => ['topic_id'], 'idx_community_read_states_cleanup' => ['updated_at']],
         'community_attachments' => ['idx_community_attachments_post' => ['post_id', 'created_at']],
         'community_drafts' => ['idx_community_drafts_updated' => ['updated_at']],
         'community_reports' => ['idx_community_reports_open' => ['status', 'created_at'], 'idx_community_reports_handled' => ['status', 'handled_at'], 'idx_community_reports_forum' => ['forum_id', 'status', 'created_at']],
@@ -283,8 +292,44 @@ T::run('Indizes', static function () use ($queries): void {
     foreach (['community_forums' => 'uq_community_forums_slug', 'community_polls' => 'uq_community_polls_topic', 'community_badges' => 'uq_community_badges_slug', 'community_forum_permissions' => 'uq_community_forum_permissions_subject'] as $table => $name) {
         T::check(v27Indexes((string) $queries[$table])[$name]['unique'] ?? false, "{$table}.{$name} ist eindeutig");
     }
-    T::check(str_contains((string) $queries['community_posts'], 'PRIMARY KEY') && str_contains((string) $queries['community_posts'], 'ip_hash CHAR(64) NULL'), 'Beiträge: ip_hash nur als Hash (keine Klar-IP), NULL-fähig für die Löschfrist');
-    T::check(!preg_match('/\bip(_address)?\s+(VAR)?CHAR/i', implode("\n", array_intersect_key($queries, array_flip(V27_TABLES)))), 'keine Klar-IP-Spalte in den Community-Tabellen (SECURITY-PRIVACY §5)');
+    T::check(str_contains((string) $queries['community_posts'], 'ip_hash CHAR(64) NULL'), 'Beiträge: ip_hash nur als Hash (CHAR(64)), NULL-fähig für die Löschfrist');
+    // Keine Klar-IP, kein User-Agent, keine E-Mail-Adresse (Name der Spalte; neue Spalten fallen außerdem im Snapshot auf).
+    foreach (V27_TABLES as $table) {
+        foreach (v27Columns((string) $queries[$table]) as $column => $definition) {
+            if ($column === 'ip_hash') {
+                continue;
+            }
+            T::check(preg_match('/(^|_)(ip|addr|address|user_agent|ua|email|mail)(_|$)/', $column) !== 1, "{$table}.{$column}: keine Klar-IP, kein User-Agent, keine E-Mail-Spalte (SECURITY-PRIVACY §5)");
+        }
+    }
+});
+
+T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku)', static function () use ($queries, $root): void {
+    $golden = json_decode((string) @file_get_contents(__DIR__ . '/golden.json'), true);
+    T::check(is_array($golden), 'golden.json lesbar (Neu erzeugen: CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-v27/dump-golden.php)');
+    $golden = is_array($golden) ? $golden : [];
+    T::same(V27_TABLES, array_keys($golden), 'der Snapshot enthält genau die 27 Tabellen in der Reihenfolge von FEATURE_TABLES_V27');
+    $handoff = (string) @file_get_contents(dirname($root) . '/DOC/workflow/specs/community/HANDOFF-PR2-PR5.md');
+    $totalIndexes = 0;
+    foreach (V27_TABLES as $table) {
+        $expected = $golden[$table] ?? ['columns' => [], 'primary' => [], 'indexes' => []];
+        $ddl = v27ParseCreate((string) $queries[$table]);
+
+        // Definition in SchemaManager == Snapshot (Spalten mit Typ, NULL, Default, AUTO_INCREMENT; Primärschlüssel; Indizes).
+        T::same($expected['columns'], $ddl['columns'], "{$table}: Spalten (Name, Typ, NULL, Default, AUTO_INCREMENT) entsprechen dem Snapshot");
+        T::same($expected['primary'], $ddl['primary'], "{$table}: Primärschlüssel entspricht dem Snapshot");
+        T::same($expected['indexes'], $ddl['indexes'], "{$table}: Indizes (Name, UNIQUE, Spalten in Reihenfolge) entsprechen dem Snapshot");
+        T::same([], $ddl['columnCollations'], "{$table}: keine Kollation an Spalten");
+        $totalIndexes += count($expected['indexes']);
+
+        // Doku (HANDOFF §3) == Snapshot, in beide Richtungen und mit Typ, NULL, Default und Indexspalten.
+        T::check(preg_match('/^#### `' . preg_quote($table, '/') . '`[^\n]*\n(.*?)(?=^#{2,4} |\z)/ms', $handoff, $section) === 1, "HANDOFF hat einen Abschnitt für {$table}");
+        $doc = v27ParseHandoffSection($section[1] ?? '');
+        T::same($expected['columns'], $doc['columns'], "HANDOFF {$table}: Spaltentabelle entspricht dem Snapshot (Name, Typ, NULL, Default, Reihenfolge)");
+        T::same($expected['primary'], $doc['primary'], "HANDOFF {$table}: Primärschlüssel entspricht dem Snapshot");
+        T::same($expected['indexes'], $doc['indexes'], "HANDOFF {$table}: Indextabelle entspricht dem Snapshot (Name, Art, Spalten)");
+    }
+    T::same(62, $totalIndexes, 'insgesamt 62 Nicht-Primär-Indizes in den 27 Tabellen');
 });
 
 T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void {
@@ -349,6 +394,33 @@ T::run('Rechte: Katalog und Standards (CommunityCapabilities)', static function 
     T::check(str_contains($roles, "private const ROLES = ['admin', 'editor', 'author', 'member', 'moderator'];"), 'moderator ist Systemrolle (nicht umbenenn-/löschbar)');
     T::check(str_contains($roles, "'moderator' => 'Moderator',"), 'Beschriftung der Rolle moderator');
     T::check(str_contains($roles, "foreach (['editor', 'author', 'member', 'moderator'] as \$role) {") && str_contains($roles, "'community.moderate'] as \$cap) {"), 'Matrix-Standards (getDefaultPermissions) entsprechen den Standardrechten');
+    // Standardmatrix des Rollen-Editors („Standardrechte wiederherstellen“, Matrix-Anzeige) tatsächlich ausführen.
+    require_once ABSPATH . 'admin/modules/users/RolesModule.php';
+    $module = (new ReflectionClass('RolesModule'))->newInstanceWithoutConstructor();
+    $method = new ReflectionMethod('RolesModule', 'getDefaultPermissions');
+    $method->setAccessible(true);
+    /** @var array<string, array<string, bool>> $matrix */
+    $matrix = $method->invoke($module);
+    foreach (Caps::DEFAULT_GRANTS as $role => $grants) {
+        foreach ($grants as $capability) {
+            T::same(true, $matrix[$role][$capability] ?? null, "RolesModule::getDefaultPermissions: {$role} hat {$capability}");
+        }
+    }
+    foreach (['member', 'editor', 'author', 'moderator'] as $role) {
+        $allowedElevated = $role === 'moderator' ? [Caps::MODERATE] : [];
+        T::same($allowedElevated, array_values(array_intersect(Caps::ELEVATED, array_keys(array_filter($matrix[$role] ?? [])))), "RolesModule::getDefaultPermissions: {$role} hat nur die vorgesehenen erhöhten Community-Rechte");
+    }
+    foreach (Caps::ALL as $capability) {
+        T::same(true, $matrix['admin'][$capability] ?? null, "RolesModule::getDefaultPermissions: admin hat {$capability}");
+    }
+    // UserService::DEFAULT_ROLE_CAPABILITIES: letzter Rückfall; darf nie mehr Community-Rechte vergeben als vorgesehen.
+    $fallback = (new ReflectionClass(\CMS\Services\UserService::class))->getConstant('DEFAULT_ROLE_CAPABILITIES');
+    T::check(is_array($fallback), 'UserService::DEFAULT_ROLE_CAPABILITIES lesbar');
+    foreach (['member', 'editor', 'author', 'moderator'] as $role) {
+        $allowedElevated = $role === 'moderator' ? [Caps::MODERATE] : [];
+        T::same($allowedElevated, array_values(array_intersect(Caps::ELEVATED, (array) ($fallback[$role] ?? []))), "UserService::DEFAULT_ROLE_CAPABILITIES: {$role} hat nur die vorgesehenen erhöhten Community-Rechte");
+    }
+    T::check(in_array('moderator', \CMS\Auth\SSO\IdentityLinker::PRIVILEGED_ROLES, true), 'IdentityLinker::PRIVILEGED_ROLES enthält moderator (keine automatische Entra-Verknüpfung per E-Mail)');
     $users = $src('core/Services/UserService.php');
     T::check(preg_match('/REGISTRATION_BLOCKED_CAPABILITIES = \[(.*?)\];/s', $users, $blocked) === 1, 'UserService::REGISTRATION_BLOCKED_CAPABILITIES lesbar');
     foreach (Caps::ELEVATED as $capability) {
@@ -382,15 +454,12 @@ T::run('Rechte: Standardrollen in roles.php', static function () use ($root): vo
     }
     T::check(empty($definitions['moderator']['capabilities']['manage_settings']) && empty($definitions['moderator']['capabilities']['manage_users']), 'moderator hat keine Verwaltungsrechte des Cores');
     $loaded = cms_get_default_role_definitions()['moderator']['capabilities'];
-    T::same(array_merge(Caps::MODERATOR_BASE, Caps::DEFAULT_GRANTS['moderator']), array_keys($loaded), 'moderator: genau Grundrechte und Community-Standards');
+    T::same(array_merge(Caps::MODERATOR_BASE, Caps::DEFAULT_GRANTS['moderator']), array_keys($loaded), 'moderator: genau Grundrechte (Code-Standard, keine Zeilen) und Community-Standards');
 });
 
 T::run('capabilities_v27: Vergabe, Marker, Idempotenz', static function (): void {
     $expectedAll = [];
     foreach (Caps::DEFAULT_GRANTS as $role => $capabilities) {
-        if ($role === 'moderator') {
-            $capabilities = array_merge(Caps::MODERATOR_BASE, $capabilities);
-        }
         foreach ($capabilities as $capability) {
             $expectedAll[] = [$role, $capability];
         }
@@ -398,8 +467,8 @@ T::run('capabilities_v27: Vergabe, Marker, Idempotenz', static function (): void
 
     $db = v27Database();
     $granted = Caps::migrate($db);
-    T::same($expectedAll, $granted, 'Neuinstallation: Standardrechte und neue Rolle moderator mit Grundrechten');
-    T::same(2 + 2 + 2 + 10, count($granted), '16 Zeilen: member 2, editor 2, author 2, moderator 7 + 3');
+    T::same($expectedAll, $granted, 'Neuinstallation: nur die Standardrechte community.* (Katalog-Rechte)');
+    T::same(2 + 2 + 2 + 3, count($granted), '9 Zeilen: member 2, editor 2, author 2, moderator 3');
     T::same(1, (int) $db->get_var("SELECT COUNT(*) FROM cms_settings WHERE option_name = 'capabilities_v27'"), 'Marker capabilities_v27 gesetzt');
     T::same([], Caps::migrate($db), 'zweiter Lauf ändert nichts (einmalig)');
     $rows = v27Granted($db);
@@ -414,6 +483,17 @@ T::run('capabilities_v27: Vergabe, Marker, Idempotenz', static function (): void
         }
     }
     T::check(!isset($rows['admin']), 'admin erhält keine Zeilen (hat alle Rechte implizit)');
+    // Zeilen außerhalb des Rollen-Katalogs (read, edit_profile, view_content, …) erschienen im Rollen-Editor als „eigene
+    // Rechte“, und das Speichern der Matrix entzöge sie Mitglied, Editor und Autor: nur Katalog-Rechte eintragen.
+    $outsideCatalog = [];
+    foreach ($rows as $role => $capabilities) {
+        foreach (array_keys($capabilities) as $capability) {
+            if (!Caps::isCommunityCapability($capability)) {
+                $outsideCatalog[] = "{$role}:{$capability}";
+            }
+        }
+    }
+    T::same([], $outsideCatalog, 'nur Rechte des Rollen-Katalogs in role_permissions (keine „eigenen Rechte“, keine Entzüge anderer Rollen beim Speichern)');
     foreach (['member', 'editor', 'author'] as $role) {
         T::check(!isset($rows[$role]['community.moderate']), "{$role}: kein community.moderate");
     }
@@ -422,11 +502,11 @@ T::run('capabilities_v27: Vergabe, Marker, Idempotenz', static function (): void
     $db->execute("DELETE FROM cms_settings WHERE option_name = 'capabilities_v27'");
     T::same([], Caps::migrate($db), 'ohne Marker, aber mit vorhandenen Zeilen: nichts Neues, Marker wird wieder gesetzt');
     T::same(1, (int) $db->get_var("SELECT COUNT(*) FROM cms_settings WHERE option_name = 'capabilities_v27'"), 'Marker wieder gesetzt');
-    T::same(16, (int) $db->get_var('SELECT COUNT(*) FROM cms_role_permissions'), 'weiterhin 16 Zeilen (INSERT IGNORE)');
+    T::same(9, (int) $db->get_var('SELECT COUNT(*) FROM cms_role_permissions'), 'weiterhin 9 Zeilen (INSERT IGNORE)');
 });
 
 T::run('capabilities_v27: überschreibt nie, nimmt nie zurück', static function (): void {
-    // Ausdrücklich entzogenes Recht, vorhandene Rolle moderator (Grundrechte nur teilweise, ein Recht entzogen).
+    // Ausdrücklich entzogenes Recht, vorhandene Rolle moderator (ein Grundrecht gespeichert, ein Community-Recht entzogen).
     $db = v27Database();
     $db->execute("INSERT INTO cms_role_permissions (role, capability, granted) VALUES ('member', 'community.participate', 0), ('moderator', 'community.moderate', 0), ('moderator', 'comments.view', 1), ('editor', 'community.view', 1)");
     $granted = Caps::migrate($db);
@@ -435,20 +515,43 @@ T::run('capabilities_v27: überschreibt nie, nimmt nie zurück', static function
     T::same(1, $rows['member']['community.view'], 'daneben wird das fehlende Standardrecht vergeben');
     T::same(0, $rows['moderator']['community.moderate'], 'vorhandene Rolle moderator: Entzug bleibt');
     T::same(1, $rows['moderator']['community.view'], 'vorhandene Rolle moderator: Standardrecht ergänzt');
-    T::check(!isset($rows['moderator']['read']), 'vorhandene Rolle moderator erhält keine Grundrechte nachgetragen');
+    T::check(!isset($rows['moderator']['read']), 'vorhandene Rolle moderator: keine Zeilen für Grundrechte (sie kommen aus den Code-Standards in roles.php)');
     T::check(!in_array(['editor', 'community.view'], $granted, true) && in_array(['editor', 'community.participate'], $granted, true), 'vorhandenes Recht wird nicht erneut gemeldet');
 
     // Konten mit der Rolle moderator, aber noch keine Zeilen: ebenfalls vorhandene Rolle.
     $withUsers = v27Database();
     $withUsers->execute("INSERT INTO cms_users (id, username, role) VALUES (1, 'mo', 'moderator')");
     Caps::migrate($withUsers);
-    T::check(!isset(v27Granted($withUsers)['moderator']['read']), 'Konto mit Rolle moderator: Rolle gilt als vorhanden, keine Grundrechte nachgetragen');
-    T::same(1, v27Granted($withUsers)['moderator']['community.moderate'] ?? null, 'Konto mit Rolle moderator: Community-Standards trotzdem vergeben');
+    T::check(!isset(v27Granted($withUsers)['moderator']['read']), 'Konto mit Rolle moderator: keine Zeilen für Grundrechte');
+    T::same(1, v27Granted($withUsers)['moderator']['community.moderate'] ?? null, 'Konto mit Rolle moderator: Community-Standards vergeben (wirksam ohnehin über roles.php)');
 });
 
 T::run('capabilities_v27: Fehler setzen keinen Marker', static function (): void {
+    // Das Eintragen schlägt fehl, nachdem alles gelesen wurde (Trigger): der Marker darf nicht vorher gesetzt worden sein.
+    $db = v27Database();
+    $db->sqlite->exec("CREATE TRIGGER cms_role_permissions_abort BEFORE INSERT ON cms_role_permissions WHEN NEW.capability = 'community.moderate' BEGIN SELECT RAISE(ABORT, 'Schreibfehler'); END");
+    $threwMidway = false;
+    try {
+        Caps::migrate($db);
+    } catch (\Throwable) {
+        $threwMidway = true;
+    }
+    T::check($threwMidway, 'Fehler beim Eintragen wird gemeldet');
+    T::same(0, (int) $db->get_var("SELECT COUNT(*) FROM cms_settings WHERE option_name = 'capabilities_v27'"), 'Marker erst nach dem vollständigen Eintragen (Fehler mittendrin: kein Marker)');
+    $db->sqlite->exec('DROP TRIGGER cms_role_permissions_abort');
+    T::same(1, count(array_filter(Caps::migrate($db), static fn (array $pair): bool => $pair[1] === 'community.moderate')), 'Wiederholung (Datenbank-Update) trägt das fehlende Recht ein, ohne Vorhandenes zu verdoppeln');
+    T::same(9, (int) $db->get_var('SELECT COUNT(*) FROM cms_role_permissions'), 'danach vollständig: 9 Zeilen');
+
+    // Die Tabelle fehlt: der Schritt legt sie selbst an (update.php lädt roles.php nicht) und läuft durch.
     $db = v27Database();
     $db->sqlite->exec('DROP TABLE cms_role_permissions');
+    T::same(9, count(Caps::migrate($db)), 'fehlende Tabelle role_permissions wird angelegt, danach 9 Zeilen');
+    T::same(1, (int) $db->get_var("SELECT COUNT(*) FROM cms_settings WHERE option_name = 'capabilities_v27'"), 'Marker gesetzt, nachdem die Tabelle angelegt wurde');
+
+    // Nicht lesbare/unpassende Tabelle: Fehler an den Aufrufer, kein Marker.
+    $db = v27Database();
+    $db->sqlite->exec('DROP TABLE cms_role_permissions');
+    $db->sqlite->exec('CREATE TABLE cms_role_permissions (id INTEGER PRIMARY KEY)');
     $threw = false;
     try {
         Caps::migrate($db);
@@ -456,7 +559,7 @@ T::run('capabilities_v27: Fehler setzen keinen Marker', static function (): void
         $threw = true;
     }
     T::check($threw, 'Datenbankfehler wird an den Aufrufer gemeldet');
-    T::same(0, (int) $db->get_var("SELECT COUNT(*) FROM cms_settings WHERE option_name = 'capabilities_v27'"), 'ohne erfolgreiche Vergabe kein Marker (der Schritt läuft beim nächsten Durchlauf erneut)');
+    T::same(0, (int) $db->get_var("SELECT COUNT(*) FROM cms_settings WHERE option_name = 'capabilities_v27'"), 'ohne erfolgreiche Vergabe kein Marker (Datenbank-Update meldet ihn und wiederholt den Schritt)');
 });
 
 T::run('Einbindung (Quelltext)', static function () use ($src, $migrationSource, $schemaSource): void {
@@ -464,6 +567,15 @@ T::run('Einbindung (Quelltext)', static function () use ($src, $migrationSource,
     T::check(!preg_match('/Database::instance\(\)|Database::get_instance\(\)/', $caps), 'CommunityCapabilities ruft Database::instance() nicht auf (DB-410-02)');
     T::check(str_contains($caps, 'INSERT IGNORE INTO') && str_contains($caps, 'VALUES (?, ?, 1)'), 'INSERT IGNORE auf den eindeutigen Schlüssel uk_role_cap (kein SELECT-dann-INSERT-Race)');
     T::check(str_contains($caps, "public const MARKER = 'capabilities_v27';"), 'Marker heißt capabilities_v27');
+    // role_permissions: gleiche Definition wie cms_ensure_role_permissions_table() (update.php lädt roles.php nicht).
+    $normalize = static fn (string $text): string => trim((string) preg_replace('/\s+/', ' ', $text));
+    $rolesSource = $src('includes/functions/roles.php');
+    T::check(preg_match('/CREATE TABLE IF NOT EXISTS \{\$db->prefix\(\)\}role_permissions \((.*?)\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci/s', $rolesSource, $definitionA) === 1
+        && preg_match('/CREATE TABLE IF NOT EXISTS \{\$table\} \((.*?)\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci/s', $caps, $definitionB) === 1
+        && $normalize($definitionA[1]) === $normalize($definitionB[1]), 'CommunityCapabilities legt role_permissions mit derselben Definition an wie roles.php');
+    $runner = $src('core/DatabaseUpdateRunner.php');
+    T::check(str_contains($runner, "'option:' . \\CMS\\Services\\Community\\Support\\CommunityCapabilities::MARKER"), 'Datenbank-Update meldet einen fehlenden Marker capabilities_v27 (option:capabilities_v27)');
+    T::check(str_contains($src('core/Auth/SSO/EntraSettings.php'), "in_array(\$defaultRole, ['admin', 'moderator'], true)"), 'SSO: Standardrolle nie admin oder moderator');
     T::check(strpos($caps, 'INSERT IGNORE INTO') < strpos($caps, 'self::MARKER, gmdate'), 'der Marker wird erst nach der Vergabe geschrieben');
     T::check(str_contains($migrationSource, '\\CMS\\Services\\Community\\Support\\CommunityCapabilities::migrate($this->db);'), 'MigrationManager::run() führt capabilities_v27 aus (Upgrade)');
     T::check(str_contains($schemaSource, '\\CMS\\Services\\Community\\Support\\CommunityCapabilities::migrate($this->db);'), 'ensureFeatureSchema() führt capabilities_v27 aus (Neuinstallation, Laufzeit)');

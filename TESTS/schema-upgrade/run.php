@@ -13,6 +13,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
+require_once dirname(__DIR__) . '/schema-v27/lib.php';
 T::$verbose = in_array('-v', $argv ?? [], true);
 
 $repo = dirname(__DIR__, 2);
@@ -80,6 +81,18 @@ $structure = static function (string $db) use ($pdo): array {
 
     return $rows;
 };
+// Snapshot der 27 Community-Tabellen (TESTS/schema-v27/golden.json): die Datenbank muss ihm entsprechen (Spalten mit Typ, NULL,
+// Default, Primärschlüssel, Indizes), nicht nur der Neuinstallation.
+$golden = json_decode((string) file_get_contents(__DIR__ . '/../schema-v27/golden.json'), true) ?: [];
+$compareGolden = static function (PDO $pdo, string $db) use ($golden): void {
+    $actual = v27ReadStructure($pdo, $db, 'cms_', array_keys($golden));
+    T::same(27, count($golden), 'Snapshot golden.json enthält 27 Tabellen');
+    foreach ($golden as $table => $expected) {
+        T::same($expected['columns'], $actual[$table]['columns'], "{$table}: Spalten entsprechen dem Snapshot");
+        T::same($expected['primary'], $actual[$table]['primary'], "{$table}: Primärschlüssel entspricht dem Snapshot");
+        T::same($expected['indexes'], $actual[$table]['indexes'], "{$table}: Indizes entsprechen dem Snapshot");
+    }
+};
 $connections = static fn (): int => (int) $pdo->query("SHOW GLOBAL STATUS LIKE 'Connections'")->fetch(PDO::FETCH_NUM)[1];
 
 $sqlMode = (string) getenv('CMS_TEST_SQL_MODE');
@@ -125,7 +138,7 @@ try {
         return $out;
     };
 
-    T::run('Neuinstallation ' . $target, static function () use ($createDb, $step, $tmp, $fresh, $connections, $target, $pdo, $communityGrants, $communityCapabilities): void {
+    T::run('Neuinstallation ' . $target, static function () use ($createDb, $step, $tmp, $fresh, $connections, $target, $pdo, $communityGrants, $communityCapabilities, $compareGolden): void {
         $createDb($fresh);
         $result = $step($tmp . '/v41', $fresh, 'install');
         T::same([], $result['install_errors'] ?? ['?'], 'alle CREATE-Statements ohne Fehler');
@@ -136,6 +149,7 @@ try {
         T::check($connections() - $before <= 2, 'DB-410-02: erster Request öffnet nur eine Verbindung (keine Rekursion im Konstruktor)', (string) ($connections() - $before));
         T::same([], $boot['errors'] ?? ['?'], 'erster Request ohne Fehler');
         T::same([], $step($tmp . '/v41', $fresh, 'status')['missing'] ?? ['?'], 'Integritätsprüfung: nichts fehlt');
+        $compareGolden($pdo, $fresh);
 
         // capabilities_v27: Marker, Standardrechte und Rolle „moderator“ nach dem ersten Request der Neuinstallation.
         T::same(1, (int) $pdo->query("SELECT COUNT(*) FROM `{$fresh}`.cms_settings WHERE option_name = 'capabilities_v27'")->fetchColumn(), 'Marker capabilities_v27 gesetzt');
@@ -147,13 +161,16 @@ try {
         }
         T::same([], array_values(array_intersect(array_keys($granted['member'] ?? []), ['community.moderate', 'community.ban', 'community.manage', 'community.view_private_data'])), 'Mitglieder erhalten keine Moderations- oder Verwaltungsrechte');
         T::check(isset($granted['moderator']) && !isset($granted['moderator']['community.ban']) && !isset($granted['moderator']['community.manage']), 'moderator erhält kein ban/manage');
-        T::same(7, (int) $pdo->query("SELECT COUNT(*) FROM `{$fresh}`.cms_role_permissions WHERE role = 'moderator' AND capability NOT LIKE 'community.%' AND granted = 1")->fetchColumn(), 'neue Rolle moderator mit den sieben Grundrechten');
+        // Keine Zeilen außerhalb des Rollen-Katalogs: sonst erschienen read/edit_profile/view_content im Rollen-Editor als
+        // „eigene Rechte“, und das Speichern der Matrix entzöge sie Mitglied, Editor und Autor.
+        T::same(['author:posts.publish', 'editor:pages.publish', 'editor:posts.publish'], $pdo->query("SELECT CONCAT(role, ':', capability) FROM `{$fresh}`.cms_role_permissions WHERE capability NOT LIKE 'community.%' ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN), 'außer community.* nur die drei Rechte aus capabilities_v26 (Grundrechte der Rolle moderator kommen aus roles.php)');
+        T::same(9, (int) $pdo->query("SELECT COUNT(*) FROM `{$fresh}`.cms_role_permissions WHERE capability LIKE 'community.%'")->fetchColumn(), 'genau 9 Zeilen community.*: member 2, editor 2, author 2, moderator 3');
     });
     $freshStructure = $structure($fresh);
 
     foreach ($sources as $label => $oldRoot) {
         $db = $prefix . preg_replace('/[^a-z0-9]/', '', strtolower($label));
-        T::run('Upgrade ' . $label . ' → ' . $target, static function () use ($createDb, $step, $tmp, $db, $oldRoot, $pdo, $structure, $freshStructure, $label, $target, $communityGrants, $communityCapabilities): void {
+        T::run('Upgrade ' . $label . ' → ' . $target, static function () use ($createDb, $step, $tmp, $db, $oldRoot, $pdo, $structure, $freshStructure, $label, $target, $communityGrants, $communityCapabilities, $compareGolden): void {
             $createDb($db);
             $old = $step($oldRoot, $db, 'install');
             T::same([], $old['install_errors'] ?? ['?'], $label . ': Ausgangsstand installiert');
@@ -185,12 +202,13 @@ try {
             T::same(1, $granted['member']['community.view'] ?? null, 'member: community.view vergeben');
             T::same(0, $granted['moderator']['community.moderate'] ?? null, 'vorhandene Rolle moderator: Entzug bleibt');
             T::same(1, $granted['editor']['community.participate'] ?? null, 'editor: community.participate vergeben');
-            T::same(0, (int) $pdo->query("SELECT COUNT(*) FROM `{$db}`.cms_role_permissions WHERE role = 'moderator' AND capability = 'read'")->fetchColumn(), 'vorhandene Rolle moderator erhält keine Grundrechte nachgetragen');
+            T::same(0, (int) $pdo->query("SELECT COUNT(*) FROM `{$db}`.cms_role_permissions WHERE role = 'moderator' AND capability = 'read'")->fetchColumn(), 'vorhandene Rolle moderator: keine Zeilen für Grundrechte (sie kommen aus den Code-Standards)');
 
             $notification = $pdo->query("SELECT group_key, event_count FROM `{$db}`.cms_notifications WHERE title = 'Alt-Hinweis'")->fetch(PDO::FETCH_ASSOC);
             T::same(['group_key' => null, 'event_count' => '1'], is_array($notification) ? array_map(static fn ($v) => $v === null ? null : (string) $v, $notification) : null, 'notifications: Bestandszeile ohne Gruppenschlüssel, Zähler 1');
             T::same(3, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = " . $pdo->quote($db) . " AND TABLE_NAME = 'cms_notifications' AND INDEX_NAME = 'idx_user_group'")->fetchColumn(), 'notifications: Index idx_user_group (user_id, group_key, is_read) vorhanden');
 
+            $compareGolden($pdo, $db);
             $upgraded = $structure($db);
             T::same([], array_values(array_diff($freshStructure, $upgraded)), 'nichts fehlt gegenüber der Neuinstallation');
             T::same([], array_values(array_diff($upgraded, $freshStructure)), 'nichts Zusätzliches gegenüber der Neuinstallation');
@@ -217,11 +235,36 @@ try {
         T::check(in_array('table:webhook_deliveries', $missing, true) && in_array('column:login_attempts.action', $missing, true), 'DB-410-04: Integritätsprüfung erkennt fehlende Tabelle und Spalte');
         T::check(in_array('table:community_reports', $missing, true), 'v27: Integritätsprüfung erkennt eine fehlende Community-Tabelle');
         T::check(in_array('column:notifications.group_key', $missing, true) && in_array('column:notifications.event_count', $missing, true), 'v27: Integritätsprüfung erkennt die fehlenden Spalten an notifications');
+        $pdo->exec("DELETE FROM `{$fresh}`.cms_settings WHERE option_name = 'capabilities_v27'");
+        $pdo->exec("DROP TABLE `{$fresh}`.cms_role_permissions");
+        $missing = $step($tmp . '/v41', $fresh, 'status')['missing'] ?? [];
+        T::check(in_array('option:capabilities_v27', $missing, true), 'v27: Integritätsprüfung erkennt den fehlenden Rechte-Marker capabilities_v27');
         $update = $step($tmp . '/v41', $fresh, 'update');
         T::check(!empty($update['success']), 'Datenbank-Update repariert', (string) ($update['message'] ?? ''));
+        T::same(9, (int) $pdo->query("SELECT COUNT(*) FROM `{$fresh}`.cms_role_permissions WHERE capability LIKE 'community.%'")->fetchColumn(), 'Reparatur: role_permissions angelegt, Standardrechte community.* wieder eingetragen');
+        T::same(1, (int) $pdo->query("SELECT COUNT(*) FROM `{$fresh}`.cms_settings WHERE option_name = 'capabilities_v27'")->fetchColumn(), 'Reparatur: Marker capabilities_v27 gesetzt');
         T::same([], $step($tmp . '/v41', $fresh, 'status')['missing'] ?? ['?'], 'danach vollständig');
         $repaired = $structure($fresh);
         T::same([], array_values(array_diff($freshStructure, $repaired)), 'Tabellen, Spalten und Indizes wiederhergestellt');
+    });
+    // Kollation: die Community-Tabellen tragen utf8mb4_unicode_ci unabhängig vom Standard der Datenbank (utf8mb4_general_ci hier).
+    T::run('Kollation der Community-Tabellen unabhängig vom Standard der Datenbank', static function () use ($pdo, $prefix, $repo): void {
+        if (!defined('ABSPATH')) {
+            define('ABSPATH', $repo . '/CMS/');
+        }
+        require_once $repo . '/CMS/core/SchemaManager.php';
+        $db = $prefix . 'collation';
+        $pdo->exec("DROP DATABASE IF EXISTS `{$db}`");
+        $pdo->exec("CREATE DATABASE `{$db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+        $pdo->exec("USE `{$db}`");
+        $queries = \CMS\SchemaManager::getSchemaQueries('cms_', 'utf8mb4');
+        foreach (\CMS\SchemaManager::FEATURE_TABLES_V27 as $table) {
+            $pdo->exec($queries[$table]);
+        }
+        $quoted = $pdo->quote($db);
+        T::same([], $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND TABLE_COLLATION <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle 27 Tabellen: utf8mb4_unicode_ci (nicht der Standard der Datenbank)');
+        T::same([], $pdo->query("SELECT CONCAT(TABLE_NAME, '.', COLUMN_NAME) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND COLLATION_NAME IS NOT NULL AND COLLATION_NAME <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle Textspalten: utf8mb4_unicode_ci');
+        T::same(27, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%'")->fetchColumn(), 'alle 27 Tabellen angelegt');
     });
 } finally {
     foreach ($pdo->query("SHOW DATABASES LIKE " . $pdo->quote(str_replace('_', '\\_', $prefix) . '%'))->fetchAll(PDO::FETCH_COLUMN) as $name) {

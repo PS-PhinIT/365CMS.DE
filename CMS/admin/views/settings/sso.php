@@ -153,7 +153,7 @@ $ssoRow = static function (array $rule) use ($ssoEsc, $ssoT, $ssoRoleOptions, $s
                         <div class="col-md-6">
                             <label class="form-label" for="sso-default-role"><?= $ssoT('sso_settings.default_role') ?></label>
                             <select class="form-select" id="sso-default-role" name="default_role">
-                                <?php foreach ($ssoRoles as $roleKey => $roleLabel): if ((string) $roleKey === 'admin') { continue; } ?>
+                                <?php foreach ($ssoRoles as $roleKey => $roleLabel): if (in_array((string) $roleKey, ['admin', 'moderator'], true)) { continue; } ?>
                                     <option value="<?= $ssoEsc($roleKey) ?>"<?= (string) $roleKey === $ssoSettings['default_role'] ? ' selected' : '' ?>><?= $ssoEsc($roleLabel) ?></option>
                                 <?php endforeach; ?>
                             </select>

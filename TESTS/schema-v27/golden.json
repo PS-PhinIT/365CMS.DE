@@ -1,0 +1,523 @@
+{
+    "community_categories": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["title","varchar(150)","NO","",false],
+            ["title_en","varchar(150)","YES",null,false],
+            ["slug","varchar(160)","NO","",false],
+            ["slug_en","varchar(160)","YES",null,false],
+            ["description","text","YES",null,false],
+            ["description_en","text","YES",null,false],
+            ["sort_order","int unsigned","NO","0",false],
+            ["is_visible","tinyint","NO","1",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_categories_sort": {"unique":false,"columns":["is_visible","sort_order"]},
+            "uq_community_categories_slug": {"unique":true,"columns":["slug"]}
+        }
+    },
+    "community_forums": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["category_id","int unsigned","NO","0",false],
+            ["parent_id","int unsigned","YES",null,false],
+            ["depth","tinyint unsigned","NO","0",false],
+            ["path","varchar(255)","NO","",false],
+            ["title","varchar(150)","NO","",false],
+            ["title_en","varchar(150)","YES",null,false],
+            ["slug","varchar(160)","NO","",false],
+            ["slug_en","varchar(160)","YES",null,false],
+            ["description","text","YES",null,false],
+            ["description_en","text","YES",null,false],
+            ["icon","varchar(50)","YES",null,false],
+            ["color","varchar(9)","YES",null,false],
+            ["type","varchar(20)","NO","discussion",false],
+            ["link_url","varchar(500)","YES",null,false],
+            ["status","varchar(20)","NO","open",false],
+            ["require_approval","tinyint","NO","0",false],
+            ["slow_mode_seconds","int unsigned","NO","0",false],
+            ["auto_close_days","int unsigned","NO","0",false],
+            ["inherit_permissions","tinyint","NO","1",false],
+            ["sort_order","int unsigned","NO","0",false],
+            ["topic_count","int unsigned","NO","0",false],
+            ["post_count","int unsigned","NO","0",false],
+            ["last_post_id","bigint unsigned","YES",null,false],
+            ["last_post_at","datetime","YES",null,false],
+            ["last_topic_id","int unsigned","YES",null,false],
+            ["last_poster_id","int unsigned","YES",null,false],
+            ["version","int unsigned","NO","1",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_forums_parent": {"unique":false,"columns":["parent_id","sort_order"]},
+            "idx_community_forums_path": {"unique":false,"columns":["path(191)"]},
+            "idx_community_forums_tree": {"unique":false,"columns":["category_id","parent_id","sort_order"]},
+            "uq_community_forums_slug": {"unique":true,"columns":["slug"]},
+            "uq_community_forums_slug_en": {"unique":true,"columns":["slug_en"]}
+        }
+    },
+    "community_forum_permissions": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["forum_id","int unsigned","NO","0",false],
+            ["subject_type","varchar(10)","NO","role",false],
+            ["subject_key","varchar(64)","NO","",false],
+            ["permissions_json","longtext","YES",null,false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_forum_permissions_lookup": {"unique":false,"columns":["subject_type","subject_key"]},
+            "uq_community_forum_permissions_subject": {"unique":true,"columns":["forum_id","subject_type","subject_key"]}
+        }
+    },
+    "community_forum_moderators": {
+        "columns": [
+            ["forum_id","int unsigned","NO","0",false],
+            ["subject_type","varchar(10)","NO","user",false],
+            ["subject_id","int unsigned","NO","0",false],
+            ["include_children","tinyint","NO","1",false]
+        ],
+        "primary": ["forum_id","subject_type","subject_id"],
+        "indexes": {
+            "idx_community_forum_moderators_subject": {"unique":false,"columns":["subject_type","subject_id"]}
+        }
+    },
+    "community_topics": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["forum_id","int unsigned","NO","0",false],
+            ["user_id","int unsigned","YES",null,false],
+            ["title","varchar(200)","NO","",false],
+            ["slug","varchar(210)","NO","",false],
+            ["status","varchar(20)","NO","published",false],
+            ["moved_to_topic_id","int unsigned","YES",null,false],
+            ["moved_expires_at","datetime","YES",null,false],
+            ["is_pinned","tinyint","NO","0",false],
+            ["pinned_until","datetime","YES",null,false],
+            ["is_announcement","tinyint","NO","0",false],
+            ["is_locked","tinyint","NO","0",false],
+            ["locked_until","datetime","YES",null,false],
+            ["slow_mode_seconds","int unsigned","NO","0",false],
+            ["prefix","varchar(30)","YES",null,false],
+            ["first_post_id","bigint unsigned","YES",null,false],
+            ["solution_post_id","bigint unsigned","YES",null,false],
+            ["solved_at","datetime","YES",null,false],
+            ["solved_by","int unsigned","YES",null,false],
+            ["has_poll","tinyint","NO","0",false],
+            ["has_attachments","tinyint","NO","0",false],
+            ["reply_count","int unsigned","NO","0",false],
+            ["view_count","int unsigned","NO","0",false],
+            ["reaction_count","int unsigned","NO","0",false],
+            ["last_post_id","bigint unsigned","YES",null,false],
+            ["last_post_at","datetime","YES",null,false],
+            ["last_poster_id","int unsigned","YES",null,false],
+            ["version","int unsigned","NO","1",false],
+            ["trashed_at","datetime","YES",null,false],
+            ["trashed_by","int unsigned","YES",null,false],
+            ["previous_status","varchar(20)","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_topics_activity": {"unique":false,"columns":["status","last_post_at"]},
+            "idx_community_topics_announce": {"unique":false,"columns":["is_announcement","status","last_post_at"]},
+            "idx_community_topics_forum_list": {"unique":false,"columns":["forum_id","status","is_pinned","last_post_at"]},
+            "idx_community_topics_locked": {"unique":false,"columns":["is_locked","locked_until"]},
+            "idx_community_topics_moved": {"unique":false,"columns":["status","moved_expires_at"]},
+            "idx_community_topics_pinned": {"unique":false,"columns":["is_pinned","pinned_until"]},
+            "idx_community_topics_trashed": {"unique":false,"columns":["trashed_at"]},
+            "idx_community_topics_unanswered": {"unique":false,"columns":["forum_id","status","reply_count","created_at"]},
+            "idx_community_topics_user": {"unique":false,"columns":["user_id","status","created_at"]}
+        }
+    },
+    "community_posts": {
+        "columns": [
+            ["id","bigint unsigned","NO",null,true],
+            ["topic_id","int unsigned","NO","0",false],
+            ["forum_id","int unsigned","NO","0",false],
+            ["user_id","int unsigned","YES",null,false],
+            ["is_first_post","tinyint","NO","0",false],
+            ["status","varchar(20)","NO","published",false],
+            ["status_reason","varchar(255)","YES",null,false],
+            ["format","varchar(10)","NO","markdown",false],
+            ["body","mediumtext","YES",null,false],
+            ["body_html","mediumtext","YES",null,false],
+            ["rendered_version","smallint unsigned","NO","0",false],
+            ["quote_of_post_id","bigint unsigned","YES",null,false],
+            ["edit_count","int unsigned","NO","0",false],
+            ["edited_at","datetime","YES",null,false],
+            ["edited_by","int unsigned","YES",null,false],
+            ["edit_reason","varchar(255)","YES",null,false],
+            ["reaction_count","int unsigned","NO","0",false],
+            ["ip_hash","char(64)","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_posts_created": {"unique":false,"columns":["created_at"]},
+            "idx_community_posts_forum_time": {"unique":false,"columns":["forum_id","status","created_at"]},
+            "idx_community_posts_queue": {"unique":false,"columns":["status","created_at"]},
+            "idx_community_posts_topic": {"unique":false,"columns":["topic_id","status","id"]},
+            "idx_community_posts_user": {"unique":false,"columns":["user_id","status","created_at"]}
+        }
+    },
+    "community_post_revisions": {
+        "columns": [
+            ["id","bigint unsigned","NO",null,true],
+            ["post_id","bigint unsigned","NO","0",false],
+            ["title","varchar(200)","YES",null,false],
+            ["body","mediumtext","YES",null,false],
+            ["format","varchar(10)","NO","markdown",false],
+            ["edited_by","int unsigned","YES",null,false],
+            ["edit_reason","varchar(255)","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_post_revisions_created": {"unique":false,"columns":["created_at"]},
+            "idx_community_post_revisions_post": {"unique":false,"columns":["post_id","created_at"]}
+        }
+    },
+    "community_attachments": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["post_id","bigint unsigned","YES",null,false],
+            ["user_id","int unsigned","YES",null,false],
+            ["storage_path","varchar(255)","NO","",false],
+            ["original_name","varchar(255)","NO","",false],
+            ["mime_type","varchar(100)","NO","",false],
+            ["extension","varchar(10)","NO","",false],
+            ["file_size","int unsigned","NO","0",false],
+            ["sha256","char(64)","NO","",false],
+            ["width","smallint unsigned","YES",null,false],
+            ["height","smallint unsigned","YES",null,false],
+            ["has_preview","tinyint","NO","0",false],
+            ["download_count","int unsigned","NO","0",false],
+            ["upload_token","char(32)","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_attachments_post": {"unique":false,"columns":["post_id","created_at"]},
+            "idx_community_attachments_token": {"unique":false,"columns":["upload_token"]},
+            "idx_community_attachments_user": {"unique":false,"columns":["user_id","created_at"]}
+        }
+    },
+    "community_drafts": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["target_type","varchar(10)","NO","topic",false],
+            ["target_id","int unsigned","NO","0",false],
+            ["title","varchar(200)","YES",null,false],
+            ["body","mediumtext","YES",null,false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id","target_type","target_id"],
+        "indexes": {
+            "idx_community_drafts_updated": {"unique":false,"columns":["updated_at"]}
+        }
+    },
+    "community_reactions": {
+        "columns": [
+            ["post_id","bigint unsigned","NO","0",false],
+            ["user_id","int unsigned","NO","0",false],
+            ["reaction","varchar(20)","NO","like",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["post_id","user_id"],
+        "indexes": {
+            "idx_community_reactions_user": {"unique":false,"columns":["user_id","created_at"]}
+        }
+    },
+    "community_subscriptions": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["target_type","varchar(10)","NO","topic",false],
+            ["target_id","int unsigned","NO","0",false],
+            ["mode","varchar(10)","NO","instant",false],
+            ["notified_at","datetime","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id","target_type","target_id"],
+        "indexes": {
+            "idx_community_subscriptions_mode": {"unique":false,"columns":["mode","user_id"]},
+            "idx_community_subscriptions_target": {"unique":false,"columns":["target_type","target_id","mode"]}
+        }
+    },
+    "community_read_states": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["topic_id","int unsigned","NO","0",false],
+            ["last_read_post_id","bigint unsigned","NO","0",false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id","topic_id"],
+        "indexes": {
+            "idx_community_read_states_cleanup": {"unique":false,"columns":["updated_at"]},
+            "idx_community_read_states_topic": {"unique":false,"columns":["topic_id"]}
+        }
+    },
+    "community_forum_read_marks": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["forum_id","int unsigned","NO","0",false],
+            ["marked_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id","forum_id"],
+        "indexes": {
+
+        }
+    },
+    "community_polls": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["topic_id","int unsigned","NO","0",false],
+            ["question","varchar(255)","NO","",false],
+            ["max_choices","tinyint unsigned","NO","1",false],
+            ["results_visibility","varchar(10)","NO","after_vote",false],
+            ["allow_change","tinyint","NO","1",false],
+            ["is_public_voters","tinyint","NO","0",false],
+            ["ends_at","datetime","YES",null,false],
+            ["voter_count","int unsigned","NO","0",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_polls_ends": {"unique":false,"columns":["ends_at"]},
+            "uq_community_polls_topic": {"unique":true,"columns":["topic_id"]}
+        }
+    },
+    "community_poll_options": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["poll_id","int unsigned","NO","0",false],
+            ["label","varchar(200)","NO","",false],
+            ["vote_count","int unsigned","NO","0",false],
+            ["sort_order","tinyint unsigned","NO","0",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_poll_options_poll": {"unique":false,"columns":["poll_id","sort_order"]}
+        }
+    },
+    "community_poll_votes": {
+        "columns": [
+            ["poll_id","int unsigned","NO","0",false],
+            ["option_id","int unsigned","NO","0",false],
+            ["user_id","int unsigned","NO","0",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["poll_id","user_id","option_id"],
+        "indexes": {
+            "idx_community_poll_votes_option": {"unique":false,"columns":["option_id"]},
+            "idx_community_poll_votes_user": {"unique":false,"columns":["user_id"]}
+        }
+    },
+    "community_ignores": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["ignored_user_id","int unsigned","NO","0",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id","ignored_user_id"],
+        "indexes": {
+            "idx_community_ignores_ignored": {"unique":false,"columns":["ignored_user_id"]}
+        }
+    },
+    "community_user_stats": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["topic_count","int unsigned","NO","0",false],
+            ["post_count","int unsigned","NO","0",false],
+            ["reactions_received","int unsigned","NO","0",false],
+            ["reactions_given","int unsigned","NO","0",false],
+            ["solutions_count","int unsigned","NO","0",false],
+            ["reputation","int","NO","0",false],
+            ["trust_level","tinyint unsigned","NO","0",false],
+            ["trust_level_locked","tinyint","NO","0",false],
+            ["topics_read","int unsigned","NO","0",false],
+            ["days_visited","int unsigned","NO","0",false],
+            ["rank_id","int unsigned","YES",null,false],
+            ["custom_title","varchar(100)","YES",null,false],
+            ["signature","text","YES",null,false],
+            ["signature_html","text","YES",null,false],
+            ["settings_json","longtext","YES",null,false],
+            ["last_post_at","datetime","YES",null,false],
+            ["last_seen_at","datetime","YES",null,false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id"],
+        "indexes": {
+            "idx_community_user_stats_posts": {"unique":false,"columns":["post_count"]},
+            "idx_community_user_stats_reputation": {"unique":false,"columns":["reputation"]},
+            "idx_community_user_stats_trust": {"unique":false,"columns":["trust_level","trust_level_locked"]}
+        }
+    },
+    "community_ranks": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["title","varchar(80)","NO","",false],
+            ["title_en","varchar(80)","YES",null,false],
+            ["min_posts","int unsigned","YES",null,false],
+            ["color","varchar(9)","YES",null,false],
+            ["icon","varchar(50)","YES",null,false],
+            ["sort_order","int unsigned","NO","0",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_ranks_min_posts": {"unique":false,"columns":["min_posts"]},
+            "idx_community_ranks_sort": {"unique":false,"columns":["sort_order"]}
+        }
+    },
+    "community_badges": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["slug","varchar(60)","NO","",false],
+            ["title","varchar(80)","NO","",false],
+            ["title_en","varchar(80)","YES",null,false],
+            ["description","varchar(255)","YES",null,false],
+            ["icon","varchar(50)","YES",null,false],
+            ["tier","varchar(10)","NO","bronze",false],
+            ["rule_json","longtext","YES",null,false],
+            ["is_active","tinyint","NO","1",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "uq_community_badges_slug": {"unique":true,"columns":["slug"]}
+        }
+    },
+    "community_user_badges": {
+        "columns": [
+            ["user_id","int unsigned","NO","0",false],
+            ["badge_id","int unsigned","NO","0",false],
+            ["granted_by","int unsigned","YES",null,false],
+            ["reason","varchar(255)","YES",null,false],
+            ["granted_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["user_id","badge_id"],
+        "indexes": {
+            "idx_community_user_badges_badge": {"unique":false,"columns":["badge_id"]}
+        }
+    },
+    "community_reports": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["target_type","varchar(10)","NO","post",false],
+            ["target_id","bigint unsigned","NO","0",false],
+            ["forum_id","int unsigned","YES",null,false],
+            ["reporter_id","int unsigned","YES",null,false],
+            ["reason","varchar(20)","NO","other",false],
+            ["message","text","YES",null,false],
+            ["status","varchar(12)","NO","open",false],
+            ["resolution_note","text","YES",null,false],
+            ["notify_reporter","tinyint","NO","1",false],
+            ["handled_by","int unsigned","YES",null,false],
+            ["handled_at","datetime","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_reports_forum": {"unique":false,"columns":["forum_id","status","created_at"]},
+            "idx_community_reports_handled": {"unique":false,"columns":["status","handled_at"]},
+            "idx_community_reports_open": {"unique":false,"columns":["status","created_at"]},
+            "idx_community_reports_reporter": {"unique":false,"columns":["reporter_id","target_type","target_id"]},
+            "idx_community_reports_target": {"unique":false,"columns":["target_type","target_id","status"]}
+        }
+    },
+    "community_warnings": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["user_id","int unsigned","NO","0",false],
+            ["issued_by","int unsigned","YES",null,false],
+            ["post_id","bigint unsigned","YES",null,false],
+            ["reason","varchar(255)","NO","",false],
+            ["points","tinyint unsigned","NO","1",false],
+            ["expires_at","datetime","YES",null,false],
+            ["revoked_at","datetime","YES",null,false],
+            ["revoked_by","int unsigned","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_warnings_expires": {"unique":false,"columns":["expires_at"]},
+            "idx_community_warnings_user": {"unique":false,"columns":["user_id","expires_at"]}
+        }
+    },
+    "community_bans": {
+        "columns": [
+            ["id","int unsigned","NO",null,true],
+            ["user_id","int unsigned","NO","0",false],
+            ["scope","varchar(10)","NO","write",false],
+            ["reason","varchar(255)","NO","",false],
+            ["internal_note","text","YES",null,false],
+            ["issued_by","int unsigned","YES",null,false],
+            ["starts_at","datetime","NO","CURRENT_TIMESTAMP",false],
+            ["ends_at","datetime","YES",null,false],
+            ["lifted_at","datetime","YES",null,false],
+            ["lifted_by","int unsigned","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_bans_user": {"unique":false,"columns":["user_id","lifted_at","ends_at"]}
+        }
+    },
+    "community_moderation_log": {
+        "columns": [
+            ["id","bigint unsigned","NO",null,true],
+            ["actor_id","int unsigned","YES",null,false],
+            ["action","varchar(40)","NO","",false],
+            ["target_type","varchar(10)","NO","",false],
+            ["target_id","bigint unsigned","NO","0",false],
+            ["forum_id","int unsigned","YES",null,false],
+            ["reason","varchar(255)","YES",null,false],
+            ["details_json","longtext","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_moderation_log_action": {"unique":false,"columns":["action","created_at"]},
+            "idx_community_moderation_log_actor": {"unique":false,"columns":["actor_id","created_at"]},
+            "idx_community_moderation_log_forum": {"unique":false,"columns":["forum_id","created_at"]},
+            "idx_community_moderation_log_target": {"unique":false,"columns":["target_type","target_id","created_at"]},
+            "idx_community_moderation_log_time": {"unique":false,"columns":["created_at"]}
+        }
+    },
+    "community_stats_daily": {
+        "columns": [
+            ["day","date","NO","1970-01-01",false],
+            ["forum_id","int unsigned","NO","0",false],
+            ["topics","int unsigned","NO","0",false],
+            ["posts","int unsigned","NO","0",false],
+            ["active_members","int unsigned","NO","0",false],
+            ["new_members","int unsigned","NO","0",false],
+            ["solved","int unsigned","NO","0",false],
+            ["median_first_reply_minutes","int unsigned","YES",null,false]
+        ],
+        "primary": ["day","forum_id"],
+        "indexes": {
+
+        }
+    },
+    "community_redirects": {
+        "columns": [
+            ["source_type","varchar(10)","NO","topic",false],
+            ["source_key","varchar(160)","NO","",false],
+            ["target_type","varchar(10)","NO","topic",false],
+            ["target_id","bigint unsigned","NO","0",false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["source_type","source_key"],
+        "indexes": {
+            "idx_community_redirects_target": {"unique":false,"columns":["target_type","target_id"]}
+        }
+    }
+}

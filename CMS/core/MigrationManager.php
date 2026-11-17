@@ -321,8 +321,9 @@ class MigrationManager
 
         // v27 (capabilities_v27): Rechte `community.*` für die Standardrollen und die neue Rolle „moderator“. Einmalig
         // (Marker `capabilities_v27` in settings), vorhandene Einträge in role_permissions werden nie überschrieben, ein
-        // ausdrücklicher Entzug (granted = 0) bleibt also wirksam. Schlägt der Schritt fehl, fehlt der Marker und er
-        // läuft beim nächsten Durchlauf erneut. Nur die übergebene Verbindung nutzen (DB-410-02).
+        // ausdrücklicher Entzug (granted = 0) bleibt also wirksam. Schlägt der Schritt fehl, fehlt der Marker: Das
+        // Datenbank-Update meldet ihn (DatabaseUpdateRunner::missingSchemaElements) und wiederholt den Schritt über
+        // run(true). Nur die übergebene Verbindung nutzen (DB-410-02).
         try {
             \CMS\Services\Community\Support\CommunityCapabilities::migrate($this->db);
         } catch (\Throwable $e) {

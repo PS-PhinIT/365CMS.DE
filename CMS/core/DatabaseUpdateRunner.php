@@ -244,6 +244,21 @@ final class DatabaseUpdateRunner
             $missing[] = 'column:posts.status (VARCHAR(20))';
         }
 
+        // v27: Der einmalige Rechte-Schritt (capabilities_v27) setzt seinen Marker erst nach dem Eintragen; fehlt er,
+        // wiederholt MigrationManager::run(true) den Schritt (INSERT IGNORE, überschreibt nichts).
+        if (isset($known[$prefix . 'settings'])) {
+            try {
+                if ((int) $this->db->get_var(
+                    'SELECT COUNT(*) FROM ' . $prefix . 'settings WHERE option_name = ?',
+                    [\CMS\Services\Community\Support\CommunityCapabilities::MARKER]
+                ) === 0) {
+                    $missing[] = 'option:' . \CMS\Services\Community\Support\CommunityCapabilities::MARKER;
+                }
+            } catch (\Throwable) {
+                $missing[] = 'schema:unreadable';
+            }
+        }
+
         return array_values(array_unique($missing));
     }
 

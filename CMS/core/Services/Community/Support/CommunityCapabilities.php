@@ -78,8 +78,11 @@ final class CommunityCapabilities
     ];
 
     /**
-     * Grundrechte der neuen Rolle „moderator“, wenn sie noch nicht existiert: wie „member“ (Lesen, Profil, Kommentare
-     * sehen), ohne Zugang zu `/admin` (den hat nur die Rolle „admin“). Entspricht der Definition in `roles.php`.
+     * Grundrechte der Rolle „moderator“ laut `cms_get_default_role_definitions()`: wie „member“ (Lesen, Profil, Kommentare
+     * sehen), ohne Zugang zu `/admin` (den hat nur die Rolle „admin“). Sie kommen aus den Code-Standards und werden
+     * bewusst **nicht** als Zeilen in `role_permissions` eingetragen: `read`, `edit_profile` und `view_content` stehen
+     * nicht im Rollen-Katalog, würden im Rollen-Editor als eigene Rechte erscheinen, und das Speichern der Matrix
+     * entzöge sie Mitglied, Editor und Autor (`granted = 0` gewinnt gegen die Code-Standards).
      *
      * @var list<string>
      */
@@ -112,19 +115,22 @@ final class CommunityCapabilities
      * Update-Schritt `capabilities_v27`: einmalig die Standardrechte eintragen und die Rolle „moderator“ anlegen.
      *
      * - Läuft nur, solange der Marker `capabilities_v27` in `settings` fehlt; er wird erst nach dem erfolgreichen
-     *   Eintragen gesetzt (bei einem Fehler läuft der Schritt beim nächsten Durchlauf erneut).
+     *   Eintragen gesetzt. Bei einem Fehler fehlt der Marker: *Admin → Updates → Datenbank-Update* meldet ihn dann als
+     *   fehlend (`option:capabilities_v27`) und führt den Schritt über `MigrationManager::run(true)` erneut aus.
+     * - Legt `role_permissions` an, falls die Tabelle fehlt (z. B. 4.0.0, wo sie erst beim ersten Lesen entsteht, oder
+     *   `update.php`, das `roles.php` nicht lädt); die Definition entspricht `cms_ensure_role_permissions_table()`.
      * - Überschreibt nie einen vorhandenen Eintrag in `role_permissions` (`INSERT IGNORE` auf den eindeutigen Schlüssel
      *   `uk_role_cap`): ein ausdrücklich entzogenes Recht (`granted = 0`) bleibt entzogen.
-     * - Existiert die Rolle „moderator“ noch nicht (keine Zeilen in `role_permissions`, kein Konto mit dieser Rolle),
-     *   erhält sie zusätzlich die Grundrechte aus MODERATOR_BASE. Eine bereits vorhandene Rolle gleichen Namens bekommt nur
-     *   die Community-Standards.
+     * - Trägt nur Rechte des Rollen-Katalogs ein (`community.*`). Die Grundrechte der Rolle „moderator“ stammen aus den
+     *   Code-Standards (MODERATOR_BASE); das gilt auch für eine bereits vorhandene Rolle gleichen Namens: Sie erhält die
+     *   Standards zusätzlich zu ihren gespeicherten Zeilen, ein ausdrücklicher Entzug bleibt wirksam.
      * - Vergibt `community.ban`, `community.manage` und `community.view_private_data` an niemanden; „admin“ hat sie über
      *   die Rolle.
      *
      * @return list<array{0: string, 1: string}> die neu eingetragenen Paare [Rolle, Capability] (leer, wenn der Schritt
      *                                         schon gelaufen ist oder nichts zu tun war)
      *
-     * @throws \Throwable bei Datenbankfehlern; der Aufrufer protokolliert und versucht es später erneut
+     * @throws \Throwable bei Datenbankfehlern; der Aufrufer protokolliert den Fehler (der Marker fehlt dann)
      */
     public static function migrate(Database $db): array
     {
@@ -136,28 +142,18 @@ final class CommunityCapabilities
             return [];
         }
 
+        self::ensurePermissionsTable($db, $permissions);
+
         $granted = [];
-
-        $moderatorExists = (int) $db->get_var("SELECT COUNT(*) FROM {$permissions} WHERE role = ?", [self::MODERATOR_ROLE]) > 0
-            || (int) $db->get_var("SELECT COUNT(*) FROM {$prefix}users WHERE role = ?", [self::MODERATOR_ROLE]) > 0;
-
-        $grants = [];
         foreach (self::DEFAULT_GRANTS as $role => $capabilities) {
-            if ($role === self::MODERATOR_ROLE && !$moderatorExists) {
-                $capabilities = array_merge(self::MODERATOR_BASE, $capabilities);
-            }
             foreach ($capabilities as $capability) {
-                $grants[] = [$role, $capability];
-            }
-        }
-
-        foreach ($grants as [$role, $capability]) {
-            $statement = $db->execute(
-                "INSERT IGNORE INTO {$permissions} (role, capability, granted) VALUES (?, ?, 1)",
-                [$role, $capability]
-            );
-            if ($statement->rowCount() === 1) {
-                $granted[] = [$role, $capability];
+                $statement = $db->execute(
+                    "INSERT IGNORE INTO {$permissions} (role, capability, granted) VALUES (?, ?, 1)",
+                    [$role, $capability]
+                );
+                if ($statement->rowCount() === 1) {
+                    $granted[] = [$role, $capability];
+                }
             }
         }
 
@@ -168,5 +164,29 @@ final class CommunityCapabilities
         );
 
         return $granted;
+    }
+
+    /**
+     * Legt `role_permissions` an, wenn sie fehlt. Gleiche Definition wie `cms_ensure_role_permissions_table()` in
+     * `includes/functions/roles.php`, die hier nicht verfügbar sein muss (`update.php` lädt `includes/functions` nicht);
+     * `TESTS/schema-v27` vergleicht beide Texte.
+     */
+    private static function ensurePermissionsTable(Database $db, string $table): void
+    {
+        try {
+            $db->get_var("SELECT 1 FROM {$table} LIMIT 1");
+
+            return;
+        } catch (\Throwable) {
+            // Tabelle fehlt (oder ist nicht lesbar): anlegen; schlägt auch das fehl, meldet der Aufrufer den Fehler.
+        }
+
+        $db->execute("CREATE TABLE IF NOT EXISTS {$table} (
+        id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        role       VARCHAR(50) NOT NULL,
+        capability VARCHAR(100) NOT NULL,
+        granted    TINYINT(1) NOT NULL DEFAULT 0,
+        UNIQUE KEY uk_role_cap (role, capability)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
 }
