@@ -16,7 +16,7 @@ CMS/core/
 ├── Bootstrap.php  Container.php  Router.php  Hooks.php  Api.php
 ├── Database.php  SchemaManager.php  MigrationManager.php  DatabaseUpdateRunner.php
 ├── Security.php  Auth.php  Totp.php
-├── CacheManager.php  Logger.php  AuditLogger.php  Debug.php  Json.php
+├── CacheManager.php  Logger.php  AuditLogger.php  Debug.php  Json.php  Slug.php
 ├── PageManager.php  TableOfContents.php  ThemeManager.php  PluginManager.php  SubscriptionManager.php
 ├── VendorRegistry.php  Version.php  WP_Error.php
 ├── Auth/

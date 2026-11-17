@@ -58,8 +58,10 @@ T::run('PERF-410-47/48: Importer-Bilder, AVIF nach der Antwort', static function
 T::run('DOC-410-01: Anzahl der Test-Suiten im Changelog', static function () use ($root): void {
     $changelog = (string) file_get_contents(dirname($root) . '/Changelog.md');
     T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 32 Suiten aus (in 4.1.6 korrigiert'), '4.1.0 nennt 32 Suiten');
+    // 4.1.5 hält den damaligen Stand fest (35 Suiten); spätere Suiten ändern diesen Eintrag nicht.
+    T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 35 Suiten aus: zu den 32 aus 4.1.0'), '4.1.5 nennt 35 Suiten');
     $suites = count(glob(dirname($root) . '/TESTS/*/run.php') ?: []);
-    T::check(str_contains($changelog, "`php TESTS/run-all.php` führt {$suites} Suiten aus: zu den 32 aus 4.1.0"), "4.1.5 nennt die tatsächliche Zahl ({$suites})");
+    T::check($suites >= 35, "mindestens die 35 Suiten aus 4.1.5 vorhanden ({$suites})");
 });
 
 T::run('FUN-410-34/35: Wissensdatenbank-Import, Feed-Aufbewahrung', static function () use ($src): void {

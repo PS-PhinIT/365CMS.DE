@@ -156,6 +156,7 @@ Root-Klassen in `CMS/core/`:
 - `Router.php`
 - `SchemaManager.php` (`SCHEMA_VERSION = 'v26'`, `FEATURE_TABLES_V26`)
 - `Security.php`
+- `Slug.php`
 - `SubscriptionManager.php`
 - `TableOfContents.php`
 - `ThemeManager.php`
