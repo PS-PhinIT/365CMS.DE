@@ -16,7 +16,7 @@
 
 ### v4.1.9 — 17.11.2026 - Patch Release
 
-**Audit-Abschluss 4.1.0** · Release-Prüfung 4.1.0, Abschluss (PR #6): FUN-410-07, -10, -28, -33, -37, -38 und DOC-410-03 ([#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170), [#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171), [#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172), [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173), [#PR0_NR](https://github.com/PS-PhinIT/365CMS.DE/pull/PR0_NR)). Der Quelltext liegt auf `main`; ein Paket 4.1.9 ist noch nicht gebaut (`Version::CURRENT` und die Manifeste bleiben bei 4.1.8). Schema bleibt `v26`.
+**Audit-Abschluss 4.1.0** · Release-Prüfung 4.1.0, Abschluss (PR #6): FUN-410-07, -10, -28, -33, -37, -38 und DOC-410-03 ([#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170), [#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171), [#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172), [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173), [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)). Der Quelltext liegt auf `main`; ein Paket 4.1.9 ist noch nicht gebaut (`Version::CURRENT` und die Manifeste bleiben bei 4.1.8). Schema bleibt `v26`.
 
 #### Hinweise zum Update von 4.1.8
 
