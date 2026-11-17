@@ -27,8 +27,11 @@ if (!defined('ABSPATH')) {
 
 final class IdentityLinker
 {
-    /** Rollen, die nie automatisch per E-Mail verknüpft werden (zusätzlich zu den Rollen mit MFA-Zwang). */
-    public const PRIVILEGED_ROLES = ['admin', 'editor', 'author'];
+    /**
+     * Rollen, die nie automatisch per E-Mail verknüpft werden (zusätzlich zu den Rollen mit MFA-Zwang). „moderator“
+     * (Community, seit 4.2.0) moderiert, sperrt und sieht Meldungen: eine privilegierte Rolle wie „author“.
+     */
+    public const PRIVILEGED_ROLES = ['admin', 'editor', 'author', 'moderator'];
 
     public function __construct(private readonly IdentityStoreInterface $store)
     {

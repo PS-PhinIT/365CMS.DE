@@ -224,7 +224,7 @@ final class DatabaseUpdateRunner
 
         $known = array_flip($tables);
         $missing = [];
-        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, array_keys(SchemaManager::REQUIRED_COLUMNS)) as $table) {
+        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27, array_keys(SchemaManager::REQUIRED_COLUMNS)) as $table) {
             if (!isset($known[$prefix . $table])) {
                 $missing[] = 'table:' . $table;
             }

@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Roadmap & Fortschritt
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** Planung | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
+> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** WP-C1 teilweise geliefert (PR #1) | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
 
 ## English (summary)
 
@@ -83,7 +83,7 @@ flowchart LR
 |---|---|---|
 | Planung (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/community/` (14.11.2026), Umsetzungsfahrplan [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) (15.11.2026) |
 | WP-C0 Entscheidungen & Bibliotheken | ⬜ | |
-| WP-C1 Modul-Gerüst & Schema v27 | ⬜ | |
+| WP-C1 Modul-Gerüst & Schema v27 | 🟡 | PR #1 (17.11.2026): Schema v27 mit allen 27 Tabellen (`TESTS/schema-v27`, `TESTS/schema-upgrade`: Neuinstallation = Update von v25/v26 gegen MariaDB 10.11), Capabilities `community.*`, Rolle `moderator`, Update-Schritt `capabilities_v27` ([HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md)). Offen: `CoreModuleService`-Eintrag, `CommunityHooks`, `Support/Settings`, Sprachschlüssel, Admin-Katalog |
 | WP-C2 Struktur & Rechte | ⬜ | |
 | WP-C3 Themen, Beiträge, Gelesen-Status | ⬜ | |
 | WP-C4 Editor & Rendering | ⬜ | |

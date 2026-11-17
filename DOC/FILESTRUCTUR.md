@@ -80,6 +80,7 @@ Verified top-level entries of this repository:
 | `TESTS/payments/` | directory | payments: `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | directory | outgoing webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | directory | schema v26 (release 4.1.0): new tables and columns identical for fresh install, update and runtime check: `php TESTS/schema-v26/run.php [-v]` |
+| `TESTS/schema-v27/` | directory | schema v27 (release 4.2.0, Community module): 27 tables, strict-mode rules, indexes, permission step `capabilities_v27`: `php TESTS/schema-v27/run.php [-v]` |
 | `TESTS/schema-upgrade/` | directory | schema upgrade against a real MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): fresh install v26 and updates from 4.0.0 (v25) and 3.5.x (v23) yield identical structure, keep data, are idempotent, one connection on first request: `php TESTS/schema-upgrade/run.php [-v]` |
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
 | `TESTS/sso-entra/` | directory | Entra ID sign-in via OpenID Connect: ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping: `php TESTS/sso-entra/run.php [-v]` |
@@ -138,6 +139,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/payments/` | Verzeichnis | Zahlungen: `php TESTS/payments/run.php [-v]` |
 | `TESTS/webhooks/` | Verzeichnis | ausgehende Webhooks: `php TESTS/webhooks/run.php [-v]` |
 | `TESTS/schema-v26/` | Verzeichnis | Schema v26 (Release 4.1.0): neue Tabellen und Spalten identisch für Neuinstallation, Update und Laufzeitprüfung: `php TESTS/schema-v26/run.php [-v]` |
+| `TESTS/schema-v27/` | Verzeichnis | Schema v27 (Release 4.2.0, Community-Modul): 27 Tabellen, Strict-Mode-Regeln, Indizes, Rechte-Schritt `capabilities_v27`: `php TESTS/schema-v27/run.php [-v]` |
 | `TESTS/schema-upgrade/` | Verzeichnis | Upgrade-Pfad gegen echte MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): Neuinstallation v26 und Updates von 4.0.0 (v25) und 3.5.x (v23) ergeben dieselbe Struktur, erhalten Daten, laufen idempotent, eine Verbindung beim ersten Request: `php TESTS/schema-upgrade/run.php [-v]` |
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
 | `TESTS/sso-entra/` | Verzeichnis | Entra-ID-Anmeldung über OpenID Connect: ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping: `php TESTS/sso-entra/run.php [-v]` |

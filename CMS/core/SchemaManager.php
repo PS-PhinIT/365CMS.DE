@@ -36,8 +36,12 @@ class SchemaManager
      * v26 (Release 4.1.0): Tabellen FEATURE_TABLES_V26 und die Spalten der Bereiche 1–5. Neuinstallationen legen sie
      * über getSchemaQueries() an, Updates über MigrationManager (Schritt v26) und zusätzlich die Laufzeitprüfung
      * ensureFeatureSchema() (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
+     *
+     * v27 (Release 4.2.0, Entwicklungsstand): die 27 Tabellen FEATURE_TABLES_V27 des Community-Moduls und der
+     * einmalige Update-Schritt `capabilities_v27` (Rechte `community.*`, Rolle `moderator`); gleicher Aufbau wie v26
+     * (DOC/workflow/specs/community/DATA-MODEL.md, HANDOFF-PR2-PR5.md).
      */
-    public const SCHEMA_VERSION = 'v26';
+    public const SCHEMA_VERSION = 'v27';
 
     /**
      * Tabellen der Core-Funktionen seit v25 (Formulare, Downloads, Feed-Aggregator) in Abhängigkeitsreihenfolge.
@@ -77,7 +81,24 @@ class SchemaManager
     ];
 
     /**
-     * Spalten, die das Zielschema v26 mindestens braucht (zusätzlich zu FEATURE_TABLES und FEATURE_TABLES_V26).
+     * v27 (Release 4.2.0): Tabellen des Community-Moduls (Präfix community_), in der Reihenfolge von DATA-MODEL.md §2.
+     * Neuinstallation, Update (MigrationManager) und Laufzeitprüfung nutzen dieselbe Liste und dieselben Definitionen.
+     *
+     * @var list<string>
+     */
+    public const FEATURE_TABLES_V27 = [
+        'community_categories', 'community_forums', 'community_forum_permissions', 'community_forum_moderators',
+        'community_topics', 'community_posts', 'community_post_revisions', 'community_attachments', 'community_drafts',
+        'community_reactions', 'community_subscriptions', 'community_read_states', 'community_forum_read_marks',
+        'community_polls', 'community_poll_options', 'community_poll_votes', 'community_ignores',
+        'community_user_stats', 'community_ranks', 'community_badges', 'community_user_badges',
+        'community_reports', 'community_warnings', 'community_bans', 'community_moderation_log',
+        'community_stats_daily', 'community_redirects',
+    ];
+
+    /**
+     * Spalten, die das Zielschema mindestens braucht (zusätzlich zu den Tabellen aus FEATURE_TABLES, FEATURE_TABLES_V26 und
+     * FEATURE_TABLES_V27; v27 ergänzt keine Spalten an bestehenden Tabellen).
      * Grundlage der Integritätsprüfung im Datenbank-Update (DatabaseUpdateRunner, DB-410-04).
      *
      * @var array<string, list<string>>
@@ -1683,6 +1704,454 @@ class SchemaManager
                 KEY idx_invoices_user (user_id, issued_at),
                 KEY idx_invoices_order (order_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Rechnungen und Storno-Rechnungen (unveränderlich, 10 Jahre)'",
+
+            // ── v27 (Release 4.2.0): Community-Modul (DOC/workflow/specs/community/DATA-MODEL.md, HANDOFF-PR2-PR5.md) ──────────────
+            // Konventionen: InnoDB, feste Kollation, DATETIME in UTC (Dienste setzen die Zeit; CURRENT_TIMESTAMP ist nur das
+            // Sicherheitsnetz), keine Fremdschlüssel (Konsistenz über die Dienste), Strukturwerte als LONGTEXT *_json, keine
+            // NOT-NULL-Spalte ohne Default (Strict Mode; Textspalten ohne Default sind NULL-fähig, weil MySQL < 8.0.13 keinen
+            // Default für TEXT kennt). Keine `legacy_*`-Spalten und keine Plugin-Weiterleitungen (E6: keine Datenübernahme).
+
+            // v27: Kategorien = oberste Gliederung der Community-Startseite.
+            'community_categories' => "CREATE TABLE IF NOT EXISTS {$p}community_categories (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(150) NOT NULL DEFAULT '',
+                title_en VARCHAR(150) NULL,
+                slug VARCHAR(160) NOT NULL DEFAULT '',
+                slug_en VARCHAR(160) NULL,
+                description TEXT NULL,
+                description_en TEXT NULL,
+                sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+                is_visible TINYINT(1) NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_community_categories_slug (slug),
+                KEY idx_community_categories_sort (is_visible, sort_order)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Kategorien'",
+
+            // v27: Foren (Baum über parent_id/path, Zähler denormalisiert, version = Cache-Schlüssel).
+            'community_forums' => "CREATE TABLE IF NOT EXISTS {$p}community_forums (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                category_id INT UNSIGNED NOT NULL DEFAULT 0,
+                parent_id INT UNSIGNED NULL,
+                depth TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                path VARCHAR(255) NOT NULL DEFAULT '',
+                title VARCHAR(150) NOT NULL DEFAULT '',
+                title_en VARCHAR(150) NULL,
+                slug VARCHAR(160) NOT NULL DEFAULT '',
+                slug_en VARCHAR(160) NULL,
+                description TEXT NULL,
+                description_en TEXT NULL,
+                icon VARCHAR(50) NULL,
+                color VARCHAR(9) NULL,
+                type VARCHAR(20) NOT NULL DEFAULT 'discussion',
+                link_url VARCHAR(500) NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'open',
+                require_approval TINYINT(1) NOT NULL DEFAULT 0,
+                slow_mode_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+                auto_close_days INT UNSIGNED NOT NULL DEFAULT 0,
+                inherit_permissions TINYINT(1) NOT NULL DEFAULT 1,
+                sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+                topic_count INT UNSIGNED NOT NULL DEFAULT 0,
+                post_count INT UNSIGNED NOT NULL DEFAULT 0,
+                last_post_id BIGINT UNSIGNED NULL,
+                last_post_at DATETIME NULL,
+                last_topic_id INT UNSIGNED NULL,
+                last_poster_id INT UNSIGNED NULL,
+                version INT UNSIGNED NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_community_forums_slug (slug),
+                UNIQUE KEY uq_community_forums_slug_en (slug_en),
+                KEY idx_community_forums_tree (category_id, parent_id, sort_order),
+                KEY idx_community_forums_parent (parent_id, sort_order),
+                KEY idx_community_forums_path (path(191))
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Foren und Unterforen'",
+
+            // v27: Rechte je Forum und Subjekt (guest | role | group | trust); permissions_json s. PERMISSIONS-MODERATION §3.
+            'community_forum_permissions' => "CREATE TABLE IF NOT EXISTS {$p}community_forum_permissions (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                forum_id INT UNSIGNED NOT NULL DEFAULT 0,
+                subject_type VARCHAR(10) NOT NULL DEFAULT 'role',
+                subject_key VARCHAR(64) NOT NULL DEFAULT '',
+                permissions_json LONGTEXT NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_community_forum_permissions_subject (forum_id, subject_type, subject_key),
+                KEY idx_community_forum_permissions_lookup (subject_type, subject_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Rechte-Matrix je Forum'",
+
+            // v27: Moderatoren je Forum (Mitglied oder Gruppe), optional mit Unterforen.
+            'community_forum_moderators' => "CREATE TABLE IF NOT EXISTS {$p}community_forum_moderators (
+                forum_id INT UNSIGNED NOT NULL DEFAULT 0,
+                subject_type VARCHAR(10) NOT NULL DEFAULT 'user',
+                subject_id INT UNSIGNED NOT NULL DEFAULT 0,
+                include_children TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (forum_id, subject_type, subject_id),
+                KEY idx_community_forum_moderators_subject (subject_type, subject_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Forum-Moderatoren'",
+
+            // v27: Themen. user_id NULL = gelöschtes Mitglied (anonymisiert); Auflösung der Adresse über die ID.
+            'community_topics' => "CREATE TABLE IF NOT EXISTS {$p}community_topics (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                forum_id INT UNSIGNED NOT NULL DEFAULT 0,
+                user_id INT UNSIGNED NULL,
+                title VARCHAR(200) NOT NULL DEFAULT '',
+                slug VARCHAR(210) NOT NULL DEFAULT '',
+                status VARCHAR(20) NOT NULL DEFAULT 'published',
+                moved_to_topic_id INT UNSIGNED NULL,
+                moved_expires_at DATETIME NULL,
+                is_pinned TINYINT(1) NOT NULL DEFAULT 0,
+                pinned_until DATETIME NULL,
+                is_announcement TINYINT(1) NOT NULL DEFAULT 0,
+                is_locked TINYINT(1) NOT NULL DEFAULT 0,
+                locked_until DATETIME NULL,
+                slow_mode_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+                prefix VARCHAR(30) NULL,
+                first_post_id BIGINT UNSIGNED NULL,
+                solution_post_id BIGINT UNSIGNED NULL,
+                solved_at DATETIME NULL,
+                solved_by INT UNSIGNED NULL,
+                has_poll TINYINT(1) NOT NULL DEFAULT 0,
+                has_attachments TINYINT(1) NOT NULL DEFAULT 0,
+                reply_count INT UNSIGNED NOT NULL DEFAULT 0,
+                view_count INT UNSIGNED NOT NULL DEFAULT 0,
+                reaction_count INT UNSIGNED NOT NULL DEFAULT 0,
+                last_post_id BIGINT UNSIGNED NULL,
+                last_post_at DATETIME NULL,
+                last_poster_id INT UNSIGNED NULL,
+                version INT UNSIGNED NOT NULL DEFAULT 1,
+                trashed_at DATETIME NULL,
+                previous_status VARCHAR(20) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_topics_forum_list (forum_id, status, is_pinned, last_post_at),
+                KEY idx_community_topics_unanswered (forum_id, status, reply_count, created_at),
+                KEY idx_community_topics_announce (is_announcement, status, last_post_at),
+                KEY idx_community_topics_activity (status, last_post_at),
+                KEY idx_community_topics_user (user_id, status, created_at),
+                KEY idx_community_topics_moved (status, moved_expires_at),
+                KEY idx_community_topics_locked (is_locked, locked_until),
+                KEY idx_community_topics_pinned (is_pinned, pinned_until),
+                KEY idx_community_topics_trashed (trashed_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Themen'",
+
+            // v27: Beiträge. body = Markdown-Quelle, body_html = gereinigter Cache (rendered_version); ip_hash = HMAC der gekürzten IP.
+            'community_posts' => "CREATE TABLE IF NOT EXISTS {$p}community_posts (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                topic_id INT UNSIGNED NOT NULL DEFAULT 0,
+                forum_id INT UNSIGNED NOT NULL DEFAULT 0,
+                user_id INT UNSIGNED NULL,
+                is_first_post TINYINT(1) NOT NULL DEFAULT 0,
+                status VARCHAR(20) NOT NULL DEFAULT 'published',
+                status_reason VARCHAR(255) NULL,
+                format VARCHAR(10) NOT NULL DEFAULT 'markdown',
+                body MEDIUMTEXT NULL,
+                body_html MEDIUMTEXT NULL,
+                rendered_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+                quote_of_post_id BIGINT UNSIGNED NULL,
+                edit_count INT UNSIGNED NOT NULL DEFAULT 0,
+                edited_at DATETIME NULL,
+                edited_by INT UNSIGNED NULL,
+                edit_reason VARCHAR(255) NULL,
+                reaction_count INT UNSIGNED NOT NULL DEFAULT 0,
+                ip_hash CHAR(64) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_posts_topic (topic_id, status, id),
+                KEY idx_community_posts_user (user_id, status, created_at),
+                KEY idx_community_posts_queue (status, created_at),
+                KEY idx_community_posts_forum_time (forum_id, status, created_at),
+                KEY idx_community_posts_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Beiträge'",
+
+            // v27: Bearbeitungsverlauf (title nur beim ersten Beitrag).
+            'community_post_revisions' => "CREATE TABLE IF NOT EXISTS {$p}community_post_revisions (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                post_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                title VARCHAR(200) NULL,
+                body MEDIUMTEXT NULL,
+                format VARCHAR(10) NOT NULL DEFAULT 'markdown',
+                edited_by INT UNSIGNED NULL,
+                edit_reason VARCHAR(255) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_post_revisions_post (post_id, created_at),
+                KEY idx_community_post_revisions_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Bearbeitungsverlauf'",
+
+            // v27: Anhänge (Datei im privaten Speicher, Bereich community). post_id NULL bis zum Absenden (verwaist: 24 h).
+            'community_attachments' => "CREATE TABLE IF NOT EXISTS {$p}community_attachments (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                post_id BIGINT UNSIGNED NULL,
+                user_id INT UNSIGNED NULL,
+                storage_path VARCHAR(255) NOT NULL DEFAULT '',
+                original_name VARCHAR(255) NOT NULL DEFAULT '',
+                mime_type VARCHAR(100) NOT NULL DEFAULT '',
+                extension VARCHAR(10) NOT NULL DEFAULT '',
+                file_size INT UNSIGNED NOT NULL DEFAULT 0,
+                sha256 CHAR(64) NOT NULL DEFAULT '',
+                width SMALLINT UNSIGNED NULL,
+                height SMALLINT UNSIGNED NULL,
+                has_preview TINYINT(1) NOT NULL DEFAULT 0,
+                download_count INT UNSIGNED NOT NULL DEFAULT 0,
+                upload_token CHAR(32) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_attachments_post (post_id, created_at),
+                KEY idx_community_attachments_user (user_id, created_at),
+                KEY idx_community_attachments_token (upload_token)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Anhänge'",
+
+            // v27: Server-Entwürfe (ein Entwurf je Ziel; target_type forum = neues Thema, topic = Antwort).
+            'community_drafts' => "CREATE TABLE IF NOT EXISTS {$p}community_drafts (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                target_type VARCHAR(10) NOT NULL DEFAULT 'topic',
+                target_id INT UNSIGNED NOT NULL DEFAULT 0,
+                title VARCHAR(200) NULL,
+                body MEDIUMTEXT NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, target_type, target_id),
+                KEY idx_community_drafts_updated (updated_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Server-Entwürfe'",
+
+            // v27: Reaktionen (eine je Mitglied und Beitrag).
+            'community_reactions' => "CREATE TABLE IF NOT EXISTS {$p}community_reactions (
+                post_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                reaction VARCHAR(20) NOT NULL DEFAULT 'like',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (post_id, user_id),
+                KEY idx_community_reactions_user (user_id, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Reaktionen'",
+
+            // v27: Abonnements (Thema oder Forum), notified_at = keine zweite Mail bis zum nächsten Besuch.
+            'community_subscriptions' => "CREATE TABLE IF NOT EXISTS {$p}community_subscriptions (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                target_type VARCHAR(10) NOT NULL DEFAULT 'topic',
+                target_id INT UNSIGNED NOT NULL DEFAULT 0,
+                mode VARCHAR(10) NOT NULL DEFAULT 'instant',
+                notified_at DATETIME NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, target_type, target_id),
+                KEY idx_community_subscriptions_target (target_type, target_id, mode)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Abonnements'",
+
+            // v27: Lesestatus je Mitglied und Thema (Löschfrist über updated_at).
+            'community_read_states' => "CREATE TABLE IF NOT EXISTS {$p}community_read_states (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                topic_id INT UNSIGNED NOT NULL DEFAULT 0,
+                last_read_post_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, topic_id),
+                KEY idx_community_read_states_cleanup (updated_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Lesestatus je Thema'",
+
+            // v27: „Alles bis hier gelesen“ je Forum (forum_id 0 = global).
+            'community_forum_read_marks' => "CREATE TABLE IF NOT EXISTS {$p}community_forum_read_marks (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                forum_id INT UNSIGNED NOT NULL DEFAULT 0,
+                marked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, forum_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Lesemarken je Forum'",
+
+            // v27: Umfragen (ohne Oberfläche bis P2).
+            'community_polls' => "CREATE TABLE IF NOT EXISTS {$p}community_polls (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                topic_id INT UNSIGNED NOT NULL DEFAULT 0,
+                question VARCHAR(255) NOT NULL DEFAULT '',
+                max_choices TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                results_visibility VARCHAR(10) NOT NULL DEFAULT 'after_vote',
+                allow_change TINYINT(1) NOT NULL DEFAULT 1,
+                is_public_voters TINYINT(1) NOT NULL DEFAULT 0,
+                ends_at DATETIME NULL,
+                voter_count INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_community_polls_topic (topic_id),
+                KEY idx_community_polls_ends (ends_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Umfragen'",
+
+            'community_poll_options' => "CREATE TABLE IF NOT EXISTS {$p}community_poll_options (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                poll_id INT UNSIGNED NOT NULL DEFAULT 0,
+                label VARCHAR(200) NOT NULL DEFAULT '',
+                vote_count INT UNSIGNED NOT NULL DEFAULT 0,
+                sort_order TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                KEY idx_community_poll_options_poll (poll_id, sort_order)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Antwortoptionen'",
+
+            'community_poll_votes' => "CREATE TABLE IF NOT EXISTS {$p}community_poll_votes (
+                poll_id INT UNSIGNED NOT NULL DEFAULT 0,
+                option_id INT UNSIGNED NOT NULL DEFAULT 0,
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (poll_id, user_id, option_id),
+                KEY idx_community_poll_votes_option (option_id),
+                KEY idx_community_poll_votes_user (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Stimmen'",
+
+            // v27: Ignorieren-Liste (P2).
+            'community_ignores' => "CREATE TABLE IF NOT EXISTS {$p}community_ignores (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                ignored_user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, ignored_user_id),
+                KEY idx_community_ignores_ignored (ignored_user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: ignorierte Mitglieder'",
+
+            // v27: Zähler, Vertrauensstufe, Rang und Signatur je Mitglied.
+            'community_user_stats' => "CREATE TABLE IF NOT EXISTS {$p}community_user_stats (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0 PRIMARY KEY,
+                topic_count INT UNSIGNED NOT NULL DEFAULT 0,
+                post_count INT UNSIGNED NOT NULL DEFAULT 0,
+                reactions_received INT UNSIGNED NOT NULL DEFAULT 0,
+                reactions_given INT UNSIGNED NOT NULL DEFAULT 0,
+                solutions_count INT UNSIGNED NOT NULL DEFAULT 0,
+                reputation INT NOT NULL DEFAULT 0,
+                trust_level TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                trust_level_locked TINYINT(1) NOT NULL DEFAULT 0,
+                topics_read INT UNSIGNED NOT NULL DEFAULT 0,
+                days_visited INT UNSIGNED NOT NULL DEFAULT 0,
+                rank_id INT UNSIGNED NULL,
+                custom_title VARCHAR(100) NULL,
+                signature TEXT NULL,
+                signature_html TEXT NULL,
+                settings_json LONGTEXT NULL,
+                last_post_at DATETIME NULL,
+                last_seen_at DATETIME NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_user_stats_posts (post_count),
+                KEY idx_community_user_stats_reputation (reputation),
+                KEY idx_community_user_stats_trust (trust_level, trust_level_locked)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Zähler und Vertrauensstufe je Mitglied'",
+
+            // v27: Ränge (min_posts NULL = nur manuell).
+            'community_ranks' => "CREATE TABLE IF NOT EXISTS {$p}community_ranks (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(80) NOT NULL DEFAULT '',
+                title_en VARCHAR(80) NULL,
+                min_posts INT UNSIGNED NULL,
+                color VARCHAR(9) NULL,
+                icon VARCHAR(50) NULL,
+                sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+                KEY idx_community_ranks_min_posts (min_posts),
+                KEY idx_community_ranks_sort (sort_order)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Ränge'",
+
+            // v27: Abzeichen (rule_json NULL = manuell; Oberfläche ab P3).
+            'community_badges' => "CREATE TABLE IF NOT EXISTS {$p}community_badges (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                slug VARCHAR(60) NOT NULL DEFAULT '',
+                title VARCHAR(80) NOT NULL DEFAULT '',
+                title_en VARCHAR(80) NULL,
+                description VARCHAR(255) NULL,
+                icon VARCHAR(50) NULL,
+                tier VARCHAR(10) NOT NULL DEFAULT 'bronze',
+                rule_json LONGTEXT NULL,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                UNIQUE KEY uq_community_badges_slug (slug)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Abzeichen'",
+
+            'community_user_badges' => "CREATE TABLE IF NOT EXISTS {$p}community_user_badges (
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                badge_id INT UNSIGNED NOT NULL DEFAULT 0,
+                granted_by INT UNSIGNED NULL,
+                reason VARCHAR(255) NULL,
+                granted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, badge_id),
+                KEY idx_community_user_badges_badge (badge_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: vergebene Abzeichen'",
+
+            // v27: Meldungen (target_type post | topic | user); forum_id für die Rechte der Forum-Moderatoren.
+            'community_reports' => "CREATE TABLE IF NOT EXISTS {$p}community_reports (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                target_type VARCHAR(10) NOT NULL DEFAULT 'post',
+                target_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                forum_id INT UNSIGNED NULL,
+                reporter_id INT UNSIGNED NULL,
+                reason VARCHAR(20) NOT NULL DEFAULT 'other',
+                message TEXT NULL,
+                status VARCHAR(12) NOT NULL DEFAULT 'open',
+                resolution_note TEXT NULL,
+                notify_reporter TINYINT(1) NOT NULL DEFAULT 1,
+                handled_by INT UNSIGNED NULL,
+                handled_at DATETIME NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_reports_open (status, created_at),
+                KEY idx_community_reports_target (target_type, target_id, status),
+                KEY idx_community_reports_forum (forum_id, status, created_at),
+                KEY idx_community_reports_reporter (reporter_id, target_type, target_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Meldungen'",
+
+            // v27: Verwarnungen mit Punkten und Ablauf (Oberfläche ab P2).
+            'community_warnings' => "CREATE TABLE IF NOT EXISTS {$p}community_warnings (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                issued_by INT UNSIGNED NULL,
+                post_id BIGINT UNSIGNED NULL,
+                reason VARCHAR(255) NOT NULL DEFAULT '',
+                points TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                expires_at DATETIME NULL,
+                revoked_at DATETIME NULL,
+                revoked_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_warnings_user (user_id, expires_at),
+                KEY idx_community_warnings_expires (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Verwarnungen'",
+
+            // v27: Community-Sperren (scope write = nur lesen, full = kein Zugriff); Ablauf wirkt ohne Cron.
+            'community_bans' => "CREATE TABLE IF NOT EXISTS {$p}community_bans (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                scope VARCHAR(10) NOT NULL DEFAULT 'write',
+                reason VARCHAR(255) NOT NULL DEFAULT '',
+                internal_note TEXT NULL,
+                issued_by INT UNSIGNED NULL,
+                starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ends_at DATETIME NULL,
+                lifted_at DATETIME NULL,
+                lifted_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_bans_user (user_id, lifted_at, ends_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Sperren'",
+
+            // v27: Moderationsprotokoll (ohne IP-Adressen; Löschfrist 365 Tage).
+            'community_moderation_log' => "CREATE TABLE IF NOT EXISTS {$p}community_moderation_log (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                actor_id INT UNSIGNED NULL,
+                action VARCHAR(40) NOT NULL DEFAULT '',
+                target_type VARCHAR(10) NOT NULL DEFAULT '',
+                target_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                forum_id INT UNSIGNED NULL,
+                reason VARCHAR(255) NULL,
+                details_json LONGTEXT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_community_moderation_log_time (created_at),
+                KEY idx_community_moderation_log_target (target_type, target_id, created_at),
+                KEY idx_community_moderation_log_actor (actor_id, created_at),
+                KEY idx_community_moderation_log_forum (forum_id, created_at),
+                KEY idx_community_moderation_log_action (action, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Moderationsprotokoll'",
+
+            // v27: Tagesverdichtung der Statistik (forum_id 0 = gesamt); ohne personenbezogene Rohdaten.
+            'community_stats_daily' => "CREATE TABLE IF NOT EXISTS {$p}community_stats_daily (
+                day DATE NOT NULL DEFAULT '1970-01-01',
+                forum_id INT UNSIGNED NOT NULL DEFAULT 0,
+                topics INT UNSIGNED NOT NULL DEFAULT 0,
+                posts INT UNSIGNED NOT NULL DEFAULT 0,
+                active_members INT UNSIGNED NOT NULL DEFAULT 0,
+                new_members INT UNSIGNED NOT NULL DEFAULT 0,
+                solved INT UNSIGNED NOT NULL DEFAULT 0,
+                median_first_reply_minutes INT UNSIGNED NULL,
+                PRIMARY KEY (day, forum_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Statistik je Tag'",
+
+            // v27: Weiterleitungen nach Zusammenführen/Umbenennen (source_type topic | forum). Ohne Plugin-Adressen (E6).
+            'community_redirects' => "CREATE TABLE IF NOT EXISTS {$p}community_redirects (
+                source_type VARCHAR(10) NOT NULL DEFAULT 'topic',
+                source_key VARCHAR(160) NOT NULL DEFAULT '',
+                target_type VARCHAR(10) NOT NULL DEFAULT 'topic',
+                target_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (source_type, source_key),
+                KEY idx_community_redirects_target (target_type, target_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Weiterleitungen'",
         ];
     }
 
@@ -2483,7 +2952,7 @@ class SchemaManager
     private function ensureFeatureSchema(): void
     {
         $queries = self::getSchemaQueries($this->prefix, $this->charset);
-        foreach (array_merge(self::FEATURE_TABLES, self::FEATURE_TABLES_V26) as $table) {
+        foreach (array_merge(self::FEATURE_TABLES, self::FEATURE_TABLES_V26, self::FEATURE_TABLES_V27) as $table) {
             if (!isset($queries[$table])) {
                 continue;
             }
@@ -2514,6 +2983,13 @@ class SchemaManager
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {
             error_log(sprintf('SchemaManager::ensureFeatureSchema(capabilities) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
+        }
+
+        // v27 (capabilities_v27): Rechte `community.*` und die Standardrolle „moderator“, einmalig (Marker in settings).
+        try {
+            \CMS\Services\Community\Support\CommunityCapabilities::migrate($this->db);
+        } catch (\Throwable $e) {
+            error_log(sprintf('SchemaManager::ensureFeatureSchema(capabilities_v27) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
         }
 
         // v26: Zahlungsanbieter (PaymentService, Bereich 5a).

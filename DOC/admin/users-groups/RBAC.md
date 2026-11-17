@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Rollen & Rechte (RBAC)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-17 | **Version:** 4.1.8, Rolle `moderator` und Gruppe „Community“ seit 4.2.0 (Entwicklung, Schema v27) | **Status:** Stable
 > **Route:** `/admin/roles` (Alt-Route `/admin/rbac` leitet um) | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_roles`
 
 ## English (summary)
@@ -18,7 +18,8 @@ Roles and capabilities are managed at `/admin/roles` (`CMS/admin/roles.php` → 
 | `admin` | Administrator | **alle** Capabilities (fest in `Auth::hasCapability()`) |
 | `editor` | Editor | `manage_pages`, `edit_all_posts`, `delete_all_posts`, `manage_media`, alle `pages.*`/`posts.*`/`media.*`, `use_ai_*`, `comments.*`, zusätzlich `manage_trash`, `view_editorial_calendar`, `manage_translations`, `upload_downloads`, `view_form_submissions`, `posts.publish`, `pages.publish` (Veröffentlichungsrecht, siehe unten) und `blocks.reusable` |
 | `author` | Autor | `edit_own_posts`, `pages.view/create/edit`, `posts.view/create/edit`, `media.view/upload`, `comments.view`, `posts.publish` |
-| `member` | Mitglied | `read`, `edit_profile`, `view_content`, `*.view` |
+| `member` | Mitglied | `read`, `edit_profile`, `view_content`, `*.view`, `community.view`, `community.participate` |
+| `moderator` | Moderator (seit 4.2.0, Systemrolle) | wie `member`, zusätzlich `community.moderate`; kein Zugang zu `/admin` |
 | `subscriber`, `contributor` | WordPress-kompatible Zusatzrollen | minimale Leserechte bzw. Beitragsentwürfe |
 
 Alle Rollen besitzen `read`, `edit_profile` und `view_content`. Der Alias `administrator` wird auf `admin` normalisiert.
@@ -46,6 +47,7 @@ Alle Rollen besitzen `read`, `edit_profile` und `view_content`. Der Alias `admin
 | Identität | `security.sso`: Tab *Einstellungen → SSO* (Microsoft Entra ID, [../security/SSO-ENTRA.md](../security/SSO-ENTRA.md)); Admin über die Rolle, weitere Rollen nur per Matrix |
 | Backups | `backups.offsite`: *Backup-Einstellungen* mit S3-Offsite-Ziel ([../system-settings/BACKUP.md](../system-settings/BACKUP.md)) |
 | Webhooks | `webhooks.manage`: ausgehende Webhooks ([../system-settings/WEBHOOKS.md](../system-settings/WEBHOOKS.md)) |
+| Community (seit 4.2.0) | `community.view` (Community sehen), `community.participate` (schreiben), `community.moderate` (globale Moderation: Warteschlange, Meldungen, Verwarnungen, befristete Sperren), `community.ban` (dauerhafte Sperren), `community.manage` (Struktur, Rechte, Einstellungen), `community.view_private_data` (gekürzte IP-Kennung, Verlauf gelöschter Beiträge); Standard: siehe [Community-Rechte](#community-rechte-und-rolle-moderator-seit-420) |
 | Zahlungen | `payments.manage`: Stripe/Mollie-Einstellungen und Zahlungsübersicht ([../subscription/PAYMENTS.md](../subscription/PAYMENTS.md)); `invoices.view`, Rechnungen aller Kunden ansehen und Storno erstellen ([../subscription/INVOICES.md](../subscription/INVOICES.md)) |
 
 Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden zu `.`).
@@ -58,13 +60,25 @@ Capability-Namen werden normalisiert (Kleinschreibung, `/`, `\` und `:` werden z
 | Aktion | Wirkung |
 |---|---|
 | `save_permissions` | Matrix speichern → `cms_role_permissions (role, capability, granted)` |
-| `reset_permissions` | Overrides löschen, Standarddefinitionen gelten wieder |
+| `reset_permissions` | schreibt die Standardrechte der Rollen (`getDefaultPermissions()`) als ausdrückliche Zeilen (`granted` 0/1) neu; weicht in Einzelfällen von den Code-Standards in `roles.php` ab |
 | `add_role` / `update_role` / `delete_role` | Eigene Rollen verwalten (Standardrollen sind geschützt) |
 | `add_capability` / `update_capability` / `delete_capability` | Eigene Capabilities (z. B. für Plugins) verwalten |
 
 ### Veröffentlichungsrechte
 
 `posts.publish` und `pages.publish` werden tatsächlich geprüft: Wer das Recht nicht besitzt, kann „Veröffentlichen“, „Planen“ und „Privat“ nur als Einreichung (Status `pending`, „Zur Prüfung“) speichern ([../pages-posts/REVIEW.md](../pages-posts/REVIEW.md)). Damit sich für bestehende Rollen nichts ändert, vergibt der Update-Schritt `ContentWorkflow::migrateCapabilities()` einmalig `posts.publish` und `pages.publish` an *Editor* sowie `posts.publish` an *Autor*, nur, wenn für die Rolle und die Capability noch kein Eintrag in `cms_role_permissions` steht; ein bewusst entzogenes Recht bleibt entzogen. Admins sind nicht betroffen. Mit der Einstellung „Veröffentlichung braucht eine zweite Person“ kann zusätzlich niemand mehr den eigenen oder selbst eingereichten Inhalt freigeben, auch kein Admin.
+
+### Community-Rechte und Rolle `moderator` (seit 4.2.0)
+
+Das Community-Modul bringt sechs Capabilities (Gruppe „Community“ in `RolesModule::CAPABILITIES`) und die Systemrolle `moderator` mit (nicht umbenenn- oder löschbar, nie als Registrierungsrolle wählbar, keine automatische Entra-Verknüpfung per E-Mail). Ein einmaliger Update-Schritt (`capabilities_v27`, Marker `capabilities_v27` in `settings`) trägt die Standards als Zeilen in `cms_role_permissions` ein:
+
+| Capability | Standard |
+|---|---|
+| `community.view`, `community.participate` | `member`, `editor`, `author`, `moderator` |
+| `community.moderate` | `moderator` |
+| `community.ban`, `community.manage`, `community.view_private_data` | nur `admin` (über die Rolle) |
+
+Der Schritt überschreibt nie eine vorhandene Zeile: Ein ausdrücklich entzogenes Recht (`granted = 0`) bleibt entzogen, ein zweiter Lauf ändert nichts. Eine schon vorhandene Rolle `moderator` erhält nur die Community-Standards, keine zusätzlichen Grundrechte. Moderation für Nicht-Admins läuft im Frontend und Mitgliederbereich, nicht in `/admin` (siehe Hinweis oben). Technik: [../../workflow/specs/community/HANDOFF-PR2-PR5.md](../../workflow/specs/community/HANDOFF-PR2-PR5.md) §4.
 
 ### Auflösung zur Laufzeit
 
