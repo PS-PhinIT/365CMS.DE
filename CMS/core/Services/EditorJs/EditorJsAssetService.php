@@ -89,6 +89,11 @@ final class EditorJsAssetService
         $registryBlocks = [];
         if (class_exists(\CMS\Auth::class) && \CMS\Auth::instance()->isAdmin()) {
             foreach (EditorJsBlockRegistry::types() as $registryType) {
+                // Release-Prüfung 4.1.0 (FUN-410-07): Die Wissensdatenbank wird nicht im Nutzungsindex der Block-Vorlagen
+                // geführt (keine Löschwarnung, kein Neuindizieren); dort gibt es keine Schnellwahl „Vorlagen“.
+                if ($registryType === 'reusableBlock' && $contextClass === 'cms-knowledgebase') {
+                    continue;
+                }
                 if (EditorJsBlockRegistry::script($registryType) !== '') {
                     $registryBlocks[$registryType] = (string) EditorJsBlockRegistry::label($registryType);
                 }

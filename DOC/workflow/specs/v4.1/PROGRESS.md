@@ -1,9 +1,9 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Fortschritt
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-17 | **Ziel-Version:** 4.1.0 (Patch-Releases bis 4.1.9 aus der Release-Prüfung) | **Übersicht:** [README.md](README.md)
 
 ## English (summary)
 
-Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progress · ⬜ open · ➡️ moved. **Result (15 Nov 2026):** areas 1–5, including invoices (5b), are done and released in 4.1.0 (version `4.1.0`, schema `v26`); area 6 (CLI, alerting) moved to **4.3.0**; the community module follows in **4.2.0** (schema `v27`, [../community/README.md](../community/README.md)).
+Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progress · ⬜ open · ➡️ moved. **Result (15 Nov 2026):** areas 1–5, including invoices (5b), are done and released in 4.1.0 (version `4.1.0`, schema `v26`); area 6 (CLI, alerting) moved to **4.3.0**; the community module follows in **4.2.0** (schema `v27`, [../community/README.md](../community/README.md)). **Audit closure (17 Nov 2026):** the 4.1.0 release audit is closed with 145 findings (136 fixed, 4 rejected, 3 accepted, 1 documented, 1 open: PERF-410-49, WXR import); details in [../../../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../../../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
 
 ## Deutsch
 
@@ -24,7 +24,8 @@ Checklist of the 4.1.0 work packages. ✅ done (with evidence) · 🟡 in progre
 | 5b | Rechnungen | ✅ | `Payments\InvoiceService` (Nummernkreis lückenlos in einer Transaktion mit `FOR UPDATE`/Savepoint, Wiederholung bei Sperrkonflikt, Pflichtprüfung vor Vergabe, Snapshot, PDF über `PdfService`, Ablage `invoices/{yyyy}/` mit SHA-256-Prüfung beim Download, Storno mit Verweis, Kleinunternehmer/Reverse Charge/Kleinbetrag, Mail mit Anhang, Sperrvermerk statt Löschung), `Payments\InvoicePrivacy` (DSGVO-Auskunft inkl. Selbstauskunft), Aufbewahrungshinweis in der Datenschutz-Vorlage, Webhook `invoice.created`, `FeatureHooks\InvoiceHooks` (Zahlungseingang, Verlängerung, DSGVO), *Abos → Rechnungen* (`invoices.view`), `/member/subscription/invoices`; Tabellen `invoice_sequences`, `invoices`; Handbuch [INVOICES.md](../../../admin/subscription/INVOICES.md); `TESTS/invoices` 194 Prüfungen (inkl. Paralleltest mit zwei Verbindungen), Gegenprobe (7 eingebaute Fehler) schlägt jedes Mal fehl. Nicht gegen MySQL geprüft; E-Rechnung nicht in 4.1.0 |
 | 6a | CLI | ➡️ | **verschoben auf 4.3.0** (Entscheidung 15.11.2026); Spezifikation bleibt [06-CLI-ALERTING.md](06-CLI-ALERTING.md) |
 | 6b | Alerting | ➡️ | **verschoben auf 4.3.0** (Entscheidung 15.11.2026), samt Webhook-Ereignis `alert.raised` und Hook `cms_alert_raised` |
-| S | Schema v26 (gemeinsam) | ✅ | Marke `v26` in `SchemaManager` und `MigrationManager` (Schritt v26: Tabellen `FEATURE_TABLES_V26`, Spalten der Bereiche 3c und 5a, `capabilities_v26` = Übernahme von `posts.publish`/`pages.publish`; neue Rechte hat nur „admin“), `Version::CURRENT = 4.1.0` (15.11.2026), Marketplace-Manifest und Release-Pakete in `RELEASE/`; `TESTS/schema-v26`, `TESTS/release-3.4.0` |
+| A | Release-Prüfung 4.1.0 (Audit-Abschluss) | ✅ (1 Punkt offen) | Patch-Releases 4.1.1 bis 4.1.8 (gepackt) und Abschluss 4.1.9 (Quelltext auf `main`, Paket folgt); 145 Befunde: 136 behoben, 4 verworfen, 3 akzeptiert, 1 dokumentiert, **1 offen: PERF-410-49** (WXR-Import in einem Request, bewusst getrennt); Bilanz, offene Punkte und Folgearbeiten in [RELEASE-AUDIT-4.1.0-2026-11-15.md](../../../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md) (Abschnitt „PR #6“); `TESTS/release-4.1.0` 593 Prüfungen, `php TESTS/run-all.php` 35 Suiten ohne Fehler |
+| S | Schema v26 (gemeinsam) | ✅ | Marke `v26` in `SchemaManager` und `MigrationManager` (Schritt v26: Tabellen `FEATURE_TABLES_V26`, Spalten der Bereiche 3c und 5a, `capabilities_v26` = Übernahme von `posts.publish`/`pages.publish`, ohne Marker und idempotent; neue Rechte hat nur „admin“, `blocks.reusable` zusätzlich „editor“ über die Standardrechte; DOC-410-03), `Version::CURRENT = 4.1.0` (15.11.2026), Marketplace-Manifest und Release-Pakete in `RELEASE/`; `TESTS/schema-v26`, `TESTS/release-3.4.0` |
 
 ### Rückmeldungen aus dem Betrieb (15.11.2026), alle umgesetzt
 

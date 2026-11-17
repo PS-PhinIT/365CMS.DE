@@ -563,12 +563,6 @@ final class PaymentService
     }
 
     /**
-     * Bezahlte Folgebestellung nach dem Muster der letzten bezahlten Bestellung dieses Abos (Grundlage der Rechnung).
-     *
-     * @param array<string, mixed> $event
-     * @param array<string, mixed> $subscription
-     */
-    /**
      * Release-Prüfung 4.1.0 (FUN-410-38): Vorlage für Folgebestellungen. Zuerst die letzte bezahlte Bestellung beim
      * Anbieter, sonst die letzte bezahlte oder erstattete Bestellung des Pakets (z. B. nach Anbieterwechsel).
      *
@@ -584,6 +578,12 @@ final class PaymentService
             ?? $this->findOrder("user_id = ? AND plan_id = ? AND status IN ('paid', 'refunded') ORDER BY id DESC", [$userId, $planId]);
     }
 
+    /**
+     * Bezahlte Folgebestellung nach dem Muster der Vorlage dieses Abos (Grundlage der Rechnung).
+     *
+     * @param array<string, mixed> $event
+     * @param array<string, mixed> $subscription
+     */
     private function createRenewalOrder(string $provider, array $event, array $subscription, int $now, string &$mismatch = ''): int
     {
         $template = $this->renewalTemplate($provider, $subscription);

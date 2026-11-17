@@ -189,6 +189,14 @@ class SubscriptionManager
             return $this->cache[$cacheKey];
         }
         
+        // Release-Prüfung 4.1.0 (FUN-410-28): Ein Abo mit wiederkehrender Zahlung beim Anbieter (nicht gekündigt) behält
+        // den Zugang bis zu `grace_period_days` über das Laufzeitende hinaus, bis die Verlängerung eintrifft.
+        // Gekündigte, erstattete und manuell bzw. per Rechnung bezahlte Abos enden mit `end_date`.
+        $graceDays = $this->getIntSetting('grace_period_days', 3, 0, 365);
+        $graceClause = $graceDays > 0
+            ? "OR (us.provider_subscription_id IS NOT NULL AND us.provider_subscription_id <> '' AND us.cancelled_at IS NULL
+                   AND us.end_date > DATE_SUB(NOW(), INTERVAL {$graceDays} DAY))"
+            : '';
         $stmt = $this->db->prepare("
             SELECT us.*, sp.*,
                    us.id as subscription_id,
@@ -197,7 +205,7 @@ class SubscriptionManager
             JOIN {$this->db->prefix()}subscription_plans sp ON us.plan_id = sp.id
             WHERE us.user_id = ?
               AND us.status = 'active'
-              AND (us.end_date IS NULL OR us.end_date > NOW())
+              AND (us.end_date IS NULL OR us.end_date > NOW() {$graceClause})
             ORDER BY us.created_at DESC
             LIMIT 1
         ");
@@ -394,7 +402,9 @@ class SubscriptionManager
 
     private function resolveSubscriptionDueDate(array $subscription): ?\DateTimeImmutable
     {
+        // FUN-410-28: Bei Abos mit Anbieter-Verlängerung ist `current_period_end` das Laufzeitende der bezahlten Periode.
         $candidates = [
+            (string) ($subscription['current_period_end'] ?? ''),
             (string) ($subscription['next_billing_date'] ?? ''),
             (string) ($subscription['end_date'] ?? ''),
             (string) ($subscription['expires_at'] ?? ''),
@@ -489,7 +499,12 @@ class SubscriptionManager
         $hasNextBillingDate = trim((string) ($data['next_billing_date'] ?? '')) !== '';
         $billingCycle = strtolower(trim((string) ($data['billing_cycle'] ?? '')));
         $status = strtolower(trim((string) ($data['status'] ?? '')));
-        $isAutoRenewal = $settings['auto_renewal_enabled'] && $hasNextBillingDate && $billingCycle !== 'lifetime';
+        // FUN-410-28: „Nächste Verlängerung“ gilt nur, wenn der Anbieter wiederkehrend abbucht (Stripe/Mollie-Abo, nicht
+        // gekündigt). Abos ohne Anbieter (Rechnung, manuell zugewiesen) laufen zum Datum aus.
+        $isProviderRenewing = trim((string) ($data['provider_subscription_id'] ?? '')) !== ''
+            && trim((string) ($data['cancelled_at'] ?? '')) === '';
+        $isAutoRenewal = $settings['auto_renewal_enabled'] && ($hasNextBillingDate || trim((string) ($data['current_period_end'] ?? '')) !== '')
+            && $billingCycle !== 'lifetime' && $isProviderRenewing;
         $isOverdue = $daysUntilDue < 0;
         $isDueToday = $daysUntilDue === 0;
         $isHighlighted = $isOverdue || $isDueToday || ($settings['warning_days'] > 0 && $daysUntilDue > 0 && $daysUntilDue <= $settings['warning_days']);
@@ -510,8 +525,9 @@ class SubscriptionManager
                 ? 'Die nächste Verlängerung war für ' . $dueLabel . ' vorgesehen. Zahlungs- und Vertragsstatus prüfen.'
                 : 'Die Laufzeit endete am ' . $dueLabel . '.';
 
-            if (!$isAutoRenewal && $settings['grace_period_days'] > 0) {
-                $message .= ' Konfigurierte Kulanzzeit: ' . $settings['grace_period_days'] . ' Tage.';
+            // FUN-410-28: Die Kulanzzeit gilt nur für Abos mit Anbieter-Verlängerung (siehe getUserSubscription()).
+            if ($isAutoRenewal && $settings['grace_period_days'] > 0) {
+                $message .= ' Der Zugang bleibt bis zum Eingang der Zahlung, längstens ' . $settings['grace_period_days'] . ' Tage nach diesem Datum, bestehen.';
             }
         } elseif ($isDueToday) {
             $kind = $isAutoRenewal ? 'renewal_due' : 'expires_today';
