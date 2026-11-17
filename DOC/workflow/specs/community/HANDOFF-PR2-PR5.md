@@ -1,4 +1,4 @@
-# 365CMS Projektdokumentation | Community: Übergabe PR #1 → PR #2 bis PR #5
+# 365CMS Projektdokumentation | Community: Übergabe PR #1 (#176) → PR #2 bis PR #5
 > **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema **v27** (Entwicklungsstand) | **Status:** PR #1 geliefert (Schema, Capabilities, Rolle) · PR #2 bis #5 offen | **Übersicht:** [README.md](README.md)
 > **Grundlage:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [TEST-PLAN.md](TEST-PLAN.md)
 

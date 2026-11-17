@@ -16,7 +16,7 @@
 
 ### v4.2.0 — in Entwicklung (Stand 17.11.2026) - Feature Release
 
-**Community-Modul, PR #1 von 5: Schema v27, Rechte, Rolle `moderator`.** Planung und Übergabe: `DOC/workflow/specs/community/` (Schema und Rechte: `HANDOFF-PR2-PR5.md`). Dieser Eintrag beschreibt den Entwicklungsstand auf `main`, kein veröffentlichtes Release: `Version::CURRENT`, die Update-Manifeste und `RELEASE/` bleiben bei 4.1.8. Es gibt noch keine Oberfläche, keine Dienste und keine Routen des Moduls.
+**Community-Modul, PR #1 von 5 (Pull Request #176): Schema v27, Rechte, Rolle `moderator`.** Planung und Übergabe: `DOC/workflow/specs/community/` (Schema und Rechte: `HANDOFF-PR2-PR5.md`). Dieser Eintrag beschreibt den Entwicklungsstand auf `main`, kein veröffentlichtes Release: `Version::CURRENT`, die Update-Manifeste und `RELEASE/` bleiben bei 4.1.8. Es gibt noch keine Oberfläche, keine Dienste und keine Routen des Moduls.
 
 #### Hinweise für Entwicklungsinstallationen
 
