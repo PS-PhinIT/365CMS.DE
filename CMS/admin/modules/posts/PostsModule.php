@@ -19,6 +19,7 @@ use CMS\CacheManager;
 use CMS\Database;
 use CMS\Hooks;
 use CMS\Logger;
+use CMS\Slug;
 use CMS\Services\Content\ContentStatus;
 use CMS\Services\Content\ContentWorkflow;
 use CMS\Services\ContentLocalizationService;
@@ -3593,33 +3594,20 @@ class PostsModule
     }
 
     /**
-     * Slug generieren
+     * Slug aus Titel oder Name erzeugen (Umlaut-Umschrift über {@see Slug}).
      */
     private function generateSlug(string $text): string
     {
-        $slug = $this->toLowercase($text);
-        $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug) ?? $slug;
-        $slug = preg_replace('/-+/', '-', $slug) ?? $slug;
-        return trim($slug, '-');
+        return Slug::fromText($text);
     }
 
+    /**
+     * Eingegebenen oder erzeugten Slug normalisieren; optional auf die Spaltenbreite kürzen
+     * (Kategorien/Tags: VARCHAR(100)). Bereits gespeicherte ASCII-Slugs bleiben unverändert.
+     */
     private function normalizeSlug(string $slug, int $maxLength = 0): string
     {
-        $slug = $this->toLowercase(trim($slug));
-        $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug) ?? $slug;
-        $slug = preg_replace('/-+/', '-', $slug) ?? $slug;
-        // Optional auf die Spaltenbreite kürzen (Kategorien/Tags: VARCHAR(100))
-        if ($maxLength > 0) {
-            $slug = $this->truncateText(trim($slug, '-'), $maxLength);
-        }
-        return trim($slug, '-');
-    }
-
-    private function toLowercase(string $value): string
-    {
-        return function_exists('mb_strtolower')
-            ? mb_strtolower($value)
-            : strtolower($value);
+        return Slug::fromText($slug, $maxLength);
     }
 
     private function truncateText(string $value, int $maxLength): string

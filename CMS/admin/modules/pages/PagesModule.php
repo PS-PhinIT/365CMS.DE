@@ -17,6 +17,7 @@ use CMS\CacheManager;
 use CMS\AuditLogger;
 use CMS\Logger;
 use CMS\PageManager;
+use CMS\Slug;
 use CMS\Services\Content\ContentStatus;
 use CMS\Services\Content\ContentWorkflow;
 use CMS\Services\ContentEditPermission;
@@ -1547,10 +1548,7 @@ class PagesModule
 
     private function normalizeSlug(string $slug): string
     {
-        $slug = strtolower(trim($slug));
-        $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug) ?? $slug;
-        $slug = preg_replace('/-+/', '-', $slug) ?? $slug;
-        return trim($slug, '-');
+        return Slug::fromText($slug);
     }
 
     private function isSlugTaken(string $slug, int $ignoreId = 0): bool

@@ -236,17 +236,11 @@ class PageManager
     }
 
     /**
-     * Generate a URL-safe slug from a title, with German umlaut handling
+     * URL-Slug aus einem Titel erzeugen (Umlaut-Umschrift und Akzente über {@see Slug}).
      */
     public function generateSlug(string $title): string
     {
-        // German umlauts and common accented chars → ASCII equivalents
-        $title = str_replace(
-            ['ä','ö','ü','Ä','Ö','Ü','ß','é','è','ê','à','â','î','ï','ô','ù','û'],
-            ['ae','oe','ue','ae','oe','ue','ss','e','e','e','a','a','i','i','o','u','u'],
-            $title
-        );
-        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title), '-'));
+        $slug = Slug::fromText($title);
         return $slug !== '' ? $slug : 'seite';
     }
 
