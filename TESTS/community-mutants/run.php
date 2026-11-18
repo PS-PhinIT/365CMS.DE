@@ -181,8 +181,9 @@ T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, 
         if (($entry['suite'] === 'community-db') !== $entry['needsDb']) {
             $problems[] = $name . ': needsDb muss genau für die Suite community-db gelten';
         }
-        if (!str_starts_with($entry['file'], 'core/Services/Community/') || str_contains($entry['file'], '..')) {
-            $problems[] = $name . ': Datei liegt nicht unter core/Services/Community/';
+        // Community-Klassen und die zwei Core-Dateien, auf denen sie aufbauen (Hooks: Filterkette und isolierte Verbraucher).
+        if ((!str_starts_with($entry['file'], 'core/Services/Community/') && !in_array($entry['file'], ['core/Hooks.php', 'core/Slug.php'], true)) || str_contains($entry['file'], '..')) {
+            $problems[] = $name . ': Datei liegt nicht unter core/Services/Community/ (oder core/Hooks.php, core/Slug.php)';
             continue;
         }
         $path = Mutant::root() . $entry['file'];

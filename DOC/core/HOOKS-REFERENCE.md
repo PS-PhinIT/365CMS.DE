@@ -20,8 +20,10 @@
 | `Hooks::addFilter(string $tag, callable $cb, int $priority = 10)` | Filter registrieren |
 | `Hooks::applyFilters(string $tag, mixed $value, ...$args): mixed` | Wert durch die Filterkette reichen |
 | `Hooks::removeFilter(string $tag, callable $cb, int $priority = 10)` | entfernen |
+| `Hooks::getCallbacks(string $tag, string $type = 'filter'): array` | registrierte Callbacks eines Tags in Ausführungsreihenfolge (`'filter'` oder `'action'`), z. B. für Filterketten, die jeden Schritt einzeln prüfen (seit 4.2.0) |
+| `Hooks::doActionIsolated(string $tag, ?callable $onError, ...$args)` | Action auslösen, jeder Verbraucher einzeln abgesichert: eine Ausnahme geht an `$onError` und hindert die übrigen nicht; zählt für `didAction()` wie `doAction()` (seit 4.2.0) |
 
-Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierungsreihenfolge ausgeführt; Filter geben den (veränderten) Wert zurück. Ausnahmen werden nicht von `Hooks` abgefangen. Callbacks sollten selbst fehlertolerant sein.
+Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierungsreihenfolge ausgeführt; Filter geben den (veränderten) Wert zurück. `doAction()` und `applyFilters()` fangen keine Ausnahmen ab (nur `doActionIsolated()`). Callbacks sollten selbst fehlertolerant sein.
 
 ### Lebenszyklus & Routing
 
