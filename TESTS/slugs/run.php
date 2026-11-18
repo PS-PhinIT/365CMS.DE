@@ -93,7 +93,11 @@ T::run('Einbindung', static function () use ($root): void {
     $pages = (string) file_get_contents($root . 'admin/modules/pages/PagesModule.php');
     T::check(preg_match('/function normalizeSlug\(string \$slug\): string\s*\{\s*return Slug::fromText\(\$slug\);/', $pages) === 1, 'PagesModule::normalizeSlug nutzt Slug::fromText');
 
-    T::check(!str_contains($posts . $pageManager . $pages, "preg_replace('/[^a-z0-9\\-]/', '-'"), 'keine eigene Ersetzung ohne Umschrift mehr');
+    $copy = (string) file_get_contents($root . 'core/Services/ContentLanguageCopyService.php');
+    T::check(str_contains($copy, 'use CMS\\Slug;'), 'ContentLanguageCopyService importiert CMS\\Slug');
+    T::check(preg_match('/function normalizeSlug\(string \$slug\): string\s*\{\s*return Slug::fromText\(\$slug\);/', $copy) === 1, 'ContentLanguageCopyService::normalizeSlug nutzt Slug::fromText');
+
+    T::check(!str_contains($posts . $pageManager . $pages . $copy, "preg_replace('/[^a-z0-9\\-]/', '-'"), 'keine eigene Ersetzung ohne Umschrift mehr');
 });
 
 T::finish();
