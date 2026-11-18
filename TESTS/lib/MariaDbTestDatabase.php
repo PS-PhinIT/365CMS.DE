@@ -5,7 +5,9 @@
  * Der Konstruktor von `CMS\Database` ist privat und das Feld `$pdo` privat; die Klasse setzt es per Reflection
  * (PHP 8.1 oder neuer, ohne `setAccessible()`). So laufen `execute()`, `insert()`, `update()`, `getPdo()` und
  * `lastInsertId()` des Cores unverändert gegen die Verbindung. Optional werfen `execute()`/`prepare()` bei Treffern
- * in `$failOn` (Fehlerinjektion für Rücknahme-Tests).
+ * in `$failOn` (Fehlerinjektion für Rücknahme-Tests) oder bei der n-ten Anweisung (`$failAtStatement`, Zähler
+ * `$statementCount`: die Suite `TESTS/community-db` fällt so nacheinander an jeder Anweisung eines Dienstaufrufs aus).
+ * `$captureParams` hält SQL und gebundene Parameter von `execute()` in `$captured` fest (EXPLAIN mit den echten Parametern).
  *
  * Jeder Aufruf von `create()` legt eine frische Datenbank mit dem Präfix `pr2a_` an (Tabellen aus den echten
  * CREATE-Texten wie das SQLite-Double, Tabellenpräfix `cms_`) und stellt die Sitzung auf die Zone `+01:00`, damit
@@ -39,6 +41,14 @@ final class MariaDbTestDatabase extends Database
     public array $throwOn = [];
     /** @var list<string> Alle vorbereiteten SQL-Texte. */
     public array $log = [];
+    /** Zahl der bisher vorbereiteten Anweisungen (jeder `prepare()`-Aufruf zählt, auch `insert()`); der Test setzt sie bei Bedarf zurück. */
+    public int $statementCount = 0;
+    /** Nummer (1 = nächste Anweisung nach dem Zurücksetzen von `$statementCount`), bei der `prepare()` eine `PDOException` wirft; `null` = aus. */
+    public ?int $failAtStatement = null;
+    /** Ob `execute()` SQL und gebundene Parameter in `$captured` festhält (für EXPLAIN mit den echten Parametern). */
+    public bool $captureParams = false;
+    /** @var list<array{sql: string, params: array<int|string, mixed>}> */
+    public array $captured = [];
     public string $databaseName = '';
 
     /** @var array<string, true> */
@@ -141,9 +151,22 @@ final class MariaDbTestDatabase extends Database
         self::$created = [];
     }
 
+    public function execute(string $sql, array $params = []): \PDOStatement
+    {
+        if ($this->captureParams) {
+            $this->captured[] = ['sql' => $sql, 'params' => $params];
+        }
+
+        return parent::execute($sql, $params);
+    }
+
     public function prepare(string $sql): \PDOStatement|false
     {
         $this->log[] = $sql;
+        $this->statementCount++;
+        if ($this->failAtStatement !== null && $this->statementCount === $this->failAtStatement) {
+            throw new \PDOException('Testfehler (Injektion bei Anweisung ' . $this->failAtStatement . '): ' . $sql);
+        }
         foreach ($this->failOn as $pattern) {
             if (preg_match($pattern, $sql) === 1) {
                 throw new \PDOException('Testfehler (Injektion): ' . $pattern);

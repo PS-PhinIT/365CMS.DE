@@ -33,13 +33,16 @@ define('LOG_PATH', sys_get_temp_dir() . '/cms-tests-logs-community-access-' . ge
 date_default_timezone_set('Europe/Berlin');
 ini_set('error_log', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null');
 
+// Gegenprobe-Haken (TESTS/lib/Mutant.php): mit CMS_TEST_MUTANT=<name> lädt der Autoloader eine Mutante statt des Originals.
+require_once dirname(__DIR__) . '/lib/Mutant.php';
+
 spl_autoload_register(static function (string $class): void {
     if (!str_starts_with($class, 'CMS\\')) {
         return;
     }
     $file = ABSPATH . 'core/' . str_replace('\\', '/', substr($class, 4)) . '.php';
     if (is_file($file)) {
-        require $file;
+        Mutant::load($file);
     }
 });
 

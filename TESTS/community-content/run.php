@@ -22,13 +22,16 @@ define('LOG_PATH', sys_get_temp_dir() . '/cms-tests-logs/');
 date_default_timezone_set('Europe/Berlin');
 ini_set('error_log', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null');
 
+// Gegenprobe-Haken (TESTS/lib/Mutant.php): mit CMS_TEST_MUTANT=<name> lädt der Autoloader eine Mutante statt des Originals.
+require_once dirname(__DIR__) . '/lib/Mutant.php';
+
 spl_autoload_register(static function (string $class): void {
     if (!str_starts_with($class, 'CMS\\')) {
         return;
     }
     $file = ABSPATH . 'core/' . str_replace('\\', '/', substr($class, 4)) . '.php';
     if (is_file($file)) {
-        require $file;
+        Mutant::load($file);
     }
 });
 
@@ -2296,6 +2299,333 @@ T::run('Ungelesen-Karte: mehr als 500 Themen (Abfrage in Teilen)', static functi
     $w->reads->advance($r, $ids[519], (int) $w->topic($ids[519])['last_post_id']);
     $map = $w->reads->unreadMap($r, $w->db->rows('community_topics', [], 'id'));
     T::same([520, 3, false, false, false, true, true], [count($map), count(array_filter($map)) - 514, $map[$ids[3]], $map[$ids[510]], $map[$ids[519]], $map[$ids[4]], $map[$ids[511]]], '520 Themen: gelesene (auch hinter Position 500) sind gelesen, alle anderen ungelesen');
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Ende-zu-Ende mit echter CommunityAccess
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Die Abschnitte oben prüfen die Dienste mit einer Closure als Rechteprüfung. Hier fragen alle vier Dienste eine echte
+// `CommunityAccess` (Rechte-Zeilen der Foren, Sperren, Fenster, Abstände, Freigabepflicht) auf demselben SQLite-Double.
+
+/** Rechte der Rollen in der Ende-zu-Ende-Welt (`admin` nimmt `CommunityAccess` selbst aus). */
+const CC_ROLE_CAPS = [
+    'member' => ['community.view', 'community.participate'],
+    'moderator' => ['community.view', 'community.participate', 'community.moderate'],
+];
+
+/**
+ * Welt wie `CcWorld`, aber die vier Dienste fragen eine echte `CommunityAccess` statt der Closure. Uhr, Datenbank-Double und
+ * Hook-Protokoll teilen sich beide Welten.
+ *
+ * @param array<string, mixed> $settings Rohwerte für Settings::fromArray()
+ */
+function ccRealWorld(array $settings = []): CcWorld
+{
+    $w = new CcWorld($settings);
+    $clock = static fn (): int => (int) $w->time['now'];
+    $access = new CommunityAccess(
+        $w->db,
+        $w->settings,
+        static fn (string $role, string $capability): bool => $role === 'admin' || in_array($capability, CC_ROLE_CAPS[$role] ?? [], true),
+        static fn (): bool => true,
+        $clock,
+        static fn (int $userId): bool => true
+    );
+    $can = static fn (?int $userId, string $action, array $context): AccessDecision => $access->can($userId, $action, $context);
+    $dispatch = static function (string $hook, mixed ...$args) use ($w): void {
+        $w->hooks[] = ['hook' => $hook, 'args' => $args, 'in_transaction' => $w->db->getPdo()->inTransaction()];
+    };
+    $w->topics = new TopicService($w->db, $w->settings, $clock, $can, $dispatch);
+    $w->posts = new PostService($w->db, $w->settings, $clock, $can, $dispatch);
+    $w->quotes = new QuoteService($w->db, $w->settings, $clock, $can);
+    $w->reads = new ReadStateService($w->db, $w->settings, $clock, $can);
+
+    return $w;
+}
+
+/**
+ * Rechte-Zeilen eines Forums setzen (ersetzt alle Zeilen des Forums).
+ *
+ * @param list<array{subject_type: string, subject_key: string, permissions: array<string, int>|null}> $rows
+ */
+function ccRows(CcWorld $w, int $forum, array $rows): void
+{
+    (new \CMS\Services\Community\Repository\ForumRepository($w->db))->savePermissions($forum, $rows, ccUtc());
+}
+
+/**
+ * Zeile „Rolle member“: lesen, schreiben, Eigenes bearbeiten und löschen; `$extra` ergänzt oder überschreibt Rechte.
+ *
+ * @param array<string, int> $extra
+ * @return array{subject_type: string, subject_key: string, permissions: array<string, int>}
+ */
+function ccMemberRow(array $extra = []): array
+{
+    return ['subject_type' => 'role', 'subject_key' => 'member', 'permissions' => $extra + ['read' => 1, 'create_topic' => 1, 'reply' => 1, 'edit_own' => 1, 'delete_own' => 1]];
+}
+
+/** Ergebnis eines Dienstaufrufs als Status oder Fehlercode (für knappe Vergleiche). */
+function ccOutcome(array $result): string
+{
+    return !empty($result['success']) ? (string) ($result['status'] ?? 'ok') : (string) ($result['error'] ?? '?');
+}
+
+T::run('Ende-zu-Ende (echte CommunityAccess): Anlegen, Antworten, Bearbeiten, Löschen mit Rechte-Zeilen, Zähler und Hook-Folge', static function (): void {
+    $w = ccRealWorld(['new_member_approval_posts' => 0]);
+    $alice = $w->db->user(['username' => 'alice']);
+    $bob = $w->db->user(['username' => 'bob']);
+    $moderator = $w->db->user(['username' => 'moda', 'role' => 'moderator']);
+    $forum = $w->db->forum(['title' => 'Allgemein']);
+    ccRows($w, $forum, [ccMemberRow()]);
+
+    $created = $w->topics->create($alice, $forum, 'Erstes Thema der Ende-zu-Ende-Welt', 'Hallo Welt');
+    T::same([true, 'published'], [$created['success'] ?? null, $created['status'] ?? null], 'Thema anlegen: Rolle member mit Rechte-Zeile, Freigabepflicht aus: veröffentlicht');
+    $topic = (int) $created['topic_id'];
+    $first = (int) $created['post_id'];
+    T::same([ccUtc(), ccUtc()], [$w->topic($topic)['created_at'], $w->post($first)['created_at']], 'Zeiten in UTC (PHP-Zone Europe/Berlin)');
+    ccAssertCounters($w, 'Thema anlegen');
+
+    $w->at(60);
+    $reply = $w->posts->reply($bob, $topic, 'Antwort von Bob');
+    T::same([true, 2, 1], [$reply['success'] ?? null, $reply['position'] ?? null, $reply['page'] ?? null], 'Antwort: Position 2, Seite 1');
+    $bobPost = (int) $reply['post_id'];
+    ccAssertCounters($w, 'Antwort');
+
+    $w->at(120);
+    $edit = $w->posts->edit($alice, $first, 'Neuer Text des Themenstarts', 'Neuer Titel der Ende-zu-Ende-Welt', 'Klarstellung');
+    T::same([true, true, 1], [$edit['success'] ?? null, $edit['title_changed'] ?? null, $edit['edit_count'] ?? null], 'Bearbeiten durch den Autor (Titel und Text)');
+    T::same('no_permission', $w->posts->edit($bob, $first, 'Fremder Text')['error'] ?? null, 'ein anderes Mitglied darf nicht bearbeiten (nur edit_own)');
+    ccAssertCounters($w, 'Bearbeiten');
+
+    $w->at(180);
+    $deleted = $w->posts->delete($bob, $bobPost);
+    T::same([true, 'deleted'], [$deleted['success'] ?? null, $deleted['mode'] ?? null], 'eigene Antwort löschen (Zeile delete_own)');
+    T::same(['deleted', 'author', 0, 1], [$w->post($bobPost)['status'], $w->post($bobPost)['status_reason'], (int) $w->topic($topic)['reply_count'], (int) $w->forum($forum)['post_count']], 'gelöscht: Status, Grund, reply_count 0, post_count 1');
+    ccAssertCounters($w, 'Antwort löschen');
+
+    $w->at(240);
+    T::same(true, $w->topics->delete($alice, $topic)['success'] ?? null, 'Thema ohne veröffentlichte Antwort: der Autor löscht es');
+    T::same([0, 0], [(int) $w->forum($forum)['topic_count'], (int) $w->forum($forum)['post_count']], 'Forum wieder leer');
+    ccAssertCounters($w, 'Thema löschen');
+
+    T::same(
+        ['cms_community_topic_created', 'cms_community_post_created', 'cms_community_post_updated', 'cms_community_topic_updated', 'cms_community_post_deleted', 'cms_community_topic_deleted'],
+        $w->hookNames(),
+        'Hook-Folge der erfolgreichen Schreibaktionen; abgelehnte lösen keinen aus'
+    );
+    T::same([], array_values(array_filter($w->hooks, static fn (array $h): bool => $h['in_transaction'])), 'kein Hook innerhalb der Transaktion');
+
+    $w->at(300);
+    $moderated = $w->topics->create($moderator, $forum, 'Thema der Moderation im Forum', 'Text');
+    T::same('published', ccOutcome($moderated), 'Moderation legt ohne eigene Zeile an (globale Moderation umgeht die Matrix)');
+    $w->at(360);
+    T::same(true, $w->posts->edit($moderator, (int) $moderated['post_id'], 'Von der Moderation bearbeitet')['success'] ?? null, 'Moderation bearbeitet');
+    $w->at(100000);
+    T::same(true, $w->posts->edit($moderator, (int) $moderated['post_id'], 'Viel später von der Moderation bearbeitet')['success'] ?? null, 'Moderation: kein Bearbeitungsfenster');
+});
+
+T::run('Ende-zu-Ende (echte CommunityAccess): Freigabepflicht (pending) bis zum Zähler, Deckel, Forum-Freigabe, bypass_approval, Moderation', static function (): void {
+    $w = ccRealWorld();   // new_member_approval_posts = 2, max_pending_per_user = 3
+    $newbie = $w->db->user();
+    $author = $w->db->user();
+    $vip = $w->db->user();
+    $admin = $w->db->user(['role' => 'admin']);
+    $group = $w->db->group('Vertrauenswürdige');
+    $w->db->join($vip, $group);
+    $forum = $w->db->forum();
+    $vipRow = ['subject_type' => 'group', 'subject_key' => (string) $group, 'permissions' => ['read' => 1, 'create_topic' => 1, 'reply' => 1, 'bypass_approval' => 1]];
+    ccRows($w, $forum, [ccMemberRow(), $vipRow]);
+    $w->db->stats($author, ['post_count' => 9]);
+
+    $open = $w->topics->create($author, $forum, 'Veröffentlichtes Thema zum Antworten', 'Themenstart');
+    T::same('published', ccOutcome($open), 'Mitglied mit 9 Beiträgen: veröffentlicht');
+    $topic = (int) $open['topic_id'];
+
+    $w->at(120);
+    $first = $w->topics->create($newbie, $forum, 'Wartendes Thema eines neuen Mitglieds', 'Erster Beitrag');
+    T::same([true, 'pending'], [$first['success'] ?? null, $first['status'] ?? null], 'neues Mitglied (0 Beiträge < 2): Thema wartet auf Freigabe');
+    $pendingTopic = (int) $first['topic_id'];
+    T::same([1, 1, 0, 0], [(int) $w->forum($forum)['topic_count'], (int) $w->forum($forum)['post_count'], (int) ($w->stats($newbie)['topic_count'] ?? 0), (int) ($w->stats($newbie)['post_count'] ?? 0)], 'wartend zählt nirgends: Forum nur das veröffentlichte Thema, Mitglied 0/0');
+    T::same(['pending', null, ccUtc(120)], [$w->topic($pendingTopic)['status'], $w->topic($pendingTopic)['last_post_id'], $w->topic($pendingTopic)['last_post_at']], 'Thema pending: last_post_id leer, last_post_at gesetzt (nie NULL)');
+    T::same([$topic], array_map(static fn (array $t): int => (int) $t['id'], $w->topics->listForum($newbie, $forum)['items'] ?? []), 'die Themenliste zeigt nur Veröffentlichtes (auch dem Autor)');
+    T::same(null, $w->topics->get($author, $pendingTopic), 'ein anderes Mitglied sieht das wartende Thema nicht');
+    T::same([$pendingTopic, 'pending'], [$w->topics->get($newbie, $pendingTopic)['id'] ?? null, $w->topics->get($newbie, $pendingTopic)['status'] ?? null], 'der Autor sieht es');
+    T::same('not_found', ccOutcome($w->posts->reply($author, $pendingTopic, 'Antwort auf wartendes Thema')), 'andere Mitglieder können nicht auf ein wartendes Thema antworten (nicht sichtbar)');
+    ccAssertCounters($w, 'wartendes Thema', false);
+
+    $outcomes = [];
+    foreach ([180, 240, 300, 360] as $i => $at) {
+        $w->at($at);
+        $outcomes[] = ccOutcome($w->posts->reply($newbie, $topic, 'Wartende Antwort ' . $i));
+    }
+    T::same(['pending', 'pending', 'pending_limit', 'pending_limit'], $outcomes, 'Deckel: das wartende Thema und zwei wartende Antworten füllen max_pending_per_user (3), danach pending_limit');
+    T::same([0, 1], [(int) $w->topic($topic)['reply_count'], (int) $w->forum($forum)['topic_count']], 'wartende Antworten zählen nicht (reply_count, Forumzähler)');
+    T::same([false], array_values($w->reads->unreadMap($author, [$w->topic($pendingTopic)])), 'wartende Themen sind nie ungelesen');
+    ccAssertCounters($w, 'wartende Antworten', false);
+
+    $w->at(600);
+    T::same('published', ccOutcome($w->topics->create($vip, $forum, 'Thema des befreiten Mitglieds', 'Text')), 'Gruppenzeile mit bypass_approval: veröffentlicht, obwohl 0 Beiträge');
+    $approval = $w->db->forum(['require_approval' => true]);
+    ccRows($w, $approval, [ccMemberRow(), $vipRow]);
+    $w->at(900);
+    T::same('pending', ccOutcome($w->topics->create($author, $approval, 'Thema im Forum mit Freigabepflicht', 'Text')), 'Forum mit require_approval: auch ein erfahrenes Mitglied wartet');
+    $w->at(1200);
+    T::same('published', ccOutcome($w->topics->create($vip, $approval, 'Befreites Mitglied im Freigabe-Forum', 'Text')), 'bypass_approval befreit auch von der Forum-Freigabe');
+    $w->at(1500);
+    T::same('published', ccOutcome($w->topics->create($admin, $approval, 'Admin im Forum mit Freigabepflicht', 'Text')), 'Moderation: keine Freigabepflicht');
+    ccAssertCounters($w, 'Befreiung', false);
+    $statuses = array_map(static fn (array $h): string => (string) $h['args'][3], array_values(array_filter($w->hooks, static fn (array $h): bool => $h['hook'] === 'cms_community_topic_created')));
+    T::same(['published', 'pending', 'published', 'pending', 'published', 'published'], $statuses, 'Hook cms_community_topic_created meldet den tatsächlichen Status je Thema');
+});
+
+T::run('Ende-zu-Ende (echte CommunityAccess): Sperre blockiert, Bearbeitungsfenster nach Stufe, Abstand, Langsamer Modus, geschlossenes Thema, Archiv', static function (): void {
+    $w = ccRealWorld(['new_member_approval_posts' => 0]);
+    $author = $w->db->user();
+    $banned = $w->db->user();
+    $fullBanned = $w->db->user();
+    $lifted = $w->db->user();
+    $expired = $w->db->user();
+    $moderator = $w->db->user(['role' => 'moderator']);
+    $admin = $w->db->user(['role' => 'admin']);
+    $forum = $w->db->forum();
+    ccRows($w, $forum, [ccMemberRow()]);
+    $w->db->ban(['user' => $banned, 'scope' => 'write']);
+    $w->db->ban(['user' => $fullBanned, 'scope' => 'full']);
+    $w->db->ban(['user' => $lifted, 'scope' => 'write', 'lifted_at' => ccUtc(-3600)]);
+    $w->db->ban(['user' => $expired, 'scope' => 'write', 'ends_at' => ccUtc(-3600)]);
+    $created = $w->topics->create($author, $forum, 'Thema für Sperren und Fenster', 'Themenstart');
+    $topic = (int) $created['topic_id'];
+    $post = (int) $created['post_id'];
+
+    $w->at(60);
+    T::same(['banned_write', 'banned_write', 'banned_write'], [
+        ccOutcome($w->topics->create($banned, $forum, 'Gesperrtes Mitglied legt an', 'Text')),
+        ccOutcome($w->posts->reply($banned, $topic, 'Gesperrte Antwort')),
+        ccOutcome($w->posts->delete($banned, $post)),
+    ], 'Schreibsperre blockiert Anlegen, Antworten und Löschen');
+    T::same(true, $w->topics->listForum($banned, $forum)['success'] ?? null, 'Schreibsperre lässt Lesen zu');
+    T::same(['banned_full', null], [$w->topics->listForum($fullBanned, $forum)['error'] ?? null, $w->topics->get($fullBanned, $topic)], 'Vollsperre: auch Lesen abgelehnt');
+    T::same('published', ccOutcome($w->posts->reply($lifted, $topic, 'Aufgehobene Sperre antwortet')), 'aufgehobene Sperre blockiert nicht');
+    $w->at(70);
+    T::same('published', ccOutcome($w->topics->create($expired, $forum, 'Abgelaufene Sperre legt an', 'Text')), 'abgelaufene Sperre blockiert nicht');
+    T::same(0, $w->db->count('community_posts', ['user_id' => $banned]), 'abgelehnte Aktionen schreiben nichts');
+    $w->db->ban(['user' => $admin, 'scope' => 'full']);
+    $w->at(80);
+    T::same('published', ccOutcome($w->posts->reply($admin, $topic, 'Admin trotz Vollsperre')), 'admin ist von Sperren ausgenommen');
+    ccAssertCounters($w, 'Sperren');
+
+    // Bearbeitungsfenster: 30 Minuten ab Anlegen (Grenze inklusive), Stufe 3: 1440 Minuten, Moderation ohne Fenster
+    $w->at(1800);
+    T::same(true, $w->posts->edit($author, $post, 'Bearbeitet genau an der Grenze')['success'] ?? null, 'Fenster: genau 30 Minuten nach dem Anlegen noch erlaubt');
+    $w->at(1801);
+    T::same('edit_window', ccOutcome($w->posts->edit($author, $post, 'Eine Sekunde zu spät')), 'Fenster: eine Sekunde später abgelehnt');
+    $w->db->execute('UPDATE cms_community_user_stats SET trust_level = 3, trust_level_locked = 1 WHERE user_id = ?', [$author]);
+    T::same(true, $w->posts->edit($author, $post, 'Stufe 3 bearbeitet nach 30 Minuten')['success'] ?? null, 'Stufe 3: Fenster 1440 Minuten');
+    $w->at(1440 * 60 + 1);
+    T::same('edit_window', ccOutcome($w->posts->edit($author, $post, 'Nach 24 Stunden')), 'Stufe 3: nach 1440 Minuten abgelehnt');
+    T::same(true, $w->posts->edit($moderator, $post, 'Moderation ohne Fenster')['success'] ?? null, 'Moderation: kein Fenster');
+    $w->db->execute('UPDATE cms_community_user_stats SET trust_level = 0, trust_level_locked = 0 WHERE user_id = ?', [$author]);
+
+    // Löschen folgt dem Bearbeitungsfenster
+    $w->at(100000);
+    $mine = (int) $w->posts->reply($author, $topic, 'Antwort zum Löschen')['post_id'];
+    $w->at(100000 + 1801);
+    T::same('edit_window', ccOutcome($w->posts->delete($author, $mine)), 'Löschen: nach dem Fenster abgelehnt');
+    $w->at(100000 + 1800);
+    T::same(true, $w->posts->delete($author, $mine)['success'] ?? null, 'Löschen: an der Grenze erlaubt');
+
+    // Abstand (rate_post_seconds 30) und Langsamer Modus des Forums
+    $w->at(200000);
+    $fast = $w->db->user();
+    T::same('published', ccOutcome($w->posts->reply($fast, $topic, 'Erste Antwort')), 'erste Antwort');
+    $w->at(200010);
+    $tooFast = $w->posts->reply($fast, $topic, 'Zweite Antwort zu schnell');
+    T::same(['rate_limited', 20], [$tooFast['error'] ?? null, $tooFast['retry_after'] ?? null], 'Abstand 30 s: nach 10 s noch 20 s Rest');
+    $w->at(200030);
+    T::same('published', ccOutcome($w->posts->reply($fast, $topic, 'Dritte Antwort pünktlich')), 'Abstand: nach genau 30 s erlaubt');
+    $slow = $w->db->forum(['slow_mode' => 120]);
+    ccRows($w, $slow, [ccMemberRow()]);
+    $w->at(201000);
+    $slowTopic = (int) $w->topics->create($fast, $slow, 'Thema im Forum mit Langsamem Modus', 'Text')['topic_id'];
+    $w->at(201060);
+    $slowed = $w->posts->reply($fast, $slowTopic, 'Antwort im Langsamen Modus');
+    T::same(['slow_mode', 60], [$slowed['error'] ?? null, $slowed['retry_after'] ?? null], 'Langsamer Modus 120 s: nach 60 s noch 60 s Rest');
+    T::same('published', ccOutcome($w->posts->reply($moderator, $slowTopic, 'Moderation ignoriert den Langsamen Modus')), 'Moderation: kein Langsamer Modus');
+
+    // Geschlossenes Thema, Archiv, schreibgeschütztes Forum
+    $w->db->execute('UPDATE cms_community_topics SET is_locked = 1 WHERE id = ?', [$topic]);
+    $w->at(300000);
+    T::same(['topic_locked', 'published'], [ccOutcome($w->posts->reply($author, $topic, 'Antwort im geschlossenen Thema')), ccOutcome($w->posts->reply($moderator, $topic, 'Moderation im geschlossenen Thema'))], 'geschlossenes Thema: Mitglied abgelehnt, Moderation erlaubt');
+    $archive = $w->db->forum(['status' => 'archived']);
+    ccRows($w, $archive, [ccMemberRow()]);
+    T::same(['forum_archived', 'forum_archived'], [ccOutcome($w->topics->create($author, $archive, 'Thema im Archiv', 'Text')), ccOutcome($w->topics->create($admin, $archive, 'Admin im Archiv', 'Text'))], 'Archiv: schreibgeschützt für alle, auch für admin');
+    $readonly = $w->db->forum(['status' => 'readonly']);
+    ccRows($w, $readonly, [ccMemberRow()]);
+    T::same(['forum_readonly', 'published'], [ccOutcome($w->topics->create($author, $readonly, 'Thema im schreibgeschützten Forum', 'Text')), ccOutcome($w->topics->create($admin, $readonly, 'Admin im schreibgeschützten Forum', 'Text'))], 'schreibgeschütztes Forum: Mitglied abgelehnt, Moderation erlaubt');
+    ccAssertCounters($w, 'Zustände');
+});
+
+T::run('Ende-zu-Ende (echte CommunityAccess): Leserechte in Listen, Platzhalter, Lesestatus und Zitate', static function (): void {
+    $w = ccRealWorld(['new_member_approval_posts' => 0]);
+    $alice = $w->db->user();
+    $insider = $w->db->user();
+    $author = $w->db->user();
+    $moderator = $w->db->user(['role' => 'moderator']);
+    $admin = $w->db->user(['role' => 'admin']);
+    $group = $w->db->group('Intern');
+    $w->db->join($insider, $group);
+    $public = $w->db->forum(['title' => 'Öffentlich']);
+    $internal = $w->db->forum(['title' => 'Intern']);
+    $secret = $w->db->forum(['title' => 'Verborgen', 'status' => 'hidden']);
+    ccRows($w, $public, [ccMemberRow(), ['subject_type' => 'guest', 'subject_key' => '', 'permissions' => ['read' => 1]]]);
+    ccRows($w, $internal, [['subject_type' => 'group', 'subject_key' => (string) $group, 'permissions' => ['read' => 1, 'reply' => 1]]]);
+    ccRows($w, $secret, [ccMemberRow()]);
+    $w->at(5000);
+    [$publicTopic, $publicPosts] = ccSeedTopic($w, $public, $author, 4, -4000, ['authors' => [$author, $alice, $author, $alice]]);
+    [$internalTopic, $internalPosts] = ccSeedTopic($w, $internal, $author, 2, -3000);
+    [$secretTopic] = ccSeedTopic($w, $secret, $author, 2, -2000);
+
+    // Leserechte in den Listen (Themenliste, Beitragsliste, einzelnes Thema)
+    $visible = static fn (array $r): string => !empty($r['success']) ? 'ok' : (string) ($r['error'] ?? '?');
+    T::same(['ok', 'not_found', 'not_found'], [$visible($w->topics->listForum($alice, $public)), $visible($w->topics->listForum($alice, $internal)), $visible($w->topics->listForum($alice, $secret))], 'Mitglied ohne Gruppe: öffentliches Forum ja, internes und verborgenes Forum nicht („nicht gefunden“)');
+    T::same(['ok', 'ok', 'not_found'], [$visible($w->topics->listForum($insider, $public)), $visible($w->topics->listForum($insider, $internal)), $visible($w->topics->listForum($insider, $secret))], 'Gruppenmitglied: auch das interne Forum, das verborgene nicht');
+    T::same(['ok', 'ok', 'ok'], [$visible($w->topics->listForum($moderator, $public)), $visible($w->topics->listForum($moderator, $internal)), $visible($w->topics->listForum($moderator, $secret))], 'Moderation liest alle Foren, auch das verborgene');
+    T::same(['not_found', 'not_found', 'not_found'], [$visible($w->topics->listForum(null, $public)), $visible($w->topics->listForum(null, $internal)), $visible($w->topics->listForum(null, $secret))], 'Gast: guests_can_read ist aus, das Gast-Recht der Zeile allein genügt nicht');
+    T::same([null, $internalTopic], [$w->topics->get($alice, $internalTopic)['id'] ?? null, $w->topics->get($insider, $internalTopic)['id'] ?? null], 'Thema im internen Forum: nur für das Gruppenmitglied lesbar');
+    T::same(['not_found', 'ok', 'not_found'], [$visible($w->posts->listPage($alice, $internalTopic)), $visible($w->posts->listPage($insider, $internalTopic)), $visible($w->posts->listPage($alice, $secretTopic))], 'Beitragsliste: dieselben Leserechte');
+    T::same([$publicTopic], array_map(static fn (array $t): int => (int) $t['id'], $w->topics->listForum($insider, $public)['items'] ?? []), 'die Liste des öffentlichen Forums enthält nur dessen Thema');
+
+    $w2 = ccRealWorld(['new_member_approval_posts' => 0, 'guests_can_read' => true]);
+    $guestPublic = $w2->db->forum();
+    $guestMembers = $w2->db->forum();
+    ccRows($w2, $guestPublic, [['subject_type' => 'guest', 'subject_key' => '', 'permissions' => ['read' => 1]]]);
+    ccRows($w2, $guestMembers, [ccMemberRow()]);
+    $w2->at(5000);
+    ccSeedTopic($w2, $guestPublic, $w2->db->user(), 2, -4000);
+    T::same(['ok', 'not_found'], [$visible($w2->topics->listForum(null, $guestPublic)), $visible($w2->topics->listForum(null, $guestMembers))], 'guests_can_read an: der Gast liest nur Foren mit Gast-Zeile (read), nicht das Mitglieder-Forum');
+    T::same('login_required', ccOutcome($w2->topics->create(0, $guestPublic, 'Gast legt Thema an', 'Text')), 'Gast schreibt nie');
+
+    // Platzhalter: ausgeblendete und gelöschte Beiträge in der Beitragsliste
+    $w->db->execute("UPDATE cms_community_posts SET status = 'hidden', status_reason = 'moderator' WHERE id = ?", [$publicPosts[2]]);
+    $w->db->execute("UPDATE cms_community_posts SET status = 'deleted', status_reason = 'author' WHERE id = ?", [$publicPosts[3]]);
+    $views = static fn (?int $viewer): array => array_map(static fn (array $p): string => (string) $p['view'], $w->posts->listPage($viewer, $publicTopic)['items'] ?? []);
+    T::same(['full', 'full', 'placeholder', 'placeholder'], $views($alice), 'Mitglied: ausgeblendeter und gelöschter Beitrag nur als Platzhalter');
+    T::same(['full', 'full', 'full', 'placeholder'], $views($author), 'Autor des ausgeblendeten Beitrags sieht ihn voll, den gelöschten (von alice) nur als Platzhalter');
+    T::same(['full', 'full', 'full', 'placeholder'], $views($moderator), 'Moderation sieht ausgeblendete voll; gelöschte nur mit view_private_data');
+    T::same(['full', 'full', 'full', 'full'], $views($admin), 'admin sieht auch gelöschte voll');
+    $items = $w->posts->listPage($alice, $publicTopic)['items'];
+    T::same(['hidden', 'deleted', false, false], [$items[2]['status'], $items[3]['status'], array_key_exists('body', $items[2]), array_key_exists('user_id', $items[3])], 'Platzhalter tragen nur den Status (Text und Autor fehlen)');
+    T::same($publicPosts, array_map(static fn (array $p): int => (int) $p['id'], $items), 'Reihenfolge der Seite nach ID, Platzhalter an ihrer Stelle');
+
+    // Lesestatus mit echter Rechteprüfung
+    T::same([false, true], [$w->reads->advance($alice, $internalTopic, $internalPosts[1]), $w->reads->advance($insider, $internalTopic, $internalPosts[1])], 'Lesestatus: ohne Leserecht wird nichts geschrieben');
+    T::same([0, 1], [$w->db->count('community_read_states', ['user_id' => $alice, 'topic_id' => $internalTopic]), $w->db->count('community_read_states', ['user_id' => $insider, 'topic_id' => $internalTopic])], 'Zeilen im Lesestatus');
+    T::same(false, $w->reads->markForumRead($alice, $internal), 'Forum-Marke im internen Forum: ohne Leserecht nicht');
+    T::same(true, $w->reads->markForumRead($insider, $internal), 'Forum-Marke mit Leserecht');
+
+    // Zitate folgen den Leserechten
+    T::same([true, false], [$w->quotes->build($internalPosts[0], $insider) !== null, $w->quotes->build($internalPosts[0], $alice) !== null], 'Zitat aus dem internen Forum: nur mit Leserecht');
+    T::same(true, str_starts_with((string) $w->quotes->build($publicPosts[1], $alice), '> [quote=post:' . $publicPosts[1] . ']'), 'Zitat aus dem öffentlichen Forum');
 });
 
 T::finish();
