@@ -181,7 +181,7 @@ Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Community/`, `Content/`, `C
 
 Identität, Medien, Redaktion, Betrieb / Identity, media, editorial, operations:
 
-- `Services/Community/Support/CommunityCapabilities.php` (capabilities `community.*`, defaults and the one-time step `capabilities_v27` / Community-Rechte, Standards und einmaliger Schritt `capabilities_v27`; weitere Schichten `Database/`, `Repository/`, `Service/`, `Http/`, `Admin/` folgen mit PR #2 bis PR #5, siehe `DOC/workflow/specs/community/HANDOFF-PR2-PR5.md`)
+- `Services/Community/` (community module / Community-Modul, 4.2.0): `Support/` (`Settings`, `Slugger`, `Urls`, `I18n`, `Events`, `CommunityModule`, `Codes`, `Cursor`, `Page`, `Transaction`, `CommunityCapabilities` = capabilities `community.*`, defaults and the one-time step `capabilities_v27` / Community-Rechte, Standards und einmaliger Schritt `capabilities_v27`), `Repository/` (`AbstractRepository`, `CategoryRepository`, `ForumRepository`, `TopicRepository`, `PostRepository`, `ReadStateRepository`, `MemberRepository`, `BanRepository`, `UserStatsRepository`), `Service/` (`CommunityAccess`, `AccessDecision`, `TrustLevelPolicy`, `BasicTrustPolicy`, `TopicService`, `PostService`, `QuoteService`, `ReadStateService`); `Http/` und `Admin/` folgen mit PR #3 bis PR #5, siehe `DOC/workflow/specs/community/HANDOFF-PR2-PR5.md`
 - `Services/Security/`, `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
 - `Services/Media/` additions, `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
 - `Services/Content/`, `ContentStatus.php` (status values incl. `pending`), `ContentWorkflow.php` (four-eyes review, preview links / Vier-Augen-Prinzip, Vorschau-Links), `ContentExpiryService.php` (expiry and review reminders / Ablauf und Wiedervorlage)
@@ -189,7 +189,7 @@ Identität, Medien, Redaktion, Betrieb / Identity, media, editorial, operations:
 - `Services/Backup/`, `OffsiteBackupService.php`, `S3Client.php`, `S3Config.php`, `SigV4Signer.php` (S3-compatible offsite backups / S3-kompatible Offsite-Backups)
 - `Services/Webhooks/WebhookService.php`, outbound webhooks / ausgehende Webhooks
 - `Services/Payments/`, `PaymentService.php`, `PaymentSettings.php`, `PaymentGatewayInterface.php`, `AbstractGateway.php`, `StripeGateway.php`, `MollieGateway.php`
-- `Services/FeatureHooks/` additions, `BackupOffsiteHooks`, `ContentExpiryHooks`, `ContentWorkflowHooks`, `ReusableBlockHooks`, `WebhookHooks`
+- `Services/FeatureHooks/` additions, `BackupOffsiteHooks`, `ContentExpiryHooks`, `ContentWorkflowHooks`, `ReusableBlockHooks`, `WebhookHooks`, `CommunityHooks` (community listeners, module-gated / Community-Listener, hinter dem Modul-Gate)
 - `Services/Newsletter/` additions, `NewsletterConsentLog.php`, `NewsletterMemberService.php`
 
 Admin-Menü und Erweiterungspunkte / Admin menu and extension points:

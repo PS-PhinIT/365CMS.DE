@@ -5,7 +5,7 @@
 
 ## English (summary)
 
-`/admin/modules` (`CMS/admin/modules.php` → `CMS/admin/modules/system/ModulesModule.php` → `CMS/admin/views/system/modules.php`) switches whole core feature areas on or off. Definitions live in `CMS\Services\CoreModuleService::MODULES`; states are stored in the settings group `core_modules`. A disabled module hides its pages in every sidebar profile. Groups and tile pages left empty disappear, so the optional groups SEO, AI services, members and subscriptions appear only while their module is active, or while a plugin places its menu there ([../ADMIN-MENU.md](../ADMIN-MENU.md)). Its admin entry points refuse access (`isAdminPageEnabled()`), and runtime features check `isModuleEnabled()`. Dependencies are resolved automatically; some modules mirror a legacy setting.
+`/admin/modules` (`CMS/admin/modules.php` → `CMS/admin/modules/system/ModulesModule.php` → `CMS/admin/views/system/modules.php`) switches whole core feature areas on or off. Definitions live in `CMS\Services\CoreModuleService::MODULES`; states are stored in the settings group `core_modules`. A disabled module hides its pages in every sidebar profile. Groups and tile pages left empty disappear, so the optional groups SEO, AI services, members and subscriptions appear only while their module is active, or while a plugin places its menu there ([../ADMIN-MENU.md](../ADMIN-MENU.md)). Its admin entry points refuse access (`isAdminPageEnabled()`), and runtime features check `isModuleEnabled()`. Dependencies are resolved automatically; some modules mirror a legacy setting. All modules are active by default except `community` (the forum module, new in 4.2.0), which stays off until an administrator enables it; its code treats a module it cannot verify as off.
 
 ## Deutsch
 
@@ -18,6 +18,7 @@
 | `security` | Sicherheit | `antispam`, `firewall`, `security-audit` | – | – |
 | `legal` | Recht | `legal-sites`, `cookie-manager`, `data-requests`, `privacy-requests`, `deletion-requests` | – | – |
 | `member_dashboard` | Member Dashboard | alle `member-dashboard*`-Seiten | – | `member_dashboard_enabled` |
+| `community` | Community | – (folgen mit dem Admin-Bereich des Moduls) | – | – |
 | `performance` | Performance | `performance`, `performance-cache`, `-media`, `-database`, `-settings`, `-sessions` | – | – |
 | `subscriptions` | Aboverwaltung Core | – | – | `subscription_enabled` |
 | `subscription_admin_packages` | Pakete & Abo-Einstellungen | `packages` | `subscriptions` | – |
@@ -28,7 +29,7 @@
 | `subscription_ordering` | Bestell- & Upgrade-Prozesse | – | `subscriptions` | `subscription_ordering_enabled` |
 | `subscription_public_pricing` | Öffentliche Paketkommunikation | – | `subscriptions` | `subscription_public_pricing_enabled` |
 
-Alle Module sind standardmäßig **aktiv**. Die Abo-Untermodule sind hier nicht einzeln schaltbar (`toggleable = false`); sie folgen dem Modul `subscriptions` bzw. ihren Legacy-Settings unter `/admin/subscription-settings`.
+Alle Module sind standardmäßig **aktiv**, mit einer Ausnahme: `community` (Forum, seit 4.2.0) ist standardmäßig **aus** und wird bei Bedarf unter `/admin/modules` oder im Installer (Schritt 3) eingeschaltet. Bestandsinstallationen behalten es nach dem Update ausgeschaltet, weil für `community` noch kein gespeicherter Zustand existiert. Die Abo-Untermodule sind hier nicht einzeln schaltbar (`toggleable = false`); sie folgen dem Modul `subscriptions` bzw. ihren Legacy-Settings unter `/admin/subscription-settings`.
 
 ### Wirkung eines deaktivierten Moduls
 
@@ -38,7 +39,8 @@ Alle Module sind standardmäßig **aktiv**. Die Abo-Untermodule sind hier nicht 
    - `seo` aus → keine erweiterten SEO-Felder im Editor,
    - `ai_services` aus → keine KI-Buttons im Editor, Endpunkte gesperrt,
    - `legal` aus → kein Cookie-Banner,
-   - `subscription_ordering` aus → Checkout leitet auf `/` um.
+   - `subscription_ordering` aus → Checkout leitet auf `/` um,
+   - `community` aus → `CommunityAccess::can()` lehnt jede Aktion mit `module_disabled` ab (auch für Administratoren), die Community-Listener (`FeatureHooks\CommunityHooks`) werden nicht angemeldet; bei Störung der Modulabfrage gilt das Modul als aus.
 4. Daten bleiben erhalten; beim Wiedereinschalten ist alles wie vorher.
 
 ### Abfrage im Code
@@ -51,7 +53,7 @@ if (CoreModuleService::getInstance()->isModuleEnabled('seo')) {
 }
 ```
 
-Unbekannte Slugs gelten als aktiv (`isModuleEnabled()` liefert `true`).
+Unbekannte Slugs gelten als aktiv (`isModuleEnabled()` liefert `true`). Das Community-Modul fragt deshalb über `CMS\Services\Community\Support\CommunityModule::isEnabled()` ab: Es kennt den Slug an einer Stelle und liefert bei jeder Störung `false`.
 
 ### Verwandte Dokumente
 

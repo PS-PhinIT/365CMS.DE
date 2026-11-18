@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-`CMS\Hooks` (`CMS/core/Hooks.php`) is a WordPress-like action/filter registry. Callbacks are stored per tag and priority (lower runs first). WordPress-style wrappers (`add_action`, `do_action`, `add_filter`, `apply_filters`) live in `CMS/includes/functions/wordpress-compat.php`. `before_footer` and `body_end` fire at most once per request. This document lists every hook fired by the core, the admin, the member area and the shipped theme in 4.0.0, with its arguments. New in 4.0.0: account hooks for e-mail verification and confirmed e-mail changes (`user_email_verified`, `user_email_change_requested`, `user_email_changed`, `guest_orders_assigned`), `user_sessions_revoked`, the `cms_data_retention_days` filter and `cms_register_content_type_providers` (content type providers for trash, export/import and search).
+`CMS\Hooks` (`CMS/core/Hooks.php`) is a WordPress-like action/filter registry. Callbacks are stored per tag and priority (lower runs first). WordPress-style wrappers (`add_action`, `do_action`, `add_filter`, `apply_filters`) live in `CMS/includes/functions/wordpress-compat.php`. `before_footer` and `body_end` fire at most once per request. This document lists every hook fired by the core, the admin, the member area and the shipped theme in 4.0.0, with its arguments. New in 4.0.0: account hooks for e-mail verification and confirmed e-mail changes (`user_email_verified`, `user_email_change_requested`, `user_email_changed`, `guest_orders_assigned`), `user_sessions_revoked`, the `cms_data_retention_days` filter and `cms_register_content_type_providers` (content type providers for trash, export/import and search). New in 4.2.0 (in development): the `cms_community_*` hooks of the community module (actions for the topic and post lifecycle, the `cms_community_can` filter; see the section “Community (4.2.0)”), fired after the commit with IDs and status values only.
 
 ## Deutsch
 
@@ -119,7 +119,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_password_changed` | Action | `$userId, $source` (`'register'`, `'member'`, `'admin_create'`, `'admin_update'`, `'reset'`; nach jedem gespeicherten Passwort, `PasswordPolicyService::recordChange()`) |
 | `cms_sso_login` | Action | `$userId, $provider` (`'entra'`), `$claims` (`tid`, `oid`, `name`, `email`, `roles`, `groups`, `amr`; nie Tokens); nach jeder SSO-Anmeldung mit fertiger Sitzung |
 | `cms_sso_user_provisioned` | Action | `$userId, $provider, $claims`; Konto bei der ersten SSO-Anmeldung angelegt |
-| `user_role_changed` | Action | `$userId, $fromRole, $toRole, $source` (`'sso'` = Rollen-Mapping der Entra-Anmeldung) |
+| `user_role_changed` | Action | `$userId, $fromRole, $toRole, $source`; nach jedem gespeicherten Rollenwechsel eines bestehenden Kontos, nie bei unveränderter Rolle (Groß-/Kleinschreibung zählt nicht) und nicht bei neuen Konten. `$source`: `'sso'` = Rollen-Mapping der Entra-Anmeldung (seit 4.1.0), `'admin_update'` = *Benutzer bearbeiten* (`UserService::updateUser()`), `'admin_bulk'` = Sammelaktion `change_role` (`UserService::bulkAction()`), `'role_renamed'` und `'role_deleted'` = Rolle umbenannt bzw. gelöscht (`RolesModule`, nach dem Commit; jedes Konto der Rolle meldet einzeln, `$toRole` ist der neue Name bzw. die Ersatzrolle); die vier Quellen außer `'sso'` seit 4.2.0. Ein Fehler eines Verbrauchers wird protokolliert (Kanal `user.service`) und macht die gespeicherte Änderung nicht rückgängig; die Quellen sind Konstanten `UserService::ROLE_SOURCE_*` |
 | `cms_mfa_enforcement_required` | Filter | `$required` (bool), `$user`; kann den MFA-Zwang für ein Konto zusätzlich einschalten, für eine gewählte Rolle nicht aufheben |
 | `cms_password_policy` | Filter | `$policy` (`min_length`, `require_uppercase`/`_lowercase`/`_digit`/`_special`, `max_age_days`, `history`); Ergebnis kann die Einstellungen nur verschärfen, nie abschwächen |
 | `subscription_assigned` | Action | `$userId, $planId` |
@@ -189,6 +189,36 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `cms_image_figcaption_credit` | Filter | `string $html`, `string $imageUrl`, `array $context` (`context` = image/gallery/carousel, `original_url`) | Credit-Zeile in Bildunterschriften; der Core hängt hier die Urheberangaben der Mediathek an |
 | `cms_media_credit_line_enabled` | Filter | `bool $enabled`, `string $imageUrl`, `array $context` | Credit-Zeile je Bild ab- oder einschalten (z. B. im Theme) |
 | `cms_after_site_search` | Action | `array $parsed`, `int $resultCount`, `string $locale`, `string $type` | nach einer Suche auf der Suchseite; speist die anonyme Suchbegriff-Statistik |
+
+### Community (4.2.0)
+
+Modul `community` (Kernmodul, standardmäßig aus). Die Namen stehen als Konstanten in `CMS\Services\Community\Support\Events`. Aktionen werden nach dem Commit über `Events::fire()` ausgelöst: Fehler in Callbacks werden protokolliert (Kanal `community`) und brechen den Vorgang nicht ab. Argumente sind IDs und Statuswerte, nie Inhalte. Das Modul selbst hört auf `user_role_changed` und `user_email_verified` und verwirft dann den Rechte-Cache des Benutzers (`FeatureHooks\CommunityHooks`, nur bei aktivem Modul).
+
+| Hook | Typ | Argumente | Hinweis |
+|---|---|---|---|
+| `cms_community_topic_created` | Action | `int $topicId`, `int $forumId`, `int $userId`, `string $status`, `int $firstPostId` | Thema samt erstem Beitrag gespeichert; `status` = `published` oder `pending` (Freigabepflicht) |
+| `cms_community_topic_updated` | Action | `int $topicId`, `int $forumId`, `int $actorId`, `array $changed` | Thema geändert; `changed` nennt die geänderten Felder (z. B. `['title', 'slug']`) |
+| `cms_community_topic_deleted` | Action | `int $topicId`, `int $forumId`, `int $actorId`, `string $mode` | Thema gelöscht; `mode` = `deleted` (weich), später `purged` (endgültig) |
+| `cms_community_post_created` | Action | `int $postId`, `int $topicId`, `int $userId`, `string $status` | Antwort gespeichert; **nicht** für den Themenstart (den meldet `cms_community_topic_created`); `status` = `published` oder `pending` |
+| `cms_community_post_updated` | Action | `int $postId`, `int $topicId`, `int $editorId`, `int $revisionId` | Beitrag bearbeitet; `revisionId` = die im Bearbeitungsverlauf gespeicherte Fassung |
+| `cms_community_post_deleted` | Action | `int $postId`, `int $topicId`, `int $actorId`, `string $mode` | Beitrag gelöscht (`deleted`, später `purged`); der erste Beitrag wird nur zusammen mit dem Thema gelöscht |
+| `cms_community_can` | Filter | `AccessDecision $decision`, `int $userId`, `string $action`, `array $context` | letzter Schritt von `CommunityAccess::can()`; das Ergebnis darf eine Erlaubnis nur in eine Ablehnung ändern (Grund `filter_denied`), nie eine Ablehnung aufheben; ungültige Rückgaben werden ignoriert |
+
+Vorgesehen, in 4.2.0 (PR #2a) noch nicht ausgelöst: Die Namen sind in `Events` festgelegt, die Argumente der Aktionen ohne Signatur folgen mit dem jeweiligen Dienst (Moderation, Meldungen, Sperren, Renderer: PR #2b und später).
+
+| Hook | Typ | Argumente | Hinweis |
+|---|---|---|---|
+| `cms_community_post_approved` | Action | `int $postId`, `int $topicId`, `int $moderatorId` | Beitrag aus der Warteschlange freigegeben |
+| `cms_community_post_rejected` | Action | `int $postId`, `int $topicId`, `int $moderatorId`, `string $reason` | Beitrag aus der Warteschlange abgelehnt |
+| `cms_community_topic_moved` | Action | IDs von Thema, Forum und Benutzer | Thema in ein anderes Forum verschoben |
+| `cms_community_topic_merged` | Action | IDs von Thema, Forum und Benutzer | Themen zusammengeführt |
+| `cms_community_render_post` | Filter | `string $html`, `int $postId` | gereinigtes HTML eines Beitrags; Filter müssen selbst escapen |
+| `cms_community_report_created` | Action | Meldungs-ID | Meldung angelegt |
+| `cms_community_report_resolved` | Action | Meldungs-ID | Meldung erledigt |
+| `cms_community_user_warned` | Action | Benutzer-ID, Grund | Verwarnung ausgesprochen |
+| `cms_community_user_banned` | Action | Benutzer-ID, Grund | Community-Sperre gesetzt |
+| `cms_community_user_unbanned` | Action | Benutzer-ID, Grund | Community-Sperre aufgehoben |
+| `cms_community_solution_marked` | Action | Thema-ID, Beitrag-ID | Antwort als Lösung markiert |
 
 ### Cron
 

@@ -2212,8 +2212,8 @@ T::run('Teil 6: Installer-Schritt „Admin-Layout“ (eigener Prozess, ohne Auto
         'normalizeAdminMenuProfile(): nur classic/structured (getrimmt), sonst classic; „custom“ gibt es erst nach dem Speichern im Editor'
     );
     $moduleSlugs = array_keys($data['modules']);
-    T::same(['ai_services', 'legal', 'member_dashboard', 'performance', 'security', 'seo', 'subscriptions'], am_sorted($moduleSlugs), 'Schaltbare Core-Module des Installers');
-    T::same([true], array_values(array_unique($data['modules'])), 'Alle schaltbaren Module sind standardmäßig aktiv');
+    T::same(['ai_services', 'community', 'legal', 'member_dashboard', 'performance', 'security', 'seo', 'subscriptions'], am_sorted($moduleSlugs), 'Schaltbare Core-Module des Installers');
+    T::same(['community' => false], array_filter($data['modules'], static fn (mixed $enabled): bool => $enabled !== true), 'Alle schaltbaren Module sind standardmäßig aktiv, außer community (standardmäßig aus)');
 
     $registry = MenuRegistry::create([]);
     $mirror = static function (array $states) use ($registry): array {

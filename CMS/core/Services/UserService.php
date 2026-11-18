@@ -89,6 +89,14 @@ class UserService {
         'themes.',
         'plugins.',
     ];
+
+    /**
+     * Quellen des Hooks `user_role_changed` (HOOKS-REFERENCE.md). Dazu kommt `'sso'` aus `EntraSsoService`.
+     */
+    public const ROLE_SOURCE_ADMIN_UPDATE = 'admin_update';
+    public const ROLE_SOURCE_ADMIN_BULK = 'admin_bulk';
+    public const ROLE_SOURCE_ROLE_RENAMED = 'role_renamed';
+    public const ROLE_SOURCE_ROLE_DELETED = 'role_deleted';
     
     private Database $db;
     private string $prefix;
@@ -314,7 +322,40 @@ class UserService {
             \CMS\Auth::instance()->refreshPasswordFingerprint($user_id);
         }
         $this->logAction('user_updated', $user_id, $update_data + $emailLogData);
+
+        // 4.2.0: Rollenwechsel melden – erst nach dem erfolgreichen Schreiben; unveränderte Rolle → keine Meldung.
+        if (isset($update_data['role'])) {
+            self::announceRoleChange($user_id, (string) ($user->role ?? ''), (string) $update_data['role'], self::ROLE_SOURCE_ADMIN_UPDATE);
+        }
         
+        return true;
+    }
+
+    /**
+     * Meldet einen tatsächlich geänderten Konto-Rollenwechsel über den Hook `user_role_changed($userId, $from, $to, $source)`.
+     *
+     * Keine Meldung bei unveränderter Rolle (Groß-/Kleinschreibung zählt nicht) oder ungültiger Konto-ID. Die Rolle ist
+     * zu diesem Zeitpunkt bereits geschrieben: Wirft ein Verbraucher, wird das protokolliert und die Änderung gilt weiter
+     * als gelungen (kein falscher Fehler in der Oberfläche).
+     *
+     * @param string $source eine der Konstanten `ROLE_SOURCE_*`
+     * @return bool true, wenn der Hook ausgelöst wurde
+     */
+    public static function announceRoleChange(int $userId, string $fromRole, string $toRole, string $source): bool {
+        if ($userId <= 0 || $toRole === '' || strcasecmp($fromRole, $toRole) === 0) {
+            return false;
+        }
+
+        try {
+            \CMS\Hooks::doAction('user_role_changed', $userId, $fromRole, $toRole, $source);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('user.service')->warning('Ein Verbraucher von user_role_changed ist fehlgeschlagen.', [
+                'user_id' => $userId,
+                'source' => $source,
+                'exception' => $e,
+            ]);
+        }
+
         return true;
     }
     
@@ -496,8 +537,8 @@ class UserService {
                 'deactivate' => $this->db->update('users', ['status' => 'inactive'], ['id' => $user_id]),
                 'delete' => $this->deleteUser($user_id, false),
                 'hard_delete' => $this->deleteUser($user_id, true),
-                'change_role' => !empty($data['role']) && $this->normalizeRole((string)$data['role']) !== ''
-                    ? $this->db->update('users', ['role' => $this->normalizeRole((string)$data['role'])], ['id' => $user_id])
+                'change_role' => !empty($data['role'])
+                    ? $this->changeRole($user_id, (string)$data['role'], self::ROLE_SOURCE_ADMIN_BULK)
                     : false,
                 default => false
             };
@@ -522,6 +563,27 @@ class UserService {
         return $results;
     }
     
+    /**
+     * Rolle eines Kontos setzen (Sammelaktion `change_role`) und den Wechsel melden.
+     *
+     * @return bool false bei leerer Rolle, unbekanntem Konto oder Schreibfehler (dann keine Meldung)
+     */
+    private function changeRole(int $userId, string $role, string $source): bool {
+        $role = $this->normalizeRole($role);
+        if ($role === '') {
+            return false;
+        }
+
+        $from = $this->db->get_var("SELECT role FROM {$this->prefix}users WHERE id = ?", [$userId]);
+        if ($from === null || !$this->db->update('users', ['role' => $role], ['id' => $userId])) {
+            return false;
+        }
+
+        self::announceRoleChange($userId, (string) $from, $role, $source);
+
+        return true;
+    }
+
     /**
      * User-Statistiken abrufen
      * 

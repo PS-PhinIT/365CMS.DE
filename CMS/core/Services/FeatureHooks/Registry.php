@@ -42,6 +42,7 @@ final class Registry
         BackupOffsiteHooks::class,
         WebhookHooks::class,
         InvoiceHooks::class,
+        CommunityHooks::class,
     ];
 
     private static bool $registered = false;
