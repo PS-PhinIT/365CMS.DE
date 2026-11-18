@@ -167,16 +167,20 @@ final class PostService
         return preg_match('/[\p{L}\p{N}\p{P}\p{S}]/u', $text) === 1;
     }
 
-    /** Grund einer Bearbeitung: eine Zeile ohne Steuerzeichen, höchstens MAX_REASON Zeichen; leer ergibt `null`. */
+    /**
+     * Grund einer Bearbeitung: eine Zeile ohne Steuerzeichen und Formatzeichen (`stripFormatCharacters()`), höchstens MAX_REASON
+     * Zeichen; leer oder ohne sichtbares Zeichen ergibt `null` (wie bei Titeln und Beiträgen).
+     */
     public static function normalizeReason(?string $reason): ?string
     {
         if ($reason === null || !mb_check_encoding($reason, 'UTF-8')) {
             return null;
         }
-        $reason = trim((string) preg_replace('/\s+/u', ' ', (string) preg_replace('/[^\P{Cc}\s]/u', '', $reason)));
+        $reason = self::stripFormatCharacters((string) preg_replace('/[^\P{Cc}\s]/u', '', $reason));
+        $reason = trim((string) preg_replace('/\s+/u', ' ', $reason));
         $reason = trim(mb_substr($reason, 0, self::MAX_REASON, 'UTF-8'));
 
-        return $reason === '' ? null : $reason;
+        return self::hasVisibleText($reason) ? $reason : null;
     }
 
     // ── Antworten ───────────────────────────────────────────────────────────────────────────────────────────────

@@ -806,11 +806,62 @@ function urhBad(string $source, string $search, string $replace): string
     return str_replace($search, $replace, $source);
 }
 
-/** Schreibt der Text die Rolle eines Kontos (SQL oder Database::update)? */
+/**
+ * Schreibt der Text die Rolle eines Kontos (SQL oder Database::update)? Erkannt werden (Befund B45):
+ *
+ *  - `UPDATE …users… SET <Zuweisungen>`: eine Zuweisung `role = …` an beliebiger Stelle der Liste, auch mit Alias (`u.role`), mit
+ *    JOIN, ohne `WHERE` (die Zuweisungen enden vor `WHERE` oder `;`); `WHERE role = ?` zählt nicht;
+ *  - `INSERT … INTO …users… ON DUPLICATE KEY UPDATE … role = …` und `REPLACE INTO …users…` (überschreiben die Rolle eines vorhandenen Kontos);
+ *  - `->update('users', [ … 'role' => … ], …)` mit der Rolle an beliebiger Stelle des Arrays;
+ *  - `->update('users', $daten, …)` mit einer Variablen: gilt als Schreibstelle, wenn die Datei irgendwo einen Schlüssel `role`
+ *    setzt (`$daten['role'] = …` oder `'role' => …`), sonst nicht (Profil, Passwort, Anmeldezeit ändern die Rolle nicht).
+ *
+ * Nicht erkannt (und für den Wächter nicht gemeint): Konto anlegen (`INSERT INTO …users (role) VALUES …`), Rolle in `WHERE`.
+ */
 function urhWritesAccountRole(string $text): bool
 {
-    return preg_match('/UPDATE\s+\S*users\s+SET\s+role\b/i', $text) === 1
-        || preg_match('/->update\(\s*[\'"]users[\'"]\s*,\s*\[\s*[\'"]role[\'"]/', $text) === 1;
+    // eine Zuweisung beginnt am Anfang der Liste oder nach einem Komma (ein Vergleich in einem Ausdruck wie IF(role = 'a', …) zählt nicht)
+    $roleAssignment = '/(?:^|,)\s*(?:\w+\.)?role\s*=(?![=>])/i';
+    if (preg_match_all('/UPDATE\s+[^;]{0,120}?users\b[^;]{0,200}?\sSET\s(.{0,600}?)(?:\sWHERE\b|;|$)/is', $text, $matches) > 0) {
+        foreach ($matches[1] as $assignments) {
+            if (preg_match($roleAssignment, $assignments) === 1) {
+                return true;
+            }
+        }
+    }
+    if (preg_match('/INSERT\s+(?:IGNORE\s+)?INTO\s+[^;]{0,120}?users\b[^;]{0,800}?ON\s+DUPLICATE\s+KEY\s+UPDATE\s(.{0,400})/is', $text, $m) === 1
+        && preg_match($roleAssignment, $m[1]) === 1) {
+        return true;
+    }
+    if (preg_match('/REPLACE\s+INTO\s+[^;]{0,120}?users\b/i', $text) === 1) {
+        return true;
+    }
+    if (preg_match_all('/->update\(\s*([\'"])users\1\s*,\s*(\[|array\(|\$\w+)/', $text, $calls, PREG_OFFSET_CAPTURE) > 0) {
+        foreach ($calls[2] as [$opening, $offset]) {
+            if ($opening[0] !== '$') {
+                // Array-Literal bis zur schließenden Klammer (Tiefe zählen); die Rolle darf an jeder Stelle stehen.
+                $open = $opening === '[' ? '[' : '(';
+                $close = $opening === '[' ? ']' : ')';
+                $depth = 0;
+                $end = strlen($text);
+                for ($i = $offset + strlen($opening) - 1, $length = strlen($text); $i < $length; $i++) {
+                    if ($text[$i] === $open) {
+                        $depth++;
+                    } elseif ($text[$i] === $close && --$depth === 0) {
+                        $end = $i;
+                        break;
+                    }
+                }
+                if (preg_match('/[\'"]role[\'"]\s*=>/', substr($text, $offset, $end - $offset)) === 1) {
+                    return true;
+                }
+            } elseif (preg_match('/\[\s*[\'"]role[\'"]\s*\]\s*=(?!=)|[\'"]role[\'"]\s*=>/', $text) === 1) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 /** @return list<string> Dateien unter CMS/, die die Rolle bestehender Konten schreiben (relativ zu CMS/). */
@@ -896,6 +947,47 @@ T::run('Quelltext: Schreibstellen auf users.role melden den Wechsel', static fun
     T::check(urhWritesAccountRole("\$db->execute('UPDATE cms_users SET role = ? WHERE id = ?', [\$r, \$id]);"), 'Gegenprobe: SQL-Schreibstelle wird erkannt');
     T::check(urhWritesAccountRole("\$this->db->update('users', ['role' => \$role], ['id' => \$id]);"), 'Gegenprobe: Database::update-Schreibstelle wird erkannt');
     T::check(!urhWritesAccountRole("\$db->execute('UPDATE cms_users SET status = ? WHERE role = ?', [\$s, \$r]);") && !urhWritesAccountRole("INSERT INTO cms_users (role) VALUES ('member')"), 'Gegenprobe: Status ändern und Konto anlegen sind kein Rollenwechsel');
+
+    // Befund B45: weitere Schreibweisen, die der frühere Wächter nicht erkannte (jede muss einzeln anschlagen)
+    $writes = [
+        'role nicht als erste Spalte' => "\$db->execute('UPDATE cms_users SET status = ?, role = ? WHERE id = ?', [\$s, \$r, \$id]);",
+        'role als letzte von drei Spalten, ohne WHERE' => "\$db->execute('UPDATE cms_users SET a = 1, b = 2, role = ?');",
+        'role mit Leerraum und Zeilenumbruch' => "\$db->execute(\"UPDATE cms_users\n    SET status = ?,\n        role   = ?\n  WHERE id = ?\");",
+        'Tabelle mit Präfixvariable' => "\$this->db->execute(\"UPDATE {\$this->prefix}users SET role = ? WHERE id = ?\", [\$r, \$id]);",
+        'Tabelle mit verketteter Präfixvariable' => "\$db->execute('UPDATE ' . \$prefix . 'users SET status = ?, role = ?', [\$s, \$r]);",
+        'Alias und JOIN' => "\$db->execute('UPDATE {prefix}users u JOIN x ON x.id = u.id SET u.role = ? WHERE x.k = 1', [\$r]);",
+        'Alias, role nach anderer Spalte' => "\$db->execute('UPDATE cms_users AS u SET u.status = 1, u.role = ?');",
+        'kleingeschrieben' => "\$db->execute('update cms_users set status = 1, role = ? where id = 2');",
+        'INSERT … ON DUPLICATE KEY UPDATE' => "\$db->execute('INSERT INTO cms_users (id, role) VALUES (?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)');",
+        'INSERT … ON DUPLICATE KEY UPDATE, role nicht zuerst' => "\$db->execute('INSERT INTO cms_users (id, email, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE email = VALUES(email), role = VALUES(role)');",
+        'REPLACE INTO' => "\$db->execute('REPLACE INTO cms_users (id, email, role) VALUES (?, ?, ?)');",
+        'update() mit Array, role nicht zuerst' => "\$db->update('users', ['status' => 1, 'role' => \$r], ['id' => \$id]);",
+        'update() mit doppelten Anführungszeichen' => "\$db->update(\"users\", [\"status\" => 1, \"role\" => \$r], [\"id\" => \$id]);",
+        'update() mit verschachteltem Array' => "\$db->update('users', ['meta' => ['a' => 1], 'role' => \$r], ['id' => \$id]);",
+        'update() mit array()' => "\$db->update('users', array('status' => 1, 'role' => \$r), array('id' => \$id));",
+        'update() mit Variable und gesetztem Schlüssel' => "\$data = []; \$data['role'] = \$r; \$db->update('users', \$data, ['id' => \$id]);",
+        'update() mit Variable und Array-Zuweisung' => "\$data = ['status' => 1, 'role' => \$r]; \$this->db->update('users', \$data, ['id' => \$id]);",
+    ];
+    foreach ($writes as $label => $code) {
+        T::check(urhWritesAccountRole($code), 'Gegenprobe B45: Schreibstelle wird erkannt (' . $label . ')');
+    }
+    $harmless = [
+        'Status ändern, Rolle nur in WHERE' => "\$db->execute('UPDATE cms_users SET status = ? WHERE role = ?', [\$s, \$r]);",
+        'Rolle in WHERE bei mehreren Spalten' => "\$db->execute('UPDATE cms_users SET status = ?, last_login = ? WHERE id = ? AND role = ?', [\$s, \$t, \$id, \$r]);",
+        'Konto anlegen' => "INSERT INTO cms_users (role) VALUES ('member')",
+        'anderer Tabellenname' => "\$db->execute('UPDATE cms_users_meta SET role = ? WHERE id = ?', [\$r, \$id]);",
+        'andere Tabelle mit Spalte role' => "\$db->execute('UPDATE cms_role_permissions SET role = ? WHERE id = ?', [\$r, \$id]);",
+        'update() ohne role' => "\$db->update('users', ['status' => 1, 'last_login' => \$t], ['id' => \$id]);",
+        'update() einer anderen Tabelle mit role' => "\$db->update('role_permissions', ['role' => \$r], ['id' => \$id]);",
+        'update() mit Variable ohne role-Schlüssel' => "\$data = ['status' => 1]; \$db->update('users', \$data, ['id' => \$id]);",
+        'Variable $role, kein Schlüssel' => "\$role = 'x'; \$db->update('users', \$data, ['id' => \$id]); \$db->update('users', ['status' => \$role], []);",
+        'Vergleich role == ' => "\$db->execute('UPDATE cms_users SET status = IF(role = \\'admin\\', 1, 0) WHERE id = ?');",
+        'INSERT ... ON DUPLICATE KEY einer anderen Tabelle' => "\$db->execute('INSERT INTO cms_settings (k, role) VALUES (?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)');",
+        'Rolle nur gelesen' => "\$row = \$db->get_row('SELECT role FROM cms_users WHERE id = ?', [\$id]);",
+    ];
+    foreach ($harmless as $label => $code) {
+        T::check(!urhWritesAccountRole($code), 'Gegenprobe B45: keine Schreibstelle der Rolle (' . $label . ')');
+    }
 });
 
 T::run('Dokumentation: Quellen in HOOKS-REFERENCE.md', static function (): void {

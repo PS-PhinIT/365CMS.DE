@@ -119,7 +119,7 @@ final class CommunityAccess
     /** Kontextschlüssel, die ein Ziel nennen (Zeile oder ID). */
     private const TARGET_KEYS = ['post', 'post_id', 'topic', 'topic_id', 'forum', 'forum_id'];
 
-    /** Forumstatus, die ein Forum öffnen (die Spalte kennt nur diese und `hidden`); alles andere gilt wie `hidden`. */
+    /** Forumstatus, die ein Forum öffnen. Die Forenverwaltung setzt nur diese und `hidden`; die Spalte ist ein VARCHAR(20), andere Werte (Import, Eingriff in die Datenbank) gelten wie `hidden`. */
     private const OPEN_FORUM_STATUSES = ['open', 'readonly', 'archived'];
 
     /** Beitragsstatus, die für Tageslimit und Abstände zählen: jeder angelegte Beitrag, auch ein gelöschter oder abgelehnter. */
@@ -1278,7 +1278,7 @@ final class CommunityAccess
         // Standards und je Forum ist keine Abfrage nötig; sonst fragt `matrixFor()` je Forum nur noch die Rechte-Zeilen der
         // Ketten ab, die welche haben.
         $anyRows = false;
-        if ($forums !== []) {
+        if ($forums !== [] && !$globalModerator) {
             $chainIds = [];
             foreach (array_keys($forums) as $forumId) {
                 foreach ($this->chainIds($forumId) as $id) {
@@ -1290,8 +1290,12 @@ final class CommunityAccess
         $defaults = $anyRows ? [] : $this->mergeMatrix($account['member'], [], false);
         $readable = [];
         foreach ($forums as $forumId => $forum) {
-            $matrix = $anyRows ? $this->matrixFor($account, $forum, $level, true) : $defaults;
-            $visible = ($matrix['read'] && !$this->hiddenInChain($forum)) || $globalModerator || $this->isForumModerator($account, $forum);
+            // Globale Moderation sieht jedes vorhandene Forum (wie in `can()`): weder Matrix noch Moderatorenabfrage nötig
+            $visible = $globalModerator;
+            if (!$visible) {
+                $matrix = $anyRows ? $this->matrixFor($account, $forum, $level, true) : $defaults;
+                $visible = ($matrix['read'] && !$this->hiddenInChain($forum)) || $this->isForumModerator($account, $forum);
+            }
             if ($visible && $this->applyFilter(AccessDecision::allow(), $account['id'], 'read', ['forum_id' => $forumId])->allowed) {
                 $readable[] = $forumId;
             }
@@ -1380,15 +1384,22 @@ final class CommunityAccess
 
     // ── Hilfen ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-    /** UTC-Text `Y-m-d H:i:s` → Unix-Zeit; null bei fehlendem oder ungültigem Wert. */
+    /**
+     * UTC-Text `Y-m-d H:i:s` → Unix-Zeit; null bei fehlendem oder ungültigem Wert. Auch ein Datum, das PHP nur durch Überlauf
+     * auflöst (`2026-13-45`, `0000-00-00 00:00:00`), ist ungültig: sonst entstünde ein Zeitpunkt in der Zukunft, der ein Fenster offen hält.
+     */
     private static function utcTimestamp(mixed $value): ?int
     {
         if (!is_string($value) || $value === '') {
             return null;
         }
         $date = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $value, new \DateTimeZone('UTC'));
+        $problems = \DateTimeImmutable::getLastErrors();
+        if ($date === false || ($problems !== false && ($problems['warning_count'] > 0 || $problems['error_count'] > 0))) {
+            return null;
+        }
 
-        return $date === false ? null : $date->getTimestamp();
+        return $date->getTimestamp();
     }
 
     /** @param array<string, mixed> $context */

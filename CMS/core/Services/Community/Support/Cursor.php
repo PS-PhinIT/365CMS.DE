@@ -21,7 +21,11 @@ if (!defined('ABSPATH')) {
 
 final class Cursor
 {
-    public const MAX_LENGTH = 64;
+    /**
+     * Längster gültiger Cursor in Zeichen: base64url (ohne Auffüllung) von `Y-m-d H:i:s` (19 Zeichen), `|` und höchstens zehn Ziffern der
+     * ID = 30 Bytes = 40 Zeichen. Jede längere Eingabe scheitert ohnehin; die Grenze hält große Eingaben von Dekodierung und Muster fern.
+     */
+    public const MAX_LENGTH = 40;
     /** Größte ID einer INT-UNSIGNED-Spalte (`community_topics.id`); jeder größere Cursor kann keine Zeile bezeichnen. */
     public const MAX_ID = 4294967295;
 

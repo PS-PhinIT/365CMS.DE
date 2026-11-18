@@ -30,6 +30,7 @@ spl_autoload_register(static function (string $class): void {
 });
 
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
+require_once dirname(__DIR__) . '/lib/MariaDbTestDatabase.php';
 
 use CMS\Database;
 use CMS\Hooks;
@@ -47,6 +48,7 @@ use CMS\Services\CoreModuleService;
 use CMS\Services\FeatureHooks\CommunityHooks;
 use CMS\Services\FeatureHooks\Registry;
 use CMS\Services\SettingsService;
+use CMS\Services\OptionStore;
 
 T::$verbose = in_array('-v', $argv ?? [], true);
 
@@ -660,7 +662,8 @@ T::run('Wirkung: base_path', static function (): void {
 T::run('Slugger', static function (): void {
     $table = [
         ['Über uns', 'ueber-uns'], ['Größe & Maße!', 'groesse-masse'], ['Straße', 'strasse'], ['ÄÖÜ äöü', 'aeoeue-aeoeue'],
-        ['Crème brûlée', 'creme-brulee'], ['  --Hallo   Welt--  ', 'hallo-welt'], ['Lódź Ñandú', 'lodz-nandu'], ['C++ & C#', 'c-c'],
+        ['Crème brûlée', 'creme-brulee'], ['  --Hallo   Welt--  ', 'hallo-welt'], ['Łódź Ñandú', 'lodz-nandu'], ['C++ & C#', 'c-c'],
+        ['Søren Ørsted', 'soren-orsted'], ['Æble & Œuvre', 'aeble-oeuvre'], ['Zażółć gęślą jaźń', 'zazolc-gesla-jazn'], ['Đorđe Þórr', 'dorde-thorr'],
         ['Version 2.0', 'version-2-0'], ['Привет', ''], ['🙂🙂', ''], ['', ''], ['---', ''], ['ABC', 'abc'],
     ];
     foreach ($table as [$text, $expected]) {
@@ -957,6 +960,152 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
         T::check($method->isPublic() && !$method->isStatic() && $method->getNumberOfParameters() === 1 && (string) $method->getParameters()[0]->getType() === 'int', 'CommunityAccess::forgetUser(int) ist öffentlich');
         T::check((new ReflectionMethod(\CMS\Services\Community\Service\CommunityAccess::class, 'instance'))->isStatic(), 'CommunityAccess::instance() ist statisch');
         T::info('CommunityAccess vorhanden: der Listener-Aufruf wird nur über Quelltext und Signatur geprüft');
+    }
+    CommunityModule::setGate(null);
+});
+
+/**
+ * Der echte Weg des Modul-Schalters (Befund B44): `CoreModuleService::isModuleEnabled()` → `SettingsService` → `OptionStore` → Zeile
+ * `core_modules.community` der Tabelle `settings` einer Datenbank. Setzt die Singletons auf die Datenbank `$db`, ruft `$body` auf und
+ * stellt sie danach wieder her.
+ *
+ * @param \Closure(Database): void $body
+ */
+function csWithModuleStack(Database $db, \Closure $body): void
+{
+    $swap = static function (string $class, string $property, mixed $value): mixed {
+        $reflection = new ReflectionProperty($class, $property);
+        $previous = $reflection->getValue();
+        $reflection->setValue(null, $value);
+
+        return $previous;
+    };
+    $settings = (new ReflectionClass(SettingsService::class))->newInstanceWithoutConstructor();
+    foreach (['db' => $db, 'prefix' => $db->getPrefix(), 'logger' => \CMS\Logger::instance()->withChannel('settings')] as $property => $value) {
+        (new ReflectionProperty(SettingsService::class, $property))->setValue($settings, $value);
+    }
+    $modules = (new ReflectionClass(CoreModuleService::class))->newInstanceWithoutConstructor();
+    foreach (['settings' => $settings, 'db' => $db, 'prefix' => $db->getPrefix()] as $property => $value) {
+        (new ReflectionProperty(CoreModuleService::class, $property))->setValue($modules, $value);
+    }
+    $previous = [
+        $swap(Database::class, 'instance', $db),
+        $swap(OptionStore::class, 'instance', null),
+        $swap(SettingsService::class, 'instance', $settings),
+        $swap(CoreModuleService::class, 'instance', $modules),
+    ];
+    try {
+        $body($db);
+    } finally {
+        $swap(CoreModuleService::class, 'instance', $previous[3]);
+        $swap(SettingsService::class, 'instance', $previous[2]);
+        $swap(OptionStore::class, 'instance', $previous[1]);
+        $swap(Database::class, 'instance', $previous[0]);
+    }
+}
+
+/** Zahl der angemeldeten Listener der beiden Hooks, die `CommunityHooks::register()` setzt. */
+function csCommunityListeners(): int
+{
+    return count(Hooks::getCallbacks('user_role_changed', 'action')) + count(Hooks::getCallbacks('user_email_verified', 'action'));
+}
+
+T::run('Modul-Schalter über CoreModuleService und die Tabelle settings (SQLite-Double und, wenn konfiguriert, MariaDB)', static function (): void {
+    $backends = ['SQLite-Double' => static fn (): Database => CommunityTestDatabase::create()];
+    if (MariaDbTestDatabase::configured()) {
+        $backends['MariaDB'] = static fn (): Database => MariaDbTestDatabase::create();
+    }
+    $gate = CommunityModule::SLUG;
+    // gespeicherter Wert => erwarteter Zustand (Modul community: Standard aus; nur ein erkennbares „an“ schaltet ein)
+    $states = [
+        '1' => true, 'true' => true, 'TRUE' => true, ' 1 ' => true, 'yes' => true, 'on' => true, 'ON' => true, 'json:true' => true, 'json:1' => true,
+        '0' => false, 'false' => false, 'off' => false, 'no' => false, '' => false, '   ' => false, 'json:false' => false, 'json:0' => false,
+        'ja' => false, 'enabled' => false, '2' => false, 'json:null' => false, 'json:"on"' => true, 'json:[1]' => false,
+    ];
+
+    foreach ($backends as $label => $make) {
+        $db = $make();
+        try {
+            csWithModuleStack($db, static function (Database $db) use ($label, $states, $gate): void {
+                $service = CoreModuleService::getInstance();
+                $prefix = $db->getPrefix();
+                $write = static function (?string $value, int $autoload) use ($db, $prefix): void {
+                    $db->execute("DELETE FROM {$prefix}settings WHERE option_name = ?", ['core_modules.community']);
+                    if ($value !== null) {
+                        $db->execute("INSERT INTO {$prefix}settings (option_name, option_value, autoload) VALUES (?, ?, ?)", ['core_modules.community', $value, $autoload]);
+                    }
+                    OptionStore::getInstance()->flush();
+                    SettingsService::flushGroupCache();
+                };
+
+                T::same(true, $service === CoreModuleService::getInstance(), "[{$label}] der Dienst ist die vorbereitete Instanz");
+                T::same(false, $service->getModuleDefinition($gate)['default_enabled'] ?? null, "[{$label}] Standard laut Modul-Eintrag: aus");
+
+                $write(null, 1);
+                T::same([false, false], [$service->isModuleEnabled($gate), CommunityModule::isEnabled()], "[{$label}] keine Zeile: Modul aus (Standard)");
+                foreach ([1, 0] as $autoload) {
+                    foreach ($states as $stored => $expected) {
+                        $write((string) $stored, $autoload);
+                        T::same(
+                            [$expected, $expected],
+                            [$service->isModuleEnabled($gate), CommunityModule::isEnabled()],
+                            "[{$label}] gespeichert " . T::export((string) $stored) . " (autoload {$autoload}): Modul " . ($expected ? 'an' : 'aus')
+                        );
+                    }
+                }
+                // Der Zustand folgt dem Schreiben auch ohne neuen Prozess (Zwischenspeicher wird nach dem Schreiben verworfen)
+                $write('1', 0);
+                T::same(true, CommunityModule::isEnabled(), "[{$label}] Zeile mit 1 → an");
+                $write('0', 0);
+                T::same(false, CommunityModule::isEnabled(), "[{$label}] danach 0 → aus");
+                $write(null, 0);
+                T::same(false, CommunityModule::isEnabled(), "[{$label}] Zeile gelöscht → aus");
+
+                // Listener: nur bei eingeschaltetem Modul
+                $write('0', 1);
+                $before = csCommunityListeners();
+                CommunityHooks::register();
+                T::same($before, csCommunityListeners(), "[{$label}] Modul aus (Zeile 0): CommunityHooks meldet nichts an");
+                $write(null, 1);
+                CommunityHooks::register();
+                T::same($before, csCommunityListeners(), "[{$label}] keine Zeile: CommunityHooks meldet nichts an");
+                $write('1', 1);
+                CommunityHooks::register();
+                T::same($before + 2, csCommunityListeners(), "[{$label}] Modul an: CommunityHooks meldet beide Listener an");
+            });
+
+            // Datenbank nicht erreichbar: aus (fail-closed), auch wenn der Standard für andere Module „an“ wäre
+            $broken = new class () extends Database {
+                public function __construct()
+                {
+                }
+
+                public function getPrefix(): string
+                {
+                    return 'cms_';
+                }
+
+                public function get_results(string $query, array $params = []): array
+                {
+                    throw new \PDOException('Datenbank nicht erreichbar');
+                }
+
+                public function get_var(string $query, array $params = []): mixed
+                {
+                    throw new \PDOException('Datenbank nicht erreichbar');
+                }
+            };
+            csWithModuleStack($broken, static function () use ($label, $gate): void {
+                T::same([false, false], [CoreModuleService::getInstance()->isModuleEnabled($gate), CommunityModule::isEnabled()], "[{$label}] Datenbank nicht erreichbar: Modul aus");
+                $before = csCommunityListeners();
+                CommunityHooks::register();
+                T::same($before, csCommunityListeners(), "[{$label}] Datenbank nicht erreichbar: CommunityHooks meldet nichts an");
+            });
+        } finally {
+            if ($db instanceof MariaDbTestDatabase) {
+                $db->dispose();
+            }
+        }
     }
     CommunityModule::setGate(null);
 });

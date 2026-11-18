@@ -313,31 +313,57 @@ final class TopicRepository extends AbstractRepository
     }
 
     /**
-     * Anzahl der Themen eines Mitglieds seit `$sinceUtc` (angelegt am oder nach dem Zeitpunkt; Status veröffentlicht,
-     * wartend, ausgeblendet) für Grenzen je Stunde. Index `idx_community_topics_user`.
+     * Anzahl der Themen eines Mitglieds seit `$sinceUtc` (angelegt am oder nach dem Zeitpunkt) für Grenzen je Stunde. Ohne
+     * `$statuses` zählen veröffentlichte, wartende und ausgeblendete Themen; mit Liste genau diese Status (die Rechteprüfung
+     * zählt auch gelöschte, damit Löschen kein Kontingent freigibt). Index `idx_community_topics_user`.
+     *
+     * @param list<string>|null $statuses Status aus STATUSES
      */
-    public function countSince(int $userId, string $sinceUtc): int
+    public function countSince(int $userId, string $sinceUtc, ?array $statuses = null): int
     {
+        $statuses = self::statuses($statuses, self::COUNTED);
+
         return (int) $this->fetchValue(
-            'SELECT COUNT(*) FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count(self::COUNTED))
+            'SELECT COUNT(*) FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count($statuses))
             . ') AND created_at >= ?',
-            [$userId, ...self::COUNTED, $sinceUtc]
+            [$userId, ...$statuses, $sinceUtc]
         );
     }
 
     /**
      * Jüngstes Thema eines Mitglieds seit `$sinceUtc` (Status wie bei `countSince()`) für den Mindestabstand zwischen Themen.
      *
+     * @param list<string>|null $statuses Status aus STATUSES
      * @return array{id: int, forum_id: int, created_at: string}|null
      */
-    public function lastOfUser(int $userId, string $sinceUtc): ?array
+    public function lastOfUser(int $userId, string $sinceUtc, ?array $statuses = null): ?array
     {
+        $statuses = self::statuses($statuses, self::COUNTED);
         $row = $this->fetchOne(
-            'SELECT id, forum_id, created_at FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count(self::COUNTED))
+            'SELECT id, forum_id, created_at FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count($statuses))
             . ') AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT 1',
-            [$userId, ...self::COUNTED, $sinceUtc]
+            [$userId, ...$statuses, $sinceUtc]
         );
 
         return $row === null ? null : ['id' => (int) $row['id'], 'forum_id' => (int) $row['forum_id'], 'created_at' => (string) $row['created_at']];
+    }
+
+    /**
+     * @param list<string>|null $statuses
+     * @param list<string> $default
+     * @return list<string>
+     */
+    private static function statuses(?array $statuses, array $default): array
+    {
+        if ($statuses === null) {
+            return $default;
+        }
+        $statuses = array_values(array_unique($statuses));
+        $unknown = array_diff($statuses, self::STATUSES);
+        if ($unknown !== [] || $statuses === []) {
+            throw new \InvalidArgumentException('Ungültige Themenstatus: ' . implode(', ', $unknown));
+        }
+
+        return $statuses;
     }
 }

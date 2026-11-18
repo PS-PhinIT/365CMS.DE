@@ -619,7 +619,7 @@ function rScenarioTopics(Database $db): void
     $rate = $db->user();
     $db->topic(['forum' => $forum, 'user' => $rate, 'created_at' => rt(-7200)]);
     $db->topic(['forum' => $forum, 'user' => $rate, 'created_at' => rt(-1800)]);
-    $db->topic(['forum' => $forum, 'user' => $rate, 'created_at' => rt(-300), 'status' => 'deleted']);
+    $t5 = $db->topic(['forum' => $forum, 'user' => $rate, 'created_at' => rt(-300), 'status' => 'deleted']);
     $t4 = $db->topic(['forum' => $forum, 'user' => $rate, 'created_at' => rt(-600), 'status' => 'pending']);
     T::same(2, $repo->countSince($rate, rt(-3600)), 'countSince: veröffentlicht und wartend seit der Grenze, gelöscht nicht');
     T::same(3, $repo->countSince($rate, rt(-7200)), 'countSince: Grenze ist einschließlich (>=)');
@@ -627,6 +627,25 @@ function rScenarioTopics(Database $db): void
     T::same(0, $repo->countSince($rate + 99, rt(-7200)), 'countSince: anderes Mitglied');
     T::same(['id' => $t4, 'forum_id' => $forum, 'created_at' => rt(-600)], $repo->lastOfUser($rate, rt(-3600)), 'lastOfUser: jüngstes zählendes Thema (das neuere gelöschte zählt nicht)');
     T::same(null, $repo->lastOfUser($rate, rt(0)), 'lastOfUser: nichts seit der Grenze → null');
+    // mit Statusliste (die Rechteprüfung zählt auch Gelöschtes: Löschen gibt kein Kontingent und keinen Abstand frei)
+    $quota = ['published', 'pending', 'hidden', 'deleted', 'trash'];
+    T::same(3, $repo->countSince($rate, rt(-3600), $quota), 'countSince mit Statusliste: veröffentlicht (-1800), wartend (-600) und gelöscht (-300) seit der Grenze');
+    T::same(1, $repo->countSince($rate, rt(-7200), ['deleted']), 'countSince nur gelöscht');
+    T::same(0, $repo->countSince($rate, rt(-7200), ['trash']), 'countSince nur im Papierkorb');
+    T::same(4, $repo->countSince($rate, rt(-7200), $quota), 'countSince mit Statusliste und früherer Grenze (vier Themen)');
+    T::same(['id' => $t5, 'forum_id' => $forum, 'created_at' => rt(-300)], $repo->lastOfUser($rate, rt(-3600), $quota), 'lastOfUser mit Statusliste: das gelöschte Thema ist das jüngste');
+    T::same($t5, $repo->lastOfUser($rate, rt(-3600), ['deleted'])['id'] ?? 0, 'lastOfUser nur gelöscht');
+    T::same(null, $repo->lastOfUser($rate, rt(-3600), ['trash']), 'lastOfUser nur im Papierkorb → null');
+    foreach ([['kaputt'], []] as $bad) {
+        foreach (['countSince' => static fn () => $repo->countSince($rate, rt(-7200), $bad), 'lastOfUser' => static fn () => $repo->lastOfUser($rate, rt(-7200), $bad)] as $name => $call) {
+            try {
+                $call();
+                T::check(false, $name . ' lehnt ungültige Status ab');
+            } catch (\InvalidArgumentException) {
+                T::check(true, $name . ' lehnt ungültige Status ab');
+            }
+        }
+    }
 
     // letztes veröffentlichtes Thema
     $lp = $db->forum(['title' => 'Letzte']);
@@ -685,6 +704,10 @@ function rScenarioTopicKeyset(Database $db): void
     // ungültige Cursor → erste Seite
     $firstIds = rIds($repo->listForum($forum, rt(500), null, 3)->items);
     $junk = ['', 'abc', str_repeat('A', 70), rtrim(strtr(base64_encode("x' OR 1=1|5"), '+/', '-_'), '='), rtrim(strtr(base64_encode('2026-11-15 10:00:00|0'), '+/', '-_'), '='), '%%%', 'MjAyNi0xMS0xNSAxMDowMDowMHxhYmM'];
+    // B22: ein unmöglicher Zeitpunkt oder eine ID außerhalb von INT UNSIGNED ist ein ungültiger Cursor (erste Seite), keine leere Seite
+    foreach (['9999-99-99 99:99:99|5', '0000-00-00 00:00:00|5', '2036-13-45 25:61:61|5', '2026-02-30 10:00:00|5', '2026-11-15 24:00:00|5', '2026-11-15 10:00:00|4294967296'] as $impossible) {
+        $junk[] = rtrim(strtr(base64_encode($impossible), '+/', '-_'), '=');
+    }
     $allNull = true;
     $sameAsFirst = true;
     foreach ($junk as $raw) {
@@ -958,6 +981,20 @@ function rScenarioPostQueries(Database $db): void
     T::same(null, $repo->lastOfUser($rate, rt(-86400), $sub), 'lastOfUser: im Unterforum nur ein ausgeblendeter Beitrag → null');
     T::same(null, $repo->lastOfUser($rate, rt(0)), 'lastOfUser: nichts seit der Grenze');
     T::check($c > 0 && $d > 0, 'Fixtures');
+    // mit Statusliste (die Rechteprüfung zählt auch Gelöschtes, damit Löschen keinen Abstand freigibt)
+    T::same($d, $repo->lastOfUser($rate, rt(-86400), null, null, ['published', 'pending', 'hidden', 'deleted'])['id'] ?? 0, 'lastOfUser mit Statusliste: der gelöschte Beitrag ist der jüngste');
+    T::same($c, $repo->lastOfUser($rate, rt(-86400), null, null, ['hidden'])['id'] ?? 0, 'lastOfUser nur ausgeblendet');
+    T::same($c, $repo->lastOfUser($rate, rt(-86400), $sub, null, ['hidden', 'deleted'])['id'] ?? 0, 'lastOfUser mit Statusliste im Unterforum');
+    T::same($d, $repo->lastOfUser($rate, rt(-86400), null, $topic, ['deleted'])['id'] ?? 0, 'lastOfUser mit Statusliste im Thema');
+    T::same(null, $repo->lastOfUser($rate, rt(-86400), $sub, null, ['deleted']), 'lastOfUser: im Unterforum kein gelöschter Beitrag → null');
+    foreach ([['kaputt'], []] as $bad) {
+        try {
+            $repo->lastOfUser($rate, rt(-86400), null, null, $bad);
+            T::check(false, 'lastOfUser lehnt ungültige Status ab');
+        } catch (\InvalidArgumentException) {
+            T::check(true, 'lastOfUser lehnt ungültige Status ab');
+        }
+    }
 
     // doppeltes Absenden
     $dupUser = $db->user();
@@ -1715,6 +1752,7 @@ function rScenarioColumnLimits(Database $db): void
         'sort_order negativ' => ['sort_order' => -1],
         'sort_order über INT UNSIGNED' => ['sort_order' => 4294967296],
         'title ungültiges UTF-8' => ['title' => "Titel \xFF"],
+        'title NULL (NOT NULL-Spalte)' => ['title' => null],
     ];
     $categoryCount = $db->count('community_categories');
     $k = 0;
@@ -1801,6 +1839,7 @@ function rScenarioDuplicateKeyCodes(Database $db): void
         'MariaDB Fremdschlüssel (1451)' => new RepoDriverException('23000', 1451, 'Integrity constraint violation: 1451 Cannot delete or update a parent row'),
         'SQLite NOT NULL' => new RepoDriverException('23000', 19, 'Integrity constraint violation: 19 NOT NULL constraint failed: cms_community_forums.category_id'),
         'SQLSTATE 23000 ohne Treibercode' => new RepoDriverException('23000', 0, 'Integrity constraint violation'),
+        'Treibercode 1062 ohne SQLSTATE 23000' => new RepoDriverException('HY000', 1062, 'Duplicate entry (anderer Zustand)'),
     ];
     foreach ($other as $label => $exception) {
         foreach ([
@@ -1969,6 +2008,187 @@ if (!MariaDbTestDatabase::configured()) {
         T::info(MariaDbTestDatabase::skipNotice());
     });
 }
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Cursor und Savepoint-Namen (ohne Datenbankserver)
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+T::run('Cursor: nur wirkliche Zeitpunkte und IDs in INT UNSIGNED (B22), Längengrenze (B43)', static function (): void {
+    $encode = static fn (string $plain): string => rtrim(strtr(base64_encode($plain), '+/', '-_'), '=');
+
+    // gültig
+    foreach ([['2026-11-15 10:00:00', 1], ['2024-02-29 23:59:59', 4294967295], ['1970-01-01 00:00:00', 7], ['9999-12-31 23:59:59', 999999], ['2026-12-31 00:00:00', 4294967290]] as [$at, $id]) {
+        $decoded = Cursor::decode($encode($at . '|' . $id));
+        T::same([$at, $id], [$decoded?->at, $decoded?->id], "gültig: {$at} | {$id}");
+        T::same($encode($at . '|' . $id), $decoded?->encode(), "encode(decode(x)) = x: {$at} | {$id}");
+    }
+    // ungültige Zeitpunkte: PHP würde sie umrechnen (30. Februar → 2. März) oder die Datenbank nur mit Warnung vergleichen
+    foreach ([
+        '9999-99-99 99:99:99', '0000-00-00 00:00:00', '2036-13-45 25:61:61', '2026-02-30 10:00:00', '2025-02-29 12:00:00', '2026-04-31 00:00:00',
+        '2026-00-10 10:00:00', '2026-11-00 10:00:00', '2026-13-01 10:00:00', '2026-11-15 24:00:00', '2026-11-15 10:60:00', '2026-11-15 10:00:60', '2026-11-32 10:00:00',
+    ] as $at) {
+        T::same(null, Cursor::decode($encode($at . '|5')), "ungültiger Zeitpunkt {$at} → null (erste Seite)");
+    }
+    // IDs: nur 1 bis 4294967295 ohne führende Null
+    foreach (['0', '00001', '01', '4294967296', '9999999999', '99999999999', '18446744073709551615', '99999999999999999999', '-1', '1.5', '1e3', ' 1', '1 '] as $id) {
+        T::same(null, Cursor::decode($encode('2026-11-15 10:00:00|' . $id)), "ungültige ID {$id} → null");
+    }
+    T::same(4294967295, Cursor::decode($encode('2026-11-15 10:00:00|4294967295'))?->id, 'größte ID einer INT-UNSIGNED-Spalte gilt');
+    // Form
+    foreach (['', '2026-11-15 10:00:00', '2026-11-15 10:00:00|', '|5', '2026-11-15|5', '2026-11-15 10:00:00 |5', '2026-11-15 10:00:00|5|6', "2026-11-15 10:00:00|5\0"] as $plain) {
+        T::same(null, Cursor::decode($encode($plain)), 'ungültige Form: ' . T::export($plain));
+    }
+    T::same(null, Cursor::decode(null), 'null → null');
+
+    // Länge: MAX_LENGTH ist genau die Länge des längsten gültigen Cursors; jede längere Eingabe wird abgewiesen
+    $longest = (new Cursor('9999-12-31 23:59:59', Cursor::MAX_ID))->encode();
+    T::same(Cursor::MAX_LENGTH, strlen($longest), 'der längste gültige Cursor hat genau MAX_LENGTH Zeichen');
+    T::same([Cursor::MAX_ID], [Cursor::decode($longest)?->id], 'und wird dekodiert');
+    T::check(Cursor::MAX_LENGTH <= 64, 'MAX_LENGTH ist eine kleine Grenze (kein Platz für große Eingaben)', (string) Cursor::MAX_LENGTH);
+    T::same(null, Cursor::decode($longest . 'A'), 'ein Zeichen länger → null');
+    T::same(null, Cursor::decode(str_repeat('A', Cursor::MAX_LENGTH + 1)), 'zu lange Eingabe → null');
+    T::same(null, Cursor::decode(str_repeat('A', 100000)), 'sehr lange Eingabe → null (ohne zu dekodieren)');
+    T::same(null, Cursor::decode($longest . '='), 'Auffüllzeichen sind nicht erlaubt');
+});
+
+/**
+ * PDO, das jede Transaktionsanweisung festhält: BEGIN, SAVEPOINT, RELEASE, ROLLBACK TO, COMMIT, ROLLBACK. Das SQLite-Double vertrüge
+ * gleichnamige Savepoints (SQLite führt sie als Stapel), MariaDB nicht (der gleichnamige Savepoint ersetzt den äußeren, Fehler 1305):
+ * deshalb prüft der Test die Namen selbst, nicht die Folgen.
+ */
+final class RepoRecordingPdo extends \PDO
+{
+    /** @var list<string> */
+    public array $statements = [];
+
+    public function exec(string $statement): int|false
+    {
+        $this->statements[] = $statement;
+
+        return parent::exec($statement);
+    }
+
+    public function beginTransaction(): bool
+    {
+        $this->statements[] = 'BEGIN';
+
+        return parent::beginTransaction();
+    }
+
+    public function commit(): bool
+    {
+        $this->statements[] = 'COMMIT';
+
+        return parent::commit();
+    }
+
+    public function rollBack(): bool
+    {
+        $this->statements[] = 'ROLLBACK';
+
+        return parent::rollBack();
+    }
+}
+
+T::run('Transaktion: Savepoints heißen je Tiefe verschieden, Geschwister gleich (B33/B40), unabhängig vom Datenbanktreiber', static function (): void {
+    $make = static function (): array {
+        $pdo = new RepoRecordingPdo('sqlite::memory:');
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $db = (new \ReflectionClass(Database::class))->newInstanceWithoutConstructor();
+        (new \ReflectionProperty(Database::class, 'pdo'))->setValue($db, $pdo);
+
+        return [$db, $pdo];
+    };
+    $nop = static fn (): null => null;
+
+    // Drei Ebenen
+    [$db, $pdo] = $make();
+    Transaction::run($db, static function () use ($db, $nop): void {
+        Transaction::run($db, static function () use ($db, $nop): void {
+            Transaction::run($db, $nop);
+        });
+    });
+    T::same(
+        ['BEGIN', 'SAVEPOINT cms_community_tx_1', 'SAVEPOINT cms_community_tx_2', 'RELEASE SAVEPOINT cms_community_tx_2', 'RELEASE SAVEPOINT cms_community_tx_1', 'COMMIT'],
+        $pdo->statements,
+        'drei Ebenen: BEGIN, Savepoint der Tiefe 1, Savepoint der Tiefe 2, danach von innen nach außen freigegeben, COMMIT'
+    );
+
+    // Vier Ebenen mit Geschwistern auf Tiefe 2: nach jedem Aufruf fällt die Tiefe zurück
+    [$db, $pdo] = $make();
+    Transaction::run($db, static function () use ($db, $nop): void {
+        Transaction::run($db, static function () use ($db, $nop): void {
+            Transaction::run($db, $nop);
+            Transaction::run($db, static function () use ($db, $nop): void {
+                Transaction::run($db, $nop);
+            });
+        });
+        Transaction::run($db, $nop);
+    });
+    T::same(
+        [
+            'BEGIN', 'SAVEPOINT cms_community_tx_1',
+            'SAVEPOINT cms_community_tx_2', 'RELEASE SAVEPOINT cms_community_tx_2',
+            'SAVEPOINT cms_community_tx_2', 'SAVEPOINT cms_community_tx_3', 'RELEASE SAVEPOINT cms_community_tx_3', 'RELEASE SAVEPOINT cms_community_tx_2',
+            'RELEASE SAVEPOINT cms_community_tx_1',
+            'SAVEPOINT cms_community_tx_1', 'RELEASE SAVEPOINT cms_community_tx_1',
+            'COMMIT',
+        ],
+        $pdo->statements,
+        'Geschwister: gleiche Tiefe, gleicher Name; jede tiefere Ebene einen eigenen Namen'
+    );
+
+    // Scheitert die mittlere Ebene: Rücknahme auf ihren Savepoint (nicht auf den der inneren Ebene), die äußere macht weiter
+    [$db, $pdo] = $make();
+    Transaction::run($db, static function () use ($db, $nop): void {
+        try {
+            Transaction::run($db, static function () use ($db, $nop): void {
+                Transaction::run($db, $nop);
+                throw new \RuntimeException('Mitte');
+            });
+        } catch (\RuntimeException) {
+        }
+        Transaction::run($db, $nop);
+    });
+    T::same(
+        [
+            'BEGIN', 'SAVEPOINT cms_community_tx_1', 'SAVEPOINT cms_community_tx_2', 'RELEASE SAVEPOINT cms_community_tx_2',
+            'ROLLBACK TO SAVEPOINT cms_community_tx_1', 'RELEASE SAVEPOINT cms_community_tx_1',
+            'SAVEPOINT cms_community_tx_1', 'RELEASE SAVEPOINT cms_community_tx_1', 'COMMIT',
+        ],
+        $pdo->statements,
+        'mittlere Ebene scheitert: ROLLBACK TO und RELEASE auf ihren eigenen Savepoint, die Tiefe fällt danach zurück'
+    );
+
+    // Nach einer Ausnahme der äußersten Ebene beginnt die Zählung neu
+    [$db, $pdo] = $make();
+    try {
+        Transaction::run($db, static function () use ($db, $nop): void {
+            Transaction::run($db, $nop);
+            throw new \RuntimeException('außen');
+        });
+    } catch (\RuntimeException) {
+    }
+    Transaction::run($db, static function () use ($db, $nop): void {
+        Transaction::run($db, $nop);
+    });
+    T::same(
+        ['BEGIN', 'SAVEPOINT cms_community_tx_1', 'RELEASE SAVEPOINT cms_community_tx_1', 'ROLLBACK', 'BEGIN', 'SAVEPOINT cms_community_tx_1', 'RELEASE SAVEPOINT cms_community_tx_1', 'COMMIT'],
+        $pdo->statements,
+        'nach einer Rücknahme der äußersten Ebene beginnt die Tiefenzählung wieder bei 1'
+    );
+
+    // Eine zweite Verbindung zählt für sich
+    [$db, $pdo] = $make();
+    [$dbOther, $pdoOther] = $make();
+    Transaction::run($db, static function () use ($dbOther, $nop): void {
+        Transaction::run($dbOther, static function () use ($dbOther, $nop): void {
+            Transaction::run($dbOther, $nop);
+        });
+    });
+    T::same(['BEGIN', 'COMMIT'], $pdo->statements, 'Verbindung A: nur die äußerste Ebene');
+    T::same(['BEGIN', 'SAVEPOINT cms_community_tx_1', 'RELEASE SAVEPOINT cms_community_tx_1', 'COMMIT'], $pdoOther->statements, 'Verbindung B zählt unabhängig von A (beginnt bei der äußersten Ebene)');
+});
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // SQLite-Double

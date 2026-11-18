@@ -747,6 +747,65 @@ cdbSection('e2e-approval', 'Ende-zu-Ende (MariaDB): Freigabepflicht, Sperre, Fen
     T::same([], cdbRealTimeColumns($db), 'kein Zeitwert aus einem Spaltendefault');
 });
 
+cdbSection('e2e-review', 'Ende-zu-Ende (MariaDB): Befunde der Nachprüfung (B6 letzter Beitrag nie NULL, B21 wiederholtes Löschen, B22/B23 Cursor und afterId an den Grenzen)', static function (): void {
+    $w = new CdbWorld();   // new_member_approval_posts = 2 (Standard): ein neues Mitglied wartet auf Freigabe
+    $db = $w->db;
+    $newbie = $db->user();
+    $author = $db->user();
+    $mod = $db->user(['role' => 'moderator']);
+    $forum = $db->forum();
+    (new ForumRepository($db))->savePermissions($forum, [
+        ['subject_type' => 'role', 'subject_key' => 'member', 'permissions' => ['read' => 1, 'create_topic' => 1, 'reply' => 1, 'edit_own' => 1, 'delete_own' => 1]],
+    ], cdbUtc());
+    $nulls = static fn (): int => (int) cdbScalar($db, 'SELECT COUNT(*) FROM cms_community_topics WHERE last_post_at IS NULL');
+
+    // B6: die Moderation antwortet in einem wartenden Thema und löscht die einzige veröffentlichte Antwort
+    $pending = $w->topics->create($newbie, $forum, 'Wartendes Thema', 'Wartender Themenstart');
+    T::same('pending', $pending['status'] ?? null, 'Vorbedingung: das Thema des Neulings wartet auf Freigabe');
+    $topic = (int) $pending['topic_id'];
+    $w->at(60);
+    $reply = $w->posts->reply($mod, $topic, 'Antwort der Moderation');
+    T::same([true, 'published', cdbUtc(60)], [$reply['success'] ?? null, $reply['status'] ?? null, $w->topic($topic)['last_post_at']], 'die Antwort der Moderation ist veröffentlicht, last_post_at zeigt sie');
+    $w->at(120);
+    T::same(true, $w->posts->delete($mod, (int) $reply['post_id'])['success'] ?? null, 'die Moderation löscht die einzige veröffentlichte Antwort');
+    T::same([0, null, null, cdbUtc(), 0], [(int) $w->topic($topic)['reply_count'], $w->topic($topic)['last_post_id'], $w->topic($topic)['last_poster_id'], $w->topic($topic)['last_post_at'], $nulls()], 'last_post_at fällt auf die Anlagezeit des Themas zurück (nie NULL), last_post_id/last_poster_id sind leer');
+    T::same([], cdbAudit($db), 'Neuberechnung: Zähler stimmen, last_post_at ist nirgends NULL');
+
+    // B21: Doppelklick auf „Thema löschen“
+    $w->at(200);
+    $own = (int) $w->topics->create($author, $forum, 'Thema zum zweimal Löschen', 'Text')['topic_id'];
+    $w->at(260);
+    T::same(true, $w->topics->delete($author, $own)['success'] ?? null, 'erstes Löschen durch den Autor');
+    $fingerprint = cdbFingerprint($db);
+    $hooks = count($w->hooks);
+    $again = $w->topics->delete($author, $own);
+    T::same([true, true], [$again['success'] ?? null, $again['already_deleted'] ?? null], 'zweites Löschen durch den Autor: Erfolg mit already_deleted');
+    T::same([true, true], [$w->topics->delete($mod, $own)['success'] ?? null, $w->topics->delete($mod, $own)['already_deleted'] ?? null], 'zweites Löschen durch die Moderation: ebenfalls');
+    T::same('not_found', $w->topics->delete($newbie, $own)['error'] ?? null, 'ein fremdes Mitglied bekommt weiter not_found');
+    T::same([$fingerprint, $hooks], [cdbFingerprint($db), count($w->hooks)], 'wirkungslos: nichts geschrieben, kein weiterer Hook');
+    T::same([], cdbAudit($db), 'Zähler stimmen nach dem wiederholten Löschen');
+
+    // B22: ein unmöglicher Zeitpunkt oder eine zu große ID im Cursor ergibt die erste Seite (nie eine leere Seite, nie db_error)
+    $w->at(300);
+    $ids = [];
+    for ($i = 0; $i < 6; $i++) {
+        $w->at(400 + $i * 600);
+        $ids[] = (int) $w->topics->create($mod, $forum, 'Thema ' . $i, 'Text ' . $i)['topic_id'];
+    }
+    $w->at(5000);
+    $firstPage = array_map(static fn (array $t): int => (int) $t['id'], $w->topics->listForum($author, $forum, null, 3)['items'] ?? []);
+    T::same(3, count($firstPage), 'Vorbedingung: erste Seite mit drei Themen');
+    foreach (['9999-99-99 99:99:99|5', '0000-00-00 00:00:00|5', '2036-13-45 25:61:61|5', '2036-02-30 10:00:00|5', '2036-06-15 24:00:00|5', '2036-06-15 10:00:00|4294967296'] as $impossible) {
+        $cursor = rtrim(strtr(base64_encode($impossible), '+/', '-_'), '=');
+        $page = $w->topics->listForum($author, $forum, $cursor, 3);
+        T::same([true, $firstPage], [$page['success'] ?? null, array_map(static fn (array $t): int => (int) $t['id'], $page['items'] ?? [])], 'Cursor ' . $impossible . ': erste Seite');
+    }
+
+    // B23: afterId an der Grenze von int
+    [$listed] = [$w->posts->listPage($author, $ids[0], PHP_INT_MAX)];
+    T::same([true, []], [$listed['success'] ?? null, $listed['items'] ?? null], 'listPage mit afterId PHP_INT_MAX: leere letzte Seite, kein TypeError');
+});
+
 cdbSection('e2e-edge', 'Ende-zu-Ende (MariaDB): Grenzfälle der echten Spalten (200 Umlaute im Titel, 4-Byte-Zeichen, 50.000 Zeichen Text, Grund mit 255 Zeichen)', static function (): void {
     $w = new CdbWorld(['new_member_approval_posts' => 0, 'rate_post_seconds' => 0, 'rate_topic_seconds' => 0, 'trust_limits' => CDB_NOLIMIT_SETTINGS['trust_limits']]);
     $db = $w->db;
@@ -1159,7 +1218,8 @@ cdbSection('denied', 'Ablehnung bleibt Ablehnung: fällt irgendeine Anweisung de
 
 /**
  * Probleme der Prozesse selbst: Ausnahme, Absturz, Ausgabe auf STDERR, offene Transaktion, `db_error` (ein durchgereichter
- * Deadlock 1213 oder Lock-Timeout 1205 ist ein Fehler, die Wiederholung in `Transaction::run` fängt ihn ab).
+ * Deadlock 1213 ist ein Fehler, die Wiederholung in `Transaction::run` fängt ihn ab; ein Lock-Timeout 1205 wird nicht wiederholt und
+ * erscheint als `db_error`).
  *
  * @param list<array<string, mixed>> $results
  * @return list<string>
@@ -1572,15 +1632,18 @@ cdbSection('locks', 'Echte Zeilensperren: solange ein Dienstaufruf seine Zeilen 
                 T::same($state, $observed[$key], "{$name}: Zeile {$key} ist {$state} (zweite Verbindung, Lock-Timeout 1 s)");
             }
         }
-        // Ein zweiter Dienstaufruf auf demselben Forum scheitert an derselben Sperre (Wiederholung, dann db_error), schreibt nichts.
+        // Ein zweiter Dienstaufruf auf demselben Forum scheitert an derselben Sperre (Lock-Timeout 1205 ohne Wiederholung: db_error), schreibt nichts.
         if ($name === 'topic.create') {
             $second = new CdbWorld(CDB_RACE_SETTINGS, time() - 7200, $db);
             $second->db->getPdo()->exec('SET SESSION innodb_lock_wait_timeout = 1');
             $before = cdbFingerprint($db);
             $started = microtime(true);
             $denied = $second->topics->create($other, $forum, 'Thema, das warten muss', 'Text');
-            T::same('db_error', $denied['error'] ?? null, 'topic.create: ein zweiter Dienstaufruf auf demselben Forum scheitert an der Sperre (Lock-Timeout, nach Wiederholung db_error)');
-            T::check(microtime(true) - $started >= 2.0, 'topic.create: der zweite Aufruf hat gewartet und wiederholt (mindestens zwei Lock-Timeouts)', round(microtime(true) - $started, 2) . ' s');
+            $waited = microtime(true) - $started;
+            T::same('db_error', $denied['error'] ?? null, 'topic.create: ein zweiter Dienstaufruf auf demselben Forum scheitert an der Sperre (Lock-Timeout 1205, sofort db_error)');
+            // B34: ein Lock-Timeout wird nicht wiederholt (sonst dreifache Wartezeit: bei 50 s Server-Standard etwa 150 s je Aufruf).
+            T::check($waited >= 0.9, 'topic.create: der zweite Aufruf hat den Lock-Timeout (1 s) abgewartet', round($waited, 2) . ' s');
+            T::check($waited < 1.9, 'topic.create: kein Wiederholen bei Lock-Timeout 1205 (genau ein Timeout, nicht drei)', round($waited, 2) . ' s');
             T::same($before, cdbFingerprint($db), 'topic.create: der gescheiterte zweite Aufruf schreibt nichts');
             $db->getPdo()->exec('SET SESSION innodb_lock_wait_timeout = 50');
             cdbLogs();

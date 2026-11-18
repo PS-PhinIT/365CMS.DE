@@ -180,6 +180,11 @@ final class AcWorld
     /** @param array<string, mixed> $settings */
     public function __construct(array $settings = [], ?TrustLevelPolicy $trust = null)
     {
+        if (MariaDbTestDatabase::configured()) {
+            // Jede Welt hält eine Verbindung und eine Datenbank; die Welten zeigen über ihre Closures auf sich selbst und werden erst
+            // vom Zyklensammler freigegeben. Ohne diesen Aufruf erschöpft die Suite max_connections (151) der MariaDB.
+            gc_collect_cycles();
+        }
         $this->db = MariaDbTestDatabase::configured() ? MariaDbTestDatabase::create() : CommunityTestDatabase::create();
         $this->now = gmmktime(12, 0, 0, 11, 15, 2026);
         $this->settings = Settings::fromArray($settings);
@@ -638,6 +643,7 @@ T::run('Matrix Bearbeiten (edit) · Beitrags-, Themen- und Forenzustände', stat
     acMatrix($w, 'Beitrag rejected: niemand', 'edit', ['post_id' => $w->p['pr']], acW(['*' => 'not_found', 'OWN' => 'post_not_editable', 'FM' => 'post_not_editable', 'GM' => 'post_not_editable', 'AD' => 'post_not_editable']));
     acMatrix($w, 'erster Beitrag (Titel) im Fenster', 'edit', ['post_id' => $w->p['pf']], acW(['*' => 'no_permission', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Thema locked: Autor nein, Moderation ja', 'edit', ['post_id' => $w->p['pl']], acW(['*' => 'no_permission', 'OWN' => 'topic_locked'] + $mods));
+    acMatrix($w, 'Thema pending: der Autor darf seinen Beitrag bearbeiten, Fremde sehen das Thema nicht', 'edit', ['post_id' => $w->p['ptp']], acW(['*' => 'not_found', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Thema deleted: nur Moderation sieht es, niemand bearbeitet', 'edit', ['post_id' => ($w->p['ptd'])], acW(['*' => 'not_found', 'FM' => 'topic_deleted', 'GM' => 'topic_deleted', 'AD' => 'topic_deleted']));
     acMatrix($w, 'Forum readonly: Autor nein, Moderation ja', 'edit', ['post_id' => $w->p['ptr']], acW(['*' => 'no_permission', 'OWN' => 'forum_readonly'] + $mods));
     acMatrix($w, 'Forum archived: auch Moderation gesperrt', 'edit', ['post_id' => $w->p['pta']], acW(['*' => 'no_permission', 'OWN' => 'forum_archived', 'FM' => 'forum_archived', 'GM' => 'forum_archived', 'AD' => 'forum_archived']));
@@ -659,6 +665,9 @@ T::run('Matrix Löschen (delete) · Standard: delete_own aus; mit delete_own an'
     acMatrix($w, 'Beitrag deleted: wiederholtes Löschen ist idempotent erlaubt', 'delete', ['post_id' => $w->p['pd']], acW(['*' => 'no_permission', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Beitrag rejected: niemand', 'delete', ['post_id' => $w->p['pr']], acW(['*' => 'not_found', 'OWN' => 'post_not_editable', 'FM' => 'post_not_editable', 'GM' => 'post_not_editable', 'AD' => 'post_not_editable']));
     acMatrix($w, 'Thema locked', 'delete', ['post_id' => $w->p['pl']], acW(['*' => 'no_permission', 'OWN' => 'topic_locked'] + $mods));
+    acMatrix($w, 'Thema pending: der Autor darf seinen Beitrag löschen', 'delete', ['post_id' => $w->p['ptp']], acW(['*' => 'not_found', 'OWN' => 'ok'] + $mods));
+    $w->topic('tpn', 'fo', ['status' => 'pending', 'age' => 300, 'activity' => 300]);
+    acMatrix($w, 'Thema pending (fünf Minuten alt): der Autor darf es löschen', 'delete', ['topic_id' => $w->t['tpn']], acW(['*' => 'not_found', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Forum archived: auch das wiederholte Löschen ist gesperrt', 'delete', ['post_id' => $w->p['pta']], acW(['*' => 'no_permission', 'OWN' => 'forum_archived', 'FM' => 'forum_archived', 'GM' => 'forum_archived', 'AD' => 'forum_archived']));
     // Thema löschen (ohne Beitrag): Autor im Fenster, Moderation immer
     acMatrix($w, 'Thema (fünf Minuten alt)', 'delete', ['topic_id' => $w->t['tnew']], acW(['*' => 'no_permission', 'OWN' => 'ok'] + $mods));
@@ -1003,7 +1012,7 @@ T::run('Fail-closed bei beschädigten Forendaten: unbekannter Forumstatus, leere
     $viewers = ['guest', 'm1', 'own', 'grp', 'vw'];
     $moderators = ['gm', 'admin'];
 
-    // Unbekannter Forumstatus (die Spalte ist auf der MariaDB ein ENUM; hier gilt das SQLite-Double)
+    // Unbekannter Forumstatus (die Spalte ist ein VARCHAR(20): auch Importe und Eingriffe in die Datenbank können beliebige Werte hinterlassen)
     foreach (['Hidden', 'HIDDEN', 'private', 'disabled', 'closed', '', ' hidden', 'open '] as $i => $status) {
         $key = 'u' . $i;
         $w->forum($key);
@@ -1012,7 +1021,7 @@ T::run('Fail-closed bei beschädigten Forendaten: unbekannter Forumstatus, leere
         try {
             $w->sql('UPDATE cms_community_forums SET status = ? WHERE id = ?', [$status, $w->f[$key]]);
         } catch (\Throwable $e) {
-            T::info('Forumstatus ' . T::export($status) . ' nicht speicherbar (ENUM der echten Datenbank): übersprungen');
+            T::info('Forumstatus ' . T::export($status) . ' nicht speicherbar: übersprungen');
             continue;
         }
         $w->moderators($key, [['subject_type' => 'user', 'subject_id' => $w->u['fm'], 'include_children' => 0]]);
@@ -1044,7 +1053,8 @@ T::run('Fail-closed bei beschädigten Forendaten: unbekannter Forumstatus, leere
     T::same('ok', $w->cell('m1', 'read', ['forum_id' => $cc]), 'Ausgangslage: das Kindforum mit intaktem Pfad ist lesbar');
     $broken = [
         'leer' => '', 'nur Schrägstriche' => '/', 'nur die eigene ID (Elternforum fehlt im Pfad)' => '/' . $cc . '/',
-        'endet nicht mit der eigenen ID' => '/' . $pp . '/', 'falsches Elternforum vor der eigenen ID' => '/' . $w->f['fo'] . '/' . $cc . '/',
+        'endet nicht mit der eigenen ID' => '/' . $pp . '/', 'endet mit einer fremden ID (Elternforum davor stimmt)' => '/' . $pp . '/' . $w->f['fo'] . '/',
+        'falsches Elternforum vor der eigenen ID' => '/' . $w->f['fo'] . '/' . $cc . '/', 'Segment 0 vor dem Elternforum' => '/0/' . $pp . '/' . $cc . '/',
         'Buchstaben im Pfad' => '/' . $pp . '/abc/' . $cc . '/', 'Segment 0' => '/0/' . $cc . '/', 'führende Null' => '/0' . $pp . '/' . $cc . '/',
         'negative ID' => '/-' . $pp . '/' . $cc . '/', 'Leerzeichen' => '/' . $pp . '/ ' . $cc . '/', 'doppelter Schrägstrich' => '/' . $pp . '//' . $cc . '/',
     ];
@@ -1894,6 +1904,14 @@ T::run('Mengen-API: wenige Abfragen ohne Rechte-Zeilen, Ergebnis wie can(read) m
         T::same($queries, count($w->db->log), $label . ': readableForumIds und filterReadable kosten gleich viele Abfragen');
         T::check($queries < 3 * count($all), $label . ': weniger als drei Abfragen je Forum (' . $queries . ' bei ' . count($all) . ' Foren)');
         T::info($label . ': ' . $queries . ' Abfragen (' . count($ids) . ' lesbar)');
+        // Globale Moderation und admin sehen jedes Forum: keine Matrix- und keine Moderatorenabfrage je Forum
+        foreach (['gm', 'admin'] as $moderator) {
+            $w->access->flush();
+            $w->db->log = [];
+            $seen = $w->access->readableForumIds($w->u[$moderator]);
+            T::same($all, $seen, $label . ', ' . $moderator . ': alle Foren lesbar');
+            T::check(count($w->db->log) <= 6, $label . ', ' . $moderator . ': höchstens 6 Abfragen unabhängig von der Forenzahl (' . count($w->db->log) . ')', implode(' | ', array_slice($w->db->log, 0, 8)));
+        }
     }
 
     // Ganz ohne Rechte-Zeilen: eine Abfrage für alle Foren, nicht eine je Forum
@@ -1966,11 +1984,27 @@ T::run('Pflichtfall: retry_after bei Abstand (rate_limited) und Langsamem Modus 
     $w->sql('UPDATE cms_community_posts SET created_at = ? WHERE id = ?', [$w->utc(-60), $w->p['flood_slow']]);
     T::same('ok:published', $w->cell('flood', 'reply', ['topic_id' => $w->t['tslow']]), 'genau 60 s: der Langsame Modus ist vorbei (Grenze erlaubt)');
 
+    // B3/B29: ein gelöschter, abgelehnter oder ausgeblendeter Beitrag hält den Langsamen Modus weiter
+    foreach (['deleted', 'rejected', 'hidden'] as $gone) {
+        $w->member('slow_' . $gone, ['posts' => 5]);
+        $w->post('slow_' . $gone . '_p', 'tslow', ['by' => 'slow_' . $gone, 'age' => 20, 'status' => $gone]);
+        T::same('slow_mode@40', $w->cell('slow_' . $gone, 'reply', ['topic_id' => $w->t['tslow']]), 'Beitrag im Status ' . $gone . ' vor 20 s im Forum mit Modus 60 s: slow_mode, 40 s');
+        T::same('rate_limited@10', $w->cell('slow_' . $gone, 'reply', ['topic_id' => $w->t['t']]), 'dto.: in einem anderen Forum gilt nur der Abstand zwischen Beiträgen (30 s, Rest 10 s)');
+    }
     // Langsamer Modus des Themas
     $w->post('flood_fast', 'tfast', ['by' => 'flood', 'age' => 31]);
     T::same('slow_mode@14', $w->cell('flood', 'reply', ['topic_id' => $w->t['tfast']]), 'Themen-Modus 45 s, Beitrag vor 31 s: slow_mode, 14 s');
     T::same('ok:published', $w->cell('flood', 'reply', ['topic_id' => $w->t['t']]), 'der Themen-Modus gilt nur in diesem Thema (Abstand 30 s ist vorbei)');
     T::same('ok:published', $w->cell('m1', 'reply', ['topic_id' => $w->t['tfast']]), 'andere Mitglieder sind nicht betroffen');
+    // Der Langsame Modus gilt je Forum und je Thema: ein Beitrag woanders (31 s her, der Abstand von 30 s ist vorbei) hält ihn nicht
+    $w->member('sc', ['posts' => 5]);
+    $w->post('sc_p', 't', ['by' => 'sc', 'age' => 31]);
+    T::same('ok:published', $w->cell('sc', 'reply', ['topic_id' => $w->t['tslow']]), 'Forum-Modus 60 s: ein Beitrag vor 31 s in einem anderen Forum zählt nicht');
+    T::same('ok:published', $w->cell('sc', 'create_topic', ['forum_id' => $w->f['slow']]), 'dto. beim Anlegen eines Themas im Forum mit Langsamem Modus');
+    T::same('ok:published', $w->cell('sc', 'reply', ['topic_id' => $w->t['tfast']]), 'Themen-Modus 45 s: ein Beitrag vor 31 s in einem anderen Thema zählt nicht');
+    $w->member('tf_gone', ['posts' => 5]);
+    $w->post('tf_gone_p', 'tfast', ['by' => 'tf_gone', 'age' => 31, 'status' => 'deleted']);
+    T::same('slow_mode@14', $w->cell('tf_gone', 'reply', ['topic_id' => $w->t['tfast']]), 'Themen-Modus 45 s, gelöschter Beitrag vor 31 s im Thema: slow_mode, 14 s (Löschen gibt den Modus nicht frei)');
 
     // bypass_slow_mode (Matrix) überspringt den Modus, aber nicht den globalen Abstand
     $w->forum('slow_b', ['slow_mode' => 600]);
@@ -2158,6 +2192,20 @@ T::run('Wirkung: edit_window_minutes', static function (): void {
         T::same('ok', $w->cell('gm', 'edit', ['post_id' => $id]), $label . ': globale Moderation ohne Fenster');
         T::same('ok', $w->cell('admin', 'delete', ['post_id' => $id]), $label . ': admin ohne Fenster');
     }
+    // Fail-closed: ohne gültiges created_at (leer, fehlt, kein Datum) gilt das Fenster als abgelaufen
+    $w = acStandardWorld(['edit_window_minutes' => 30, 'default_permissions' => ['member' => ['delete_own' => 1]]]);
+    $row = (array) (new PostRepository($w->db))->find($w->p['p']);
+    foreach ([null, '', 'kein Datum', '2026-13-45 99:99:99', '2026-11-15'] as $broken) {
+        $label = 'created_at ' . T::export($broken);
+        T::same('edit_window', acCell($w->access->can($w->u['own'], 'edit', ['post_id' => $w->p['p'], 'post' => ['created_at' => $broken] + $row, 'now' => $w->now])), $label . ': Bearbeiten abgelaufen');
+        T::same('edit_window', acCell($w->access->can($w->u['own'], 'delete', ['post_id' => $w->p['p'], 'post' => ['created_at' => $broken] + $row, 'now' => $w->now])), $label . ': Löschen abgelaufen');
+        T::same('ok', acCell($w->access->can($w->u['gm'], 'edit', ['post_id' => $w->p['p'], 'post' => ['created_at' => $broken] + $row, 'now' => $w->now])), $label . ': Moderation hat kein Fenster');
+    }
+    T::same('ok', acCell($w->access->can($w->u['own'], 'edit', ['post_id' => $w->p['p'], 'post' => $row, 'now' => $w->now])), 'Gegenprobe: gültiges created_at, im Fenster');
+    $unlimited = acStandardWorld(['edit_window_minutes' => 0]);
+    $row0 = (array) (new PostRepository($unlimited->db))->find($unlimited->p['p']);
+    T::same('ok', acCell($unlimited->access->can($unlimited->u['own'], 'edit', ['post_id' => $unlimited->p['p'], 'post' => ['created_at' => null] + $row0, 'now' => $unlimited->now])), 'Fenster 0 (unbegrenzt): auch ohne created_at erlaubt');
+
     $w = acStandardWorld(['edit_window_minutes' => 30]);
     // Erster Beitrag: der Titel gehört zum Fenster des Beitrags
     $w->post('erster_alt', 't', ['first' => true, 'age' => 31 * 60]);
@@ -2247,6 +2295,12 @@ T::run('Wirkung: rate_post_seconds', static function (): void {
     $w = $make(30);
     $w->post('nur_tabelle', 't', ['by' => 'm2', 'age' => 10]);
     T::same('rate_limited@20', $w->cell('m2', 'reply', $reply($w)), 'ohne last_post_at: der Beitrag in der Tabelle genügt');
+    // B3/B29: auch ohne Zeile in der Statistik hält ein gelöschter, abgelehnter oder ausgeblendeter Beitrag den Abstand
+    foreach (['deleted', 'rejected', 'hidden'] as $gone) {
+        $w->member('t_' . $gone, ['posts' => 5]);
+        $w->post('t_' . $gone . '_p', 't', ['by' => 't_' . $gone, 'age' => 10, 'status' => $gone]);
+        T::same('rate_limited@20', $w->cell('t_' . $gone, 'reply', $reply($w)), 'Beitrag im Status ' . $gone . ' vor 10 s (nur die Beitragstabelle kennt ihn): der Abstand gilt');
+    }
     // Quelle Statistik allein (der Beitrag wurde gelöscht: kein Umgehen des Abstands durch Löschen)
     $w->member('del', ['posts' => 5]);
     $w->post('geloescht', 't', ['by' => 'del', 'age' => 10, 'status' => 'deleted']);
@@ -2289,8 +2343,15 @@ T::run('Wirkung: rate_topic_seconds', static function (): void {
     T::same('rate_limited@60', $hidden->cell('m1', 'create_topic', $create($hidden)), 'ein ausgeblendetes Thema zählt');
     $pending = $make(120, 'pending');
     T::same('rate_limited@60', $pending->cell('m1', 'create_topic', $create($pending)), 'ein wartendes Thema zählt');
-    $deleted = $make(120, 'deleted');
-    T::same('ok:published', $deleted->cell('m1', 'create_topic', $create($deleted)), 'ein gelöschtes Thema zählt nicht');
+    // B3/B29: Löschen gibt den Abstand nicht frei (eigenes Löschen und Löschen durch die Moderation, auch im Papierkorb)
+    foreach (['deleted', 'trash'] as $gone) {
+        $deleted = $make(120, $gone);
+        T::same('rate_limited@60', $deleted->cell('m1', 'create_topic', $create($deleted)), 'ein Thema im Status ' . $gone . ' zählt weiter (Löschen gibt den Abstand nicht frei)');
+    }
+    $moved = $make(120, 'moved');
+    T::same('ok:published', $moved->cell('m1', 'create_topic', $create($moved)), 'der Verweis auf ein verschobenes Thema (moved) ist kein neues Thema und zählt nicht');
+    $goneOld = $make(120, 'deleted', 121);
+    T::same('ok:published', $goneOld->cell('m1', 'create_topic', $create($goneOld)), 'ein gelöschtes Thema vor 121 s: Abstand vorbei');
     $old = $make(120, 'published', 121);
     T::same('ok:published', $old->cell('m1', 'create_topic', $create($old)), 'Thema vor 121 s: Abstand vorbei');
     // Die Restzeit ist die größte aus Themenabstand und Beitragsabstand
@@ -2458,7 +2519,27 @@ T::run('Wirkung: trust_limits', static function (): void {
     T::same('ok:published', $w->cell('h1', 'create_topic', $create), 'Stufe 1, 2 Themen je Stunde: ein Thema → erlaubt');
     $w->topic('h1_b', 'fq', ['by' => 'h1', 'age' => 900, 'activity' => 900]);
     T::same('trust_limit', $w->cell('h1', 'create_topic', $create), 'Stufe 1, 2 Themen je Stunde: zwei Themen → trust_limit');
-    $w->topic('h0c_t', 'fq', ['by' => 'h1', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    // B3/B29: Löschen gibt das Stundenkontingent nicht frei (auch nicht durch die Moderation, auch nicht im Papierkorb)
+    $w->member('h2', ['posts' => 5]);
+    $w->topic('h2_a', 'fq', ['by' => 'h2', 'age' => 600, 'activity' => 600]);
+    T::same('ok:published', $w->cell('h2', 'create_topic', $create), 'Stufe 1, 2 Themen je Stunde: ein Thema → erlaubt');
+    $w->topic('h2_b', 'fq', ['by' => 'h2', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    T::same('trust_limit', $w->cell('h2', 'create_topic', $create), 'ein Thema und ein gelöschtes Thema in der Stunde: trust_limit');
+    $w->member('h3', ['posts' => 5]);
+    $w->topic('h3_a', 'fq', ['by' => 'h3', 'age' => 600, 'activity' => 600, 'status' => 'trash']);
+    $w->topic('h3_b', 'fq', ['by' => 'h3', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    T::same('trust_limit', $w->cell('h3', 'create_topic', $create), 'zwei gelöschte Themen (deleted, trash) in der Stunde: trust_limit');
+    $w->member('h4', ['posts' => 5]);
+    $w->topic('h4_a', 'fq', ['by' => 'h4', 'age' => 600, 'activity' => 600, 'status' => 'moved']);
+    $w->topic('h4_b', 'fq', ['by' => 'h4', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    T::same('ok:published', $w->cell('h4', 'create_topic', $create), 'ein Verweis (moved) zählt nicht: ein gelöschtes Thema, Limit 2 → erlaubt');
+    $w->member('h5', ['posts' => 5]);
+    $w->topic('h5_a', 'fq', ['by' => 'h5', 'age' => 4000, 'activity' => 4000, 'status' => 'deleted']);
+    $w->topic('h5_b', 'fq', ['by' => 'h5', 'age' => 5000, 'activity' => 5000, 'status' => 'deleted']);
+    $w->topic('h5_c', 'fq', ['by' => 'h5', 'age' => 600, 'activity' => 600, 'status' => 'published']);
+    T::same('ok:published', $w->cell('h5', 'create_topic', $create), 'gelöschte Themen älter als eine Stunde zählen nicht (ein Thema in der Stunde, Limit 2)');
+    $w->topic('h5_d', 'fq', ['by' => 'h5', 'age' => 700, 'activity' => 700, 'status' => 'deleted']);
+    T::same('trust_limit', $w->cell('h5', 'create_topic', $create), 'ein weiteres gelöschtes Thema in der Stunde: trust_limit');
 
     // limitsFor liefert die eingestellten Zahlen je Stufe
     foreach (['m0' => [0, 2, 1], 'own' => [1, 4, 2], 'm2' => [2, 0, 0], 'm3' => [3, 7, 3]] as $name => [$level, $day, $hour]) {

@@ -10,7 +10,8 @@ if (!defined('ABSPATH')) {
 /**
  * Gemeinsame Slug-Erzeugung für Beiträge, Kategorien, Tags und Seiten.
  *
- * Umlaute werden umgeschrieben (ä → ae, ö → oe, ü → ue, ß → ss), andere Akzente entfernt (é → e), erst danach wird
+ * Umlaute werden umgeschrieben (ä → ae, ö → oe, ü → ue, ß → ss), andere Akzente entfernt (é → e), ebenso Buchstaben, die
+ * Unicode nicht in Grundbuchstabe und Akzent zerlegt (ł → l, ø → o, æ → ae, œ → oe, þ → th, đ/ð → d, ı → i); erst danach wird
  * jedes Zeichen außerhalb von [a-z0-9-] durch „-“ ersetzt. Aus „Größe der Postfächer“ wird so
  * `groesse-der-postfaecher` statt `gr-e-der-postf-cher`.
  *

@@ -2,8 +2,8 @@
 /**
  * Slugs für Foren und Themen: reines ASCII (a-z, 0-9, Bindestrich), unabhängig von Server und Locale.
  *
- * Umlaute werden ausgeschrieben (ä → ae, ö → oe, ü → ue, ß → ss), Akzente entfernt (über `CMS\Slug`); alles andere wird
- * zum Trennstrich. Forum-Slugs sind über beide Spalten
+ * Umlaute werden ausgeschrieben (ä → ae, ö → oe, ü → ue, ß → ss), Akzente entfernt und Buchstaben wie ł, ø, æ, œ, þ, đ, ð, ı
+ * umgeschrieben (über `CMS\Slug`); alles andere wird zum Trennstrich. Forum-Slugs sind über beide Spalten
  * (`slug`, `slug_en`) eindeutig und meiden die reservierten Pfadsegmente (DE und EN), damit sie nie eine feste Adresse
  * unterhalb des Community-Pfads verdecken. Der Slug eines Themas ist nur Zierde: die Adresse löst über die ID auf.
  *

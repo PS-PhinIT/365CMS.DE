@@ -52,6 +52,7 @@ use CMS\Services\Community\Service\TopicService;
 use CMS\Services\Community\Support\Codes;
 use CMS\Services\Community\Support\Cursor;
 use CMS\Services\Community\Support\Events;
+use CMS\Services\Community\Support\I18n;
 use CMS\Services\Community\Support\Settings;
 
 T::$verbose = in_array('-v', $argv ?? [], true);
@@ -3037,6 +3038,10 @@ T::run('B25: unsichtbare Zeichen in Titeln und Beiträgen entfallen; was danach 
     T::same('a b', TopicService::normalizeTitle("a \u{200D} b"), 'ZWJ neben Leerraum entfällt');
     T::same('🏴', TopicService::normalizeTitle("🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}"), 'Tag-Zeichen hinter einem Emoji entfallen');
 
+    // Grund einer Bearbeitung: gleiche Regel (Formatzeichen entfallen; ohne sichtbares Zeichen kein Grund)
+    T::same([null, null, null, null], [PostService::normalizeReason("\u{200B}\u{3164}\u{2800}"), PostService::normalizeReason(" \u{00AD}\t\u{2060} "), PostService::normalizeReason("\u{202E}"), PostService::normalizeReason('')], 'Grund nur aus unsichtbaren Zeichen: null');
+    T::same(['Tippfehler', 'Zeile eins Zeile zwei', null, 'x'], [PostService::normalizeReason("Tipp\u{200B}fehler"), PostService::normalizeReason("Zeile eins\n\u{00AD}Zeile zwei"), PostService::normalizeReason(null), PostService::normalizeReason("\u{FEFF}x")], 'Grund: Formatzeichen entfallen, Zeilenumbruch wird zum Leerzeichen');
+
     // Dienste: Eingabe wird vor der Längenprüfung normalisiert; die Datenbank bleibt unberührt
     $w = new CcWorld(['title_min' => 1, 'post_min' => 1]);
     $a = $w->db->user();
@@ -3099,6 +3104,53 @@ T::run('B7: Zitat-Marker im übernommenen Text werden entschärft (nur die erste
     T::same('\\[quote=post:1] [x]', QuoteService::defuseMarkers('[quote=post:1] [x]'), 'defuseMarkers: nur das Marker-Muster');
     T::same(QuoteService::defuseMarkers('x [quote=post:1]'), QuoteService::defuseMarkers(QuoteService::defuseMarkers('x [quote=post:1]')), 'defuseMarkers ist wiederholbar');
     T::same(null, QuoteService::format(5, "> [quote=post:3]\n> nur ein Zitat"), 'ein Beitrag nur aus einem echten Zitat: nichts zu zitieren (stripQuotes bleibt wirksam)');
+
+    // Jedes Marker-Muster wird entschärft, nicht nur das, das nach dem Voranstellen von „> “ die Markerzeile träfe (genauer Text des Ergebnisses)
+    foreach ([
+        'mitten im Text' => ['Anfang [quote=post:1] Angriff', "> [quote=post:5]\n> Anfang \\[quote=post:1] Angriff"],
+        'am Ende der Zeile' => ["Anfang [quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang \\[quote=post:1]\n> Angriff"],
+        'hinter Leerraum' => ["Anfang\n  [quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang\n>   \\[quote=post:1]\n> Angriff"],
+        'hinter Tabulator' => ["Anfang\n\t[quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \t\\[quote=post:1]\n> Angriff"],
+        'mit Leerraum um = und :' => ["Anfang\n[quote = post : 1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \\[quote = post : 1]\n> Angriff"],
+        'mit Leerraum nach der Klammer' => ["Anfang\n[ quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \\[ quote=post:1]\n> Angriff"],
+        'Großschreibung' => ["Anfang\n[QUOTE=POST:1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \\[QUOTE=POST:1]\n> Angriff"],
+        'gemischte Schreibweise' => ['x [Quote=Post:2] y', "> [quote=post:5]\n> x \\[Quote=Post:2] y"],
+        'zwei Muster in einer Zeile' => ['[quote=post:1][quote=post:2]', "> [quote=post:5]\n> \\[quote=post:1]\\[quote=post:2]"],
+        'mit Zeilenende Windows' => ["a\r\n[quote=post:1]\r\nb", "> [quote=post:5]\n> a\n> \\[quote=post:1]\n> b"],
+    ] as $label => [$text, $expected]) {
+        T::same($expected, QuoteService::format(5, $text), 'entschärft: ' . $label);
+        T::same($expected, QuoteService::format(5, $text), 'wiederholbar: ' . $label);
+    }
+    T::same('x', QuoteService::defuseMarkers('x'), 'defuseMarkers: Text ohne Muster bleibt');
+    T::same('\\[quote=post:]', QuoteService::defuseMarkers('[quote=post:]'), 'defuseMarkers: das Muster ist „[quote=post:“; was danach folgt, ist gleichgültig (lieber zu viel schützen)');
+
+    // Eigenschaft über viele zufällige, aber feste Texte: der erzeugte Block hat genau eine Markerzeile (die erste), die Anzeige entfernt ihn ganz
+    mt_srand(20261115);
+    $fragments = ['[quote=post:7]', '> ', '>', "\n", "\n", ' ', "\t", '\\', 'Text', '[', ']', '[quote=post:', '1]', "\r\n", '[quote = post: 3]', 'Angriff', '> [quote=post:9]', "> [quote=post:2]\n> eingebettet\n", '[QUOTE=post:4]', 'quote=post:5]', ' [quote=post:6] '];
+    $built = 0;
+    $problems = [];
+    for ($i = 0; $i < 4000; $i++) {
+        $text = '';
+        for ($n = mt_rand(1, 12); $n > 0; $n--) {
+            $text .= $fragments[mt_rand(0, count($fragments) - 1)];
+        }
+        $block = QuoteService::format(5, $text);
+        if ($block === null) {
+            continue;
+        }
+        $built++;
+        $lines = explode("\n", $block);
+        $markers = array_keys(array_filter($lines, static fn (string $line): bool => preg_match('/^> \[quote=post:\d+\][ \t]*$/', $line) === 1));
+        $out = QuoteService::neutralize($block, static fn (int $id): bool|string => $id === 5 ? QuoteService::REMOVED : true);
+        if ($markers !== [0] || QuoteService::extractRefs($block) !== [5] || $out !== "> [quote=post:5]\n> " . QuoteService::REMOVED_NOTICE || QuoteService::format(5, $text) !== $block) {
+            $problems[] = T::export($text);
+            if (count($problems) >= 3) {
+                break;
+            }
+        }
+    }
+    T::same([], $problems, 'Eigenschaft (4000 zufällige Texte): genau eine Markerzeile (die erste), eine Referenz, Anzeige ersetzt den ganzen Block');
+    T::check($built > 3000, 'die meisten Texte ergeben einen Block (die Eigenschaft wurde wirklich geprüft)', (string) $built);
 
     // Ablauf über den Dienst: Quelle und Auswahl mit Angriffstext
     $w = new CcWorld();
@@ -3240,6 +3292,14 @@ T::run('B21: wiederholtes Löschen eines Themas ist mit der echten CommunityAcce
     T::same('not_found', ccOutcome($w->topics->delete($other, $topic)), 'ein fremdes Mitglied: weiterhin abgelehnt (not_found, kein Hinweis auf das gelöschte Thema)');
     T::same('login_required', ccOutcome($w->topics->delete(0, $topic)), 'Gast: abgelehnt');
     T::same('not_found', ccOutcome($w->topics->delete($author, 99999)), 'unbekanntes Thema: weiterhin not_found');
+    // Ein Thema, das nicht gelöscht ist und aus anderem Grund nicht erreichbar ist (Forum verborgen): die Ablehnung bleibt,
+    // nie „already_deleted“ (der Zweig gilt nur für ein wirklich gelöschtes Thema)
+    $secretForum = $w->db->forum(['status' => 'hidden']);
+    $secretTopic = $w->db->topic(['forum' => $secretForum, 'user' => $author]);
+    $snapshot = ccSnapshot($w);
+    $result = $w->topics->delete($author, $secretTopic);
+    T::same([false, null], [$result['success'] ?? null, $result['already_deleted'] ?? null], 'Thema in verborgenem Forum (nicht gelöscht): der Starter bekommt kein „bereits gelöscht“', json_encode($result));
+    T::same($snapshot, ccSnapshot($w), 'und nichts wurde geschrieben');
     // Gesperrter Starter eines gelöschten Themas (Sperre vor der ersten Aktion, der Zwischenspeicher kennt ihn noch nicht)
     $w->db->ban(['user' => $banned, 'scope' => 'full', 'reason' => 'Test']);
     $bannedTopic = $w->db->topic(['forum' => $forum, 'user' => $banned, 'status' => 'deleted']);
@@ -3277,6 +3337,50 @@ T::run('B46: jeder Fehlercode in Codes::ERRORS wird irgendwo erzeugt (keine tote
     T::check(!in_array('not_deletable', Codes::ERRORS, true), 'not_deletable ist entfernt (wurde nie erzeugt)');
     // Gegenprobe: die Erkennung findet einen nie erzeugten Code
     T::same(['nirgends_erzeugt'], array_values(array_filter(['db_error', 'nirgends_erzeugt'], static fn (string $code): bool => !str_contains($produced, "'" . $code . "'"))), 'Gegenprobe: ein erfundener Code wird als tot erkannt');
+});
+
+T::run('B10: der Slug eines Themas schreibt ł, ø, æ, œ, þ, đ, ð, ı um (statt sie zu „-“ zu machen)', static function (): void {
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $forum = $w->db->forum();
+    foreach ([
+        'Łódź Ñandú' => 'lodz-nandu', 'Søren Ørsted fragt' => 'soren-orsted-fragt', 'Æble & Œuvre' => 'aeble-oeuvre', 'Þórr Óðinn' => 'thorr-odinn',
+        'Đorđe aus Zagreb' => 'dorde-aus-zagreb', 'Diyarbakır Dürüm' => 'diyarbakir-dueruem',
+    ] as $title => $slug) {
+        $w->at(30);
+        $created = $w->topics->create($a, $forum, $title, 'Text des Themenstarts');
+        T::same($slug, $created['slug'] ?? null, 'Slug in der Antwort: ' . $title);
+        T::same($slug, $w->topic((int) $created['topic_id'])['slug'] ?? null, 'Slug in der Zeile des Themas: ' . $title);
+    }
+});
+
+T::run('B43: Sprach-Rückfall der Texte zu Dienstergebnissen: fehlt der Schlüssel im englischen Katalog, gilt der deutsche Text', static function (): void {
+    // Die echten Sprachdateien sind zeilenparallel; ein Katalog mit einem nur deutschen Schlüssel prüft den Rückfall.
+    I18n::reset('de', 'en', 'Europe/Berlin', [
+        'de' => ['community.error.nur_deutsch' => 'Nur auf Deutsch', 'community.error.beide' => 'Auf Deutsch'],
+        'en' => ['community.error.beide' => 'In English'],
+    ]);
+    T::same('In English', I18n::t('community.error.beide'), 'Sprache der Anfrage en: englischer Text');
+    T::same('In English', I18n::t('community.error.beide', [], 'en'), 'ausdrücklich en: englischer Text');
+    T::same('Nur auf Deutsch', I18n::t('community.error.nur_deutsch'), 'Schlüssel nur im deutschen Katalog (Anfrage en): deutscher Text, nicht der Schlüssel');
+    T::same('Nur auf Deutsch', I18n::t('community.error.nur_deutsch', [], 'en'), 'ausdrücklich en, Schlüssel nur deutsch: deutscher Text');
+    T::same('Nur auf Deutsch', I18n::t('community.error.nur_deutsch', [], 'fr'), 'unbekannte Sprache: deutscher Text');
+    T::same('community.error.keiner', I18n::t('community.error.keiner'), 'Schlüssel in keinem Katalog: der Schlüssel selbst');
+    T::same('community.error.keiner', I18n::t('community.error.keiner', [], 'en'), 'ausdrücklich en, in keinem Katalog: der Schlüssel selbst');
+    I18n::reset();
+    // Mit den echten Dateien: jeder Fehlercode hat in beiden Sprachen einen eigenen Text (nicht den Schlüssel)
+    I18n::reset('de', 'en', 'Europe/Berlin');
+    $missing = [];
+    foreach (Codes::ERRORS as $code) {
+        foreach (['de', 'en'] as $locale) {
+            if (I18n::t('community.error.' . $code, [], $locale) === 'community.error.' . $code) {
+                $missing[] = $locale . ':' . $code;
+            }
+        }
+    }
+    T::same([], $missing, 'jeder Fehlercode hat einen deutschen und einen englischen Text');
+    T::check(I18n::t('community.error.db_error', [], 'de') !== I18n::t('community.error.db_error', [], 'en'), 'deutscher und englischer Text unterscheiden sich');
+    I18n::reset();
 });
 
 T::finish();
