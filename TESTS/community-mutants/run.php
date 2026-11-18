@@ -157,7 +157,7 @@ T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, 
     $duplicates = array_keys(array_filter(array_count_values($names), static fn (int $n): bool => $n > 1));
     T::same([], $duplicates, 'keine doppelten Namen (ein doppelter Schlüssel überschreibt im PHP-Array still den ersten)');
     T::same(count($names), count($catalog), 'jede Zeile des Katalogs ist ein Eintrag');
-    T::check(count($catalog) >= 60 && count($catalog) <= 90, 'der Katalog hat 60 bis 90 Mutanten', (string) count($catalog));
+    T::check(count($catalog) >= 60 && count($catalog) <= 110, 'der Katalog hat 60 bis 110 Mutanten', (string) count($catalog));
 
     $problems = [];
     $perSuite = array_fill_keys(array_keys(CM_SUITES), 0);

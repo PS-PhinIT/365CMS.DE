@@ -41,6 +41,8 @@ final class MariaDbTestDatabase extends Database
     public array $throwOn = [];
     /** @var list<string> Alle vorbereiteten SQL-Texte. */
     public array $log = [];
+    /** @var array<int, bool> Zum Eintrag `$log[$i]`: lief die Anweisung innerhalb einer Transaktion (`PDO::inTransaction()`)? Nur über `txAt()` lesen (wie beim SQLite-Double). */
+    public array $logTx = [];
     /** Zahl der bisher vorbereiteten Anweisungen (jeder `prepare()`-Aufruf zählt, auch `insert()`); der Test setzt sie bei Bedarf zurück. */
     public int $statementCount = 0;
     /** Nummer (1 = nächste Anweisung nach dem Zurücksetzen von `$statementCount`), bei der `prepare()` eine `PDOException` wirft; `null` = aus. */
@@ -160,8 +162,15 @@ final class MariaDbTestDatabase extends Database
         return parent::execute($sql, $params);
     }
 
+    /** Lief die Anweisung `$log[$index]` innerhalb einer Transaktion? (`false` für unbekannte Indizes.) */
+    public function txAt(int $index): bool
+    {
+        return isset($this->log[$index]) && ($this->logTx[$index] ?? false);
+    }
+
     public function prepare(string $sql): \PDOStatement|false
     {
+        $this->logTx[count($this->log)] = $this->getPdo()->inTransaction();
         $this->log[] = $sql;
         $this->statementCount++;
         if ($this->failAtStatement !== null && $this->statementCount === $this->failAtStatement) {

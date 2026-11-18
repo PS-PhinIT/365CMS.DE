@@ -10,6 +10,15 @@
  *   `CommunityAccess`.
  * - Zähler (`applyCounters()`, `bumpCounters()`) ändern sich atomar in einer Anweisung und fallen nie unter 0.
  * - Sperrreihenfolge der Dienste: Forum, Thema, Beitrag, Benutzerstatistik (`lockForUpdate()`).
+ * - Slug-Eindeutigkeit über beide Spalten (`slug`, `slug_en`): die zwei UNIQUE-Indizes sehen den Kreuzfall nicht (Slug des einen
+ *   gleich `slug_en` des anderen), die Prüfung `slugTaken()` allein ist ohne Sperre ein Wettlauf. `create()` und `update()` (wenn
+ *   `slug` oder `slug_en` sich ändert) prüfen und schreiben deshalb unter einer Mutex-Zeile in der Tabelle `{prefix}settings`:
+ *   `option_name = 'community_lock_forum_slugs'` (bewusst ohne Punkt, damit sie nicht zur Einstellungsgruppe `community` gehört
+ *   und nie als Einstellung gelesen oder ausgegeben wird), `option_value = '0'`, `autoload = 0`. Die Zeile entsteht VOR der
+ *   Transaktion im Autocommit (`INSERT IGNORE`); in der Transaktion ist die Zeilensperre dieser Zeile die ERSTE Anweisung, danach
+ *   laufen `slugTaken()` und das Schreiben (kein nicht sperrender Zugriff davor: der Schnappschuss von REPEATABLE READ entsteht
+ *   erst nach der Sperre und sieht jedes gleichzeitig angelegte Forum). Alle Schreiber der Slugs serialisieren sich an dieser
+ *   einen Zeile; Foren werden selten angelegt.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -39,6 +48,10 @@ final class ForumRepository extends AbstractRepository
     public const PERMISSION_SUBJECTS = ['guest', 'role', 'group', 'trust'];
     /** Subjekte der Forum-Moderatoren. */
     public const MODERATOR_SUBJECTS = ['user', 'group'];
+    /** Tabelle der Mutex-Zeile für die Slug-Eindeutigkeit (Kernstabelle `settings`). */
+    private const SETTINGS = 'settings';
+    /** `option_name` der Mutex-Zeile: ohne Punkt, damit sie nicht zur Einstellungsgruppe `community` gehört. */
+    public const SLUG_LOCK = 'community_lock_forum_slugs';
     private const TABLE = 'community_forums';
     private const PERMISSIONS = 'community_forum_permissions';
     private const MODERATORS = 'community_forum_moderators';
@@ -220,7 +233,10 @@ final class ForumRepository extends AbstractRepository
         }
 
         try {
+            // Mutex-Zeile vor der Transaktion (Autocommit); in der Transaktion ist ihre Sperre die erste Anweisung.
+            $this->ensureSlugLock();
             $result = Transaction::run($this->db, function () use ($data, $depth, $pathPrefix): array {
+                $this->lockSlugs();
                 if ($this->slugTaken((string) $data['slug'], $data['slug_en'] ?? null, null)) {
                     return ['success' => false, 'error' => 'slug_taken'];
                 }
@@ -271,14 +287,27 @@ final class ForumRepository extends AbstractRepository
             }
         }
         $set = implode(', ', array_map(static fn (string $column): string => $column . ' = ?', array_keys($data)));
+        $sql = 'UPDATE ' . $this->table(self::TABLE) . " SET {$set}, version = version + 1, updated_at = ? WHERE id = ?";
+        $params = [...array_values($data), $nowUtc, $id];
         try {
-            if ($changed !== [] && $this->slugConflict($changed, $id)) {
-                return ['success' => false, 'error' => 'slug_taken'];
+            if ($changed === []) {
+                $this->run($sql, $params);
+            } else {
+                // Ändert sich ein Slug: Prüfung und Schreiben unter der Mutex-Zeile (Anlage vor der Transaktion, Sperre zuerst).
+                $this->ensureSlugLock();
+                $free = Transaction::run($this->db, function () use ($changed, $id, $sql, $params): bool {
+                    $this->lockSlugs();
+                    if ($this->slugConflict($changed, $id)) {
+                        return false;
+                    }
+                    $this->run($sql, $params);
+
+                    return true;
+                });
+                if (!$free) {
+                    return ['success' => false, 'error' => 'slug_taken'];
+                }
             }
-            $this->run(
-                'UPDATE ' . $this->table(self::TABLE) . " SET {$set}, version = version + 1, updated_at = ? WHERE id = ?",
-                [...array_values($data), $nowUtc, $id]
-            );
         } catch (\PDOException $e) {
             if (self::isDuplicateKey($e)) {
                 return ['success' => false, 'error' => 'slug_taken'];
@@ -625,6 +654,30 @@ final class ForumRepository extends AbstractRepository
         }
 
         return $data;
+    }
+
+    /** Legt die Mutex-Zeile der Slug-Prüfung an (Autocommit, vor der Transaktion; ohne Wirkung, wenn sie existiert). */
+    private function ensureSlugLock(): void
+    {
+        $this->run(
+            'INSERT IGNORE INTO ' . $this->table(self::SETTINGS) . ' (option_name, option_value, autoload) VALUES (?, ?, ?)',
+            [self::SLUG_LOCK, '0', 0]
+        );
+    }
+
+    /**
+     * Sperrt die Mutex-Zeile der Slug-Prüfung: als ERSTE Anweisung der Transaktion, vor jeder nicht sperrenden Abfrage. Fehlt die
+     * Zeile (Ausnahmefall: gelöscht nach `ensureSlugLock()`), legt die Methode sie an und sperrt erneut.
+     */
+    private function lockSlugs(): void
+    {
+        $sql = 'SELECT option_value FROM ' . $this->table(self::SETTINGS) . ' WHERE option_name = ? LIMIT 1' . self::forUpdate();
+        if ($this->fetchOne($sql, [self::SLUG_LOCK]) === null) {
+            $this->ensureSlugLock();
+            if ($this->fetchOne($sql, [self::SLUG_LOCK]) === null) {
+                throw new \RuntimeException('Mutex-Zeile der Forum-Slugs konnte nicht angelegt werden.');
+            }
+        }
     }
 
     /** Ist einer der Slugs schon in `slug` oder `slug_en` eines anderen Forums vergeben? */

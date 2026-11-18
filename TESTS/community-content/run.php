@@ -4,6 +4,10 @@
  * Zähler nach jedem Schritt (Abgleich mit Neuberechnung per COUNT), doppeltes Absenden, Konflikte, Position und Seite,
  * Keyset-Listen, Lesestatus, Zitate, Rollback bei Fehlerinjektion, Hooks nach dem Commit, Sperrreihenfolge, dazu ein
  * Quelltext-Wächter über `CMS/core/Services/Community/**` (Vertrag §1) und ein Wirkungstest je Einstellung der Dienste.
+ * Regressionen der Integrationssuite `TESTS/community-db` (am Ende der Datei, über das SQL-Protokoll des Doubles mit
+ * `txAt()`): B1 zweimal dasselbe nacheinander absenden → `duplicate = true` statt `rate_limited` (Grenzgründe vorläufig, alle
+ * anderen Gründe endgültig), B2 alle Sperren vor der ersten nicht sperrenden Leseanweisung der Transaktion, B3 die
+ * Statistikzeile entsteht vor dem BEGIN.
  *
  * DB-frei: SQLite-Double (`TESTS/lib/CommunityTestDatabase.php`, Tabellen aus den echten CREATE-Texten), die Rechteprüfung
  * (`can`) ist eine Closure. Läuft in der CI ohne Datenbankserver; Wettlauf und echte Sperren prüft `TESTS/community-db`.
@@ -1535,6 +1539,37 @@ T::run('Zitate: Auflösung aus den Rechten und Verwendung beim Antworten (quote_
  *
  * @param \Closure(CcWorld): \Closure(): array<string, mixed> $prepare baut die Welt auf und liefert den Aufruf
  */
+/**
+ * Statistikzeilen nach einer Rücknahme: bestehende Zeilen unverändert, neue Zeilen leer. Die Dienste legen die Statistikzeile
+ * des Mitglieds VOR der Transaktion im Autocommit an (`ensure()`, Befund B3); sie bleibt nach einer Rücknahme als leere Zeile
+ * stehen, ohne dass etwas gezählt wäre.
+ *
+ * @param list<array<string, mixed>> $before
+ * @param list<array<string, mixed>> $after
+ * @return list<string>
+ */
+function ccStatsProblems(array $before, array $after): array
+{
+    $problems = [];
+    $known = [];
+    foreach ($before as $row) {
+        $known[(int) $row['user_id']] = $row;
+    }
+    foreach ($after as $row) {
+        $id = (int) $row['user_id'];
+        if (isset($known[$id])) {
+            if ($known[$id] !== $row) {
+                $problems[] = 'Statistikzeile ' . $id . ' verändert';
+            }
+            unset($known[$id]);
+        } elseif ((int) $row['topic_count'] !== 0 || (int) $row['post_count'] !== 0 || $row['last_post_at'] !== null) {
+            $problems[] = 'neue Statistikzeile ' . $id . ' ist nicht leer';
+        }
+    }
+
+    return array_merge($problems, array_map(static fn (int $id): string => 'Statistikzeile ' . $id . ' fehlt', array_keys($known)));
+}
+
 function ccRollbackCase(string $label, string $pattern, \Closure $prepare): void
 {
     $w = new CcWorld();
@@ -1544,7 +1579,10 @@ function ccRollbackCase(string $label, string $pattern, \Closure $prepare): void
     $w->db->failOn = [$pattern];
     $failed = $call();
     T::same(['success' => false, 'error' => 'db_error'], $failed, $label . ': error = db_error');
-    T::same($before, ccSnapshot($w), $label . ': nichts geschrieben (alle Tabellen unverändert)');
+    $after = ccSnapshot($w);
+    T::same([], ccStatsProblems($before['community_user_stats'], $after['community_user_stats']), $label . ': Statistikzeilen unverändert (höchstens eine leere Zeile aus ensure vor der Transaktion)');
+    unset($before['community_user_stats'], $after['community_user_stats']);
+    T::same($before, $after, $label . ': nichts geschrieben (alle übrigen Tabellen unverändert)');
     T::same([[], false], [$w->hooks, $w->db->getPdo()->inTransaction()], $label . ': kein Hook, keine offene Transaktion');
     $w->db->failOn = [];
     $again = $call();
@@ -2186,7 +2224,7 @@ T::run('Zustand unter der Sperre: Änderungen zwischen Lesen und Sperren werden 
     $after = ccSnapshot($w);
     $stats = $after['community_user_stats'];
     unset($snapshot['community_user_stats'], $after['community_user_stats']);
-    T::same($snapshot, $after, 'nichts geschrieben (außer der leeren Zeile der Mitgliederstatistik, die das Sperren anlegt)');
+    T::same($snapshot, $after, 'nichts geschrieben (außer der leeren Zeile der Mitgliederstatistik, die ensure() vor der Transaktion anlegt)');
     T::same([], array_filter($stats, static fn (array $row): bool => (int) $row['topic_count'] !== 0 || (int) $row['post_count'] !== 0), 'die angelegte Statistikzeile ist leer');
 
     // Ein Thema, das das Forum gewechselt hat: die Aktion beginnt von vorn (null), sie schreibt nichts in das alte Forum.
@@ -2626,6 +2664,327 @@ T::run('Ende-zu-Ende (echte CommunityAccess): Leserechte in Listen, Platzhalter,
     // Zitate folgen den Leserechten
     T::same([true, false], [$w->quotes->build($internalPosts[0], $insider) !== null, $w->quotes->build($internalPosts[0], $alice) !== null], 'Zitat aus dem internen Forum: nur mit Leserecht');
     T::same(true, str_starts_with((string) $w->quotes->build($publicPosts[1], $alice), '> [quote=post:' . $publicPosts[1] . ']'), 'Zitat aus dem öffentlichen Forum');
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Befunde der Integrationssuite (B1 bis B3): Dublette vor Grenzgrund, Sperrreihenfolge im Protokoll, Statistikzeile vor BEGIN
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Protokoll der Anweisungen ab Index `$from` mit Art (`lock` = `FOR UPDATE`, `read` = nicht sperrendes `SELECT`, `write`),
+ * Tabelle (ohne Präfix `cms_community_`) und Transaktionszustand zum Zeitpunkt der Anweisung (`BEGIN` steht nicht im
+ * Protokoll des Doubles; `tx` zeigt, welche Anweisungen davor liegen).
+ *
+ * @return list<array{tx: bool, kind: string, table: string, sql: string}>
+ */
+function ccTrace(CcWorld $w, int $from = 0): array
+{
+    $trace = [];
+    for ($i = $from, $n = count($w->db->log); $i < $n; $i++) {
+        $sql = $w->db->log[$i];
+        $kind = match (true) {
+            str_contains($sql, ' FOR UPDATE') => 'lock',
+            preg_match('/^\s*SELECT\b/i', $sql) === 1 => 'read',
+            default => 'write',
+        };
+        preg_match('/\b(?:FROM|INTO|UPDATE)\s+cms_(\w+)/i', $sql, $m);
+        $trace[] = ['tx' => $w->db->txAt($i), 'kind' => $kind, 'table' => str_replace('community_', '', $m[1] ?? '?'), 'sql' => $sql];
+    }
+
+    return $trace;
+}
+
+/**
+ * Regel „Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung“ (Docblock in `Support\Transaction`): Anweisungen
+ * innerhalb der Transaktion, zuerst alle Sperren, danach alles andere. Eine Leseanweisung vor der letzten Sperre legt unter
+ * REPEATABLE READ den Schnappschuss zu früh an, die Rechteprüfung unter der Sperre sähe dann veraltete Daten.
+ *
+ * @param list<array{tx: bool, kind: string, table: string, sql: string}> $trace
+ * @return array{locks: list<string>, problems: list<string>}
+ */
+function ccTxOrder(array $trace): array
+{
+    $inside = array_values(array_filter($trace, static fn (array $s): bool => $s['tx']));
+    $problems = [];
+    if ($inside === []) {
+        return ['locks' => [], 'problems' => ['keine Anweisung innerhalb einer Transaktion']];
+    }
+    if ($inside[0]['kind'] !== 'lock') {
+        $problems[] = 'erste Anweisung der Transaktion ist keine Sperre: ' . substr($inside[0]['sql'], 0, 80);
+    }
+    $firstOther = null;
+    $locks = [];
+    foreach ($inside as $position => $statement) {
+        if ($statement['kind'] === 'lock') {
+            if ($firstOther !== null) {
+                $problems[] = 'Sperre auf ' . $statement['table'] . ' nach der nicht sperrenden Anweisung: ' . substr($inside[$firstOther]['sql'], 0, 80);
+            }
+            $locks[] = $statement['table'];
+        } elseif ($firstOther === null) {
+            $firstOther = $position;
+        }
+    }
+
+    return ['locks' => array_values(array_unique($locks)), 'problems' => $problems];
+}
+
+/** Ergebnis-Array nach Schlüsseln sortiert (der Vergleich soll nicht von der Reihenfolge der Schlüssel abhängen). */
+function ccSortedKeys(array $result): array
+{
+    ksort($result);
+
+    return $result;
+}
+
+/** Grenzgründe: vorläufige Ablehnung, eine Dublette hat Vorrang (Entwurf D16). */
+const CC_LIMIT_REASONS = ['rate_limited', 'slow_mode', 'trust_limit', 'pending_limit'];
+
+T::run('B1 mit echter CommunityAccess: zweimal dasselbe absenden → zweites Mal duplicate = true statt rate_limited, ohne Transaktion und ohne Schreiben', static function (): void {
+    $w = ccRealWorld(['new_member_approval_posts' => 0]);
+    $user = $w->db->user();
+    $forum = $w->db->forum();
+    ccRows($w, $forum, [ccMemberRow()]);
+
+    $first = $w->topics->create($user, $forum, 'Doppelt abgesendetes Thema', 'Gleicher Text');
+    T::same('published', ccOutcome($first), 'erstes Absenden: veröffentlicht');
+    $w->at(2);
+    $from = count($w->db->log);
+    $second = $w->topics->create($user, $forum, "Doppelt  abgesendetes Thema\n", "Gleicher Text\r\n");
+    T::same(ccSortedKeys($first + ['duplicate' => true]), ccSortedKeys($second), 'zwei Sekunden später: das vorhandene Thema mit duplicate = true (nicht rate_limited)');
+    $trace = ccTrace($w, $from);
+    T::same([], array_values(array_filter($trace, static fn (array $s): bool => $s['tx'] || $s['kind'] !== 'read')), 'Dublette vorab erkannt: keine Transaktion, keine Sperre, kein Schreiben');
+    T::same([1, 1, [Events::TOPIC_CREATED]], [$w->db->count('community_topics'), $w->db->count('community_posts'), $w->hookNames()], 'ein Thema, ein Beitrag, ein Hook');
+    ccAssertCounters($w, 'Thema doppelt abgesendet (echte CommunityAccess)');
+
+    // Anderer Inhalt: die Ablehnung bleibt, ohne Sperre und ohne Schreiben.
+    $before = ccSnapshot($w);
+    $from = count($w->db->log);
+    $other = $w->topics->create($user, $forum, 'Ein ganz anderes Thema', 'Anderer Text');
+    T::same(['success' => false, 'error' => 'rate_limited', 'retry_after' => 118], $other, 'anderer Inhalt: rate_limited mit Restzeit');
+    T::same([], array_values(array_filter(ccTrace($w, $from), static fn (array $s): bool => $s['tx'] || $s['kind'] !== 'read')), 'abgelehnt: keine Transaktion, keine Sperre, kein Schreiben (auch keine Statistikzeile)');
+    T::same($before, ccSnapshot($w), 'abgelehnt: Tabellen unverändert');
+
+    // Antworten
+    $topic = (int) $first['topic_id'];
+    $w->at(100);
+    $reply = $w->posts->reply($user, $topic, 'Gleiche Antwort');
+    T::same([true, 'published', 2], [$reply['success'] ?? null, $reply['status'] ?? null, $reply['position'] ?? null], 'erste Antwort veröffentlicht (Position 2)');
+    $w->at(102);
+    $from = count($w->db->log);
+    $again = $w->posts->reply($user, $topic, "Gleiche Antwort\n");
+    T::same(ccSortedKeys($reply + ['duplicate' => true]), ccSortedKeys($again), 'Antwort zwei Sekunden später erneut abgesendet: dieselbe Antwort mit duplicate = true (nicht rate_limited)');
+    T::same([], array_values(array_filter(ccTrace($w, $from), static fn (array $s): bool => $s['tx'] || $s['kind'] !== 'read')), 'Antwort-Dublette vorab erkannt: keine Transaktion, keine Sperre, kein Schreiben');
+    T::same([1, 2], [$w->db->count('community_topics'), $w->db->count('community_posts')], 'keine zweite Zeile');
+    T::same([Events::TOPIC_CREATED, Events::POST_CREATED], $w->hookNames(), 'kein zweiter Hook');
+    $before = ccSnapshot($w);
+    T::same(['success' => false, 'error' => 'rate_limited', 'retry_after' => 28], $w->posts->reply($user, $topic, 'Eine andere Antwort'), 'andere Antwort: rate_limited');
+    $w->at(110);
+    T::same(['success' => false, 'error' => 'rate_limited', 'retry_after' => 20], $w->posts->reply($user, $topic, 'Gleicher Text'), 'derselbe Text wie der eigene Themenstart ist keine Dublette: rate_limited bleibt');
+    T::same($before, ccSnapshot($w), 'abgelehnt: Tabellen unverändert');
+    ccAssertCounters($w, 'Antwort doppelt abgesendet (echte CommunityAccess)');
+});
+
+T::run('B1: Grenzgründe sind vorläufig (Dublette hat Vorrang), jeder andere Ablehnungsgrund ist endgültig und lässt die Datenbank unberührt', static function (): void {
+    $final = array_values(array_diff(array_keys(Codes::ACCESS_REASONS), CC_LIMIT_REASONS));
+    T::same(['rate_limited', 'slow_mode', 'trust_limit', 'pending_limit'], CC_LIMIT_REASONS, 'die vier Grenzgründe des Entwurfs');
+    T::check(count($final) >= 15, 'alle übrigen Gründe aus Codes::ACCESS_REASONS sind endgültig', (string) count($final));
+
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $b = $w->db->user();
+    $forum = $w->db->forum();
+    $created = $w->topics->create($a, $forum, 'Vorhandenes Thema', 'Vorhandener Text');
+    $topic = (int) $created['topic_id'];
+    $w->at(60);
+    $reply = $w->posts->reply($b, $topic, 'Vorhandene Antwort');
+    $w->at(65);
+    $w->hooks = [];
+    $snapshot = ccSnapshot($w);
+
+    foreach (CC_LIMIT_REASONS as $reason) {
+        $w->rule = ccDenyActions(['create_topic', 'reply'], $reason, 30);
+        $from = count($w->db->log);
+        T::same(ccSortedKeys($created + ['duplicate' => true]), ccSortedKeys($w->topics->create($a, $forum, 'Vorhandenes Thema', 'Vorhandener Text')), $reason . ': Thema, Dublette vorab → vorhandenes Ergebnis mit duplicate = true');
+        T::same(ccSortedKeys($reply + ['duplicate' => true]), ccSortedKeys($w->posts->reply($b, $topic, 'Vorhandene Antwort')), $reason . ': Antwort, Dublette vorab → vorhandenes Ergebnis mit duplicate = true');
+        T::same([], array_values(array_filter(ccTrace($w, $from), static fn (array $s): bool => $s['tx'] || $s['kind'] !== 'read')), $reason . ': Dublette ohne Transaktion, Sperre und Schreiben');
+        T::same(['success' => false, 'error' => $reason, 'retry_after' => 30], $w->topics->create($a, $forum, 'Neues Thema', 'Neuer Text'), $reason . ': Thema ohne Dublette → Ablehnung mit retry_after');
+        T::same(['success' => false, 'error' => $reason, 'retry_after' => 30], $w->posts->reply($b, $topic, 'Neue Antwort'), $reason . ': Antwort ohne Dublette → Ablehnung mit retry_after');
+        T::same([], $w->lockOrder($from), $reason . ': nie eine Zeilensperre (ein abgelehnter Absender hält keine Sperren)');
+    }
+    T::same([$snapshot, []], [ccSnapshot($w), $w->hooks], 'Grenzgründe: nichts geschrieben, kein Hook');
+
+    foreach ($final as $reason) {
+        $w->rule = ccDenyActions(['create_topic', 'reply'], $reason);
+        $from = count($w->db->log);
+        T::same(['success' => false, 'error' => $reason], $w->topics->create($a, $forum, 'Vorhandenes Thema', 'Vorhandener Text'), $reason . ': Thema mit vorhandener Dublette bleibt abgelehnt');
+        T::same(['success' => false, 'error' => $reason], $w->posts->reply($b, $topic, 'Vorhandene Antwort'), $reason . ': Antwort mit vorhandener Dublette bleibt abgelehnt');
+        T::same([], ccTrace($w, $from), $reason . ': endgültige Ablehnung: keine einzige Datenbankanweisung (die Dublette wird nicht einmal gesucht)');
+    }
+    T::same([$snapshot, []], [ccSnapshot($w), $w->hooks], 'endgültige Gründe: nichts geschrieben, kein Hook');
+});
+
+T::run('B1: vorläufige Dublettenprüfung wie unter der Sperre (Mitglied, Forum/Thema, Text, Fenster, Status) und Datenbankfehler', static function (): void {
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $b = $w->db->user();
+    $forum = $w->db->forum();
+    $otherForum = $w->db->forum();
+    $created = $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung');
+    $topic = (int) $created['topic_id'];
+    $w->at(10);
+    $reply = $w->posts->reply($b, $topic, 'Antwort der Dublettenprüfung');
+    $w->rule = ccDenyActions(['create_topic', 'reply'], 'rate_limited', 30);
+    $denied = ['success' => false, 'error' => 'rate_limited', 'retry_after' => 30];
+
+    $w->at(20);
+    T::same($denied, $w->topics->create($b, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung'), 'Thema: anderes Mitglied → keine Dublette');
+    T::same($denied, $w->topics->create($a, $otherForum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung'), 'Thema: anderes Forum → keine Dublette');
+    T::same($denied, $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Anderer Text'), 'Thema: anderer Text → keine Dublette');
+    T::same($denied, $w->topics->create($a, $forum, 'Anderer Titel', 'Text der Dublettenprüfung'), 'Thema: anderer Titel → keine Dublette');
+    T::same($denied, $w->posts->reply($a, $topic, 'Antwort der Dublettenprüfung'), 'Antwort: anderes Mitglied → keine Dublette');
+    $secondTopic = (int) $w->db->topic(['forum' => $forum, 'user' => $b]);
+    T::same($denied, $w->posts->reply($b, $secondTopic, 'Antwort der Dublettenprüfung'), 'Antwort: anderes Thema → keine Dublette');
+    T::same($denied, $w->posts->reply($b, $topic, 'Andere Antwort'), 'Antwort: anderer Text → keine Dublette');
+    T::same($denied, $w->posts->reply($a, $topic, 'Text der Dublettenprüfung'), 'Antwort mit dem Text des eigenen Themenstarts: keine Dublette (der Themenstart zählt nicht)');
+
+    // Fenster (120 s, Grenze inklusive) und Status
+    $w->at(120);
+    T::same([true, $created['topic_id']], [($w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung')['duplicate'] ?? null), $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung')['topic_id'] ?? null], 'Thema: genau am Rand des Fensters noch eine Dublette');
+    $w->at(121);
+    T::same($denied, $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung'), 'Thema: eine Sekunde außerhalb des Fensters → Ablehnung');
+    $w->at(130);
+    T::same(true, $w->posts->reply($b, $topic, 'Antwort der Dublettenprüfung')['duplicate'] ?? null, 'Antwort: am Rand des Fensters (120 s nach 10 s) noch eine Dublette');
+    $w->at(131);
+    T::same($denied, $w->posts->reply($b, $topic, 'Antwort der Dublettenprüfung'), 'Antwort: außerhalb des Fensters → Ablehnung');
+
+    $w->at(20);
+    $w->db->execute("UPDATE cms_community_topics SET status = 'pending' WHERE id = ?", [$topic]);
+    T::same(['pending', true], [$w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung')['status'] ?? null, $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung')['duplicate'] ?? null], 'wartendes Thema zählt als Dublette (Status pending)');
+    $w->db->execute("UPDATE cms_community_topics SET status = 'deleted' WHERE id = ?", [$topic]);
+    T::same($denied, $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung'), 'gelöschtes Thema zählt nicht');
+    $w->db->execute("UPDATE cms_community_topics SET status = 'published' WHERE id = ?", [$topic]);
+    $w->db->execute("UPDATE cms_community_posts SET status = 'deleted' WHERE id = ?", [$reply['post_id']]);
+    T::same($denied, $w->posts->reply($b, $topic, 'Antwort der Dublettenprüfung'), 'gelöschte Antwort zählt nicht');
+
+    // Datenbankfehler in der vorläufigen Prüfung: nie ein Erfolg, nie ein Hook, keine offene Transaktion
+    $w->db->execute("UPDATE cms_community_posts SET status = 'published' WHERE id = ?", [$reply['post_id']]);
+    $w->hooks = [];
+    $snapshot = ccSnapshot($w);
+    foreach (['Thema' => ['/LEFT JOIN cms_community_posts p ON p\.id = t\.first_post_id/', static fn (CcWorld $w): array => $w->topics->create($a, $forum, 'Thema für die Dublettenprüfung', 'Text der Dublettenprüfung')],
+        'Antwort' => ['/SELECT id, topic_id, status, is_first_post, body FROM/', static fn (CcWorld $w): array => $w->posts->reply($b, $topic, 'Antwort der Dublettenprüfung')]] as $label => [$pattern, $call]) {
+        $w->db->failOn = [$pattern];
+        $result = $call($w);
+        $w->db->failOn = [];
+        T::same(['success' => false, 'error' => 'db_error'], $result, $label . ': Ausfall der vorläufigen Dublettenprüfung → db_error (kein Erfolg, keine stille Ablehnung)');
+        T::same([$snapshot, [], false], [ccSnapshot($w), $w->hooks, $w->db->getPdo()->inTransaction()], $label . ': nichts geschrieben, kein Hook, keine offene Transaktion');
+    }
+});
+
+T::run('B2: in jeder Schreibaktion kommen alle Sperren vor der ersten nicht sperrenden Leseanweisung der Transaktion (Mitgliedersperre vor Dublettenprüfung und Rechteprüfung)', static function (): void {
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $b = $w->db->user();
+    $forum = $w->db->forum();
+    $check = static function (string $label, \Closure $call, array $locks) use ($w): void {
+        $from = count($w->db->log);
+        $call();
+        $order = ccTxOrder(ccTrace($w, $from));
+        T::same([$locks, []], [$order['locks'], $order['problems']], $label . ': Sperren ' . implode(' → ', $locks) . ', danach erst Lesen und Schreiben');
+    };
+
+    $created = [];
+    $check('create', static function () use ($w, $a, $forum, &$created): void {
+        $created = $w->topics->create($a, $forum, 'Thema für die Sperrreihenfolge im Protokoll', 'Themenstart');
+    }, ['forums', 'user_stats']);
+    $topic = (int) ($created['topic_id'] ?? 0);
+    $w->at(60);
+    $reply = 0;
+    $check('reply', static function () use ($w, $b, $topic, &$reply): void {
+        $reply = (int) $w->posts->reply($b, $topic, 'Antwort für die Sperrreihenfolge im Protokoll')['post_id'];
+    }, ['forums', 'topics', 'user_stats']);
+    $w->at(120);
+    $check('edit (Text)', static fn () => $w->posts->edit($b, $reply, 'Antwort, bearbeitet'), ['topics', 'posts']);
+    $check('edit (mit Titel)', static fn () => $w->posts->edit($a, (int) $created['post_id'], 'Themenstart, bearbeitet', 'Neuer Titel im Protokoll'), ['forums', 'topics', 'posts']);
+    $w->at(180);
+    $check('delete (Beitrag)', static fn () => $w->posts->delete($b, $reply), ['forums', 'topics', 'posts', 'user_stats']);
+    $check('delete (Thema)', static fn () => $w->topics->delete($a, $topic), ['forums', 'topics', 'user_stats']);
+
+    // Auch bei einer Dublette unter der Sperre (gleichzeitig abgesendet): erst sperren, dann suchen
+    $w2 = new CcWorld();
+    $u = $w2->db->user();
+    $f = $w2->db->forum();
+    $one = $w2->topics->create($u, $f, 'Gleichzeitiges Thema', 'Text');
+    $w2->at(1);
+    // Die vorläufige Prüfung gibt es nur bei einer Ablehnung; ohne Ablehnung läuft die Dublette unter der Sperre.
+    $from = count($w2->db->log);
+    $dup = $w2->topics->create($u, $f, 'Gleichzeitiges Thema', 'Text');
+    $order = ccTxOrder(ccTrace($w2, $from));
+    T::same([true, $one['topic_id'], ['forums', 'user_stats'], []], [$dup['duplicate'] ?? null, $dup['topic_id'] ?? null, $order['locks'], $order['problems']], 'Dublette unter der Sperre: erst Forum und Mitglied sperren, dann suchen');
+});
+
+T::run('B3: die Statistikzeile entsteht vor der Transaktion (ensure im Autocommit); in der Transaktion trifft FOR UPDATE eine vorhandene Zeile', static function (): void {
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $b = $w->db->user();
+    $forum = $w->db->forum();
+    $isEnsure = static fn (array $s): bool => $s['kind'] === 'write' && $s['table'] === 'user_stats' && str_starts_with(ltrim($s['sql']), 'INSERT IGNORE');
+    $check = static function (string $label, array $trace, int $userRows) use ($isEnsure): void {
+        $firstInside = null;
+        $statsLock = null;
+        foreach ($trace as $index => $statement) {
+            $firstInside ??= $statement['tx'] ? $index : null;
+            if ($statement['tx'] && $statement['kind'] === 'lock' && $statement['table'] === 'user_stats') {
+                $statsLock ??= $index;
+            }
+        }
+        $before = array_keys(array_filter($trace, static fn (array $s): bool => !$s['tx'] && $isEnsure($s)));
+        $insideBeforeLock = array_filter($trace, static fn (array $s, int $i): bool => $s['tx'] && $isEnsure($s) && $statsLock !== null && $i < $statsLock, ARRAY_FILTER_USE_BOTH);
+        T::check($firstInside !== null && $statsLock !== null, $label . ': Transaktion und Mitgliedersperre vorhanden');
+        T::check(count($before) === 1 && $before[0] < (int) $firstInside, $label . ': genau ein INSERT IGNORE auf die Statistikzeile, vor der ersten Anweisung der Transaktion', json_encode($before));
+        T::same([], array_keys($insideBeforeLock), $label . ': in der Transaktion kein INSERT vor der Mitgliedersperre (kein SELECT … FOR UPDATE auf eine fehlende Zeile, keine Lückensperre)');
+        T::same(1, $userRows, $label . ': Statistikzeile vorhanden');
+    };
+
+    T::same(0, $w->db->count('community_user_stats', ['user_id' => $a]), 'Voraussetzung: neues Mitglied ohne Statistikzeile');
+    $from = count($w->db->log);
+    $created = $w->topics->create($a, $forum, 'Thema des neuen Mitglieds', 'Themenstart');
+    $check('create (neues Mitglied)', ccTrace($w, $from), $w->db->count('community_user_stats', ['user_id' => $a]));
+    $topic = (int) $created['topic_id'];
+    $w->at(60);
+    T::same(0, $w->db->count('community_user_stats', ['user_id' => $b]), 'Voraussetzung: zweites neues Mitglied ohne Statistikzeile');
+    $from = count($w->db->log);
+    $w->posts->reply($b, $topic, 'Antwort des neuen Mitglieds');
+    $check('reply (neues Mitglied)', ccTrace($w, $from), $w->db->count('community_user_stats', ['user_id' => $b]));
+    $w->at(120);
+    $from = count($w->db->log);
+    $w->posts->reply($b, $topic, 'Zweite Antwort desselben Mitglieds');
+    $check('reply (Zeile vorhanden)', ccTrace($w, $from), $w->db->count('community_user_stats', ['user_id' => $b]));
+
+    // Löschen nimmt ebenfalls die Mitgliedersperre (Autor des Beitrags, Starter des Themas): Zeile vor der Transaktion
+    $w2 = new CcWorld();
+    $author = $w2->db->user();
+    $starter = $w2->db->user();
+    $f = $w2->db->forum();
+    [$t, $ids] = ccSeedTopic($w2, $f, $starter, 2, -4000, ['authors' => [$starter, $author]]);
+    [$lonely] = ccSeedTopic($w2, $f, $starter, 1, -3000);
+    T::same([0, 0], [$w2->db->count('community_user_stats', ['user_id' => $author]), $w2->db->count('community_user_stats', ['user_id' => $starter])], 'Voraussetzung: Altbestand ohne Statistikzeilen');
+    $from = count($w2->db->log);
+    T::same(true, $w2->posts->delete($author, $ids[1])['success'] ?? null, 'Beitrag löschen (Autor ohne Statistikzeile)');
+    $check('delete (Beitrag)', ccTrace($w2, $from), $w2->db->count('community_user_stats', ['user_id' => $author]));
+    $from = count($w2->db->log);
+    T::same(true, $w2->topics->delete($starter, $lonely)['success'] ?? null, 'Thema löschen (Starter ohne Statistikzeile)');
+    $check('delete (Thema)', ccTrace($w2, $from), $w2->db->count('community_user_stats', ['user_id' => $starter]));
+
+    // Abgelehnte Aktionen legen keine Statistikzeile an; ein Ausfall des ensure ist ein db_error ohne Transaktion
+    $w3 = new CcWorld();
+    $c = $w3->db->user();
+    $g = $w3->db->forum();
+    $w3->rule = ccDenyActions(['create_topic'], 'no_permission');
+    $w3->topics->create($c, $g, 'Abgelehntes Thema', 'Text');
+    T::same(0, $w3->db->count('community_user_stats', ['user_id' => $c]), 'abgelehnt: keine Statistikzeile');
+    $w3->rule = null;
+    $w3->db->failOn = ['/^INSERT IGNORE INTO cms_community_user_stats/'];
+    T::same([['success' => false, 'error' => 'db_error'], false, 0, []], [$w3->topics->create($c, $g, 'Thema bei Ausfall des ensure', 'Text'), $w3->db->getPdo()->inTransaction(), $w3->db->count('community_topics'), $w3->hooks], 'Ausfall von ensure vor BEGIN: db_error, keine offene Transaktion, nichts geschrieben, kein Hook');
 });
 
 T::finish();

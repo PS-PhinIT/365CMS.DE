@@ -3,6 +3,23 @@
  * Transaktion über getPdo() (wie InvoiceService::issue()): äußerste Ebene = BEGIN/COMMIT, verschachtelt = SAVEPOINT.
  * Wiederholt bei Sperrkonflikt (Deadlock 1213, Lock-Timeout 1205, SQLSTATE 40001) nur auf der äußersten Ebene.
  *
+ * Regeln für den Inhalt einer Transaktion der Community-Dienste (Befunde B2 und B3 der Integrationssuite):
+ *
+ * - Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung, sonst sieht `can(fresh)` einen veralteten Schnappschuss:
+ *   Unter REPEATABLE READ (Standard von InnoDB) entsteht der Lese-Schnappschuss der Transaktion bei der ersten Abfrage ohne
+ *   Sperre. Alles, was eine gleichzeitige Transaktion bis dahin committet hat, ist sichtbar, alles danach nicht mehr. Liest der
+ *   Dienst also vor der Mitgliedersperre (etwa die Dublettenprüfung), wartet er danach zwar auf den Mitbewerber desselben
+ *   Mitglieds in einem anderen Forum, sieht dessen Beitrag aber nicht und umgeht den Abstand `rate_post_seconds` und die
+ *   Zähl- und Tagesgrenzen. Reihenfolge deshalb: erst alle Sperren (Forum → Thema → Beitrag → Mitglied, über die
+ *   `lockForUpdate()`-Methoden der Repositories, die selbst nichts ohne Sperre lesen), dann Dublettenprüfung, Rechteprüfung
+ *   mit `fresh = true` und Schreiben. Kein Rückfall auf READ COMMITTED als Ausweg: die Reihenfolge gilt für jede Stufe.
+ * - Zeilen, die in der Transaktion gesperrt werden, müssen vorher existieren: die Dienste legen die Statistikzeile des
+ *   Mitglieds VOR `run()` im Autocommit an (`UserStatsRepository::ensure()`). Eine Sperre auf eine fehlende Zeile ist unter
+ *   REPEATABLE READ eine Lückensperre; zwei Transaktionen mit Lückensperren auf derselben Lücke geraten beim anschließenden
+ *   Einfügen in einen Deadlock. Dasselbe gilt für die Mutex-Zeile der Forum-Slugs (`ForumRepository`).
+ * - Lesen, das den Zustand für die Entscheidung liefert, gehört nach den Sperren; Lesen, das nur die Sperrziele bestimmt (etwa
+ *   die Forum-ID eines Themas), läuft vorher im Autocommit außerhalb der Transaktion.
+ *
  * @package CMSv2\Core\Services\Community
  */
 

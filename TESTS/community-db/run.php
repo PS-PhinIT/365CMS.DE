@@ -19,15 +19,16 @@
  *  (e) Echte `FOR UPDATE`-Sperren: solange ein Dienstaufruf seine Zeilen hält, läuft eine zweite Verbindung in den Lock-Timeout.
  *  (f) UNIQUE-Wettlauf bei Forum-Slugs: genau einer gewinnt, die anderen bekommen `slug_taken`.
  *
- * Befunde: Die Suite hat gefunden, was die DB-freien Suiten nicht sehen können. Solange ein solcher Fehler in Dienst, Repository
- * oder Zugriff offen ist, steht die Prüfung als `BEFUND B<n> (offen, nicht behoben)` in der Ausgabe und lässt die Suite grün (sonst
- * wäre jede Gegenprobe wertlos: Exit 1 schon im Original). Mit `CMS_TEST_STRICT_FINDINGS=1` ist jeder Befund ein Fehlschlag; nach der
- * Behebung muss der Lauf mit dieser Variable grün sein.
- *   B1  doppeltes Absenden nacheinander: `rate_limited` statt des vorhandenen Themas/der vorhandenen Antwort (Rechteprüfung vorab)
- *   B2  Abstand `rate_post_seconds` lässt sich mit gleichzeitigen Anfragen in verschiedenen Foren umgehen (Lese-Schnappschuss)
- *   B3  erstmals schreibende Mitglieder in verschiedenen Foren: Deadlocks, ab etwa 16 gleichzeitigen auch `db_error` nach außen
- *   B4  Slug eines Forums gleich `slug_en` eines anderen: im Wettlauf entstehen beide
- *   B5  `TopicRepository::lastPublished()` liest in einem ruhigen Forum fast den ganzen Aktivitätsindex
+ * Regressionen: Die Suite hat fünf Fehler gefunden, die die DB-freien Suiten nicht sehen können; alle sind behoben und die Prüfungen
+ * dazu sind gewöhnliche Prüfungen (kein Sonderstatus, keine Zusatzvariable):
+ *   B1  doppeltes Absenden nacheinander: das vorhandene Thema bzw. die vorhandene Antwort mit `duplicate = true`, nicht `rate_limited`
+ *       (Abschnitt `dup`; Wettlauf `race-dup`, `race-dup-reply`)
+ *   B2  Abstand `rate_post_seconds` hält auch bei gleichzeitigen Anfragen desselben Mitglieds in verschiedenen Foren (Abschnitt
+ *       `race-two-rate`, REPEATABLE READ; Regel „Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung“)
+ *   B3  erstmals schreibende Mitglieder in verschiedenen Foren: kein `db_error` nach außen, kaum Deadlocks (Abschnitt `race-new`);
+ *       die Statistikzeile entsteht vor der Transaktion, in der Transaktion gibt es keine Lückensperre (Abschnitt `locks`)
+ *   B4  Forum-Slug gleich `slug_en` eines anderen Forums: im Wettlauf entsteht nur eines (Abschnitt `slug`, Mutex-Zeile in `settings`)
+ *   B5  `TopicRepository::lastPublished()` liest auch in einem ruhigen Forum nur wenige Index-Einträge (Abschnitt `explain`)
  *
  * Optional: läuft nur mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER (Recht CREATE/DROP DATABASE), sonst Hinweis (Exit 0), wie
  * `TESTS/schema-upgrade/run.php`. Gegenprobe: `TESTS/community-mutants` (Mutanten „db-…“ laufen nur mit Datenbank und lassen mit
@@ -131,6 +132,15 @@ const CDB_NOLIMIT_SETTINGS = CDB_RACE_SETTINGS + [
         3 => ['posts_per_day' => 0, 'topics_per_hour' => 0], 4 => ['posts_per_day' => 0, 'topics_per_hour' => 0],
     ],
 ];
+
+/**
+ * Obergrenze der Deadlocks des Servers in `race-new` (fünf Läufe, acht und 16 gleichzeitige neue Mitglieder, zusammen 56 Anfragen).
+ * Vor der Behebung von B3 waren es 43 bis 58 (und 3 bis 4 durchgereichte `db_error`); mit der Statistikzeile vor der Transaktion
+ * allein noch 10 bis 17 (Lesestatus: UPDATE auf eine fehlende Zeile vor dem INSERT); gemessen nach der Behebung: 0 in 20 Läufen.
+ * Ein Deadlock darf nur ausnahmsweise vorkommen und wird von `Transaction::run` wiederholt (nach außen nie ein `db_error`: das
+ * prüft die Suite hart); die Grenze liegt weit unter dem, was jede der Ursachen einzeln erzeugt.
+ */
+const CDB_DEADLOCK_BUDGET = 2;
 
 /** Uhr der Ende-zu-Ende-Abläufe: 2036-06-15 10:00:00 UTC (Sommer: Berlin +02:00, Sitzung +01:00, UTC: alle drei verschieden; weit entfernt von der echten Zeit, damit Werte aus Spaltendefaults auffallen). */
 function cdbAt(int $seconds = 0): int
@@ -320,6 +330,45 @@ function cdbAudit(\CMS\Database $db): array
     return $bad;
 }
 
+/**
+ * Alle Zeilen von `community_user_stats` nach Mitglied.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function cdbStatsRows(\CMS\Database $db): array
+{
+    $rows = [];
+    foreach ($db->execute('SELECT * FROM cms_community_user_stats ORDER BY user_id')->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+        $rows[(int) $row['user_id']] = $row;
+    }
+
+    return $rows;
+}
+
+/**
+ * Statistikzeilen nach einer Rücknahme: bestehende unverändert, neue leer (nichts gezählt).
+ *
+ * @param array<int, array<string, mixed>> $before
+ * @param array<int, array<string, mixed>> $after
+ * @return list<string>
+ */
+function cdbStatsProblems(array $before, array $after): array
+{
+    $problems = [];
+    foreach ($before as $id => $row) {
+        if (($after[$id] ?? null) !== $row) {
+            $problems[] = 'Statistikzeile ' . $id . ' verändert';
+        }
+    }
+    foreach (array_diff_key($after, $before) as $id => $row) {
+        if ((int) $row['topic_count'] !== 0 || (int) $row['post_count'] !== 0 || $row['last_post_at'] !== null) {
+            $problems[] = 'neue Statistikzeile ' . $id . ' ist nicht leer';
+        }
+    }
+
+    return $problems;
+}
+
 /** Tabellen der Zustandsprüfung („nichts geschrieben“). */
 const CDB_TABLES = [
     'community_forums', 'community_topics', 'community_posts', 'community_post_revisions', 'community_user_stats',
@@ -380,23 +429,6 @@ function cdbLogs(): string
     }
 
     return $text;
-}
-
-/**
- * Bekannter Fehler in fremdem Code (Dienst, Repository, Zugriff), den T6 meldet, aber nicht behebt. Standard: die Prüfung steht
- * als Hinweis `BEFUND` in der Ausgabe und lässt die Suite grün (sonst wären alle Gegenproben der Mutanten wertlos: Exit 1 wäre
- * schon im Original sicher). Mit `CMS_TEST_STRICT_FINDINGS=1` ist jeder Befund ein Fehlschlag; nach der Behebung muss der Lauf
- * mit dieser Variable grün sein.
- */
-function cdbFinding(string $id, bool $ok, string $message, string $detail = ''): void
-{
-    if ($ok || (string) getenv('CMS_TEST_STRICT_FINDINGS') === '1') {
-        T::check($ok, 'BEFUND ' . $id . ': ' . $message, $detail);
-
-        return;
-    }
-    echo '  BEFUND ' . $id . ' (offen, nicht behoben): ' . $message . ($detail !== '' ? PHP_EOL . '        ' . $detail : '') . PHP_EOL;
-    T::info('BEFUND ' . $id . ': ' . $message);
 }
 
 /** Zahl der Deadlocks des Servers seit Start (globaler Zähler). */
@@ -531,6 +563,29 @@ function cdbProbeLock(\PDO $pdo, string $table, string $key, int $id, bool $wait
         }
 
         return in_array((int) ($e->errorInfo[1] ?? 0), [1205, 3572], true) ? 'blocked' : 'error:' . $e->getMessage();
+    }
+}
+
+/**
+ * Prüft, ob eine zweite Verbindung eine Statistikzeile für `$userId` einfügen kann (Lückensperre?). Eine Lückensperre eines
+ * Dienstaufrufs, der auf eine fehlende Statistikzeile gesperrt hat, lässt das INSERT in den Lock-Timeout laufen (`blocked`).
+ * Rückgabe: `blocked` (1205), `free` oder `error:<Text>`; die Zeile wird zurückgerollt.
+ */
+function cdbProbeInsert(\PDO $pdo, int $userId): string
+{
+    try {
+        $pdo->exec('SET SESSION innodb_lock_wait_timeout = 1');
+        $pdo->beginTransaction();
+        $pdo->prepare('INSERT INTO cms_community_user_stats (user_id, updated_at) VALUES (?, ?)')->execute([$userId, gmdate('Y-m-d H:i:s')]);
+        $pdo->rollBack();
+
+        return 'free';
+    } catch (\PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        return (int) ($e->errorInfo[1] ?? 0) === 1205 ? 'blocked' : 'error:' . $e->getMessage();
     }
 }
 
@@ -813,7 +868,7 @@ function cdbInjectAll(\Closure $scenario, array $settings = ['new_member_approva
         cdbLogs();
         $before = cdbFingerprint($w->db);
         $beforeWithoutStats = cdbFingerprint($w->db, false);
-        $statsBefore = array_map('intval', $w->db->get_col('SELECT user_id FROM cms_community_user_stats'));
+        $statsBefore = cdbStatsRows($w->db);
         $w->db->statementCount = 0;
         $w->db->failAtStatement = $number;
         $result = [];
@@ -845,15 +900,16 @@ function cdbInjectAll(\Closure $scenario, array $settings = ['new_member_approva
             if ($w->hooks !== []) {
                 $problems[] = $label . ': Hook trotz Fehler ausgelöst: ' . json_encode($w->hookNames());
             }
-            $after = cdbFingerprint($w->db);
-            if ($after !== $before) {
-                if ($kind === 'read' && cdbFingerprint($w->db, false) === $beforeWithoutStats) {
-                    // Nur eine leere Statistikzeile (Rechteprüfung unter der Sperre abgelehnt): aufräumen.
-                    $keep = $statsBefore === [] ? '0' : implode(',', $statsBefore);
-                    $w->db->execute('DELETE FROM cms_community_user_stats WHERE user_id NOT IN (' . $keep . ')');
-                } else {
-                    $problems[] = $label . ': Zustand nach dem Fehler verändert (Rücknahme fehlt)';
+            if (cdbFingerprint($w->db, false) !== $beforeWithoutStats) {
+                $problems[] = $label . ': Zustand nach dem Fehler verändert (Rücknahme fehlt)';
+            } elseif (cdbFingerprint($w->db) !== $before) {
+                // Die Statistikzeile des Mitglieds entsteht vor der Transaktion (ensure im Autocommit, Befund B3) und bleibt nach
+                // einer Rücknahme als leere Zeile stehen: bestehende Zeilen unverändert, neue leer; danach aufräumen.
+                foreach (cdbStatsProblems($statsBefore, cdbStatsRows($w->db)) as $problem) {
+                    $problems[] = $label . ': ' . $problem;
                 }
+                $keep = $statsBefore === [] ? '0' : implode(',', array_keys($statsBefore));
+                $w->db->execute('DELETE FROM cms_community_user_stats WHERE user_id NOT IN (' . $keep . ')');
             }
         }
         if ($w->db->getPdo()->inTransaction()) {
@@ -1142,34 +1198,36 @@ cdbSection('dup', 'Doppeltes Absenden nacheinander (echte CommunityAccess): dass
     $forum = cdbOpenForum($w->db);
     $first = $w->topics->create($user, $forum, 'Doppelt abgesendetes Thema', 'Gleicher Text');
     $w->at(2);
+    $mark = count($w->db->log);
     $second = $w->topics->create($user, $forum, 'Doppelt abgesendetes Thema', 'Gleicher Text');
-    cdbFinding(
-        'B1',
+    T::check(
         ($second['duplicate'] ?? null) === true && ($second['topic_id'] ?? null) === $first['topic_id'],
-        'Thema zwei Sekunden später erneut abgesendet: das vorhandene Thema mit duplicate = true (Entwurf D16, API-services.md „Idempotenz“), nicht „rate_limited“',
-        'Ergebnis ' . json_encode($second) . ' – die Rechteprüfung vorab (TopicService::create, erster decide()) lehnt vor der Idempotenzprüfung unter der Sperre ab'
+        'B1: Thema zwei Sekunden später erneut abgesendet: das vorhandene Thema mit duplicate = true (Entwurf D16), nicht „rate_limited“',
+        'Ergebnis ' . json_encode($second)
     );
+    $inTransaction = array_filter(array_keys(array_slice($w->db->log, $mark, null, true)), static fn (int $i): bool => $w->db->txAt($i));
+    T::same([], array_values($inTransaction), 'B1: die Dublette wird vorab erkannt, ohne Transaktion (keine Zeilensperren für einen abgelehnten Absender)');
     $topic = (int) $first['topic_id'];
     $w->at(100);
     $reply = $w->posts->reply($user, $topic, 'Gleiche Antwort');
     $w->at(102);
     $again = $w->posts->reply($user, $topic, 'Gleiche Antwort');
-    cdbFinding(
-        'B1',
+    T::check(
         ($again['duplicate'] ?? null) === true && ($again['post_id'] ?? null) === $reply['post_id'],
-        'Antwort zwei Sekunden später erneut abgesendet: die vorhandene Antwort mit duplicate = true, nicht „rate_limited“',
-        'Ergebnis ' . json_encode($again) . ' (PostService::reply, erster decide())'
+        'B1: Antwort zwei Sekunden später erneut abgesendet: die vorhandene Antwort mit duplicate = true, nicht „rate_limited“',
+        'Ergebnis ' . json_encode($again)
     );
+    T::same(['success' => false, 'error' => 'rate_limited', 'retry_after' => 28], $w->posts->reply($user, $topic, 'Eine andere Antwort'), 'ein anderer Text bleibt rate_limited (mit Restzeit)');
     T::same([1, 2], [$w->db->count('community_topics'), $w->db->count('community_posts')], 'in keinem Fall wird eine zweite Zeile geschrieben');
+    T::same([], cdbAudit($w->db), 'Zähler stimmen mit der Neuberechnung überein');
 });
 
 cdbSection('race-dup', 'Wettlauf: acht Prozesse senden dasselbe Thema gleichzeitig (Idempotenz B: genau ein Thema), mehrere Runden', static function (): void {
     $deadlocks = cdbDeadlocks();
     for ($round = 1; $round <= 4; $round++) {
-        // Runden 1 und 2 mit den Standardgrenzen (eine verspätete Absendung kann schon an der Rechteprüfung vorab scheitern, Befund B1),
-        // Runden 3 und 4 ohne Grenzen: dann entscheidet allein die Idempotenz unter der Forum-Sperre, alle sieben bekommen das Thema.
-        $strict = $round > 2;
-        $settings = $strict ? CDB_NOLIMIT_SETTINGS : CDB_RACE_SETTINGS;
+        // Runden 1 und 2 mit den Standardgrenzen (Abstand, eine Absendung je Stunde), Runden 3 und 4 ohne Grenzen: in beiden Fällen
+        // bekommen alle sieben anderen das vorhandene Thema mit duplicate = true; eine Grenze verdeckt die Dublette nicht mehr (B1).
+        $settings = $round > 2 ? CDB_NOLIMIT_SETTINGS : CDB_RACE_SETTINGS;
         $w = new CdbWorld($settings, time() - 7200);
         $user = $w->db->user();
         $forum = cdbOpenForum($w->db);
@@ -1182,11 +1240,7 @@ cdbSection('race-dup', 'Wettlauf: acht Prozesse senden dasselbe Thema gleichzeit
         $fresh = array_values(array_filter($results, static fn (array $r): bool => !empty($r['result']['success']) && empty($r['result']['duplicate'])));
         $duplicates = array_values(array_filter($results, static fn (array $r): bool => !empty($r['result']['success']) && !empty($r['result']['duplicate'])));
         $denied = array_values(array_filter($results, static fn (array $r): bool => in_array($r['result']['error'] ?? null, ['rate_limited', 'trust_limit'], true)));
-        if ($strict) {
-            T::same([1, 7, 0], [count($fresh), count($duplicates), count($denied)], "Runde {$round}: ein neues Thema, sieben Wiederholungen mit duplicate = true, keine Ablehnung");
-        } else {
-            T::same([1, 7], [count($fresh), count($duplicates) + count($denied)], "Runde {$round}: ein neues Thema, alle anderen erhalten das vorhandene Thema (duplicate) oder die Ablehnung der Rechteprüfung vorab");
-        }
+        T::same([1, 7, 0], [count($fresh), count($duplicates), count($denied)], "Runde {$round}: ein neues Thema, sieben Wiederholungen mit duplicate = true, keine Ablehnung");
         T::info("Runde {$round}: " . count($duplicates) . ' x duplicate, ' . count($denied) . ' x abgelehnt vor der Sperre');
         foreach ($results as $r) {
             if (empty($r['result']['success']) && !in_array($r['result']['error'] ?? null, ['rate_limited', 'trust_limit'], true)) {
@@ -1335,36 +1389,29 @@ cdbSection('race-two-free', 'Wettlauf: dasselbe Mitglied antwortet gleichzeitig 
 
 cdbSection('race-two-rate', 'Wettlauf: dasselbe Mitglied antwortet gleichzeitig in zwei Foren (Abstand 30 s): die Rechteprüfung unter der Sperre sieht die gleichzeitige Antwort', static function (): void {
     $deadlocks = cdbDeadlocks();
-    $run = static function (int $rounds, ?string $isolation): int {
-        $both = 0;
-        for ($round = 1; $round <= $rounds; $round++) {
-            $f = cdbTwoForums(CDB_RACE_SETTINGS, $round % 2 === 0);
-            $w = $f['w'];
-            $jobs = [];
-            foreach ($f['topics'] as $i => $topic) {
-                $job = ['action' => 'post.reply', 'args' => ['user' => $f['member'], 'topic' => $topic, 'body' => 'Gleichzeitig mit Abstand ' . ($i + 1)], 'settings' => CDB_RACE_SETTINGS];
-                $jobs[] = $isolation === null ? $job : $job + ['isolation' => $isolation];
-            }
-            $results = cdbRace($w->db, $jobs);
-            T::same([], cdbProcessProblems($results), "Runde {$round}: keine Fehler in den Prozessen");
-            $ok = count(array_filter($results, static fn (array $r): bool => !empty($r['result']['success'])));
-            T::same([$ok, $ok], [$ok, (int) $w->stats($f['member'])['post_count']], "Runde {$round}: Zähler des Mitglieds = Zahl der gespeicherten Antworten");
-            T::same([], cdbAudit($w->db), "Runde {$round}: Zähler stimmen mit der Neuberechnung überein");
-            $both += $ok === 2 ? 1 : 0;
-            T::info("Runde {$round}" . ($isolation === null ? '' : " ({$isolation})") . ': ' . $ok . ' x Erfolg, ' . count(array_filter($results, static fn (array $r): bool => ($r['result']['error'] ?? null) === 'rate_limited')) . ' x rate_limited');
-            $w->db->dispose();
+    // Standard-Isolationsstufe (REPEATABLE READ): ein Rückfall auf READ COMMITTED wäre kein Ausweg. Die Mitgliedersperre kommt vor
+    // der ersten nicht sperrenden Leseanweisung der Transaktion, der Schnappschuss entsteht erst danach und sieht die fremde Antwort.
+    $both = 0;
+    $rounds = 8;
+    for ($round = 1; $round <= $rounds; $round++) {
+        $f = cdbTwoForums(CDB_RACE_SETTINGS, $round % 2 === 0);
+        $w = $f['w'];
+        $jobs = [];
+        foreach ($f['topics'] as $i => $topic) {
+            $jobs[] = ['action' => 'post.reply', 'args' => ['user' => $f['member'], 'topic' => $topic, 'body' => 'Gleichzeitig mit Abstand ' . ($i + 1)], 'settings' => CDB_RACE_SETTINGS];
         }
-
-        return $both;
-    };
-    $both = $run(6, null);
-    $bothReadCommitted = $run(3, 'READ COMMITTED');
-    cdbFinding(
-        'B2',
-        $both === 0,
-        'Abstand zwischen Beiträgen (rate_post_seconds 30) hält auch bei gleichzeitigen Absendungen desselben Mitglieds in verschiedenen Foren: höchstens eine Antwort pro Abstand',
-        "in {$both} von 6 Runden (REPEATABLE READ) und in {$bothReadCommitted} von 3 Runden (READ COMMITTED) wurden beide Antworten angenommen; Ursache: die Rechteprüfung unter der Mitgliedersperre liest mit dem Schnappschuss der ersten normalen Abfrage der Transaktion (Idempotenzprüfung vor `UserStatsRepository::lockForUpdate()`) und sieht die gleichzeitig committete Antwort nicht"
-    );
+        $results = cdbRace($w->db, $jobs);
+        T::same([], cdbProcessProblems($results), "Runde {$round}: keine Fehler in den Prozessen");
+        $ok = count(array_filter($results, static fn (array $r): bool => !empty($r['result']['success'])));
+        $limited = count(array_filter($results, static fn (array $r): bool => ($r['result']['error'] ?? null) === 'rate_limited'));
+        T::same([$ok, $ok], [$ok, (int) $w->stats($f['member'])['post_count']], "Runde {$round}: Zähler des Mitglieds = Zahl der gespeicherten Antworten");
+        T::same([], cdbAudit($w->db), "Runde {$round}: Zähler stimmen mit der Neuberechnung überein");
+        T::same([1, 1], [$ok, $limited], "Runde {$round}: eine Antwort angenommen, die andere rate_limited (Abstand 30 s gilt über Foren hinweg)");
+        $both += $ok === 2 ? 1 : 0;
+        T::info("Runde {$round}: " . $ok . ' x Erfolg, ' . $limited . ' x rate_limited');
+        $w->db->dispose();
+    }
+    T::same(0, $both, "B2: der Abstand zwischen Beiträgen (rate_post_seconds 30) hält bei gleichzeitigen Absendungen desselben Mitglieds in verschiedenen Foren (in {$both} von {$rounds} Runden wurden beide Antworten angenommen)");
     T::info('Deadlocks des Servers während des Wettlaufs (von Transaction::run wiederholt): ' . (cdbDeadlocks() - $deadlocks));
 });
 
@@ -1401,12 +1448,8 @@ cdbSection('race-new', 'Wettlauf: neue Mitglieder legen gleichzeitig Themen in v
     }
     $delta = cdbDeadlocks() - $deadlocks;
     T::info("Deadlocks des Servers: {$delta}, davon als db_error nach außen: {$surfaced}");
-    cdbFinding(
-        'B3',
-        $delta === 0 && $surfaced === 0,
-        'erstmals schreibende Mitglieder in verschiedenen Foren erzeugen keine Deadlocks (auch keine von Transaction::run aufgefangenen) und nie ein db_error nach außen',
-        "{$delta} Deadlocks des Servers, {$surfaced} Anfragen mit db_error nach außen (UserStatsRepository::lockForUpdate: SELECT … FOR UPDATE auf eine fehlende Zeile sperrt die Lücke, danach INSERT IGNORE: zwei solche Transaktionen blockieren einander)"
-    );
+    T::same(0, $surfaced, 'B3: bei acht und 16 gleichzeitigen neuen Mitgliedern in verschiedenen Foren wird nie ein db_error nach außen gereicht');
+    T::check($delta <= CDB_DEADLOCK_BUDGET, 'B3: erstmals schreibende Mitglieder erzeugen höchstens ausnahmsweise einen Deadlock (von Transaction::run wiederholt): höchstens ' . CDB_DEADLOCK_BUDGET . ' bei 5 Läufen mit 8 und 16 Prozessen', (string) $delta . ' Deadlocks des Servers (vorher 58: SELECT … FOR UPDATE auf eine fehlende Statistikzeile sperrt die Lücke, danach INSERT IGNORE; dazu UPDATE auf eine fehlende Lesestatus-Zeile vor dem INSERT)');
 });
 
 cdbSection('race-mixed', 'Wettlauf: gemischte Last auf einem Forum (Antworten, Anlegen, Löschen durch die Moderation, Bearbeiten mit und ohne Titel)', static function (): void {
@@ -1458,6 +1501,11 @@ cdbSection('locks', 'Echte Zeilensperren: solange ein Dienstaufruf seine Zeilen 
         'post.edit (nur Text)' => ['blocked' => ['topic', 'post'], 'free' => ['forum', 'stats:other']],
         'post.delete' => ['blocked' => ['forum', 'topic', 'post', 'stats:author'], 'free' => ['forum:other', 'stats:other']],
         'topic.delete' => ['blocked' => ['forum', 'topic', 'stats:actor'], 'free' => ['forum:other', 'stats:other']],
+        // B3: ein erstmals schreibendes Mitglied hat seine Statistikzeile schon vor der Transaktion (ensure im Autocommit): die
+        // Transaktion sperrt eine vorhandene Zeile (reine Zeilensperre) und hält keine Lückensperre, in die ein anderes neues
+        // Mitglied einfügen müsste (vorher: SELECT … FOR UPDATE auf die fehlende Zeile, danach INSERT IGNORE: Deadlocks).
+        'topic.create (neues Mitglied)' => ['blocked' => ['forum', 'stats:newbie'], 'free' => ['forum:other', 'stats:other', 'gap:behind-newbie']],
+        'post.reply (neues Mitglied)' => ['blocked' => ['forum', 'topic', 'stats:newbie'], 'free' => ['forum:other', 'stats:other', 'gap:behind-newbie']],
     ];
     foreach ($cases as $name => $expect) {
         $w = new CdbWorld(CDB_RACE_SETTINGS, time() - 7200);
@@ -1476,6 +1524,8 @@ cdbSection('locks', 'Echte Zeilensperren: solange ein Dienstaufruf seine Zeilen 
         (new \CMS\Services\Community\Repository\UserStatsRepository($db))->ensure($other, $w->utc());
         $loner = $db->user();
         $alone = (int) $w->topics->create($loner, $forum, 'Thema ohne Antworten', 'Nur Themenstart')['topic_id'];
+        $newbie = $db->user();
+        $behindNewbie = $db->user();
 
         $job = match ($name) {
             'topic.create' => ['action' => 'topic.create', 'args' => ['user' => $actor, 'forum' => $forum, 'title' => 'Thema unter Sperre', 'body' => 'Text']],
@@ -1484,6 +1534,8 @@ cdbSection('locks', 'Echte Zeilensperren: solange ein Dienstaufruf seine Zeilen 
             'post.edit (nur Text)' => ['action' => 'post.edit', 'args' => ['user' => $actor, 'post' => $reply, 'body' => 'Neuer Text der Antwort']],
             'post.delete' => ['action' => 'post.delete', 'args' => ['user' => $mod, 'post' => $reply]],
             'topic.delete' => ['action' => 'topic.delete', 'args' => ['user' => $loner, 'topic' => $alone]],
+            'topic.create (neues Mitglied)' => ['action' => 'topic.create', 'args' => ['user' => $newbie, 'forum' => $forum, 'title' => 'Thema des neuen Mitglieds unter Sperre', 'body' => 'Text']],
+            'post.reply (neues Mitglied)' => ['action' => 'post.reply', 'args' => ['user' => $newbie, 'topic' => $topic, 'body' => 'Antwort des neuen Mitglieds unter Sperre']],
         };
         $subject = ['topic.create' => $actor, 'post.reply' => $other, 'post.delete' => $actor, 'topic.delete' => $loner][$name] ?? $actor;
         $topicOfAction = $name === 'topic.delete' ? $alone : $topic;
@@ -1496,6 +1548,8 @@ cdbSection('locks', 'Echte Zeilensperren: solange ein Dienstaufruf seine Zeilen 
             'stats:actor' => ['community_user_stats', 'user_id', $subject],
             'stats:author' => ['community_user_stats', 'user_id', $actor],
             'stats:other' => ['community_user_stats', 'user_id', $other === $subject ? $author : $other],
+            'stats:newbie' => ['community_user_stats', 'user_id', $newbie],
+            'gap:behind-newbie' => ['community_user_stats', 'user_id', $behindNewbie],
         ];
         $dir = sys_get_temp_dir() . '/cms-hold-' . getmypid() . '-' . bin2hex(random_bytes(3));
         mkdir($dir, 0700, true);
@@ -1512,7 +1566,9 @@ cdbSection('locks', 'Echte Zeilensperren: solange ein Dienstaufruf seine Zeilen 
         foreach (['blocked', 'free'] as $state) {
             foreach ($expect[$state] as $key) {
                 [$table, $column, $id] = $rows[$key];
-                $observed[$key] = cdbProbeLock($probe, $table, $column, $id, $name === 'topic.create' && $state === 'blocked');
+                $observed[$key] = str_starts_with($key, 'gap:')
+                    ? cdbProbeInsert($probe, $id)
+                    : cdbProbeLock($probe, $table, $column, $id, $name === 'topic.create' && $state === 'blocked');
                 T::same($state, $observed[$key], "{$name}: Zeile {$key} ist {$state} (zweite Verbindung, Lock-Timeout 1 s)");
             }
         }
@@ -1586,12 +1642,21 @@ cdbSection('slug', 'UNIQUE-Wettlauf: mehrere Prozesse legen dasselbe Forum mit d
         ]);
         $violations += count(array_filter($results, static fn (array $r): bool => !empty($r['result']['success']))) === 2 ? 1 : 0;
     }
-    cdbFinding(
-        'B4',
-        $violations === 0,
-        'Slug eines Forums gleich slug_en eines anderen: auch im Wettlauf höchstens eines wird angelegt („Slug-Eindeutigkeit über beide Spalten“, API-repositories.md)',
-        "in {$violations} von 10 Runden wurden beide Foren angelegt (die beiden UNIQUE-Indizes `slug` und `slug_en` sehen den Gegensatz über Kreuz nicht; die Prüfung `slugTaken()` läuft ohne Sperre)"
-    );
+    T::same(0, $violations, "B4: ein Forum-Slug gleich slug_en eines anderen Forums entsteht auch im Wettlauf nicht (in {$violations} von 10 Runden wurden beide Foren angelegt)");
+    // Umgekehrt: slug_en des einen gleich slug des anderen, in beiden Reihenfolgen der Auftragsliste
+    $violations = 0;
+    for ($round = 1; $round <= 6; $round++) {
+        $jobs = [
+            ['action' => 'forum.create', 'args' => ['data' => ['title' => 'Kreuz B ' . $round, 'slug' => 'andere-b-' . $round, 'slug_en' => 'umgekehrt-' . $round]]],
+            ['action' => 'forum.create', 'args' => ['data' => ['title' => 'Kreuz A ' . $round, 'slug' => 'umgekehrt-' . $round]]],
+        ];
+        $results = cdbRace($w->db, $round % 2 === 0 ? array_reverse($jobs) : $jobs);
+        T::same([], cdbProcessProblems($results), "Kreuz umgekehrt, Runde {$round}: keine Fehler in den Prozessen");
+        $violations += count(array_filter($results, static fn (array $r): bool => !empty($r['result']['success']))) === 2 ? 1 : 0;
+    }
+    T::same(0, $violations, "B4: auch in der anderen Richtung höchstens ein Gewinner (in {$violations} von 6 Runden entstanden beide)");
+    T::same(1, count($w->db->rows('settings', ['option_name' => 'community_lock_forum_slugs'])), 'B4: die Mutex-Zeile existiert genau einmal (INSERT IGNORE im Autocommit, kein Duplikat durch die Wettläufe)');
+    T::same([], array_values(array_filter(array_map(static fn (array $row): ?string => (string) $row['option_name'], $w->db->rows('settings')), static fn (string $name): bool => str_starts_with($name, 'community.'))), 'B4: die Mutex-Zeile gehört nicht zur Einstellungsgruppe community (kein Punkt im Namen)');
 });
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -1826,6 +1891,8 @@ cdbSection('explain', 'EXPLAIN-Gate: Listen, Position, Dubletten- und Zählabfra
         'Letzter Beitrag im Forum (lastPublishedInForum)' => [static fn () => $posts->lastPublishedInForum($forum), ['maxReads' => 400, 'statements' => 1]],
         'Erster ungelesener Beitrag (firstUnread)' => [static fn () => $reads->firstUnread($big, $deepPost), ['keys' => ['idx_community_posts_topic'], 'maxReads' => 100, 'statements' => 1]],
         'Ungelesene Themen (unreadCount, Obergrenze 100)' => [static fn () => $reads->unreadCount($data['users'][0], [$forum], '2036-01-01 00:00:00', 100), ['maxReads' => 3000, 'maxScan' => 150, 'statements' => 1]],
+        // Dasselbe Muster wie B5: ohne `is_pinned IN (0, 1)` liest der Optimierer idx_community_topics_activity (status, last_post_at) und filtert das Forum
+        'Ungelesene Themen im ruhigen Forum (unreadCount, 60 alte Themen, 20.000 jüngere anderer Foren)' => [static fn () => $reads->unreadCount($data['users'][0], [$data['quiet']], '2035-01-01 00:00:00', 100), ['maxReads' => 100, 'maxScan' => 150, 'statements' => 1]],
     ];
     $measured = [];
     foreach ($cases as $label => [$call, $rule]) {
@@ -1840,13 +1907,11 @@ cdbSection('explain', 'EXPLAIN-Gate: Listen, Position, Dubletten- und Zählabfra
         $measure = cdbMeasure($db, static fn () => $topics->lastPublished($forumId));
         T::info('lastPublished, Forum ' . $kind . ': ' . $measure['reads'] . ' Lesezugriffe; ' . implode(' | ', array_map(static fn (array $plan): string => implode(', ', array_map(static fn (array $row): string => ($row['table'] ?? '-') . ':' . ($row['type'] ?? '-') . ':' . ($row['key'] ?? 'NULL') . ':' . ($row['rows'] ?? '?') . ':' . ($row['Extra'] ?? ''), $plan['rows'])), $measure['plans'])));
         T::check($measure['result'] !== null, 'lastPublished, Forum ' . $kind . ': liefert das jüngste veröffentlichte Thema');
-        cdbFinding(
-            'B5',
-            cdbPlanProblems($measure, ['maxReads' => 100, 'statements' => 1]) === [],
-            'TopicRepository::lastPublished() liest für ein Forum (' . $kind . ') nur wenige Index-Einträge (letztes Thema nach dem Löschen: Forum + Status + Aktivität)',
-            $measure['reads'] . ' Handler-Lesezugriffe; ' . implode(' | ', cdbPlanProblems($measure, ['maxReads' => 100, 'statements' => 1])) . ' (kein Index passt zu `forum_id = ? AND status = ? ORDER BY last_post_at DESC`: `idx_community_topics_forum_list` hat `is_pinned` zwischen Status und Zeit; der Optimierer läuft über `idx_community_topics_activity` und filtert das Forum)'
-        );
+        $problems = cdbPlanProblems($measure, ['keys' => $forumList, 'maxReads' => 100, 'statements' => 2]);
+        T::same([], $problems, 'B5: lastPublished() liest für ein Forum (' . $kind . ') nur wenige Index-Einträge: zwei Abfragen mit Gleichheit auf forum_id, status und is_pinned über idx_community_topics_forum_list (' . $measure['reads'] . ' Handler-Lesezugriffe, vorher 18601 im ruhigen Forum)');
     }
+    $quietLast = $topics->lastPublished($data['quiet']);
+    T::same('Altes Thema 59', (string) $db->get_var('SELECT title FROM cms_community_topics WHERE id = ?', [(int) ($quietLast['id'] ?? 0)]), 'lastPublished im ruhigen Forum: das jüngste der 60 alten Themen');
 
     // Ergebnisse inhaltlich plausibel (die Abfragen liefern, was sie sollen)
     $first = $measured['Themenliste erste Seite (Pins und Strom)']['result'];

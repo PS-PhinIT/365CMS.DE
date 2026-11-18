@@ -259,23 +259,48 @@ final class TopicRepository extends AbstractRepository
     /**
      * Jüngstes veröffentlichtes Thema eines Forums nach Aktivität (für „letztes Thema“ nach dem Löschen).
      *
+     * Zwei Abfragen statt einer: je eine mit Gleichheit auf `forum_id`, `status` UND `is_pinned` (0 und 1) und
+     * `ORDER BY last_post_at DESC, id DESC LIMIT 1` laufen über `idx_community_topics_forum_list` (forum_id, status, is_pinned,
+     * last_post_at) mit einem einzigen Index-Eintrag je Abfrage; danach wählt PHP das spätere Paar (`last_post_at`, `id`). Eine
+     * einzige Abfrage ohne `is_pinned` passt zu keinem Index (der Index hat `is_pinned` zwischen Status und Zeit): der Optimierer
+     * liest dann `idx_community_topics_activity` und filtert das Forum, in einem ruhigen Forum neben einer aktiven Tabelle mit
+     * Zehntausenden Lesezugriffen (Befund B5). Dasselbe Muster gilt für jede Abfrage nach Forum und Status: `is_pinned` nicht
+     * überspringen, sondern über beide Werte (0, 1) abfragen.
+     *
      * @return array{id: int, user_id: int|null, last_post_id: int|null, last_post_at: string|null, last_poster_id: int|null}|null
      */
     public function lastPublished(int $forumId): ?array
     {
-        $row = $this->fetchOne(
-            'SELECT id, user_id, last_post_id, last_post_at, last_poster_id FROM ' . $this->table(self::TABLE)
-            . " WHERE forum_id = ? AND status = 'published' ORDER BY last_post_at DESC, id DESC LIMIT 1",
-            [$forumId]
-        );
+        $best = null;
+        foreach ([0, 1] as $pinned) {
+            $row = $this->fetchOne(
+                'SELECT id, user_id, last_post_id, last_post_at, last_poster_id FROM ' . $this->table(self::TABLE)
+                . " WHERE forum_id = ? AND status = 'published' AND is_pinned = ? ORDER BY last_post_at DESC, id DESC LIMIT 1",
+                [$forumId, $pinned]
+            );
+            if ($row !== null && ($best === null || self::activityKey($row) > self::activityKey($best))) {
+                $best = $row;
+            }
+        }
 
-        return $row === null ? null : [
-            'id' => (int) $row['id'],
-            'user_id' => $row['user_id'] === null ? null : (int) $row['user_id'],
-            'last_post_id' => $row['last_post_id'] === null ? null : (int) $row['last_post_id'],
-            'last_post_at' => $row['last_post_at'] === null ? null : (string) $row['last_post_at'],
-            'last_poster_id' => $row['last_poster_id'] === null ? null : (int) $row['last_poster_id'],
+        return $best === null ? null : [
+            'id' => (int) $best['id'],
+            'user_id' => $best['user_id'] === null ? null : (int) $best['user_id'],
+            'last_post_id' => $best['last_post_id'] === null ? null : (int) $best['last_post_id'],
+            'last_post_at' => $best['last_post_at'] === null ? null : (string) $best['last_post_at'],
+            'last_poster_id' => $best['last_poster_id'] === null ? null : (int) $best['last_poster_id'],
         ];
+    }
+
+    /**
+     * Sortierschlüssel (`last_post_at`, `id`) wie `ORDER BY last_post_at DESC, id DESC`: Zeit als Text (UTC, `Y-m-d H:i:s`, NULL zuletzt), ID als Zahl.
+     *
+     * @param array<string, mixed> $row
+     * @return array{0: string, 1: int}
+     */
+    private static function activityKey(array $row): array
+    {
+        return [(string) ($row['last_post_at'] ?? ''), (int) $row['id']];
     }
 
     /**

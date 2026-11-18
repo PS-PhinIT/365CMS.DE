@@ -999,8 +999,22 @@ function rScenarioReadStates(Database $db): void
     T::same(true, $repo->advance($user2, $topic, 2, rt(5)), 'andere Mitglieder getrennt');
     T::same([12, 2], [(int) $state($user, $topic)['last_read_post_id'], (int) $state($user2, $topic)['last_read_post_id']], 'Marken je Mitglied');
     T::same(1, $db->count('community_read_states', ['user_id' => $user, 'topic_id' => $topic]), 'genau eine Zeile je Mitglied und Thema');
+    // Reihenfolge der Anweisungen: INSERT IGNORE zuerst. Ein UPDATE auf eine fehlende Zeile sperrt die Lücke im Index, und zwei
+    // Transaktionen mit Lückensperren auf derselben Lücke geraten beim Einfügen in einen Deadlock (Befund B3: Anlegen eines Themas).
+    $fresh = $db->topic(['forum' => $forum, 'user' => $user]);
+    $verbs = static fn (): array => array_map(static fn (string $sql): string => strtok(trim($sql), ' '), $db->log);
+    $db->log = [];
+    T::same(true, $repo->advance($user, $fresh, 7, rt(10)), 'advance: neue Marke für ein Thema ohne Lesezeile');
+    T::same(['INSERT'], $verbs(), 'neue Marke: nur ein INSERT IGNORE, kein UPDATE auf die fehlende Zeile davor (keine Lückensperre)');
+    $db->log = [];
+    T::same(true, $repo->advance($user, $fresh, 9, rt(11)), 'advance: bestehende Marke steigt');
+    T::same(['INSERT', 'UPDATE'], $verbs(), 'bestehende Marke: INSERT IGNORE ohne Wirkung, dann UPDATE');
+    $db->log = [];
+    T::same(false, $repo->advance($user, $fresh, 9, rt(12)), 'advance: gleiche ID → false');
+    T::same(['INSERT', 'UPDATE'], $verbs(), 'Wiederbesuch: INSERT IGNORE ohne Wirkung und ein UPDATE ohne Treffer');
+    T::same([9, rt(11)], [(int) $state($user, $fresh)['last_read_post_id'], $state($user, $fresh)['updated_at']], 'Wiederbesuch schreibt nichts (Stand und updated_at bleiben)');
     T::same([false, false, false], [$repo->advance($user, $topic, 0, rt()), $repo->advance(0, $topic, 5, rt()), $repo->advance($user, 0, 5, rt())], 'ungültige IDs → false, nichts geschrieben');
-    T::same(3, $db->count('community_read_states'), 'keine Zeilen für ungültige Aufrufe');
+    T::same(4, $db->count('community_read_states'), 'keine Zeilen für ungültige Aufrufe');
 
     T::same([$topic => 12, $topic2 => 3], $repo->forTopics($user, [$topic, $topic2, 99999]), 'forTopics: Map Thema → ID, unbekannte fehlen');
     T::same([], $repo->forTopics($user, []), 'forTopics: leere Liste → []');
@@ -1077,6 +1091,15 @@ function rScenarioUnreadCount(Database $db): void
     $repo->advance($user, $never, 30, rt(301));
     T::same(1, $repo->unreadCount($user, [$forum], $since), 'nach dem Lesen sinkt die Zahl');
     T::check($old > 0 && $hidden > 0 && $inSub > 0, 'Fixtures');
+
+    // is_pinned IN (0, 1) hält die Abfrage auf dem Index (forum_id, status, is_pinned, last_post_at), filtert aber nichts: angeheftete Themen zählen
+    $pinned = $db->topic(['forum' => $forum, 'user' => $user, 'last_post_at' => rt(260), 'last_post_id' => 80, 'pinned' => true]);
+    $expired = $db->topic(['forum' => $forum, 'user' => $user, 'last_post_at' => rt(270), 'last_post_id' => 90, 'pinned' => true, 'pinned_until' => rt(-60)]);
+    T::same(3, $repo->unreadCount($user, [$forum], $since), 'angeheftete Themen (auch mit abgelaufener Frist) zählen als ungelesen');
+    $db->log = [];
+    $repo->unreadCount($user, [$forum], $since);
+    T::check(count(array_filter($db->log, static fn (string $sql): bool => str_contains($sql, 't.is_pinned IN (0, 1)'))) === 1, 'unreadCount fragt über beide Werte von is_pinned (Index idx_community_topics_forum_list)');
+    T::check($pinned > 0 && $expired > 0, 'Fixtures (angeheftet)');
 }
 
 function rScenarioMembers(Database $db): void
@@ -1246,6 +1269,172 @@ function rScenarioRollback(Database $db): void
     T::same(null, $forums->findBySlug('nur-in-der-transaktion'), 'das zurückgerollte Forum ist weg');
 }
 
+/**
+ * Anweisungen des Protokolls ab Index `$from`: Text, Art (`lock` = Zeilensperre, `read` = nicht sperrendes SELECT, `write`),
+ * Tabelle ohne Präfix und ob die Anweisung innerhalb einer Transaktion lief (`txAt()` beider Doubles).
+ *
+ * @return list<array{sql: string, kind: string, table: string, tx: bool}>
+ */
+function rTrace(Database $db, int $from = 0): array
+{
+    $trace = [];
+    for ($i = $from, $n = count($db->log); $i < $n; $i++) {
+        $sql = trim($db->log[$i]);
+        $kind = str_ends_with($sql, ' FOR UPDATE') ? 'lock' : (str_starts_with($sql, 'SELECT') ? 'read' : 'write');
+        preg_match('/\b(?:FROM|INTO|UPDATE)\s+' . preg_quote($db->getPrefix(), '/') . '(\w+)/i', $sql, $m);
+        $trace[] = ['sql' => $sql, 'kind' => $kind, 'table' => $m[1] ?? '?', 'tx' => $db->txAt($i)];
+    }
+
+    return $trace;
+}
+
+/**
+ * B4: Slug-Eindeutigkeit über beide Spalten unter einer Mutex-Zeile in `settings` (`community_lock_forum_slugs`, ohne Punkt,
+ * damit sie nicht zur Gruppe `community` gehört). Die Zeile entsteht vor der Transaktion im Autocommit; in der Transaktion ist
+ * die Sperre dieser Zeile die erste Anweisung, danach laufen die Prüfung und das Schreiben.
+ */
+function rScenarioForumSlugMutex(Database $db): void
+{
+    $repo = new ForumRepository($db);
+    $name = 'community_lock_forum_slugs';
+    $mutex = static fn (): array => $db->rows('settings', ['option_name' => $name]);
+    $settingsStatements = static fn (array $trace): array => array_values(array_filter($trace, static fn (array $s): bool => $s['table'] === 'settings'));
+
+    T::same(0, count($mutex()), 'Voraussetzung: noch keine Mutex-Zeile');
+    $from = count($db->log);
+    $first = $repo->create(['title' => 'Erstes', 'slug' => 'erstes', 'slug_en' => 'first'], 3, rt());
+    $trace = rTrace($db, $from);
+    T::check($first['success'], 'create gelingt');
+    $row = $mutex();
+    T::same([1, '0', 0], [count($row), (string) ($row[0]['option_value'] ?? '?'), (int) ($row[0]['autoload'] ?? -1)], 'Mutex-Zeile: genau eine, Wert 0, autoload 0');
+    T::check(!str_contains($name, '.') && !str_starts_with($name, 'community.'), 'der Name hat keinen Punkt: die Zeile gehört nicht zur Einstellungsgruppe community');
+    T::same(1, count($db->rows('settings')), 'in settings steht nur die Mutex-Zeile (create schreibt keine Einstellung)');
+    T::same(0, (int) $db->get_var('SELECT COUNT(*) FROM ' . $db->getPrefix() . 'settings WHERE option_name LIKE ?', ['community.%']), 'die Einstellungsgruppe community sieht die Zeile nicht (LIKE community.%)');
+
+    $outside = array_values(array_filter($trace, static fn (array $s): bool => !$s['tx']));
+    $inside = array_values(array_filter($trace, static fn (array $s): bool => $s['tx']));
+    T::check(
+        $outside !== [] && str_starts_with($outside[0]['sql'], 'INSERT IGNORE INTO ' . $db->getPrefix() . 'settings') && $outside[0]['kind'] === 'write',
+        'vor der Transaktion: INSERT IGNORE der Mutex-Zeile im Autocommit (erste Anweisung von create)',
+        substr((string) ($outside[0]['sql'] ?? ''), 0, 100)
+    );
+    T::same(1, count(array_filter($outside, static fn (array $s): bool => $s['table'] === 'settings')), 'nur ein Zugriff auf settings außerhalb der Transaktion');
+    T::check(
+        $inside !== [] && $inside[0]['kind'] === 'lock' && $inside[0]['table'] === 'settings' && str_contains($inside[0]['sql'], 'option_name = ?'),
+        'in der Transaktion ist die Sperre der Mutex-Zeile die ERSTE Anweisung',
+        substr((string) ($inside[0]['sql'] ?? '(keine)'), 0, 120)
+    );
+    T::same(['settings'], array_values(array_unique(array_column(array_filter($inside, static fn (array $s): bool => $s['kind'] === 'lock'), 'table'))), 'in der Transaktion wird nur die Mutex-Zeile gesperrt');
+    $kinds = array_map(static fn (array $s): string => $s['kind'] . ':' . $s['table'], $inside);
+    $slugCheck = array_search('read:community_forums', $kinds, true);
+    $insert = array_search('write:community_forums', $kinds, true);
+    T::check($slugCheck !== false && $insert !== false && $slugCheck > 0 && $slugCheck < $insert, 'danach die Prüfung auf vergebene Slugs, dann das Einfügen', implode(' | ', $kinds));
+
+    // Zweiter Aufruf: die Zeile bleibt eine Zeile; abgelehnte Eingaben fassen settings nicht an
+    $from = count($db->log);
+    T::same(['success' => false, 'error' => 'slug_taken'], $repo->create(['title' => 'Doppelt', 'slug' => 'first'], 3, rt(1)), 'slug gleich slug_en eines anderen Forums → slug_taken');
+    T::same(['success' => false, 'error' => 'slug_taken'], $repo->create(['title' => 'Doppelt', 'slug' => 'zweites', 'slug_en' => 'erstes'], 3, rt(1)), 'slug_en gleich slug eines anderen Forums → slug_taken');
+    $trace = rTrace($db, $from);
+    T::same(1, count($mutex()), 'weiterhin genau eine Mutex-Zeile');
+    $inside = array_values(array_filter($trace, static fn (array $s): bool => $s['tx']));
+    T::check($inside !== [] && $inside[0]['kind'] === 'lock' && $inside[0]['table'] === 'settings', 'auch bei slug_taken: erste Anweisung der Transaktion ist die Sperre der Mutex-Zeile');
+    T::same(false, $db->getPdo()->inTransaction(), 'keine Transaktion bleibt offen');
+    $from = count($db->log);
+    T::same(['success' => false, 'error' => 'invalid_input'], $repo->create(['title' => '', 'slug' => 'leer'], 3, rt(2)), 'ungültige Eingabe → invalid_input');
+    T::same(['success' => false, 'error' => 'forum_depth'], $repo->create(['title' => 'Tief', 'slug' => 'tief', 'parent_id' => (int) $first['id']], 1, rt(2)), 'zu tief → forum_depth');
+    T::same([], $settingsStatements(rTrace($db, $from)), 'abgelehnte Eingaben (vor der Transaktion) fassen settings nicht an');
+
+    // Unterforum: das Elternforum wird vor der Transaktion gelesen (kein nicht sperrender Zugriff in der Transaktion vor der Sperre)
+    $from = count($db->log);
+    $child = $repo->create(['title' => 'Kind', 'slug' => 'kind', 'parent_id' => (int) $first['id']], 3, rt(3));
+    T::check($child['success'], 'Unterforum angelegt');
+    $inside = array_values(array_filter(rTrace($db, $from), static fn (array $s): bool => $s['tx']));
+    T::check($inside !== [] && $inside[0]['kind'] === 'lock' && $inside[0]['table'] === 'settings', 'Unterforum: auch hier ist die Mutex-Sperre die erste Anweisung der Transaktion');
+
+    // update: nur wenn slug oder slug_en geändert werden
+    $second = $repo->create(['title' => 'Zweites', 'slug' => 'zweites'], 3, rt(4));
+    $id = (int) $second['id'];
+    $before = count($mutex());
+    $from = count($db->log);
+    T::same(['success' => true], $repo->update($id, ['title' => 'Zweites, umbenannt', 'sort_order' => 3], rt(5)), 'update ohne Slug-Änderung');
+    T::same([], $settingsStatements(rTrace($db, $from)), 'update ohne Slug-Änderung: keine Mutex-Sperre (kein Zugriff auf settings)');
+    $from = count($db->log);
+    T::same(['success' => true], $repo->update($id, ['slug' => 'zweites'], rt(6)), 'update mit demselben Slug');
+    T::same([], $settingsStatements(rTrace($db, $from)), 'update mit unverändertem Slug: keine Mutex-Sperre');
+    foreach ([['slug' => 'zweites-neu'], ['slug_en' => 'second']] as $change) {
+        $from = count($db->log);
+        T::same(['success' => true], $repo->update($id, $change, rt(7)), 'update ändert ' . key($change));
+        $inside = array_values(array_filter(rTrace($db, $from), static fn (array $s): bool => $s['tx']));
+        $kinds = array_map(static fn (array $s): string => $s['kind'] . ':' . $s['table'], $inside);
+        T::check(($kinds[0] ?? '') === 'lock:settings' && in_array('read:community_forums', $kinds, true) && in_array('write:community_forums', $kinds, true), 'update ' . key($change) . ': Transaktion mit Mutex-Sperre zuerst, dann Prüfung und Schreiben', implode(' | ', $kinds));
+    }
+    T::same(['success' => false, 'error' => 'slug_taken'], $repo->update($id, ['slug_en' => 'erstes'], rt(8)), 'update: slug_en gleich slug eines anderen Forums → slug_taken');
+    T::same(['success' => false, 'error' => 'slug_taken'], $repo->update($id, ['slug' => 'first'], rt(8)), 'update: slug gleich slug_en eines anderen Forums → slug_taken');
+    T::same('second', $repo->find($id)['slug_en'] ?? null, 'abgelehnte Änderung lässt die Zeile unverändert');
+    T::same([$before, false], [count($mutex()), $db->getPdo()->inTransaction()], 'eine Mutex-Zeile, keine offene Transaktion');
+}
+
+/**
+ * B5: `lastPublished()` fragt je Wert von `is_pinned` (0 und 1) mit Gleichheit auf `forum_id`, `status` und `is_pinned`
+ * (Index `idx_community_topics_forum_list`, `ORDER BY last_post_at DESC, id DESC LIMIT 1`) und wählt in PHP das spätere
+ * Paar (`last_post_at`, `id`). Den Plan prüft `TESTS/community-db` (EXPLAIN, Handler-Zähler).
+ */
+function rScenarioLastPublished(Database $db): void
+{
+    $repo = new TopicRepository($db);
+    $user = $db->user();
+    $poster = $db->user();
+    $forum = $db->forum(['title' => 'Letzte Themen']);
+    $other = $db->forum(['title' => 'Anderes Forum']);
+    $expect = static fn (int $id, int $at, int $postId, int $lastPoster): array => ['id' => $id, 'user_id' => $user, 'last_post_id' => $postId, 'last_post_at' => rt($at), 'last_poster_id' => $lastPoster];
+    $topic = static fn (array $o): int => $db->topic($o + ['forum' => $forum, 'user' => $user, 'last_poster_id' => $user]);
+
+    T::same(null, $repo->lastPublished($forum), 'leeres Forum → null');
+    $from = count($db->log);
+    $repo->lastPublished($forum);
+    $selects = array_values(array_filter(rTrace($db, $from), static fn (array $s): bool => $s['kind'] === 'read'));
+    T::same(2, count($selects), 'zwei Abfragen (je Wert von is_pinned)');
+    foreach ($selects as $i => $statement) {
+        T::check(
+            preg_match("/WHERE forum_id = \\? AND status = 'published' AND is_pinned = \\? ORDER BY last_post_at DESC, id DESC LIMIT 1$/", $statement['sql']) === 1,
+            'Abfrage ' . ($i + 1) . ': Gleichheit auf forum_id, status und is_pinned, Sortierung nach Aktivität und ID, LIMIT 1',
+            substr($statement['sql'], -140)
+        );
+    }
+
+    // nur nicht angeheftete Themen
+    $t1 = $topic(['last_post_at' => rt(100), 'last_post_id' => 5]);
+    $t2 = $topic(['last_post_at' => rt(200), 'last_post_id' => 9, 'last_poster_id' => $poster]);
+    T::same($expect($t2, 200, 9, $poster), $repo->lastPublished($forum), 'nur nicht angeheftete Themen: das mit der jüngsten Aktivität');
+    // ein älteres angeheftetes Thema ändert nichts, ein jüngeres gewinnt
+    $p1 = $topic(['last_post_at' => rt(150), 'last_post_id' => 7, 'pinned' => true]);
+    T::same($expect($t2, 200, 9, $poster), $repo->lastPublished($forum), 'älteres angeheftetes Thema: das nicht angeheftete mit der jüngeren Aktivität gewinnt');
+    $p2 = $topic(['last_post_at' => rt(250), 'last_post_id' => 11, 'pinned' => true]);
+    T::same($expect($p2, 250, 11, $user), $repo->lastPublished($forum), 'jüngeres angeheftetes Thema gewinnt');
+    // abgelaufene Anheftung (is_pinned bleibt 1 bis zum Aufräumen): das Thema zählt, gleich wie
+    $p3 = $topic(['last_post_at' => rt(260), 'last_post_id' => 12, 'pinned' => true, 'pinned_until' => rt(-3600)]);
+    T::same($expect($p3, 260, 12, $user), $repo->lastPublished($forum), 'angeheftet mit abgelaufener Frist: zählt als veröffentlichtes Thema');
+    // Gleichstand der Zeit: die größere ID gewinnt, über die beiden Teilabfragen hinweg
+    $u4 = $topic(['last_post_at' => rt(300), 'last_post_id' => 13]);
+    $p4 = $topic(['last_post_at' => rt(300), 'last_post_id' => 14, 'pinned' => true]);
+    T::same($expect($p4, 300, 14, $user), $repo->lastPublished($forum), 'gleiche Zeit: das angeheftete Thema mit der größeren ID gewinnt');
+    $u5 = $topic(['last_post_at' => rt(300), 'last_post_id' => 15]);
+    T::same($expect($u5, 300, 15, $user), $repo->lastPublished($forum), 'gleiche Zeit: das nicht angeheftete Thema mit der größeren ID gewinnt');
+    T::check($u4 < $p4 && $p4 < $u5, 'Voraussetzung: IDs in der Reihenfolge u4 < p4 < u5');
+    // Status: nur veröffentlicht; andere Foren zählen nicht
+    foreach (['hidden', 'pending', 'deleted', 'trash', 'moved'] as $i => $status) {
+        $topic(['last_post_at' => rt(400 + $i), 'last_post_id' => 20 + $i, 'status' => $status]);
+        $topic(['last_post_at' => rt(500 + $i), 'last_post_id' => 30 + $i, 'status' => $status, 'pinned' => true]);
+    }
+    $db->topic(['forum' => $other, 'user' => $user, 'last_post_at' => rt(900), 'last_post_id' => 99]);
+    T::same($expect($u5, 300, 15, $user), $repo->lastPublished($forum), 'ausgeblendete, wartende, gelöschte und verschobene Themen (auch angeheftete) und andere Foren zählen nicht');
+    // nur angeheftete Themen
+    $solo = $db->forum(['title' => 'Nur angeheftet']);
+    $s1 = $db->topic(['forum' => $solo, 'user' => $user, 'last_post_at' => rt(10), 'last_post_id' => 1, 'last_poster_id' => $user, 'pinned' => true]);
+    T::same($expect($s1, 10, 1, $user), $repo->lastPublished($solo), 'nur angeheftete Themen: das jüngste davon');
+    T::check($t1 > 0 && $p1 > 0, 'Fixtures');
+}
+
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Backends
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -1261,6 +1450,7 @@ $scenarios = [
     'Foren: Baum, path/depth, Tiefengrenze, Slugs über beide Spalten, Zwischenspeicher, update' => 'rScenarioForumTree',
     'Foren: Tiefengrenze beim Anlegen' => 'rScenarioForumMaxDepth',
     'Foren und Kategorien: UNIQUE-Verletzung im Wettlauf wird zum Fachfehler' => 'rScenarioUniqueRace',
+    'Foren: Slug-Prüfung unter der Mutex-Zeile (B4)' => 'rScenarioForumSlugMutex',
     'Foren: Zähler atomar, nie unter 0, letzter Beitrag' => 'rScenarioForumCounters',
     'Foren: Rechte-Zeilen über die Vererbungskette, mehrere Subjekte' => 'rScenarioPermissions',
     'Foren: Moderatoren mit include_children' => 'rScenarioModerators',
@@ -1268,6 +1458,7 @@ $scenarios = [
     'Themen: Keyset-Liste mit drei Zeitstempeln, ungültige Cursor' => 'rScenarioTopicKeyset',
     'Themen: angeheftete und befristete Themen' => 'rScenarioTopicPins',
     'Themen: Doppelt-Absenden' => 'rScenarioTopicDuplicates',
+    'Themen: letztes veröffentlichtes Thema über zwei Abfragen (B5)' => 'rScenarioLastPublished',
     'Beiträge: CRUD, Bearbeitung, Verlauf' => 'rScenarioPosts',
     'Beiträge: Seiten, Platzhalter, Position' => 'rScenarioPostLists',
     'Beiträge: letzter Beitrag, Zählen, Abstände, Doppelt-Absenden' => 'rScenarioPostQueries',

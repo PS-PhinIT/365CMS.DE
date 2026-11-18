@@ -5,10 +5,22 @@
  * Grundsätze (Entwurfsvertrag PR #2a, §1; Karte §3.0, §3.1, §3.5, §3.6) wie bei `PostService`:
  * - `can()` vorab und unter den Sperren erneut mit `fresh = true`; Sperrreihenfolge Forum → Thema → Beitrag → Mitglied;
  *   Zähler nur atomar; Hooks nach dem Commit über `Events::fire()`; Zeit UTC (`gmdate`), Uhr je Aufruf einmal.
+ * - Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung der Transaktion, sonst sieht `can(fresh)` einen veralteten
+ *   Schnappschuss (REPEATABLE READ legt ihn bei der ersten nicht sperrenden Abfrage an; ein gleichzeitig committeter Beitrag
+ *   desselben Mitglieds in einem anderen Forum bliebe unsichtbar und der Abstand `rate_post_seconds` ließe sich umgehen).
+ *   Reihenfolge in der Transaktion von `create()`: Forum sperren → Mitglied sperren → Dublettenprüfung → `can(fresh)` → Schreiben.
+ * - Die Statistikzeile des Mitglieds entsteht VOR der Transaktion im Autocommit (`UserStatsRepository::ensure()`), damit die
+ *   Mitgliedersperre in der Transaktion eine vorhandene Zeile trifft (reine Zeilensperre, keine Lückensperre, keine Deadlocks
+ *   bei erstmals schreibenden Mitgliedern). Abgelehnte Aufrufe legen nichts an.
  * - `create()` schreibt Thema, ersten Beitrag, Zähler von Forum und Mitglied und den Lesestatus des Autors in einer
  *   Transaktion. Doppeltes Absenden (gleicher Titel und Text im selben Forum innerhalb von `duplicate_window_seconds`)
- *   liefert unter der Forum-Sperre dasselbe Ergebnis mit `duplicate = true`. `last_post_at` ist nie NULL (auch bei
- *   wartenden Themen), `last_post_id` und `last_poster_id` erst, wenn das Thema veröffentlicht ist.
+ *   liefert dasselbe Ergebnis mit `duplicate = true`. Lehnt die erste Rechteprüfung mit einem Grenzgrund (`LIMIT_REASONS`:
+ *   `rate_limited`, `slow_mode`, `trust_limit`, `pending_limit`) ab, ist die Ablehnung vorläufig: eine Dublettenprüfung ohne
+ *   Sperre (dieselbe Logik wie unter der Sperre) liefert bei Treffer das vorhandene Ergebnis, sonst wird die Ablehnung sofort
+ *   zurückgegeben (ohne Transaktion, ohne Sperren). Alle anderen Gründe (Recht, Sperre, Zustand, Modul) sind endgültig und
+ *   werden nie von einer Dublette überstimmt. Wirklich gleichzeitige Dubletten erkennt die Prüfung unter der Forum-Sperre.
+ *   `last_post_at` ist nie NULL (auch bei wartenden Themen), `last_post_id` und `last_poster_id` erst, wenn das Thema
+ *   veröffentlicht ist.
  * - Wartende Themen zählen nirgends (Forum, Mitglied); die Freigabe in PR #2b bucht nach, einschließlich „letzter Beitrag“.
  * - `delete()` löscht weich (`status = deleted`, `previous_status`); die Beiträge des Themas bleiben unverändert. Zähler
  *   laut Matrix: Forum `topic_count − 1` und `post_count − (reply_count + 1)`, Themenstarter je −1; die Beitragszähler
@@ -43,6 +55,13 @@ final class TopicService
 {
     /** Versuche, wenn ein Thema zwischen Lesen und Sperren das Forum wechselt. */
     private const MAX_ATTEMPTS = 3;
+
+    /**
+     * Zeit- und Zählgrenzen von `can()`: Eine Ablehnung aus diesen Gründen ist vorläufig. Wer dasselbe zum zweiten Mal absendet,
+     * bekommt statt der Ablehnung das vorhandene Ergebnis (`duplicate = true`), weil der erste Absender die Grenze selbst
+     * ausgelöst hat. Alle anderen Ablehnungsgründe sind endgültig.
+     */
+    public const LIMIT_REASONS = ['rate_limited', 'slow_mode', 'trust_limit', 'pending_limit'];
 
     /** Ganzzahlspalten einer Themenzeile. */
     private const INT_COLUMNS = [
@@ -160,20 +179,32 @@ final class TopicService
         }
 
         $nowTs = ($this->clock)();
+        $now = gmdate('Y-m-d H:i:s', $nowTs);
+        $since = gmdate('Y-m-d H:i:s', $nowTs - $this->settings->int('duplicate_window_seconds'));
         $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs]);
         if (!$decision->allowed) {
-            return self::denied($decision);
+            if ($userId < 1 || !in_array($decision->reason, self::LIMIT_REASONS, true)) {
+                return self::denied($decision);
+            }
+            // Grenzgrund: vorläufig. Eine Dublette ohne Sperre liefert das vorhandene Thema, sonst gilt die Ablehnung (ohne Transaktion).
+            try {
+                $duplicate = $this->topics->findRecentDuplicate($userId, $forumId, $title, $since, $body);
+            } catch (\PDOException | \RuntimeException $e) {
+                return $this->databaseError('topic.create', $e, ['forum_id' => $forumId]);
+            }
+
+            return $duplicate !== null ? self::duplicateResult($duplicate, $forumId) : self::denied($decision);
         }
         if ($userId < 1) {
             return self::failure('invalid_input');
         }
-        $now = gmdate('Y-m-d H:i:s', $nowTs);
-        $since = gmdate('Y-m-d H:i:s', $nowTs - $this->settings->int('duplicate_window_seconds'));
 
         try {
             if ($this->forums->find($forumId) === null) {
                 return self::failure('forum_not_found');
             }
+            // Statistikzeile vor der Transaktion (Autocommit): die Mitgliedersperre trifft dann eine vorhandene Zeile.
+            $this->stats->ensure($userId, $now);
             $result = Transaction::run($this->db, fn (): array => $this->createLocked($userId, $forumId, $title, $body, $nowTs, $now, $since));
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('topic.create', $e, ['forum_id' => $forumId]);
@@ -188,25 +219,20 @@ final class TopicService
     /** @return array<string, mixed> */
     private function createLocked(int $userId, int $forumId, string $title, string $body, int $nowTs, string $now, string $since): array
     {
-        // Sperrreihenfolge: Forum → (Thema, Beitrag: neu) → Mitglied.
+        // Sperrreihenfolge: Forum → (Thema, Beitrag: neu) → Mitglied. Mitgliedersperre vor der ersten nicht sperrenden
+        // Leseanweisung der Transaktion (Dublettenprüfung, `can(fresh)`): der Schnappschuss von REPEATABLE READ entsteht erst
+        // danach und sieht jede Antwort, die ein gleichzeitiger Aufruf desselben Mitglieds in einem anderen Forum committet hat.
         if ($this->forums->lockForUpdate($forumId) === null) {
             return self::failure('forum_not_found');
         }
+        $this->stats->lockForUpdate($userId, $now);
+
         // Doppeltes Absenden zuerst: wer ein zweites Mal absendet, bekommt das Ergebnis des ersten Mals, nicht „zu schnell“.
         $duplicate = $this->topics->findRecentDuplicate($userId, $forumId, $title, $since, $body);
         if ($duplicate !== null) {
-            return [
-                'success' => true,
-                'duplicate' => true,
-                'topic_id' => $duplicate['id'],
-                'post_id' => (int) $duplicate['first_post_id'],
-                'forum_id' => $forumId,
-                'status' => $duplicate['status'],
-                'slug' => Slugger::topicSlug($duplicate['title']),
-            ];
+            return self::duplicateResult($duplicate, $forumId);
         }
 
-        $this->stats->lockForUpdate($userId, $now);
         $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs, 'fresh' => true]);
         if (!$decision->allowed) {
             return self::denied($decision);
@@ -256,6 +282,25 @@ final class TopicService
         return ['success' => true, 'topic_id' => $topicId, 'post_id' => $postId, 'forum_id' => $forumId, 'status' => $status, 'slug' => $slug];
     }
 
+    /**
+     * Ergebnis für ein doppelt abgesendetes Thema: dasselbe wie beim ersten Mal, dazu `duplicate = true` (nichts geschrieben).
+     *
+     * @param array{id: int, first_post_id: int|null, status: string, forum_id: int, title: string} $duplicate
+     * @return array<string, mixed>
+     */
+    private static function duplicateResult(array $duplicate, int $forumId): array
+    {
+        return [
+            'success' => true,
+            'duplicate' => true,
+            'topic_id' => $duplicate['id'],
+            'post_id' => (int) $duplicate['first_post_id'],
+            'forum_id' => $forumId,
+            'status' => $duplicate['status'],
+            'slug' => Slugger::topicSlug($duplicate['title']),
+        ];
+    }
+
     // ── Löschen ─────────────────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -294,6 +339,10 @@ final class TopicService
                 if ((int) $topic['reply_count'] > 0 && !$moderates) {
                     return self::failure('has_replies');
                 }
+                if ($topic['user_id'] !== null) {
+                    // Statistikzeile des Themenstarters vor der Transaktion (Autocommit), die Mitgliedersperre trifft eine vorhandene Zeile.
+                    $this->stats->ensure((int) $topic['user_id'], $now);
+                }
                 $result = Transaction::run($this->db, fn (): ?array => $this->deleteLocked($userId, $topicId, $forumId, $moderates, $nowTs, $now));
             }
         } catch (\PDOException | \RuntimeException $e) {
@@ -314,7 +363,7 @@ final class TopicService
      */
     private function deleteLocked(int $userId, int $topicId, int $forumId, bool $moderates, int $nowTs, string $now): ?array
     {
-        // Sperrreihenfolge: Forum → Thema → Mitglied (der Themenstarter, dessen Zähler sinkt).
+        // Sperrreihenfolge: Forum → Thema → Mitglied (der Themenstarter, dessen Zähler sinkt), alles vor der ersten nicht sperrenden Leseanweisung.
         $forum = $this->forums->lockForUpdate($forumId);
         if ($forum === null) {
             return self::failure('forum_not_found');

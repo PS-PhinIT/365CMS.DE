@@ -387,6 +387,13 @@ final class CommunityTestDatabase extends Database
     public array $throwOn = [];
     /** @var list<string> Alle ausgeführten SQL-Texte (vor der Übersetzung, ohne Parameter). */
     public array $log = [];
+    /**
+     * @var array<int, bool> Zum Eintrag `$log[$i]`: lief die Anweisung innerhalb einer Transaktion (`PDO::inTransaction()` im
+     *                       Augenblick des Aufrufs)? `BEGIN`/`COMMIT` selbst stehen nicht im Protokoll (sie laufen über die
+     *                       PDO-Verbindung); dieses Feld macht sichtbar, welche Anweisungen vor dem `BEGIN` liegen. Nach
+     *                       `$log = []` zählt der Index neu, ältere Einträge werden überschrieben: nur `txAt()` benutzen.
+     */
+    public array $logTx = [];
 
     /** @param string|null $file SQLite-Datei statt Arbeitsspeicher (zwei Verbindungen auf dieselben Daten) */
     public function __construct(?string $file = null)
@@ -448,8 +455,15 @@ final class CommunityTestDatabase extends Database
         return $found;
     }
 
+    /** Lief die Anweisung `$log[$index]` innerhalb einer Transaktion? (`false` für unbekannte Indizes.) */
+    public function txAt(int $index): bool
+    {
+        return isset($this->log[$index]) && ($this->logTx[$index] ?? false);
+    }
+
     public function execute(string $sql, array $params = []): \PDOStatement
     {
+        $this->logTx[count($this->log)] = $this->sqlite->inTransaction();
         $this->log[] = $sql;
         foreach ($this->failOn as $pattern) {
             if (preg_match($pattern, $sql) === 1) {

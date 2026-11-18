@@ -32,6 +32,12 @@ final class ReadStateRepository extends AbstractRepository
     /**
      * Setzt die zuletzt gelesene Beitrags-ID eines Themas, aber nur nach oben. Liefert `true`, wenn die Marke angelegt oder
      * erhöht wurde, `false`, wenn sie schon gleich hoch oder höher war (oder `$postId` kleiner 1 ist).
+     *
+     * Reihenfolge: zuerst `INSERT IGNORE` (neue Marke), dann `UPDATE … WHERE last_read_post_id < ?` (bestehende Marke erhöhen).
+     * Umgekehrt (erst UPDATE, dann INSERT) sperrt das UPDATE auf eine fehlende Zeile die Lücke im Index; zwei Transaktionen mit
+     * Lückensperren auf derselben Lücke geraten beim anschließenden Einfügen in einen Deadlock. Das betraf jedes Anlegen eines
+     * Themas durch ein neues Mitglied (Lesestatus des Autors, Befund B3). Eine vorhandene gleich hohe Marke wird dabei nicht
+     * geschrieben (`updated_at` bleibt).
      */
     public function advance(int $userId, int $topicId, int $postId, string $nowUtc): bool
     {
@@ -39,18 +45,16 @@ final class ReadStateRepository extends AbstractRepository
             return false;
         }
         $table = $this->table(self::STATES);
-        $raise = "UPDATE {$table} SET last_read_post_id = ?, updated_at = ? WHERE user_id = ? AND topic_id = ? AND last_read_post_id < ?";
-        $raiseParams = [$postId, $nowUtc, $userId, $topicId, $postId];
-
-        if ($this->run($raise, $raiseParams) > 0) {
-            return true;
-        }
         $inserted = $this->run(
             "INSERT IGNORE INTO {$table} (user_id, topic_id, last_read_post_id, updated_at) VALUES (?, ?, ?, ?)",
             [$userId, $topicId, $postId, $nowUtc]
         );
+        if ($inserted > 0) {
+            return true;
+        }
+        $raise = "UPDATE {$table} SET last_read_post_id = ?, updated_at = ? WHERE user_id = ? AND topic_id = ? AND last_read_post_id < ?";
 
-        return $inserted > 0 || $this->run($raise, $raiseParams) > 0;
+        return $this->run($raise, [$postId, $nowUtc, $userId, $topicId, $postId]) > 0;
     }
 
     /**
@@ -156,6 +160,11 @@ final class ReadStateRepository extends AbstractRepository
      * Themen mit Aktivität nach `$sinceUtc` und einer Beitrags-ID über der gelesenen. `$sinceUtc` ist die Untergrenze,
      * die der Aufrufer aus Marken und Horizont bildet (Aktivität bis einschließlich dieses Zeitpunkts gilt als gelesen).
      *
+     * `is_pinned IN (0, 1)` überspringt den Index `idx_community_topics_forum_list` (forum_id, status, is_pinned, last_post_at) nicht:
+     * ohne diese Bedingung wählt der Optimierer in einem Forum mit alten Themen neben einer aktiven Tabelle den Index
+     * `idx_community_topics_activity` und liest Zehntausende Einträge anderer Foren (gemessen: 100.000 statt 2 Lesezugriffe).
+     * Alle Werte von `is_pinned` (0 und 1) zählen, die Bedingung filtert nichts.
+     *
      * @param list<int> $forumIds Forum und, wenn gewünscht, seine Unterforen
      */
     public function unreadCount(int $userId, array $forumIds, string $sinceUtc, int $cap = 100): int
@@ -168,7 +177,7 @@ final class ReadStateRepository extends AbstractRepository
         return (int) $this->fetchValue(
             'SELECT COUNT(*) FROM (SELECT t.id FROM ' . $this->table(self::TOPICS) . ' t LEFT JOIN ' . $this->table(self::STATES)
             . ' rs ON rs.user_id = ? AND rs.topic_id = t.id WHERE t.forum_id IN (' . self::placeholders(count($forumIds)) . ")"
-            . " AND t.status = 'published' AND t.last_post_at > ? AND (rs.last_read_post_id IS NULL OR rs.last_read_post_id < t.last_post_id) LIMIT ?) unread",
+            . " AND t.status = 'published' AND t.is_pinned IN (0, 1) AND t.last_post_at > ? AND (rs.last_read_post_id IS NULL OR rs.last_read_post_id < t.last_post_id) LIMIT ?) unread",
             [$userId, ...$forumIds, $sinceUtc, max(1, $cap)]
         );
     }

@@ -11,6 +11,11 @@
  * - Portables SQL (läuft gegen MariaDB und gegen das SQLite-Double der Tests). Der Anhang für Zeilensperren steht nur in
  *   `forUpdate()`, damit das Double den Text an einer Stelle entfernen kann.
  * - Zähler werden nur atomar geändert (`counter()`), nie durch Lesen, Rechnen und Schreiben.
+ * - Zeilensperren (`forUpdate()`): Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung der Transaktion, sonst sieht
+ *   `can(fresh)` einen veralteten Schnappschuss (REPEATABLE READ legt ihn bei der ersten Abfrage ohne Sperre an). Die
+ *   `lockForUpdate()`-Methoden der Repositories lesen selbst nie ohne Sperre; gesperrte Zeilen müssen vorher existieren
+ *   (Statistikzeile, Mutex-Zeile der Forum-Slugs: Anlage im Autocommit VOR der Transaktion), sonst entsteht eine Lückensperre
+ *   und mit ihr Deadlocks. Ausführlich in `Support\Transaction`.
  *
  * @package CMSv2\Core\Services\Community
  */

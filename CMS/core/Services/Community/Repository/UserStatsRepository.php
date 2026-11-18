@@ -3,10 +3,18 @@
  * Zähler und Vertrauensstufe je Mitglied (`community_user_stats`). Die Zeile kann fehlen (bis zum ersten Beitrag):
  * `get()` liefert dann `null`, Vertrauensstufe und Zähler gelten als 0.
  *
- * Schreiben: `ensure()` legt die Zeile an, `lockForUpdate()` legt an und sperrt (letzte Sperre in der Reihenfolge Forum,
- * Thema, Beitrag, Statistik), `bump()` ändert Zähler atomar (nie unter 0), `touchLastPost()` setzt den Zeitpunkt des
- * letzten Beitrags (auch bei wartenden Beiträgen).
+ * Schreiben: `ensure()` legt die Zeile an, `lockForUpdate()` sperrt sie (letzte Sperre in der Reihenfolge Forum, Thema,
+ * Beitrag, Statistik), `bump()` ändert Zähler atomar (nie unter 0), `touchLastPost()` setzt den Zeitpunkt des letzten
+ * Beitrags (auch bei wartenden Beiträgen).
  *
+ * Regeln der Dienste (PR #2a, Befunde B2 und B3 der Integrationssuite):
+ * - Die Zeile entsteht VOR der Transaktion im Autocommit (`ensure()`). Dann trifft die Sperre in der Transaktion eine vorhandene
+ *   Zeile (reine Zeilensperre). Eine Sperre auf eine fehlende Zeile ist unter REPEATABLE READ eine Lückensperre, und zwei
+ *   Transaktionen mit solchen Lückensperren blockieren einander, sobald beide anschließend einfügen (Deadlock).
+ * - Die Mitgliedersperre kommt vor der ersten nicht sperrenden Leseanweisung der Transaktion (sonst sieht die Rechteprüfung
+ *   unter der Sperre einen veralteten Schnappschuss; siehe `Support\Transaction`). `lockForUpdate()` liest deshalb nie ohne Sperre.
+ *
+
  * @package CMSv2\Core\Services\Community
  */
 
@@ -36,16 +44,22 @@ final class UserStatsRepository extends AbstractRepository
         return $this->fetchOne('SELECT ' . self::COLUMNS . ' FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? LIMIT 1', [$userId]);
     }
 
-    /** Legt die Zeile an, falls sie fehlt (ohne Wirkung, wenn sie existiert). */
+    /**
+     * Legt die Zeile an, falls sie fehlt (ohne Wirkung, wenn sie existiert). Die Dienste rufen das VOR `Transaction::run()` im
+     * Autocommit auf (kein Lückensperrkonflikt, keine offene Transaktion); innerhalb einer Transaktion nur nach der Sperre.
+     */
     public function ensure(int $userId, string $nowUtc): void
     {
         $this->run('INSERT IGNORE INTO ' . $this->table(self::TABLE) . ' (user_id, updated_at) VALUES (?, ?)', [$userId, $nowUtc]);
     }
 
     /**
-     * Zeile mit Sperre lesen und, falls sie fehlt, vorher anlegen. Liest zuerst (Sperre ohne Schreibzugriff, wenn die Zeile
-     * existiert) und legt nur bei Bedarf an; das vermeidet Sperrkonflikte zwischen parallelen Aufrufern desselben Mitglieds.
-     * Nur in einer Transaktion sinnvoll.
+     * Zeile mit Sperre lesen (nur in einer Transaktion sinnvoll). Normalfall: die Zeile existiert, weil der Dienst `ensure()` vor
+     * der Transaktion aufgerufen hat; die Sperre ist dann eine reine Zeilensperre ohne Schreibzugriff (kein Konflikt zwischen
+     * parallelen Aufrufern desselben Mitglieds). Nur als Absicherung für den Ausnahmefall einer fehlenden Zeile (etwa gelöscht
+     * zwischen `ensure()` und Sperre) legt die Methode sie an und sperrt erneut; ein dabei möglicher Sperrkonflikt wird von
+     * `Transaction::run()` wiederholt. Die Methode liest nie ohne Sperre: sie darf als erste Anweisung nach den Forum- und
+     * Themensperren stehen, ohne den Schnappschuss der Transaktion anzulegen.
      *
      * @return array<string, mixed>
      */
@@ -54,6 +68,7 @@ final class UserStatsRepository extends AbstractRepository
         $sql = 'SELECT ' . self::COLUMNS . ' FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? LIMIT 1' . self::forUpdate();
         $row = $this->fetchOne($sql, [$userId]);
         if ($row === null) {
+            // Ausnahmefall: die Zeile fehlt (Normalfall: ensure() lief vor der Transaktion).
             $this->ensure($userId, $nowUtc);
             $row = $this->fetchOne($sql, [$userId]);
         }
