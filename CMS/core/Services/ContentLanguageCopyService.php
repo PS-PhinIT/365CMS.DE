@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace CMS\Services;
 
+use CMS\Slug;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -143,16 +145,7 @@ final class ContentLanguageCopyService
 
     private function normalizeSlug(string $slug): string
     {
-        $slug = strtolower(trim($slug));
-        $slug = str_replace(
-            ['ä', 'ö', 'ü', 'ß', 'é', 'è', 'ê', 'à', 'á', 'â', 'î', 'ï', 'ô', 'ó', 'ù', 'ú', 'û'],
-            ['ae', 'oe', 'ue', 'ss', 'e', 'e', 'e', 'a', 'a', 'a', 'i', 'i', 'o', 'o', 'u', 'u', 'u'],
-            $slug
-        );
-        $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug) ?? $slug;
-        $slug = preg_replace('/-+/', '-', $slug) ?? $slug;
-
-        return trim($slug, '-');
+        return Slug::fromText($slug);
     }
 
     private function normalizeStatus(string $status, array $allowed): string
