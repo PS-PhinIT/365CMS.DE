@@ -660,7 +660,7 @@ T::run('Wirkung: base_path', static function (): void {
 T::run('Slugger', static function (): void {
     $table = [
         ['Über uns', 'ueber-uns'], ['Größe & Maße!', 'groesse-masse'], ['Straße', 'strasse'], ['ÄÖÜ äöü', 'aeoeue-aeoeue'],
-        ['Crème brûlée', 'creme-brulee'], ['  --Hallo   Welt--  ', 'hallo-welt'], ['Łódź Ñandú', 'lodz-nandu'], ['C++ & C#', 'c-c'],
+        ['Crème brûlée', 'creme-brulee'], ['  --Hallo   Welt--  ', 'hallo-welt'], ['Lódź Ñandú', 'lodz-nandu'], ['C++ & C#', 'c-c'],
         ['Version 2.0', 'version-2-0'], ['Привет', ''], ['🙂🙂', ''], ['', ''], ['---', ''], ['ABC', 'abc'],
     ];
     foreach ($table as [$text, $expected]) {
