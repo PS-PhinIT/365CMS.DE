@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 
 use CMS\Database;
 use CMS\Logger;
+use CMS\Services\UserService;
 
 class RolesModule
 {
@@ -339,6 +340,9 @@ class RolesModule
                 $pdo->beginTransaction();
             }
 
+            // 4.2.0: Betroffene Konten vor der Umbenennung merken (danach sind sie über die alte Rolle nicht mehr zu finden).
+            $affectedUserIds = $this->lockUserIdsWithRole($currentRole);
+
             $permissionStatement = $this->db->execute(
                 "UPDATE {$this->prefix}role_permissions SET role = ? WHERE role = ?",
                 [$newRole, $currentRole]
@@ -356,6 +360,9 @@ class RolesModule
             if ($startedTransaction && $pdo->inTransaction()) {
                 $pdo->commit();
             }
+
+            // Erst nach dem Commit; ein Fehler eines Verbrauchers ändert am Ergebnis nichts (UserService::announceRoleChange()).
+            $this->announceRoleChanges($affectedUserIds, $currentRole, $newRole, UserService::ROLE_SOURCE_ROLE_RENAMED);
 
             return ['success' => true, 'message' => 'Rolle wurde aktualisiert.'];
         } catch (\Throwable $e) {
@@ -401,6 +408,9 @@ class RolesModule
                 $pdo->beginTransaction();
             }
 
+            // 4.2.0: Betroffene Konten vor dem Umhängen merken (siehe updateRole()).
+            $affectedUserIds = $this->lockUserIdsWithRole($role);
+
             $usersStatement = $this->db->execute(
                 "UPDATE {$this->prefix}users SET role = ? WHERE role = ?",
                 [$fallbackRole, $role]
@@ -419,6 +429,8 @@ class RolesModule
                 $pdo->commit();
             }
 
+            $this->announceRoleChanges($affectedUserIds, $role, $fallbackRole, UserService::ROLE_SOURCE_ROLE_DELETED);
+
             return ['success' => true, 'message' => 'Rolle wurde gelöscht.'];
         } catch (\Throwable $e) {
             $pdo = $this->db->getPdo();
@@ -427,6 +439,36 @@ class RolesModule
             }
 
             return $this->buildRoleOperationFailure('Rolle konnte nicht gelöscht werden.', $e, 'delete_role');
+        }
+    }
+
+    /**
+     * IDs aller Konten mit dieser Rolle; `FOR UPDATE` hält sie bis zum Commit fest, damit zwischen Auswahl und
+     * `UPDATE` kein Konto die Rolle wechselt (sonst fehlte dafür der Hook).
+     *
+     * @return list<int>
+     */
+    private function lockUserIdsWithRole(string $role): array
+    {
+        $ids = $this->db->get_col(
+            "SELECT id FROM {$this->prefix}users WHERE role = ? ORDER BY id ASC FOR UPDATE",
+            [$role]
+        );
+
+        return array_values(array_map('intval', $ids));
+    }
+
+    /**
+     * Hook `user_role_changed` je betroffenem Konto (Rollen-Umbenennung/-Löschung ändert die Rolle jedes Kontos).
+     * Läuft der Aufruf in einer fremden Transaktion (`$startedTransaction = false`), feuert der Hook vor deren Commit;
+     * heute ruft nur `admin/roles.php` ohne äußere Transaktion auf.
+     *
+     * @param list<int> $userIds
+     */
+    private function announceRoleChanges(array $userIds, string $fromRole, string $toRole, string $source): void
+    {
+        foreach ($userIds as $userId) {
+            UserService::announceRoleChange($userId, $fromRole, $toRole, $source);
         }
     }
 

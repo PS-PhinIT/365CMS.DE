@@ -85,6 +85,13 @@ Verified top-level entries of this repository:
 | `TESTS/slugs/` | directory | slug generation: umlaut transliteration, accents, unchanged ASCII titles: `php TESTS/slugs/run.php [-v]` |
 =======
 | `TESTS/schema-v27/` | directory | schema v27 (release 4.2.0, Community module): 27 tables, strict-mode rules, indexes, snapshot `golden.json` (regenerate with `dump-golden.php`), permission step `capabilities_v27`: `php TESTS/schema-v27/run.php [-v]` |
+| `TESTS/community-settings/` | directory | settings of the Community module: definitions, limits, readers, effect, language keys and module entry: `php TESTS/community-settings/run.php [-v]` |
+| `TESTS/community-repositories/` | directory | repositories of the Community module against the SQLite double (forums, topics, posts, read states, bans, statistics, keyset): `php TESTS/community-repositories/run.php [-v]` |
+| `TESTS/community-access/` | directory | access decision `CommunityAccess::can()`: matrix of user class, action and state, trust levels, bans, windows, approval, filter: `php TESTS/community-access/run.php [-v]` |
+| `TESTS/community-content/` | directory | topics, posts, quotes and read states: counters, idempotency, editing with history, soft delete, keyset, source guard for UTC and OFFSET: `php TESTS/community-content/run.php [-v]` |
+| `TESTS/community-db/` | directory | Community services against a real MariaDB/MySQL (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): rollback, race, UTC with local time, EXPLAIN of the lists: `php TESTS/community-db/run.php [-v]` |
+| `TESTS/community-mutants/` | directory | counter-check: every rule of the Community suites runs once against an intentionally wrong implementation and must fail: `php TESTS/community-mutants/run.php [-v]` |
+| `TESTS/user-role-hook/` | directory | core hook `user_role_changed` on role changes (user administration, bulk action, rename/delete role): `php TESTS/user-role-hook/run.php [-v]` |
 | `TESTS/schema-upgrade/` | directory | schema upgrade against a real MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): fresh install v27 and updates from 4.0.0 (v25), 4.1.8 (v26) and, with the Git tag, 3.5.x (v23) yield identical structure matching the snapshot `TESTS/schema-v27/golden.json`, plus the one-time permission step `capabilities_v27`, the collation of the Community tables and the repair path, keep data, are idempotent, one connection on first request: `php TESTS/schema-upgrade/run.php [-v]` |
 >>>>>>> origin/main
 | `TESTS/security/` | directory | security tests: `php TESTS/security/run.php` |
@@ -149,6 +156,13 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/slugs/` | Verzeichnis | Slug-Erzeugung: Umlaut-Umschrift, Akzente, unveränderte ASCII-Titel: `php TESTS/slugs/run.php [-v]` |
 =======
 | `TESTS/schema-v27/` | Verzeichnis | Schema v27 (Release 4.2.0, Community-Modul): 27 Tabellen, Strict-Mode-Regeln, Indizes, Snapshot `golden.json` (neu erzeugen mit `dump-golden.php`), Rechte-Schritt `capabilities_v27`: `php TESTS/schema-v27/run.php [-v]` |
+| `TESTS/community-settings/` | Verzeichnis | Einstellungen des Community-Moduls: Definitionen, Grenzen, Leser, Wirkung, Sprachschlüssel und Modul-Eintrag: `php TESTS/community-settings/run.php [-v]` |
+| `TESTS/community-repositories/` | Verzeichnis | Repositories des Community-Moduls gegen das SQLite-Double (Foren, Themen, Beiträge, Lesestatus, Sperren, Statistik, Keyset): `php TESTS/community-repositories/run.php [-v]` |
+| `TESTS/community-access/` | Verzeichnis | Zugriffsentscheidung `CommunityAccess::can()`: Matrix aus Nutzerklasse, Aktion und Zustand, Vertrauensstufen, Sperren, Fenster, Freigabe, Filter: `php TESTS/community-access/run.php [-v]` |
+| `TESTS/community-content/` | Verzeichnis | Themen, Beiträge, Zitate und Lesestatus: Zähler, Idempotenz, Bearbeiten mit Verlauf, weiches Löschen, Keyset, Quelltext-Wächter für UTC und OFFSET: `php TESTS/community-content/run.php [-v]` |
+| `TESTS/community-db/` | Verzeichnis | Community-Dienste gegen eine echte MariaDB/MySQL (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): Rollback, Wettlauf, UTC bei Ortszeit, EXPLAIN der Listen: `php TESTS/community-db/run.php [-v]` |
+| `TESTS/community-mutants/` | Verzeichnis | Gegenprobe: jede Regel der Community-Suiten läuft einmal gegen eine absichtlich falsche Umsetzung und muss scheitern: `php TESTS/community-mutants/run.php [-v]` |
+| `TESTS/user-role-hook/` | Verzeichnis | Core-Hook `user_role_changed` bei Rollenwechsel (Benutzerverwaltung, Sammelaktion, Rolle umbenennen/löschen): `php TESTS/user-role-hook/run.php [-v]` |
 | `TESTS/schema-upgrade/` | Verzeichnis | Upgrade-Pfad gegen echte MySQL/MariaDB (optional, `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`): Neuinstallation v27 und Updates von 4.0.0 (v25), 4.1.8 (v26) und, mit dem Git-Tag, 3.5.x (v23) ergeben dieselbe Struktur gemäß Snapshot `TESTS/schema-v27/golden.json`, dazu der einmalige Rechte-Schritt `capabilities_v27`, die Kollation der Community-Tabellen und der Reparaturpfad, erhalten Daten, laufen idempotent, eine Verbindung beim ersten Request: `php TESTS/schema-upgrade/run.php [-v]` |
 >>>>>>> origin/main
 | `TESTS/security/` | Verzeichnis | Sicherheitstests: `php TESTS/security/run.php` |
