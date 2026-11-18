@@ -27,8 +27,11 @@ if (!defined('ABSPATH')) {
 
 final class IdentityLinker
 {
-    /** Rollen, die nie automatisch per E-Mail verknüpft werden (zusätzlich zu den Rollen mit MFA-Zwang). */
-    public const PRIVILEGED_ROLES = ['admin', 'editor', 'author'];
+    /**
+     * Rollen, die nie automatisch per E-Mail verknüpft werden (zusätzlich zu den Rollen mit MFA-Zwang). „moderator“
+     * (Community, seit 4.2.0) moderiert, sperrt und sieht Meldungen: eine privilegierte Rolle wie „author“.
+     */
+    public const PRIVILEGED_ROLES = ['admin', 'editor', 'author', 'moderator'];
 
     public function __construct(private readonly IdentityStoreInterface $store)
     {
@@ -100,7 +103,7 @@ final class IdentityLinker
             return ['status' => 'rejected', 'reason' => 'email_missing'];
         }
 
-        $role = self::mapRole($claims, $settings, $knownRoles) ?? (string) ($settings['default_role'] ?? 'member');
+        $role = self::mapRole($claims, $settings, $knownRoles) ?? self::defaultRole($settings);
         if ($role === 'admin' && empty($settings['allow_admin_mapping'])) {
             $role = 'member';
         }
@@ -198,6 +201,20 @@ final class IdentityLinker
     }
 
     /**
+     * Standardrolle für neu angelegte Konten ohne Mapping-Treffer. `moderator` (Community-Moderation, 4.2.0) ist nie
+     * Standardrolle, auch nicht bei nicht normalisierten Einstellungen (zweite Sicherung neben `EntraSettings::normalize()`);
+     * die Rolle bleibt über ausdrückliche Mapping-Regeln erreichbar.
+     *
+     * @param array<string, mixed> $settings
+     */
+    private static function defaultRole(array $settings): string
+    {
+        $role = (string) ($settings['default_role'] ?? 'member');
+
+        return $role === 'moderator' ? 'member' : $role;
+    }
+
+    /**
      * Zielrolle bei der Synchronisation: Mapping oder Standardrolle; null = keine Änderung.
      * Herabstufen ist erlaubt, `admin` nur mit `allow_admin_mapping`.
      *
@@ -205,7 +222,7 @@ final class IdentityLinker
      */
     public static function syncTarget(string $currentRole, ?string $mappedRole, array $settings): ?string
     {
-        $target = $mappedRole ?? (string) ($settings['default_role'] ?? 'member');
+        $target = $mappedRole ?? self::defaultRole($settings);
         if ($target === '' || $target === $currentRole) {
             return null;
         }

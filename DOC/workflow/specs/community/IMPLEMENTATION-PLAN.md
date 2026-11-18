@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Community: Umsetzungsfahrplan 4.2.0
 
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** Planung · noch kein Code · direkt umsetzbar | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** PR #1 geliefert (Schema v27, `capabilities_v27`, Rolle `moderator`), Rest direkt umsetzbar · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übersicht:** [README.md](README.md)
 > **Quellen:** [ROADMAP.md](ROADMAP.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## English (summary)

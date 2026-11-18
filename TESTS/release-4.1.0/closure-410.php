@@ -81,9 +81,9 @@ T::run('FUN-410-28: Kulanzzeit im Zugriff (Quelltext)', static function () use (
     T::check(str_contains($body, '$graceDays > 0') && str_contains($body, ": '';"), 'Kulanzzeit 0 lässt keine Klausel entstehen');
 });
 
-T::run('Audit-Abschluss: Schema- und Rechte-Marker v26', static function () use ($src): void {
-    T::same('v26', \CMS\SchemaManager::SCHEMA_VERSION, 'SchemaManager: Marke v26');
-    T::same('v26', \CMS\MigrationManager::SCHEMA_VERSION, 'MigrationManager: Marke v26');
+T::run('Audit-Abschluss: Schema- und Rechte-Marker v26 (ab 4.2.0-Entwicklung: v27)', static function () use ($src): void {
+    T::check(in_array(\CMS\SchemaManager::SCHEMA_VERSION, ['v26', 'v27'], true), 'SchemaManager: Marke v26 (4.1.x) oder v27 (Entwicklung 4.2.0)');
+    T::same(\CMS\SchemaManager::SCHEMA_VERSION, \CMS\MigrationManager::SCHEMA_VERSION, 'MigrationManager: dieselbe Marke');
     $migration = $src('core/MigrationManager.php');
     T::check(str_contains($migration, '\\CMS\\Services\\Content\\ContentWorkflow::migrateCapabilities($this->db);'), 'capabilities_v26: Übernahme der Veröffentlichungsrechte läuft in der Migration');
     T::check(str_contains($migration, "error_log('MigrationManager: capabilities_v26: '"), 'capabilities_v26: Fehler werden protokolliert');

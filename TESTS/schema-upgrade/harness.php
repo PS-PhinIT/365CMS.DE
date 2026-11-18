@@ -7,6 +7,7 @@
  *   boot    = erster Request nach dem Core-Tausch (Database::instance() → automatische Migration)
  *   update  = boot + DatabaseUpdateRunner::run() (Admin → Updates → Datenbank-Update)
  *   status  = boot + DatabaseUpdateRunner::missingSchemaElements()
+ *   Mit Suffix `_nofn` (z. B. update_nofn) bleibt includes/functions ungeladen, wie bei CMS/update.php (Updater ohne Funktionsdateien).
  *
  * Verbindung über CMS_TEST_DB_HOST, CMS_TEST_DB_USER, CMS_TEST_DB_PASS. Ausgabe: eine JSON-Zeile.
  */
@@ -14,6 +15,8 @@
 declare(strict_types=1);
 
 [$root, $dbName, $mode] = [rtrim((string) ($argv[1] ?? ''), '/') . '/', (string) ($argv[2] ?? ''), (string) ($argv[3] ?? '')];
+$withoutFunctions = str_ends_with($mode, '_nofn');
+$mode = (string) preg_replace('/_nofn$/', '', $mode);
 $host = (string) getenv('CMS_TEST_DB_HOST');
 $user = (string) getenv('CMS_TEST_DB_USER');
 $pass = (string) getenv('CMS_TEST_DB_PASS');
@@ -39,7 +42,7 @@ $errorLog = $root . 'logs/schema-upgrade.log';
 @unlink($errorLog);
 ini_set('error_log', $errorLog);
 require_once $root . 'core/autoload.php';
-foreach (glob($root . 'includes/functions/*.php') ?: [] as $file) {
+foreach ($withoutFunctions ? [] : (glob($root . 'includes/functions/*.php') ?: []) as $file) {
     require_once $file;
 }
 

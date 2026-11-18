@@ -1,11 +1,12 @@
 # 365CMS Projektdokumentation | Community: Datenmodell
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** umgesetzt in PR #1 (Abweichungen unten) | **Übersicht:** [README.md](README.md)
+> **Umsetzungsstand:** Die Tabellen liegen in `SchemaManager::getSchemaQueries()` (`FEATURE_TABLES_V27`, 27 Tabellen, 117 insgesamt). **Maßgeblich für Spalten, Typen und Indizes ist [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) §3** (aus einer echten Datenbank erzeugt, durch `TESTS/schema-v27` geprüft). Die SQL-Entwürfe in §3 unten sind der ursprüngliche Plan und weichen so ab: keine `legacy_id`/`legacy_source`-Spalten (E6); `community_redirects` nur für `topic`/`forum`; keine `NOT NULL`-Spalte ohne Default (Strict Mode), Textspalten (`TEXT`, `MEDIUMTEXT`, `LONGTEXT`) `NULL`-fähig und `DATETIME NOT NULL` mit Default `CURRENT_TIMESTAMP`; Indexnamen `uq_/idx_community_<tabelle>_<zweck>`; zusätzliche Indizes für Löschfristen, Cron und Listen (u. a. `idx_community_posts_created`, `idx_community_topics_moved`/`_locked`/`_pinned`/`_trashed`, `idx_community_warnings_expires`, `idx_community_post_revisions_created`, `idx_community_forum_permissions_lookup`, `idx_community_forums_parent`); Index `(user_id, status, created_at)` statt `(user_id, created_at)` an Themen und Beiträgen; Index `(forum_id, status, created_at)` statt `(forum_id, created_at)` an Beiträgen.
 
 ## English (summary)
 
 Database design of the Community module: 27 tables with prefix `community_`, created by
-`Community\Database\Installer` through `SchemaManager` (schema v27, idempotent, one definition shared by fresh
-install, update and runtime check). It lists columns, keys and indexes, denormalised counters and their maintenance,
+`SchemaManager::getSchemaQueries()` (schema v27, idempotent, one definition shared by fresh
+install, update and runtime check; there is no separate installer class). It lists columns, keys and indexes, denormalised counters and their maintenance,
 status values, what is reused from existing core tables (users, roles, user_groups, notifications, messages,
 favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin tables (`{prefix}cmsforum_*`).
 
@@ -20,7 +21,7 @@ favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin 
 - Keine Fremdschlüssel-Constraints (wie im übrigen Core); Konsistenz über Dienste und den Reparatur-Job.
 - **Keine Site-Spalten** ([KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3).
 - Weiches Löschen über `status`, endgültiges Löschen nur über Papierkorb, Löschfristen oder DSGVO.
-- Jede Tabelle in einer einzigen Definition (`Installer::tables()`), genutzt von Neuinstallation, Update und Laufzeitprüfung (wie `admin_menu_layouts` in v25).
+- Jede Tabelle in einer einzigen Definition (umgesetzt in `SchemaManager::getSchemaQueries()`, nicht in einem `Installer`), genutzt von Neuinstallation, Update und Laufzeitprüfung (wie `admin_menu_layouts` in v25).
 - Benutzer, Rollen, Gruppen, Benachrichtigungen, Nachrichten, Favoriten und Mails bleiben in den **Core-Tabellen**; das Modul legt dafür keine eigenen Tabellen an.
 
 ### 2. Übersicht

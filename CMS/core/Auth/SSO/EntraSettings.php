@@ -131,10 +131,11 @@ final class EntraSettings
         }
 
         $defaultRole = strtolower(trim((string) ($raw['default_role'] ?? $d['default_role'])));
-        // Die Standardrolle ist nie `admin`: Admin nur über eine ausdrückliche Mapping-Regel.
-        if ($defaultRole === 'admin' || !$roleOk($defaultRole)) {
+        // Die Standardrolle ist nie `admin` oder `moderator` (Community-Moderation, 4.2.0): beide nur über eine
+        // ausdrückliche Mapping-Regel.
+        if (in_array($defaultRole, ['admin', 'moderator'], true) || !$roleOk($defaultRole)) {
             $defaultRole = $knownRoles === null || in_array('member', $knownRoles, true) ? 'member' : ($knownRoles[0] ?? 'member');
-            if ($defaultRole === 'admin') {
+            if (in_array($defaultRole, ['admin', 'moderator'], true)) {
                 $defaultRole = 'member';
             }
         }

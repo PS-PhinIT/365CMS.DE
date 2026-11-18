@@ -154,14 +154,14 @@ Root-Klassen in `CMS/core/`:
 - `PageManager.php`
 - `PluginManager.php`
 - `Router.php`
-- `SchemaManager.php` (`SCHEMA_VERSION = 'v26'`, `FEATURE_TABLES_V26`)
+- `SchemaManager.php` (`SCHEMA_VERSION = 'v27'` im Entwicklungsstand, 4.1.x: `v26`; `FEATURE_TABLES_V26`, `FEATURE_TABLES_V27`)
 - `Security.php`
 - `SubscriptionManager.php`
 - `TableOfContents.php`
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT = '4.1.0'`)
+- `Version.php` (`CURRENT = '4.1.8'`)
 - `WP_Error.php`
 
 Subdirectories:
@@ -177,10 +177,11 @@ Subdirectories:
 
 Service PHP files currently present at `core/Services/` root include: `AdminNavigationService`, `AdminNoticeService`, `AdminSiteContextService`, `AdminToolbarService`, `AdminUiPreferenceService`, `AnalyticsService`, `AntispamService`, `AssetOptimizerService`, `AzureMailTokenProvider`, `BackupService`, `BatchJobService`, `CmsAuthPageService`, `CommentService`, `ContentChangesService`, `ContentEditPermission`, `ContentLanguageCopyService`, `ContentLocalizationService`, `ContentMediaPlacementService`, `CookieConsentService`, `CoreModuleService`, `CoreWebVitalsService`, `CronExpressionAdapter`, `CronRunnerService`, `CryptoService`, `CsvExchange`, `DashboardService`, `DataRetentionService`, `EditorialCalendarService`, `EditorJsRenderer`, `EditorJsService`, `EditorService`, `ElfinderService`, `EmailChangeService`, `EmailVerificationService`, `EnvironmentInfoService`, `ErrorReportService`, `FeatureUsageService`, `FeedService`, `FileUploadService`, `GraphApiService`, `ImageService`, `IndexingService`, `IntegratedPluginService`, `JwtService`, `LandingPageService`, `LoginThrottleSettings`, `MailLogService`, `MailQueueService`, `MailService`, `MarketplaceEndpoints`, `MediaDeliveryService`, `MediaService`, `MediaUsageService`, `MemberContentService`, `MemberService`, `MessageService`, `MonitoringTrendService`, `NotificationService`, `OpcacheWarmupService`, `OptionStore`, `PageTemplateService`, `PdfService`, `PerformanceSafetyNetService`, `PermalinkService`, `PluginSiteAssignmentService`, `PostPublishChecklistService`, `PostRevisionService`, `PrivateStorageService`, `PurifierService`, `RedirectService`, `SearchService`, `SecurityAlertService`, `SecurityRuntimeService`, `SeoAnalysisService`, `SeoBrokenLinkService`, `SEOService`, `SeoTrendService`, `SettingsService`, `SitemapService`, `SiteSearchService`, `SiteTableService`, `StatusService`, `SystemService`, `ThemeCustomizer`, `TrackingService`, `TranslationService`, `TranslationStatusService`, `TrustedProxyService`, `UpdateService`, `UserService`.
 
-Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Content/`, `ContentTypes/`, `Downloads/`, `EditorJs/`, `Exchange/`, `FeatureHooks/`, `Feed/`, `Forms/`, `Knowledgebase/`, `Landing/`, `Legal/`, `Media/`, `Newsletter/`, `Payments/`, `PluginMigration/`, `Retention/`, `ReusableBlocks/`, `Search/`, `Security/`, `SEO/`, `SiteTable/`, `Trash/`, `Webhooks/`.
+Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Community/`, `Content/`, `ContentTypes/`, `Downloads/`, `EditorJs/`, `Exchange/`, `FeatureHooks/`, `Feed/`, `Forms/`, `Knowledgebase/`, `Landing/`, `Legal/`, `Media/`, `Newsletter/`, `Payments/`, `PluginMigration/`, `Retention/`, `ReusableBlocks/`, `Search/`, `Security/`, `SEO/`, `SiteTable/`, `Trash/`, `Webhooks/`.
 
 Identität, Medien, Redaktion, Betrieb / Identity, media, editorial, operations:
 
+- `Services/Community/Support/CommunityCapabilities.php` (capabilities `community.*`, defaults and the one-time step `capabilities_v27` / Community-Rechte, Standards und einmaliger Schritt `capabilities_v27`; weitere Schichten `Database/`, `Repository/`, `Service/`, `Http/`, `Admin/` folgen mit PR #2 bis PR #5, siehe `DOC/workflow/specs/community/HANDOFF-PR2-PR5.md`)
 - `Services/Security/`, `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
 - `Services/Media/` additions, `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
 - `Services/Content/`, `ContentStatus.php` (status values incl. `pending`), `ContentWorkflow.php` (four-eyes review, preview links / Vier-Augen-Prinzip, Vorschau-Links), `ContentExpiryService.php` (expiry and review reminders / Ablauf und Wiedervorlage)

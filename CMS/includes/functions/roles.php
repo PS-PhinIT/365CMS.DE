@@ -167,6 +167,13 @@ function cms_get_default_role_definitions(): array {
                 'view_download_stats' => true,
                 'manage_feeds' => true,
                 'blocks.reusable' => true,
+                // 4.2.0: Community-Modul (CommunityCapabilities::ALL). „admin“ hat sie ohnehin implizit.
+                'community.view' => true,
+                'community.participate' => true,
+                'community.moderate' => true,
+                'community.ban' => true,
+                'community.manage' => true,
+                'community.view_private_data' => true,
             ],
         ],
         'editor' => [
@@ -206,6 +213,8 @@ function cms_get_default_role_definitions(): array {
                 'upload_downloads' => true,
                 'view_form_submissions' => true,
                 'blocks.reusable' => true,
+                'community.view' => true,
+                'community.participate' => true,
             ],
         ],
         'author' => [
@@ -224,6 +233,8 @@ function cms_get_default_role_definitions(): array {
                 'media.view' => true,
                 'media.upload' => true,
                 'comments.view' => true,
+                'community.view' => true,
+                'community.participate' => true,
             ],
         ],
         'member' => [
@@ -236,6 +247,25 @@ function cms_get_default_role_definitions(): array {
                 'posts.view' => true,
                 'media.view' => true,
                 'comments.view' => true,
+                'community.view' => true,
+                'community.participate' => true,
+            ],
+        ],
+        // 4.2.0: Standardrolle für die globale Community-Moderation (capabilities_v27 legt die Zeilen in
+        // role_permissions an). Wie „member“, ohne Zugang zu /admin; die Moderation läuft im Frontend/Mitgliederbereich.
+        'moderator' => [
+            'display_name' => 'Moderator',
+            'capabilities' => [
+                'read' => true,
+                'edit_profile' => true,
+                'view_content' => true,
+                'pages.view' => true,
+                'posts.view' => true,
+                'media.view' => true,
+                'comments.view' => true,
+                'community.view' => true,
+                'community.participate' => true,
+                'community.moderate' => true,
             ],
         ],
         'subscriber' => [
@@ -445,7 +475,7 @@ function add_role(string $role, string $display_name, array $capabilities = []):
  */
 function remove_role(string $role): void {
     $role = cms_normalize_role_slug($role);
-    if ($role === '' || in_array($role, ['admin', 'editor', 'author', 'member'], true)) {
+    if ($role === '' || in_array($role, ['admin', 'editor', 'author', 'member', 'moderator'], true)) {
         return;
     }
 

@@ -179,6 +179,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 
 | Namespace | Aufgabe |
 |---|---|
+| `Community\…` (Ordner `Community\`) | Community-Modul (Forum), seit 4.2.0 in Entwicklung: bisher `Support\CommunityCapabilities` (Rechte `community.*`, Rolle `moderator`, Schritt `capabilities_v27`); Dienste, Repositories und Controller folgen ([HANDOFF-PR2-PR5.md](../workflow/specs/community/HANDOFF-PR2-PR5.md)) |
 | `Forms\…` | Formulare, Eingänge, Uploads, Spamprüfung, Versand ([FORMS.md](../admin/pages-posts/FORMS.md)) |
 | `Downloads\…` | Downloads mit Versionen, Zugriffsschutz, Statistik und Editor-Block ([DOWNLOADS.md](../admin/media/DOWNLOADS.md)) |
 | `Feed\…` | Feed-Aggregator: Quellen, Abruf-Warteschlange, OPML, Digest-Versand ([FEEDS.md](../admin/system-settings/FEEDS.md)) |

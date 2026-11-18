@@ -30,7 +30,7 @@ class MigrationManager
      * Aktuelle Schema-Version – erhöhen wenn neue Migrations hinzukommen.
      * Wird in cms_settings (option_name = 'db_schema_version') gespeichert.
      */
-    public const SCHEMA_VERSION = 'v26'; // Release 4.1.0 (siehe SchemaManager::SCHEMA_VERSION)
+    public const SCHEMA_VERSION = 'v27'; // Release 4.2.0, Community-Modul (siehe SchemaManager::SCHEMA_VERSION)
 
     public function __construct(Database $db)
     {
@@ -264,10 +264,20 @@ class MigrationManager
             "ALTER TABLE `{$p}user_subscriptions` ADD INDEX `idx_provider_sub` (`provider`, `provider_subscription_id`)"
         );
 
+        // v27 (4.2.0, Community): Bündelung von Benachrichtigungen („3 neue Antworten in …“) braucht einen Gruppenschlüssel
+        // und einen Zähler an der Core-Tabelle notifications. Bestandszeilen: kein Schlüssel, Zähler 1.
+        array_push(
+            $migrations,
+            "ALTER TABLE `{$p}notifications` ADD COLUMN `group_key` VARCHAR(120) DEFAULT NULL",
+            "ALTER TABLE `{$p}notifications` ADD COLUMN `event_count` INT UNSIGNED NOT NULL DEFAULT 1",
+            "ALTER TABLE `{$p}notifications` ADD INDEX `idx_user_group` (`user_id`, `group_key`, `is_read`)"
+        );
+
         // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –
-        // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge.
+        // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge. v26 ergänzt die Tabellen von
+        // 4.1.0, v27 die 27 Tabellen des Community-Moduls (4.2.0).
         $schemaQueries = SchemaManager::getSchemaQueries($p, $charset);
-        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26) as $featureTable) {
+        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27) as $featureTable) {
             if (isset($schemaQueries[$featureTable])) {
                 $migrations[] = $schemaQueries[$featureTable];
             }
@@ -303,10 +313,24 @@ class MigrationManager
         try {
             if (function_exists('cms_ensure_role_permissions_table')) {
                 cms_ensure_role_permissions_table($this->db);
+            } else {
+                // update.php lädt includes/functions nicht: Tabelle selbst anlegen (sonst scheitert dieser Schritt leise).
+                \CMS\Services\Community\Support\CommunityCapabilities::ensurePermissionsTable($this->db);
             }
             \CMS\Services\Content\ContentWorkflow::migrateCapabilities($this->db);
         } catch (\Throwable $e) {
             error_log('MigrationManager: capabilities_v26: ' . $e->getMessage());
+        }
+
+        // v27 (capabilities_v27): Rechte `community.*` für die Standardrollen und die neue Rolle „moderator“. Einmalig
+        // (Marker `capabilities_v27` in settings), vorhandene Einträge in role_permissions werden nie überschrieben, ein
+        // ausdrücklicher Entzug (granted = 0) bleibt also wirksam. Schlägt der Schritt fehl, fehlt der Marker: Das
+        // Datenbank-Update meldet ihn (DatabaseUpdateRunner::missingSchemaElements) und wiederholt den Schritt über
+        // run(true). Nur die übergebene Verbindung nutzen (DB-410-02).
+        try {
+            \CMS\Services\Community\Support\CommunityCapabilities::migrate($this->db);
+        } catch (\Throwable $e) {
+            error_log('MigrationManager: capabilities_v27: ' . $e->getMessage());
         }
 
         // Version nach erfolgreichem Durchlauf persistieren

@@ -34,6 +34,7 @@ $groupLabels = [
     'forms'    => 'Formulare',
     'downloads'=> 'Downloads',
     'system'   => 'System & Werkzeuge',
+    'community'=> 'Community',
 ];
 
 $capLabels = [
@@ -408,7 +409,7 @@ $renderCapabilityDiffList = static function (array $groupedCapabilities) use ($g
                     <input type="hidden" name="action" value="add_role">
                     <div class="mb-3">
                         <label class="form-label" for="role_slug">Rollen-Slug</label>
-                        <input type="text" class="form-control" id="role_slug" name="role_slug" placeholder="z. B. moderator" maxlength="20" required>
+                        <input type="text" class="form-control" id="role_slug" name="role_slug" placeholder="z. B. gastautor" maxlength="20" required>
                         <div class="form-hint">Nur Kleinbuchstaben, Zahlen, Bindestriche und Unterstriche.</div>
                     </div>
                     <div>

@@ -19,7 +19,8 @@ class RolesModule
     private Database $db;
     private string $prefix;
 
-    private const ROLES = ['admin', 'editor', 'author', 'member'];
+    // 4.2.0: „moderator“ ist Standardrolle (Community, capabilities_v27) und damit nicht umbenenn- oder löschbar.
+    private const ROLES = ['admin', 'editor', 'author', 'member', 'moderator'];
     // Spaltenbreiten: users.role VARCHAR(20), role_permissions.capability VARCHAR(100)
     private const MAX_ROLE_SLUG_LENGTH = 20;
     private const MAX_CAPABILITY_LENGTH = 100;
@@ -45,6 +46,8 @@ class RolesModule
         'backups'  => ['backups.offsite'],
         'webhooks' => ['webhooks.manage'],
         'payments' => ['payments.manage', 'invoices.view'],
+        // 4.2.0: Community-Modul (CommunityCapabilities::ALL, PERMISSIONS-MODERATION.md §2).
+        'community' => ['community.view', 'community.participate', 'community.moderate', 'community.ban', 'community.manage', 'community.view_private_data'],
     ];
 
     public function __construct()
@@ -617,6 +620,17 @@ class RolesModule
             $perms['member'][$cap] = true;
         }
 
+        // 4.2.0 Community (capabilities_v27, CommunityCapabilities::DEFAULT_GRANTS): lesen und mitschreiben dürfen
+        // Redakteur, Autor und Mitglied; „moderator“ ist wie ein Mitglied, moderiert aber zusätzlich.
+        foreach (['editor', 'author', 'member', 'moderator'] as $role) {
+            foreach (['community.view', 'community.participate'] as $cap) {
+                $perms[$role][$cap] = true;
+            }
+        }
+        foreach (['read', 'edit_profile', 'view_content', 'pages.view', 'posts.view', 'media.view', 'comments.view', 'community.moderate'] as $cap) {
+            $perms['moderator'][$cap] = true;
+        }
+
         return $perms;
     }
 
@@ -754,6 +768,7 @@ class RolesModule
             'editor' => 'Editor',
             'author' => 'Autor',
             'member' => 'Mitglied',
+            'moderator' => 'Moderator',
         ];
 
         foreach ($roles as $role) {

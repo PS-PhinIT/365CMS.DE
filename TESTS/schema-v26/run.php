@@ -24,13 +24,15 @@ $migrationSource = (string) file_get_contents($root . 'core/MigrationManager.php
 $queries = \CMS\SchemaManager::getSchemaQueries('cms_', 'utf8mb4');
 
 T::run('Versionsstand', static function () use ($migrationSource, $root): void {
-    // Die Marke wird erst mit der Release-Vorbereitung 4.1.0 gehoben; bis dahin müssen SchemaManager, MigrationManager
-    // und Marketplace-Manifest übereinstimmen (Manifest beschreibt das veröffentlichte Paket).
+    // v26 gehört zu Release 4.1.x; mit der Entwicklung von 4.2.0 steht der Arbeitsstand auf v27 (schema-v27). SchemaManager
+    // und MigrationManager nennen immer dieselbe Marke. Das Marketplace-Manifest beschreibt das veröffentlichte Paket
+    // (4.1.x: v26) und darf der Entwicklung hinterherlaufen, nie vorauseilen; die Übereinstimmung mit dem Paket prüft release-3.4.0.
     $version = \CMS\SchemaManager::SCHEMA_VERSION;
-    T::check(in_array($version, ['v25', 'v26'], true), 'SchemaManager::SCHEMA_VERSION ist v25 (Entwicklung) oder v26 (Release 4.1.0)');
+    T::check(in_array($version, ['v26', 'v27'], true), 'SchemaManager::SCHEMA_VERSION ist v26 (Release 4.1.x) oder v27 (Entwicklung 4.2.0)');
     T::check(str_contains($migrationSource, "public const SCHEMA_VERSION = '{$version}';"), 'MigrationManager nennt dieselbe Marke');
     $manifest = json_decode((string) file_get_contents($root . 'marketplace/core/365cms/update.json'), true);
-    T::same($version, (string) ($manifest['schema_version'] ?? ''), 'Marketplace-Manifest nennt dieselbe Marke');
+    $manifestVersion = (string) ($manifest['schema_version'] ?? '');
+    T::check($manifestVersion === 'v26' || $manifestVersion === $version, 'Marketplace-Manifest nennt v26 (veröffentlichtes Paket) oder die Marke des Arbeitsstands');
 });
 
 T::run('Neue Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
@@ -41,8 +43,8 @@ T::run('Neue Tabellen', static function () use ($queries, $migrationSource, $sch
         T::check(str_contains((string) ($queries[$table] ?? ''), "CREATE TABLE IF NOT EXISTS cms_{$table} ("), "{$table}: idempotentes CREATE mit Präfix");
         T::check(!preg_match('/\bJSON\b(?!_)/', (string) ($queries[$table] ?? '')), "{$table}: kein Spaltentyp JSON (LONGTEXT *_json, MariaDB)");
     }
-    T::check(str_contains($migrationSource, 'array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26)'), 'Update legt die v26-Tabellen über dieselben Definitionen an');
-    T::check(str_contains($schemaSource, 'array_merge(self::FEATURE_TABLES, self::FEATURE_TABLES_V26)'), 'Laufzeitprüfung legt die v26-Tabellen über dieselben Definitionen an');
+    T::check(str_contains($migrationSource, 'array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27)'), 'Update legt die v26-Tabellen über dieselben Definitionen an');
+    T::check(str_contains($schemaSource, 'array_merge(self::FEATURE_TABLES, self::FEATURE_TABLES_V26, self::FEATURE_TABLES_V27)'), 'Laufzeitprüfung legt die v26-Tabellen über dieselben Definitionen an');
 });
 
 T::run('Sicherheitsrelevante Schlüssel', static function () use ($queries): void {
@@ -91,7 +93,7 @@ T::run('Audit 4.1.0: Konstruktor ohne Rekursion, Integritätsprüfung, Reparatur
     $runner = (string) file_get_contents($root . 'core/DatabaseUpdateRunner.php');
     T::check(str_contains($runner, 'public function missingSchemaElements(): array') && !str_contains($runner, 'isTargetSchemaReady'), 'Datenbank-Update prüft das ganze Zielschema (nicht nur ai_quota_usage)');
     T::check(str_contains($runner, "'schema_missing' => \$schemaMissing"), 'Status nennt fehlende Elemente');
-    T::check(str_contains($runner, 'SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, array_keys(SchemaManager::REQUIRED_COLUMNS)'), 'alle Feature-Tabellen v25/v26 geprüft');
+    T::check(str_contains($runner, 'SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27, array_keys(SchemaManager::REQUIRED_COLUMNS)'), 'alle Feature-Tabellen v25/v26/v27 geprüft');
 
     // DB-410-05: Reparatur läuft auch bei gespeicherter Zielversion.
     T::check(str_contains($migrationSource, 'public function run(bool $force = false): void') && str_contains($migrationSource, '$this->run(true);'), 'repairTables() erzwingt die idempotenten Migrationen');
