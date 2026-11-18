@@ -151,13 +151,16 @@ $started = microtime(true);
 // ── Vorlauf: der Katalog selbst (ohne eine Suite zu starten) ──────────────────────────────────────────────────────────────
 
 T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, gültiges PHP, Suite, Regel', static function () use ($catalog): void {
-    $source = (string) file_get_contents(__DIR__ . '/catalog.php');
+    $source = '';
+    foreach (array_merge([__DIR__ . '/catalog.php'], glob(__DIR__ . '/catalog-*.php') ?: []) as $catalogFile) {
+        $source .= (string) file_get_contents($catalogFile);
+    }
     preg_match_all("/^    '([^']+)' => \\[/m", $source, $declared);
     $names = $declared[1];
     $duplicates = array_keys(array_filter(array_count_values($names), static fn (int $n): bool => $n > 1));
     T::same([], $duplicates, 'keine doppelten Namen (ein doppelter Schlüssel überschreibt im PHP-Array still den ersten)');
     T::same(count($names), count($catalog), 'jede Zeile des Katalogs ist ein Eintrag');
-    T::check(count($catalog) >= 60 && count($catalog) <= 110, 'der Katalog hat 60 bis 110 Mutanten', (string) count($catalog));
+    T::check(count($catalog) >= 60 && count($catalog) <= 250, 'der Katalog hat 60 bis 250 Mutanten', (string) count($catalog));
 
     $problems = [];
     $perSuite = array_fill_keys(array_keys(CM_SUITES), 0);
