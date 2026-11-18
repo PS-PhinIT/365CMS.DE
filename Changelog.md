@@ -16,17 +16,6 @@
 
 ### v4.2.0 — in Entwicklung (Stand 17.11.2026) - Feature Release
 
-**Community-Modul, PR #1 von 5 (Pull Request #176): Schema v27, Rechte, Rolle `moderator`.** Planung und Übergabe: `DOC/workflow/specs/community/` (Schema und Rechte: `HANDOFF-PR2-PR5.md`). Dieser Eintrag beschreibt den Entwicklungsstand auf `main`, kein veröffentlichtes Release: `Version::CURRENT`, die Update-Manifeste und `RELEASE/` bleiben bei 4.1.8. Es gibt noch keine Oberfläche, keine Dienste und keine Routen des Moduls.
-
-**Community-Modul, PR #2a von 5: Fundament der Dienste** (Modul, Einstellungen, Repositories, Zugriffsentscheidung, Themen und Beiträge, Lesestatus, Core-Hook `user_role_changed`). Das Modul `community` ist neu und **standardmäßig aus** (*Admin → Module*); ohne Routen, Admin-Seiten und Vorlagen ist es in diesem Stand nur für Code und Tests nutzbar. Darstellung der Beiträge, Moderation, Meldungen, Benachrichtigungen, Anhänge und Suche folgen in PR #2b, das Captcha als eigener Pull Request. Planung und Übergabe: `HANDOFF-PR2-PR5.md` §1a und §2a.
-
-#### Hinweise für Entwicklungsinstallationen
-
-- **Datenbank.** Schema `v27` legt 27 neue Tabellen `community_*` an (117 insgesamt). Einzige Änderung an einer bestehenden Tabelle: `notifications` erhält `group_key` und `event_count` (Bündelung von Hinweisen je Thema; Bestandszeilen: kein Schlüssel, Zähler 1) samt Index `idx_user_group`. Die Anhebung läuft beim ersten Request nach dem Code-Wechsel automatisch (neuer Flag-Name, `MigrationManager` von `v26`, danach die Laufzeitprüfung); *Admin → Updates → Datenbank-Update* prüft die neuen Tabellen mit. Das Update-System selbst kennt `v27` erst mit dem Release 4.2.0.
-- **Rechte.** Beim ersten Durchlauf trägt der einmalige Schritt `capabilities_v27` die Standardrechte ein (siehe unten). Eine vorhandene eigene Rolle `moderator` wird zur Systemrolle: nicht mehr umbenenn- oder löschbar; die Standardrechte (Grundrechte wie ein Mitglied, `community.view`, `community.participate`, `community.moderate`) gelten wirksam zusätzlich zu ihren gespeicherten Rechten, ein ausdrücklicher Entzug (`granted = 0`) bleibt. Wer eine solche Rolle angelegt hat, prüft sie vor dem Update. Schlägt der Schritt fehl, meldet das Datenbank-Update den fehlenden Marker `capabilities_v27` und wiederholt ihn.
-- **Export/Import.** Ein Inhaltsexport einer Installation mit `v27` lässt sich in Installationen mit `v26` nicht importieren (der Import lehnt höhere Schema-Marken ab), auch wenn er keine Community-Daten enthält.
-- **Slugs mit Umlauten.** Neu erzeugte Slugs von Beiträgen, Kategorien, Tags und Seiten schreiben Umlaute um („Größe“ → `groesse` statt `gr-e`). Bestehende Slugs bleiben unverändert, es gibt keine Migration und keine neuen Weiterleitungen. Wer einen alten, zerstückelten Slug korrigieren will, ändert ihn von Hand und prüft, ob für die alte Adresse eine Weiterleitung nötig ist.
-
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.2.0** | 🟢 feat | Community / Modul | Neues Kernmodul `community` (`CoreModuleService`, Kategorie „Inhalte & Community“, abschaltbar, standardmäßig aus; erstes Modul mit `default_enabled = false`). `FeatureHooks\CommunityHooks` meldet nichts an, solange das Modul aus ist oder die Prüfung scheitert (fail-closed). Der Installer zeigt das Modul unmarkiert; `TESTS/admin-menu` und `MODULES.md` sind angepasst. |
@@ -53,13 +42,6 @@
 
 ### v4.1.9 — 17.11.2026 - Patch Release
 
-**Audit-Abschluss 4.1.0** · Release-Prüfung 4.1.0, Abschluss (PR #6): FUN-410-07, -10, -28, -33, -37, -38 und DOC-410-03 ([#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170), [#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171), [#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172), [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173), [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)). Der Quelltext liegt auf `main`; ein Paket 4.1.9 ist noch nicht gebaut (`Version::CURRENT` und die Manifeste bleiben bei 4.1.8). Schema bleibt `v26`.
-
-#### Hinweise zum Update von 4.1.8
-
-- **Kulanzzeit wirkt jetzt.** Die Einstellung *Abos → Pakete → Kulanzzeit nach Ablauf* (`grace_period_days`, Standard 3) gilt für Abos mit wiederkehrender Zahlung bei Stripe oder Mollie: Bleibt die Verlängerung aus, behält das Mitglied den Zugang bis zu so viele Tage über das Laufzeitende hinaus. Bisher endete der Zugang sofort mit `end_date`. Wer das nicht möchte, setzt den Wert auf 0.
-- **Bekannte Einschränkung (PERF-410-49):** Der WXR-Import des Plugins `cms-importer` läuft weiter in einem einzigen Request. Sehr große Exporte vor dem Import teilen oder `max_execution_time` erhöhen.
-
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.1.9** | 🔴 fix | Abos / Kulanzzeit und Anzeige (FUN-410-28) | Abos mit wiederkehrender Zahlung beim Anbieter, die nicht gekündigt sind, behalten den Zugang bis zu `grace_period_days` Tage über das Laufzeitende, bis die Verlängerung eintrifft. Gekündigte, erstattete, per Rechnung bezahlte und manuell zugewiesene Abos enden mit ihrem Laufzeitende. *Mitgliederbereich → Abo* zeigt „Nächste Verlängerung“ nur noch bei Anbieter-Verlängerung (sonst „Läuft bis“), richtet sich nach `current_period_end` und nennt die Kulanzzeit nur, wo sie wirkt. |
@@ -74,8 +56,6 @@
 
 ### v4.1.8 — 15.11.2026 - Patch Release
 
-**Feeds, Wissensdatenbank** · Release-Prüfung 4.1.0, FUN-410-34 und FUN-410-35 ([#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169)). Kumulatives Paket 4.1.1 bis 4.1.8, Schema bleibt `v26`.
-
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.1.8** | 🔴 fix | Feeds / Aufbewahrung (FUN-410-35) | Eine Aufbewahrung von 1–6 Tagen wird auf 7 Tage angehoben, sonst fehlten Artikel im wöchentlichen Digest. 0 bleibt „nie löschen“. |
@@ -85,8 +65,6 @@
 ### v4.1.7 — 15.11.2026 - Patch Release
 
 **Zahlungen: Erstattung, Rückbuchung, Kündigung** · Release-Prüfung 4.1.0, Funktionslücken FUN-410-21 und FUN-410-27 ([#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168)).
-
-Kumulatives Paket 4.1.1 bis 4.1.7. Schema bleibt `v26`. **Stripe:** im Webhook die Ereignisse `charge.refunded` und `charge.dispute.created` ergänzen (*Abos → Zahlungen* listet alle Ereignisse).
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
@@ -98,10 +76,6 @@ Kumulatives Paket 4.1.1 bis 4.1.7. Schema bleibt `v26`. **Stripe:** im Webhook d
 
 ### v4.1.6 — 15.11.2026 - Patch Release
 
-**Entscheidungen aus der Release-Prüfung** · Prüfbereich 3 und 5 (Medien, Rechte, Upload, Importer), Changelog-Korrektur ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)).
-
-Kumulatives Paket 4.1.1 bis 4.1.6; Hinweise zum Update von 4.1.0 wie bei 4.1.5. Schema bleibt `v26`.
-
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.1.6** | 🛡️ security | Rollen / Admin-Zugang (SEC-410-26) | Die Seiten *Zahlungen*, *Rechnungen*, *EditorJS Block Vorlagen* und *Webhooks* lassen sich über ihre Capability (`payments.manage`, `invoices.view`, `blocks.reusable`, `webhooks.manage`) an Rollen ohne Admin-Status vergeben. Alle übrigen Admin-Seiten verlangen weiter die Rolle *admin*. Die Rolle *editor* hat `blocks.reusable` seit 4.1.0 und erreicht damit jetzt die Block-Vorlagen. |
@@ -112,18 +86,6 @@ Kumulatives Paket 4.1.1 bis 4.1.6; Hinweise zum Update von 4.1.0 wie bei 4.1.5. 
 | **4.1.6** | ⬜ chore | Release | `Version::CURRENT` 4.1.6; beide Update-Manifeste mit Version 4.1.6, `critical: true` und neuer Prüfsumme; Pakete `RELEASE/365CMS-4.1.6-*` mit `README-4.1.6.md`. Die Pakete 4.1.5 bleiben unverändert. |
 
 ### v4.1.5 — 15.11.2026 - Patch Release
-
-**Performance, Caching, Core Web Vitals** · Release-Prüfung 4.1.0, PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166), Zwischenstand).
-
-#### Hinweise zum Update von 4.1.0
-
-- Das Paket 4.1.5 enthält alle Patch-Releases 4.1.1 bis 4.1.5. Es gibt kein eigenes Paket je Zwischenversion.
-- Sicherheitskorrekturen aus 4.1.1 und 4.1.4: Das Update wird für alle 4.1.0-Installationen empfohlen (`critical`).
-- Das Datenbankschema bleibt **v26**. Der Laufzeit-Abgleich stellt beim ersten Aufruf nach dem Update einmalig `posts.tags` und `post_revisions.tags` auf `TEXT` um (4.1.4). Ein manuelles Datenbank-Update ist nicht nötig.
-- Neue Aufbewahrungsregeln (*Datenaufbewahrung*): erledigte Mail-Jobs nach 30 Tagen, Mail-Protokoll nach 90 Tagen, Feature-Telemetrie nach 180 Tagen. Der tägliche Cron löscht beim ersten Lauf ältere Bestände blockweise.
-- Eigene Assets tragen jetzt `?v=`. Bilder unter `uploads/` sind nicht mehr ein Jahr `immutable` (1 Tag, danach Revalidierung). Wer Nginx nutzt: die neuen Regeln in `DOC/INSTALLATION.md` übernehmen.
-
-Messung (312 Beiträge, MariaDB): Monitor-Seiten 5–8 s → unter 0,1 s, `/admin/updates` 1,1 s → 0,1 s, Beitragsliste 98 → 36 Abfragen. Anonyme Beitragsseiten sind wieder cachebar. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`, Abschnitt PR #5.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
@@ -139,10 +101,6 @@ Messung (312 Beiträge, MariaDB): Monitor-Seiten 5–8 s → unter 0,1 s, `/admi
 | **4.1.5** | ⬜ chore | Release | `Version::CURRENT` 4.1.5. `CMS/update.json` und `CMS/marketplace/core/365cms/update.json` mit Version 4.1.5, `schema_version` `v26`, `critical: true` und neuer Prüfsumme. Pakete `RELEASE/365CMS-4.1.5-full.zip` und `-update.zip` mit `-SHA256SUMS.txt`, `-update.json` und `README-4.1.5.md`. |
 
 ### v4.1.4 — 15.11.2026 - Patch Release
-
-**Regressionen, Altlasten, PHP 8.4/8.5** · Release-Prüfung 4.1.0, PR #4 ([#164](https://github.com/PS-PhinIT/365CMS.DE/pull/164), [#165](https://github.com/PS-PhinIT/365CMS.DE/pull/165)).
-
-CI-Wächter für PHP 8.4/8.5, deterministischer Scan aller 895 PHP-Dateien ohne Befund, Laufzeitprüfung gegen MariaDB. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
@@ -160,10 +118,6 @@ CI-Wächter für PHP 8.4/8.5, deterministischer Scan aller 895 PHP-Dateien ohne 
 
 ### v4.1.3 — 15.11.2026 - Patch Release
 
-**Funktionen** · Release-Prüfung 4.1.0, PR #3 ([#163](https://github.com/PS-PhinIT/365CMS.DE/pull/163)).
-
-Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends gegen MariaDB ohne PHP-Fehler; dazu eine statische Prüfung aller 4.1.0-Funktionen. Nachweise und offene Funktionslücken: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
-
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.1.3** | 🔴 fix | Updates / Repository (FUN-410-01) | Update-Prüfung (Rückfall über GitHub), Doku-Sync und Changelog-Link zeigen auf `PS-PhinIT/365CMS.DE` statt auf die alte Adresse `PS-easyIT/365CMS.DE`. `Http\Client` folgt keinen Weiterleitungen, deshalb schlugen diese Abrufe fehl. Ein gespeicherter Altwert wird umgestellt. |
@@ -177,10 +131,6 @@ Laufzeit-Crawl aller 115 Admin-Routen, des Mitgliederbereichs und des Frontends 
 
 ### v4.1.2 — 15.11.2026 - Patch Release
 
-**Datenbank und Upgrade-Pfad** · Release-Prüfung 4.1.0, PR #2 ([#162](https://github.com/PS-PhinIT/365CMS.DE/pull/162)).
-
-Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen MariaDB 10.11 abgeglichen (auch mit dem `sql_mode` von MySQL 8): gleiche Tabellen, Spalten, Typen, Defaults, Indizes und Fremdschlüssel, Daten erhalten, wiederholte Läufe ohne Änderung. Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
-
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.1.2** | 🔴 fix | Datenbank / erster Request (DB-410-02) | Der erste Request nach Installation, Core-Update oder „Tabellen reparieren“ öffnete bis zu 152 Datenbankverbindungen und brauchte rund 7 s, bis der Server „Too many connections“ meldete: Die Schemaprüfung im Konstruktor von `Database` rief über `cms_ensure_role_permissions_table()` erneut `Database::instance()` auf. Die Funktion nimmt jetzt die Verbindung entgegen; der Request öffnet eine Verbindung. Eingeführt in der 4.1.0-Entwicklung (auch in den bis dahin gepackten 4.1.0-Paketen), 4.0.0 ist nicht betroffen. |
@@ -189,10 +139,6 @@ Neuinstallation v26 und die Updates von 4.0.0 (v25) und 3.5.x (v23) wurden gegen
 | **4.1.2** | ⬜ chore | Tests | Neu: `TESTS/schema-upgrade` (optional mit `CMS_TEST_DB_HOST`/`CMS_TEST_DB_USER`, sonst übersprungen): Neuinstallation und Upgrades gegen eine echte MySQL/MariaDB. Erweitert: `TESTS/schema-v26`, `TESTS/release-3.4.0`. |
 
 ### v4.1.1 — 15.11.2026 - Patch Release
-
-**Sicherheit** · Release-Prüfung 4.1.0, PR #1 ([#158](https://github.com/PS-PhinIT/365CMS.DE/pull/158)).
-
-Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
@@ -207,8 +153,6 @@ Befunde und Nachweise: `DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`.
 | **4.1.1** | ⬜ chore | Tests | Neu: `TESTS/security/audit-410.php`; erweitert: `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`. |
 
 ### v4.1.0 — 15.11.2026 - Feature Release
-
-Version 4.1.0 setzt die Roadmap aus `DOC/workflow/specs/v4.1/` um (Nachweise: `PROGRESS.md`): Bereich 1 – Identität (konfigurierbare Passwort-Richtlinie, rollenbasierter MFA-Zwang, Anmeldung mit Microsoft Entra ID), Bereich 2 (AVIF-Fassungen, Verwendungsnachweis für Medien), Bereich 3 (Vier-Augen-Prinzip, EditorJS Block Vorlagen, Ablauf- und Prüfdaten), Bereich 4 (Offsite-Backups, ausgehende Webhooks) und Bereich 5 (Zahlungen über Stripe/Mollie, Rechnungen nach § 14 UStG). Bereich 6 (CLI, Alerting) folgt mit 4.3.0. **Datenbankschema v26:** nach dem Update unter *Admin → Updates* das Datenbank-Update ausführen; den Cron mindestens stündlich laufen lassen. Vergleichsstand ist 4.0.0.
 
 #### Hinweise zum Update von 4.0.0
 
