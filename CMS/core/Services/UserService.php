@@ -30,6 +30,7 @@ class UserService {
         'editor' => 'Redakteur',
         'author' => 'Autor',
         'member' => 'Mitglied',
+        'moderator' => 'Moderator',
     ];
 
     private const DEFAULT_ROLE_CAPABILITIES = [
@@ -57,6 +58,13 @@ class UserService {
             'read',
             'edit_profile',
         ],
+        'moderator' => [
+            'read',
+            'edit_profile',
+            'community.view',
+            'community.participate',
+            'community.moderate',
+        ],
     ];
 
     private const REGISTRATION_BLOCKED_CAPABILITIES = [
@@ -68,6 +76,11 @@ class UserService {
         'view_analytics',
         'comments.moderate',
         'comments.delete',
+        // 4.2.0: Community-Moderation darf nie über die Registrierung vergeben werden (CommunityCapabilities::ELEVATED).
+        'community.moderate',
+        'community.ban',
+        'community.manage',
+        'community.view_private_data',
     ];
 
     private const REGISTRATION_BLOCKED_PREFIXES = [
@@ -843,6 +856,7 @@ class UserService {
                     'editor' => '✏️',
                     'author' => '📝',
                     'member' => '👤',
+                    'moderator' => '🛡️',
                     default => '🧩',
                 },
                 'description' => match ($role) {
@@ -850,6 +864,7 @@ class UserService {
                     'editor' => 'Kann alle Inhalte erstellen, bearbeiten und veröffentlichen',
                     'author' => 'Kann eigene Beiträge erstellen und veröffentlichen',
                     'member' => 'Kann sich einloggen und eigenes Profil bearbeiten',
+                    'moderator' => 'Moderiert die Community (Meldungen, Verwarnungen, befristete Sperren), ohne Zugang zu /admin',
                     default => 'Individuelle Rolle mit frei konfigurierbaren Berechtigungen',
                 },
                 'capabilities' => $this->getRoleCapabilities($role),
@@ -955,7 +970,9 @@ class UserService {
 
     private function isRegistrationRoleAllowed(string $role): bool {
         $role = strtolower(trim($role));
-        if ($role === '' || $role === 'admin') {
+        // 4.2.0: „moderator“ ist wie „admin“ eine Funktionsrolle und nie über die Registrierung zuweisbar, auch wenn ihr
+        // einzelne Capabilities entzogen wurden.
+        if ($role === '' || $role === 'admin' || $role === 'moderator') {
             return false;
         }
 

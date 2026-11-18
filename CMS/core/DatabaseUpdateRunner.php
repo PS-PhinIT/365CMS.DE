@@ -224,7 +224,7 @@ final class DatabaseUpdateRunner
 
         $known = array_flip($tables);
         $missing = [];
-        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, array_keys(SchemaManager::REQUIRED_COLUMNS)) as $table) {
+        foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27, array_keys(SchemaManager::REQUIRED_COLUMNS)) as $table) {
             if (!isset($known[$prefix . $table])) {
                 $missing[] = 'table:' . $table;
             }
@@ -242,6 +242,21 @@ final class DatabaseUpdateRunner
         $statusType = $columns[$prefix . 'posts']['status'] ?? '';
         if ($statusType === '' || SchemaManager::postStatusColumnNeedsWidening($statusType)) {
             $missing[] = 'column:posts.status (VARCHAR(20))';
+        }
+
+        // v27: Der einmalige Rechte-Schritt (capabilities_v27) setzt seinen Marker erst nach dem Eintragen; fehlt er,
+        // wiederholt MigrationManager::run(true) den Schritt (INSERT IGNORE, überschreibt nichts).
+        if (isset($known[$prefix . 'settings'])) {
+            try {
+                if ((int) $this->db->get_var(
+                    'SELECT COUNT(*) FROM ' . $prefix . 'settings WHERE option_name = ?',
+                    [\CMS\Services\Community\Support\CommunityCapabilities::MARKER]
+                ) === 0) {
+                    $missing[] = 'option:' . \CMS\Services\Community\Support\CommunityCapabilities::MARKER;
+                }
+            } catch (\Throwable) {
+                $missing[] = 'schema:unreadable';
+            }
         }
 
         return array_values(array_unique($missing));

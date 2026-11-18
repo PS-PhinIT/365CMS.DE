@@ -58,10 +58,15 @@ T::run('PERF-410-47/48: Importer-Bilder, AVIF nach der Antwort', static function
 T::run('DOC-410-01: Anzahl der Test-Suiten im Changelog', static function () use ($root): void {
     $changelog = (string) file_get_contents(dirname($root) . '/Changelog.md');
     T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 32 Suiten aus (in 4.1.6 korrigiert'), '4.1.0 nennt 32 Suiten');
-    // 4.1.5 hält den damaligen Stand fest (35 Suiten); spätere Suiten ändern diesen Eintrag nicht.
-    T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 35 Suiten aus: zu den 32 aus 4.1.0'), '4.1.5 nennt 35 Suiten');
+    // Der Eintrag 4.1.5 hält den Stand dieses Releases fest (35 Suiten); spätere Releases fügen Suiten hinzu (4.2.0: schema-v27),
+    // ohne den historischen Eintrag umzuschreiben. Geprüft wird die Zahl von 4.1.5 und dass es seitdem nicht weniger wurden.
     $suites = count(glob(dirname($root) . '/TESTS/*/run.php') ?: []);
-    T::check($suites >= 35, "mindestens die 35 Suiten aus 4.1.5 vorhanden ({$suites})");
+    T::check(str_contains($changelog, '`php TESTS/run-all.php` führt 35 Suiten aus: zu den 32 aus 4.1.0'), '4.1.5 nennt 35 Suiten (Stand des Releases)');
+    T::check($suites >= 35, "seit 4.1.5 sind keine Suiten weggefallen ({$suites})");
+    // Der laufende Entwicklungsabschnitt nennt die aktuelle Zahl (4.2.0: schema-v27 kam hinzu).
+    if (preg_match('/^### v4\.2\.0\b.*?(?=^### v)/ms', $changelog, $section) === 1) {
+        T::check(str_contains($section[0], "`php TESTS/run-all.php` führt {$suites} Suiten aus"), "v4.2.0 nennt die aktuelle Suitenzahl ({$suites})");
+    }
 });
 
 T::run('FUN-410-34/35: Wissensdatenbank-Import, Feed-Aufbewahrung', static function () use ($src): void {

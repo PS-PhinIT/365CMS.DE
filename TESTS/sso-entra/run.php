@@ -519,6 +519,7 @@ T::run('Zuordnung: automatische Verknüpfung nur unter allen Bedingungen', stati
     T::same('link_conflict', $case(static fn (MemoryIdentityStore $s) => $s->users[2]->status = 'unverified', $verified, $linkSettings())[0]['reason'] ?? null, 'Konto nicht aktiv');
     T::same('link_conflict', $case(static fn (MemoryIdentityStore $s) => $s->addUser(3, 'ERIKA@contoso.example', 'member'), $verified, $linkSettings())[0]['reason'] ?? null, 'zwei Konten mit der Adresse');
     T::same('link_conflict', $case(static fn (MemoryIdentityStore $s) => $s->users[2]->role = 'editor', $verified, $linkSettings())[0]['reason'] ?? null, 'Rolle editor (privilegiert)');
+    T::same('link_conflict', $case(static fn (MemoryIdentityStore $s) => $s->users[2]->role = 'moderator', $verified, $linkSettings())[0]['reason'] ?? null, 'Rolle moderator (Community-Moderation, privilegiert)');
     T::same('link_conflict', $case($noop, $verified, $linkSettings(), ['member'])[0]['reason'] ?? null, 'Rolle mit MFA-Zwang');
     T::same('link_conflict', $case(static fn (MemoryIdentityStore $s) => $s->createIdentity(2, 'entra', TENANT, '0f0f0f0f-0000-0000-0000-000000000000', '', false), $verified, $linkSettings())[0]['reason'] ?? null, 'Konto ist schon mit einer anderen Entra-Identität verknüpft');
 });
@@ -558,6 +559,8 @@ T::run('Provisioning und Rollen-Mapping', static function () use ($claims, $link
     T::same(['provision_failed', $before], [$race['reason'] ?? null, count($store->users)], 'Bindung scheitert → angelegtes Konto wird entfernt');
 
     T::same('member', EntraSettings::normalize(['default_role' => 'admin'], $roles)['default_role'], 'Standardrolle nie admin');
+    T::same('member', EntraSettings::normalize(['default_role' => 'moderator'], [...$roles, 'moderator'])['default_role'], 'Standardrolle nie moderator (Community-Moderation nur über eine Mapping-Regel)');
+    T::same('editor', EntraSettings::normalize(['default_role' => 'editor'], [...$roles, 'moderator'])['default_role'], 'andere Rollen bleiben als Standardrolle wählbar');
     T::same(null, IdentityLinker::mapRole(['roles' => ['CMS.Admin']], $linkSettings(['role_mapping' => $mapping]), $roles), 'mapRole: Admin-Regel ohne Erlaubnis übersprungen');
     T::check(IdentityLinker::hasGroupOverage(['_claim_names' => ['groups' => 'src1']]), 'Gruppen-Overage erkannt');
 });

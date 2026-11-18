@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Community-Modul (Forum)
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** Planung · noch kein Code · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Update:** 2026-11-15
+> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** PR #1 geliefert (Schema v27, Rechte `community.*`, Rolle `moderator`); Dienste, Admin, Frontend und DSGVO folgen · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Update:** 2026-11-17
 > **Ersetzt:** den früheren Integrationsfahrplan für das Plugin `cms-forum` · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
@@ -31,6 +31,7 @@ Datenübernahme abgelöst; seine öffentlichen Adressen bleiben erreichbar.
 | [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) | Bedrohungsmodell, Schutzmaßnahmen (XSS, CSRF, SQL, Uploads, Spam, Bots), DSGVO, Löschfristen |
 | [THEME-UI.md](THEME-UI.md) | Vorlagen, Theme-Overrides, Komponenten, Mobile-First, Barrierefreiheit, SEO, Auswirkungen auf `cms-phinit` |
 | [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) | Paritäts-Checkliste Plugin → Core, URL-Zuordnung, Datenübernahme, Plugin-Abschaltung |
+| [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übergabe nach PR #1**: umgesetzter Stand von Schema v27 (Tabellen, Spalten, Indizes), Capabilities und Rolle `moderator`, Aufgaben je Pull Request (PR #2 bis #5), Abweichungen von den Plänen und offene Entscheidungen |
 | [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Umsetzungsfahrplan 4.2.0**: Ausgangslage nach 4.1.0, Arbeitspakete P1 mit Lieferumfang, Sicherheits-Gate und Tests, Tabellen v27, Capabilities, Datenschutz-/Moderationsregeln, CSP-/Security-Vorgaben, Freigabe-Kriterien |
 | [ROADMAP.md](ROADMAP.md) | Phasen, Arbeitspakete mit Abhängigkeiten und Aufwand, Fortschritts-Checkliste |
 | [TEST-PLAN.md](TEST-PLAN.md) | Test-Suiten, Prüffälle, Gegenproben, Laufzeit- und Browserprüfungen |
