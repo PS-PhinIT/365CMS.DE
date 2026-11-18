@@ -65,6 +65,62 @@ class Hooks
     }
 
     /**
+     * Wie `doAction()`, aber jeder Callback läuft einzeln abgesichert: wirft einer, wird `$onError($exception, $callback)`
+     * aufgerufen (falls gesetzt) und die übrigen Callbacks laufen trotzdem. Zählt wie `doAction()` für `didAction()` und
+     * beachtet die einmaligen Dokument-Abschluss-Hooks. Wirft nie (auch nicht, wenn `$onError` wirft).
+     *
+     * @param (callable(\Throwable, callable): void)|null $onError
+     */
+    public static function doActionIsolated(string $tag, ?callable $onError, ...$args): void
+    {
+        if (in_array($tag, self::ONCE_PER_REQUEST_ACTIONS, true) && isset(self::$firedActions[$tag])) {
+            return;
+        }
+        self::$firedActions[$tag] = (self::$firedActions[$tag] ?? 0) + 1;
+
+        foreach (self::getCallbacks($tag, 'action') as $callback) {
+            try {
+                call_user_func_array($callback, $args);
+            } catch (\Throwable $e) {
+                if ($onError === null) {
+                    continue;
+                }
+                try {
+                    $onError($e, $callback);
+                } catch (\Throwable) {
+                    // Die Fehlerbehandlung selbst darf die übrigen Callbacks nicht verhindern.
+                }
+            }
+        }
+    }
+
+    /**
+     * Die registrierten Callbacks eines Tags in Ausführungsreihenfolge (Priorität aufsteigend, innerhalb einer Priorität in
+     * der Reihenfolge der Registrierung), für Aufrufer, die eine Kette selbst durchlaufen (einzelne Callbacks absichern,
+     * Zwischenergebnisse prüfen). Ändert nichts; `$type` ist `filter` oder `action`, sonst und für unbekannte Tags kommt eine
+     * leere Liste.
+     *
+     * @return list<callable>
+     */
+    public static function getCallbacks(string $tag, string $type = 'filter'): array
+    {
+        $registry = match ($type) {
+            'filter' => self::$filters[$tag] ?? [],
+            'action' => self::$actions[$tag] ?? [],
+            default => [],
+        };
+        ksort($registry);
+        $callbacks = [];
+        foreach ($registry as $group) {
+            foreach ($group as $callback) {
+                $callbacks[] = $callback;
+            }
+        }
+
+        return $callbacks;
+    }
+
+    /**
      * Wie oft wurde ein Action-Tag im aktuellen Request bereits ausgelöst?
      */
     public static function didAction(string $tag): int

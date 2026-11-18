@@ -31,6 +31,21 @@ T::run('Umlaute und Akzente', static function (): void {
     T::same('', Slug::fromText('日本語'), 'Schrift ohne Umschrift ergibt leeren Slug');
 });
 
+T::run('Buchstaben ohne Zerlegung (B10): ł ø æ œ þ đ ð ı bleiben lesbar statt zu „-“ zu werden', static function (): void {
+    // Diese Buchstaben haben in Unicode keine Zerlegung in Grundbuchstabe und Akzent: ohne eigene Umschrift gingen sie verloren.
+    T::same('lodz-nandu', Slug::fromText('Łódź Ñandú'), 'Łódź Ñandú');
+    T::same('soren-orsted', Slug::fromText('Søren Ørsted'), 'Søren Ørsted');
+    T::same('aeble-oeuvre', Slug::fromText('Æble & Œuvre'), 'Æble & Œuvre');
+    T::same('zazolc-gesla-jazn', Slug::fromText('Zażółć gęślą jaźń'), 'Zażółć gęślą jaźń');
+    T::same('dorde', Slug::fromText('Đorđe'), 'Đorđe (đ und Đ)');
+    T::same('thorr-odinn', Slug::fromText('Þórr Óðinn'), 'Þórr Óðinn (þ → th, ð → d)');
+    T::same('istanbul-diyarbakir', Slug::fromText('İstanbul Diyarbakır'), 'türkisches ı und İ (İ zerlegt sich in i und Punkt)');
+    foreach (['ł' => 'l', 'ø' => 'o', 'æ' => 'ae', 'œ' => 'oe', 'þ' => 'th', 'đ' => 'd', 'ð' => 'd', 'ı' => 'i'] as $letter => $ascii) {
+        T::same('x' . $ascii . 'y', Slug::fromText('x' . $letter . 'y'), 'Umschrift ' . $letter . ' → ' . $ascii);
+    }
+    T::same('groesse-lodz', Slug::fromText('Größe Łódź'), 'ältere Umschrift (ä ö ü ß) bleibt neben der neuen');
+});
+
 T::run('Reine ASCII-Titel unverändert', static function (): void {
     // Erwartung = frühere Logik: Kleinschreibung, alles außerhalb [a-z0-9-] → „-“, Bindestriche zusammenfassen.
     $legacy = static function (string $text): string {
@@ -73,11 +88,11 @@ T::run('Ohne intl und mbstring (php -n)', static function () use ($root): void {
         return;
     }
     $code = 'define("ABSPATH", ' . var_export($root, true) . '); require ABSPATH . "core/Slug.php";'
-        . ' echo json_encode([CMS\\Slug::fromText($argv[1]), CMS\\Slug::fromText($argv[2]), CMS\\Slug::fromText($argv[3])]);';
+        . ' echo json_encode([CMS\\Slug::fromText($argv[1]), CMS\\Slug::fromText($argv[2]), CMS\\Slug::fromText($argv[3]), CMS\\Slug::fromText($argv[4])]);';
     $out = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' -n -r ' . escapeshellarg($code) . ' -- '
         . escapeshellarg('Übersicht: Größe der Postfächer prüfen') . ' ' . escapeshellarg('Café & Crème') . ' '
-        . escapeshellarg('Exchange Online PowerShell v3'));
-    T::same(['uebersicht-groesse-der-postfaecher-pruefen', 'cafe-creme', 'exchange-online-powershell-v3'], json_decode($out, true), 'Rückfall ohne Normalizer');
+        . escapeshellarg('Exchange Online PowerShell v3') . ' ' . escapeshellarg('Łódź Søren Æble'));
+    T::same(['uebersicht-groesse-der-postfaecher-pruefen', 'cafe-creme', 'exchange-online-powershell-v3', 'lodz-soren-aeble'], json_decode($out, true), 'Rückfall ohne Normalizer (auch ł ø æ, Großbuchstaben ohne mbstring)');
 });
 
 T::run('Einbindung', static function () use ($root): void {

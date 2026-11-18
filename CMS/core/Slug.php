@@ -26,6 +26,10 @@ final class Slug
     private const TRANSLITERATION = [
         'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss',
         'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue', 'ẞ' => 'ss',
+        // Buchstaben ohne Zerlegung in Grundbuchstabe und Akzent (Unicode kennt für sie keinen kombinierenden Akzent), ohne
+        // diese Zeilen würden sie zu „-“ (Łódź → odz, Søren → s-ren): Polnisch, Dänisch/Norwegisch, Isländisch, Kroatisch, Türkisch.
+        'ł' => 'l', 'ø' => 'o', 'æ' => 'ae', 'œ' => 'oe', 'þ' => 'th', 'đ' => 'd', 'ð' => 'd', 'ı' => 'i',
+        'Ł' => 'l', 'Ø' => 'o', 'Æ' => 'ae', 'Œ' => 'oe', 'Þ' => 'th', 'Đ' => 'd', 'Ð' => 'd',
     ];
 
     /**

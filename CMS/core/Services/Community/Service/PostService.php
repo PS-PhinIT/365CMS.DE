@@ -125,7 +125,9 @@ final class PostService
 
     /**
      * Text eines Beitrags: Zeilenenden vereinheitlicht (`\n`), Steuerzeichen außer Zeilenumbruch und Tabulator entfernt,
-     * Rand getrimmt. `null` bei ungültigem UTF-8.
+     * Formatzeichen (Nullbreite, Richtungsumschalter, weiche Trennstriche, BOM, Tag-Zeichen) entfernt (`stripFormatCharacters()`),
+     * Rand getrimmt. Bleibt kein sichtbares Zeichen übrig (nur Leerraum, Nullbreite, Füllzeichen), ist das Ergebnis leer und
+     * damit `body_too_short`. `null` bei ungültigem UTF-8.
      */
     public static function normalizeBody(string $body): ?string
     {
@@ -133,8 +135,36 @@ final class PostService
             return null;
         }
         $body = str_replace(["\r\n", "\r"], "\n", $body);
+        $body = trim(self::stripFormatCharacters((string) preg_replace('/[^\P{Cc}\n\t]/u', '', $body)));
 
-        return trim((string) preg_replace('/[^\P{Cc}\n\t]/u', '', $body));
+        return self::hasVisibleText($body) ? $body : '';
+    }
+
+    /**
+     * Entfernt Formatzeichen (Unicode-Kategorie Cf): Nullbreite-Leerzeichen, Richtungsumschalter, Wortverbinder, weiche
+     * Trennstriche, BOM, Tag-Zeichen. Ausnahme: ZWNJ (U+200C) und ZWJ (U+200D) zwischen zwei Buchstaben, Zeichen mit
+     * Akzent oder Symbolen bleiben, weil persische Wörter und Emoji-Folgen (Familie, Beruf, Flagge) sie brauchen; am Rand, doppelt oder neben
+     * Leerraum sind sie unsichtbar und entfallen. Der Text muss gültiges UTF-8 sein.
+     */
+    public static function stripFormatCharacters(string $text): string
+    {
+        return (string) preg_replace(
+            '/(?<![\p{L}\p{M}\p{So}\p{Sk}])[\x{200C}\x{200D}]|[\x{200C}\x{200D}](?![\p{L}\p{M}\p{So}\p{Sk}])|[^\x{200C}\x{200D}\P{Cf}]/u',
+            '',
+            $text
+        );
+    }
+
+    /**
+     * Enthält der Text mindestens ein sichtbares Zeichen (Buchstabe, Ziffer, Satzzeichen, Symbol)? Kombinierende Zeichen und
+     * Füllzeichen ohne Darstellung (Hangul-Füller U+115F/U+1160/U+3164/U+FFA0, Braille-Leerzeichen U+2800, U+1D159,
+     * Combining Grapheme Joiner U+034F) zählen nicht, ebenso wenig Leerraum.
+     */
+    public static function hasVisibleText(string $text): bool
+    {
+        $text = (string) preg_replace('/[\p{M}\x{034F}\x{115F}\x{1160}\x{2800}\x{3164}\x{FFA0}\x{1D159}]/u', '', $text);
+
+        return preg_match('/[\p{L}\p{N}\p{P}\p{S}]/u', $text) === 1;
     }
 
     /** Grund einer Bearbeitung: eine Zeile ohne Steuerzeichen, höchstens MAX_REASON Zeichen; leer ergibt `null`. */
@@ -584,7 +614,9 @@ final class PostService
         $lastOfTopic = null;
         if ((int) ($topic['last_post_id'] ?? 0) === $postId) {
             $latest = $this->posts->lastPublishedInTopic($topicId);
-            $lastOfTopic = ['post_id' => $latest['id'] ?? null, 'post_at' => $latest['created_at'] ?? null, 'poster_id' => $latest['user_id'] ?? null];
+            // Ohne veröffentlichten Beitrag (der Themenstart wartet noch auf Freigabe) gilt die Anlagezeit des Themas:
+            // `last_post_at` ist nie NULL, die Liste sortiert danach.
+            $lastOfTopic = ['post_id' => $latest['id'] ?? null, 'post_at' => $latest['created_at'] ?? ($topic['created_at'] ?? null), 'poster_id' => $latest['user_id'] ?? null];
         }
         $this->topics->applyCounters($topicId, -1, $now, $lastOfTopic);
 
@@ -633,10 +665,18 @@ final class PostService
         if (!$decision->allowed) {
             return self::denied($decision);
         }
-        $after = max(0, (int) $afterId);
+        // Obergrenze PHP_INT_MAX - 1: `$after + 1` (Beginn des Platzhalterbereichs) darf nicht überlaufen (sonst TypeError); eine so große ID
+        // bezeichnet ohnehin keinen Beitrag, das Ergebnis ist eine leere letzte Seite.
+        $after = max(0, min(PHP_INT_MAX - 1, (int) $afterId));
         $limit = max(1, min(PostRepository::MAX_LIMIT, $limit ?? $this->settings->int('posts_per_page')));
 
         try {
+            // Thema und Forum einmal laden und jedem can('read')-Aufruf der Seite mitgeben: sonst lädt die Rechteprüfung beides je Beitrag neu.
+            $topic = $this->topics->find($topicId);
+            $forum = $topic === null ? null : $this->forums->find((int) $topic['forum_id']);
+            if ($topic === null || $forum === null) {
+                return self::failure('not_found');
+            }
             $page = $this->posts->listPublished($topicId, $after, $limit);
             // Platzhalter zwischen dem Ende der vorigen und dem Ende dieser Seite; die letzte Seite reicht bis zum Ende.
             $to = $page->next === null ? PHP_INT_MAX : (int) $page->next;
@@ -645,7 +685,7 @@ final class PostService
 
             $items = [];
             foreach ($rows as $row) {
-                $items[] = $this->viewItem($viewer, $row, $nowTs);
+                $items[] = $this->viewItem($viewer, $row, $topic, $forum, $nowTs);
             }
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('post.list', $e, ['topic_id' => $topicId]);
@@ -696,11 +736,13 @@ final class PostService
 
     /**
      * @param array<string, mixed> $row Beitragszeile oder Platzhalterzeile
+     * @param array<string, mixed> $topic Zeile des Themas (einmal je Seite geladen)
+     * @param array<string, mixed> $forum Zeile des Forums (einmal je Seite geladen)
      * @return array<string, mixed>
      */
-    private function viewItem(?int $viewer, array $row, int $nowTs): array
+    private function viewItem(?int $viewer, array $row, array $topic, array $forum, int $nowTs): array
     {
-        $decision = ($this->can)($viewer, 'read', ['post_id' => (int) $row['id'], 'post' => $row, 'now' => $nowTs]);
+        $decision = ($this->can)($viewer, 'read', ['post_id' => (int) $row['id'], 'post' => $row, 'topic' => $topic, 'forum' => $forum, 'now' => $nowTs]);
         $full = $decision->allowed && $decision->view !== 'placeholder';
         if ($full && !array_key_exists('body', $row)) {
             // Platzhalterzeilen haben keinen Text: wer den Inhalt sehen darf (Autor, Moderation), lädt ihn.

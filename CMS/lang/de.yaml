@@ -3404,7 +3404,6 @@ default:
   "community.error.post_not_found": "Der Beitrag wurde nicht gefunden."
   "community.error.first_post": "Der erste Beitrag lässt sich nur zusammen mit dem Thema löschen."
   "community.error.has_replies": "Das Thema hat Antworten und kann nicht gelöscht werden."
-  "community.error.not_deletable": "Dieser Inhalt kann nicht gelöscht werden."
   "community.error.edit_conflict": "Der Beitrag wurde inzwischen geändert. Bitte lade ihn neu und bearbeite ihn erneut."
   "community.error.new_posts": "Seit du das Thema geöffnet hast, sind neue Antworten eingegangen. Sende erneut, wenn du trotzdem antworten möchtest."
   "community.error.quote_unavailable": "Dieser Beitrag kann nicht zitiert werden."

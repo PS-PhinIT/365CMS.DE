@@ -66,7 +66,6 @@ final class Codes
         'post_not_found',
         'first_post',
         'has_replies',
-        'not_deletable',
         'edit_conflict',
         'new_posts',
         'quote_unavailable',

@@ -27,7 +27,15 @@ final class TopicRepository extends AbstractRepository
     public const STATUSES = ['published', 'pending', 'hidden', 'deleted', 'trash', 'moved'];
     /** Größte Seite der Themenliste. */
     public const MAX_LIMIT = 100;
-    /** Höchstzahl angepinnter Themen auf der ersten Seite einer Liste. */
+    /**
+     * Höchstzahl wirksam angepinnter Themen je Forum und Status auf der ersten Seite einer Liste. Das ist zugleich die Invariante
+     * für das Anheften (PR #2b): Der Strom einer Liste fragt `is_pinned = 0`; ein angepinntes Thema jenseits dieser Grenze stünde
+     * in keiner Seite (weder in `pinned()` noch im Strom, Befund B24). Beide in den Strom einzumischen ginge nur mit
+     * `is_pinned IN (0, 1)` und damit ohne den Index `idx_community_topics_forum_list` für die Sortierung (Filesort über alle
+     * Themen des Forums, siehe Befund B5): zu teuer für einen Randfall. Der Anheft-Dienst muss deshalb beim Anheften ablehnen,
+     * wenn das Forum schon MAX_PINNED wirksame Pins hat; ein Ablauf von `pinned_until` gibt Platz frei, ohne dass die Liste
+     * etwas verliert (abgelaufene Pins gehören zum Strom).
+     */
     public const MAX_PINNED = 50;
 
     private const TABLE = 'community_topics';
@@ -150,7 +158,8 @@ final class TopicRepository extends AbstractRepository
     /**
      * Seite der Themenliste eines Forums, jüngste Aktivität zuerst (Index `idx_community_topics_forum_list`).
      *
-     * - Ohne Cursor (erste Seite) stehen zuerst die angepinnten Themen (höchstens MAX_PINNED, nach Aktivität sortiert),
+     * - Ohne Cursor (erste Seite) stehen zuerst die angepinnten Themen (höchstens MAX_PINNED, nach Aktivität sortiert; mehr Pins
+     *   sind unerreichbar, das Anheften erzwingt die Grenze, siehe MAX_PINNED),
      *   danach bis zu `$limit` Themen des Stroms. Mit Cursor kommen nur Themen des Stroms.
      * - Ein Thema, dessen `pinned_until` abgelaufen ist, gehört zum Strom (Sortierung nach Aktivität); `is_pinned` und
      *   `is_locked` der Zeilen sind die wirksamen Werte (`withEffectiveState()`).

@@ -199,10 +199,70 @@ abstract class AbstractRepository
         return [$plus, $minus, $plus, $minus];
     }
 
-    /** Verletzung eines UNIQUE-Index (SQLSTATE 23000; MariaDB 1062, SQLite 19). */
+    /**
+     * Verletzung eines UNIQUE-Index. SQLSTATE 23000 steht für jede Integritätsverletzung (auch `NOT NULL` 1048 und
+     * Fremdschlüssel 1451/1452); ein Fachfehler `slug_taken` darf nur der Treibercode auslösen: MariaDB/MySQL 1062 (Duplicate
+     * entry). SQLite meldet für jede Art von Constraint 19 und unterscheidet nur im Text („UNIQUE constraint failed“).
+     * Alle übrigen Integritätsverletzungen sind Programmfehler und werden vom Aufrufer weitergeworfen.
+     */
     final protected static function isDuplicateKey(\PDOException $e): bool
     {
-        return (string) $e->getCode() === '23000';
+        if ((string) $e->getCode() !== '23000') {
+            return false;
+        }
+        $driverCode = (int) ($e->errorInfo[1] ?? 0);
+
+        return $driverCode === 1062
+            || ($driverCode === 19 && str_contains((string) ($e->errorInfo[2] ?? $e->getMessage()), 'UNIQUE constraint failed'));
+    }
+
+    /**
+     * Passen die Werte nicht in ihre Spalten (laut Schema)? Spaltenlängen und -bereiche prüft ein Repository vor dem Schreiben:
+     * die Datenbank würde sonst im strengen Modus eine `PDOException` werfen (1406 zu lang, 1264 außerhalb des Bereichs,
+     * 1366 ungültiges UTF-8) oder ohne `STRICT` still kürzen und klemmen. Nur vorhandene Schlüssel werden geprüft.
+     *
+     * Grenzen je Spalte (`$limits`): `['chars', N, nullable]` (VARCHAR(N), Zeichen), `['bytes', N, nullable]` (TEXT, Bytes),
+     * `['uint']` (INT UNSIGNED, ganze Zahl 0 bis 4294967295, nie `null`), `['flag']` (Schalter, nie `null`; jeder Wert wird später zu 0/1).
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, array{0: string, 1?: int, 2?: bool}> $limits
+     */
+    final protected static function exceeds(array $data, array $limits): bool
+    {
+        foreach ($limits as $column => $limit) {
+            if (!array_key_exists($column, $data)) {
+                continue;
+            }
+            $value = $data[$column];
+            if ($limit[0] === 'flag') {
+                if ($value === null || is_array($value) || is_object($value)) {
+                    return true;
+                }
+                continue;
+            }
+            if ($limit[0] === 'uint') {
+                $number = is_int($value) ? $value : (is_string($value) && preg_match('/^\d{1,10}$/', $value) === 1 ? (int) $value : -1);
+                if ($number < 0 || $number > 4294967295) {
+                    return true;
+                }
+                continue;
+            }
+            if ($value === null) {
+                if (!($limit[2] ?? false)) {
+                    return true;
+                }
+                continue;
+            }
+            if (!is_string($value) || !mb_check_encoding($value, 'UTF-8')) {
+                return true;
+            }
+            $length = $limit[0] === 'bytes' ? strlen($value) : mb_strlen($value, 'UTF-8');
+            if ($length > (int) ($limit[1] ?? 0)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -1436,6 +1436,480 @@ function rScenarioLastPublished(Database $db): void
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Nachprüfung (B22, B24, B28, B33/B34/B40, B37, B38, B43): Savepoints, Wiederholung, Spaltengrenzen, reservierte Slugs, UNIQUE
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** PDOException wie ein Treiberfehler (SQLSTATE, Treibercode, Text) für die Fehlerinjektion über `throwOn` und für Transaction::run. */
+final class RepoDriverException extends \PDOException
+{
+    public function __construct(string $sqlState, int $driverCode, string $message)
+    {
+        parent::__construct("SQLSTATE[{$sqlState}]: {$message}");
+        $this->code = $sqlState;
+        $this->errorInfo = [$sqlState, $driverCode, $message];
+    }
+}
+
+/**
+ * B33/B40: Verschachtelung über SAVEPOINT mit je Tiefe eigenem Namen. Vorher hieß jede Ebene `cms_community_tx`: ab drei Ebenen
+ * löschte das RELEASE der inneren den Savepoint der äußeren, und das der mittleren scheiterte mit Fehler 1305.
+ */
+function rScenarioTransactionNesting(Database $db): void
+{
+    $titles = static fn (): array => array_map(static fn (array $row): string => (string) $row['title'], $db->rows('community_forums', [], 'id'));
+    $pdo = $db->getPdo();
+
+    // Drei und vier Ebenen, alles gelingt
+    Transaction::run($db, function () use ($db): void {
+        $db->forum(['title' => 'E1']);
+        Transaction::run($db, function () use ($db): void {
+            $db->forum(['title' => 'E2']);
+            Transaction::run($db, function () use ($db): void {
+                $db->forum(['title' => 'E3']);
+                Transaction::run($db, static function () use ($db): void {
+                    $db->forum(['title' => 'E4']);
+                });
+            });
+        });
+    });
+    T::same(['E1', 'E2', 'E3', 'E4'], $titles(), 'vier Ebenen: alles gespeichert (vorher scheiterte schon die dritte mit „SAVEPOINT does not exist“)');
+    T::same(false, $pdo->inTransaction(), 'danach ist keine Transaktion offen');
+    $db->execute('DELETE FROM ' . $db->getPrefix() . 'community_forums');
+
+    // Die mittlere Ebene scheitert, die äußere fängt: nur die innere Schreibung der mittleren und der dritten Ebene entfällt
+    Transaction::run($db, function () use ($db): void {
+        $db->forum(['title' => 'E1']);
+        try {
+            Transaction::run($db, function () use ($db): void {
+                $db->forum(['title' => 'E2']);
+                Transaction::run($db, function () use ($db): void {
+                    $db->forum(['title' => 'E3']);
+                });
+                throw new \RuntimeException('Mitte');
+            });
+        } catch (\RuntimeException) {
+        }
+        $db->forum(['title' => 'E1b']);
+    });
+    T::same(['E1', 'E1b'], $titles(), 'mittlere Ebene scheitert: ihre Schreibung und die der dritten Ebene sind zurückgerollt, die äußere bleibt und macht weiter');
+    $db->execute('DELETE FROM ' . $db->getPrefix() . 'community_forums');
+
+    // Die innerste Ebene scheitert, die mittlere fängt und schreibt weiter
+    Transaction::run($db, function () use ($db): void {
+        $db->forum(['title' => 'E1']);
+        Transaction::run($db, function () use ($db): void {
+            $db->forum(['title' => 'E2']);
+            try {
+                Transaction::run($db, function () use ($db): void {
+                    $db->forum(['title' => 'E3']);
+                    throw new \RuntimeException('Innen');
+                });
+            } catch (\RuntimeException) {
+            }
+            $db->forum(['title' => 'E2b']);
+        });
+    });
+    T::same(['E1', 'E2', 'E2b'], $titles(), 'innerste Ebene scheitert: nur ihre Schreibung entfällt, die mittlere schreibt weiter');
+    $db->execute('DELETE FROM ' . $db->getPrefix() . 'community_forums');
+
+    // Geschwister auf derselben Ebene (die Tiefe fällt nach jedem Aufruf zurück), eines davon scheitert
+    Transaction::run($db, function () use ($db): void {
+        Transaction::run($db, function () use ($db): void {
+            Transaction::run($db, function () use ($db): void {
+                $db->forum(['title' => 'A']);
+            });
+            try {
+                Transaction::run($db, function () use ($db): void {
+                    $db->forum(['title' => 'B']);
+                    throw new \RuntimeException('Geschwister');
+                });
+            } catch (\RuntimeException) {
+            }
+            Transaction::run($db, function () use ($db): void {
+                $db->forum(['title' => 'C']);
+            });
+        });
+    });
+    T::same(['A', 'C'], $titles(), 'Geschwister auf derselben Ebene: das gescheiterte entfällt, die übrigen bleiben');
+    $db->execute('DELETE FROM ' . $db->getPrefix() . 'community_forums');
+
+    // Ein Fehler reißt alle drei Ebenen mit
+    try {
+        Transaction::run($db, function () use ($db): void {
+            $db->forum(['title' => 'E1']);
+            Transaction::run($db, function () use ($db): void {
+                $db->forum(['title' => 'E2']);
+                Transaction::run($db, function () use ($db): void {
+                    $db->forum(['title' => 'E3']);
+                    throw new \RuntimeException('Ganz innen');
+                });
+            });
+        });
+        T::check(false, 'der Fehler der innersten Ebene erreicht den Aufrufer');
+    } catch (\RuntimeException $e) {
+        T::same('Ganz innen', $e->getMessage(), 'der Fehler der innersten Ebene erreicht den Aufrufer unverändert (kein 1305)');
+    }
+    T::same([[], false], [$titles(), $pdo->inTransaction()], 'Fehler in der dritten Ebene: alles zurückgerollt, keine Transaktion offen');
+
+    // Danach beginnt die Zählung wieder bei der äußersten Ebene; eine von außen geöffnete Transaktion zählt als Ebene 0
+    $pdo->beginTransaction();
+    Transaction::run($db, function () use ($db): void {
+        $db->forum(['title' => 'X1']);
+        Transaction::run($db, function () use ($db): void {
+            $db->forum(['title' => 'X2']);
+            Transaction::run($db, function () use ($db): void {
+                $db->forum(['title' => 'X3']);
+            });
+        });
+    });
+    $pdo->rollBack();
+    T::same([], $titles(), 'in einer von außen geöffneten Transaktion: drei Ebenen laufen, die äußere Rücknahme nimmt alles zurück');
+    T::same('ok', Transaction::run($db, static fn (): string => 'ok'), 'die äußerste Ebene arbeitet danach wieder normal');
+}
+
+/** B34: Wiederholung nur bei Deadlock (1213, SQLSTATE 40001), nicht bei Lock-Timeout (1205). */
+function rScenarioTransactionRetry(Database $db): void
+{
+    $titles = static fn (): array => array_map(static fn (array $row): string => (string) $row['title'], $db->rows('community_forums', [], 'id'));
+    $pdo = $db->getPdo();
+    $run = static function (\Closure $fail, int $failures) use ($db): array {
+        $attempts = 0;
+        try {
+            $result = Transaction::run($db, static function () use ($db, $fail, $failures, &$attempts): string {
+                $attempts++;
+                $db->forum(['title' => 'Versuch ' . $attempts]);
+                if ($attempts <= $failures) {
+                    throw $fail();
+                }
+
+                return 'fertig';
+            });
+        } catch (\Throwable $e) {
+            return [$attempts, $e::class . ': ' . $e->getMessage()];
+        }
+
+        return [$attempts, $result];
+    };
+
+    $deadlock = static fn (): \PDOException => new RepoDriverException('40001', 1213, 'Deadlock found when trying to get lock; try restarting transaction');
+    $serialization = static fn (): \PDOException => new RepoDriverException('40001', 0, 'Serialization failure');
+    $timeout = static fn (): \PDOException => new RepoDriverException('HY000', 1205, 'Lock wait timeout exceeded; try restarting transaction');
+
+    T::same([3, 'fertig'], $run($deadlock, 2), 'Deadlock (1213): zweimal wiederholt, der dritte Versuch gelingt');
+    T::same(['Versuch 3'], $titles(), 'Deadlock: nur der Versuch, der gelingt, ist gespeichert (die früheren sind zurückgerollt)');
+    $db->execute('DELETE FROM ' . $db->getPrefix() . 'community_forums');
+    T::same([3, 'fertig'], $run($serialization, 2), 'SQLSTATE 40001 ohne Treibercode: wiederholt');
+    $db->execute('DELETE FROM ' . $db->getPrefix() . 'community_forums');
+    $exhausted = $run($deadlock, 99);
+    T::same(Transaction::MAX_ATTEMPTS, $exhausted[0], 'Deadlock bleibt bestehen: genau MAX_ATTEMPTS Versuche');
+    T::check(str_starts_with($exhausted[1], RepoDriverException::class . ': SQLSTATE[40001]'), 'danach geht der Fehler an den Aufrufer', $exhausted[1]);
+    T::same([[], false], [$titles(), $pdo->inTransaction()], 'nach dem Aufgeben: nichts gespeichert, keine Transaktion offen');
+
+    $started = microtime(true);
+    $timedOut = $run($timeout, 99);
+    T::same(1, $timedOut[0], 'Lock-Timeout (1205): nicht wiederholt, genau ein Versuch (vorher drei: die Wartezeit des Servers verdreifachte sich)');
+    T::check(str_starts_with($timedOut[1], RepoDriverException::class . ': SQLSTATE[HY000]'), 'der Lock-Timeout geht sofort an den Aufrufer', $timedOut[1]);
+    T::check(microtime(true) - $started < 0.05, 'ohne Pause zwischen Versuchen (kein usleep)', (string) round(microtime(true) - $started, 3));
+    T::same([[], false], [$titles(), $pdo->inTransaction()], 'Lock-Timeout: nichts gespeichert, keine Transaktion offen');
+
+    // Verschachtelt wird nie wiederholt: der Deadlock geht an die äußerste Ebene, die dann selbst wiederholt
+    $attempts = 0;
+    $inner = 0;
+    $result = Transaction::run($db, static function () use ($db, $deadlock, &$attempts, &$inner): string {
+        $attempts++;
+        Transaction::run($db, static function () use ($db, $deadlock, &$attempts, &$inner): void {
+            $inner++;
+            $db->forum(['title' => 'innen ' . $attempts]);
+            if ($attempts < 2) {
+                throw $deadlock();
+            }
+        });
+
+        return 'fertig';
+    });
+    T::same(['fertig', 2, 2], [$result, $attempts, $inner], 'verschachtelt: die innere Ebene wiederholt nicht, die äußerste tut es');
+
+    T::same(
+        [true, true, false, false, false, false, false],
+        [
+            Transaction::isRetryable($deadlock()), Transaction::isRetryable($serialization()), Transaction::isRetryable($timeout()),
+            Transaction::isRetryable(new RepoDriverException('23000', 1062, 'Duplicate entry')), Transaction::isRetryable(new \PDOException('ohne Treibercode')),
+            Transaction::isRetryable(new \RuntimeException('kein PDO')), Transaction::isRetryable(new \LogicException('Programmfehler')),
+        ],
+        'isRetryable: 1213 und 40001 ja; 1205, Duplicate entry, Fehler ohne Treibercode und fremde Ausnahmen nein'
+    );
+}
+
+/** B37: Längen und Bereiche der Spalten werden vor dem Schreiben geprüft (invalid_input statt PDOException oder stillem Kürzen). */
+function rScenarioColumnLimits(Database $db): void
+{
+    $forums = new ForumRepository($db);
+    $categories = new CategoryRepository($db);
+    $row = static fn (int $n): array => ['title' => 'Forum ' . $n, 'slug' => 'forum-' . $n];
+    $invalid = ['success' => false, 'error' => 'invalid_input'];
+
+    $bad = [
+        'title 151 Zeichen' => ['title' => str_repeat('x', 151)],
+        'title_en 151 Zeichen' => ['title_en' => str_repeat('x', 151)],
+        'title 151 Umlaute (Zeichen, nicht Bytes)' => ['title' => str_repeat('ä', 151)],
+        'title kein Text' => ['title' => ['Liste']],
+        'title ungültiges UTF-8' => ['title' => "Titel \xFF"],
+        'description über 65.535 Bytes' => ['description' => str_repeat('a', 65536)],
+        'description_en über 65.535 Bytes' => ['description_en' => str_repeat('ä', 32768)],
+        'icon 51 Zeichen' => ['icon' => str_repeat('i', 51)],
+        'color 10 Zeichen' => ['color' => '#112233445'],
+        'link_url 501 Zeichen' => ['link_url' => 'https://example.org/' . str_repeat('a', 481)],
+        'sort_order negativ' => ['sort_order' => -1],
+        'sort_order über INT UNSIGNED' => ['sort_order' => 4294967296],
+        'sort_order kein Zahlenwert' => ['sort_order' => 'abc'],
+        'sort_order Dezimalzahl' => ['sort_order' => '1.5'],
+        'slow_mode_seconds negativ' => ['slow_mode_seconds' => -5],
+        'auto_close_days negativ' => ['auto_close_days' => -1],
+        'category_id negativ' => ['category_id' => -1],
+        'category_id NULL (NOT NULL-Spalte)' => ['category_id' => null],
+        'require_approval NULL' => ['require_approval' => null],
+        'slug_en zu lang' => ['slug_en' => str_repeat('a', 161)],
+    ];
+    $count = $db->count('community_forums');
+    $n = 0;
+    foreach ($bad as $label => $extra) {
+        T::same($invalid, $forums->create($extra + $row(++$n), 3, rt()), "Forum create lehnt ab: {$label}");
+    }
+    T::same(['success' => false, 'error' => 'invalid_input'], $forums->create($row(++$n) + ['parent_id' => -3], 3, rt()), 'Forum create lehnt ab: parent_id negativ');
+    T::same($count, $db->count('community_forums'), 'abgelehnte Forum-Eingaben schreiben nichts');
+
+    $ok = [
+        'title 150 Umlaute' => ['title' => str_repeat('ä', 150)],
+        'title_en 150 Zeichen' => ['title_en' => str_repeat('x', 150)],
+        'description 65.535 Bytes' => ['description' => str_repeat('a', 65535)],
+        'icon 50 Zeichen' => ['icon' => str_repeat('i', 50)],
+        'color 9 Zeichen' => ['color' => '#11223344'],
+        'link_url 500 Zeichen' => ['link_url' => 'https://example.org/' . str_repeat('a', 480)],
+        'Zahlen am oberen Rand von INT UNSIGNED' => ['sort_order' => 4294967295, 'slow_mode_seconds' => '4294967295', 'auto_close_days' => 0],
+        'Texte NULL (nullbare Spalten)' => ['title_en' => null, 'description' => null, 'icon' => null, 'color' => null, 'link_url' => null],
+    ];
+    foreach ($ok as $label => $extra) {
+        $created = $forums->create($extra + $row(++$n), 3, rt());
+        T::check($created['success'] === true, "Forum create nimmt an: {$label}", json_encode($created));
+    }
+
+    // update: dieselben Grenzen, die Zeile bleibt unverändert
+    $id = (int) $forums->create($row(++$n), 3, rt())['id'];
+    $before = $forums->find($id);
+    foreach ($bad as $label => $extra) {
+        if (isset($extra['slug_en']) && strlen((string) $extra['slug_en']) > 160) {
+            T::same($invalid, $forums->update($id, $extra, rt(5)), "Forum update lehnt ab: {$label}");
+            continue;
+        }
+        T::same($invalid, $forums->update($id, $extra, rt(5)), "Forum update lehnt ab: {$label}");
+    }
+    T::same($before, $forums->find($id), 'abgelehnte Änderungen lassen die Zeile unverändert (auch version und updated_at)');
+    T::check($forums->update($id, ['title' => str_repeat('ä', 150), 'sort_order' => 4294967295], rt(6))['success'] ?? false, 'update nimmt die Obergrenzen an');
+
+    // Kategorien
+    $badCategories = [
+        'title 151 Zeichen' => ['title' => str_repeat('x', 151)],
+        'title_en 151 Zeichen' => ['title_en' => str_repeat('x', 151)],
+        'description über 65.535 Bytes' => ['description' => str_repeat('a', 65536)],
+        'description_en über 65.535 Bytes' => ['description_en' => str_repeat('a', 65536)],
+        'sort_order negativ' => ['sort_order' => -1],
+        'sort_order über INT UNSIGNED' => ['sort_order' => 4294967296],
+        'title ungültiges UTF-8' => ['title' => "Titel \xFF"],
+    ];
+    $categoryCount = $db->count('community_categories');
+    $k = 0;
+    foreach ($badCategories as $label => $extra) {
+        $k++;
+        T::same($invalid, $categories->create($extra + ['title' => 'Kategorie ' . $k, 'slug' => 'kategorie-' . $k], rt()), "Kategorie create lehnt ab: {$label}");
+    }
+    T::same($categoryCount, $db->count('community_categories'), 'abgelehnte Kategorie-Eingaben schreiben nichts');
+    $category = $categories->create(['title' => str_repeat('ä', 150), 'title_en' => str_repeat('x', 150), 'slug' => 'kategorie-ok', 'description' => str_repeat('a', 65535), 'sort_order' => 4294967295, 'is_visible' => 5], rt());
+    T::check($category['success'] === true, 'Kategorie create nimmt die Obergrenzen an', json_encode($category));
+    $categoryId = (int) $category['id'];
+    T::same(1, (int) $categories->find($categoryId)['is_visible'], 'is_visible wird als Schalter 0/1 gespeichert (5 → 1)');
+    $categories->update($categoryId, ['is_visible' => '0'], rt(1));
+    T::same(0, (int) $categories->find($categoryId)['is_visible'], 'update: is_visible "0" → 0');
+    $beforeCategory = $categories->find($categoryId);
+    foreach ($badCategories as $label => $extra) {
+        T::same($invalid, $categories->update($categoryId, $extra, rt(9)), "Kategorie update lehnt ab: {$label}");
+    }
+    T::same($beforeCategory, $categories->find($categoryId), 'abgelehnte Kategorie-Änderungen lassen die Zeile unverändert');
+    $db->throwOn = [];
+}
+
+/** B28: reservierte Pfadsegmente sind als Forum-Slug gesperrt (slug_taken), auch beim Schreiben über das Repository. */
+function rScenarioReservedSlugs(Database $db): void
+{
+    $forums = new ForumRepository($db);
+    $taken = ['success' => false, 'error' => 'slug_taken'];
+    $reserved = [...\CMS\Services\Community\Support\Slugger::RESERVED, 'seite-2', 'page-3', 'seite-10'];
+    $count = $db->count('community_forums');
+    foreach ($reserved as $slug) {
+        T::same($taken, $forums->create(['title' => 'Reserviert ' . $slug, 'slug' => $slug], 3, rt()), "create: slug „{$slug}“ ist reserviert");
+        T::same($taken, $forums->create(['title' => 'Reserviert en ' . $slug, 'slug' => 'frei-' . $slug, 'slug_en' => $slug], 3, rt()), "create: slug_en „{$slug}“ ist reserviert");
+    }
+    T::same($count, $db->count('community_forums'), 'abgelehnte Slugs schreiben nichts');
+    T::same(0, $db->count('settings', ['option_name' => ForumRepository::SLUG_LOCK]), 'abgelehnte Eingaben fassen die Mutex-Zeile nicht an');
+
+    $id = (int) $forums->create(['title' => 'Normal', 'slug' => 'normal'], 3, rt())['id'];
+    $before = $forums->find($id);
+    foreach (['neu', 'thema', 'seite-2', 'page-3', 'en', 'api', 'neues-thema', 'unread'] as $slug) {
+        T::same($taken, $forums->update($id, ['slug' => $slug], rt(5)), "update: slug „{$slug}“ ist reserviert");
+    }
+    T::same($taken, $forums->update($id, ['slug_en' => 'new'], rt(5)), 'update: slug_en „new“ ist reserviert');
+    T::same($taken, $forums->update($id, ['title' => 'Neu', 'slug' => 'neu', 'slug_en' => 'normal-en'], rt(5)), 'update: ein reservierter Slug unter mehreren Änderungen verwirft alles');
+    T::same($before, $forums->find($id), 'abgelehnte Änderungen lassen die Zeile unverändert');
+
+    // Ähnliche, aber nicht reservierte Slugs sind erlaubt
+    foreach (['neuigkeiten', 'seite', 'seite-x', 'page-x', 'themen', 'eng', 'new-york', 'seite-2a', 'api-doku'] as $slug) {
+        $created = $forums->create(['title' => 'Erlaubt ' . $slug, 'slug' => $slug], 3, rt());
+        T::check($created['success'] === true, "create: slug „{$slug}“ ist nicht reserviert", json_encode($created));
+    }
+    T::check($forums->update($id, ['slug' => 'normal-neu', 'slug_en' => 'normal-new'], rt(6))['success'] ?? false, 'update mit freien Slugs gelingt');
+    // Kategorien haben eigene Adressen unterhalb des Community-Pfads und sind von der Sperrliste nicht betroffen
+    T::check((new CategoryRepository($db))->create(['title' => 'Neu', 'slug' => 'neu'], rt())['success'] ?? false, 'Kategorie-Slug „neu“ bleibt erlaubt (eigener Adressraum)');
+}
+
+/** B38: nur ein UNIQUE-Verstoß wird zu slug_taken; andere Integritätsfehler (NOT NULL, Fremdschlüssel) gehen an den Aufrufer. */
+function rScenarioDuplicateKeyCodes(Database $db): void
+{
+    $forums = new ForumRepository($db);
+    $categories = new CategoryRepository($db);
+    $existing = $forums->create(['title' => 'Vorhanden', 'slug' => 'vorhanden'], 3, rt());
+    $category = $categories->create(['title' => 'Kategorie', 'slug' => 'kategorie'], rt());
+    $forumId = (int) $existing['id'];
+    $categoryId = (int) $category['id'];
+
+    $unique = [
+        'MariaDB 1062' => new RepoDriverException('23000', 1062, "Integrity constraint violation: 1062 Duplicate entry 'x' for key 'uq'"),
+        'SQLite UNIQUE' => new RepoDriverException('23000', 19, 'Integrity constraint violation: 19 UNIQUE constraint failed: cms_community_forums.slug'),
+    ];
+    foreach ($unique as $label => $exception) {
+        $db->throwOn = ['/^INSERT INTO \S*community_forums\b/' => $exception];
+        T::same(['success' => false, 'error' => 'slug_taken'], $forums->create(['title' => 'Rennen', 'slug' => 'rennen'], 3, rt()), "Forum create: UNIQUE-Verstoß ({$label}) → slug_taken");
+        $db->throwOn = ['/^UPDATE \S*community_forums SET\b/' => $exception];
+        T::same(['success' => false, 'error' => 'slug_taken'], $forums->update($forumId, ['slug' => 'anders'], rt(5)), "Forum update: UNIQUE-Verstoß ({$label}) → slug_taken");
+        $db->throwOn = ['/^INSERT INTO \S*community_categories\b/' => $exception];
+        T::same(['success' => false, 'error' => 'slug_taken'], $categories->create(['title' => 'Rennen', 'slug' => 'rennen'], rt()), "Kategorie create: UNIQUE-Verstoß ({$label}) → slug_taken");
+        $db->throwOn = ['/^UPDATE \S*community_categories SET\b/' => $exception];
+        T::same(['success' => false, 'error' => 'slug_taken'], $categories->update($categoryId, ['title' => 'Neu'], rt(5)), "Kategorie update: UNIQUE-Verstoß ({$label}) → slug_taken");
+    }
+
+    $other = [
+        'MariaDB NOT NULL (1048)' => new RepoDriverException('23000', 1048, "Integrity constraint violation: 1048 Column 'category_id' cannot be null"),
+        'MariaDB Fremdschlüssel (1452)' => new RepoDriverException('23000', 1452, 'Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails'),
+        'MariaDB Fremdschlüssel (1451)' => new RepoDriverException('23000', 1451, 'Integrity constraint violation: 1451 Cannot delete or update a parent row'),
+        'SQLite NOT NULL' => new RepoDriverException('23000', 19, 'Integrity constraint violation: 19 NOT NULL constraint failed: cms_community_forums.category_id'),
+        'SQLSTATE 23000 ohne Treibercode' => new RepoDriverException('23000', 0, 'Integrity constraint violation'),
+    ];
+    foreach ($other as $label => $exception) {
+        foreach ([
+            'Forum create' => ['/^INSERT INTO \S*community_forums\b/', static fn () => $forums->create(['title' => 'Fehler', 'slug' => 'fehler'], 3, rt())],
+            'Forum update' => ['/^UPDATE \S*community_forums SET\b/', static fn () => $forums->update($forumId, ['slug' => 'fehler'], rt(5))],
+            'Kategorie create' => ['/^INSERT INTO \S*community_categories\b/', static fn () => $categories->create(['title' => 'Fehler', 'slug' => 'fehler'], rt())],
+            'Kategorie update' => ['/^UPDATE \S*community_categories SET\b/', static fn () => $categories->update($categoryId, ['title' => 'Fehler'], rt(5))],
+        ] as $where => [$pattern, $call]) {
+            $db->throwOn = [$pattern => $exception];
+            try {
+                $result = $call();
+                T::check(false, "{$where}: {$label} wird nicht als slug_taken gemeldet", json_encode($result));
+            } catch (\PDOException $e) {
+                T::same($exception, $e, "{$where}: {$label} geht als Datenbankfehler an den Aufrufer (kein slug_taken)");
+            }
+        }
+    }
+    $db->throwOn = [];
+    T::same([0, false], [$db->count('community_forums', ['slug' => 'fehler']) + $db->count('community_categories', ['slug' => 'fehler']), $db->getPdo()->inTransaction()], 'die Fehler hinterlassen nichts und keine offene Transaktion');
+}
+
+/** B24: bis MAX_PINNED wirksame Pins sind alle sichtbar; die Grenze ist eine Invariante des Anheftens (PR #2b), nicht der Liste. */
+function rScenarioPinLimit(Database $db): void
+{
+    $repo = new TopicRepository($db);
+    $forum = $db->forum(['title' => 'Viele Pins']);
+    $user = $db->user();
+    $now = rt(10000);
+    $pins = [];
+    for ($i = 0; $i < TopicRepository::MAX_PINNED; $i++) {
+        $pins[] = $db->topic(['forum' => $forum, 'user' => $user, 'last_post_at' => rt(100 + $i), 'pinned' => true]);
+    }
+    $normal = [];
+    for ($i = 0; $i < 12; $i++) {
+        $normal[] = $db->topic(['forum' => $forum, 'user' => $user, 'last_post_at' => rt(5000 + $i)]);
+    }
+    [$all] = rCollect(static fn (?Cursor $c): Page => $repo->listForum($forum, $now, $c, 5));
+    T::same(TopicRepository::MAX_PINNED + 12, count($all), 'genau MAX_PINNED Pins plus Strom: alle Themen sind über die Seiten erreichbar');
+    T::same(TopicRepository::MAX_PINNED, count($repo->pinned($forum, $now)), 'pinned() liefert höchstens MAX_PINNED');
+    T::same(50, TopicRepository::MAX_PINNED, 'MAX_PINNED ist 50 (Obergrenze, die der Anheft-Dienst in PR #2b erzwingen muss)');
+
+    // Bekannte Grenze (Befund B24): ein Pin über MAX_PINNED hinaus steht in keiner Seite. Deshalb darf das Anheften ihn gar nicht zulassen.
+    $extra = $db->topic(['forum' => $forum, 'user' => $user, 'last_post_at' => rt(50), 'pinned' => true]);
+    [$more] = rCollect(static fn (?Cursor $c): Page => $repo->listForum($forum, $now, $c, 5));
+    T::same(false, in_array($extra, rIds($more), true), 'bekannte Grenze: der 51. wirksame Pin erscheint nirgends (Invariante des Anheftens, siehe TopicRepository::MAX_PINNED)');
+    T::same(TopicRepository::MAX_PINNED + 12, count($more), 'die übrigen Themen bleiben vollständig erreichbar');
+    // Ablauf der Frist gibt den Platz frei, ohne dass etwas verloren geht (abgelaufene Pins gehören zum Strom)
+    $db->execute('UPDATE ' . $db->getPrefix() . 'community_topics SET pinned_until = ? WHERE id = ?', [rt(9000), $extra]);
+    [$expired] = rCollect(static fn (?Cursor $c): Page => $repo->listForum($forum, $now, $c, 5));
+    T::same(true, in_array($extra, rIds($expired), true), 'ein abgelaufener Pin gehört wieder zum Strom und ist erreichbar');
+}
+
+/** B43: Pfad der Foren (`path`) mit beschädigten Segmenten, Rechte-Subjekte mit Grenzfällen. */
+function rScenarioForumKeys(Database $db): void
+{
+    $repo = new ForumRepository($db);
+    $a = $db->forum(['title' => 'A']);
+    $b = $db->forum(['title' => 'B', 'parent' => $a]);
+    $prefix = $db->getPrefix();
+    foreach ([
+        'Segment 0' => ["/0/{$b}/", [$b]],
+        'leeres Segment' => ["/{$a}//{$b}/", [$b, $a]],
+        'führende Null' => ["/0{$a}/{$b}/", [$b]],
+        'Buchstaben im Segment' => ["/{$a}/x{$b}/", [$b]],
+        'nur das Forum' => ["/{$b}/", [$b]],
+        'Pfad endet nicht mit dem Forum' => ["/{$b}/{$a}/", [$b]],
+    ] as $label => [$path, $expected]) {
+        $db->execute("UPDATE {$prefix}community_forums SET path = ? WHERE id = ?", [$path, $b]);
+        $repo->forgetTree();
+        T::same($expected, $repo->ancestorIds($b), "ancestorIds bei beschädigtem Pfad ({$label}: {$path})");
+        T::same(true, $repo->chainIds($b) === $expected || $repo->chainIds($b) === array_slice($expected, 0, 1), "chainIds bei beschädigtem Pfad ({$label})");
+    }
+    $db->execute("UPDATE {$prefix}community_forums SET path = ? WHERE id = ?", ["/{$a}/{$b}/", $b]);
+    $repo->forgetTree();
+    T::same([$b, $a], $repo->ancestorIds($b), 'intakter Pfad: Forum, dann Vorfahren');
+
+    // Rechte-Subjekte: Grenzen der Schlüssel
+    $bad = [
+        'Gruppe 0' => [['subject_type' => 'group', 'subject_key' => '0']],
+        'Gruppe mit führender Null' => [['subject_type' => 'group', 'subject_key' => '012']],
+        'Gruppe mit elf Stellen' => [['subject_type' => 'group', 'subject_key' => str_repeat('1', 11)]],
+        'Gruppe mit Vorzeichen' => [['subject_type' => 'group', 'subject_key' => '-3']],
+        'Rolle mit 51 Zeichen' => [['subject_type' => 'role', 'subject_key' => str_repeat('a', 51)]],
+        'Rolle mit Großbuchstaben' => [['subject_type' => 'role', 'subject_key' => 'Member']],
+        'Rolle mit Leerzeichen' => [['subject_type' => 'role', 'subject_key' => 'a b']],
+        'trust mit zwei Stellen' => [['subject_type' => 'trust', 'subject_key' => '10']],
+        'trust mit Vorzeichen' => [['subject_type' => 'trust', 'subject_key' => '-1']],
+    ];
+    $count = $db->count('community_forum_permissions');
+    foreach ($bad as $label => $rows) {
+        try {
+            $repo->savePermissions($a, [['subject_type' => 'guest', 'permissions' => ['read' => 1]], ...$rows], rt());
+            T::check(false, "savePermissions lehnt ab: {$label}");
+        } catch (\InvalidArgumentException) {
+            T::check(true, "savePermissions lehnt ab: {$label}");
+        }
+    }
+    T::same($count, $db->count('community_forum_permissions'), 'abgelehnte Subjekte schreiben nichts');
+    $repo->savePermissions($a, [
+        ['subject_type' => 'role', 'subject_key' => str_repeat('a', 50), 'permissions' => ['read' => 1]],
+        ['subject_type' => 'role', 'subject_key' => 'a-b_c9', 'permissions' => ['read' => 1]],
+        ['subject_type' => 'group', 'subject_key' => '1234567890', 'permissions' => ['read' => 1]],
+        ['subject_type' => 'group', 'subject_key' => '7', 'permissions' => ['read' => 1]],
+        ['subject_type' => 'trust', 'subject_key' => '4', 'permissions' => ['read' => 1]],
+    ], rt());
+    T::same(5, $db->count('community_forum_permissions', ['forum_id' => $a]), 'Grenzwerte, die gültig sind (50 Zeichen, Gruppe mit zehn Stellen, trust 4), werden gespeichert');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Backends
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -1468,6 +1942,13 @@ $scenarios = [
     'Sperren: Fenster, aufgehoben, Umfang, interne Notiz' => 'rScenarioBans',
     'Benutzerstatistik: ensure, Sperre, Zähler, letzter Beitrag' => 'rScenarioUserStats',
     'Rücknahme: Fehler im letzten Schritt (Fehlerinjektion)' => 'rScenarioRollback',
+    'Transaktionen: Verschachtelung über drei und vier Ebenen (B33/B40)' => 'rScenarioTransactionNesting',
+    'Transaktionen: Wiederholung nur bei Deadlock, nicht bei Lock-Timeout (B34)' => 'rScenarioTransactionRetry',
+    'Foren und Kategorien: Spaltenlängen und -bereiche (B37)' => 'rScenarioColumnLimits',
+    'Foren: reservierte Slugs auch beim Schreiben (B28)' => 'rScenarioReservedSlugs',
+    'Foren und Kategorien: nur UNIQUE wird zu slug_taken (B38)' => 'rScenarioDuplicateKeyCodes',
+    'Themen: Pins bis MAX_PINNED (B24)' => 'rScenarioPinLimit',
+    'Foren: beschädigter Pfad und Rechte-Subjekte an den Grenzen (B43)' => 'rScenarioForumKeys',
 ];
 foreach ($backends as $label => $make) {
     foreach ($scenarios as $title => $function) {

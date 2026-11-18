@@ -9,6 +9,12 @@
  *     > Zeile 1 des zitierten Textes
  *     > Zeile 2
  *
+ * Die Markerzeile ist die einzige Zeile eines erzeugten Blocks, die ein Marker sein darf: jedes Muster `[quote=post:ID]` im
+ * übernommenen Text (Quelle oder Auswahl) wird mit einem Backslash entschärft (`\[quote=post:ID]`), gleich ob es eine eigene Zeile
+ * ist, hinter Leerraum steht oder mitten im Text. Sonst würde aus einer unmarkierten Zeile `[quote=post:1]` der Quelle durch das
+ * Voranstellen von `> ` ein gefälschter Marker: `neutralize()` beendete dort den Block der verborgenen Quelle, und der Text dahinter
+ * bliebe sichtbar (Befund B7).
+ *
  * Der Autor der Quelle steht nicht im Text (er kommt beim Rendern aus `posts.user_id`). Zitiert wird nur, was das Mitglied
  * lesen darf: `build()` prüft `can('read')` und verlangt die volle Ansicht. Rechte können sich ändern; deshalb ersetzt
  * `neutralize()` Blöcke mit nicht mehr sichtbarer Quelle erst zur Anzeigezeit durch einen Platzhalter (der gespeicherte Text
@@ -86,7 +92,8 @@ final class QuoteService
      * (Tiefe 1), der Text ist auf MAX_LENGTH Zeichen begrenzt. Das Ergebnis hat keinen Zeilenumbruch am Ende.
      *
      * Die Auswahl (`$selection`) ist Text des Mitglieds und wird nicht gegen die Quelle geprüft: das Mitglied kann den Text
-     * des Zitats vor dem Absenden ohnehin ändern. Nach dem Zitieren ist nur die Marke `post:ID` verlässlich.
+     * des Zitats vor dem Absenden ohnehin ändern. Nach dem Zitieren ist nur die Marke `post:ID` verlässlich. Marker-Muster in
+     * der Auswahl und in der Quelle werden entschärft (siehe `defuseMarkers()`): `extractRefs(build(…))` liefert nur die ID des Zitats.
      */
     public function build(int $postId, ?int $viewerId, ?string $selection = null): ?string
     {
@@ -110,6 +117,7 @@ final class QuoteService
 
     /**
      * Markerzeile plus Text als Blockquote. Rein; `null`, wenn nach dem Entfernen verschachtelter Zitate kein Text bleibt.
+     * Marker-Muster im Text werden entschärft: die erste Zeile ist die einzige Markerzeile des Blocks.
      */
     public static function format(int $postId, string $text): ?string
     {
@@ -123,6 +131,7 @@ final class QuoteService
         if ($text === '') {
             return null;
         }
+        $text = self::defuseMarkers($text);
         if (mb_strlen($text, 'UTF-8') > self::MAX_LENGTH) {
             $text = rtrim(mb_substr($text, 0, self::MAX_LENGTH, 'UTF-8'));
             $omitted = true;
@@ -136,6 +145,22 @@ final class QuoteService
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Entschärft jedes Marker-Muster `[quote=post:…]` (auch mit Leerraum um `=` und `:`, in beliebiger Schreibweise) durch einen
+     * Backslash vor der öffnenden Klammer. Der Text bleibt lesbar (Markdown zeigt `[quote=post:5]` als Text), ist aber nie ein Marker.
+     * Eine Klammer, die schon ein Backslash schützt (ungerade Zahl von Backslashes davor), bleibt unverändert; bei gerader Zahl
+     * (`\\[`) steht die Klammer ungeschützt und bekommt einen weiteren Backslash. Wiederholbar:
+     * `defuseMarkers(defuseMarkers($x)) === defuseMarkers($x)`.
+     */
+    public static function defuseMarkers(string $text): string
+    {
+        return (string) preg_replace_callback(
+            '/(\\\\*)\[(?=\s*quote\s*=\s*post\s*:)/iu',
+            static fn (array $m): string => strlen($m[1]) % 2 === 1 ? $m[0] : $m[1] . '\\[',
+            $text
+        );
     }
 
     // ── Zitate lesen ────────────────────────────────────────────────────────────────────────────────────────────

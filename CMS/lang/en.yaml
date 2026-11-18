@@ -3404,7 +3404,6 @@ default:
   "community.error.post_not_found": "The post could not be found."
   "community.error.first_post": "The first post can only be deleted together with the topic."
   "community.error.has_replies": "The topic has replies and cannot be deleted."
-  "community.error.not_deletable": "This content cannot be deleted."
   "community.error.edit_conflict": "The post has been changed in the meantime. Please reload it and edit it again."
   "community.error.new_posts": "New replies have arrived since you opened the topic. Submit again if you still want to reply."
   "community.error.quote_unavailable": "This post cannot be quoted."
