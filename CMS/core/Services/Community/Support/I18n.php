@@ -82,10 +82,16 @@ final class I18n
         return $time->setTimezone(self::siteTimezone())->format($format);
     }
 
-    /** Nur für Tests: zwischengespeicherte Kataloge, Sprachen und Zeitzone setzen bzw. zurücksetzen. */
-    public static function reset(?string $siteLocale = null, ?string $requestLocale = null, ?string $timezone = null): void
+    /**
+     * Nur für Tests: zwischengespeicherte Kataloge, Sprachen und Zeitzone setzen bzw. zurücksetzen. `$catalogs` (Sprache →
+     * Schlüssel → Text) ersetzt die Sprachdateien, etwa um den Rückfall auf Deutsch mit einem Schlüssel zu prüfen, den nur der
+     * deutsche Katalog kennt (die echten Dateien sind zeilenparallel).
+     *
+     * @param array<string, array<string, string>>|null $catalogs
+     */
+    public static function reset(?string $siteLocale = null, ?string $requestLocale = null, ?string $timezone = null, ?array $catalogs = null): void
     {
-        self::$catalogs = [];
+        self::$catalogs = $catalogs ?? [];
         self::$siteLocale = $siteLocale !== null ? self::normalizeLocale($siteLocale) : null;
         self::$requestLocale = $requestLocale !== null ? self::normalizeLocale($requestLocale) : null;
         self::$timezone = $timezone;

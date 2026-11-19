@@ -27,7 +27,15 @@ final class TopicRepository extends AbstractRepository
     public const STATUSES = ['published', 'pending', 'hidden', 'deleted', 'trash', 'moved'];
     /** Größte Seite der Themenliste. */
     public const MAX_LIMIT = 100;
-    /** Höchstzahl angepinnter Themen auf der ersten Seite einer Liste. */
+    /**
+     * Höchstzahl wirksam angepinnter Themen je Forum und Status auf der ersten Seite einer Liste. Das ist zugleich die Invariante
+     * für das Anheften (PR #2b): Der Strom einer Liste fragt `is_pinned = 0`; ein angepinntes Thema jenseits dieser Grenze stünde
+     * in keiner Seite (weder in `pinned()` noch im Strom, Befund B24). Beide in den Strom einzumischen ginge nur mit
+     * `is_pinned IN (0, 1)` und damit ohne den Index `idx_community_topics_forum_list` für die Sortierung (Filesort über alle
+     * Themen des Forums, siehe Befund B5): zu teuer für einen Randfall. Der Anheft-Dienst muss deshalb beim Anheften ablehnen,
+     * wenn das Forum schon MAX_PINNED wirksame Pins hat; ein Ablauf von `pinned_until` gibt Platz frei, ohne dass die Liste
+     * etwas verliert (abgelaufene Pins gehören zum Strom).
+     */
     public const MAX_PINNED = 50;
 
     private const TABLE = 'community_topics';
@@ -150,7 +158,8 @@ final class TopicRepository extends AbstractRepository
     /**
      * Seite der Themenliste eines Forums, jüngste Aktivität zuerst (Index `idx_community_topics_forum_list`).
      *
-     * - Ohne Cursor (erste Seite) stehen zuerst die angepinnten Themen (höchstens MAX_PINNED, nach Aktivität sortiert),
+     * - Ohne Cursor (erste Seite) stehen zuerst die angepinnten Themen (höchstens MAX_PINNED, nach Aktivität sortiert; mehr Pins
+     *   sind unerreichbar, das Anheften erzwingt die Grenze, siehe MAX_PINNED),
      *   danach bis zu `$limit` Themen des Stroms. Mit Cursor kommen nur Themen des Stroms.
      * - Ein Thema, dessen `pinned_until` abgelaufen ist, gehört zum Strom (Sortierung nach Aktivität); `is_pinned` und
      *   `is_locked` der Zeilen sind die wirksamen Werte (`withEffectiveState()`).
@@ -304,31 +313,57 @@ final class TopicRepository extends AbstractRepository
     }
 
     /**
-     * Anzahl der Themen eines Mitglieds seit `$sinceUtc` (angelegt am oder nach dem Zeitpunkt; Status veröffentlicht,
-     * wartend, ausgeblendet) für Grenzen je Stunde. Index `idx_community_topics_user`.
+     * Anzahl der Themen eines Mitglieds seit `$sinceUtc` (angelegt am oder nach dem Zeitpunkt) für Grenzen je Stunde. Ohne
+     * `$statuses` zählen veröffentlichte, wartende und ausgeblendete Themen; mit Liste genau diese Status (die Rechteprüfung
+     * zählt auch gelöschte, damit Löschen kein Kontingent freigibt). Index `idx_community_topics_user`.
+     *
+     * @param list<string>|null $statuses Status aus STATUSES
      */
-    public function countSince(int $userId, string $sinceUtc): int
+    public function countSince(int $userId, string $sinceUtc, ?array $statuses = null): int
     {
+        $statuses = self::statuses($statuses, self::COUNTED);
+
         return (int) $this->fetchValue(
-            'SELECT COUNT(*) FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count(self::COUNTED))
+            'SELECT COUNT(*) FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count($statuses))
             . ') AND created_at >= ?',
-            [$userId, ...self::COUNTED, $sinceUtc]
+            [$userId, ...$statuses, $sinceUtc]
         );
     }
 
     /**
      * Jüngstes Thema eines Mitglieds seit `$sinceUtc` (Status wie bei `countSince()`) für den Mindestabstand zwischen Themen.
      *
+     * @param list<string>|null $statuses Status aus STATUSES
      * @return array{id: int, forum_id: int, created_at: string}|null
      */
-    public function lastOfUser(int $userId, string $sinceUtc): ?array
+    public function lastOfUser(int $userId, string $sinceUtc, ?array $statuses = null): ?array
     {
+        $statuses = self::statuses($statuses, self::COUNTED);
         $row = $this->fetchOne(
-            'SELECT id, forum_id, created_at FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count(self::COUNTED))
+            'SELECT id, forum_id, created_at FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN (' . self::placeholders(count($statuses))
             . ') AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT 1',
-            [$userId, ...self::COUNTED, $sinceUtc]
+            [$userId, ...$statuses, $sinceUtc]
         );
 
         return $row === null ? null : ['id' => (int) $row['id'], 'forum_id' => (int) $row['forum_id'], 'created_at' => (string) $row['created_at']];
+    }
+
+    /**
+     * @param list<string>|null $statuses
+     * @param list<string> $default
+     * @return list<string>
+     */
+    private static function statuses(?array $statuses, array $default): array
+    {
+        if ($statuses === null) {
+            return $default;
+        }
+        $statuses = array_values(array_unique($statuses));
+        $unknown = array_diff($statuses, self::STATUSES);
+        if ($unknown !== [] || $statuses === []) {
+            throw new \InvalidArgumentException('Ungültige Themenstatus: ' . implode(', ', $unknown));
+        }
+
+        return $statuses;
     }
 }

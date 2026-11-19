@@ -2,10 +2,12 @@
 /**
  * Hook-Namen des Community-Moduls an einer Stelle und der gekapselte Aufruf.
  *
- * Aktionen werden nach dem Commit über `fire()` ausgelöst; Argumente sind IDs und Statuswerte, nie Inhalte. Ein Fehler
- * in einem Callback wird protokolliert (Kanal `community`) und bricht den Vorgang nicht ab. Filter laufen über
- * `applyFilter()`; bei einer Ausnahme gilt der Eingangswert. Das Ergebnis eines Filters prüft der Aufrufer selbst
- * (`cms_community_can` darf nur ablehnen).
+ * Aktionen werden nach dem Commit über `fire()` ausgelöst; Argumente sind IDs und Statuswerte, nie Inhalte. Jeder Verbraucher
+ * läuft einzeln abgesichert: ein Fehler wird protokolliert (Kanal `community`), bricht den Vorgang nicht ab und hält die
+ * übrigen Verbraucher desselben Hooks nicht auf. Filter für Werte, die ein Plugin nur verändern darf (Ansicht, Text), laufen
+ * über `applyFilter()`; bei einer Ausnahme gilt der Eingangswert. Entscheidungsfilter mit Vetorecht (`cms_community_can`) laufen
+ * nicht darüber: `filters()` liefert die Kette, der Aufrufer durchläuft sie selbst, prüft jedes Zwischenergebnis und wertet eine
+ * Ausnahme als Ablehnung (siehe `CommunityAccess`).
  *
  * Signaturen: DOC/core/HOOKS-REFERENCE.md, Abschnitt „Community (4.2.0)“.
  *
@@ -53,17 +55,42 @@ final class Events
     public const USER_UNBANNED = 'cms_community_user_unbanned';
     public const SOLUTION_MARKED = 'cms_community_solution_marked';
 
-    /** Löst eine Aktion aus; wirft nie. */
+    /**
+     * Löst eine Aktion aus; wirft nie. Jeder Verbraucher läuft einzeln abgesichert (`Hooks::doActionIsolated()`): wirft einer,
+     * wird der Fehler protokolliert und die übrigen Verbraucher des Hooks laufen trotzdem.
+     */
     public static function fire(string $hook, mixed ...$args): void
     {
         try {
-            Hooks::doAction($hook, ...$args);
+            Hooks::doActionIsolated($hook, static function (\Throwable $e) use ($hook): void {
+                self::log($hook, $e);
+            }, ...$args);
         } catch (\Throwable $e) {
             self::log($hook, $e);
         }
     }
 
-    /** Wendet einen Filter an; bei einer Ausnahme gilt der Eingangswert. */
+    /**
+     * Die Filter eines Hooks in Ausführungsreihenfolge (Priorität aufsteigend), für Entscheidungsfilter: der Aufrufer ruft jeden
+     * einzeln auf, prüft das Ergebnis gegen den laufenden Wert und fängt Ausnahmen selbst ab. Wirft nie.
+     *
+     * @return list<callable>
+     */
+    public static function filters(string $hook): array
+    {
+        try {
+            return Hooks::getCallbacks($hook, 'filter');
+        } catch (\Throwable $e) {
+            self::log($hook, $e);
+
+            return [];
+        }
+    }
+
+    /**
+     * Wendet einen Filter an; bei einer Ausnahme gilt der Eingangswert (die Kette bricht dann ab). Nicht für Entscheidungen,
+     * die ein Plugin nur ablehnen darf: dort würde eine Ausnahme die Ablehnung eines früheren Filters aufheben, siehe `filters()`.
+     */
     public static function applyFilter(string $hook, mixed $value, mixed ...$args): mixed
     {
         try {

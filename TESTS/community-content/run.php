@@ -52,6 +52,7 @@ use CMS\Services\Community\Service\TopicService;
 use CMS\Services\Community\Support\Codes;
 use CMS\Services\Community\Support\Cursor;
 use CMS\Services\Community\Support\Events;
+use CMS\Services\Community\Support\I18n;
 use CMS\Services\Community\Support\Settings;
 
 T::$verbose = in_array('-v', $argv ?? [], true);
@@ -1906,7 +1907,10 @@ T::run('Rechteprüfung: Aktion und Kontext je Dienst; erneut unter den Sperren m
         array_map(static fn (array $c): array => [$c['action'], $c['user'], $c['context']], [$calls($w)[0], $calls($w)[1], $calls($w)[$afterList]]),
         'Lesen: read mit forum_id bzw. topic_id; Gast (null und 0) als null'
     );
-    T::same(['post_id', 'post', 'now'], array_keys($calls($w)[2]['context'] ?? []), 'listPage fragt je Beitrag read mit dem geladenen Beitrag (post_id, post)');
+    // B9/B18: Thema und Forum werden einmal je Seite geladen und mitgegeben (sonst lädt die Rechteprüfung beides je Beitrag neu).
+    $context = $calls($w)[2]['context'] ?? [];
+    T::same(['post_id', 'post', 'topic', 'forum', 'now'], array_keys($context), 'listPage fragt je Beitrag read mit dem geladenen Beitrag, Thema und Forum (post_id, post, topic, forum)');
+    T::same([$topic, $forum], [(int) ($context['topic']['id'] ?? 0), (int) ($context['forum']['id'] ?? 0)], 'listPage: topic und forum sind die Zeilen des Themas und seines Forums');
 });
 
 T::run('Sperrreihenfolge: Forum → Thema → Beitrag → Mitglied bei jeder Schreibaktion', static function (): void {
@@ -2369,7 +2373,11 @@ function ccRealWorld(array $settings = []): CcWorld
         $clock,
         static fn (int $userId): bool => true
     );
-    $can = static fn (?int $userId, string $action, array $context): AccessDecision => $access->can($userId, $action, $context);
+    $can = static function (?int $userId, string $action, array $context) use ($w, $access): AccessDecision {
+        $w->canLog[] = ['user' => $userId, 'action' => $action, 'context' => $context, 'queries' => count($w->db->log)];
+
+        return $access->can($userId, $action, $context);
+    };
     $dispatch = static function (string $hook, mixed ...$args) use ($w): void {
         $w->hooks[] = ['hook' => $hook, 'args' => $args, 'in_transaction' => $w->db->getPdo()->inTransaction()];
     };
@@ -2985,6 +2993,394 @@ T::run('B3: die Statistikzeile entsteht vor der Transaktion (ensure im Autocommi
     $w3->rule = null;
     $w3->db->failOn = ['/^INSERT IGNORE INTO cms_community_user_stats/'];
     T::same([['success' => false, 'error' => 'db_error'], false, 0, []], [$w3->topics->create($c, $g, 'Thema bei Ausfall des ensure', 'Text'), $w3->db->getPdo()->inTransaction(), $w3->db->count('community_topics'), $w3->hooks], 'Ausfall von ensure vor BEGIN: db_error, keine offene Transaktion, nichts geschrieben, kein Hook');
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Befunde der Nachprüfung (B6, B7, B9/B18, B21, B23, B25, B46)
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+T::run('B25: unsichtbare Zeichen in Titeln und Beiträgen entfallen; was danach nicht sichtbar bleibt, ist zu kurz', static function (): void {
+    // Zeichen, die allein oder wiederholt nichts darstellen (Befund: fünfmal als Titel angenommen)
+    $invisible = [
+        'U+2060 Wortverbinder' => "\u{2060}", 'U+200C ZWNJ' => "\u{200C}", 'U+200D ZWJ' => "\u{200D}", 'U+00AD weicher Trennstrich' => "\u{00AD}",
+        'U+3164 Hangul-Füller' => "\u{3164}", 'U+2800 Braille-Leerzeichen' => "\u{2800}", 'U+200E Links-nach-rechts-Marke' => "\u{200E}",
+        'U+034F CGJ' => "\u{034F}", 'U+FE0F Variantenwähler' => "\u{FE0F}", 'U+E0020 Tag-Leerzeichen' => "\u{E0020}", 'U+1D159 Notenkopf' => "\u{1D159}",
+        'U+180E Mongolisch' => "\u{180E}", 'U+FEFF BOM' => "\u{FEFF}", 'U+200B Nullbreite' => "\u{200B}", 'U+202E Rechts-nach-links-Überschreiben' => "\u{202E}",
+        'U+061C Arabische Buchstabenmarke' => "\u{061C}", 'U+115F Hangul-Füller' => "\u{115F}", 'U+1160 Hangul-Füller' => "\u{1160}", 'U+FFA0 Halbbreiter Füller' => "\u{FFA0}",
+        'U+00A0 geschütztes Leerzeichen' => "\u{00A0}", 'U+2003 Geviert' => "\u{2003}", 'U+0301 nur Akzent' => "\u{0301}", 'Steuerzeichen U+0007' => "\x07",
+    ];
+    foreach ($invisible as $label => $char) {
+        T::same('', TopicService::normalizeTitle(str_repeat($char, 5)), 'Titel aus fünfmal ' . $label . ' ist leer');
+        T::same('', PostService::normalizeBody(str_repeat($char, 5)), 'Text aus fünfmal ' . $label . ' ist leer');
+    }
+    T::same('', PostService::normalizeBody("\u{00A0}\u{00A0}"), 'zwei geschützte Leerzeichen sind kein Text (post_min 2 zählte sie als zwei Zeichen)');
+    T::same('', TopicService::normalizeTitle("\u{200B} \u{2060}\t\u{3164}\n\u{2800}"), 'gemischt aus Leerraum und Füllzeichen: leer');
+    T::same('', PostService::normalizeBody("\u{2800}\n\u{200B}\n\t\u{3164}"), 'Text aus Zeilenumbrüchen, Tabulator und Füllzeichen: leer');
+
+    // Sichtbares bleibt; Unsichtbares dazwischen entfällt
+    T::same('Hallo Welt', TopicService::normalizeTitle("Hal\u{200B}lo\u{00AD} Wel\u{2060}t\u{FEFF}"), 'Titel: Nullbreite, weicher Trennstrich, Wortverbinder, BOM entfallen');
+    T::same('Hallo Welt', TopicService::normalizeTitle("\u{202E}Hallo\u{200F} Welt\u{202C}"), 'Titel: Richtungsumschalter entfallen');
+    T::same("Zeile eins\nZeile zwei", PostService::normalizeBody("Zeile\u{200B} eins\nZeile \u{00AD}zwei"), 'Text: Formatzeichen entfallen, der Zeilenumbruch bleibt');
+    T::same("a\tb\n\nc", PostService::normalizeBody("a\tb\n\x07\n\u{200B}c"), 'Text: Tabulator und Zeilenumbruch bleiben');
+    T::same('.', PostService::normalizeBody('.'), 'ein Satzzeichen ist sichtbar');
+    T::same('😀', TopicService::normalizeTitle('😀'), 'ein Emoji ist sichtbar');
+    T::same("e\u{0301}", PostService::normalizeBody("e\u{0301}"), 'Buchstabe mit kombiniertem Akzent bleibt unverändert');
+    T::same('日本語', TopicService::normalizeTitle('日本語'), 'andere Schriften bleiben');
+    T::same(true, PostService::hasVisibleText('a') && PostService::hasVisibleText('7') && PostService::hasVisibleText('!') && PostService::hasVisibleText('€'), 'hasVisibleText: Buchstabe, Ziffer, Satzzeichen, Symbol');
+    T::same(false, PostService::hasVisibleText(" \t\n\u{00A0}\u{200B}\u{3164}\u{0301}"), 'hasVisibleText: Leerraum, Nullbreite, Füller, Akzent allein');
+
+    // ZWNJ und ZWJ zwischen Zeichen bleiben (Persisch, Emoji-Folgen), am Rand und doppelt nicht
+    T::same("می\u{200C}خواهم", PostService::normalizeBody("می\u{200C}خواهم"), 'Text: ZWNJ zwischen persischen Buchstaben bleibt');
+    T::same("👨\u{200D}👩\u{200D}👧 Familie", TopicService::normalizeTitle("👨\u{200D}👩\u{200D}👧 Familie"), 'Titel: ZWJ in einer Emoji-Folge bleibt');
+    T::same("🏳\u{FE0F}\u{200D}🌈", TopicService::normalizeTitle("🏳\u{FE0F}\u{200D}🌈"), 'Titel: ZWJ nach Variantenwähler in einer Emoji-Folge bleibt');
+    T::same('Wort', TopicService::normalizeTitle("\u{200C}Wort\u{200D}"), 'ZWNJ und ZWJ am Rand entfallen');
+    T::same('ab', TopicService::normalizeTitle("a\u{200D}\u{200D}b"), 'doppelte ZWJ entfallen');
+    T::same('a b', TopicService::normalizeTitle("a \u{200D} b"), 'ZWJ neben Leerraum entfällt');
+    T::same('🏴', TopicService::normalizeTitle("🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}"), 'Tag-Zeichen hinter einem Emoji entfallen');
+
+    // Grund einer Bearbeitung: gleiche Regel (Formatzeichen entfallen; ohne sichtbares Zeichen kein Grund)
+    T::same([null, null, null, null], [PostService::normalizeReason("\u{200B}\u{3164}\u{2800}"), PostService::normalizeReason(" \u{00AD}\t\u{2060} "), PostService::normalizeReason("\u{202E}"), PostService::normalizeReason('')], 'Grund nur aus unsichtbaren Zeichen: null');
+    T::same(['Tippfehler', 'Zeile eins Zeile zwei', null, 'x'], [PostService::normalizeReason("Tipp\u{200B}fehler"), PostService::normalizeReason("Zeile eins\n\u{00AD}Zeile zwei"), PostService::normalizeReason(null), PostService::normalizeReason("\u{FEFF}x")], 'Grund: Formatzeichen entfallen, Zeilenumbruch wird zum Leerzeichen');
+
+    // Dienste: Eingabe wird vor der Längenprüfung normalisiert; die Datenbank bleibt unberührt
+    $w = new CcWorld(['title_min' => 1, 'post_min' => 1]);
+    $a = $w->db->user();
+    $forum = $w->db->forum();
+    $topic = (int) $w->topics->create($a, $forum, 'Ein sichtbarer Titel', 'Ein sichtbarer Text')['topic_id'];
+    $firstPost = (int) $w->topic($topic)['first_post_id'];
+    $w->hooks = [];
+    $w->at(60);
+    $snapshot = ccSnapshot($w);
+    T::same(['title_too_short', 'title_too_short', 'title_too_short'], [
+        ccOutcome($w->topics->create($a, $forum, "\u{2060}\u{2060}\u{2060}\u{2060}\u{2060}", 'Text')),
+        ccOutcome($w->topics->create($a, $forum, "\u{3164}\u{3164}\u{3164}", 'Text')),
+        ccOutcome($w->posts->edit($a, $firstPost, 'Neuer Text', "\u{200B}\u{200D}\u{2800}")),
+    ], 'Titel nur aus unsichtbaren Zeichen: title_too_short (auch mit title_min 1), beim Anlegen und beim Bearbeiten');
+    T::same(['body_too_short', 'body_too_short', 'body_too_short', 'body_too_short'], [
+        ccOutcome($w->topics->create($a, $forum, 'Titel mit leerem Text', "\u{00A0}\u{00A0}")),
+        ccOutcome($w->posts->reply($a, $topic, "\u{200B}\u{200B}")),
+        ccOutcome($w->posts->reply($a, $topic, "\u{2800}\u{3164}\n\u{00AD}")),
+        ccOutcome($w->posts->edit($a, $firstPost, "\u{FEFF}\u{FEFF}")),
+    ], 'Text nur aus unsichtbaren Zeichen: body_too_short (auch mit post_min 1), beim Anlegen, Antworten und Bearbeiten');
+    T::same([$snapshot, []], [ccSnapshot($w), $w->hooks], 'abgelehnt: nichts geschrieben, kein Hook');
+    $ok = $w->topics->create($a, $forum, "Thema\u{200B} mit\u{00AD} Füllzeichen", "Text\u{200B} mit Füllzeichen");
+    T::same(['Thema mit Füllzeichen', 'Text mit Füllzeichen'], [$w->topic((int) $ok['topic_id'])['title'], $w->post((int) $ok['post_id'])['body']], 'gespeichert wird der bereinigte Text');
+});
+
+T::run('B7: Zitat-Marker im übernommenen Text werden entschärft (nur die erste Zeile des Blocks ist ein Marker)', static function (): void {
+    $attacks = [
+        'Marker ohne „> “ auf eigener Zeile' => "Beleidigender Text...\n[quote=post:1]\nhier steht der eigentliche Angriff",
+        'Marker mit Leerzeichen am Ende' => "Anfang\n[quote=post:1]  \nAngriff",
+        'Marker mit Tabulator am Ende' => "Anfang\n[quote=post:1]\t\nAngriff",
+        'Marker hinter Leerraum' => "Anfang\n  [quote=post:1]\nAngriff",
+        'Marker hinter Tabulator' => "Anfang\n\t[quote=post:1]\nAngriff",
+        'Marker mitten im Text' => 'Anfang [quote=post:1] Angriff',
+        'Marker am Ende der Zeile' => "Anfang [quote=post:1]\nAngriff",
+        'Marker mit Leerraum um = und :' => "Anfang\n[quote = post : 1]\nAngriff",
+        'Marker in anderer Schreibweise' => "Anfang\n[QUOTE=POST:1]\nAngriff",
+        'Windows-Zeilenenden' => "Anfang\r\n[quote=post:1]\r\nAngriff",
+        'mehrere Marker' => "[quote=post:1]\n[quote=post:2]\nAngriff\n[quote=post:3]",
+        'Marker in der ersten Zeile' => "[quote=post:1] Angriff\nrest",
+    ];
+    foreach ($attacks as $label => $text) {
+        $block = QuoteService::format(5, $text);
+        T::check($block !== null, $label . ': ein Block entsteht');
+        $block = (string) $block;
+        T::same([5], QuoteService::extractRefs($block), $label . ': extractRefs liefert nur die ID des Zitats');
+        $lines = explode("\n", $block);
+        T::same('> [quote=post:5]', $lines[0], $label . ': die erste Zeile ist der Marker');
+        T::same([], array_values(array_filter(array_slice($lines, 1), static fn (string $line): bool => preg_match('/^> \[quote=post:\d+\][ \t]*$/', $line) === 1)), $label . ': keine weitere Zeile ist ein Marker');
+        T::check(substr_count($block, '[quote=post:') + substr_count(strtolower($block), '[quote = post :') + substr_count(strtolower($block), '[quote=post:') >= 1, $label . ': der Text bleibt lesbar (Muster mit Backslash geschützt)');
+        // Anzeigezeit: die Quelle wird entfernt, der Text dahinter bleibt nicht stehen
+        $out = QuoteService::neutralize($block, static fn (int $id): bool|string => $id === 5 ? QuoteService::REMOVED : true);
+        T::same("> [quote=post:5]\n> " . QuoteService::REMOVED_NOTICE, $out, $label . ': neutralize ersetzt den ganzen Block durch einen Platzhalter, auch der Text nach dem Marker-Muster verschwindet');
+        T::check(!str_contains($out, 'Angriff'), $label . ': kein Angriffstext sichtbar');
+    }
+    T::same("> [quote=post:5]\n> Anfang\n> \\[quote=post:1]\n> Angriff", QuoteService::format(5, "Anfang\n[quote=post:1]\nAngriff"), 'Format der Entschärfung: Backslash vor der öffnenden Klammer');
+    T::same("> [quote=post:5]\n> a \\[quote=post:2] b", QuoteService::format(5, 'a \[quote=post:2] b'), 'ein schon geschütztes Muster bleibt unverändert');
+    T::same("> [quote=post:5]\n> \\\\\\[quote=post:2]", QuoteService::format(5, '\\\\[quote=post:2]'), 'zwei Backslashes davor (die Klammer ist ungeschützt): ein weiterer Backslash schützt sie');
+    T::same("> [quote=post:5]\n> \\\\\\\\\\[quote=post:2]", QuoteService::format(5, '\\\\\\\\[quote=post:2]'), 'vier Backslashes davor: ein weiterer Backslash');
+    T::same("> [quote=post:5]\n> [quote nicht ganz]", QuoteService::format(5, '[quote nicht ganz]'), 'Text, der nur ähnlich aussieht, bleibt unverändert');
+    T::same('\\[quote=post:1] [x]', QuoteService::defuseMarkers('[quote=post:1] [x]'), 'defuseMarkers: nur das Marker-Muster');
+    T::same(QuoteService::defuseMarkers('x [quote=post:1]'), QuoteService::defuseMarkers(QuoteService::defuseMarkers('x [quote=post:1]')), 'defuseMarkers ist wiederholbar');
+    T::same(null, QuoteService::format(5, "> [quote=post:3]\n> nur ein Zitat"), 'ein Beitrag nur aus einem echten Zitat: nichts zu zitieren (stripQuotes bleibt wirksam)');
+
+    // Jedes Marker-Muster wird entschärft, nicht nur das, das nach dem Voranstellen von „> “ die Markerzeile träfe (genauer Text des Ergebnisses)
+    foreach ([
+        'mitten im Text' => ['Anfang [quote=post:1] Angriff', "> [quote=post:5]\n> Anfang \\[quote=post:1] Angriff"],
+        'am Ende der Zeile' => ["Anfang [quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang \\[quote=post:1]\n> Angriff"],
+        'hinter Leerraum' => ["Anfang\n  [quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang\n>   \\[quote=post:1]\n> Angriff"],
+        'hinter Tabulator' => ["Anfang\n\t[quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \t\\[quote=post:1]\n> Angriff"],
+        'mit Leerraum um = und :' => ["Anfang\n[quote = post : 1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \\[quote = post : 1]\n> Angriff"],
+        'mit Leerraum nach der Klammer' => ["Anfang\n[ quote=post:1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \\[ quote=post:1]\n> Angriff"],
+        'Großschreibung' => ["Anfang\n[QUOTE=POST:1]\nAngriff", "> [quote=post:5]\n> Anfang\n> \\[QUOTE=POST:1]\n> Angriff"],
+        'gemischte Schreibweise' => ['x [Quote=Post:2] y', "> [quote=post:5]\n> x \\[Quote=Post:2] y"],
+        'zwei Muster in einer Zeile' => ['[quote=post:1][quote=post:2]', "> [quote=post:5]\n> \\[quote=post:1]\\[quote=post:2]"],
+        'mit Zeilenende Windows' => ["a\r\n[quote=post:1]\r\nb", "> [quote=post:5]\n> a\n> \\[quote=post:1]\n> b"],
+    ] as $label => [$text, $expected]) {
+        T::same($expected, QuoteService::format(5, $text), 'entschärft: ' . $label);
+        T::same($expected, QuoteService::format(5, $text), 'wiederholbar: ' . $label);
+    }
+    T::same('x', QuoteService::defuseMarkers('x'), 'defuseMarkers: Text ohne Muster bleibt');
+    T::same('\\[quote=post:]', QuoteService::defuseMarkers('[quote=post:]'), 'defuseMarkers: das Muster ist „[quote=post:“; was danach folgt, ist gleichgültig (lieber zu viel schützen)');
+
+    // Eigenschaft über viele zufällige, aber feste Texte: der erzeugte Block hat genau eine Markerzeile (die erste), die Anzeige entfernt ihn ganz
+    mt_srand(20261115);
+    $fragments = ['[quote=post:7]', '> ', '>', "\n", "\n", ' ', "\t", '\\', 'Text', '[', ']', '[quote=post:', '1]', "\r\n", '[quote = post: 3]', 'Angriff', '> [quote=post:9]', "> [quote=post:2]\n> eingebettet\n", '[QUOTE=post:4]', 'quote=post:5]', ' [quote=post:6] '];
+    $built = 0;
+    $problems = [];
+    for ($i = 0; $i < 4000; $i++) {
+        $text = '';
+        for ($n = mt_rand(1, 12); $n > 0; $n--) {
+            $text .= $fragments[mt_rand(0, count($fragments) - 1)];
+        }
+        $block = QuoteService::format(5, $text);
+        if ($block === null) {
+            continue;
+        }
+        $built++;
+        $lines = explode("\n", $block);
+        $markers = array_keys(array_filter($lines, static fn (string $line): bool => preg_match('/^> \[quote=post:\d+\][ \t]*$/', $line) === 1));
+        $out = QuoteService::neutralize($block, static fn (int $id): bool|string => $id === 5 ? QuoteService::REMOVED : true);
+        if ($markers !== [0] || QuoteService::extractRefs($block) !== [5] || $out !== "> [quote=post:5]\n> " . QuoteService::REMOVED_NOTICE || QuoteService::format(5, $text) !== $block) {
+            $problems[] = T::export($text);
+            if (count($problems) >= 3) {
+                break;
+            }
+        }
+    }
+    T::same([], $problems, 'Eigenschaft (4000 zufällige Texte): genau eine Markerzeile (die erste), eine Referenz, Anzeige ersetzt den ganzen Block');
+    T::check($built > 3000, 'die meisten Texte ergeben einen Block (die Eigenschaft wurde wirklich geprüft)', (string) $built);
+
+    // Ablauf über den Dienst: Quelle und Auswahl mit Angriffstext
+    $w = new CcWorld();
+    $author = $w->db->user();
+    $reader = $w->db->user();
+    $forum = $w->db->forum();
+    $topic = $w->db->topic(['forum' => $forum, 'user' => $author]);
+    $victim = $w->db->post(['topic' => $topic, 'user' => $author, 'body' => 'Anderer Beitrag']);
+    $source = $w->db->post(['topic' => $topic, 'user' => $author, 'body' => "Beleidigender Text...\n[quote=post:{$victim}]\nhier steht der eigentliche Angriff"]);
+    $built = (string) $w->quotes->build($source, $reader);
+    T::same([$source], QuoteService::extractRefs($built), 'build: der gefälschte Marker in der Quelle erzeugt keine zweite Referenz');
+    T::same("> [quote=post:{$source}]\n> " . QuoteService::REMOVED_NOTICE, QuoteService::neutralize($built, static fn (int $id): bool|string => $id === $source ? QuoteService::REMOVED : true), 'build: ist die Quelle später ausgeblendet, bleibt vom ganzen Zitat nichts stehen (Sichtbarkeit des gefälschten Zielbeitrags ändert daran nichts)');
+    $selected = (string) $w->quotes->build($victim, $reader, "kurz\n[quote=post:999]\nfremder Text");
+    T::same([$victim], QuoteService::extractRefs($selected), 'build: die Auswahl mit Marker-Muster erzeugt keine fremde Referenz (vorher [victim, 999])');
+    $selectedPrefixed = (string) $w->quotes->build($victim, $reader, "kurz\n> [quote=post:999]\n> fremder Text\nEnde");
+    T::same([$victim], QuoteService::extractRefs($selectedPrefixed), 'build: auch ein Block mit „> “ in der Auswahl erzeugt keine fremde Referenz');
+    T::same(true, str_contains($selectedPrefixed, 'kurz') && str_contains($selectedPrefixed, 'Ende') && !str_contains($selectedPrefixed, 'fremder Text'), 'build: der echte Block der Auswahl wird entfernt (verschachtelte Zitate entfallen), der übrige Text bleibt');
+});
+
+T::run('B6: topics.last_post_at wird nie NULL (Löschen der einzigen veröffentlichten Antwort eines wartenden Themas)', static function (): void {
+    $w = ccRealWorld();   // new_member_approval_posts = 2: der Neuling wartet auf Freigabe
+    $newbie = $w->db->user();
+    $moderator = $w->db->user(['role' => 'moderator']);
+    $forum = $w->db->forum();
+    ccRows($w, $forum, [ccMemberRow()]);
+    $created = $w->topics->create($newbie, $forum, 'Thema eines Neulings', 'Wartender Themenstart');
+    T::same('pending', ccOutcome($created), 'Vorbedingung: das Thema des Neulings wartet auf Freigabe');
+    $topic = (int) $created['topic_id'];
+    $w->at(60);
+    $reply = $w->posts->reply($moderator, $topic, 'Antwort der Moderation im wartenden Thema');
+    T::same('published', ccOutcome($reply), 'Vorbedingung: die Moderation antwortet im wartenden Thema, die Antwort ist veröffentlicht');
+    T::same([1, ccUtc(60), (int) $reply['post_id']], [(int) $w->topic($topic)['reply_count'], $w->topic($topic)['last_post_at'], (int) $w->topic($topic)['last_post_id']], 'Vorbedingung: reply_count 1, last_post_at und last_post_id der Antwort');
+    T::same([], ccAudit($w, false), 'Zähler von Forum und Thema stimmen vor dem Löschen');
+
+    $w->at(120);
+    $deleted = $w->posts->delete($moderator, (int) $reply['post_id']);
+    T::same(true, $deleted['success'] ?? null, 'die Moderation löscht die einzige veröffentlichte Antwort');
+    $t = $w->topic($topic);
+    T::same([0, null, null, ccUtc()], [(int) $t['reply_count'], $t['last_post_id'], $t['last_poster_id'], $t['last_post_at']], 'Thema: reply_count 0, last_post_id/last_poster_id NULL, last_post_at fällt auf die Anlagezeit des Themas zurück (nicht NULL)');
+    T::same([], ccAudit($w, false), 'Neuberechnung: last_post_at ist nirgends NULL, Zähler von Forum und Thema stimmen');
+    T::same(0, (int) $w->scalar('SELECT COUNT(*) FROM cms_community_topics WHERE last_post_at IS NULL'), 'Invariante: kein Thema hat last_post_at NULL (COUNT)');
+
+    // Ein veröffentlichtes Thema fällt weiterhin auf die letzte verbleibende Antwort zurück, nicht auf die Anlagezeit
+    $w->at(600);
+    $author = $w->db->user();
+    [$published, $postIds] = ccSeedTopic($w, $forum, $author, 3, 500);
+    $w->at(700);
+    $w->posts->delete($moderator, $postIds[2]);
+    T::same([$postIds[1], ccUtc(560)], [(int) $w->topic($published)['last_post_id'], $w->topic($published)['last_post_at']], 'veröffentlichtes Thema: last_* zeigt den letzten verbleibenden veröffentlichten Beitrag (nicht die Anlagezeit des Themas)');
+    T::same(0, (int) $w->scalar('SELECT COUNT(*) FROM cms_community_topics WHERE last_post_at IS NULL'), 'Invariante gilt weiter (COUNT)');
+});
+
+T::run('B23: listPage mit afterId an der Grenze von int: kein TypeError, leere letzte Seite', static function (): void {
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $forum = $w->db->forum();
+    [$topic, $ids] = ccSeedTopic($w, $forum, $a, 3);
+    foreach ([PHP_INT_MAX, PHP_INT_MAX - 1, PHP_INT_MAX - 2, 4294967296, 4294967295] as $after) {
+        try {
+            $r = $w->posts->listPage($a, $topic, $after);
+            T::same([true, [], null, false], [ccGet($r, 'success'), ccGet($r, 'items'), ccGet($r, 'next'), ccGet($r, 'has_more')], 'afterId ' . $after . ': leere letzte Seite');
+        } catch (\Throwable $e) {
+            T::check(false, 'afterId ' . $after . ': keine Ausnahme', get_class($e) . ': ' . $e->getMessage());
+        }
+    }
+    T::same(0, count($w->posts->listPage($a, $topic, PHP_INT_MAX)['items'] ?? [null]), 'afterId PHP_INT_MAX liefert keinen Beitrag');
+    T::same($ids, array_map(static fn (array $p): int => (int) $p['id'], $w->posts->listPage($a, $topic, -5)['items'] ?? []), 'negative afterId: von Anfang an');
+    // Platzhalter hinter der letzten veröffentlichten Seite erscheinen nur, wenn afterId davor liegt
+    $w->db->execute("UPDATE cms_community_posts SET status = 'deleted', status_reason = 'author' WHERE id = ?", [$ids[2]]);
+    T::same([$ids[0], $ids[1], $ids[2]], array_map(static fn (array $p): int => (int) $p['id'], $w->posts->listPage($a, $topic)['items'] ?? []), 'Vorbedingung: der gelöschte letzte Beitrag erscheint als Platzhalter');
+    T::same([], $w->posts->listPage($a, $topic, PHP_INT_MAX)['items'] ?? null, 'hinter PHP_INT_MAX nichts, auch kein Platzhalter');
+});
+
+T::run('B9/B18: Beitragsliste lädt Thema und Forum einmal je Seite (höchstens eine zusätzliche Abfrage je Beitrag)', static function (): void {
+    $w = ccRealWorld(['new_member_approval_posts' => 0]);
+    $author = $w->db->user();
+    $member = $w->db->user();
+    $forum = $w->db->forum();
+    ccRows($w, $forum, [ccMemberRow(), ['subject_type' => 'guest', 'subject_key' => '', 'permissions' => ['read' => 1]]]);
+    $w->at(5000);
+    [$topic, $ids] = ccSeedTopic($w, $forum, $author, 40, -4000);
+    $w->db->stats($member, ['post_count' => 5]);
+    $count = static fn (int $posts, ?int $viewer) => (static function () use ($w, $topic, $posts, $viewer): array {
+        $from = count($w->db->log);
+        $page = $w->posts->listPage($viewer, $topic, null, $posts);
+        $queries = array_slice($w->db->log, $from);
+
+        return [count($page['items'] ?? []), count($queries), count(array_filter($queries, static fn (string $q): bool => str_contains($q, 'FROM cms_community_topics'))), count(array_filter($queries, static fn (string $q): bool => str_contains($q, 'FROM cms_community_forums')))];
+    })();
+
+    foreach ([5, 15, 40] as $posts) {
+        // Betrachter: Mitglied (Statistikzeile je Beitrag möglich), Gast (guests_can_read ist aus: Gast sieht nichts, deshalb nur Mitglied und Autor)
+        foreach (['member' => $member, 'author' => $author] as $label => $viewer) {
+            [$items, $queries, $topicReads, $forumReads] = $count($posts, $viewer);
+            T::same($posts, $items, "Seite mit {$posts} Beiträgen ({$label}): vollständig");
+            T::check($topicReads <= 3 && $forumReads <= 3, "Seite mit {$posts} Beiträgen ({$label}): Thema höchstens dreimal (vorab, Seite) und Forum höchstens dreimal gelesen, nicht je Beitrag", "Thema {$topicReads}x, Forum {$forumReads}x");
+            T::check($queries <= 16 + $posts, "Seite mit {$posts} Beiträgen ({$label}): höchstens 16 + eine Abfrage je Beitrag (vorher drei je Beitrag: 57 bei 15, 305 bei 100 Beiträgen)", $queries . ' Abfragen');
+        }
+    }
+    // Ohne Kontextzeilen wären es 3 Abfragen je Beitrag: Gegenprobe über die Rechteprüfung ohne topic/forum im Kontext
+    $w->canLog = [];
+    $w->posts->listPage($member, $topic, null, 10);
+    $perPost = array_values(array_filter($w->canLog, static fn (array $c): bool => isset($c['context']['post'])));
+    T::same(10, count($perPost), 'die Seite fragt je Beitrag einmal read');
+    T::same([true], array_values(array_unique(array_map(static fn (array $c): bool => isset($c['context']['topic'], $c['context']['forum']) && (int) $c['context']['topic']['id'] === $topic, $perPost))), 'jede Frage trägt die geladene Themen- und Forumzeile');
+
+    // Rechte ändern sich dadurch nicht: ausgeblendeter Beitrag bleibt Platzhalter, ein verborgenes Forum bleibt verborgen
+    $w->db->execute("UPDATE cms_community_posts SET status = 'hidden', status_reason = 'moderator' WHERE id = ?", [$ids[1]]);
+    $views = array_map(static fn (array $p): string => (string) $p['view'], $w->posts->listPage($member, $topic, null, 3)['items'] ?? []);
+    T::same(['full', 'placeholder', 'full', 'full'], $views, 'Ansicht je Beitrag unverändert (ausgeblendet: Platzhalter zwischen den veröffentlichten Beiträgen)');
+    $w->db->execute("UPDATE cms_community_forums SET status = 'hidden' WHERE id = ?", [$forum]);
+    T::same('not_found', ccOutcome($w->posts->listPage($member, $topic)), 'verborgenes Forum: nicht lesbar');
+});
+
+T::run('B21: wiederholtes Löschen eines Themas ist mit der echten CommunityAccess wirkungslos (already_deleted), Fremde und Gesperrte bleiben abgelehnt', static function (): void {
+    $w = ccRealWorld(['new_member_approval_posts' => 0]);
+    $author = $w->db->user();
+    $other = $w->db->user();
+    $banned = $w->db->user();
+    $moderator = $w->db->user(['role' => 'moderator']);
+    $forum = $w->db->forum();
+    ccRows($w, $forum, [ccMemberRow()]);
+    $topic = (int) $w->topics->create($author, $forum, 'Thema zum zweimal Löschen', 'Themenstart')['topic_id'];
+    $w->at(60);
+    $first = $w->topics->delete($author, $topic);
+    T::same([true, 'published', 'deleted'], [$first['success'] ?? null, $first['previous_status'] ?? null, $first['mode'] ?? null], 'erstes Löschen durch den Autor');
+    $w->hooks = [];
+    $snapshot = ccSnapshot($w);
+    $w->at(65);
+
+    $again = $w->topics->delete($author, $topic);
+    T::same([true, true, $topic, $forum, 'deleted'], [$again['success'] ?? null, $again['already_deleted'] ?? null, $again['topic_id'] ?? null, $again['forum_id'] ?? null, $again['previous_status'] ?? null], 'zweites Löschen durch den Autor (Doppelklick): Erfolg mit already_deleted');
+    $viaModerator = $w->topics->delete($moderator, $topic);
+    T::same([true, true], [$viaModerator['success'] ?? null, $viaModerator['already_deleted'] ?? null], 'zweites Löschen durch die Moderation: Erfolg mit already_deleted');
+    T::same([$snapshot, []], [ccSnapshot($w), $w->hooks], 'wirkungslos: nichts geschrieben, kein Hook, Zähler unverändert');
+    T::same([], ccAudit($w), 'Zähler stimmen');
+
+    // Alle anderen Ablehnungen bleiben Ablehnungen (kein Freibrief für „gelöscht“)
+    T::same('not_found', ccOutcome($w->topics->delete($other, $topic)), 'ein fremdes Mitglied: weiterhin abgelehnt (not_found, kein Hinweis auf das gelöschte Thema)');
+    T::same('login_required', ccOutcome($w->topics->delete(0, $topic)), 'Gast: abgelehnt');
+    T::same('not_found', ccOutcome($w->topics->delete($author, 99999)), 'unbekanntes Thema: weiterhin not_found');
+    // Ein Thema, das nicht gelöscht ist und aus anderem Grund nicht erreichbar ist (Forum verborgen): die Ablehnung bleibt,
+    // nie „already_deleted“ (der Zweig gilt nur für ein wirklich gelöschtes Thema)
+    $secretForum = $w->db->forum(['status' => 'hidden']);
+    $secretTopic = $w->db->topic(['forum' => $secretForum, 'user' => $author]);
+    $snapshot = ccSnapshot($w);
+    $result = $w->topics->delete($author, $secretTopic);
+    T::same([false, null], [$result['success'] ?? null, $result['already_deleted'] ?? null], 'Thema in verborgenem Forum (nicht gelöscht): der Starter bekommt kein „bereits gelöscht“', json_encode($result));
+    T::same($snapshot, ccSnapshot($w), 'und nichts wurde geschrieben');
+    // Gesperrter Starter eines gelöschten Themas (Sperre vor der ersten Aktion, der Zwischenspeicher kennt ihn noch nicht)
+    $w->db->ban(['user' => $banned, 'scope' => 'full', 'reason' => 'Test']);
+    $bannedTopic = $w->db->topic(['forum' => $forum, 'user' => $banned, 'status' => 'deleted']);
+    $snapshot = ccSnapshot($w);
+    T::same('banned_full', ccOutcome($w->topics->delete($banned, $bannedTopic)), 'gesperrter Starter (full): weiterhin banned_full, auch beim Wiederholen');
+    T::same([$snapshot, []], [ccSnapshot($w), $w->hooks], 'Ablehnungen schreiben nichts');
+
+    // Moderator löscht ein fremdes Thema, danach wiederholt der Autor: ebenfalls wirkungslos
+    $w->at(120);
+    $second = (int) $w->topics->create($other, $forum, 'Thema, das die Moderation löscht', 'Themenstart')['topic_id'];
+    $w->at(180);
+    T::same(true, $w->topics->delete($moderator, $second)['success'] ?? null, 'Moderation löscht das Thema eines Mitglieds');
+    T::same(true, $w->topics->delete($other, $second)['already_deleted'] ?? null, 'der Themenstarter wiederholt danach: already_deleted');
+
+    // Ein Thema in der Wartestellung wird vom Starter ebenfalls wiederholt gelöscht
+    $w2 = ccRealWorld();
+    $newbie = $w2->db->user();
+    $f2 = $w2->db->forum();
+    ccRows($w2, $f2, [ccMemberRow()]);
+    $pending = (int) $w2->topics->create($newbie, $f2, 'Wartendes Thema', 'Wartender Themenstart')['topic_id'];
+    $w2->at(30);
+    T::same([true, 'pending'], [$w2->topics->delete($newbie, $pending)['success'] ?? null, $w2->topic($pending)['previous_status'] ?? null], 'wartendes Thema gelöscht (previous_status pending)');
+    T::same(true, $w2->topics->delete($newbie, $pending)['already_deleted'] ?? null, 'wartendes Thema: Wiederholen ist wirkungslos');
+});
+
+T::run('B46: jeder Fehlercode in Codes::ERRORS wird irgendwo erzeugt (keine toten Codes samt Sprachschlüsseln)', static function (): void {
+    $produced = '';
+    foreach (['Service', 'Repository'] as $folder) {
+        foreach (glob(ABSPATH . 'core/Services/Community/' . $folder . '/*.php') ?: [] as $file) {
+            $produced .= ccCodeWithoutComments((string) file_get_contents($file));
+        }
+    }
+    $dead = array_values(array_filter(Codes::ERRORS, static fn (string $code): bool => !str_contains($produced, "'" . $code . "'")));
+    T::same([], $dead, 'alle Codes aus Codes::ERRORS kommen als Zeichenkette im Quelltext der Dienste oder Repositories vor');
+    T::check(!in_array('not_deletable', Codes::ERRORS, true), 'not_deletable ist entfernt (wurde nie erzeugt)');
+    // Gegenprobe: die Erkennung findet einen nie erzeugten Code
+    T::same(['nirgends_erzeugt'], array_values(array_filter(['db_error', 'nirgends_erzeugt'], static fn (string $code): bool => !str_contains($produced, "'" . $code . "'"))), 'Gegenprobe: ein erfundener Code wird als tot erkannt');
+});
+
+T::run('B10: der Slug eines Themas schreibt ł, ø, æ, œ, þ, đ, ð, ı um (statt sie zu „-“ zu machen)', static function (): void {
+    $w = new CcWorld();
+    $a = $w->db->user();
+    $forum = $w->db->forum();
+    foreach ([
+        'Łódź Ñandú' => 'lodz-nandu', 'Søren Ørsted fragt' => 'soren-orsted-fragt', 'Æble & Œuvre' => 'aeble-oeuvre', 'Þórr Óðinn' => 'thorr-odinn',
+        'Đorđe aus Zagreb' => 'dorde-aus-zagreb', 'Diyarbakır Dürüm' => 'diyarbakir-dueruem',
+    ] as $title => $slug) {
+        $w->at(30);
+        $created = $w->topics->create($a, $forum, $title, 'Text des Themenstarts');
+        T::same($slug, $created['slug'] ?? null, 'Slug in der Antwort: ' . $title);
+        T::same($slug, $w->topic((int) $created['topic_id'])['slug'] ?? null, 'Slug in der Zeile des Themas: ' . $title);
+    }
+});
+
+T::run('B43: Sprach-Rückfall der Texte zu Dienstergebnissen: fehlt der Schlüssel im englischen Katalog, gilt der deutsche Text', static function (): void {
+    // Die echten Sprachdateien sind zeilenparallel; ein Katalog mit einem nur deutschen Schlüssel prüft den Rückfall.
+    I18n::reset('de', 'en', 'Europe/Berlin', [
+        'de' => ['community.error.nur_deutsch' => 'Nur auf Deutsch', 'community.error.beide' => 'Auf Deutsch'],
+        'en' => ['community.error.beide' => 'In English'],
+    ]);
+    T::same('In English', I18n::t('community.error.beide'), 'Sprache der Anfrage en: englischer Text');
+    T::same('In English', I18n::t('community.error.beide', [], 'en'), 'ausdrücklich en: englischer Text');
+    T::same('Nur auf Deutsch', I18n::t('community.error.nur_deutsch'), 'Schlüssel nur im deutschen Katalog (Anfrage en): deutscher Text, nicht der Schlüssel');
+    T::same('Nur auf Deutsch', I18n::t('community.error.nur_deutsch', [], 'en'), 'ausdrücklich en, Schlüssel nur deutsch: deutscher Text');
+    T::same('Nur auf Deutsch', I18n::t('community.error.nur_deutsch', [], 'fr'), 'unbekannte Sprache: deutscher Text');
+    T::same('community.error.keiner', I18n::t('community.error.keiner'), 'Schlüssel in keinem Katalog: der Schlüssel selbst');
+    T::same('community.error.keiner', I18n::t('community.error.keiner', [], 'en'), 'ausdrücklich en, in keinem Katalog: der Schlüssel selbst');
+    I18n::reset();
+    // Mit den echten Dateien: jeder Fehlercode hat in beiden Sprachen einen eigenen Text (nicht den Schlüssel)
+    I18n::reset('de', 'en', 'Europe/Berlin');
+    $missing = [];
+    foreach (Codes::ERRORS as $code) {
+        foreach (['de', 'en'] as $locale) {
+            if (I18n::t('community.error.' . $code, [], $locale) === 'community.error.' . $code) {
+                $missing[] = $locale . ':' . $code;
+            }
+        }
+    }
+    T::same([], $missing, 'jeder Fehlercode hat einen deutschen und einen englischen Text');
+    T::check(I18n::t('community.error.db_error', [], 'de') !== I18n::t('community.error.db_error', [], 'en'), 'deutscher und englischer Text unterscheiden sich');
+    I18n::reset();
 });
 
 T::finish();

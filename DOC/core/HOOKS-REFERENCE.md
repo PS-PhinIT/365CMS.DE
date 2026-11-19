@@ -20,8 +20,10 @@
 | `Hooks::addFilter(string $tag, callable $cb, int $priority = 10)` | Filter registrieren |
 | `Hooks::applyFilters(string $tag, mixed $value, ...$args): mixed` | Wert durch die Filterkette reichen |
 | `Hooks::removeFilter(string $tag, callable $cb, int $priority = 10)` | entfernen |
+| `Hooks::getCallbacks(string $tag, string $type = 'filter'): array` | registrierte Callbacks eines Tags in Ausführungsreihenfolge (`'filter'` oder `'action'`), z. B. für Filterketten, die jeden Schritt einzeln prüfen (seit 4.2.0) |
+| `Hooks::doActionIsolated(string $tag, ?callable $onError, ...$args)` | Action auslösen, jeder Verbraucher einzeln abgesichert: eine Ausnahme geht an `$onError` und hindert die übrigen nicht; zählt für `didAction()` wie `doAction()` (seit 4.2.0) |
 
-Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierungsreihenfolge ausgeführt; Filter geben den (veränderten) Wert zurück. Ausnahmen werden nicht von `Hooks` abgefangen. Callbacks sollten selbst fehlertolerant sein.
+Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierungsreihenfolge ausgeführt; Filter geben den (veränderten) Wert zurück. `doAction()` und `applyFilters()` fangen keine Ausnahmen ab (nur `doActionIsolated()`). Callbacks sollten selbst fehlertolerant sein.
 
 ### Lebenszyklus & Routing
 
@@ -202,7 +204,7 @@ Modul `community` (Kernmodul, standardmäßig aus). Die Namen stehen als Konstan
 | `cms_community_post_created` | Action | `int $postId`, `int $topicId`, `int $userId`, `string $status` | Antwort gespeichert; **nicht** für den Themenstart (den meldet `cms_community_topic_created`); `status` = `published` oder `pending` |
 | `cms_community_post_updated` | Action | `int $postId`, `int $topicId`, `int $editorId`, `int $revisionId` | Beitrag bearbeitet; `revisionId` = die im Bearbeitungsverlauf gespeicherte Fassung |
 | `cms_community_post_deleted` | Action | `int $postId`, `int $topicId`, `int $actorId`, `string $mode` | Beitrag gelöscht (`deleted`, später `purged`); der erste Beitrag wird nur zusammen mit dem Thema gelöscht |
-| `cms_community_can` | Filter | `AccessDecision $decision`, `int $userId`, `string $action`, `array $context` | letzter Schritt von `CommunityAccess::can()`; das Ergebnis darf eine Erlaubnis nur in eine Ablehnung ändern (Grund `filter_denied`), nie eine Ablehnung aufheben; ungültige Rückgaben werden ignoriert |
+| `cms_community_can` | Filter | `AccessDecision $decision`, `int $userId`, `string $action`, `array $context` | letzter Schritt von `CommunityAccess::can()` (nur bei erlaubter Entscheidung; `$context` kommt nur aus Dienst- oder Controller-Code). Jeder Filter läuft einzeln und bekommt die Entscheidung, die der vorige übrig gelassen hat. Er darf eine Erlaubnis nur ablehnen oder verschärfen (wartend statt veröffentlicht, Platzhalter statt voll), nie erweitern oder eine Ablehnung aufheben: die erste Ablehnung steht fest und beendet die Kette (Grund `filter_denied`, bei `read` und `search` `not_found`); eine Ausnahme im Filter gilt als Ablehnung (fail-closed). Ungültige Rückgaben und Erweiterungen werden ignoriert und protokolliert |
 
 Vorgesehen, in 4.2.0 (PR #2a) noch nicht ausgelöst: Die Namen sind in `Events` festgelegt, die Argumente der Aktionen ohne Signatur folgen mit dem jeweiligen Dienst (Moderation, Meldungen, Sperren, Renderer: PR #2b und später).
 

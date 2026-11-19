@@ -63,6 +63,9 @@ final class TopicService
      */
     public const LIMIT_REASONS = ['rate_limited', 'slow_mode', 'trust_limit', 'pending_limit'];
 
+    /** Ablehnungsgründe von `can('delete')` für ein bereits gelöschtes Thema (Moderation: `topic_deleted`, Autor: `not_found`). */
+    private const REPEAT_REASONS = ['not_found', 'topic_deleted'];
+
     /** Ganzzahlspalten einer Themenzeile. */
     private const INT_COLUMNS = [
         'id', 'forum_id', 'user_id', 'moved_to_topic_id', 'is_pinned', 'is_announcement', 'is_locked', 'slow_mode_seconds',
@@ -125,18 +128,21 @@ final class TopicService
 
     /**
      * Titel: Steuerzeichen entfernt, jede Folge von Leerraum (auch Tabulator, Zeilenumbruch, geschützte Leerzeichen) ein
-     * Leerzeichen, Rand getrimmt; unsichtbare Zeichen, die Titel fälschen (Nullbreitenzeichen, Richtungsumschalter, BOM),
-     * entfallen. `null` bei ungültigem UTF-8. Die Länge prüft der Aufrufer gegen `title_min`/`title_max`.
+     * Leerzeichen, Rand getrimmt; unsichtbare Zeichen, die Titel fälschen (Formatzeichen der Kategorie Cf: Nullbreitenzeichen,
+     * Richtungsumschalter, weiche Trennstriche, BOM, Tag-Zeichen; Näheres bei `PostService::stripFormatCharacters()`), entfallen.
+     * Bleibt kein sichtbares Zeichen übrig (Leerraum, Hangul-Füller, Braille-Leerzeichen, nur Akzentzeichen), ist der Titel leer
+     * und damit `title_too_short`. `null` bei ungültigem UTF-8. Die Länge prüft der Aufrufer gegen `title_min`/`title_max`.
      */
     public static function normalizeTitle(string $title): ?string
     {
         if (!mb_check_encoding($title, 'UTF-8')) {
             return null;
         }
-        $title = (string) preg_replace('/[\x{200B}\x{FEFF}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $title);
+        $title = PostService::stripFormatCharacters($title);
         $title = (string) preg_replace('/[\s\p{Z}]+/u', ' ', $title);
+        $title = trim((string) preg_replace('/\p{Cc}/u', '', $title));
 
-        return trim((string) preg_replace('/\p{Cc}/u', '', $title));
+        return PostService::hasVisibleText($title) ? $title : '';
     }
 
     // ── Anlegen ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -307,7 +313,11 @@ final class TopicService
      * Thema weich löschen (`status = deleted`, `previous_status` merkt den Vorwert). Der Autor darf nur ein Thema ohne
      * Antworten löschen (`has_replies`); die Moderation (`can('moderate')`) auch eines mit Antworten. War das Thema
      * veröffentlicht, sinken die Zähler laut Matrix und „letztes Thema/letzter Beitrag“ des Forums werden neu bestimmt,
-     * falls das Thema es war. Wiederholtes Löschen ist wirkungslos (`already_deleted = true`).
+     * falls das Thema es war. Wiederholtes Löschen ist wirkungslos (`already_deleted = true`): ein bereits gelöschtes Thema
+     * lehnt `can('delete')` ab (`topic_deleted` für die Moderation, `not_found` für den Autor, dem ein gelöschtes Thema nicht
+     * mehr sichtbar ist). Beides gilt hier nicht als Fehler, wenn der Handelnde der Themenstarter ist oder das Forum moderiert
+     * (`repeatedDelete()`), damit ein Doppelklick auf „Thema löschen“ nach dem Erfolg keine Fehlermeldung zeigt; jede andere
+     * Ablehnung (Sperre, Modul aus, kein Konto, fremdes Thema) bleibt eine Ablehnung.
      *
      * @return array<string, mixed> bei Erfolg `topic_id`, `forum_id`, `previous_status`, `mode`
      */
@@ -319,6 +329,13 @@ final class TopicService
         $nowTs = ($this->clock)();
         $decision = $this->decide($userId, 'delete', ['topic_id' => $topicId, 'now' => $nowTs]);
         if (!$decision->allowed) {
+            if ($userId > 0 && in_array($decision->reason, self::REPEAT_REASONS, true)) {
+                $repeat = $this->repeatedDelete($userId, $topicId, $nowTs);
+                if ($repeat !== null) {
+                    return $repeat;
+                }
+            }
+
             return self::denied($decision);
         }
         if ($userId < 1) {
@@ -359,6 +376,34 @@ final class TopicService
     }
 
     /**
+     * Wiederholtes Löschen: das Thema ist schon gelöscht und der Handelnde ist der Themenstarter oder moderiert das Forum.
+     * `null`, wenn es etwas anderes ist (dann gilt die ursprüngliche Ablehnung). Ohne Sperre, ohne Schreiben, ohne Hook.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function repeatedDelete(int $userId, int $topicId, int $nowTs): ?array
+    {
+        try {
+            $topic = $this->topics->find($topicId);
+            if ($topic === null || (string) $topic['status'] !== 'deleted') {
+                return null;
+            }
+            $forumId = (int) $topic['forum_id'];
+            if ($topic['user_id'] === null || (int) $topic['user_id'] !== $userId) {
+                if (!($this->can)($userId, 'moderate', ['forum_id' => $forumId, 'now' => $nowTs])->allowed) {
+                    return null;
+                }
+            }
+        } catch (\PDOException | \RuntimeException $e) {
+            $this->databaseError('topic.delete', $e, ['topic_id' => $topicId]);
+
+            return null;
+        }
+
+        return ['success' => true, 'topic_id' => $topicId, 'forum_id' => $forumId, 'previous_status' => 'deleted', 'mode' => 'deleted', 'already_deleted' => true];
+    }
+
+    /**
      * @return array<string, mixed>|null null: das Thema hat das Forum gewechselt, der Aufrufer beginnt von vorn
      */
     private function deleteLocked(int $userId, int $topicId, int $forumId, bool $moderates, int $nowTs, string $now): ?array
@@ -382,6 +427,12 @@ final class TopicService
 
         $decision = $this->decide($userId, 'delete', ['topic_id' => $topicId, 'now' => $nowTs, 'fresh' => true]);
         if (!$decision->allowed) {
+            // Ein gleichzeitiger zweiter Aufruf hat das Thema zwischen Vorprüfung und Sperre gelöscht: auch das ist ein Wiederholen.
+            if (in_array($decision->reason, self::REPEAT_REASONS, true) && (string) $topic['status'] === 'deleted'
+                && (($topic['user_id'] !== null && (int) $topic['user_id'] === $userId) || $moderates)) {
+                return ['success' => true, 'topic_id' => $topicId, 'forum_id' => $forumId, 'previous_status' => 'deleted', 'mode' => 'deleted', 'already_deleted' => true];
+            }
+
             return self::denied($decision);
         }
         $replies = (int) $topic['reply_count'];

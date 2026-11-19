@@ -27,6 +27,7 @@ declare(strict_types=1);
 
 namespace CMS\Services\Community\Repository;
 
+use CMS\Services\Community\Support\Slugger;
 use CMS\Services\Community\Support\Transaction;
 
 if (!defined('ABSPATH')) {
@@ -71,6 +72,19 @@ final class ForumRepository extends AbstractRepository
 
     /** Schalter-Spalten, die als 0/1 gespeichert werden. */
     private const FLAGS = ['require_approval', 'inherit_permissions'];
+
+    /**
+     * Grenzen der Spalten laut Schema (`TESTS/schema-v27/golden.json`): `title`/`title_en` VARCHAR(150), `icon` VARCHAR(50),
+     * `color` VARCHAR(9), `link_url` VARCHAR(500), Beschreibungen TEXT (65.535 Bytes), Zahlen INT UNSIGNED. Slugs und Auswahlwerte
+     * (`status`, `type`) prüft `invalid()` gesondert. Format: siehe `AbstractRepository::exceeds()`.
+     */
+    private const LIMITS = [
+        'title' => ['chars', 150, false], 'title_en' => ['chars', 150, true],
+        'description' => ['bytes', 65535, true], 'description_en' => ['bytes', 65535, true],
+        'icon' => ['chars', 50, true], 'color' => ['chars', 9, true], 'link_url' => ['chars', 500, true],
+        'category_id' => ['uint'], 'slow_mode_seconds' => ['uint'], 'auto_close_days' => ['uint'], 'sort_order' => ['uint'],
+        'require_approval' => ['flag'], 'inherit_permissions' => ['flag'],
+    ];
 
     /** @var array<int, array<string, mixed>>|null */
     private ?array $tree = null;
@@ -193,7 +207,9 @@ final class ForumRepository extends AbstractRepository
     /**
      * Legt ein Forum an und setzt `depth` und `path` nach dem Einfügen (die eigene ID gehört in den Pfad).
      * `$maxDepth` ist die Zahl der Ebenen (die Einstellung dazu folgt mit der Forenverwaltung in PR #3, dort liest sie der Aufrufer): ein Forum der Tiefe `$maxDepth` oder mehr wird abgelehnt.
-     * Alles in einer Transaktion; Slugs müssen über beide Spalten (`slug`, `slug_en`) eindeutig sein.
+     * Alles in einer Transaktion; Slugs müssen über beide Spalten (`slug`, `slug_en`) eindeutig sein und dürfen kein reserviertes
+     * Pfadsegment sein (`Slugger::isReserved()`, sonst `slug_taken`). Längen und Bereiche der Spalten prüft die Methode vor dem
+     * Schreiben (`invalid_input` statt `PDOException`).
      * Fachfehler: `invalid_input`, `forum_not_found` (Elternforum), `forum_depth`, `slug_taken`.
      *
      * @param array<string, mixed> $data Spalten aus INSERTABLE; `parent_id` leer, 0 oder NULL = oberste Ebene
@@ -260,6 +276,7 @@ final class ForumRepository extends AbstractRepository
 
     /**
      * Ändert Spalten aus UPDATABLE, erhöht `version` und setzt `updated_at`. Ein leerer Änderungssatz ändert nichts.
+     * Slugs und Spaltengrenzen wie bei `create()` (reserviertes Segment → `slug_taken`, zu lang oder außerhalb → `invalid_input`).
      * Fachfehler: `forum_not_found`, `invalid_input`, `slug_taken`.
      *
      * @param array<string, mixed> $data
@@ -612,6 +629,15 @@ final class ForumRepository extends AbstractRepository
      */
     private function invalid(array $data, bool $creating): ?string
     {
+        // Typen und Spaltengrenzen zuerst: die Prüfungen danach rechnen mit Texten und Zahlen.
+        foreach (['slug', 'slug_en'] as $column) {
+            if (isset($data[$column]) && !is_string($data[$column])) {
+                return 'invalid_input';
+            }
+        }
+        if (self::exceeds($data, self::LIMITS)) {
+            return 'invalid_input';
+        }
         if ($creating && (trim((string) ($data['title'] ?? '')) === '' || !self::validSlug((string) ($data['slug'] ?? '')))) {
             return 'invalid_input';
         }
@@ -619,7 +645,8 @@ final class ForumRepository extends AbstractRepository
             || (array_key_exists('slug', $data) && !self::validSlug((string) $data['slug'])))) {
             return 'invalid_input';
         }
-        if ($creating && (int) ($data['parent_id'] ?? 0) < 0) {
+        $parentId = $data['parent_id'] ?? null;
+        if ($creating && $parentId !== null && $parentId !== '' && self::exceeds(['parent_id' => $parentId], ['parent_id' => ['uint']])) {
             return 'invalid_input';
         }
         $slugEn = $data['slug_en'] ?? null;
@@ -631,6 +658,12 @@ final class ForumRepository extends AbstractRepository
         }
         if (isset($data['type']) && !in_array($data['type'], self::TYPES, true)) {
             return 'invalid_input';
+        }
+        // Reservierte Pfadsegmente (neu, thema, seite-2, en, …) würden feste Adressen unterhalb des Community-Pfads verdecken.
+        foreach (['slug', 'slug_en'] as $column) {
+            if (isset($data[$column]) && is_string($data[$column]) && $data[$column] !== '' && Slugger::isReserved($data[$column])) {
+                return 'slug_taken';
+            }
         }
 
         return null;

@@ -25,6 +25,17 @@ final class CategoryRepository extends AbstractRepository
         'title', 'title_en', 'slug', 'slug_en', 'description', 'description_en', 'sort_order', 'is_visible',
     ];
 
+    /**
+     * Grenzen der Spalten laut Schema (`TESTS/schema-v27/golden.json`): `title`/`title_en` VARCHAR(150), Beschreibungen TEXT
+     * (65.535 Bytes), `sort_order` INT UNSIGNED. Die Slugs prüft `validSlug()` (höchstens 160 Zeichen). Format: siehe
+     * `AbstractRepository::exceeds()`.
+     */
+    private const LIMITS = [
+        'title' => ['chars', 150, false], 'title_en' => ['chars', 150, true],
+        'description' => ['bytes', 65535, true], 'description_en' => ['bytes', 65535, true],
+        'sort_order' => ['uint'], 'is_visible' => ['flag'],
+    ];
+
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
@@ -60,7 +71,8 @@ final class CategoryRepository extends AbstractRepository
     }
 
     /**
-     * Legt eine Kategorie an. Fachfehler: `invalid_input` (Slug leer oder ungültig), `slug_taken`.
+     * Legt eine Kategorie an. Fachfehler: `invalid_input` (Slug leer oder ungültig, Text zu lang, Zahl außerhalb des Bereichs der
+     * Spalte), `slug_taken`.
      *
      * @param array<string, mixed> $data Spalten aus INSERTABLE
      * @return array{success: bool, id?: int, error?: string}
@@ -69,8 +81,11 @@ final class CategoryRepository extends AbstractRepository
     {
         $data = self::pick($data, self::INSERTABLE);
         $data['slug_en'] = ($data['slug_en'] ?? '') === '' ? null : $data['slug_en'];
-        if (!self::validSlug((string) ($data['slug'] ?? '')) || ($data['slug_en'] !== null && !self::validSlug((string) $data['slug_en']))) {
+        if (!self::validSlug((string) ($data['slug'] ?? '')) || ($data['slug_en'] !== null && !self::validSlug((string) $data['slug_en'])) || self::exceeds($data, self::LIMITS)) {
             return ['success' => false, 'error' => 'invalid_input'];
+        }
+        if (array_key_exists('is_visible', $data)) {
+            $data['is_visible'] = !empty($data['is_visible']) ? 1 : 0;
         }
         if ($this->slugTaken((string) $data['slug'], null)) {
             return ['success' => false, 'error' => 'slug_taken'];
@@ -90,7 +105,8 @@ final class CategoryRepository extends AbstractRepository
     }
 
     /**
-     * Ändert Spalten aus INSERTABLE. Fachfehler: `invalid_input` (unbekannte ID oder ungültiger Slug), `slug_taken`.
+     * Ändert Spalten aus INSERTABLE. Fachfehler: `invalid_input` (unbekannte ID, ungültiger Slug, Text zu lang, Zahl außerhalb des
+     * Bereichs der Spalte), `slug_taken`.
      *
      * @param array<string, mixed> $data
      * @return array{success: bool, error?: string}
@@ -105,8 +121,12 @@ final class CategoryRepository extends AbstractRepository
             $data['slug_en'] = null;
         }
         if ((isset($data['slug']) && !self::validSlug((string) $data['slug']))
-            || (isset($data['slug_en']) && !self::validSlug((string) $data['slug_en']))) {
+            || (isset($data['slug_en']) && !self::validSlug((string) $data['slug_en']))
+            || self::exceeds($data, self::LIMITS)) {
             return ['success' => false, 'error' => 'invalid_input'];
+        }
+        if (array_key_exists('is_visible', $data)) {
+            $data['is_visible'] = !empty($data['is_visible']) ? 1 : 0;
         }
         if (isset($data['slug']) && $this->slugTaken((string) $data['slug'], $id)) {
             return ['success' => false, 'error' => 'slug_taken'];

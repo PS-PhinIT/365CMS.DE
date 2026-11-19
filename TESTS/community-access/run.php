@@ -180,6 +180,11 @@ final class AcWorld
     /** @param array<string, mixed> $settings */
     public function __construct(array $settings = [], ?TrustLevelPolicy $trust = null)
     {
+        if (MariaDbTestDatabase::configured()) {
+            // Jede Welt hält eine Verbindung und eine Datenbank; die Welten zeigen über ihre Closures auf sich selbst und werden erst
+            // vom Zyklensammler freigegeben. Ohne diesen Aufruf erschöpft die Suite max_connections (151) der MariaDB.
+            gc_collect_cycles();
+        }
         $this->db = MariaDbTestDatabase::configured() ? MariaDbTestDatabase::create() : CommunityTestDatabase::create();
         $this->now = gmmktime(12, 0, 0, 11, 15, 2026);
         $this->settings = Settings::fromArray($settings);
@@ -445,6 +450,9 @@ function acM(array $cells = []): array
 /** Ergebnis für alle drei Moderationsklassen. */
 const AC_MODS_OK = ['FM' => 'ok', 'GM' => 'ok', 'AD' => 'ok'];
 
+/** Kontext der Frage „darf dieses Konto die Community betreten/durchsuchen“ (ohne Ziel); ohne ihn ist read/search ohne Ziel `not_found`. */
+const AC_GLOBAL = ['scope' => 'global'];
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 T::run('Dateikonventionen, Aktionsvokabular und Quelltext-Wächter', static function (): void {
@@ -483,7 +491,8 @@ T::run('Dateikonventionen, Aktionsvokabular und Quelltext-Wächter', static func
     foreach (['strtotime(', 'mktime(', 'date_default_timezone', 'Hooks::applyFilters', 'Hooks::doAction', '$_SESSION', '$_GET', '$_POST', '$_REQUEST'] as $forbidden) {
         T::check(!str_contains($code, $forbidden), 'CommunityAccess enthält nicht: ' . $forbidden);
     }
-    T::same(1, substr_count($code, 'Events::applyFilter('), 'der Filter cms_community_can läuft an genau einer Stelle (Events::applyFilter)');
+    T::same(1, substr_count($code, 'Events::filters('), 'der Filter cms_community_can läuft an genau einer Stelle (Events::filters: jeder Filter einzeln, B1/B8)');
+    T::check(!str_contains($code, 'Events::applyFilter('), 'cms_community_can läuft nicht über Events::applyFilter (dort hebt ein späterer Filter eine Ablehnung auf)');
     $policy = acCode(acRead(AC_ROOT . 'Service/BasicTrustPolicy.php'));
     T::check(!str_contains($policy, 'Database') && !str_contains($policy, 'execute('), 'BasicTrustPolicy liest keine Datenbank');
 });
@@ -546,8 +555,10 @@ T::run('Matrix Lesen · Foren in allen Zuständen', static function (): void {
         acR(['*' => 'not_found', 'GRP' => 'ok', 'GM' => 'ok', 'AD' => 'ok'])
     );
     acMatrix($w, 'Forum als geladene Zeile', 'read', ['forum' => (new ForumRepository($w->db))->find($w->f['fh'])], acR(['*' => 'not_found', 'FM' => 'ok', 'GM' => 'ok', 'AD' => 'ok']));
-    acMatrix($w, 'ohne Ziel: nur die globalen Schritte', 'read', [], acR(['*' => 'ok']));
-    acMatrix($w, 'Suche', 'search', [], acR(['*' => 'ok', 'NC' => 'no_capability']));
+    acMatrix($w, 'ohne Ziel, aber ausdrücklich scope = global: nur die globalen Schritte', 'read', AC_GLOBAL, acR(['*' => 'ok']));
+    acMatrix($w, 'Suche (scope = global)', 'search', AC_GLOBAL, acR(['*' => 'ok', 'NC' => 'no_capability']));
+    acMatrix($w, 'ohne Ziel und ohne scope: kein Freibrief (B2)', 'read', [], acR(['*' => 'not_found', 'BF' => 'banned_full']));
+    acMatrix($w, 'Suche ohne Ziel und ohne scope (B2)', 'search', [], acR(['*' => 'not_found', 'BF' => 'banned_full', 'NC' => 'no_capability']));
 });
 
 T::run('Matrix Lesen · Themen in allen Zuständen', static function (): void {
@@ -632,6 +643,7 @@ T::run('Matrix Bearbeiten (edit) · Beitrags-, Themen- und Forenzustände', stat
     acMatrix($w, 'Beitrag rejected: niemand', 'edit', ['post_id' => $w->p['pr']], acW(['*' => 'not_found', 'OWN' => 'post_not_editable', 'FM' => 'post_not_editable', 'GM' => 'post_not_editable', 'AD' => 'post_not_editable']));
     acMatrix($w, 'erster Beitrag (Titel) im Fenster', 'edit', ['post_id' => $w->p['pf']], acW(['*' => 'no_permission', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Thema locked: Autor nein, Moderation ja', 'edit', ['post_id' => $w->p['pl']], acW(['*' => 'no_permission', 'OWN' => 'topic_locked'] + $mods));
+    acMatrix($w, 'Thema pending: der Autor darf seinen Beitrag bearbeiten, Fremde sehen das Thema nicht', 'edit', ['post_id' => $w->p['ptp']], acW(['*' => 'not_found', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Thema deleted: nur Moderation sieht es, niemand bearbeitet', 'edit', ['post_id' => ($w->p['ptd'])], acW(['*' => 'not_found', 'FM' => 'topic_deleted', 'GM' => 'topic_deleted', 'AD' => 'topic_deleted']));
     acMatrix($w, 'Forum readonly: Autor nein, Moderation ja', 'edit', ['post_id' => $w->p['ptr']], acW(['*' => 'no_permission', 'OWN' => 'forum_readonly'] + $mods));
     acMatrix($w, 'Forum archived: auch Moderation gesperrt', 'edit', ['post_id' => $w->p['pta']], acW(['*' => 'no_permission', 'OWN' => 'forum_archived', 'FM' => 'forum_archived', 'GM' => 'forum_archived', 'AD' => 'forum_archived']));
@@ -653,6 +665,9 @@ T::run('Matrix Löschen (delete) · Standard: delete_own aus; mit delete_own an'
     acMatrix($w, 'Beitrag deleted: wiederholtes Löschen ist idempotent erlaubt', 'delete', ['post_id' => $w->p['pd']], acW(['*' => 'no_permission', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Beitrag rejected: niemand', 'delete', ['post_id' => $w->p['pr']], acW(['*' => 'not_found', 'OWN' => 'post_not_editable', 'FM' => 'post_not_editable', 'GM' => 'post_not_editable', 'AD' => 'post_not_editable']));
     acMatrix($w, 'Thema locked', 'delete', ['post_id' => $w->p['pl']], acW(['*' => 'no_permission', 'OWN' => 'topic_locked'] + $mods));
+    acMatrix($w, 'Thema pending: der Autor darf seinen Beitrag löschen', 'delete', ['post_id' => $w->p['ptp']], acW(['*' => 'not_found', 'OWN' => 'ok'] + $mods));
+    $w->topic('tpn', 'fo', ['status' => 'pending', 'age' => 300, 'activity' => 300]);
+    acMatrix($w, 'Thema pending (fünf Minuten alt): der Autor darf es löschen', 'delete', ['topic_id' => $w->t['tpn']], acW(['*' => 'not_found', 'OWN' => 'ok'] + $mods));
     acMatrix($w, 'Forum archived: auch das wiederholte Löschen ist gesperrt', 'delete', ['post_id' => $w->p['pta']], acW(['*' => 'no_permission', 'OWN' => 'forum_archived', 'FM' => 'forum_archived', 'GM' => 'forum_archived', 'AD' => 'forum_archived']));
     // Thema löschen (ohne Beitrag): Autor im Fenster, Moderation immer
     acMatrix($w, 'Thema (fünf Minuten alt)', 'delete', ['topic_id' => $w->t['tnew']], acW(['*' => 'no_permission', 'OWN' => 'ok'] + $mods));
@@ -745,10 +760,10 @@ T::run('Sperren: write, full, abgelaufen, aufgehoben, noch nicht begonnen, unbek
     T::same('banned_write', $w->cell('bwlim', 'react', ['post_id' => $w->p['p']]), 'Schreibsperre: reagieren verboten');
     T::same('banned_write', $w->cell('bwlim', 'subscribe', ['topic_id' => $w->t['t']]), 'Schreibsperre: abonnieren verboten');
     T::same('ok', $w->cell('bwlim', 'read', ['topic_id' => $w->t['t']]), 'Schreibsperre: Lesen bleibt erlaubt');
-    T::same('ok', $w->cell('bwlim', 'search'), 'Schreibsperre: Suche bleibt erlaubt');
+    T::same('ok', $w->cell('bwlim', 'search', AC_GLOBAL), 'Schreibsperre: Suche bleibt erlaubt');
     T::same('banned_full', $w->cell('bweird', 'read', ['topic_id' => $w->t['t']]), 'unbekannter Umfang gilt als full (auch Lesen)');
     T::same('banned_full', $w->cell('bmix', 'read', ['topic_id' => $w->t['t']]), 'bei mehreren Sperren gilt die strengste');
-    T::same('banned_full', $w->cell('bf', 'search'), 'full: auch die Suche ist gesperrt');
+    T::same('banned_full', $w->cell('bf', 'search', AC_GLOBAL), 'full: auch die Suche ist gesperrt');
     T::same('ok:published', $w->cell('admin', 'reply', $reply), 'admin ist von Sperren ausgenommen');
     T::same('ok', $w->cell('admin', 'read', ['topic_id' => $w->t['t']]), 'admin liest trotz Sperre full');
     T::same(403, $w->can('bf', 'read', $reply)->status(), 'Sperre meldet 403 (nicht 404)');
@@ -782,7 +797,7 @@ T::run('Konten: nicht aktiv = Gast, unbekannte Konto-ID, Rolle ohne Community-Re
     T::same('not_found', $w2->cell('inactive', 'read', ['topic_id' => $w2->t['t']]), 'nicht aktives Konto bei geschlossenem Gast-Tor: nichts lesbar');
     T::same('ok', $w2->cell('vw', 'read', ['topic_id' => $w2->t['t']]), 'Mitglied mit Leserecht liest auch bei geschlossenem Gast-Tor');
     T::same('not_found', $w2->cell('nc', 'read', ['topic_id' => $w2->t['t']]), 'Mitglied ohne community.view: read = not_found');
-    T::same('no_capability', $w2->cell('nc', 'search'), 'Mitglied ohne community.view: search = no_capability');
+    T::same('no_capability', $w2->cell('nc', 'search', AC_GLOBAL), 'Mitglied ohne community.view: search = no_capability');
     T::same('no_capability', $w2->cell('vw', 'reply', ['topic_id' => $w2->t['t']]), 'Mitglied ohne community.participate: reply = no_capability');
     T::same('no_capability', $w2->cell('vw', 'create_topic', ['forum_id' => $w2->f['fo']]), 'Mitglied ohne community.participate: create_topic = no_capability');
     T::same('no_permission', $w2->cell('vw', 'topic.lock', ['topic_id' => $w2->t['t']]), 'Moderationsname braucht kein participate, nur Moderation');
@@ -806,19 +821,19 @@ T::run('Rolle moderator (community.moderate) ohne Forum-Zeile und Rolle admin oh
 T::run('Modul aus: alles abgelehnt, auch für admin; Mengen-API leer; limitsFor unberührt', static function (): void {
     $w = acStandardWorld();
     $w->moduleOn = false;
-    $cases = [['read', ['forum_id' => $w->f['fo']]], ['reply', ['topic_id' => $w->t['t']]], ['search', []], ['moderate', []], ['ban', []], ['unbekannt', []]];
+    $cases = [['read', ['forum_id' => $w->f['fo']]], ['reply', ['topic_id' => $w->t['t']]], ['search', AC_GLOBAL], ['moderate', []], ['ban', []], ['unbekannt', []]];
     foreach (AC_COLS as $column => $name) {
         foreach ($cases as [$action, $ctx]) {
             $expected = $action === 'unbekannt' ? 'unknown_action' : 'module_disabled';
             T::same($expected, $w->cell($name, $action, $ctx), 'Modul aus: ' . $column . ' · ' . $action);
         }
     }
-    T::same(404, $w->can('admin', 'read')->status(), 'module_disabled meldet 404');
+    T::same(404, $w->can('admin', 'read', AC_GLOBAL)->status(), 'module_disabled meldet 404');
     T::same([], $w->access->filterReadable($w->u['admin'], [$w->f['fo']]), 'Modul aus: filterReadable leer');
     T::same([], $w->access->readableForumIds($w->u['admin']), 'Modul aus: readableForumIds leer');
     T::same(1, $w->access->limitsFor($w->u['m1'])['level'], 'limitsFor liest die Stufe auch bei ausgeschaltetem Modul');
     $w->moduleOn = true;
-    T::same('ok', $w->cell('admin', 'read'), 'Modul wieder an: die Entscheidung folgt sofort (kein Zwischenspeicher für den Modulzustand)');
+    T::same('ok', $w->cell('admin', 'read', AC_GLOBAL), 'Modul wieder an: die Entscheidung folgt sofort (kein Zwischenspeicher für den Modulzustand)');
 });
 
 // ── Rechtematrix: Standards, Zeilen, Vererbung ──────────────────────────────────────────────────────────────────
@@ -992,6 +1007,137 @@ T::run('Forum-Moderator: include_children, Gruppen, Vorfahren; Forum unter verbo
     T::same([$w->f['HidChild']], $w->access->filterReadable($w->u['fme'], [$w->f['HidChild'], $w->f['Hid']]), 'filterReadable: Moderator des Unterforums sieht nur dieses');
 });
 
+T::run('Fail-closed bei beschädigten Forendaten: unbekannter Forumstatus, leerer oder beschädigter Pfad gelten wie hidden (B13)', static function (): void {
+    $w = acStandardWorld(['guests_can_read' => true]);
+    $viewers = ['guest', 'm1', 'own', 'grp', 'vw'];
+    $moderators = ['gm', 'admin'];
+
+    // Unbekannter Forumstatus (die Spalte ist ein VARCHAR(20): auch Importe und Eingriffe in die Datenbank können beliebige Werte hinterlassen)
+    foreach (['Hidden', 'HIDDEN', 'private', 'disabled', 'closed', '', ' hidden', 'open '] as $i => $status) {
+        $key = 'u' . $i;
+        $w->forum($key);
+        $w->topic('t' . $key, $key);
+        $w->post('p' . $key, 't' . $key);
+        try {
+            $w->sql('UPDATE cms_community_forums SET status = ? WHERE id = ?', [$status, $w->f[$key]]);
+        } catch (\Throwable $e) {
+            T::info('Forumstatus ' . T::export($status) . ' nicht speicherbar: übersprungen');
+            continue;
+        }
+        $w->moderators($key, [['subject_type' => 'user', 'subject_id' => $w->u['fm'], 'include_children' => 0]]);
+        $label = 'Forumstatus ' . T::export($status);
+        foreach ($viewers as $viewer) {
+            T::same('not_found', $w->cell($viewer, 'read', ['forum_id' => $w->f[$key]]), $label . ': ' . $viewer . ' liest das Forum nicht');
+            T::same('not_found', $w->cell($viewer, 'read', ['topic_id' => $w->t['t' . $key]]), $label . ': ' . $viewer . ' liest das Thema nicht');
+            T::same('not_found', $w->cell($viewer, 'read', ['post_id' => $w->p['p' . $key]]), $label . ': ' . $viewer . ' liest den Beitrag nicht');
+        }
+        T::same('login_required', $w->cell('guest', 'reply', ['topic_id' => $w->t['t' . $key]]), $label . ': Gast schreibt nicht (login_required)');
+        T::same('not_found', $w->cell('m1', 'reply', ['topic_id' => $w->t['t' . $key]]), $label . ': Mitglied antwortet nicht');
+        T::same('not_found', $w->cell('m1', 'create_topic', ['forum_id' => $w->f[$key]]), $label . ': Mitglied legt kein Thema an');
+        foreach (array_merge($moderators, ['fm']) as $moderator) {
+            T::same('ok', $w->cell($moderator, 'read', ['forum_id' => $w->f[$key]]), $label . ': ' . $moderator . ' (Moderation) sieht das Forum wie ein verborgenes');
+        }
+        T::same(false, in_array($w->f[$key], $w->access->readableForumIds($w->u['m1']), true), $label . ': readableForumIds(Mitglied) enthält es nicht');
+        T::same(false, in_array($w->f[$key], $w->access->readableForumIds(null), true), $label . ': readableForumIds(Gast) enthält es nicht');
+        T::same([], $w->access->filterReadable($w->u['m1'], [$w->f[$key]]), $label . ': filterReadable liefert es nicht');
+        T::same([$w->f[$key]], $w->access->filterReadable($w->u['gm'], [$w->f[$key]]), $label . ': globale Moderation liest es');
+    }
+
+    // Leerer oder beschädigter Pfad bei vorhandenem Elternforum
+    $w->forum('PP');
+    $w->forum('CC', ['parent' => 'PP']);
+    $w->topic('tCC', 'CC');
+    $w->moderators('CC', [['subject_type' => 'user', 'subject_id' => $w->u['fm'], 'include_children' => 0]]);
+    $pp = $w->f['PP'];
+    $cc = $w->f['CC'];
+    T::same('ok', $w->cell('m1', 'read', ['forum_id' => $cc]), 'Ausgangslage: das Kindforum mit intaktem Pfad ist lesbar');
+    $broken = [
+        'leer' => '', 'nur Schrägstriche' => '/', 'nur die eigene ID (Elternforum fehlt im Pfad)' => '/' . $cc . '/',
+        'endet nicht mit der eigenen ID' => '/' . $pp . '/', 'endet mit einer fremden ID (Elternforum davor stimmt)' => '/' . $pp . '/' . $w->f['fo'] . '/',
+        'falsches Elternforum vor der eigenen ID' => '/' . $w->f['fo'] . '/' . $cc . '/', 'Segment 0 vor dem Elternforum' => '/0/' . $pp . '/' . $cc . '/',
+        'Buchstaben im Pfad' => '/' . $pp . '/abc/' . $cc . '/', 'Segment 0' => '/0/' . $cc . '/', 'führende Null' => '/0' . $pp . '/' . $cc . '/',
+        'negative ID' => '/-' . $pp . '/' . $cc . '/', 'Leerzeichen' => '/' . $pp . '/ ' . $cc . '/', 'doppelter Schrägstrich' => '/' . $pp . '//' . $cc . '/',
+    ];
+    foreach ($broken as $label => $path) {
+        $w->sql('UPDATE cms_community_forums SET path = ? WHERE id = ?', [$path, $cc]);
+        $w->access->flush();
+        T::same('not_found', $w->cell('m1', 'read', ['forum_id' => $cc]), 'Pfad ' . $label . ': Mitglied liest das Kindforum nicht');
+        T::same('not_found', $w->cell('guest', 'read', ['topic_id' => $w->t['tCC']]), 'Pfad ' . $label . ': Gast liest das Thema nicht');
+        T::same('not_found', $w->cell('m1', 'reply', ['topic_id' => $w->t['tCC']]), 'Pfad ' . $label . ': Mitglied antwortet nicht');
+        T::same('ok', $w->cell('fm', 'read', ['forum_id' => $cc]), 'Pfad ' . $label . ': der Forum-Moderator sieht es');
+        T::same('ok', $w->cell('gm', 'read', ['forum_id' => $cc]), 'Pfad ' . $label . ': globale Moderation sieht es');
+        T::same(false, in_array($cc, $w->access->readableForumIds($w->u['m1']), true), 'Pfad ' . $label . ': readableForumIds(Mitglied) enthält es nicht');
+        T::same(false, in_array($cc, $w->access->readableForumIds(null), true), 'Pfad ' . $label . ': readableForumIds(Gast) enthält es nicht');
+        T::same([$cc], $w->access->filterReadable($w->u['gm'], [$cc]), 'Pfad ' . $label . ': filterReadable(globale Moderation) liefert es');
+    }
+    // Pfad repariert: das Forum ist wieder lesbar
+    $w->sql('UPDATE cms_community_forums SET path = ? WHERE id = ?', ['/' . $pp . '/' . $cc . '/', $cc]);
+    $w->access->flush();
+    T::same('ok', $w->cell('m1', 'read', ['forum_id' => $cc]), 'Pfad repariert: wieder lesbar');
+
+    // Der Fall des Befunds: Kindforum unter einem verborgenen oder internen Elternforum mit leerem Pfad
+    $w->forum('HP', ['status' => 'hidden']);
+    $w->forum('HC', ['parent' => 'HP']);
+    $w->topic('tHC', 'HC');
+    $w->forum('IP');
+    $w->permissions('IP', [['subject_type' => 'group', 'subject_key' => (string) $w->g['team'], 'permissions' => ['read' => 1, 'reply' => 1]]]);
+    $w->forum('IC', ['parent' => 'IP']);
+    $w->topic('tIC', 'IC');
+    T::same(['not_found', 'ok', 'not_found'], [$w->cell('m1', 'read', ['forum_id' => $w->f['HC']]), $w->cell('grp', 'read', ['forum_id' => $w->f['IC']]), $w->cell('m1', 'read', ['forum_id' => $w->f['IC']])], 'Ausgangslage mit intaktem Pfad: verborgen / nur Gruppe Team / nicht für Mitglieder');
+    $w->sql('UPDATE cms_community_forums SET path = ? WHERE id IN (?, ?)', ['', $w->f['HC'], $w->f['IC']]);
+    $w->access->flush();
+    foreach (['guest', 'm1', 'own', 'editor'] as $viewer) {
+        T::same('not_found', $w->cell($viewer, 'read', ['forum_id' => $w->f['HC']]), $viewer . ': Kind unter verborgenem Elternforum mit leerem Pfad bleibt verborgen');
+        T::same('not_found', $w->cell($viewer, 'read', ['topic_id' => $w->t['tIC']]), $viewer . ': Kind unter internem Elternforum mit leerem Pfad bleibt unlesbar (die Rechte der Vorfahren sind nicht mehr bestimmbar)');
+    }
+    T::same(false, in_array($w->f['HC'], $w->access->readableForumIds(null), true) || in_array($w->f['IC'], $w->access->readableForumIds(null), true), 'readableForumIds(Gast) enthält beide Kinder nicht');
+    T::same('not_found', $w->cell('m1', 'reply', ['topic_id' => $w->t['tIC']]), 'reply im Kind mit leerem Pfad: not_found');
+    T::same('not_found', $w->cell('m1', 'create_topic', ['forum_id' => $w->f['IC']]), 'create_topic dort: not_found');
+
+    // Ein Vorfahre fehlt im Forenbaum (der Pfad nennt ein Forum, das es nicht gibt) oder hat einen unbekannten Status
+    $w->forum('GA');
+    $w->forum('GB', ['parent' => 'GA']);
+    $w->forum('GC', ['parent' => 'GB']);
+    $w->topic('tGC', 'GC');
+    T::same('ok', $w->cell('m1', 'read', ['forum_id' => $w->f['GC']]), 'Ausgangslage: Enkelforum lesbar');
+    $w->sql('UPDATE cms_community_forums SET parent_id = ?, path = ? WHERE id = ?', [777777, '/777777/' . $w->f['GA'] . '/', $w->f['GA']]);
+    $w->sql('UPDATE cms_community_forums SET path = ? WHERE id IN (?, ?)', ['/777777/' . $w->f['GA'] . '/' . $w->f['GB'] . '/', $w->f['GB'], $w->f['GB']]);
+    $w->sql('UPDATE cms_community_forums SET path = ? WHERE id = ?', ['/777777/' . $w->f['GA'] . '/' . $w->f['GB'] . '/' . $w->f['GC'] . '/', $w->f['GC']]);
+    $w->access->flush();
+    T::same('not_found', $w->cell('m1', 'read', ['forum_id' => $w->f['GC']]), 'ein Vorfahre im Pfad, den es nicht gibt: das Enkelforum gilt als verborgen');
+    T::same('not_found', $w->cell('m1', 'read', ['forum_id' => $w->f['GA']]), 'dto. für das Forum mit dem fehlenden Elternforum selbst');
+    T::same('ok', $w->cell('gm', 'read', ['forum_id' => $w->f['GC']]), 'globale Moderation sieht es');
+
+    // Oberste Foren ohne Elternforum sind vom Pfad unabhängig (ihre Kette ist das Forum selbst)
+    $w->forum('RT');
+    $w->sql('UPDATE cms_community_forums SET path = ? WHERE id = ?', ['', $w->f['RT']]);
+    $w->access->flush();
+    T::same('ok', $w->cell('m1', 'read', ['forum_id' => $w->f['RT']]), 'oberstes Forum mit leerem Pfad bleibt lesbar (kein Elternforum, das fehlen könnte)');
+});
+
+T::run('Entscheidung B15: Unterforen unter einem readonly- oder archived-Elternforum bleiben beschreibbar (nur hidden wirkt auf die Unterforen)', static function (): void {
+    $w = acStandardWorld(['rate_post_seconds' => 0, 'rate_topic_seconds' => 0, 'new_member_approval_posts' => 0]);
+    foreach (['readonly' => 'forum_readonly', 'archived' => 'forum_archived'] as $status => $reason) {
+        $p = 'P' . $status;
+        $c = 'C' . $status;
+        $w->forum($p, ['status' => $status]);
+        $w->forum($c, ['parent' => $p]);
+        $w->topic('t' . $p, $p);
+        $w->topic('t' . $c, $c, ['by' => 'own']);
+        $w->post('p' . $c, 't' . $c, ['by' => 'own']);
+        T::same($reason, $w->cell('m1', 'reply', ['topic_id' => $w->t['t' . $p]]), 'Elternforum ' . $status . ': antworten nicht möglich (' . $reason . ')');
+        T::same('ok:published', $w->cell('m1', 'reply', ['topic_id' => $w->t['t' . $c]]), 'Unterforum unter ' . $status . ': antworten möglich (bewusste Entscheidung)');
+        T::same('ok:published', $w->cell('m1', 'create_topic', ['forum_id' => $w->f[$c]]), 'Unterforum unter ' . $status . ': Thema anlegen möglich');
+        T::same('ok', $w->cell('own', 'edit', ['post_id' => $w->p['p' . $c]]), 'Unterforum unter ' . $status . ': eigenen Beitrag bearbeiten möglich');
+        T::same('ok', $w->cell('gm', 'topic.lock', ['topic_id' => $w->t['t' . $c]]), 'Unterforum unter ' . $status . ': Moderation möglich');
+        T::same('ok', $w->cell('guest', 'read', ['topic_id' => $w->t['t' . $c]]), 'Unterforum unter ' . $status . ': lesbar');
+    }
+    $w->forum('Phid', ['status' => 'hidden']);
+    $w->forum('Chid', ['parent' => 'Phid']);
+    T::same('not_found', $w->cell('m1', 'create_topic', ['forum_id' => $w->f['Chid']]), 'Gegenprobe: unter einem verborgenen Elternforum gilt der Zustand für die Unterforen');
+    T::check(str_contains(acRead(AC_ROOT . 'Service/CommunityAccess.php'), 'bleibt beschreibbar (bewusste Entscheidung'), 'die Entscheidung steht im Docblock von CommunityAccess');
+});
+
 // ── Filter cms_community_can ────────────────────────────────────────────────────────────────────────────────────
 
 T::run('Pflichtfall: Filter cms_community_can darf nur ablehnen oder verschärfen, nie erweitern', static function (): void {
@@ -1040,7 +1186,7 @@ T::run('Pflichtfall: Filter cms_community_can darf nur ablehnen oder verschärfe
         // Erweiterung einer Freigabepflicht: wartend → veröffentlicht wird verworfen
         T::same('ok:pending', $w->cell('m0', 'reply', ['topic_id' => $w->t['t']]), 'Filter will pending → published: verworfen');
         T::same('ok:placeholder', $w->cell('m1', 'read', ['post_id' => $w->p['pd']]), 'Filter will placeholder → full (hier: Ansicht ohne Wert): verworfen');
-        T::same('ok', $w->cell('m1', 'search'), 'Filter will einen Anfangsstatus setzen, wo keiner vorgesehen ist: verworfen');
+        T::same('ok', $w->cell('m1', 'search', AC_GLOBAL), 'Filter will einen Anfangsstatus setzen, wo keiner vorgesehen ist: verworfen');
     });
 
     // Verschärfen ist erlaubt: veröffentlicht → wartend, voll → Platzhalter
@@ -1058,12 +1204,13 @@ T::run('Pflichtfall: Filter cms_community_can darf nur ablehnen oder verschärfe
             T::same('ok:published', $w->cell('m1', 'reply', ['topic_id' => $w->t['t']]), 'Filterergebnis ' . get_debug_type($junk) . ' wird ignoriert');
         });
     }
-    // Eine Ausnahme im Filter wirft nicht durch; der Eingangswert gilt
+    // Eine Ausnahme im Filter wirft nicht durch und gilt als Ablehnung (fail-closed, B8); bei read/search heißt sie not_found (B11)
     $throwing = static function (): never {
         throw new \RuntimeException('Plugin kaputt');
     };
     $with($throwing, function () use ($w): void {
-        T::same('ok:published', $w->cell('m1', 'reply', ['topic_id' => $w->t['t']]), 'werfender Filter: Eingangsentscheidung gilt');
+        T::same('filter_denied', $w->cell('m1', 'reply', ['topic_id' => $w->t['t']]), 'werfender Filter: Ablehnung filter_denied, nicht die Eingangsentscheidung');
+        T::same('not_found', $w->cell('m1', 'read', ['topic_id' => $w->t['t']]), 'werfender Filter bei read: not_found');
     });
 
     // Argumente: Entscheidung, Konto-ID als int (Gast 0), Aktion, Kontext
@@ -1085,7 +1232,7 @@ T::run('Pflichtfall: Filter cms_community_can darf nur ablehnen oder verschärfe
     };
     $with($denyForum, function () use ($w): void {
         T::same([$w->f['fo'], $w->f['fa']], $w->access->filterReadable($w->u['m1'], [$w->f['fo'], $w->f['fr'], $w->f['fa']]), 'filterReadable beachtet den Filter');
-        T::same('filter_denied', $w->can('m1', 'read', ['forum_id' => $w->f['fr']])->reason, 'dto. über can()');
+        T::same('not_found', $w->can('m1', 'read', ['forum_id' => $w->f['fr']])->reason, 'dto. über can(): bei read heißt die Ablehnung not_found (B11)');
     });
 
     // Verstöße werden protokolliert (Kanal community)
@@ -1099,6 +1246,243 @@ T::run('Pflichtfall: Filter cms_community_can darf nur ablehnen oder verschärfe
         $w->can('m1', 'reply', ['topic_id' => $w->t['t']]);
     });
     T::check(substr_count($log(), 'lieferte keine Entscheidung') === $before + 1, 'ein Filterergebnis ohne Entscheidung wird protokolliert');
+});
+
+/** Text aller Protokolldateien des Kanals community. */
+function acLogText(): string
+{
+    return implode("\n", array_map(static fn (string $f): string => acRead($f), glob(LOG_PATH . 'community-*.log') ?: []));
+}
+
+T::run('Filter cms_community_can: Ablehnung gilt für die ganze Kette, Ausnahme = Ablehnung, Verschärfung bleibt, read/search → not_found (B1, B8, B11)', static function (): void {
+    $w = acStandardWorld();
+    $reply = ['topic_id' => $w->t['t']];
+    /** @param list<array{0: callable, 1: int}> $filters */
+    $with = static function (array $filters, callable $test): void {
+        foreach ($filters as [$filter, $priority]) {
+            Hooks::addFilter(Events::CAN, $filter, $priority);
+        }
+        try {
+            $test();
+        } finally {
+            foreach ($filters as [$filter, $priority]) {
+                Hooks::removeFilter(Events::CAN, $filter, $priority);
+            }
+        }
+    };
+    $calls = [];
+    $deny = static function (string $name, ?int $retry = null) use (&$calls): \Closure {
+        return static function (AccessDecision $d) use (&$calls, $name, $retry): AccessDecision {
+            $calls[] = $name;
+
+            return AccessDecision::deny('geheim', $retry);
+        };
+    };
+    // Ein „frischer“ Freibrief: gibt immer die weiteste Entscheidung zurück (veröffentlicht, voll)
+    $widest = static function (string $name) use (&$calls): \Closure {
+        return static function (AccessDecision $d) use (&$calls, $name): AccessDecision {
+            $calls[] = $name;
+
+            return AccessDecision::allow($d->initialStatus === null ? null : 'published', $d->view === null ? null : 'full');
+        };
+    };
+    $throws = static function (string $name) use (&$calls): \Closure {
+        return static function () use (&$calls, $name): never {
+            $calls[] = $name;
+            throw new \RuntimeException('Plugin ' . $name . ' kaputt');
+        };
+    };
+
+    // B1: Filter A lehnt ab, ein späterer Filter B gibt wieder frei: die Ablehnung bleibt
+    $calls = [];
+    $with([[$deny('A', 10), 5], [$widest('B'), 20]], function () use ($w, $reply, &$calls): void {
+        T::same('filter_denied@10', $w->cell('m1', 'reply', $reply), 'A lehnt ab (Priorität 5), B erlaubt wieder (Priorität 20): die Ablehnung bleibt, mit der Wartezeit von A');
+        T::same(['A'], $calls, 'die Kette endet bei der ersten Ablehnung: B läuft nicht');
+        T::same('not_found', $w->cell('m1', 'read', ['forum_id' => $w->f['fo']]), 'dto. bei read: not_found');
+    });
+    // Die Priorität bestimmt die Reihenfolge, nicht die Registrierung: B (Priorität 5) zuerst, A (Priorität 20) danach
+    $calls = [];
+    $with([[$deny('A'), 20], [$widest('B'), 5]], function () use ($w, $reply, &$calls): void {
+        T::same('filter_denied', $w->cell('m1', 'reply', $reply), 'B (Priorität 5) erlaubt, A (Priorität 20) lehnt ab: abgelehnt');
+        T::same(['B', 'A'], $calls, 'Ausführungsreihenfolge nach Priorität');
+    });
+    // Der Filter nach einer Ablehnung kann auch nichts mehr erweitern: Mengen-API
+    $with([[$deny('A'), 5], [$widest('B'), 20]], function () use ($w): void {
+        T::same([], $w->access->readableForumIds($w->u['m1']), 'readableForumIds: A lehnt alle ab, B erlaubt wieder: nichts lesbar');
+        T::same([], $w->access->filterReadable($w->u['m1'], [$w->f['fo'], $w->f['fr']]), 'filterReadable: dto.');
+    });
+    $only = static function (int $forumId) use ($w): \Closure {
+        return static fn (AccessDecision $d, int $uid, string $action, array $ctx): AccessDecision => ($ctx['forum_id'] ?? 0) === $forumId ? AccessDecision::deny('x') : $d;
+    };
+    $with([[$only($w->f['fr']), 5], [$widest('B'), 20]], function () use ($w): void {
+        T::same(false, in_array($w->f['fr'], $w->access->readableForumIds($w->u['m1']), true), 'ein abgelehntes Forum bleibt abgelehnt, auch wenn ein späterer Filter alles erlaubt');
+        T::same(true, in_array($w->f['fo'], $w->access->readableForumIds($w->u['m1']), true), 'die übrigen Foren bleiben lesbar');
+    });
+
+    // B8: eine Ausnahme ist eine Ablehnung (vor und nach einem ablehnenden Filter, allein, bei Error/TypeError)
+    $calls = [];
+    $with([[$throws('X'), 5], [$deny('A'), 10]], function () use ($w, $reply, &$calls): void {
+        T::same('filter_denied', $w->cell('m1', 'reply', $reply), 'X wirft (Priorität 5): Ablehnung, nicht der Eingangswert');
+        T::same(['X'], $calls, 'die Kette endet bei der Ausnahme');
+    });
+    $calls = [];
+    $with([[$deny('A'), 5], [$throws('X'), 10]], function () use ($w, $reply, &$calls): void {
+        T::same('filter_denied', $w->cell('m1', 'reply', $reply), 'A lehnt ab, danach würde X werfen: abgelehnt');
+        T::same(['A'], $calls, 'X läuft gar nicht mehr');
+    });
+    $with([[static fn (AccessDecision $d, array $uid): AccessDecision => $d, 10]], function () use ($w, $reply): void {
+        T::same('filter_denied', $w->cell('m1', 'reply', $reply), 'TypeError im Filter (Signatur passt nicht): Ablehnung');
+    });
+    $with([[static fn (AccessDecision $d): AccessDecision => $d, 5], [static function (): never {
+        throw new \RuntimeException('Plugin kaputt');
+    }, 10]], function () use ($w, $reply): void {
+        T::same('filter_denied', $w->cell('m1', 'reply', $reply), 'erster Filter unverändert, zweiter wirft: Ablehnung');
+        T::same('not_found', $w->cell('guest', 'read', ['forum_id' => $w->f['fo']]), 'dto. bei read: not_found');
+        T::same('not_found', $w->cell('m1', 'search', AC_GLOBAL), 'dto. bei search: not_found');
+        T::same([], $w->access->readableForumIds($w->u['m1']), 'dto. in der Mengen-API: nichts lesbar');
+    });
+    $before = substr_count(acLogText(), 'warf eine Ausnahme und lehnt ab');
+    $with([[$throws('X'), 10]], function () use ($w, $reply): void {
+        $w->can('m1', 'reply', $reply);
+    });
+    T::same($before + 1, substr_count(acLogText(), 'warf eine Ausnahme und lehnt ab'), 'die Ausnahme eines Filters wird protokolliert');
+    // Andere Ablehnungen, andere Aktionen: keine Wirkung ohne Filter
+    T::same('ok:published', $w->cell('m1', 'reply', $reply), 'ohne Filter gilt wieder die Ausgangsentscheidung');
+
+    // Verschärfungen bleiben: ein späterer Filter kann sie nicht zurücknehmen (published → pending → published)
+    $tighten = static fn (AccessDecision $d): AccessDecision => $d->withInitialStatus($d->initialStatus === null ? null : 'pending')->withView($d->view === null ? null : 'placeholder');
+    $before = substr_count(acLogText(), 'wollte eine Entscheidung erweitern');
+    $with([[$tighten, 5], [$widest('B'), 20]], function () use ($w): void {
+        T::same('ok:pending', $w->cell('m1', 'reply', ['topic_id' => $w->t['t']]), 'A verschärft zu pending, B will veröffentlicht: pending bleibt');
+        T::same('ok:placeholder', $w->cell('m1', 'read', ['post_id' => $w->p['p']]), 'A verschärft zu Platzhalter, B will voll: Platzhalter bleibt');
+    });
+    T::same($before + 2, substr_count(acLogText(), 'wollte eine Entscheidung erweitern'), 'beide Erweiterungen werden protokolliert');
+    // Eine Verschärfung in der Mitte der Kette gilt für den Rest, ein Ergebnis ohne Entscheidung wird übersprungen
+    $with([[static fn () => null, 5], [$tighten, 10], [static fn (AccessDecision $d): AccessDecision => $d, 20]], function () use ($w): void {
+        T::same('ok:pending', $w->cell('m1', 'reply', ['topic_id' => $w->t['t']]), 'ein Filter ohne Rückgabe wird übersprungen, die Verschärfung danach gilt');
+    });
+    $with([[static fn () => 'allow', 5], [$deny('A'), 10]], function () use ($w, $reply): void {
+        T::same('filter_denied', $w->cell('m1', 'reply', $reply), 'ein ungültiges Ergebnis davor hindert die Ablehnung nicht');
+    });
+
+    // B11: bei read und search keine Unterscheidung zwischen „abgelehnt“ und „gibt es nicht“
+    $denyRead = static fn (AccessDecision $d, int $uid, string $action): AccessDecision => in_array($action, ['read', 'search'], true) ? AccessDecision::deny('geheim', 30) : $d;
+    $with([[$denyRead, 10]], function () use ($w): void {
+        $known = $w->access->can($w->u['m1'], 'read', ['forum_id' => $w->f['fo']]);
+        $unknown = $w->access->can($w->u['m1'], 'read', ['forum_id' => 99999]);
+        T::same(['not_found', 404, null], [$known->reason, $known->status(), $known->retryAfter], 'Filter lehnt read ab: not_found, HTTP 404, ohne Wartezeit');
+        T::same([$unknown->reason, $unknown->status(), $unknown->retryAfter], [$known->reason, $known->status(), $known->retryAfter], 'identisch zu einem unbekannten Forum (kein Existenzkanal)');
+        T::same('not_found', $w->cell('m1', 'read', ['topic_id' => $w->t['t']]), 'dto. für ein Thema');
+        T::same('not_found', $w->cell('m1', 'read', ['post_id' => $w->p['p']]), 'dto. für einen Beitrag');
+        T::same('not_found', $w->cell('guest', 'search', AC_GLOBAL), 'search: not_found');
+        T::same('ok', $w->cell('m1', 'subscribe', ['topic_id' => $w->t['t']]), 'andere Aktionen sind vom Lesefilter unberührt');
+    });
+    $denyWrite = static fn (AccessDecision $d, int $uid, string $action): AccessDecision => $action === 'reply' ? AccessDecision::deny('geheim', 30) : $d;
+    $with([[$denyWrite, 10]], function () use ($w): void {
+        T::same('filter_denied@30', $w->cell('m1', 'reply', ['topic_id' => $w->t['t']]), 'Schreibaktionen: weiter filter_denied mit der Wartezeit des Filters');
+        T::same(403, $w->can('m1', 'reply', ['topic_id' => $w->t['t']])->status(), 'filter_denied meldet 403');
+    });
+    // Die Argumente jedes Filters sind die Entscheidung des vorigen (nicht die ursprüngliche)
+    $seen = [];
+    $spy = static function (AccessDecision $d) use (&$seen): AccessDecision {
+        $seen[] = $d->initialStatus;
+
+        return $d;
+    };
+    $with([[$tighten, 5], [$spy, 10]], function () use ($w): void {
+        $w->can('m1', 'reply', ['topic_id' => $w->t['t']]);
+    });
+    T::same(['pending'], $seen, 'der zweite Filter bekommt die Entscheidung, die der erste übrig gelassen hat');
+});
+
+T::run('Hooks::getCallbacks, Hooks::doActionIsolated und Events::fire: jeder Verbraucher einzeln abgesichert (B20)', static function (): void {
+    $tag = 'cms_community_test_isolation';
+    $calls = [];
+    $listener = static function (string $name, bool $throw = false) use (&$calls): \Closure {
+        return static function (mixed ...$args) use (&$calls, $name, $throw): void {
+            $calls[] = [$name, $args];
+            if ($throw) {
+                throw new \RuntimeException('Verbraucher ' . $name . ' kaputt');
+            }
+        };
+    };
+    $first = $listener('erster');
+    $bad = $listener('kaputt', true);
+    $last = $listener('letzter');
+    $typed = static function (int $needsInt) use (&$calls): void {
+        $calls[] = ['typisiert', [$needsInt]];
+    };
+    Hooks::addAction($tag, $last, 20);
+    Hooks::addAction($tag, $bad, 10);
+    Hooks::addAction($tag, $first, 5);
+    Hooks::addAction($tag, $typed, 10);
+    $before = substr_count(acLogText(), 'Community-Hook');
+
+    // getCallbacks: Priorität aufsteigend, innerhalb einer Priorität in der Reihenfolge der Registrierung
+    T::same([$first, $bad, $typed, $last], Hooks::getCallbacks($tag, 'action'), 'getCallbacks: Priorität aufsteigend, bei gleicher Priorität nach Registrierung');
+    T::same([], Hooks::getCallbacks($tag, 'filter'), 'getCallbacks: Aktionen und Filter sind getrennt');
+    T::same([], Hooks::getCallbacks($tag, 'unbekannt'), 'getCallbacks: unbekannter Typ → leere Liste');
+    T::same([], Hooks::getCallbacks('cms_community_ohne_eintrag'), 'getCallbacks: unbekannter Tag → leere Liste');
+    Hooks::addFilter($tag . '_f', $first, 7);
+    Hooks::addFilter($tag . '_f', $last, 3);
+    T::same([$last, $first], Hooks::getCallbacks($tag . '_f'), 'getCallbacks: Filter sind der Standardtyp');
+    T::same([$last, $first], Hooks::getCallbacks($tag . '_f', 'filter'), 'getCallbacks: gleiche Antwort beim zweiten Aufruf (ändert nichts)');
+    Hooks::removeFilter($tag . '_f', $first, 7);
+    T::same([$last], Hooks::getCallbacks($tag . '_f'), 'getCallbacks: entfernte Filter fehlen');
+    Hooks::removeFilter($tag . '_f', $last, 3);
+
+    // fire(): der kaputte Verbraucher (und der mit falscher Signatur) hält die übrigen nicht auf
+    Events::fire($tag, 'x');
+    T::same(['erster', 'kaputt', 'letzter'], array_map(static fn (array $c): string => $c[0], $calls), 'fire(): alle Verbraucher laufen, auch hinter dem kaputten und dem TypeError (typisiert wirft vor dem Aufruf)');
+    T::same([['erster', ['x']], ['kaputt', ['x']], ['letzter', ['x']]], $calls, 'fire(): jeder Verbraucher bekommt die Argumente unverändert');
+    T::same($before + 2, substr_count(acLogText(), 'Community-Hook'), 'fire(): zwei Fehler (Ausnahme und TypeError) werden protokolliert');
+    T::same(1, Hooks::didAction($tag), 'fire() zählt für didAction() wie doAction()');
+    Events::fire($tag, 'y');
+    T::same(2, Hooks::didAction($tag), 'didAction() zählt jeden Aufruf');
+
+    // doActionIsolated(): ohne Fehlerbehandlung, mit werfender Fehlerbehandlung
+    $calls = [];
+    $caught = [];
+    Hooks::doActionIsolated($tag, static function (\Throwable $e, callable $callback) use (&$caught): void {
+        $caught[] = [$e->getMessage() !== '', is_callable($callback)];
+    }, 'z');
+    T::same(['erster', 'kaputt', 'letzter'], array_map(static fn (array $c): string => $c[0], $calls), 'doActionIsolated(): alle Verbraucher laufen');
+    T::same([[true, true], [true, true]], $caught, 'doActionIsolated(): die Fehlerbehandlung bekommt Ausnahme und Callback');
+    $calls = [];
+    Hooks::doActionIsolated($tag, null, 'z');
+    T::same(3, count($calls), 'doActionIsolated(): ohne Fehlerbehandlung werden Fehler verschluckt');
+    $calls = [];
+    $thrown = false;
+    try {
+        Hooks::doActionIsolated($tag, static function (): never {
+            throw new \LogicException('Fehlerbehandlung kaputt');
+        }, 'z');
+    } catch (\Throwable) {
+        $thrown = true;
+    }
+    T::same([false, 3], [$thrown, count($calls)], 'doActionIsolated(): auch eine werfende Fehlerbehandlung hält die Verbraucher nicht auf');
+    // Ohne Verbraucher kein Fehler
+    Events::fire('cms_community_ohne_eintrag', 1);
+    T::same(1, Hooks::didAction('cms_community_ohne_eintrag'), 'ein Hook ohne Verbraucher wird trotzdem gezählt');
+
+    // Einmalige Dokument-Abschluss-Hooks bleiben einmalig
+    $once = 0;
+    $counter = static function () use (&$once): void {
+        $once++;
+    };
+    Hooks::addAction('body_end', $counter);
+    Hooks::doActionIsolated('body_end', null);
+    Hooks::doActionIsolated('body_end', null);
+    Hooks::removeAction('body_end', $counter);
+    T::same(1, $once, 'body_end läuft auch über doActionIsolated() nur einmal je Request');
+
+    foreach ([[$first, 5], [$bad, 10], [$typed, 10], [$last, 20]] as [$callback, $priority]) {
+        Hooks::removeAction($tag, $callback, $priority);
+    }
+    T::same([], Hooks::getCallbacks($tag, 'action'), 'aufgeräumt');
+    $source = acRead(AC_ROOT . 'Support/Events.php');
+    T::check(str_contains($source, 'Hooks::doActionIsolated('), 'Events::fire läuft über doActionIsolated (kein Hooks::doAction, das beim ersten Fehler abbricht)');
+    T::check(!str_contains(acCode($source), 'Hooks::doAction('), 'Events enthält kein Hooks::doAction(');
 });
 
 // ── Zustände, Ziele, Zwischenspeicher ───────────────────────────────────────────────────────────────────────────
@@ -1139,6 +1523,57 @@ T::run('Ziel: Beitrag → Thema → Forum; das Forum kommt nie aus der Eingabe; 
     T::same('ok', acCell($w->access->can($w->u['own'], 'edit', ['post_id' => $w->p['p'], 'now' => $w->now])), 'now = jetzt: im Fenster');
     T::same('ok', acCell($w->access->can($w->u['own'], 'edit', ['post_id' => $w->p['p'], 'now' => 'später'])), 'now ohne Zahl wird ignoriert (Uhr gilt)');
     T::same('ok:published', acCell($w->access->can($w->u['m1'], 'reply', ['topic_id' => $w->t['tlf'], 'now' => $w->now + 7200])), 'locked_until wird mit dem Zeitpunkt der Entscheidung verglichen');
+});
+
+T::run('Ziellose Fragen: read/search nur mit scope = global; ein leeres oder falsch geschriebenes Ziel ist not_found; eine ID ist nie eine Zeile (B2, B12)', static function (): void {
+    $w = acStandardWorld(['guests_can_read' => true]);
+    $internal = $w->f['fi'];
+    $nothing = [
+        [], ['forum_id' => null], ['topic_id' => null], ['post_id' => null], ['forum' => null], ['topic' => null], ['post' => null],
+        ['forum_id' => null, 'topic_id' => null, 'post_id' => null], ['forumId' => $internal], ['Forum_ID' => $internal], ['topicid' => $w->t['tfi']],
+        ['scope' => 'Global'], ['scope' => 'all'], ['scope' => true], ['scope' => 1], ['scope' => null], ['scope' => ['global']], ['scope' => ' global'],
+        ['scope' => 'global', 'forum_id' => null], ['scope' => 'global', 'topic_id' => null], ['scope' => 'global', 'post' => null],
+    ];
+    foreach (['guest', 'm1', 'admin'] as $user) {
+        foreach (['read', 'search'] as $action) {
+            foreach ($nothing as $ctx) {
+                T::same('not_found', $w->cell($user, $action, $ctx), $user . ' ' . $action . ' ' . json_encode($ctx) . ': kein erkanntes Ziel und kein scope = global → not_found');
+            }
+            T::same('ok', $w->cell($user, $action, AC_GLOBAL), $user . ' ' . $action . ' mit scope = global: erlaubt');
+        }
+    }
+    // scope = global ersetzt kein Ziel: ein genanntes Ziel entscheidet allein
+    T::same('not_found', $w->cell('m1', 'read', AC_GLOBAL + ['forum_id' => $internal]), 'scope = global neben einem internen Forum: das Forum entscheidet (not_found)');
+    T::same('not_found', $w->cell('m1', 'read', AC_GLOBAL + ['forum_id' => 99999]), 'scope = global neben einem unbekannten Forum: not_found');
+    T::same('ok', $w->cell('m1', 'read', AC_GLOBAL + ['forum_id' => $w->f['fo']]), 'scope = global neben einem offenen Forum: ok');
+    T::same('not_found', $w->cell('guest', 'read', AC_GLOBAL + ['topic_id' => $w->t['tp']]), 'scope = global neben einem wartenden Thema: not_found');
+    // Die Sperre und das Gast-Tor gehen vor, auch mit scope = global
+    T::same('banned_full', $w->cell('bf', 'read', AC_GLOBAL), 'Sperre full: auch die globale Frage ist gesperrt');
+    $closed = acStandardWorld(['guests_can_read' => false]);
+    T::same('not_found', $closed->cell('guest', 'read', AC_GLOBAL), 'Gast-Tor zu: scope = global öffnet nichts');
+    T::same('no_capability', $closed->cell('guest', 'search', AC_GLOBAL), 'Gast-Tor zu: Suche mit scope = global nicht möglich');
+    // Alle übrigen Aktionen brauchen ein Ziel, scope = global hilft ihnen nicht
+    foreach (['create_topic', 'reply', 'edit', 'delete', 'upload', 'vote', 'react', 'report', 'subscribe', 'topic.lock', 'post.hide'] as $action) {
+        T::same('not_found', $w->cell('gm', $action, AC_GLOBAL), $action . ' ohne Ziel (auch mit scope = global): not_found');
+    }
+    T::same('ok', $w->cell('gm', 'moderate', []), 'moderate ohne Ziel: globale Moderation (unverändert)');
+    T::same('no_permission', $w->cell('m1', 'moderate', []), 'moderate ohne Ziel: Mitglied ohne Moderation');
+
+    // B12: eine ID ist nie eine Zeile; ein Array unter `*_id` (aus ?topic_id[id]=… der Anfrage) ist ein unbekanntes Ziel
+    $forged = [
+        'id' => $w->t['tfi'], 'status' => 'published', 'forum_id' => $w->f['fo'], 'user_id' => $w->u['own'], 'created_at' => $w->utc(-60),
+        'is_locked' => 0, 'locked_until' => null, 'slow_mode_seconds' => 0,
+    ];
+    foreach (['guest', 'm1', 'gm'] as $user) {
+        T::same('not_found', $w->cell($user, 'read', ['topic_id' => $forged]), $user . ': Zeile unter topic_id → unbekanntes Ziel (kein Weg am internen Forum vorbei)');
+        T::same('not_found', $w->cell($user, 'read', ['forum_id' => ['id' => $w->f['fo']]]), $user . ': Array unter forum_id → unbekanntes Ziel');
+        T::same('not_found', $w->cell($user, 'read', ['post_id' => ['id' => $w->p['p']]]), $user . ': Array unter post_id → unbekanntes Ziel');
+    }
+    T::same('not_found', $w->cell('m1', 'reply', ['topic_id' => $forged]), 'reply mit einer Zeile unter topic_id: not_found');
+    T::same('not_found', $w->cell('m1', 'read', ['topic_id' => $forged, 'forum_id' => $w->f['fo']]), 'dto. mit zusätzlicher forum_id');
+    T::same('not_found', $w->cell('m1', 'read', ['topic_id' => $w->t['t'], 'post_id' => ['id' => $w->p['p']]]), 'ein Array unter post_id ist ein unbekannter Beitrag, auch neben einer gültigen topic_id (der Beitrag ist die engste Ebene)');
+    // Vertrag: unter dem Namen der Zeile (`topic`, `forum`, `post`) werden Zeilen vertraut, denn nur Dienste geben sie mit
+    T::same('ok', $w->cell('m1', 'read', ['topic' => $forged]), 'Vertrag: eine Zeile unter `topic` gilt (Dienste geben geladene Zeilen mit; Controller geben IDs)');
 });
 
 T::run('Zwischenspeicher: forgetUser(), flush(), fresh; Abfragen je Aufruf', static function (): void {
@@ -1202,6 +1637,123 @@ T::run('Zwischenspeicher: forgetUser(), flush(), fresh; Abfragen je Aufruf', sta
     $w->db->log = [];
     $w->can('m1', 'reply', ['topic_id' => $w->t['t'], 'fresh' => true]);
     T::check(count($w->db->log) >= $first - 1, 'fresh liest wieder alles (' . count($w->db->log) . ' Abfragen)');
+});
+
+T::run('fresh und Sperrencache: Sperre, Forenbaum und Stufe werden neu gelesen, wo es verlangt ist (B5, B19)', static function (): void {
+    // Sperre nach der ersten Entscheidung (Dienste entscheiden unter Zeilensperre erneut mit fresh)
+    $w = acStandardWorld(['rate_post_seconds' => 0]);
+    $w->member('late', ['posts' => 5]);
+    $reply = ['topic_id' => $w->t['t'], 'now' => $w->now];
+    T::same('ok:published', acCell($w->access->can($w->u['late'], 'reply', $reply)), 'Ausgangslage: keine Sperre');
+    $w->db->ban(['user' => $w->u['late'], 'scope' => 'write']);
+    T::same('ok:published', acCell($w->access->can($w->u['late'], 'reply', $reply)), 'dieselbe Sekunde, ohne fresh: die zwischengespeicherte Sperrenabfrage gilt (je Sekunde)');
+    T::same('banned_write', acCell($w->access->can($w->u['late'], 'reply', $reply + ['fresh' => true])), 'fresh liest die Sperre neu: banned_write');
+    T::same('banned_write', acCell($w->access->can($w->u['late'], 'reply', $reply)), 'danach gilt die frisch gelesene Sperre auch ohne fresh');
+
+    // forgetUser() verwirft die Sperre ebenso
+    $w2 = acStandardWorld(['rate_post_seconds' => 0]);
+    $w2->member('late', ['posts' => 5]);
+    T::same('ok:published', acCell($w2->access->can($w2->u['late'], 'reply', $reply2 = ['topic_id' => $w2->t['t'], 'now' => $w2->now])), 'Ausgangslage (zweite Welt)');
+    $w2->db->ban(['user' => $w2->u['late'], 'scope' => 'full']);
+    $w2->access->forgetUser($w2->u['late']);
+    T::same('banned_full', acCell($w2->access->can($w2->u['late'], 'reply', $reply2)), 'forgetUser() verwirft die zwischengespeicherte Sperre');
+    T::same('banned_full', acCell($w2->access->can($w2->u['late'], 'read', ['topic_id' => $w2->t['t'], 'now' => $w2->now])), 'dto. für Lesen (Sperre full)');
+
+    // Der Sperrencache gilt je Sekunde: eine Sekunde später wird neu gelesen, ohne fresh
+    $w3 = acStandardWorld(['rate_post_seconds' => 0]);
+    $w3->member('late', ['posts' => 5]);
+    $at = static fn (int $delta): array => ['topic_id' => $w3->t['t'], 'now' => $w3->now + $delta];
+    T::same('ok:published', acCell($w3->access->can($w3->u['late'], 'reply', $at(0))), 'Sekunde 0: keine Sperre');
+    $w3->db->ban(['user' => $w3->u['late'], 'scope' => 'write', 'ends_at' => $w3->utc(60)]);
+    T::same('ok:published', acCell($w3->access->can($w3->u['late'], 'reply', $at(0))), 'Sekunde 0 noch einmal: zwischengespeichert, noch keine Sperre');
+    T::same('banned_write', acCell($w3->access->can($w3->u['late'], 'reply', $at(1))), 'Sekunde 1: die Abfrage läuft neu, die Sperre gilt');
+    T::same('banned_write', acCell($w3->access->can($w3->u['late'], 'reply', $at(59))), 'Sekunde 59: gesperrt');
+    T::same('ok:published', acCell($w3->access->can($w3->u['late'], 'reply', $at(61))), 'Sekunde 61: die Sperre ist abgelaufen, ohne fresh und ohne forgetUser()');
+    T::same('banned_write', acCell($w3->access->can($w3->u['late'], 'reply', $at(30))), 'Sekunde 30 (zurück in der Zeit): wieder neu gelesen, gesperrt');
+
+    // fresh verwirft auch den Forenbaum: ein Elternforum, das zwischenzeitlich verborgen wurde, gilt sofort
+    $t = acStandardWorld();
+    $t->forum('Pf');
+    $t->forum('Cf', ['parent' => 'Pf']);
+    $t->topic('tCf', 'Cf');
+    $child = ['topic_id' => $t->t['tCf'], 'now' => $t->now];
+    T::same('ok:published', acCell($t->access->can($t->u['m1'], 'reply', $child)), 'Kindforum: antworten möglich (der Forenbaum ist jetzt zwischengespeichert)');
+    $t->sql('UPDATE cms_community_forums SET status = ? WHERE id = ?', ['hidden', $t->f['Pf']]);
+    T::same('not_found', acCell($t->access->can($t->u['m1'], 'reply', $child + ['fresh' => true])), 'fresh liest den Forenbaum neu: das Elternforum ist verborgen, das Kindforum nicht mehr erreichbar');
+    $t->sql('UPDATE cms_community_forums SET status = ? WHERE id = ?', ['open', $t->f['Pf']]);
+    T::same('ok:published', acCell($t->access->can($t->u['m1'], 'reply', $child + ['fresh' => true])), 'fresh noch einmal: wieder offen');
+
+    // Die Stufe für lesende Entscheidungen: je Instanz einmal gelesen; Schreibaktionen, fresh und forgetUser() frischen sie auf
+    $l = acStandardWorld();
+    $l->forum('t1');
+    $l->permissions('t1', [['subject_type' => 'trust', 'subject_key' => '1', 'permissions' => ['read' => 1, 'reply' => 1]]]);
+    $l->topic('t1t', 't1');
+    $l->member('lv', ['posts' => 0]);
+    $l->member('lv2', ['posts' => 0]);
+    $l->member('lv3', ['posts' => 0]);
+    $read = ['forum_id' => $l->f['t1']];
+    foreach (['lv', 'lv2', 'lv3'] as $name) {
+        T::same('not_found', $l->cell($name, 'read', $read), $name . ': Stufe 0 liest trust:1 nicht');
+    }
+    $l->sql('UPDATE cms_community_user_stats SET post_count = ? WHERE user_id IN (?, ?, ?)', [5, $l->u['lv'], $l->u['lv2'], $l->u['lv3']]);
+    T::same('not_found', $l->cell('lv', 'read', $read), 'Lesen nutzt die je Instanz zwischengespeicherte Stufe (die Beitragszahl hat sich geändert)');
+    $l->access->forgetUser($l->u['lv']);
+    T::same('ok', $l->cell('lv', 'read', $read), 'forgetUser() verwirft die Stufe');
+    $l->cell('lv2', 'reply', ['topic_id' => $l->t['t1t']]);
+    T::same('ok', $l->cell('lv2', 'read', $read), 'eine Schreibentscheidung liest die Statistik und frischt die Stufe auf');
+    T::same('ok', acCell($l->access->can($l->u['lv3'], 'read', $read + ['fresh' => true])), 'fresh verwirft die Stufe');
+    // Die Stufe eines Mitglieds berührt kein anderes
+    $l->member('lv4', ['posts' => 0]);
+    T::same('not_found', $l->cell('lv4', 'read', $read), 'lv4 (Stufe 0) wird zwischengespeichert');
+    $l->sql('UPDATE cms_community_user_stats SET post_count = ? WHERE user_id = ?', [5, $l->u['lv4']]);
+    $l->access->forgetUser($l->u['lv']);
+    T::same('not_found', $l->cell('lv4', 'read', $read), 'forgetUser() eines anderen Mitglieds berührt lv4 nicht');
+    $l->access->flush();
+    T::same('ok', $l->cell('lv4', 'read', $read), 'flush() verwirft die Stufe aller Mitglieder');
+});
+
+T::run('read eines Beitrags kostet mit übergebenen Zeilen höchstens eine Abfrage je Beitrag; die Statistik nur für Schreibaktionen (B9, B18)', static function (): void {
+    $w = acStandardWorld(['guests_can_read' => true]);
+    $w->topic('big', 'fo');
+    $posts = new PostRepository($w->db);
+    $rows = [];
+    for ($i = 0; $i < 40; $i++) {
+        $rows[] = (array) $posts->find($w->post('big' . $i, 'big', ['age' => 5000 - $i]));
+    }
+    $topicRow = (new TopicRepository($w->db))->find($w->t['big']);
+    $forumRow = (new ForumRepository($w->db))->find($w->f['fo']);
+    $sweep = static function (string $viewer, bool $withRows) use ($w, $rows, $topicRow, $forumRow): array {
+        $w->access->flush();
+        $w->db->log = [];
+        $bad = 0;
+        foreach ($rows as $row) {
+            $ctx = ['post_id' => (int) $row['id'], 'post' => $row, 'now' => $w->now];
+            if ($withRows) {
+                $ctx += ['topic' => $topicRow, 'forum' => $forumRow];
+            }
+            $d = $w->access->can($w->u[$viewer], 'read', $ctx);
+            $bad += $d->allowed && $d->view === 'full' ? 0 : 1;
+        }
+
+        return [$bad, $w->db->log];
+    };
+    foreach (['guest', 'm1', 'gm', 'admin', 'fm'] as $viewer) {
+        [$bad, $log] = $sweep($viewer, true);
+        T::same(0, $bad, $viewer . ': alle 40 Beiträge lesbar (Ansicht full)');
+        T::check(count($log) <= count($rows), $viewer . ': ' . count($log) . ' Abfragen für ' . count($rows) . ' Beiträge mit Thema- und Forenzeile im Kontext (höchstens eine je Beitrag)', implode(' | ', array_slice($log, 0, 6)));
+        T::check(count(preg_grep('/community_user_stats/', $log) ?: []) <= 1, $viewer . ': die Statistik wird für Lesen höchstens einmal gelesen');
+        T::same(0, count(preg_grep('/FROM \w*community_(topics|posts|forums) WHERE id = \? LIMIT 1/', $log) ?: []), $viewer . ': Thema-, Forum- und Beitragszeile werden nicht neu geladen');
+        [, $logIds] = $sweep($viewer, false);
+        T::check(count($logIds) > count($log), $viewer . ': ohne Zeilen kostet es mehr (' . count($logIds) . ' statt ' . count($log) . ')');
+        T::info($viewer . ': ' . count($log) . ' Abfragen mit Zeilen, ' . count($logIds) . ' ohne (40 Beiträge)');
+    }
+    // Schreibaktionen lesen die Statistik jedes Mal (Beitragszahl, Stufe: nie zwischengespeichert)
+    $w->access->flush();
+    $w->db->log = [];
+    for ($i = 0; $i < 3; $i++) {
+        $w->can('m1', 'reply', ['topic_id' => $w->t['t'], 'now' => $w->now]);
+    }
+    T::same(3, count(preg_grep('/community_user_stats/', $w->db->log) ?: []), 'drei Schreibentscheidungen lesen die Statistik dreimal');
 });
 
 T::run('Gleiche Abfragefolge bei „gibt es nicht“ und „darfst du nicht sehen“ (not_found)', static function (): void {
@@ -1275,6 +1827,137 @@ T::run('Mengen-API: filterReadable() und readableForumIds() stimmen mit can(read
     T::check(count($w->db->log) < 6 * count($all) + 10, 'Mengen-API: Abfragen wachsen höchstens linear mit der Forenzahl (' . count($w->db->log) . ' bei ' . count($all) . ' Foren)');
 });
 
+T::run('Gast-Tor in der Mengen-API: eine Gast-Zeile mit read = 1 öffnet bei geschlossenem Tor nichts (B4)', static function (): void {
+    foreach ([true, false] as $gate) {
+        $w = acStandardWorld(['guests_can_read' => $gate]);
+        $w->forum('pub');
+        $w->permissions('pub', [['subject_type' => 'guest', 'permissions' => ['read' => 1]]]);
+        $pub = $w->f['pub'];
+        $label = 'Tor ' . ($gate ? 'offen' : 'zu');
+        // can(), filterReadable() und readableForumIds() müssen übereinstimmen
+        foreach (['guest' => null, 'inactive' => $w->u['inactive']] as $name => $uid) {
+            $fromCan = $w->access->can($uid, 'read', ['forum_id' => $pub])->allowed;
+            T::same($gate, $fromCan, $label . ': can(read) ' . $name . ' auf das Forum mit Gast-Zeile');
+            T::same($gate ? [$pub] : [], $w->access->filterReadable($uid, [$pub, $w->f['fi'], $w->f['fh']]), $label . ': filterReadable ' . $name . ' (Forum mit Gast-Zeile, internes, verborgenes)');
+            T::same($gate, in_array($pub, $w->access->readableForumIds($uid), true), $label . ': readableForumIds ' . $name . ' enthält das Forum mit Gast-Zeile genau bei offenem Tor');
+        }
+        if (!$gate) {
+            T::same([], $w->access->readableForumIds(null), $label . ': readableForumIds(Gast) ist leer, auch für Foren ohne Zeilen');
+            T::same([], $w->access->filterReadable(null, array_values($w->f)), $label . ': filterReadable(Gast) ist leer');
+        }
+        // Mitglieder sind vom Tor nicht betroffen: die Gast-Zeile gilt für Angemeldete
+        T::same([$pub], $w->access->filterReadable($w->u['m1'], [$pub]), $label . ': Mitglied liest das Forum mit Gast-Zeile');
+        T::same('ok', $w->cell('m1', 'read', ['forum_id' => $pub]), $label . ': dto. über can()');
+    }
+});
+
+T::run('Mengen-API: wenige Abfragen ohne Rechte-Zeilen, Ergebnis wie can(read) mit und ohne Zeilen (B31)', static function (): void {
+    $build = static function (int $roots, int $children, bool $rows): AcWorld {
+        $w = acStandardWorld(['guests_can_read' => true]);
+        $w->g['t2'] = $w->db->group('Zweite');
+        $w->member('batch', ['posts' => 5, 'groups' => [$w->g['t2']]]);
+        for ($r = 0; $r < $roots; $r++) {
+            $w->forum('R' . $r);
+            for ($c = 0; $c < $children; $c++) {
+                $w->forum('R' . $r . 'C' . $c, ['parent' => 'R' . $r]);
+            }
+            if ($rows && $r % 3 === 0) {
+                $w->permissions('R' . $r, [
+                    ['subject_type' => 'role', 'subject_key' => 'member', 'permissions' => ['read' => 1]],
+                    ['subject_type' => 'group', 'subject_key' => (string) $w->g['t2'], 'permissions' => ['read' => 1]],
+                ]);
+            }
+            if ($rows && $r % 3 === 1) {
+                $w->permissions('R' . $r, [['subject_type' => 'trust', 'subject_key' => '3', 'permissions' => ['read' => 1]]]);
+            }
+        }
+        if ($rows) {
+            $w->permissions('R0C0', [['subject_type' => 'role', 'subject_key' => 'editor', 'permissions' => ['read' => 1]]]);
+        }
+        $w->access->flush();
+
+        return $w;
+    };
+    foreach ([false, true] as $rows) {
+        $w = $build(10, 5, $rows);
+        $all = array_keys((new ForumRepository($w->db))->tree());
+        $label = ($rows ? 'mit' : 'ohne') . ' Rechte-Zeilen in den Neuanlagen, ' . count($all) . ' Foren';
+        foreach (['guest', 'm0', 'm1', 'm3', 'editor', 'batch', 'gm', 'fm', 'admin', 'nc', 'bf'] as $name) {
+            $fromCan = [];
+            foreach ($all as $forumId) {
+                if ($w->can($name, 'read', ['forum_id' => $forumId])->allowed) {
+                    $fromCan[] = $forumId;
+                }
+            }
+            $w->access->flush();
+            T::same($fromCan, $w->access->readableForumIds($w->u[$name]), $label . ', ' . $name . ': readableForumIds = can(read) je Forum');
+            T::same($fromCan, $w->access->filterReadable($w->u[$name], $all), $label . ', ' . $name . ': filterReadable = can(read) je Forum');
+        }
+        // Abfragen (Information): mit Rechte-Zeilen in der Kette kostet jedes Forum noch eine Abfrage (siehe Wunsch an ForumRepository)
+        $w->access->flush();
+        $w->db->log = [];
+        $ids = $w->access->readableForumIds($w->u['batch']);
+        $queries = count($w->db->log);
+        $w->access->flush();
+        $w->db->log = [];
+        $w->access->filterReadable($w->u['batch'], $all);
+        T::same($queries, count($w->db->log), $label . ': readableForumIds und filterReadable kosten gleich viele Abfragen');
+        T::check($queries < 3 * count($all), $label . ': weniger als drei Abfragen je Forum (' . $queries . ' bei ' . count($all) . ' Foren)');
+        T::info($label . ': ' . $queries . ' Abfragen (' . count($ids) . ' lesbar)');
+        // Globale Moderation und admin sehen jedes Forum: keine Matrix- und keine Moderatorenabfrage je Forum
+        foreach (['gm', 'admin'] as $moderator) {
+            $w->access->flush();
+            $w->db->log = [];
+            $seen = $w->access->readableForumIds($w->u[$moderator]);
+            T::same($all, $seen, $label . ', ' . $moderator . ': alle Foren lesbar');
+            T::check(count($w->db->log) <= 6, $label . ', ' . $moderator . ': höchstens 6 Abfragen unabhängig von der Forenzahl (' . count($w->db->log) . ')', implode(' | ', array_slice($w->db->log, 0, 8)));
+        }
+    }
+
+    // Ganz ohne Rechte-Zeilen: eine Abfrage für alle Foren, nicht eine je Forum
+    $bare = new AcWorld(['guests_can_read' => true]);
+    $bare->member('plain', ['posts' => 5]);
+    $bare->member('plain2', ['posts' => 5]);
+    $ids = [];
+    for ($i = 0; $i < 3; $i++) {
+        $bare->forum('B' . $i);
+        $ids[] = $bare->f['B' . $i];
+        for ($c = 0; $c < 12; $c++) {
+            $bare->forum('B' . $i . 'c' . $c, ['parent' => 'B' . $i]);
+            $ids[] = $bare->f['B' . $i . 'c' . $c];
+        }
+    }
+    $bare->member('gm', ['role' => 'moderator', 'posts' => 5]);
+    $bare->access->flush();
+    $bare->db->log = [];
+    $readable = $bare->access->readableForumIds($bare->u['plain']);
+    $few = count($bare->db->log);
+    $sorted = static function (array $list): array {
+        sort($list);
+
+        return $list;
+    };
+    T::same($sorted($ids), $sorted($readable), 'ohne Rechte-Zeilen: alle ' . count($ids) . ' Foren lesbar (Standards)');
+    T::check($few <= 8, 'ohne Rechte-Zeilen: höchstens 8 Abfragen für ' . count($ids) . ' Foren, unabhängig von ihrer Zahl (' . $few . ')', implode(' | ', array_slice($bare->db->log, 0, 12)));
+    $bare->access->flush();
+    $bare->db->log = [];
+    $bare->access->filterReadable(null, $ids);
+    T::check(count($bare->db->log) <= 6, 'ohne Rechte-Zeilen: Gast, höchstens 6 Abfragen (' . count($bare->db->log) . ')');
+    T::info('ohne Rechte-Zeilen, ' . count($ids) . ' Foren: ' . $few . ' Abfragen (Mitglied), ' . count($bare->db->log) . ' (Gast)');
+    // Eine einzige Rechte-Zeile irgendwo: das Ergebnis bleibt richtig (B1 und seine Unterforen erben die Whitelist)
+    $bare->permissions('B1', [['subject_type' => 'role', 'subject_key' => 'editor', 'permissions' => ['read' => 1]]]);
+    $hidden = [$bare->f['B1']];
+    for ($c = 0; $c < 12; $c++) {
+        $hidden[] = $bare->f['B1c' . $c];
+    }
+    $expected = array_values(array_diff($ids, $hidden));
+    T::same($sorted($expected), $sorted($bare->access->readableForumIds($bare->u['plain'])), 'eine Rechte-Zeile bei B1 (nur editor liest): B1 und seine Unterforen fehlen, die übrigen bleiben');
+    T::same($sorted($ids), $sorted($bare->access->readableForumIds($bare->u['gm'])), 'globale Moderation liest weiter alle');
+    foreach ($ids as $forumId) {
+        T::same(in_array($forumId, $expected, true), $bare->can('plain', 'read', ['forum_id' => $forumId])->allowed, 'can(read) stimmt mit der Menge überein: Forum ' . $forumId);
+    }
+});
+
 // ── Grenzen: Abstände, Langsamer Modus, Limits, Freigabepflicht ─────────────────────────────────────────────────
 
 T::run('Pflichtfall: retry_after bei Abstand (rate_limited) und Langsamem Modus (slow_mode); größte Restzeit gewinnt', static function (): void {
@@ -1301,11 +1984,27 @@ T::run('Pflichtfall: retry_after bei Abstand (rate_limited) und Langsamem Modus 
     $w->sql('UPDATE cms_community_posts SET created_at = ? WHERE id = ?', [$w->utc(-60), $w->p['flood_slow']]);
     T::same('ok:published', $w->cell('flood', 'reply', ['topic_id' => $w->t['tslow']]), 'genau 60 s: der Langsame Modus ist vorbei (Grenze erlaubt)');
 
+    // B3/B29: ein gelöschter, abgelehnter oder ausgeblendeter Beitrag hält den Langsamen Modus weiter
+    foreach (['deleted', 'rejected', 'hidden'] as $gone) {
+        $w->member('slow_' . $gone, ['posts' => 5]);
+        $w->post('slow_' . $gone . '_p', 'tslow', ['by' => 'slow_' . $gone, 'age' => 20, 'status' => $gone]);
+        T::same('slow_mode@40', $w->cell('slow_' . $gone, 'reply', ['topic_id' => $w->t['tslow']]), 'Beitrag im Status ' . $gone . ' vor 20 s im Forum mit Modus 60 s: slow_mode, 40 s');
+        T::same('rate_limited@10', $w->cell('slow_' . $gone, 'reply', ['topic_id' => $w->t['t']]), 'dto.: in einem anderen Forum gilt nur der Abstand zwischen Beiträgen (30 s, Rest 10 s)');
+    }
     // Langsamer Modus des Themas
     $w->post('flood_fast', 'tfast', ['by' => 'flood', 'age' => 31]);
     T::same('slow_mode@14', $w->cell('flood', 'reply', ['topic_id' => $w->t['tfast']]), 'Themen-Modus 45 s, Beitrag vor 31 s: slow_mode, 14 s');
     T::same('ok:published', $w->cell('flood', 'reply', ['topic_id' => $w->t['t']]), 'der Themen-Modus gilt nur in diesem Thema (Abstand 30 s ist vorbei)');
     T::same('ok:published', $w->cell('m1', 'reply', ['topic_id' => $w->t['tfast']]), 'andere Mitglieder sind nicht betroffen');
+    // Der Langsame Modus gilt je Forum und je Thema: ein Beitrag woanders (31 s her, der Abstand von 30 s ist vorbei) hält ihn nicht
+    $w->member('sc', ['posts' => 5]);
+    $w->post('sc_p', 't', ['by' => 'sc', 'age' => 31]);
+    T::same('ok:published', $w->cell('sc', 'reply', ['topic_id' => $w->t['tslow']]), 'Forum-Modus 60 s: ein Beitrag vor 31 s in einem anderen Forum zählt nicht');
+    T::same('ok:published', $w->cell('sc', 'create_topic', ['forum_id' => $w->f['slow']]), 'dto. beim Anlegen eines Themas im Forum mit Langsamem Modus');
+    T::same('ok:published', $w->cell('sc', 'reply', ['topic_id' => $w->t['tfast']]), 'Themen-Modus 45 s: ein Beitrag vor 31 s in einem anderen Thema zählt nicht');
+    $w->member('tf_gone', ['posts' => 5]);
+    $w->post('tf_gone_p', 'tfast', ['by' => 'tf_gone', 'age' => 31, 'status' => 'deleted']);
+    T::same('slow_mode@14', $w->cell('tf_gone', 'reply', ['topic_id' => $w->t['tfast']]), 'Themen-Modus 45 s, gelöschter Beitrag vor 31 s im Thema: slow_mode, 14 s (Löschen gibt den Modus nicht frei)');
 
     // bypass_slow_mode (Matrix) überspringt den Modus, aber nicht den globalen Abstand
     $w->forum('slow_b', ['slow_mode' => 600]);
@@ -1385,12 +2084,16 @@ T::run('Pflichtfall: Freigabepflicht (initialStatus), bypass_approval, Deckel f�
     }
     T::same('ok:published', $w2->cell('day', 'reply', ['topic_id' => $w2->t['t']]), 'vier Beiträge heute (Limit 5): erlaubt');
     $w2->post('d4', 't', ['by' => 'day', 'status' => 'deleted', 'age' => 100]);
-    $w2->post('d5', 't', ['by' => 'day', 'status' => 'rejected', 'age' => 100]);
-    T::same('ok:published', $w2->cell('day', 'reply', ['topic_id' => $w2->t['t']]), 'gelöschte und abgelehnte Beiträge zählen nicht');
-    $w2->post('d6', 't', ['by' => 'day', 'age' => 100]);
-    T::same('trust_limit', $w2->cell('day', 'reply', ['topic_id' => $w2->t['t']]), 'fünf Beiträge heute (published, pending, hidden): trust_limit');
+    T::same('trust_limit', $w2->cell('day', 'reply', ['topic_id' => $w2->t['t']]), 'ein gelöschter Beitrag zählt mit: fünf Beiträge heute (davon einer gelöscht) = trust_limit (B3/B29)');
     T::same('trust_limit', $w2->cell('day', 'create_topic', ['forum_id' => $w2->f['fo']]), 'dto. beim Anlegen eines Themas');
     T::same('ok:published', $w2->cell('m1', 'reply', ['topic_id' => $w2->t['t']]), 'andere Mitglieder sind nicht betroffen');
+    // Ein abgelehnter Beitrag verbraucht das Kontingent ebenso (er wurde angelegt)
+    $w3 = acStandardWorld(['rate_post_seconds' => 0, 'rate_topic_seconds' => 0, 'new_member_approval_posts' => 0]);
+    $w3->member('day2', []);
+    foreach (['published', 'published', 'published', 'published', 'rejected'] as $i => $status) {
+        $w3->post('e' . $i, 't', ['by' => 'day2', 'status' => $status, 'age' => 7200 + $i]);
+    }
+    T::same('trust_limit', $w3->cell('day2', 'reply', ['topic_id' => $w3->t['t']]), 'ein abgelehnter Beitrag zählt mit (Limit 5)');
 });
 
 // ── Wirkung je Einstellung ──────────────────────────────────────────────────────────────────────────────────────
@@ -1403,8 +2106,8 @@ T::run('Wirkung: guests_can_read', static function (): void {
     foreach ([['Standard (ungültiger Wert)', $default], ['aus', $off]] as [$label, $w]) {
         T::same('not_found', $w->cell('guest', 'read', ['forum_id' => $w->f['fo']]), $label . ': Gast liest kein Forum');
         T::same('not_found', $w->cell('guest', 'read', ['topic_id' => $w->t['t']]), $label . ': Gast liest kein Thema');
-        T::same('not_found', $w->cell('guest', 'read'), $label . ': Gast darf die Community nicht betreten');
-        T::same('no_capability', $w->cell('guest', 'search'), $label . ': Gast sucht nicht');
+        T::same('not_found', $w->cell('guest', 'read', AC_GLOBAL), $label . ': Gast darf die Community nicht betreten');
+        T::same('no_capability', $w->cell('guest', 'search', AC_GLOBAL), $label . ': Gast sucht nicht');
         T::same('login_required', $w->cell('guest', 'reply', ['topic_id' => $w->t['t']]), $label . ': Schreibaktionen bleiben login_required');
         T::same([], $w->access->filterReadable(null, [$w->f['fo']]), $label . ': keine lesbaren Foren');
         T::same([], $w->access->readableForumIds(null), $label . ': readableForumIds leer');
@@ -1414,8 +2117,8 @@ T::run('Wirkung: guests_can_read', static function (): void {
     T::same('ok', $on->cell('guest', 'read', ['forum_id' => $on->f['fo']]), 'an: Gast liest ein Forum ohne Zeilen (Standard guest.read)');
     T::same('ok', $on->cell('guest', 'read', ['topic_id' => $on->t['t']]), 'an: Gast liest ein Thema');
     T::same('ok:full', $on->cell('guest', 'read', ['post_id' => $on->p['p']]), 'an: Gast liest einen Beitrag');
-    T::same('ok', $on->cell('guest', 'read'), 'an: Gast darf die Community betreten');
-    T::same('ok', $on->cell('guest', 'search'), 'an: Gast sucht');
+    T::same('ok', $on->cell('guest', 'read', AC_GLOBAL), 'an: Gast darf die Community betreten');
+    T::same('ok', $on->cell('guest', 'search', AC_GLOBAL), 'an: Gast sucht');
     T::same('not_found', $on->cell('guest', 'read', ['forum_id' => $on->f['fi']]), 'an: ein Forum mit Rechte-Zeilen ohne Gast-read bleibt zu');
     T::same('not_found', $on->cell('guest', 'read', ['forum_id' => $on->f['fh']]), 'an: ein verborgenes Forum bleibt zu');
     T::same('not_found', $on->cell('guest', 'read', ['topic_id' => $on->t['tp']]), 'an: ein wartendes Thema bleibt zu');
@@ -1443,7 +2146,7 @@ T::run('Wirkung: require_verified_email', static function (): void {
     T::same('email_unverified', $w->cell('unverified', 'report', ['post_id' => $w->p['p']]), 'an: auch kein Melden');
     T::same('email_unverified', $w->cell('unverified', 'topic.lock', ['topic_id' => $w->t['t']]), 'an: auch keine Moderationsaktion');
     T::same('ok', $w->cell('unverified', 'read', ['topic_id' => $w->t['t']]), 'an: Lesen bleibt möglich');
-    T::same('ok', $w->cell('unverified', 'search'), 'an: Suchen bleibt möglich');
+    T::same('ok', $w->cell('unverified', 'search', AC_GLOBAL), 'an: Suchen bleibt möglich');
     T::same(403, $w->can('unverified', 'reply', $reply)->status(), 'email_unverified meldet 403');
     // admin ist ausgenommen, auch ohne bestätigte Adresse
     $w->verified[$w->u['admin']] = false;
@@ -1489,6 +2192,20 @@ T::run('Wirkung: edit_window_minutes', static function (): void {
         T::same('ok', $w->cell('gm', 'edit', ['post_id' => $id]), $label . ': globale Moderation ohne Fenster');
         T::same('ok', $w->cell('admin', 'delete', ['post_id' => $id]), $label . ': admin ohne Fenster');
     }
+    // Fail-closed: ohne gültiges created_at (leer, fehlt, kein Datum) gilt das Fenster als abgelaufen
+    $w = acStandardWorld(['edit_window_minutes' => 30, 'default_permissions' => ['member' => ['delete_own' => 1]]]);
+    $row = (array) (new PostRepository($w->db))->find($w->p['p']);
+    foreach ([null, '', 'kein Datum', '2026-13-45 99:99:99', '2026-11-15'] as $broken) {
+        $label = 'created_at ' . T::export($broken);
+        T::same('edit_window', acCell($w->access->can($w->u['own'], 'edit', ['post_id' => $w->p['p'], 'post' => ['created_at' => $broken] + $row, 'now' => $w->now])), $label . ': Bearbeiten abgelaufen');
+        T::same('edit_window', acCell($w->access->can($w->u['own'], 'delete', ['post_id' => $w->p['p'], 'post' => ['created_at' => $broken] + $row, 'now' => $w->now])), $label . ': Löschen abgelaufen');
+        T::same('ok', acCell($w->access->can($w->u['gm'], 'edit', ['post_id' => $w->p['p'], 'post' => ['created_at' => $broken] + $row, 'now' => $w->now])), $label . ': Moderation hat kein Fenster');
+    }
+    T::same('ok', acCell($w->access->can($w->u['own'], 'edit', ['post_id' => $w->p['p'], 'post' => $row, 'now' => $w->now])), 'Gegenprobe: gültiges created_at, im Fenster');
+    $unlimited = acStandardWorld(['edit_window_minutes' => 0]);
+    $row0 = (array) (new PostRepository($unlimited->db))->find($unlimited->p['p']);
+    T::same('ok', acCell($unlimited->access->can($unlimited->u['own'], 'edit', ['post_id' => $unlimited->p['p'], 'post' => ['created_at' => null] + $row0, 'now' => $unlimited->now])), 'Fenster 0 (unbegrenzt): auch ohne created_at erlaubt');
+
     $w = acStandardWorld(['edit_window_minutes' => 30]);
     // Erster Beitrag: der Titel gehört zum Fenster des Beitrags
     $w->post('erster_alt', 't', ['first' => true, 'age' => 31 * 60]);
@@ -1578,6 +2295,12 @@ T::run('Wirkung: rate_post_seconds', static function (): void {
     $w = $make(30);
     $w->post('nur_tabelle', 't', ['by' => 'm2', 'age' => 10]);
     T::same('rate_limited@20', $w->cell('m2', 'reply', $reply($w)), 'ohne last_post_at: der Beitrag in der Tabelle genügt');
+    // B3/B29: auch ohne Zeile in der Statistik hält ein gelöschter, abgelehnter oder ausgeblendeter Beitrag den Abstand
+    foreach (['deleted', 'rejected', 'hidden'] as $gone) {
+        $w->member('t_' . $gone, ['posts' => 5]);
+        $w->post('t_' . $gone . '_p', 't', ['by' => 't_' . $gone, 'age' => 10, 'status' => $gone]);
+        T::same('rate_limited@20', $w->cell('t_' . $gone, 'reply', $reply($w)), 'Beitrag im Status ' . $gone . ' vor 10 s (nur die Beitragstabelle kennt ihn): der Abstand gilt');
+    }
     // Quelle Statistik allein (der Beitrag wurde gelöscht: kein Umgehen des Abstands durch Löschen)
     $w->member('del', ['posts' => 5]);
     $w->post('geloescht', 't', ['by' => 'del', 'age' => 10, 'status' => 'deleted']);
@@ -1620,8 +2343,15 @@ T::run('Wirkung: rate_topic_seconds', static function (): void {
     T::same('rate_limited@60', $hidden->cell('m1', 'create_topic', $create($hidden)), 'ein ausgeblendetes Thema zählt');
     $pending = $make(120, 'pending');
     T::same('rate_limited@60', $pending->cell('m1', 'create_topic', $create($pending)), 'ein wartendes Thema zählt');
-    $deleted = $make(120, 'deleted');
-    T::same('ok:published', $deleted->cell('m1', 'create_topic', $create($deleted)), 'ein gelöschtes Thema zählt nicht');
+    // B3/B29: Löschen gibt den Abstand nicht frei (eigenes Löschen und Löschen durch die Moderation, auch im Papierkorb)
+    foreach (['deleted', 'trash'] as $gone) {
+        $deleted = $make(120, $gone);
+        T::same('rate_limited@60', $deleted->cell('m1', 'create_topic', $create($deleted)), 'ein Thema im Status ' . $gone . ' zählt weiter (Löschen gibt den Abstand nicht frei)');
+    }
+    $moved = $make(120, 'moved');
+    T::same('ok:published', $moved->cell('m1', 'create_topic', $create($moved)), 'der Verweis auf ein verschobenes Thema (moved) ist kein neues Thema und zählt nicht');
+    $goneOld = $make(120, 'deleted', 121);
+    T::same('ok:published', $goneOld->cell('m1', 'create_topic', $create($goneOld)), 'ein gelöschtes Thema vor 121 s: Abstand vorbei');
     $old = $make(120, 'published', 121);
     T::same('ok:published', $old->cell('m1', 'create_topic', $create($old)), 'Thema vor 121 s: Abstand vorbei');
     // Die Restzeit ist die größte aus Themenabstand und Beitragsabstand
@@ -1748,16 +2478,20 @@ T::run('Wirkung: trust_limits', static function (): void {
     }
     T::same('ok:published', $w->cell('l2', 'reply', $reply), 'Stufe 2, Limit 0 = unbegrenzt: zwölf Beiträge → erlaubt');
     T::same('ok:published', $w->cell('l2', 'create_topic', $create), 'Stufe 2, topics_per_hour 0 = unbegrenzt');
-    // Beiträge außerhalb der 24 Stunden zählen nicht; wartende, ausgeblendete zählen; gelöschte, abgelehnte nicht
+    // Beiträge außerhalb der 24 Stunden zählen nicht, jeder Beitrag im Fenster zählt (auch gelöschte und abgelehnte, B3/B29)
     $w->member('l0b', []);
     $w->post('alt_a', 't', ['by' => 'l0b', 'age' => 86401]);
     $w->post('alt_b', 't', ['by' => 'l0b', 'age' => 90000]);
-    $w->post('alt_c', 't', ['by' => 'l0b', 'age' => 3600, 'status' => 'deleted']);
-    $w->post('alt_d', 't', ['by' => 'l0b', 'age' => 3600, 'status' => 'rejected']);
-    T::same('ok:published', $w->cell('l0b', 'reply', $reply), 'ältere (> 24 h), gelöschte und abgelehnte Beiträge zählen nicht');
+    $w->post('alt_c', 't', ['by' => 'l0b', 'age' => 90000, 'status' => 'deleted']);
+    $w->post('alt_d', 't', ['by' => 'l0b', 'age' => 90000, 'status' => 'rejected']);
+    T::same('ok:published', $w->cell('l0b', 'reply', $reply), 'ältere Beiträge (> 24 h) zählen nicht, auch nicht gelöschte und abgelehnte');
     $w->post('neu_a', 't', ['by' => 'l0b', 'age' => 3600, 'status' => 'pending']);
     $w->post('neu_b', 't', ['by' => 'l0b', 'age' => 3600, 'status' => 'hidden']);
     T::same('trust_limit', $w->cell('l0b', 'reply', $reply), 'wartende und ausgeblendete Beiträge zählen');
+    $w->member('l0c', []);
+    $w->post('del_a', 't', ['by' => 'l0c', 'age' => 3600, 'status' => 'deleted', 'status_reason' => 'author']);
+    $w->post('del_b', 't', ['by' => 'l0c', 'age' => 3500, 'status' => 'deleted', 'status_reason' => 'moderator']);
+    T::same('trust_limit', $w->cell('l0c', 'reply', $reply), 'zwei gelöschte Beiträge im Fenster (eigenes Löschen und Löschen durch die Moderation) zählen: Limit 2');
     foreach (['gm', 'admin'] as $mod) {
         foreach ([3600, 3700, 3800, 3900, 4000, 4100, 4200, 4300] as $i => $age) {
             $w->post($mod . '_tag' . $i, 't', ['by' => $mod, 'age' => $age]);
@@ -1785,7 +2519,27 @@ T::run('Wirkung: trust_limits', static function (): void {
     T::same('ok:published', $w->cell('h1', 'create_topic', $create), 'Stufe 1, 2 Themen je Stunde: ein Thema → erlaubt');
     $w->topic('h1_b', 'fq', ['by' => 'h1', 'age' => 900, 'activity' => 900]);
     T::same('trust_limit', $w->cell('h1', 'create_topic', $create), 'Stufe 1, 2 Themen je Stunde: zwei Themen → trust_limit');
-    $w->topic('h0c_t', 'fq', ['by' => 'h1', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    // B3/B29: Löschen gibt das Stundenkontingent nicht frei (auch nicht durch die Moderation, auch nicht im Papierkorb)
+    $w->member('h2', ['posts' => 5]);
+    $w->topic('h2_a', 'fq', ['by' => 'h2', 'age' => 600, 'activity' => 600]);
+    T::same('ok:published', $w->cell('h2', 'create_topic', $create), 'Stufe 1, 2 Themen je Stunde: ein Thema → erlaubt');
+    $w->topic('h2_b', 'fq', ['by' => 'h2', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    T::same('trust_limit', $w->cell('h2', 'create_topic', $create), 'ein Thema und ein gelöschtes Thema in der Stunde: trust_limit');
+    $w->member('h3', ['posts' => 5]);
+    $w->topic('h3_a', 'fq', ['by' => 'h3', 'age' => 600, 'activity' => 600, 'status' => 'trash']);
+    $w->topic('h3_b', 'fq', ['by' => 'h3', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    T::same('trust_limit', $w->cell('h3', 'create_topic', $create), 'zwei gelöschte Themen (deleted, trash) in der Stunde: trust_limit');
+    $w->member('h4', ['posts' => 5]);
+    $w->topic('h4_a', 'fq', ['by' => 'h4', 'age' => 600, 'activity' => 600, 'status' => 'moved']);
+    $w->topic('h4_b', 'fq', ['by' => 'h4', 'age' => 900, 'activity' => 900, 'status' => 'deleted']);
+    T::same('ok:published', $w->cell('h4', 'create_topic', $create), 'ein Verweis (moved) zählt nicht: ein gelöschtes Thema, Limit 2 → erlaubt');
+    $w->member('h5', ['posts' => 5]);
+    $w->topic('h5_a', 'fq', ['by' => 'h5', 'age' => 4000, 'activity' => 4000, 'status' => 'deleted']);
+    $w->topic('h5_b', 'fq', ['by' => 'h5', 'age' => 5000, 'activity' => 5000, 'status' => 'deleted']);
+    $w->topic('h5_c', 'fq', ['by' => 'h5', 'age' => 600, 'activity' => 600, 'status' => 'published']);
+    T::same('ok:published', $w->cell('h5', 'create_topic', $create), 'gelöschte Themen älter als eine Stunde zählen nicht (ein Thema in der Stunde, Limit 2)');
+    $w->topic('h5_d', 'fq', ['by' => 'h5', 'age' => 700, 'activity' => 700, 'status' => 'deleted']);
+    T::same('trust_limit', $w->cell('h5', 'create_topic', $create), 'ein weiteres gelöschtes Thema in der Stunde: trust_limit');
 
     // limitsFor liefert die eingestellten Zahlen je Stufe
     foreach (['m0' => [0, 2, 1], 'own' => [1, 4, 2], 'm2' => [2, 0, 0], 'm3' => [3, 7, 3]] as $name => [$level, $day, $hour]) {

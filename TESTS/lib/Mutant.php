@@ -70,8 +70,24 @@ final class Mutant
     {
         if (self::$catalog === null) {
             $path = (string) getenv('CMS_TEST_MUTANT_CATALOG');
+            if ($path !== '') {
+                $files = [$path];
+            } else {
+                // catalog.php und ergänzende Dateien catalog-*.php (je Umsetzer eine; gleiches Format, Namen eindeutig)
+                $dir = dirname(__DIR__) . '/community-mutants';
+                $files = array_merge([$dir . '/catalog.php'], glob($dir . '/catalog-*.php') ?: []);
+            }
             /** @var array<string, array<int, mixed>> $raw */
-            $raw = require $path !== '' ? $path : dirname(__DIR__) . '/community-mutants/catalog.php';
+            $raw = [];
+            foreach ($files as $file) {
+                foreach ((array) require $file as $name => $row) {
+                    if (isset($raw[$name])) {
+                        fwrite(STDERR, 'Doppelter Mutantenname ' . $name . ' in ' . basename($file) . PHP_EOL);
+                        exit(99);
+                    }
+                    $raw[$name] = $row;
+                }
+            }
             self::$catalog = [];
             foreach ($raw as $name => $row) {
                 self::$catalog[(string) $name] = [

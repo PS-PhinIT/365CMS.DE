@@ -230,16 +230,19 @@ final class PostRepository extends AbstractRepository
     }
 
     /**
-     * Jüngster Beitrag eines Mitglieds seit `$sinceUtc` (veröffentlicht oder wartend), optional nur in einem Forum und/oder
-     * Thema, für Mindestabstände und den Langsamen Modus.
+     * Jüngster Beitrag eines Mitglieds seit `$sinceUtc`, optional nur in einem Forum und/oder Thema, für Mindestabstände und den
+     * Langsamen Modus. Ohne `$statuses` zählen veröffentlichte und wartende Beiträge; mit Liste genau diese Status (die
+     * Rechteprüfung zählt auch gelöschte, damit Löschen keinen Abstand freigibt).
      *
+     * @param list<string>|null $statuses Status aus STATUSES
      * @return array{id: int, topic_id: int, forum_id: int, created_at: string}|null
      */
-    public function lastOfUser(int $userId, string $sinceUtc, ?int $forumId = null, ?int $topicId = null): ?array
+    public function lastOfUser(int $userId, string $sinceUtc, ?int $forumId = null, ?int $topicId = null, ?array $statuses = null): ?array
     {
+        $statuses = self::statuses($statuses, self::SPACED);
         $sql = 'SELECT id, topic_id, forum_id, created_at FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status IN ('
-            . self::placeholders(count(self::SPACED)) . ') AND created_at >= ?';
-        $params = [$userId, ...self::SPACED, $sinceUtc];
+            . self::placeholders(count($statuses)) . ') AND created_at >= ?';
+        $params = [$userId, ...$statuses, $sinceUtc];
         if ($forumId !== null) {
             $sql .= ' AND forum_id = ?';
             $params[] = $forumId;
