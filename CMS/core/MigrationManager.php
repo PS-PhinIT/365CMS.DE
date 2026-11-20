@@ -265,11 +265,13 @@ class MigrationManager
         );
 
         // v27 (4.2.0, Community): Bündelung von Benachrichtigungen („3 neue Antworten in …“) braucht einen Gruppenschlüssel
-        // und einen Zähler an der Core-Tabelle notifications. Bestandszeilen: kein Schlüssel, Zähler 1.
+        // und einen Zähler an der Core-Tabelle notifications. Bestandszeilen: kein Schlüssel, Zähler 1. Definition wie im CREATE
+        // (mit Kommentar) und in ensureFeatureSchema(); group_key mit ausdrücklicher Kollation, weil ADD COLUMN sonst die der
+        // Tabelle erbt (aus 4.0.0 die Standardkollation des Servers, z. B. utf8mb4_general_ci). Ohne AFTER: die Spalten hängen an (wie die v26-Spalten von orders).
         array_push(
             $migrations,
-            "ALTER TABLE `{$p}notifications` ADD COLUMN `group_key` VARCHAR(120) DEFAULT NULL",
-            "ALTER TABLE `{$p}notifications` ADD COLUMN `event_count` INT UNSIGNED NOT NULL DEFAULT 1",
+            "ALTER TABLE `{$p}notifications` ADD COLUMN `group_key` VARCHAR(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Bündelung gleichartiger Hinweise, z. B. community:topic:12'",
+            "ALTER TABLE `{$p}notifications` ADD COLUMN `event_count` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Anzahl gebündelter Ereignisse'",
             "ALTER TABLE `{$p}notifications` ADD INDEX `idx_user_group` (`user_id`, `group_key`, `is_read`)"
         );
 

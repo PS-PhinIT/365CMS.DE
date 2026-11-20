@@ -106,7 +106,7 @@ Verified top-level entries of this repository:
 | `CODE_OF_CONDUCT.md` | file | code of conduct |
 | `.gitignore` | file | git ignore rules |
 
-`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and 31 suites (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `editorjs-csp`, `feeds-design`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`, `webhooks`), all run by `php TESTS/run-all.php` in CI.
+`ASSETS/` (asset staging), `AUDIT/` and `tools/` are referenced in older notes and in `VendorRegistry` (staging paths) but are **not** part of this repository (state 2026-11-13); they exist only in local maintainer workspaces. `TESTS/` is fully versioned: `run-all.php`, `lib/TestRunner.php` and every suite `TESTS/<suite>/run.php` (one row per suite in the table above), all run by `php TESTS/run-all.php` in CI.
 
 There is **no** `var/` directory in this repository. Application logs are configured as `CMS/logs/` (`LOG_PATH` in `config/app.php`).
 
@@ -177,7 +177,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und 31 Suiten (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-expiry`, `content-types`, `content-workflow`, `csp-style-rewriter`, `editorjs-blocks`, `editorjs-csp`, `feeds-design`, `functions`, `login-showcase`, `media-avif`, `media-usage`, `member-area`, `mfa-enforcement`, `newsletter-member`, `password-policy`, `release-3.4.0`, `reusable-blocks`, `s3-backup`, `schema-v26`, `security`, `sso-entra`, `theme-contract`, `update-swap`, `webhooks`), die `php TESTS/run-all.php` in der CI ausführt.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und jede Suite `TESTS/<suite>/run.php` (je Suite eine Zeile in der Tabelle oben), alle führt `php TESTS/run-all.php` in der CI aus.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 

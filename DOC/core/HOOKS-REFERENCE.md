@@ -222,6 +222,8 @@ Vorgesehen, in 4.2.0 (PR #2a) noch nicht ausgelöst: Die Namen sind in `Events` 
 | `cms_community_user_unbanned` | Action | Benutzer-ID, Grund | Community-Sperre aufgehoben |
 | `cms_community_solution_marked` | Action | Thema-ID, Beitrag-ID | Antwort als Lösung markiert |
 
+Geplant, aber noch ohne Konstante in `Events` (Namen aus der Übergabe `HANDOFF-PR2-PR5.md` §5.1): die Filter `cms_community_spam_check` (Antispam-Prüfung eines Beitrags, PR #2b) und `cms_community_notification_types` (erweitert die Liste der Benachrichtigungstypen `community.*`, PR #2b). Sie erhalten Konstante, Signatur und Tabellenzeile mit dem jeweiligen Dienst.
+
 ### Cron
 
 | Hook | Typ | Argumente |

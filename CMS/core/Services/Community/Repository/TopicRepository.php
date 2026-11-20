@@ -166,6 +166,12 @@ final class TopicRepository extends AbstractRepository
      * - Keyset: `Page::$next` ist der Cursor (`last_post_at`, `id`) der letzten Stromzeile oder null auf der letzten Seite.
      *   Abfrage als `(zeit < ? OR (zeit = ? AND id < ?))`: mit gleichen Zeitstempeln geht keine Zeile verloren und keine erscheint doppelt.
      * - `$status` ist genau ein Status (Standard `published`); unbekannte Werte fallen auf `published`.
+     * - Der Strom läuft in zwei Schritten: erst `id, last_post_at` über den Keyset (nur Indexzugriff auf
+     *   `idx_community_topics_forum_list`), danach die Zeilen über `id IN (…)`. Mit `SELECT *` wählte MariaDB 10.11 in großen
+     *   Foren bei einem Cursor in der oberen Hälfte der Liste `ref` statt `range`; der Keyset wirkte nur noch als Filter, und die
+     *   Lesezugriffe wuchsen mit der Position (15.000 Themen: Position 6000 mit 6021, die ID-Abfrage mit 22; HANDOFF §2 Nr. 10).
+     *   Gehört eine Zeile beim zweiten Schritt nicht mehr zur Liste (anderes Forum, anderer Status, angeheftet, gelöscht), fehlt
+     *   sie auf dieser Seite; der Cursor bleibt der des ersten Schritts.
      *
      * @return Page Einträge sind Themenzeilen (alle Spalten)
      */
@@ -184,17 +190,20 @@ final class TopicRepository extends AbstractRepository
         $order = ' ORDER BY last_post_at DESC, id DESC LIMIT ?';
 
         $stream = $this->fetchAll(
-            "SELECT * FROM {$table} WHERE forum_id = ? AND status = ? AND is_pinned = 0{$keyset}{$order}",
+            "SELECT id, last_post_at FROM {$table} WHERE forum_id = ? AND status = ? AND is_pinned = 0{$keyset}{$order}",
             [$forumId, $status, ...$keysetParams, $limit + 1]
         );
         // Abgelaufene Anheftung: gehört zum Strom und wird mit ihm nach (Zeit, ID) zusammengeführt. Beide Teillisten sind auf
         // $limit + 1 begrenzt, die ersten $limit + 1 der Vereinigung sind damit vollständig.
-        $expired = $this->fetchAll(
+        $expired = [];
+        foreach ($this->fetchAll(
             "SELECT * FROM {$table} WHERE forum_id = ? AND status = ? AND is_pinned = 1 AND pinned_until IS NOT NULL AND pinned_until <= ?{$keyset}{$order}",
             [$forumId, $status, $nowUtc, ...$keysetParams, $limit + 1]
-        );
+        ) as $row) {
+            $expired[(int) $row['id']] = $row;
+            $stream[] = ['id' => $row['id'], 'last_post_at' => $row['last_post_at']];
+        }
         if ($expired !== []) {
-            $stream = array_merge($stream, $expired);
             usort($stream, static fn (array $a, array $b): int => [(string) $b['last_post_at'], (int) $b['id']] <=> [(string) $a['last_post_at'], (int) $a['id']]);
         }
         $more = count($stream) > $limit;
@@ -205,9 +214,22 @@ final class TopicRepository extends AbstractRepository
             ? (new Cursor((string) $last['last_post_at'], (int) $last['id']))->encode()
             : null;
 
+        // Zweiter Schritt: die Zeilen über den Primärschlüssel, nur solange sie noch zur Liste gehören.
+        $rows = $expired;
+        $ids = array_values(array_diff(array_map(static fn (array $entry): int => (int) $entry['id'], $stream), array_keys($expired)));
+        if ($ids !== []) {
+            foreach ($this->fetchAll("SELECT * FROM {$table} WHERE id IN (" . self::placeholders(count($ids)) . ')', $ids) as $row) {
+                if ((int) $row['forum_id'] === $forumId && (string) $row['status'] === $status && (int) $row['is_pinned'] === 0) {
+                    $rows[(int) $row['id']] = $row;
+                }
+            }
+        }
+
         $items = $after === null ? $this->pinned($forumId, $nowUtc, $status) : [];
-        foreach ($stream as $row) {
-            $items[] = self::withEffectiveState($row, $nowUtc);
+        foreach ($stream as $entry) {
+            if (isset($rows[(int) $entry['id']])) {
+                $items[] = self::withEffectiveState($rows[(int) $entry['id']], $nowUtc);
+            }
         }
 
         return new Page($items, $next);

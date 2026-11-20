@@ -119,7 +119,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `README.md` | public README |
 | `Changelog.md` | changelog |
 
-`ASSETS/` and `tools/` are not part of this repository; under `TESTS/` 18 suites are versioned (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `member-area`, `newsletter-member`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), all run by `php TESTS/run-all.php` in CI (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; unter `TESTS/` sind 18 Suiten versioniert (`admin-menu`, `ai-admin-contract`, `ai-content-creator`, `ai-editorjs-translation`, `ai-policy`, `ai-seo-metadata`, `analytics-consent`, `content-types`, `csp-style-rewriter`, `editorjs-blocks`, `functions`, `login-showcase`, `member-area`, `newsletter-member`, `release-3.4.0`, `security`, `theme-contract`, `update-swap`), die `php TESTS/run-all.php` in der CI ausführt.
+`ASSETS/` and `tools/` are not part of this repository; under `TESTS/` every suite `TESTS/<suite>/run.php` is versioned (one row per suite in the table above), all run by `php TESTS/run-all.php` in CI (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; unter `TESTS/` ist jede Suite `TESTS/<suite>/run.php` versioniert (je Suite eine Zeile in der Tabelle oben), alle führt `php TESTS/run-all.php` in der CI aus.
 
 Rule: **always know whether you are editing runtime, documentation, or source context.**
 
