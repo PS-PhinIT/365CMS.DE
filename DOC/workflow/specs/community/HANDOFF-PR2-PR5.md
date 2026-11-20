@@ -735,6 +735,32 @@ Weiterleitungen nach Zusammenführen oder Umbenennen: `source_type` `topic` oder
 | PRIMARY | Primärschlüssel | `source_type`, `source_key` |  |
 | `idx_community_redirects_target` | Index | `target_type`, `target_id` | Weiterleitungen eines Ziels beim Löschen aufräumen |
 
+#### `community_notify_queue`
+
+Offene Zustellaufträge der Benachrichtigungen (PR #2b, einzige Schemaänderung nach PR #1; Vertrag DESIGN-2b §3.9, §4.5). Ein Auftrag je Ereignis, angelegt von den Listenern nach dem Commit des Auslösers, zugestellt im Cron (`NotificationDispatcher::runQueue()`); erledigte Aufträge werden gelöscht, Aufträge älter als 48 Stunden verfallen. `kind`: `reply` · `new_topic` · `reaction` · `solution` · `moderation` · `report`. `post_id` trägt bei `report` die Meldungs-ID. `detail`: Reaktion, `approved` · `rejected` · `hidden` · `moved` bzw. der Meldestatus. `phase` und `cursor_user_id` sind der Cursor des Fan-outs (genau einmal je Auftrag und Empfänger), `lease_token` und `locked_until` die Lease eines Laufs, `attempts` zählt abgebrochene Leases (über 5: gelöscht). Bestandsinstallationen v27 erhalten die Tabelle über `ensureFeatureSchema()`. PR #5: Löschfrist und DSGVO-Behandlung von `actor_id`.
+
+| Spalte | Typ | Eigenschaften |
+|---|---|---|
+| `id` | bigint(20) unsigned | NOT NULL, AUTO_INCREMENT |
+| `kind` | varchar(12) | NOT NULL, Default '' |
+| `topic_id` | int(10) unsigned | NOT NULL, Default 0 |
+| `post_id` | bigint(20) unsigned | NOT NULL, Default 0 |
+| `actor_id` | int(10) unsigned | NOT NULL, Default 0 |
+| `detail` | varchar(20) | NULL |
+| `phase` | tinyint(3) unsigned | NOT NULL, Default 0 |
+| `cursor_user_id` | int(10) unsigned | NOT NULL, Default 0 |
+| `attempts` | tinyint(3) unsigned | NOT NULL, Default 0 |
+| `steps` | int(10) unsigned | NOT NULL, Default 0 |
+| `lease_token` | char(32) | NULL |
+| `locked_until` | datetime | NULL |
+| `created_at` | datetime | NOT NULL, Default current_timestamp() |
+| `updated_at` | datetime | NOT NULL, Default current_timestamp() |
+
+| Schlüssel | Art | Spalten | Zweck |
+|---|---|---|---|
+| PRIMARY | Primärschlüssel | `id` |  |
+| `idx_community_notify_queue_kind` | Index | `kind` | Stufen der Zustellung (`dueIds()` je Stufe, innerhalb nach `id`) |
+
 ### 4. Capabilities und Rolle
 
 | Capability | Wirkung | Standard (`capabilities_v27`) |

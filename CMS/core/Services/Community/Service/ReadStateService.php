@@ -11,6 +11,8 @@
  *   seiner Vorfahren (eine Marke gilt für Unterforen) und dem Horizont `unread_horizon_days` (jetzt minus Tage); ohne
  *   Horizont wäre jedes alte Thema für ein neues Mitglied ungelesen.
  * - Gäste haben keinen Lesestatus. Geschrieben wird nur, wo das Mitglied lesen darf (`can('read')`).
+ * - `touchSeen()` (PR #2b) setzt `community_user_stats.last_seen_at` höchstens einmal je SEEN_INTERVAL: das Tor der Forum-Abos
+ *   (eine Mail je Forum bis zum nächsten Besuch, Entwurf interaktion §2.9). PR #4 ruft es je Community-Seite eines Mitglieds.
  * - Zeiten sind UTC (`gmdate`); die Uhr wird je Aufruf einmal gelesen. Lesestatus ist unkritisch: ein Datenbankfehler wird
  *   protokolliert und liefert den neutralen Wert (false, 0, leere Karte), er bricht die Seite nicht ab.
  *
@@ -26,6 +28,7 @@ use CMS\Logger;
 use CMS\Services\Community\Repository\ForumRepository;
 use CMS\Services\Community\Repository\ReadStateRepository;
 use CMS\Services\Community\Repository\TopicRepository;
+use CMS\Services\Community\Repository\UserStatsRepository;
 use CMS\Services\Community\Support\Settings;
 
 if (!defined('ABSPATH')) {
@@ -38,6 +41,8 @@ final class ReadStateService
     public const DEFAULT_CAP = 100;
     /** Größte Obergrenze der Ungelesen-Zahl. */
     public const MAX_CAP = 1000;
+    /** Sekunden: `last_seen_at` wird höchstens so oft geschrieben (`touchSeen()`). */
+    public const SEEN_INTERVAL = 300;
     /** Themen je Abfrage nach Lesestatus (Grenze von `ReadStateRepository::forTopics()`). */
     private const CHUNK = 500;
 
@@ -52,6 +57,7 @@ final class ReadStateService
     private ReadStateRepository $readStates;
     private TopicRepository $topics;
     private ForumRepository $forums;
+    private UserStatsRepository $stats;
 
     /**
      * @param \Closure(): int|null $clock Unix-Zeit (Standard `time()`)
@@ -70,6 +76,7 @@ final class ReadStateService
         $this->readStates = new ReadStateRepository($this->db);
         $this->topics = new TopicRepository($this->db);
         $this->forums = new ForumRepository($this->db);
+        $this->stats = new UserStatsRepository($this->db);
     }
 
     public static function instance(): self
@@ -135,6 +142,25 @@ final class ReadStateService
             return $this->readStates->setMark($userId, $forumId, gmdate('Y-m-d H:i:s', $nowTs));
         } catch (\PDOException | \RuntimeException $e) {
             $this->logFailure('read_state.mark_forum', $e);
+
+            return false;
+        }
+    }
+
+    /**
+     * Besuch eines Mitglieds vermerken (`last_seen_at`, Tor der Forum-Abos): höchstens ein Schreibzugriff je SEEN_INTERVAL, ohne
+     * Statistikzeile nichts (Abonnenten haben immer eine). `true`, wenn geschrieben wurde. Kein `can()`: eigene Daten.
+     */
+    public function touchSeen(int $userId): bool
+    {
+        if ($userId < 1) {
+            return false;
+        }
+        $nowTs = ($this->clock)();
+        try {
+            return $this->stats->touchSeen($userId, gmdate('Y-m-d H:i:s', $nowTs), gmdate('Y-m-d H:i:s', $nowTs - self::SEEN_INTERVAL));
+        } catch (\PDOException | \RuntimeException $e) {
+            $this->logFailure('read_state.touch_seen', $e);
 
             return false;
         }

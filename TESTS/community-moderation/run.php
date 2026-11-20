@@ -736,6 +736,40 @@ T::run('Sperren: mehr als 100 Autoren werden in Stücken aufsteigend gesperrt; k
     mdAudit($w, 'Ausblenden mit 121 Autoren');
 });
 
+T::run('Sperren: Verschieben schreibt Verweis-Themen erst nach dem Umhängen der Meldungen, das Protokoll zuletzt (Vertrag §3.10)', static function (): void {
+    $w = new MdWorld();
+    $mod = $w->db->user(['role' => 'moderator']);
+    $s = $w->db->user();
+    $f1 = $w->db->forum();
+    $f2 = $w->db->forum();
+    [$t, $p] = mdSeed($w, $f1, $s, [[$s, 'published']]);
+    $w->recount();
+    $out = $w->mod->moveTopic($mod, $t, $f2);
+    $oldStub = (int) ($out['stub_topic_id'] ?? 0);
+    $w->db->report(['target' => $t, 'target_type' => 'topic', 'forum' => $f2]);
+    $w->db->report(['target' => $p[1], 'forum' => $f2]);
+    $from = count($w->db->log);
+    $back = $w->mod->moveTopic($mod, $t, $f1);
+    $classes = [];
+    foreach (mdTrace($w, $from) as $st) {
+        if (!$st['tx'] || $st['kind'] !== 'write') {
+            continue;
+        }
+        $class = match (true) {
+            str_starts_with($st['sql'], 'UPDATE cms_community_reports') => 'Meldungen',
+            str_starts_with($st['sql'], 'DELETE FROM cms_community_topics'), str_starts_with($st['sql'], 'INSERT INTO cms_community_topics') => 'Verweis',
+            str_starts_with($st['sql'], 'INSERT INTO cms_community_moderation_log') => 'Protokoll',
+            default => null,
+        };
+        if ($class !== null && end($classes) !== $class) {
+            $classes[] = $class;
+        }
+    }
+    T::same(['ok', null, ['Meldungen', 'Verweis', 'Protokoll']], [mdOutcome($back), $w->topic($oldStub), $classes], 'zurückverschoben: erst Meldungen umgehängt, dann alter Verweis gelöscht und neuer angelegt, zuletzt das Protokoll');
+    T::same([$f1, $f1], [(int) $w->db->row('community_reports', ['target_id' => $t, 'target_type' => 'topic'])['forum_id'], (int) $w->db->row('community_reports', ['target_id' => $p[1]])['forum_id']], 'offene Meldungen im neuen Forum');
+    mdAudit($w, 'Zurückverschieben mit Meldungen');
+});
+
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Wiederholung zwischen Vorprüfung und Sperre
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -807,6 +841,79 @@ T::run('Wiederholung: Forumswechsel, neuer Autor und Lösungswechsel zwischen Pl
     unset($w->db->beforeExecute[MD_FORUM_LOCK]);
     T::same(['db_error', 'published', [], $logs], [mdOutcome($result), $w->topic($t)['status'], $w->hooks, count($w->logRows())], 'drei Planabweichungen: db_error, nichts geschrieben, kein Hook, kein Protokoll');
     mdAudit($w, 'nach drei Abweichungen');
+});
+
+/** Parameter der Forensperren ab Index `$from` (je Sperre die Forum-ID). @return list<list<mixed>> */
+function mdForumLocks(MdWorld $w, int $from): array
+{
+    return array_column(array_values(array_filter(mdTrace($w, $from), static fn (array $st): bool => $st['kind'] === 'lock' && $st['table'] === 'forums')), 'params');
+}
+
+T::run('Wiederholung: Thema, Beiträge und Antwort wechseln zwischen Plan und Sperre den Ort ⇒ zweiter Versuch mit neuem Plan', static function (): void {
+    $w = new MdWorld();
+    $mod = $w->db->user(['role' => 'moderator']);
+    $s = $w->db->user();
+    $a = $w->db->user();
+    $f1 = $w->db->forum();
+    $f2 = $w->db->forum();
+    $f3 = $w->db->forum();
+    [$t] = mdSeed($w, $f1, $s, [[$a, 'published'], [$a, 'published']]);
+    [$dst] = mdSeed($w, $f2, $s, [], ['at' => 300]);
+    [$src, $sp] = mdSeed($w, $f1, $s, [[$a, 'published'], [$a, 'published'], [$a, 'published'], [$a, 'published']], ['at' => 600]);
+    [$side, $xp] = mdSeed($w, $f1, $s, [[$a, 'pending']], ['at' => 900]);
+    $w->recount();
+    $relocate = static function (int $topic, int $forum) use ($w): void {
+        $w->db->execute('UPDATE cms_community_topics SET forum_id = ? WHERE id = ?', [$forum, $topic]);
+        $w->db->execute('UPDATE cms_community_posts SET forum_id = ? WHERE topic_id = ?', [$forum, $topic]);
+        $w->recount();
+    };
+
+    // moveTopic: das Thema liegt beim Sperren schon in f3 ⇒ zweiter Versuch mit der Quelle f3 (Foren erneut aufsteigend)
+    $w->db->beforeExecute[MD_FORUM_LOCK] = static fn () => $relocate($t, $f3);
+    $from = count($w->db->log);
+    $moved = $w->mod->moveTopic($mod, $t, $f2, false);
+    T::same(['ok', $f3, $f2, [[$f1], [$f2], [$f2], [$f3]]], [mdOutcome($moved), $moved['from_forum_id'] ?? null, $moved['to_forum_id'] ?? null, mdForumLocks($w, $from)], 'moveTopic: Forumswechsel vor der Sperre, zweiter Versuch verschiebt aus dem neuen Forum');
+    $rows = $w->logRows();
+    T::same([$f3, ['from_forum' => $f3, 'to_forum' => $f2, 'stub' => 0, 'unpinned' => false]], [(int) end($rows)['forum_id'], json_decode((string) end($rows)['details_json'], true)], 'moveTopic: Protokoll mit dem Quellforum des zweiten Versuchs');
+    mdAudit($w, 'moveTopic nach Forumswechsel');
+
+    // movePosts: das Quellthema wechselt das Forum ⇒ zweiter Versuch mit neuem Plan
+    $w->db->beforeExecute[MD_FORUM_LOCK] = static fn () => $relocate($src, $f3);
+    $from = count($w->db->log);
+    $result = $w->mod->movePosts($mod, [$sp[1]], $dst);
+    T::same(['ok', [[$f1], [$f2], [$f2], [$f3]], $f2], [mdOutcome($result), mdForumLocks($w, $from), (int) $w->post($sp[1])['forum_id']], 'movePosts: Forumswechsel der Quelle, zweiter Versuch sperrt f2 und f3');
+    mdAudit($w, 'movePosts nach Forumswechsel');
+
+    // movePosts: zwischen Plan und Sperre wird ein verschobener Beitrag zur Lösung der Quelle ⇒ zweiter Versuch sperrt den Lösungsautor
+    $w->db->beforeExecute[MD_FORUM_LOCK] = static function () use ($w, $src, $sp, $s): void {
+        mdSolve($w, $src, $sp[2], $s);
+        $w->recount();
+    };
+    $from = count($w->db->log);
+    $result = $w->mod->movePosts($mod, [$sp[2]], $dst);
+    $statsLocks = array_column(array_values(array_filter(mdTrace($w, $from), static fn (array $st): bool => $st['kind'] === 'lock' && $st['table'] === 'user_stats')), 'params');
+    T::same(['ok', true, [[$a]], null], [mdOutcome($result), $result['solution_cleared'] ?? null, $statsLocks, $w->topic($src)['solution_post_id']], 'movePosts: Lösungswechsel vor der Sperre, zweiter Versuch hebt die neue Lösung auf und bucht ihren Autor');
+    mdAudit($w, 'movePosts nach Lösungswechsel');
+
+    // movePosts: ein Beitrag verlässt die Quelle zwischen Plan und Sperre ⇒ zweiter Versuch sieht gemischte Themen (invalid_state)
+    $w->db->beforeExecute[MD_FORUM_LOCK] = static function () use ($w, $sp, $side, $f1): void {
+        $w->db->execute('UPDATE cms_community_posts SET topic_id = ?, forum_id = ? WHERE id = ?', [$side, $f1, $sp[3]]);
+        $w->recount();
+    };
+    $logs = count($w->logRows());
+    $result = $w->mod->movePosts($mod, [$sp[3], $sp[4]], $dst);
+    T::same(['invalid_state', $side, $logs], [mdOutcome($result), (int) $w->post($sp[3])['topic_id'], count($w->logRows())], 'movePosts: Beitrag nicht mehr in der Quelle ⇒ kein Verschieben, kein Protokoll');
+    mdAudit($w, 'movePosts nach Wegzug eines Beitrags');
+
+    // approvePost: die wartende Antwort wandert in ein Thema eines anderen Forums ⇒ zweiter Versuch im neuen Thema
+    $w->db->beforeExecute[MD_FORUM_LOCK] = static function () use ($w, $xp, $dst, $f2): void {
+        $w->db->execute('UPDATE cms_community_posts SET topic_id = ?, forum_id = ? WHERE id = ?', [$dst, $f2, $xp[1]]);
+        $w->recount();
+    };
+    $from = count($w->db->log);
+    $approved = $w->mod->approvePost($mod, $xp[1]);
+    T::same(['ok', $dst, $f2, [[$f1], [$f2]]], [mdOutcome($approved), $approved['topic_id'] ?? null, $approved['forum_id'] ?? null, mdForumLocks($w, $from)], 'approvePost: Antwort vor der Sperre verschoben, zweiter Versuch bucht im neuen Thema');
+    mdAudit($w, 'approvePost nach Ortswechsel');
 });
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -894,7 +894,10 @@ final class ModerationService
             return self::denied($decision);
         }
 
-        return $this->run('topic.move', ['topic_id' => $topicId], function () use ($actorId, $topicId, $targetForumId, $stub, $reason, $nowTs): ?array {
+        // Ablauf des Verweises vor der Transaktion: kein Lesen der Einstellungen unter Sperren (Vertrag §1 Nr. 2).
+        $stubExpires = $nowTs + $this->settings->int('moved_stub_days') * 86400;
+
+        return $this->run('topic.move', ['topic_id' => $topicId], function () use ($actorId, $topicId, $targetForumId, $stub, $stubExpires, $reason, $nowTs): ?array {
             $topic = $this->topics->find($topicId);
             if ($topic === null) {
                 return self::failure('topic_not_found');
@@ -904,12 +907,12 @@ final class ModerationService
                 return self::unchanged(['topic_id' => $topicId, 'from_forum_id' => $sourceId, 'to_forum_id' => $targetForumId, 'stub_topic_id' => null, 'unpinned' => false]);
             }
 
-            return Transaction::run($this->db, fn (): ?array => $this->moveTopicLocked($actorId, $topicId, $sourceId, $targetForumId, $stub, $reason, $nowTs));
+            return Transaction::run($this->db, fn (): ?array => $this->moveTopicLocked($actorId, $topicId, $sourceId, $targetForumId, $stub, $stubExpires, $reason, $nowTs));
         });
     }
 
     /** @return array<string, mixed>|null */
-    private function moveTopicLocked(int $actorId, int $topicId, int $sourceId, int $targetId, bool $stub, ?string $reason, int $nowTs): ?array
+    private function moveTopicLocked(int $actorId, int $topicId, int $sourceId, int $targetId, bool $stub, int $stubExpires, ?string $reason, int $nowTs): ?array
     {
         $now = self::utc($nowTs);
         // Sperrfolge M: beide Foren aufsteigend nach ID, dann das Thema.
@@ -938,12 +941,14 @@ final class ModerationService
             $columns += ['is_pinned' => 0, 'pinned_until' => null];
             $unpinned = true;
         }
-        foreach ($this->topics->stubIdsFor($targetId, $topicId) as $oldStub) {
-            $this->topics->deleteStub($oldStub);
-        }
         $this->topics->update($topicId, $columns);
         $this->posts->setTopicForum($topicId, $targetId);
         $this->reports->reassignTopic($topicId, $targetId);
+        // Verweis-Themen erst nach allen Sperren und dem Umhängen der Meldungen (Vertrag §3.10): alte Verweise im Ziel auf dieses
+        // Thema löschen, einen neuen im Quellforum anlegen.
+        foreach ($this->topics->stubIdsFor($targetId, $topicId) as $oldStub) {
+            $this->topics->deleteStub($oldStub);
+        }
         $stubId = 0;
         if ($stub && $topic['status'] === 'published') {
             $stubId = $this->topics->insert([
@@ -953,7 +958,7 @@ final class ModerationService
                 'slug' => (string) $topic['slug'],
                 'status' => 'moved',
                 'moved_to_topic_id' => $topicId,
-                'moved_expires_at' => self::utc($nowTs + $this->settings->int('moved_stub_days') * 86400),
+                'moved_expires_at' => self::utc($stubExpires),
                 'last_post_at' => $topic['last_post_at'] ?? $now,
                 'created_at' => $now,
                 'updated_at' => $now,

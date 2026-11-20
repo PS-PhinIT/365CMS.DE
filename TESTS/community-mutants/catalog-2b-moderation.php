@@ -56,6 +56,12 @@ return [
     'mod-covers-skipped' => [$mod, 'if (!$this->book->covers($topicId, $plan)) {', 'if (false) {', $suite, false, 'Planprüfung unter der Sperre: neuer Autor ⇒ neuer Versuch', false, []],
     'mod-plan-forum-unchecked' => [$mod, 'if ((int) $topic[\'forum_id\'] !== $forumId) {', 'if (false) {', $suite, false, 'Planprüfung unter der Sperre: Forumswechsel ⇒ neuer Versuch', false, []],
     'mod-expire-no-touch' => [$mod, '$this->forums->touch($forumIds, $now);', '', $suite, false, 'expire(): version der betroffenen Foren + 1 (Cache der Listen)', false, []],
+    'mod-move-plan-unchecked' => [$mod, 'if ((int) $topic[\'forum_id\'] !== $sourceId) {', 'if (false) {', $suite, false, 'Thema verschieben: Forumswechsel zwischen Plan und Sperre ⇒ neuer Versuch', false, []],
+    'mod-moveposts-plan-unchecked' => [$mod, 'if ((int) $source[\'forum_id\'] !== $sourceForumId || ', 'if (false && (int) $source[\'forum_id\'] !== $sourceForumId || ', $suite, false, 'Beiträge verschieben: Forumswechsel der Quelle zwischen Plan und Sperre ⇒ neuer Versuch', false, []],
+    'mod-moveposts-solution-unchecked' => [$mod, '|| (int) ($source[\'solution_post_id\'] ?? 0) !== $plan[\'solution\'] ||', '|| false ||', $suite, false, 'Beiträge verschieben: Lösungswechsel zwischen Plan und Sperre ⇒ neuer Versuch mit gesperrtem Lösungsautor', false, []],
+    'mod-moveposts-left-unchecked' => [$mod, 'if ((int) $post[\'topic_id\'] !== $plan[\'source\']) {', 'if (false) {', $suite, false, 'Beiträge verschieben: jeder Beitrag liegt unter der Sperre noch in der Quelle', false, []],
+    'mod-post-plan-unchecked' => [$mod, 'if ((int) $post[\'topic_id\'] !== $topicId || ($author !== null && $lockedAuthor !== $author)) {', 'if (false) {', $suite, false, 'Statuswechsel einer Antwort: Ortswechsel zwischen Lesen und Sperre ⇒ neuer Versuch', false, []],
+    'mod-stub-before-reassign' => [$mod, '$this->reports->reassignTopic($topicId, $targetId);', 'foreach ($this->topics->stubIdsFor($targetId, $topicId) as $early) { $this->topics->deleteStub($early); } $this->reports->reassignTopic($topicId, $targetId);', $suite, false, 'Sperrfolge: Verweis-Themen erst nach dem Umhängen der Meldungen (Vertrag §3.10)', false, []],
 
     // ── CounterBook (moderation §6.4, Vertrag §7.4) ──
     'book-counts-any-topic' => [$book, 'return (string) $topic[\'status\'] === \'published\';', 'return true;', $suite, false, 'S1: Forum und Mitglied zählen nur Beiträge in veröffentlichten Themen', true, []],

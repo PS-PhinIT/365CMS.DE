@@ -8,7 +8,8 @@
  *  race-approve-reply   Freigabe einer alten wartenden Antwort, gleichzeitig 7 neue Antworten: `reply_count`, `last_*` = jüngste
  *  race-move-reply      Thema A → B verschieben, gleichzeitig 7 Antworten: alle gelingen, alle `posts.forum_id = B`, Zähler A/B
  *  race-move-cross      Thema X A → B und Y B → A gleichzeitig, 20 Runden: kein `db_error` (Foren aufsteigend gesperrt)
- *  race-pin-limit       49 wirksame Pins, 8 Prozesse heften 8 Themen an: genau einer gelingt, 7 × `pin_limit`
+ *  race-pin-limit       49 wirksame Pins, 8 Prozesse heften 8 Themen an: genau einer gelingt, 7 × `pin_limit`; dazu ein fester Ablauf
+ *                       (A hält seine Sperren in can(fresh), B wartet an der Forensperre und erhält danach `pin_limit`)
  *  race-hide-reply      Thema ausblenden, gleichzeitig antworten 6 neue Autoren: Planprüfung wiederholt, Mitgliederzähler stimmen
  *  race-hide-overlap    8 Prozesse blenden je ein Thema mit 30 gemeinsamen Autoren dreimal aus und ein: kein `db_error`
  *  race-bulk            Massenfreigabe von 100 Antworten, gleichzeitig 7 Antworten in denselben Themen: kein `db_error`, Orakel
@@ -16,8 +17,9 @@
  *                       kein Hook, keine offene Transaktion, keine hängende Sperre, Wiederholung gelingt
  *  utc-moderation       Sitzung +01:00, PHP Europe/Berlin (Sommer): `locked_until`, `pinned_until`, `moved_expires_at`, Protokoll in UTC;
  *                       `expire()` genau an der UTC-Grenze
- *  explain-moderation   EXPLAIN-Gate (24.000 Themen, 100.000 Beiträge): Pin-Zählung, Autoren, Statistiksperre, Warteschlange global,
- *                       Protokoll je Forum und global, Verweise, Ablauf, Moderatoren, Meldungen beim Verschieben, Ankündigungen
+ *  explain-moderation   EXPLAIN-Gate (24.000 Themen, 100.000 Beiträge): Pin-Zählung, Autoren, Statistiksperre, Warteschlange global und
+ *                       Protokoll je Forum und global (je auch mit tiefem Cursor), Verweise, Ablauf, Moderatoren, Meldungen beim
+ *                       Verschieben, Ankündigungen
  *
  * `race-solution-delete` braucht `PostService::delete` über CounterBook (T, W3) und folgt in W4; ebenso `perf-topic-authors` (§3.11).
  * Worker-Aktionen in `actions-moderation.php`. Geladen von `run.php` (nutzt `cdbSection()`, `CdbWorld`, `cdbRace()`, `cdbInjectAll()`,
@@ -37,6 +39,7 @@ use CMS\Services\Community\Repository\ReportRepository;
 use CMS\Services\Community\Repository\TopicRepository;
 use CMS\Services\Community\Repository\UserStatsRepository;
 use CMS\Services\Community\Service\ModerationService;
+use CMS\Services\Community\Support\Cursor;
 
 /** ModerationService der Testwelt: Uhr, echte CommunityAccess und Hook-Protokoll der Welt (auch nach `rebuild()`). */
 function cdbModeration(CdbWorld $w): ModerationService
@@ -240,8 +243,57 @@ cdbSection('race-pin-limit', 'race-pin-limit: 49 wirksame Pins, 8 gleichzeitige 
     T::same(['ok' => 1, 'pin_limit' => 7], $outcomes, 'genau eine Anheftung gelingt, sieben erhalten pin_limit');
     T::same(50, (int) cdbScalar($db, 'SELECT COUNT(*) FROM cms_community_topics WHERE forum_id = ? AND is_pinned = 1', [$forum]), 'genau 50 Pins');
     cdbModAudit($db, 'race-pin-limit');
+
+    // Fester Ablauf (unabhängig vom Zufall der Prozessfolge): A hält seine Sperren in can(fresh), B heftet im selben Forum an und
+    // wartet an der Forensperre; nach der Freigabe zählt B die 50 Pins von A ⇒ pin_limit.
+    $second = cdbOpenForum($db);
+    for ($i = 0; $i < 49; $i++) {
+        $db->topic(['forum' => $second, 'user' => $s, 'pinned' => true, 'created_at' => '2036-01-01 00:00:00']);
+    }
+    [$a] = cdbModSeed($db, $second, $s);
+    [$b] = cdbModSeed($db, $second, $s);
+    communityRecount($db, gmdate('Y-m-d H:i:s'));
+    $run = cdbModHoldThen($db, ['action' => 'mod.pin', 'args' => ['user' => $mod, 'topic' => $a]], ['action' => 'mod.pin', 'args' => ['user' => $mod, 'topic' => $b]]);
+    T::same([true, true], [$run['locked'], $run['waiting']], 'fester Ablauf: A hält Forum und Thema, B wartet an der Forensperre');
+    T::same(['ok', 'pin_limit'], [cdbModOutcome((array) ($run['holder']['result'] ?? [])), cdbModOutcome((array) ($run['waiter']['result'] ?? []))], 'fester Ablauf: A heftet als 50. an, B erhält pin_limit');
+    T::same(50, (int) cdbScalar($db, 'SELECT COUNT(*) FROM cms_community_topics WHERE forum_id = ? AND is_pinned = 1', [$second]), 'fester Ablauf: genau 50 Pins');
+    cdbModAudit($db, 'race-pin-limit (fester Ablauf)');
     $db->dispose();
 });
+
+/**
+ * Ein Auftrag hält seine Sperren in can(fresh), ein zweiter startet; nach einer Sekunde wird geprüft, ob er noch läuft (wartet),
+ * dann gibt der erste frei.
+ *
+ * @param array<string, mixed> $holder
+ * @param array<string, mixed> $waiter
+ * @return array{locked: bool, waiting: bool, holder: array<string, mixed>, waiter: array<string, mixed>}
+ */
+function cdbModHoldThen(MariaDbTestDatabase $db, array $holder, array $waiter): array
+{
+    $dir = sys_get_temp_dir() . '/cms-hold-mod-' . getmypid() . '-' . bin2hex(random_bytes(3));
+    mkdir($dir, 0700, true);
+    $hold = ['locked' => $dir . '/locked', 'release' => $dir . '/release'];
+    $first = cdbSpawn($db, [$holder + ['hold' => $hold, 'settings' => CDB_NOLIMIT_SETTINGS]]);
+    touch($first['dir'] . '/start');
+    $deadline = microtime(true) + 20;
+    while (!is_file($hold['locked']) && microtime(true) < $deadline) {
+        usleep(2000);
+    }
+    $locked = is_file($hold['locked']);
+    $second = cdbSpawn($db, [$waiter + ['settings' => CDB_NOLIMIT_SETTINGS]]);
+    touch($second['dir'] . '/start');
+    usleep(1000000);
+    $waiting = (bool) (proc_get_status($second['procs'][0])['running'] ?? false);
+    touch($hold['release']);
+    $holderResult = cdbFinish($first, false)[0];
+    $waiterResult = cdbFinish($second, false)[0];
+    @unlink($hold['locked']);
+    @unlink($hold['release']);
+    @rmdir($dir);
+
+    return ['locked' => $locked, 'waiting' => $waiting, 'holder' => $holderResult, 'waiter' => $waiterResult];
+}
 
 cdbSection('race-hide-reply', 'race-hide-reply: Thema ausblenden, gleichzeitig 6 neue Autoren', static function (): void {
     cdbModPreload();
@@ -473,6 +525,16 @@ cdbSection('explain-moderation', 'explain-moderation: Abfragen der Moderation nu
     $someTopic = (int) cdbScalar($db, "SELECT id FROM cms_community_topics WHERE forum_id = ? AND status = 'published' AND reply_count > 0 ORDER BY id LIMIT 1", [$forum]);
     $moved = (int) cdbScalar($db, "SELECT moved_to_topic_id FROM cms_community_topics WHERE status = 'moved' AND forum_id = ? LIMIT 1", [$forum]);
     $postIds = array_map('intval', array_column($db->execute('SELECT id FROM cms_community_posts WHERE topic_id = ? ORDER BY id', [$someTopic])->fetchAll(\PDO::FETCH_ASSOC), 'id'));
+    // Tiefe Cursor (Keyset): Position 800 der Warteschlange, Position 20.000 des globalen Protokolls, Position 800 eines Forums.
+    $deep = static function (string $sql, array $params) use ($db): ?Cursor {
+        $row = $db->execute($sql, $params)->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : new Cursor((string) $row['created_at'], (int) $row['id']);
+    };
+    $queueCursor = $deep("SELECT id, created_at FROM cms_community_posts WHERE status = 'pending' ORDER BY created_at ASC, id ASC LIMIT 1 OFFSET 800", []);
+    $logCursor = $deep('SELECT id, created_at FROM cms_community_moderation_log ORDER BY created_at DESC, id DESC LIMIT 1 OFFSET 20000', []);
+    $forumLogCursor = $deep('SELECT id, created_at FROM cms_community_moderation_log WHERE forum_id = ? ORDER BY created_at DESC, id DESC LIMIT 1 OFFSET 800', [$forum]);
+    T::check($queueCursor !== null && $logCursor !== null && $forumLogCursor !== null, 'tiefe Cursor vorhanden (genug wartende Beiträge und Protokolleinträge)');
 
     $gates = [
         'Pin-Zählung (countPinned)' => [static fn () => $topics->countPinned($forum, $now), ['keys' => ['idx_community_topics_forum_list'], 'maxReads' => 60]],
@@ -482,6 +544,9 @@ cdbSection('explain-moderation', 'explain-moderation: Abfragen der Moderation nu
         'Warteschlange Zählung (queueSummary)' => [static fn () => $posts->queueSummary(null), ['keys' => ['idx_community_posts_queue'], 'maxReads' => 1100, 'maxScan' => PostRepository::QUEUE_COUNT_MAX + 10]],
         'Protokoll eines Forums (list)' => [static fn () => $log->list(['forum_ids' => [$forum]], null, 50), ['keys' => ['idx_community_moderation_log_forum'], 'maxReads' => 60]],
         'Protokoll global (list)' => [static fn () => $log->list([], null, 50), ['keys' => ['idx_community_moderation_log_time'], 'maxReads' => 60]],
+        'Warteschlange global, tiefer Cursor (queue, Position 800)' => [static fn () => $posts->queue(null, $queueCursor, 20), ['keys' => ['idx_community_posts_queue'], 'maxReads' => 60]],
+        'Protokoll global, tiefer Cursor (list, Position 20.000)' => [static fn () => $log->list([], $logCursor, 50), ['keys' => ['idx_community_moderation_log_time'], 'maxReads' => 60]],
+        'Protokoll eines Forums, tiefer Cursor (list, Position 800)' => [static fn () => $log->list(['forum_ids' => [$forum]], $forumLogCursor, 50), ['keys' => ['idx_community_moderation_log_forum'], 'maxReads' => 60]],
         'Verweise auf ein Thema (stubIdsFor)' => [static fn () => $topics->stubIdsFor($forum, $moved), ['keys' => ['idx_community_topics_forum_list', 'idx_community_topics_moved'], 'maxReads' => 200]],
         'Verweise eines Forums (listMoved)' => [static fn () => $topics->listMoved($forum, $now, 20), ['keys' => ['idx_community_topics_forum_list', 'idx_community_topics_moved'], 'maxReads' => 400, 'filesort' => true]],
         'Ablauf Schließen (expiredIds lock)' => [static fn () => $topics->expiredIds('lock', $now, 500), ['keys' => ['idx_community_topics_locked'], 'maxReads' => 520]],

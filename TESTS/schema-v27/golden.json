@@ -522,5 +522,27 @@
         "indexes": {
             "idx_community_redirects_target": {"unique":false,"columns":["target_type","target_id"]}
         }
+    },
+    "community_notify_queue": {
+        "columns": [
+            ["id","bigint unsigned","NO",null,true],
+            ["kind","varchar(12)","NO","",false],
+            ["topic_id","int unsigned","NO","0",false],
+            ["post_id","bigint unsigned","NO","0",false],
+            ["actor_id","int unsigned","NO","0",false],
+            ["detail","varchar(20)","YES",null,false],
+            ["phase","tinyint unsigned","NO","0",false],
+            ["cursor_user_id","int unsigned","NO","0",false],
+            ["attempts","tinyint unsigned","NO","0",false],
+            ["steps","int unsigned","NO","0",false],
+            ["lease_token","char(32)","YES",null,false],
+            ["locked_until","datetime","YES",null,false],
+            ["created_at","datetime","NO","CURRENT_TIMESTAMP",false],
+            ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
+        ],
+        "primary": ["id"],
+        "indexes": {
+            "idx_community_notify_queue_kind": {"unique":false,"columns":["kind"]}
+        }
     }
 }
