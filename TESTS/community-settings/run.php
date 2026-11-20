@@ -1,10 +1,11 @@
 <?php
 /**
- * Community-Fundament, Teil Einstellungen und Support (4.2.0, PR #2a): Definitionen und Normalisierung von
- * `Support\Settings`, Lesen/Speichern über Closures und über `SettingsService`, `Slugger`, `Urls`, `Cursor`, `Page`,
- * `I18n`, `Events`, `CommunityModule`, `CommunityHooks`, Codes ↔ Sprachschlüssel (de/en zeilenparallel), Modul-Eintrag,
- * Registry-Eintrag, Hook-Konstanten ↔ HOOKS-REFERENCE.md, Zeitwächter über `Services/Community/**` und die Prüfung, dass
- * jede Einstellung einen Leser und einen Wirkungstest hat (fehlende Dateien der Dienste: Hinweis statt Fehler).
+ * Community-Fundament, Teil Einstellungen und Support (4.2.0, PR #2a und Register aus PR #2b): Definitionen und Normalisierung
+ * von `Support\Settings` (33 Schlüssel, Schemas `trust_limits`, `permissions`, `word_filter`, `reaction_set`, `attachment_types`),
+ * Lesen/Speichern über Closures und über `SettingsService`, `Slugger`, `Urls`, `Cursor`, `Page`, `I18n`, `Events`,
+ * `CommunityModule`, `CommunityHooks`, Codes ↔ Sprachschlüssel (de/en zeilenparallel, danach die feste Liste `CS_EXTRA_KEYS`),
+ * Modul-Eintrag, Registry-Eintrag, Hook-Konstanten ↔ HOOKS-REFERENCE.md, Zeitwächter über `Services/Community/**` und die
+ * Prüfung, dass jede Einstellung einen Leser und einen Wirkungstest hat (fehlende Dateien der Dienste: Hinweis statt Fehler).
  *
  * Ohne Datenbank (SettingsService läuft über eine Attrappe im Speicher). Aufruf aus dem Repository-Wurzelverzeichnis:
  * php TESTS/community-settings/run.php [-v]
@@ -228,8 +229,27 @@ T::run('Definitionen: Typen, Standards und Grenzen laut Vertrag', static functio
         'trust_limits' => ['map'],
         'default_permissions' => ['map'],
         'unread_horizon_days' => ['int', 90, 1, 180],
+        // PR #2b (Vertrag DESIGN-2b §3.1, Nr. 22 bis 33)
+        'word_filter' => ['map'],
+        'use_core_antispam' => ['bool', false],
+        'spam_duplicate_hours' => ['int', 24, 0, 168],
+        'ip_hash_days' => ['int', 30, 0, 90],
+        'moved_stub_days' => ['int', 7, 1, 365],
+        'moderation_reason_required' => ['bool', true],
+        'report_hide_threshold' => ['int', 3, 0, 20],
+        'moderator_ban_max_days' => ['int', 30, 1, 365],
+        'notify_mail' => ['bool', true],
+        'reaction_set' => ['map'],
+        'attachment_types' => ['map'],
+        'attachment_max_kb' => ['int', 5120, 64, 51200],
     ];
-    T::same(array_keys($expected), array_keys(Settings::DEFINITIONS), 'Schlüsselliste und Reihenfolge stimmen mit Vertrag §3 überein');
+    T::same(array_keys($expected), array_keys(Settings::DEFINITIONS), 'Schlüsselliste und Reihenfolge stimmen mit Vertrag §3 überein (#2a, dann #2b)');
+    T::same(33, count(Settings::DEFINITIONS), 'insgesamt 33 Schlüssel');
+    T::same(
+        ['trust_limits' => 'trust_limits', 'default_permissions' => 'permissions', 'word_filter' => 'word_filter', 'reaction_set' => 'reaction_set', 'attachment_types' => 'attachment_types'],
+        array_map(static fn (array $d): string => (string) $d['schema'], array_filter(Settings::DEFINITIONS, static fn (array $d): bool => $d['type'] === 'map')),
+        'Strukturen und ihre Schemas'
+    );
 
     $defaults = Settings::normalize([]);
     foreach ($expected as $key => $row) {
@@ -248,12 +268,37 @@ T::run('Definitionen: Typen, Standards und Grenzen laut Vertrag', static functio
     }
 
     T::same([0, 1, 2, 3, 4], Settings::TRUST_LEVELS, 'Vertrauensstufen 0 bis 4');
-    T::same(['posts_per_day', 'topics_per_hour'], Settings::LIMIT_FIELDS, 'Grenzen je Stufe in #2a: Beiträge/Tag und Themen/Stunde');
     T::same(
-        [0 => [5, 1], 1 => [30, 3], 2 => [100, 5], 3 => [300, 10], 4 => [300, 10]],
-        array_map(static fn (array $row): array => [$row['posts_per_day'], $row['topics_per_hour']], $defaults['trust_limits']),
-        'trust_limits: Standards je Stufe (Beiträge/Tag 5/30/100/300/300, Themen/Stunde 1/3/5/10/10)'
+        ['posts_per_day', 'topics_per_hour', 'links_per_post', 'images_per_post', 'attachments_per_post', 'attachments_per_day'],
+        Settings::LIMIT_FIELDS,
+        'Grenzen je Stufe: sechs Felder in Tabellenreihenfolge (Vertrag DESIGN-2b §3.1)'
     );
+    T::same(-1, Settings::UNLIMITED, 'UNLIMITED = -1 (0 heißt „keine“)');
+    T::same(
+        [0 => [5, 1, 1, 0, 0, 0], 1 => [30, 3, 5, 10, 3, 20], 2 => [100, 5, -1, -1, 3, 50], 3 => [300, 10, -1, -1, 3, 100], 4 => [300, 10, -1, -1, 3, 100]],
+        array_map(static fn (array $row): array => array_values($row), $defaults['trust_limits']),
+        'trust_limits: Standards je Stufe (Beiträge/Tag, Themen/Stunde, Links, Bilder, Anhänge je Beitrag, Anhänge je Tag)'
+    );
+    T::same($defaults['trust_limits'], Settings::DEFAULT_TRUST_LIMITS, 'DEFAULT_TRUST_LIMITS ist der Standard von trust_limits');
+    foreach (Settings::DEFAULT_TRUST_LIMITS as $level => $row) {
+        T::same(Settings::LIMIT_FIELDS, array_keys($row), 'DEFAULT_TRUST_LIMITS Stufe ' . $level . ': alle sechs Felder in Reihenfolge');
+        T::check($row['posts_per_day'] !== 0 && $row['topics_per_hour'] !== 0, 'DEFAULT_TRUST_LIMITS Stufe ' . $level . ': Beiträge/Tag und Themen/Stunde nie 0 (vor W1 deutet CommunityAccess 0 noch als unbegrenzt)');
+    }
+    T::same(['block' => [], 'review' => [], 'replace' => [], 'replacement' => '***'], Settings::DEFAULT_WORD_FILTER, 'DEFAULT_WORD_FILTER: drei leere Listen und Ersatz ***');
+    T::same(Settings::DEFAULT_WORD_FILTER, $defaults['word_filter'], 'word_filter: Standard');
+    T::same(500, Settings::WORD_FILTER_MAX, 'WORD_FILTER_MAX = 500 Einträge zusammen');
+    T::same(['like', 'love', 'laugh', 'idea', 'thanks', 'wow', 'sad', 'celebrate'], Settings::REACTION_KEYS, 'REACTION_KEYS: acht Reaktionen');
+    T::same(['like', 'love', 'laugh', 'idea'], Settings::DEFAULT_REACTION_SET, 'DEFAULT_REACTION_SET');
+    T::same(Settings::DEFAULT_REACTION_SET, $defaults['reaction_set'], 'reaction_set: Standard');
+    T::same(['jpg', 'png', 'webp', 'gif', 'pdf', 'zip', 'txt'], Settings::ATTACHMENT_TYPES, 'ATTACHMENT_TYPES: sieben Endungen');
+    T::same(['jpg' => 1, 'png' => 1, 'webp' => 1, 'gif' => 1, 'pdf' => 1, 'zip' => 1, 'txt' => 0], Settings::DEFAULT_ATTACHMENT_TYPES, 'DEFAULT_ATTACHMENT_TYPES: alles außer txt');
+    T::same(Settings::DEFAULT_ATTACHMENT_TYPES, $defaults['attachment_types'], 'attachment_types: Standard');
+    $service = 'CMS\\Services\\Community\\Service\\AttachmentService';
+    if (class_exists($service) && defined($service . '::TYPES')) {
+        T::same(Settings::ATTACHMENT_TYPES, array_keys(constant($service . '::TYPES')), 'ATTACHMENT_TYPES = array_keys(AttachmentService::TYPES)');
+    } else {
+        T::info('folgt in Welle 2: Abgleich ATTACHMENT_TYPES mit AttachmentService::TYPES');
+    }
     T::same(
         ['read', 'create_topic', 'reply', 'edit_own', 'delete_own', 'upload', 'poll', 'vote', 'react', 'mark_solution', 'bypass_approval', 'bypass_slow_mode'],
         Settings::PERMISSION_KEYS,
@@ -315,6 +360,24 @@ T::run('normalize(): Eingabe → Erwartung', static function (): void {
         ['duplicate_window_seconds', 5, 10, 'duplicate_window_seconds: Minimum 10'],
         ['unread_horizon_days', 365, 180, 'unread_horizon_days: höchstens 180'],
         ['unread_horizon_days', 0, 1, 'unread_horizon_days: Minimum 1'],
+        ['spam_duplicate_hours', 0, 0, 'spam_duplicate_hours: 0 = aus'],
+        ['spam_duplicate_hours', 169, 168, 'spam_duplicate_hours: höchstens 168 (eine Woche)'],
+        ['ip_hash_days', 0, 0, 'ip_hash_days: 0 = kein ip_hash'],
+        ['ip_hash_days', 91, 90, 'ip_hash_days: höchstens 90'],
+        ['moved_stub_days', 0, 1, 'moved_stub_days: Minimum 1'],
+        ['moved_stub_days', 366, 365, 'moved_stub_days: höchstens 365'],
+        ['report_hide_threshold', 0, 0, 'report_hide_threshold: 0 = kein automatisches Ausblenden'],
+        ['report_hide_threshold', 21, 20, 'report_hide_threshold: höchstens 20'],
+        ['moderator_ban_max_days', 0, 1, 'moderator_ban_max_days: Minimum 1'],
+        ['moderator_ban_max_days', 400, 365, 'moderator_ban_max_days: höchstens 365'],
+        ['attachment_max_kb', 10, 64, 'attachment_max_kb: Minimum 64'],
+        ['attachment_max_kb', 99999, 51200, 'attachment_max_kb: höchstens 51200'],
+        ['use_core_antispam', 'on', true, 'use_core_antispam: an'],
+        ['use_core_antispam', 'maybe', false, 'use_core_antispam: unbekannter Text → Standard (aus)'],
+        ['moderation_reason_required', 'off', false, 'moderation_reason_required: aus'],
+        ['moderation_reason_required', '', true, 'moderation_reason_required: Leerstring → Standard (an)'],
+        ['notify_mail', '0', false, 'notify_mail: aus'],
+        ['notify_mail', null, true, 'notify_mail: null → Standard (an)'],
         ['guests_can_read', true, true, 'bool: true'],
         ['guests_can_read', 'yes', true, 'bool: yes'],
         ['guests_can_read', 'ON', true, 'bool: ON (Groß-/Kleinschreibung egal)'],
@@ -387,21 +450,37 @@ T::run('normalize(): JSON-Strukturen trust_limits und default_permissions', stat
     T::same($defaults['trust_limits'], $limits([]), 'trust_limits: leere Struktur → Standards');
 
     $partial = $limits([2 => ['posts_per_day' => 7], 9 => ['posts_per_day' => 1, 'topics_per_hour' => 1]]);
-    T::same(['posts_per_day' => 7, 'topics_per_hour' => 5], $partial[2], 'trust_limits: fehlendes Feld wird aus dem Standard aufgefüllt');
+    T::same(['posts_per_day' => 7, 'topics_per_hour' => 5, 'links_per_post' => -1, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 50], $partial[2], 'trust_limits: fehlende Felder werden aus dem Standard aufgefüllt');
     T::same($defaults['trust_limits'][3], $partial[3], 'trust_limits: nicht genannte Stufe bleibt Standard');
     T::same([0, 1, 2, 3, 4], array_keys($partial), 'trust_limits: unbekannte Stufe 9 entfällt, Stufen 0 bis 4 in Reihenfolge');
 
+    $two = static fn (array $row): array => [$row['posts_per_day'], $row['topics_per_hour']];
     $clamped = $limits(['1' => ['posts_per_day' => '-5', 'topics_per_hour' => 'abc', 'links' => 4], 3 => ['posts_per_day' => 100001, 'topics_per_hour' => 0]]);
-    T::same(['posts_per_day' => 0, 'topics_per_hour' => 3], $clamped[1], 'trust_limits: negativ → 0, Text → Standard, unbekanntes Feld entfällt');
-    T::same(['posts_per_day' => 100000, 'topics_per_hour' => 0], $clamped[3], 'trust_limits: Maximum 100000, 0 = unbegrenzt bleibt');
-    T::same(['posts_per_day' => 5, 'topics_per_hour' => 1], $limits([0 => 5])[0], 'trust_limits: Zeile kein Array → Standard');
+    T::same([30, 3], $two($clamped[1]), 'trust_limits: unter -1 → Standard des Feldes (fail-safe), Text → Standard');
+    T::check(!array_key_exists('links', $clamped[1]), 'trust_limits: unbekanntes Feld entfällt');
+    T::same([100000, 0], $two($clamped[3]), 'trust_limits: Maximum 100000, 0 = keine bleibt 0');
+    T::same([5, 1], $two($limits([0 => 5])[0]), 'trust_limits: Zeile kein Array → Standard');
+
+    // -1 = unbegrenzt, 0 = keine (Vertrag DESIGN-2b §3.1); alle sechs Felder
+    $signed = $limits([2 => ['posts_per_day' => -1, 'topics_per_hour' => '-1', 'links_per_post' => 0, 'images_per_post' => -2, 'attachments_per_post' => '-99999999999999999999', 'attachments_per_day' => -1.0]]);
+    T::same(
+        ['posts_per_day' => -1, 'topics_per_hour' => -1, 'links_per_post' => 0, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => -1],
+        $signed[2],
+        'trust_limits: -1 bleibt (unbegrenzt, auch als Text und Kommazahl), 0 bleibt (keine), -2 und riesige negative Werte → Standard des Feldes'
+    );
+    T::same(-1, $limits([0 => ['links_per_post' => -1]])[0]['links_per_post'], 'trust_limits: -1 auch dort, wo der Standard eine Zahl ist');
+    T::same(1, $limits([0 => ['links_per_post' => -7]])[0]['links_per_post'], 'trust_limits: -7 → Standard des Feldes (1), nicht unbegrenzt');
+    T::same(100000, $limits([4 => ['attachments_per_day' => '99999999999999999999']])[4]['attachments_per_day'], 'trust_limits: riesiger Text → 100000');
+    foreach ($limits(null) as $level => $row) {
+        T::same(Settings::LIMIT_FIELDS, array_keys($row), 'trust_limits Stufe ' . $level . ': sechs Felder in Reihenfolge');
+    }
 
     $fromJson = $limits('{"3":{"posts_per_day":12}}');
-    T::same(['posts_per_day' => 12, 'topics_per_hour' => 10], $fromJson[3], 'trust_limits: JSON-Text wird gelesen');
+    T::same([12, 10], $two($fromJson[3]), 'trust_limits: JSON-Text wird gelesen');
     $fromPrefixed = $limits('json:{"3":{"topics_per_hour":2}}');
-    T::same(['posts_per_day' => 300, 'topics_per_hour' => 2], $fromPrefixed[3], 'trust_limits: JSON-Text mit json:-Präfix wird gelesen');
+    T::same([300, 2], $two($fromPrefixed[3]), 'trust_limits: JSON-Text mit json:-Präfix wird gelesen');
     $fromList = $limits([['posts_per_day' => 1, 'topics_per_hour' => 2]]);
-    T::same(['posts_per_day' => 1, 'topics_per_hour' => 2], $fromList[0], 'trust_limits: als JSON-Liste gespeicherte Stufen (Index 0 bis 4)');
+    T::same([1, 2], $two($fromList[0]), 'trust_limits: als JSON-Liste gespeicherte Stufen (Index 0 bis 4)');
 
     T::same($defaults['default_permissions'], $permissions(null), 'default_permissions: null → Standards');
     T::same($defaults['default_permissions'], $permissions('{oops'), 'default_permissions: ungültiges JSON → Standards');
@@ -452,6 +531,62 @@ T::run('normalize(): JSON-Strukturen trust_limits und default_permissions', stat
         }
     }
     T::same([], $violations, 'Fuzz: jeder Schlüssel × 27 Eingaben ergibt gültige, idempotente Werte');
+});
+
+T::run('normalize(): Schemas word_filter, reaction_set und attachment_types (PR #2b)', static function (): void {
+    $filter = static fn (mixed $raw): array => Settings::normalize(['word_filter' => $raw])['word_filter'];
+    $default = Settings::DEFAULT_WORD_FILTER;
+    foreach ([null, 'kein JSON', '{oops', 5, true, [], '[]'] as $raw) {
+        T::same($default, $filter($raw), 'word_filter: ' . T::export($raw) . ' → Standard');
+    }
+    T::same(['block', 'review', 'replace', 'replacement'], array_keys($filter(['evil' => ['x'], 'replacement' => '#', 'block' => ['ab']])), 'word_filter: Schlüssel block, review, replace, replacement in dieser Reihenfolge, fremde entfallen');
+    T::same(['spam', 'viel werbung', 'ärger'], $filter(['block' => ['Spam', 'spam', "  viel \t  WERBUNG ", 'ÄRGER']])['block'], 'word_filter: klein (mb_strtolower), Leerraum zu einem Leerzeichen, doppelt einmal');
+    T::same(['ab', str_repeat('a', 100)], $filter(['block' => ['a', 'ab', str_repeat('a', 100), str_repeat('a', 101)]])['block'], 'word_filter: Einträge 2 bis 100 Zeichen');
+    T::same(['ü1', 'öö'], $filter(['block' => ['ü1', 'öö', '**', '!!', '- -', '…']])['block'], 'word_filter: mindestens ein Buchstabe oder eine Ziffer (Zeichen, nicht Bytes)');
+    T::same(['spam*', 'a*'], $filter(['block' => ['spam*', 'sp*m', '*spam', 'spam**', 'a*']])['block'], 'word_filter: * nur einmal und nur am Ende');
+    T::same(['ok1'], $filter(['block' => ["spa\x00m", "sp\x7Fam", "\xFFxy", 5, null, ['x'], 'ok1']])['block'], 'word_filter: Steuerzeichen, ungültiges UTF-8 und Nicht-Texte entfallen');
+    T::same([], $filter(['block' => 'spam'])['block'], 'word_filter: Liste als Text → leer');
+    $numeric = $filter(['block' => ['12', '007'], 'review' => ['12', '42*'], 'replace' => ['99']]);
+    T::same([['12', '007'], ['42*'], ['99']], [$numeric['block'], $numeric['review'], $numeric['replace']], 'word_filter: Einträge nur aus Ziffern bleiben Texte (kein Umnummerieren), Vorrang gilt auch für sie');
+    if (class_exists(\Normalizer::class)) {
+        T::same(["caf\u{00E9}"], $filter(['block' => ["cafe\u{0301}"]])['block'], 'word_filter: NFC (e + Akut → é)');
+    } else {
+        T::info('intl fehlt: NFC-Fall übersprungen');
+    }
+    $precedence = $filter(['block' => ['x1'], 'review' => ['X1', 'y1'], 'replace' => ['y1', 'z1', 'x1']]);
+    T::same([['x1'], ['y1'], ['z1']], [$precedence['block'], $precedence['review'], $precedence['replace']], 'word_filter: doppelt über Listen → Vorrang block > review > replace');
+    $many = static fn (string $p, int $n): array => array_map(static fn (int $i): string => $p . $i, range(1, $n));
+    $capped = $filter(['block' => $many('b', 300), 'review' => $many('r', 300), 'replace' => $many('e', 50)]);
+    T::same([300, 200, 0], [count($capped['block']), count($capped['review']), count($capped['replace'])], 'word_filter: zusammen höchstens 500 Einträge, in Vorrangreihenfolge');
+    T::same(['r1', 'r200'], [$capped['review'][0], $capped['review'][199]], 'word_filter: gekürzt wird am Ende (Reihenfolge erhalten)');
+    T::same(['spam'], $filter('{"block":["Spam"],"review":[],"replace":[],"replacement":"###"}')['block'], 'word_filter: JSON-Text wird gelesen');
+    T::same(['spam'], $filter('json:{"review":["spam"]}')['review'], 'word_filter: JSON-Text mit json:-Präfix');
+    foreach (['###' => '###', '•••' => '•••', str_repeat('#', 20) => str_repeat('#', 20), '' => '***', str_repeat('#', 21) => '***', 'xx' => '***', '#1' => '***', '[zensiert]' => '***', "**\x01" => '***', "\xFF" => '***'] as $raw => $expected) {
+        T::same($expected, $filter(['replacement' => (string) $raw])['replacement'], 'word_filter: Ersatz ' . T::export((string) $raw) . ' → ' . T::export($expected));
+    }
+    T::same('***', $filter(['replacement' => 5])['replacement'], 'word_filter: Ersatz kein Text → ***');
+    $once = $filter(['block' => ['Spam', 'Ärger*'], 'review' => ['x  y'], 'replacement' => '#']);
+    T::same($once, $filter($once), 'word_filter: idempotent');
+
+    $reactions = static fn (mixed $raw): array => Settings::normalize(['reaction_set' => $raw])['reaction_set'];
+    foreach ([null, 'like', 5, true, '[oops', '{"a":"like"}', ['a' => 'like']] as $raw) {
+        T::same(Settings::DEFAULT_REACTION_SET, $reactions($raw), 'reaction_set: ' . T::export($raw) . ' → Standard');
+    }
+    T::same([], $reactions([]), 'reaction_set: [] = Reaktionen aus');
+    T::same([], $reactions('[]'), 'reaction_set: [] als JSON-Text = aus');
+    T::same(['love', 'like'], $reactions(['love', 'like', 'love']), 'reaction_set: eindeutig, Reihenfolge erhalten');
+    T::same(['like', 'wow'], $reactions(['like', 'bogus', 5, null, 'LIKE', 'wow']), 'reaction_set: nur Texte aus REACTION_KEYS');
+    T::same(['thanks', 'wow'], $reactions('["thanks","wow"]'), 'reaction_set: JSON-Liste wird gelesen');
+    T::same(['sad'], $reactions('json:["sad"]'), 'reaction_set: JSON-Liste mit json:-Präfix');
+    T::same(Settings::REACTION_KEYS, $reactions(array_reverse(array_reverse(Settings::REACTION_KEYS))), 'reaction_set: alle acht erlaubt');
+
+    $types = static fn (mixed $raw): array => Settings::normalize(['attachment_types' => $raw])['attachment_types'];
+    foreach ([null, 'x', 5, '{oops', []] as $raw) {
+        T::same(Settings::DEFAULT_ATTACHMENT_TYPES, $types($raw), 'attachment_types: ' . T::export($raw) . ' → Standard');
+    }
+    $changed = $types(['txt' => 1, 'zip' => '0', 'exe' => 1, 'svg' => 1, 'jpg' => 'x', 'pdf' => false]);
+    T::same(['jpg' => 1, 'png' => 1, 'webp' => 1, 'gif' => 1, 'pdf' => 0, 'zip' => 0, 'txt' => 1], $changed, 'attachment_types: nur Schlüssel aus ATTACHMENT_TYPES (exe, svg entfallen), Werte 0/1, ungültig → Standard, Reihenfolge der Liste');
+    T::same(0, $types('{"png":0}')['png'], 'attachment_types: JSON-Text wird gelesen');
 });
 
 T::run('Lesen und Speichern über Closures', static function (): void {
@@ -531,7 +666,7 @@ T::run('Lesen und Speichern über Closures', static function (): void {
     T::same(['topics_per_page' => 100, 'guests_can_read' => true, 'base_path' => 'hilfe'], end($writes), 'gespeichert wird der normalisierte Wert (geklemmt, typisiert)');
     $saver->save(['trust_limits' => [2 => ['posts_per_day' => 7]]]);
     $stored = end($writes)['trust_limits'];
-    T::same(['posts_per_day' => 7, 'topics_per_hour' => 5], $stored[2], 'Strukturen werden vollständig aufgefüllt gespeichert');
+    T::same(['posts_per_day' => 7, 'topics_per_hour' => 5, 'links_per_post' => -1, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 50], $stored[2], 'Strukturen werden vollständig aufgefüllt gespeichert (sechs Felder)');
     T::same(5, count($stored), 'trust_limits: alle fünf Stufen');
     $pairSaver = $make();
     $pairSaver->save(['title_min' => 100, 'title_max' => 10]);
@@ -560,10 +695,12 @@ T::run('Lesen und Speichern über Closures', static function (): void {
 });
 
 T::run('limitsForLevel() und permissionDefaults()', static function (): void {
-    $settings = Settings::fromArray(['trust_limits' => [1 => ['posts_per_day' => 11, 'topics_per_hour' => 2], 4 => ['posts_per_day' => 0]]]);
-    T::same(['posts_per_day' => 5, 'topics_per_hour' => 1], $settings->limitsForLevel(0), 'limitsForLevel(0): Standard');
-    T::same(['posts_per_day' => 11, 'topics_per_hour' => 2], $settings->limitsForLevel(1), 'limitsForLevel(1): gespeicherter Wert');
-    T::same(['posts_per_day' => 0, 'topics_per_hour' => 10], $settings->limitsForLevel(4), 'limitsForLevel(4): 0 = unbegrenzt, Rest Standard');
+    $settings = Settings::fromArray(['trust_limits' => [1 => ['posts_per_day' => 11, 'topics_per_hour' => 2, 'images_per_post' => -1], 4 => ['posts_per_day' => 0, 'links_per_post' => 0]]]);
+    T::same(['posts_per_day' => 5, 'topics_per_hour' => 1, 'links_per_post' => 1, 'images_per_post' => 0, 'attachments_per_post' => 0, 'attachments_per_day' => 0], $settings->limitsForLevel(0), 'limitsForLevel(0): Standard, alle sechs Felder');
+    T::same(['posts_per_day' => 11, 'topics_per_hour' => 2, 'links_per_post' => 5, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 20], $settings->limitsForLevel(1), 'limitsForLevel(1): gespeicherte Werte, -1 = unbegrenzt');
+    T::same(['posts_per_day' => 0, 'topics_per_hour' => 10, 'links_per_post' => 0, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 100], $settings->limitsForLevel(4), 'limitsForLevel(4): 0 = keine, Rest Standard');
+    T::same(Settings::LIMIT_FIELDS, array_keys($settings->limitsForLevel(2)), 'limitsForLevel(): genau die Felder aus LIMIT_FIELDS in Reihenfolge');
+    T::same(true, array_reduce($settings->limitsForLevel(3), static fn (bool $all, mixed $v): bool => $all && is_int($v), true), 'limitsForLevel(): nur ganze Zahlen');
     T::same($settings->limitsForLevel(0), $settings->limitsForLevel(-3), 'limitsForLevel(-3) wird an Stufe 0 gelegt');
     T::same($settings->limitsForLevel(4), $settings->limitsForLevel(99), 'limitsForLevel(99) wird an Stufe 4 gelegt');
 
@@ -654,6 +791,10 @@ T::run('Wirkung: base_path', static function (): void {
     T::same('/en/community/topic/5-x', Urls::topic(5, 'x', 'en'), 'base_path ändert englische Themenadressen');
     T::same('/community/hilfe', Urls::forum('hilfe', 'de'), 'base_path ändert Forenadressen');
     T::same('/community/beitrag/9', Urls::post(9), 'base_path ändert Beitragslinks');
+    T::same('/community/anhang/4', Urls::attachment(4), 'base_path ändert Anhangsadressen (Leser über Urls::attachment())');
+    T::same('/en/community/attachment/4/preview', Urls::attachment(4, true, 'en'), 'base_path ändert englische Vorschauadressen');
+    T::same('/community/thema/5/ungelesen', Urls::topicUnread(5), 'base_path ändert „erster ungelesener Beitrag“');
+    T::same('/cms-community-unsubscribe/1.a.x', Urls::unsubscribe('1.a.x'), 'Abmeldelink liegt außerhalb von base_path');
     Settings::setInstance(Settings::fromArray(['base_path' => 'admin']));
     T::same('/forum', Urls::index('de'), 'gesperrter base_path fällt auf den Standard zurück');
     Settings::setInstance(null);
@@ -738,6 +879,22 @@ T::run('Urls', static function (): void {
     T::same('/en/forum', Urls::index('en'), 'Startseite en');
     T::same(\CMS\Services\Feed\FeedI18n::path('/forum/thema/1-x', 'en'), '/en/forum/thema/1-x', 'Sprachpräfix wie Feed\\FeedI18n::path()');
 
+    // PR #2b: Anhänge, „ungelesen“, Abmeldelink, absolute Adressen, Mitgliederbereich
+    T::same('/forum/anhang/12', Urls::attachment(12), 'attachment(): Standard deutsch, ohne Vorschau');
+    T::same('/forum/anhang/12/vorschau', Urls::attachment(12, true), 'attachment(): Vorschau de');
+    T::same('/en/forum/attachment/12', Urls::attachment(12, false, 'en'), 'attachment(): en');
+    T::same('/en/forum/attachment/12/preview', Urls::attachment(12, true, 'en_GB'), 'attachment(): Vorschau en (en_GB zählt als Englisch)');
+    T::same('/forum/thema/7/ungelesen', Urls::topicUnread(7), 'topicUnread(): de');
+    T::same('/en/forum/topic/7/unread', Urls::topicUnread(7, 'en'), 'topicUnread(): en');
+    T::same('/cms-community-unsubscribe/5.t12.abcdef0123', Urls::unsubscribe('5.t12.abcdef0123'), 'unsubscribe(): ohne Sprachpräfix und ohne base_path');
+    T::same('/cms-community-unsubscribe/a%2Fb%20c', Urls::unsubscribe('a/b c'), 'unsubscribe(): Token wird URL-kodiert');
+    T::same('/member/plugin/community', Urls::MEMBER_SECTION, 'MEMBER_SECTION: Bereich im Mitgliederbereich');
+    $site = defined('SITE_URL') ? rtrim((string) SITE_URL, '/') : '';
+    T::same($site . '/forum/thema/7-x', Urls::absolute('/forum/thema/7-x'), 'absolute(): SITE_URL + Pfad');
+    T::same($site . '/forum', Urls::absolute('forum'), 'absolute(): Pfad ohne führenden Schrägstrich');
+    T::same('https://andere.example/x', Urls::absolute('https://andere.example/x'), 'absolute(): absolute Adresse bleibt unverändert');
+    T::same($site . '/member/plugin/community?rejected=9', Urls::absolute(Urls::MEMBER_SECTION . '?rejected=9'), 'absolute(): Abfrageteil bleibt');
+
     T::same('help', Urls::forumSlugFor('hilfe', 'help', 'en'), 'forumSlugFor(): englischer Slug für en');
     T::same('hilfe', Urls::forumSlugFor('hilfe', 'help', 'de'), 'forumSlugFor(): deutscher Slug für de');
     T::same('hilfe', Urls::forumSlugFor('hilfe', null, 'en'), 'forumSlugFor(): slug_en fehlt → slug');
@@ -788,6 +945,14 @@ T::run('I18n', static function (): void {
     T::same('community.nicht.vorhanden', I18n::t('community.nicht.vorhanden', ['name' => 'x'], 'en'), 't(): unbekannter Schlüssel in en → der Schlüssel selbst');
     I18n::reset('de', 'en', 'Europe/Berlin');
     T::same($en['community.error.db_error'], I18n::t('community.error.db_error'), 't(): ohne Sprachangabe gilt die Sprache der Anfrage');
+    T::same(['de', 'en'], [I18n::siteLocale(), I18n::requestLocale()], 'siteLocale()/requestLocale() sind öffentlich (Sprache je Empfänger, Stemmer der Suche)');
+    I18n::reset('en_US', null, 'Europe/Berlin');
+    T::same(['en', 'en'], [I18n::siteLocale(), I18n::requestLocale()], 'requestLocale(): ohne Anfrage gilt die Websitesprache');
+    foreach (['siteLocale', 'requestLocale'] as $method) {
+        $reflection = new ReflectionMethod(I18n::class, $method);
+        T::check($reflection->isPublic() && $reflection->isStatic() && (string) $reflection->getReturnType() === 'string', 'I18n::' . $method . '(): public static string');
+    }
+    I18n::reset('de', 'en', 'Europe/Berlin');
 
     // Platzhalter: über __() (Websitesprache), danach über den Katalog.
     if (!function_exists('__')) {
@@ -817,19 +982,34 @@ T::run('I18n', static function (): void {
     I18n::reset();
 });
 
+/** Hook-Konstanten in der Reihenfolge des Registers (Vertrag DESIGN-2b §3.3): Konstante => Hook. */
+const CS_EVENTS = [
+    'TOPIC_CREATED' => 'cms_community_topic_created', 'TOPIC_UPDATED' => 'cms_community_topic_updated', 'TOPIC_DELETED' => 'cms_community_topic_deleted',
+    'POST_CREATED' => 'cms_community_post_created', 'POST_UPDATED' => 'cms_community_post_updated', 'POST_DELETED' => 'cms_community_post_deleted',
+    'CAN' => 'cms_community_can',
+    'POST_APPROVED' => 'cms_community_post_approved', 'POST_REJECTED' => 'cms_community_post_rejected', 'POST_HIDDEN' => 'cms_community_post_hidden',
+    'POST_RESTORED' => 'cms_community_post_restored', 'POST_MOVED' => 'cms_community_post_moved',
+    'TOPIC_APPROVED' => 'cms_community_topic_approved', 'TOPIC_REJECTED' => 'cms_community_topic_rejected', 'TOPIC_HIDDEN' => 'cms_community_topic_hidden',
+    'TOPIC_RESTORED' => 'cms_community_topic_restored', 'TOPIC_MOVED' => 'cms_community_topic_moved', 'TOPIC_MERGED' => 'cms_community_topic_merged',
+    'TOPIC_SPLIT' => 'cms_community_topic_split',
+    'SOLUTION_MARKED' => 'cms_community_solution_marked', 'SOLUTION_UNMARKED' => 'cms_community_solution_unmarked',
+    'REPORT_CREATED' => 'cms_community_report_created', 'REPORT_RESOLVED' => 'cms_community_report_resolved',
+    'USER_BANNED' => 'cms_community_user_banned', 'USER_UNBANNED' => 'cms_community_user_unbanned', 'USER_WARNED' => 'cms_community_user_warned',
+    'REACTION_CHANGED' => 'cms_community_reaction_changed', 'SUBSCRIPTION_CHANGED' => 'cms_community_subscription_changed',
+    'RENDER_POST' => 'cms_community_render_post', 'SPAM_CHECK' => 'cms_community_spam_check', 'NOTIFICATION_TYPES' => 'cms_community_notification_types',
+];
+
+/** In 4.2.0 nicht ausgelöst (P2): stehen in HOOKS-REFERENCE unter „Vorgesehen“. */
+const CS_EVENTS_PLANNED = ['cms_community_topic_merged', 'cms_community_topic_split', 'cms_community_user_warned'];
+
 T::run('Events', static function (): void {
-    $fired = [
-        'TOPIC_CREATED' => 'cms_community_topic_created', 'TOPIC_UPDATED' => 'cms_community_topic_updated', 'TOPIC_DELETED' => 'cms_community_topic_deleted',
-        'POST_CREATED' => 'cms_community_post_created', 'POST_UPDATED' => 'cms_community_post_updated', 'POST_DELETED' => 'cms_community_post_deleted',
-        'CAN' => 'cms_community_can',
-    ];
-    foreach ($fired as $constant => $name) {
+    foreach (CS_EVENTS as $constant => $name) {
         T::same($name, constant(Events::class . '::' . $constant), 'Events::' . $constant . ' = ' . $name);
     }
-    $planned = ['cms_community_post_approved', 'cms_community_post_rejected', 'cms_community_topic_moved', 'cms_community_topic_merged', 'cms_community_render_post',
-        'cms_community_report_created', 'cms_community_report_resolved', 'cms_community_user_warned', 'cms_community_user_banned', 'cms_community_user_unbanned', 'cms_community_solution_marked'];
-    $values = array_values((new ReflectionClass(Events::class))->getConstants());
-    T::same(array_merge(array_values($fired), $planned), $values, 'Events enthält genau die Hook-Namen aus Vertrag §5 (ausgelöste, dann für #2b vorgesehene)');
+    $constants = (new ReflectionClass(Events::class))->getConstants();
+    T::same(CS_EVENTS, $constants, 'Events enthält genau die 31 Hook-Konstanten des Registers (Vertrag DESIGN-2b §3.3) in dieser Reihenfolge');
+    T::same(31, count($constants), '18 aus #2a, 13 neu');
+    $values = array_values($constants);
     T::same(count($values), count(array_unique($values)), 'Hook-Namen sind eindeutig');
     T::same(true, array_reduce($values, static fn (bool $all, string $name): bool => $all && preg_match('/^cms_community_[a-z_]+$/', $name) === 1, true), 'Namensschema cms_community_*');
 
@@ -1110,6 +1290,54 @@ T::run('Modul-Schalter über CoreModuleService und die Tabelle settings (SQLite-
     CommunityModule::setGate(null);
 });
 
+/**
+ * Zusatzschlüssel nach `community.access.*` und `community.error.*` in dieser Reihenfolge (Vertrag DESIGN-2b §3.4 Nr. 3): 3 Zitat,
+ * 5 Meldegründe, 4 Meldestatus, 2 Sperrumfang, 35 Hinweise, 14 Mails (63). Die drei Gruppen der Sanktionen leitet der Test aus
+ * `ReportService::REASONS`/`::STATUSES` und `BanService::SCOPES` ab, sobald die Klassen existieren (J2).
+ */
+const CS_EXTRA_KEYS = [
+    'community.quote.hidden', 'community.quote.removed', 'community.quote.source',
+    'community.report.reason.spam', 'community.report.reason.abuse', 'community.report.reason.offtopic', 'community.report.reason.illegal', 'community.report.reason.other',
+    'community.report.status.open', 'community.report.status.valid', 'community.report.status.invalid', 'community.report.status.resolved',
+    'community.ban.scope.write', 'community.ban.scope.full',
+    'community.notify.deleted_member',
+    'community.notify.reply.title', 'community.notify.reply.title_many', 'community.notify.reply.message', 'community.notify.reply.message_many',
+    'community.notify.new_topic.title', 'community.notify.new_topic.title_many', 'community.notify.new_topic.message', 'community.notify.new_topic.message_many',
+    'community.notify.quote.title', 'community.notify.quote.title_many', 'community.notify.quote.message', 'community.notify.quote.message_many',
+    'community.notify.reaction.title', 'community.notify.reaction.title_many', 'community.notify.reaction.message', 'community.notify.reaction.message_many',
+    'community.notify.solution.title', 'community.notify.solution.message',
+    'community.notify.moderation.approved', 'community.notify.moderation.approved_topic', 'community.notify.moderation.rejected', 'community.notify.moderation.rejected_topic',
+    'community.notify.moderation.hidden', 'community.notify.moderation.hidden_topic', 'community.notify.moderation.reason', 'community.notify.moderation.no_reason',
+    'community.notify.moderation.generic',
+    'community.notify.moderation.moved', 'community.notify.report.title', 'community.notify.report.title_many', 'community.notify.report.message',
+    'community.notify.ban.title', 'community.notify.ban.message', 'community.notify.ban.permanent',
+    'community.mail.greeting', 'community.mail.reply.subject', 'community.mail.reply.body', 'community.mail.reply.gate',
+    'community.mail.new_topic.subject', 'community.mail.new_topic.body', 'community.mail.new_topic.gate', 'community.mail.link',
+    'community.mail.unsubscribe_topic', 'community.mail.unsubscribe_forum', 'community.mail.unsubscribe_all', 'community.mail.settings',
+    'community.mail.ban.subject', 'community.mail.ban.contact',
+];
+
+T::run('Zusatzschlüssel CS_EXTRA_KEYS: Zahlen und Ableitung aus den Diensten', static function (): void {
+    $group = static fn (string $prefix): array => array_values(array_filter(CS_EXTRA_KEYS, static fn (string $key): bool => str_starts_with($key, $prefix)));
+    T::same(63, count(CS_EXTRA_KEYS), '63 Zusatzschlüssel');
+    T::same(count(CS_EXTRA_KEYS), count(array_unique(CS_EXTRA_KEYS)), 'Zusatzschlüssel eindeutig');
+    T::same([3, 5, 4, 2, 35, 14], [count($group('community.quote.')), count($group('community.report.reason.')), count($group('community.report.status.')), count($group('community.ban.scope.')), count($group('community.notify.')), count($group('community.mail.'))], 'Gruppen: Zitat 3, Gründe 5, Status 4, Umfang 2, Hinweise 35, Mails 14');
+    T::same(95, count(Codes::ACCESS_REASONS) - 23 + count(Codes::ERRORS) - 16 + count(CS_EXTRA_KEYS), '95 neue Schlüssel je Sprache in PR #2b (5 Gründe, 27 Codes, 63 Zusatzschlüssel)');
+    $derived = [
+        'community.report.reason.' => ['CMS\\Services\\Community\\Service\\ReportService', 'REASONS'],
+        'community.report.status.' => ['CMS\\Services\\Community\\Service\\ReportService', 'STATUSES'],
+        'community.ban.scope.' => ['CMS\\Services\\Community\\Service\\BanService', 'SCOPES'],
+    ];
+    foreach ($derived as $prefix => [$class, $constant]) {
+        $fixed = array_map(static fn (string $key): string => substr($key, strlen($prefix)), $group($prefix));
+        if (class_exists($class) && defined($class . '::' . $constant)) {
+            T::same(array_values(constant($class . '::' . $constant)), $fixed, $prefix . '*: gleich ' . substr($class, strrpos($class, '\\') + 1) . '::' . $constant);
+        } else {
+            T::info('folgt in Welle 2: ' . $prefix . '* aus ' . substr($class, strrpos($class, '\\') + 1) . '::' . $constant . ' ableiten (bis dahin feste Liste)');
+        }
+    }
+});
+
 T::run('Codes ↔ Sprachschlüssel (de und en, zeilenparallel)', static function (): void {
     $de = csLang('de');
     $en = csLang('en');
@@ -1131,8 +1359,15 @@ T::run('Codes ↔ Sprachschlüssel (de und en, zeilenparallel)', static function
         $expected[] = 'community.error.' . $code;
         T::same('community.error.' . $code, Codes::errorKey($code), 'Codes::errorKey(' . $code . ')');
     }
+    $expected = [...$expected, ...CS_EXTRA_KEYS];
     $communityKeys = array_values(array_filter(array_column($de, 0), static fn (string $key): bool => str_starts_with($key, 'community.')));
-    T::same($expected, $communityKeys, 'jeder Code hat genau einen Schlüssel (Reihenfolge ACCESS_REASONS, dann ERRORS), keine überzähligen community.*-Schlüssel');
+    T::same($expected, $communityKeys, 'jeder Code hat genau einen Schlüssel (Reihenfolge ACCESS_REASONS, dann ERRORS, dann CS_EXTRA_KEYS), keine überzähligen community.*-Schlüssel');
+    T::same([\CMS\Services\Community\Service\QuoteService::HIDDEN_NOTICE, \CMS\Services\Community\Service\QuoteService::REMOVED_NOTICE], [$deText['community.quote.hidden'] ?? '', $deText['community.quote.removed'] ?? ''], 'community.quote.hidden/removed (de) = QuoteService::HIDDEN_NOTICE/REMOVED_NOTICE');
+    T::same(
+        ['Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment.', 'Too many requests in a short time. Please wait a moment.'],
+        [$deText['community.access.rate_limited'] ?? '', $enText['community.access.rate_limited'] ?? ''],
+        'community.access.rate_limited ist neutral (Suche, Vorschau, Reaktionen, Uploads)'
+    );
     T::same(count($expected), count(array_unique($communityKeys)), 'keine doppelten community.*-Schlüssel');
 
     foreach ($expected as $key) {
@@ -1198,15 +1433,53 @@ T::run('Hook-Konstanten ↔ HOOKS-REFERENCE.md', static function (): void {
         Events::POST_DELETED => ['Action', ['int $postId', 'int $topicId', 'int $actorId', 'string $mode']],
         Events::CAN => ['Filter', ['AccessDecision $decision', 'int $userId', 'string $action', 'array $context']],
         Events::POST_APPROVED => ['Action', ['int $postId', 'int $topicId', 'int $moderatorId']],
-        Events::POST_REJECTED => ['Action', ['int $postId', 'int $topicId', 'int $moderatorId', 'string $reason']],
+        // Vertragsänderung eines bisher nie ausgelösten Hooks: den Grund liefert das Protokoll (Vertrag DESIGN-2b §3.3)
+        Events::POST_REJECTED => ['Action', ['int $postId', 'int $topicId', 'int $moderatorId', 'int $logId']],
+        Events::POST_HIDDEN => ['Action', ['int $postId', 'int $topicId', 'int $actorId', 'int $logId']],
+        Events::POST_RESTORED => ['Action', ['int $postId', 'int $topicId', 'int $actorId', 'string $fromStatus']],
+        Events::POST_MOVED => ['Action', ['int $postId', 'int $fromTopicId', 'int $toTopicId', 'int $actorId']],
+        Events::TOPIC_APPROVED => ['Action', ['int $topicId', 'int $forumId', 'int $moderatorId', 'int $firstPostId']],
+        Events::TOPIC_REJECTED => ['Action', ['int $topicId', 'int $forumId', 'int $moderatorId', 'int $logId']],
+        Events::TOPIC_HIDDEN => ['Action', ['int $topicId', 'int $forumId', 'int $actorId', 'int $logId']],
+        Events::TOPIC_RESTORED => ['Action', ['int $topicId', 'int $forumId', 'int $actorId', 'string $status']],
+        Events::TOPIC_MOVED => ['Action', ['int $topicId', 'int $fromForumId', 'int $toForumId', 'int $actorId', 'int $stubTopicId']],
+        Events::TOPIC_MERGED => ['Action', ['int $sourceTopicId', 'int $targetTopicId', 'int $actorId', 'int $logId']],
+        Events::TOPIC_SPLIT => ['Action', ['int $sourceTopicId', 'int $newTopicId', 'int $actorId', 'int $logId']],
+        Events::SOLUTION_MARKED => ['Action', ['int $topicId', 'int $postId', 'int $actorId']],
+        Events::SOLUTION_UNMARKED => ['Action', ['int $topicId', 'int $postId', 'int $actorId']],
+        Events::REPORT_CREATED => ['Action', ['int $reportId', 'string $targetType', 'int $targetId', 'int $reporterId']],
+        Events::REPORT_RESOLVED => ['Action', ['int $reportId', 'string $status', 'int $moderatorId']],
+        Events::USER_BANNED => ['Action', ['int $userId', 'int $banId', 'string $scope', 'int $actorId']],
+        Events::USER_UNBANNED => ['Action', ['int $userId', 'int $banId', 'int $actorId']],
+        Events::USER_WARNED => ['Action', ['int $userId', 'int $warningId', 'int $actorId']],
+        Events::REACTION_CHANGED => ['Action', ['int $postId', 'int $userId', 'string $reaction', 'string $previous']],
+        Events::SUBSCRIPTION_CHANGED => ['Action', ['int $userId', 'string $targetType', 'int $targetId', 'string $mode']],
         Events::RENDER_POST => ['Filter', ['string $html', 'int $postId']],
+        Events::SPAM_CHECK => ['Filter', ['string $verdict', 'int $userId', 'string $action', 'array $input']],
+        Events::NOTIFICATION_TYPES => ['Filter', ['array $types']],
     ];
+    $signatureKeys = array_keys($signatures);
+    sort($signatureKeys);
+    T::same($constants, $signatureKeys, 'jede Konstante hat eine feste Signatur im Test (Vertrag DESIGN-2b §3.3)');
     foreach ($signatures as $hook => [$type, $args]) {
         $row = $byHook[$hook] ?? ['type' => '', 'args' => ''];
         T::same($type, $row['type'], $hook . ': Typ ' . $type);
         $documentedArgs = array_map(static fn (string $arg): string => trim($arg, '` '), explode('`, `', trim($row['args'])));
-        T::same($args, $documentedArgs, $hook . ': Argumente laut Vertrag §5');
+        T::same($args, $documentedArgs, $hook . ': Argumente laut Vertrag (Argumentspalte ohne Zusatz)');
+        $constant = (string) array_search($hook, CS_EVENTS, true);
+        $docblock = (string) (new ReflectionClassConstant(Events::class, $constant))->getDocComment();
+        T::check(str_contains($docblock, implode(', ', $args)), 'Events::' . $constant . ': Docblock nennt die Signatur ' . implode(', ', $args));
     }
+
+    // Haupttabelle: alle in 4.2.0 ausgelösten Hooks; „Vorgesehen“: nur die drei P2-Hooks
+    $split = preg_split('/^Vorgesehen\b[^\n]*$/m', $section, 2);
+    T::same(2, count($split), 'Abschnitt hat einen Absatz „Vorgesehen …“ mit eigener Tabelle');
+    preg_match_all('/^\| `(cms_community_[a-z_]+)` \|/m', (string) ($split[0] ?? ''), $main);
+    preg_match_all('/^\| `(cms_community_[a-z_]+)` \|/m', (string) ($split[1] ?? ''), $planned);
+    T::same(CS_EVENTS_PLANNED, $planned[1], 'unter „Vorgesehen“ stehen nur TOPIC_MERGED, TOPIC_SPLIT und USER_WARNED');
+    T::same(array_values(array_diff(array_values(CS_EVENTS), CS_EVENTS_PLANNED)), $main[1], 'Haupttabelle: alle übrigen Hooks in Registerreihenfolge');
+    T::check(str_contains($section, 'Argumente sind IDs und Statuswerte, nie Inhalte. Ausnahme: der Filter `cms_community_spam_check`'), 'Kopfsatz nennt die Ausnahme cms_community_spam_check');
+    T::check(!str_contains($section, 'noch ohne Konstante'), 'kein Absatz „geplant, aber noch ohne Konstante“ mehr (beide Filter haben Konstanten)');
     T::check(str_contains($section, 'nach dem Commit') && str_contains($section, 'user_role_changed') && str_contains($section, 'user_email_verified'), 'Abschnitt beschreibt Auslösung nach dem Commit und die Listener des Moduls');
     T::check(preg_match('/^## English \(summary\)\n\n[^\n]*cms_community_\*[^\n]*\n/m', $doc) === 1, 'englischer Kopf nennt die cms_community_*-Hooks');
 });
@@ -1237,17 +1510,20 @@ T::run('Leser vorhanden: jeder Schlüssel in Settings::DEFINITIONS wird außerha
     $post = 'Service/PostService.php';
     $access = 'Service/CommunityAccess.php';
     $trust = 'Service/BasicTrustPolicy.php';
-    // Schlüssel → [erwartete Dateien (Vertrag §3, Spalte Leser), Hilfsmethode, die den Schlüssel in Settings liest]
+    $render = 'Service/RenderService.php';
+    $moderation = 'Service/ModerationService.php';
+    $guard = 'Service/ContentGuard.php';
+    // Schlüssel → [erwartete Dateien (Vertrag §3 und DESIGN-2b §3.1, Spalte Leser), Hilfsmethode, die den Schlüssel in Settings liest]
     $readers = [
         'base_path' => [['Support/Urls.php'], null],
         'guests_can_read' => [[$access], null],
         'require_verified_email' => [[$access], null],
         'topics_per_page' => [[$topic], null],
         'posts_per_page' => [[$post], null],
-        'title_min' => [[$topic, $post], null],
-        'title_max' => [[$topic, $post], null],
-        'post_min' => [[$topic, $post], null],
-        'post_max' => [[$topic, $post], null],
+        'title_min' => [[$topic, $post, $moderation], null],
+        'title_max' => [[$topic, $post, $moderation], null],
+        'post_min' => [[$topic, $post, $render], null],
+        'post_max' => [[$topic, $post, $render], null],
         'edit_window_minutes' => [[$access], null],
         'edit_window_minutes_trusted' => [[$access], null],
         'rate_post_seconds' => [[$access], null],
@@ -1260,6 +1536,18 @@ T::run('Leser vorhanden: jeder Schlüssel in Settings::DEFINITIONS wird außerha
         'trust_limits' => [[$access], 'limitsForLevel'],
         'default_permissions' => [[$access], 'permissionDefaults'],
         'unread_horizon_days' => [['Service/ReadStateService.php'], null],
+        'word_filter' => [[$guard], null],
+        'use_core_antispam' => [[$guard], null],
+        'spam_duplicate_hours' => [[$guard], null],
+        'ip_hash_days' => [[$guard], null],
+        'moved_stub_days' => [[$moderation], null],
+        'moderation_reason_required' => [[$moderation], null],
+        'report_hide_threshold' => [['Service/ReportService.php'], null],
+        'moderator_ban_max_days' => [['Service/BanService.php'], null],
+        'notify_mail' => [['Service/NotificationDispatcher.php'], null],
+        'reaction_set' => [['Service/ReactionService.php'], null],
+        'attachment_types' => [['Service/AttachmentService.php'], null],
+        'attachment_max_kb' => [['Service/AttachmentService.php'], null],
     ];
     T::same(array_keys(Settings::DEFINITIONS), array_keys($readers), 'die Lesertabelle deckt genau die Schlüssel aus DEFINITIONS ab');
 
@@ -1290,6 +1578,12 @@ T::run('Wirkungstest vorhanden: Abschnitt „Wirkung: <schlüssel>“ je Einstel
         'trust_level2_posts' => 'community-access', 'trust_limits' => 'community-access', 'default_permissions' => 'community-access',
         'topics_per_page' => 'community-content', 'posts_per_page' => 'community-content', 'title_min' => 'community-content', 'title_max' => 'community-content',
         'post_min' => 'community-content', 'post_max' => 'community-content', 'duplicate_window_seconds' => 'community-content', 'unread_horizon_days' => 'community-content',
+        // PR #2b (Vertrag DESIGN-2b §3.1, Spalte Wirkungstest)
+        'word_filter' => 'community-spam', 'use_core_antispam' => 'community-spam', 'spam_duplicate_hours' => 'community-spam', 'ip_hash_days' => 'community-spam',
+        'moved_stub_days' => 'community-moderation', 'moderation_reason_required' => 'community-moderation',
+        'report_hide_threshold' => 'community-sanctions', 'moderator_ban_max_days' => 'community-sanctions',
+        'notify_mail' => 'community-notify', 'reaction_set' => 'community-notify',
+        'attachment_types' => 'community-uploads', 'attachment_max_kb' => 'community-uploads',
     ];
     $tableKeys = array_keys($suites);
     $definedKeys = array_keys(Settings::DEFINITIONS);

@@ -10,7 +10,9 @@
  *   Schlüssel. Standards werden nie in die Datenbank geschrieben: `save()` schreibt nur Werte, die vom aktuell
  *   wirksamen Wert abweichen.
  * - Textwerte mit dem Präfix `json:` oder `enc:` würde `SettingsService` beim Lesen als JSON bzw. Chiffre deuten;
- *   der einzige Textwert (`base_path`) lässt wegen seines Musters kein `:` zu.
+ *   der einzige Textwert (`base_path`) lässt wegen seines Musters kein `:` zu. Strukturen (`map`) speichert `SettingsService`
+ *   als `json:`-Text; Texte darin (Wortfilter, Ersatztext) sind davon nicht betroffen.
+ * - Grenzen je Vertrauensstufe (`trust_limits`): `-1` = unbegrenzt (`UNLIMITED`), `0` = keine.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -37,11 +39,38 @@ final class Settings
     /** Vertrauensstufen 0 (neu) bis 4 (Leitung). */
     public const TRUST_LEVELS = [0, 1, 2, 3, 4];
 
-    /** Grenzen je Vertrauensstufe, die in #2a durchgesetzt werden (Link-/Bild-/Anhangsgrenzen folgen mit dem Renderer). */
-    public const LIMIT_FIELDS = ['posts_per_day', 'topics_per_hour'];
+    /**
+     * Felder der Grenzen je Vertrauensstufe: Beiträge je Tag, Themen je Stunde (CommunityAccess), Links, Bilder und Anhänge je
+     * Beitrag (`can()` mit Kontext `content`), Anhänge je Tag (AttachmentService über `limitsFor()`).
+     */
+    public const LIMIT_FIELDS = ['posts_per_day', 'topics_per_hour', 'links_per_post', 'images_per_post', 'attachments_per_post', 'attachments_per_day'];
 
-    /** Obergrenze je Feld in `trust_limits` (0 = unbegrenzt). */
+    /** Wert eines Feldes in `trust_limits` für „unbegrenzt“; `0` heißt „keine“. */
+    public const UNLIMITED = -1;
+
+    /** Obergrenze je Feld in `trust_limits`; Werte unter `UNLIMITED` ergeben den Standard des Feldes. */
     public const LIMIT_MAX = 100000;
+
+    /** Höchstzahl der Einträge im Wortfilter (block, review, replace zusammen, in dieser Vorrangreihenfolge). */
+    public const WORD_FILTER_MAX = 500;
+
+    /** Listen des Wortfilters in Vorrangreihenfolge: ein Eintrag in mehreren Listen bleibt nur in der ersten. */
+    public const WORD_FILTER_LISTS = ['block', 'review', 'replace'];
+
+    /** Standard des Wortfilters: keine Einträge, Ersatztext `***`. */
+    public const DEFAULT_WORD_FILTER = ['block' => [], 'review' => [], 'replace' => [], 'replacement' => '***'];
+
+    /** Alle Reaktionen, die `reaction_set` enthalten darf. */
+    public const REACTION_KEYS = ['like', 'love', 'laugh', 'idea', 'thanks', 'wow', 'sad', 'celebrate'];
+
+    /** Standard von `reaction_set`; `[]` schaltet Reaktionen ab. */
+    public const DEFAULT_REACTION_SET = ['like', 'love', 'laugh', 'idea'];
+
+    /** Endungen, die `attachment_types` kennt (gleich `array_keys(AttachmentService::TYPES)`). */
+    public const ATTACHMENT_TYPES = ['jpg', 'png', 'webp', 'gif', 'pdf', 'zip', 'txt'];
+
+    /** Standard von `attachment_types` (1 = erlaubt). */
+    public const DEFAULT_ATTACHMENT_TYPES = ['jpg' => 1, 'png' => 1, 'webp' => 1, 'gif' => 1, 'pdf' => 1, 'zip' => 1, 'txt' => 0];
 
     /** Schlüssel der Forum-Rechtematrix (`permissions_json` und `default_permissions`). */
     public const PERMISSION_KEYS = [
@@ -58,16 +87,17 @@ final class Settings
     public const BASE_PATH_PATTERN = '/^[a-z0-9][a-z0-9-]{0,39}$/';
 
     /**
-     * Standards der Grenzen je Vertrauensstufe. Die Zahlen sind Platzhalter, die der Auftraggeber bestätigt.
+     * Standards der Grenzen je Vertrauensstufe (`-1` = unbegrenzt, `0` = keine). Die Zahlen sind Platzhalter, in PR #3 im Admin
+     * änderbar (DESIGN-2b I-34). Beiträge je Tag und Themen je Stunde sind nie 0.
      *
-     * @var array<int, array{posts_per_day: int, topics_per_hour: int}>
+     * @var array<int, array{posts_per_day: int, topics_per_hour: int, links_per_post: int, images_per_post: int, attachments_per_post: int, attachments_per_day: int}>
      */
     public const DEFAULT_TRUST_LIMITS = [
-        0 => ['posts_per_day' => 5, 'topics_per_hour' => 1],
-        1 => ['posts_per_day' => 30, 'topics_per_hour' => 3],
-        2 => ['posts_per_day' => 100, 'topics_per_hour' => 5],
-        3 => ['posts_per_day' => 300, 'topics_per_hour' => 10],
-        4 => ['posts_per_day' => 300, 'topics_per_hour' => 10],
+        0 => ['posts_per_day' => 5, 'topics_per_hour' => 1, 'links_per_post' => 1, 'images_per_post' => 0, 'attachments_per_post' => 0, 'attachments_per_day' => 0],
+        1 => ['posts_per_day' => 30, 'topics_per_hour' => 3, 'links_per_post' => 5, 'images_per_post' => 10, 'attachments_per_post' => 3, 'attachments_per_day' => 20],
+        2 => ['posts_per_day' => 100, 'topics_per_hour' => 5, 'links_per_post' => -1, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 50],
+        3 => ['posts_per_day' => 300, 'topics_per_hour' => 10, 'links_per_post' => -1, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 100],
+        4 => ['posts_per_day' => 300, 'topics_per_hour' => 10, 'links_per_post' => -1, 'images_per_post' => -1, 'attachments_per_post' => 3, 'attachments_per_day' => 100],
     ];
 
     /**
@@ -114,6 +144,19 @@ final class Settings
         'trust_limits' => ['type' => 'map', 'schema' => 'trust_limits', 'default' => self::DEFAULT_TRUST_LIMITS],
         'default_permissions' => ['type' => 'map', 'schema' => 'permissions', 'default' => self::DEFAULT_PERMISSIONS],
         'unread_horizon_days' => ['type' => 'int', 'default' => 90, 'min' => 1, 'max' => 180],
+        // PR #2b (Vertrag DESIGN-2b §3.1)
+        'word_filter' => ['type' => 'map', 'schema' => 'word_filter', 'default' => self::DEFAULT_WORD_FILTER],
+        'use_core_antispam' => ['type' => 'bool', 'default' => false],
+        'spam_duplicate_hours' => ['type' => 'int', 'default' => 24, 'min' => 0, 'max' => 168],
+        'ip_hash_days' => ['type' => 'int', 'default' => 30, 'min' => 0, 'max' => 90],
+        'moved_stub_days' => ['type' => 'int', 'default' => 7, 'min' => 1, 'max' => 365],
+        'moderation_reason_required' => ['type' => 'bool', 'default' => true],
+        'report_hide_threshold' => ['type' => 'int', 'default' => 3, 'min' => 0, 'max' => 20],
+        'moderator_ban_max_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 365],
+        'notify_mail' => ['type' => 'bool', 'default' => true],
+        'reaction_set' => ['type' => 'map', 'schema' => 'reaction_set', 'default' => self::DEFAULT_REACTION_SET],
+        'attachment_types' => ['type' => 'map', 'schema' => 'attachment_types', 'default' => self::DEFAULT_ATTACHMENT_TYPES],
+        'attachment_max_kb' => ['type' => 'int', 'default' => 5120, 'min' => 64, 'max' => 51200],
     ];
 
     /** Paare (Mindest- vor Höchstwert): ein Mindestwert über dem Höchstwert wird auf den Höchstwert gesenkt. */
@@ -177,9 +220,13 @@ final class Settings
                 'int' => self::parseInt($value, $definition['min'], $definition['max'], $definition['default']),
                 'bool' => self::parseBool($value) ?? $definition['default'],
                 'slug' => self::parseSlug($value, $definition['default']),
-                default => $definition['schema'] === 'trust_limits'
-                    ? self::parseTrustLimits($value)
-                    : self::parsePermissions($value),
+                default => match ($definition['schema']) {
+                    'trust_limits' => self::parseTrustLimits($value),
+                    'word_filter' => self::parseWordFilter($value),
+                    'reaction_set' => self::parseReactionSet($value),
+                    'attachment_types' => self::parseAttachmentTypes($value),
+                    default => self::parsePermissions($value),
+                },
             };
         }
 
@@ -266,16 +313,21 @@ final class Settings
     }
 
     /**
-     * Zeit- und Zählgrenzen einer Vertrauensstufe (Stufen außerhalb 0 bis 4 werden an den Rand gelegt).
+     * Grenzen einer Vertrauensstufe, alle Felder aus `LIMIT_FIELDS` (`-1` = unbegrenzt, `0` = keine). Stufen außerhalb 0 bis 4
+     * werden an den Rand gelegt.
      *
-     * @return array{posts_per_day: int, topics_per_hour: int}
+     * @return array{posts_per_day: int, topics_per_hour: int, links_per_post: int, images_per_post: int, attachments_per_post: int, attachments_per_day: int}
      */
     public function limitsForLevel(int $level): array
     {
         $level = max(self::TRUST_LEVELS[0], min(self::TRUST_LEVELS[count(self::TRUST_LEVELS) - 1], $level));
         $limits = $this->map('trust_limits')[$level];
+        $result = [];
+        foreach (self::LIMIT_FIELDS as $field) {
+            $result[$field] = (int) $limits[$field];
+        }
 
-        return ['posts_per_day' => (int) $limits['posts_per_day'], 'topics_per_hour' => (int) $limits['topics_per_hour']];
+        return $result;
     }
 
     /**
@@ -400,8 +452,13 @@ final class Settings
         return $slug;
     }
 
-    /** @return array<int|string, mixed>|null */
-    private static function decodeMap(mixed $value): ?array
+    /**
+     * Struktur aus einem Array oder JSON-Text (mit oder ohne `json:`-Präfix); `$opening` sind die erlaubten ersten Zeichen des
+     * Texts (`{` für Objekte, `[` für Listen).
+     *
+     * @return array<int|string, mixed>|null
+     */
+    private static function decodeMap(mixed $value, string $opening = '{'): ?array
     {
         if (is_array($value)) {
             return $value;
@@ -414,7 +471,7 @@ final class Settings
         if (str_starts_with($text, 'json:')) {
             $text = substr($text, 5);
         }
-        if ($text === '' || $text[0] !== '{') {
+        if ($text === '' || !str_contains($opening, $text[0])) {
             return null;
         }
 
@@ -427,7 +484,7 @@ final class Settings
         return is_array($decoded) ? $decoded : null;
     }
 
-    /** @return array<int, array{posts_per_day: int, topics_per_hour: int}> */
+    /** @return array<int, array<string, int>> je Stufe alle Felder aus LIMIT_FIELDS */
     private static function parseTrustLimits(mixed $value): array
     {
         $input = self::decodeMap($value) ?? [];
@@ -435,8 +492,120 @@ final class Settings
         foreach (self::TRUST_LEVELS as $level) {
             $row = is_array($input[$level] ?? null) ? $input[$level] : [];
             foreach (self::LIMIT_FIELDS as $field) {
-                $result[$level][$field] = self::parseInt($row[$field] ?? null, 0, self::LIMIT_MAX, self::DEFAULT_TRUST_LIMITS[$level][$field]);
+                $result[$level][$field] = self::parseLimit($row[$field] ?? null, self::DEFAULT_TRUST_LIMITS[$level][$field]);
             }
+        }
+
+        return $result;
+    }
+
+    /** Ein Feld von `trust_limits`: `-1` bis `LIMIT_MAX`; darunter (fail-safe) oder ungültig der Standard, darüber `LIMIT_MAX`. */
+    private static function parseLimit(mixed $value, int $default): int
+    {
+        $parsed = self::parseInt($value, PHP_INT_MIN, self::LIMIT_MAX, $default);
+
+        return $parsed < self::UNLIMITED ? $default : $parsed;
+    }
+
+    /**
+     * Wortfilter: drei Listen (`block`, `review`, `replace`) und der Ersatztext. Einträge werden klein geschrieben (NFC,
+     * Leerraum zu einem Leerzeichen) und gelten nur mit 2 bis 100 Zeichen, mindestens einem Buchstaben oder einer Ziffer,
+     * ohne Steuerzeichen und mit `*` höchstens als letztem Zeichen. Doppelte Einträge bleiben nur in der Liste mit Vorrang
+     * (`block` > `review` > `replace`); zusammen gelten höchstens `WORD_FILTER_MAX` Einträge in dieser Reihenfolge.
+     *
+     * @return array{block: list<string>, review: list<string>, replace: list<string>, replacement: string}
+     */
+    private static function parseWordFilter(mixed $value): array
+    {
+        $input = self::decodeMap($value) ?? [];
+        $entries = [];
+        $seen = [];
+        foreach (self::WORD_FILTER_LISTS as $list) {
+            foreach (is_array($input[$list] ?? null) ? $input[$list] : [] as $raw) {
+                $entry = self::wordFilterEntry($raw);
+                if ($entry !== null && !isset($seen[$entry])) {
+                    $seen[$entry] = true;
+                    $entries[] = [$list, $entry];
+                }
+            }
+        }
+
+        $result = ['block' => [], 'review' => [], 'replace' => []];
+        foreach (array_slice($entries, 0, self::WORD_FILTER_MAX) as [$list, $entry]) {
+            $result[$list][] = $entry;
+        }
+        $result['replacement'] = self::wordFilterReplacement($input['replacement'] ?? null);
+
+        return $result;
+    }
+
+    /** Ein Eintrag des Wortfilters in Speicherform oder `null`, wenn er nicht gilt. */
+    private static function wordFilterEntry(mixed $raw): ?string
+    {
+        if (!is_string($raw) || preg_match('//u', $raw) !== 1) {
+            return null;
+        }
+        $entry = trim((string) preg_replace('/[\s\p{Z}]+/u', ' ', $raw));
+        if (class_exists(\Normalizer::class)) {
+            $entry = (string) \Normalizer::normalize($entry, \Normalizer::FORM_C);
+        }
+        $entry = mb_strtolower($entry, 'UTF-8');
+        $length = mb_strlen($entry, 'UTF-8');
+        if ($length < 2 || $length > 100
+            || preg_match('/[\p{L}\p{N}]/u', $entry) !== 1
+            || preg_match('/\p{Cc}/u', $entry) === 1
+            || preg_match('/\*(?!$)/u', $entry) === 1
+        ) {
+            return null;
+        }
+
+        return $entry;
+    }
+
+    /** Ersatztext: 1 bis 20 Zeichen ohne Buchstaben, Ziffern und Steuerzeichen (kann so in keinem Eintrag erneut treffen), sonst `***`. */
+    private static function wordFilterReplacement(mixed $raw): string
+    {
+        if (!is_string($raw) || preg_match('//u', $raw) !== 1) {
+            return self::DEFAULT_WORD_FILTER['replacement'];
+        }
+        $length = mb_strlen($raw, 'UTF-8');
+        if ($length < 1 || $length > 20 || preg_match('/[\p{L}\p{N}\p{Cc}]/u', $raw) === 1) {
+            return self::DEFAULT_WORD_FILTER['replacement'];
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Reaktionen zur Auswahl: Liste (Array oder JSON-Text) aus `REACTION_KEYS`, eindeutig, Reihenfolge erhalten; fremde Werte
+     * entfallen, `[]` schaltet Reaktionen ab. Keine Liste (auch ein JSON-Objekt) ergibt den Standard.
+     *
+     * @return list<string>
+     */
+    private static function parseReactionSet(mixed $value): array
+    {
+        $input = self::decodeMap($value, '[');
+        if ($input === null || !array_is_list($input)) {
+            return self::DEFAULT_REACTION_SET;
+        }
+        $result = [];
+        foreach ($input as $key) {
+            if (is_string($key) && in_array($key, self::REACTION_KEYS, true) && !in_array($key, $result, true)) {
+                $result[] = $key;
+            }
+        }
+
+        return $result;
+    }
+
+    /** @return array<string, int> Endung aus ATTACHMENT_TYPES => 0|1 (fehlend oder ungültig: Standard) */
+    private static function parseAttachmentTypes(mixed $value): array
+    {
+        $input = self::decodeMap($value) ?? [];
+        $result = [];
+        foreach (self::ATTACHMENT_TYPES as $type) {
+            $flag = self::parseBool($input[$type] ?? null);
+            $result[$type] = $flag === null ? self::DEFAULT_ATTACHMENT_TYPES[$type] : ($flag ? 1 : 0);
         }
 
         return $result;

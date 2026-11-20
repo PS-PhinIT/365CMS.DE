@@ -20,7 +20,9 @@
  * `neutralize()` Blöcke mit nicht mehr sichtbarer Quelle erst zur Anzeigezeit durch einen Platzhalter (der gespeicherte Text
  * fremder Beiträge bleibt unberührt; der Renderer in PR #2b ruft `neutralize()`).
  *
- * Reine Textregeln (`extractRefs`, `neutralize`, `stripQuotes`) sind statisch und brauchen keine Datenbank.
+ * Reine Textregeln (`markerId`, `extractRefs`, `neutralize`, `stripQuotes`, `presentable`) sind statisch und brauchen keine
+ * Datenbank. `markerId()` ist die einzige Marker-Regel: der Renderer (PR #2b, `Support\ContentRenderer`) erkennt Zitat-Blöcke über
+ * dieselbe Methode an ihrer Quellzeile.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -166,6 +168,15 @@ final class QuoteService
     // ── Zitate lesen ────────────────────────────────────────────────────────────────────────────────────────────
 
     /**
+     * Beitrags-ID einer Markerzeile (`> [quote=post:ID]`, Leerraum am Ende erlaubt), sonst `null`. Einzige Marker-Regel für die
+     * Zeilenfunktionen dieser Klasse und für den Renderer (Quellzeile eines Zitat-Blocks auf oberster Ebene).
+     */
+    public static function markerId(string $line): ?int
+    {
+        return preg_match(self::MARKER, $line, $m) === 1 ? (int) $m[1] : null;
+    }
+
+    /**
      * IDs der zitierten Beiträge (Markerzeilen), in der Reihenfolge des Auftretens, ohne Doppelte (für Benachrichtigungen in PR #2b).
      *
      * @return list<int>
@@ -174,8 +185,9 @@ final class QuoteService
     {
         $ids = [];
         foreach (self::lines($markdown) as $line) {
-            if (preg_match(self::MARKER, $line, $m) === 1) {
-                $ids[(int) $m[1]] = (int) $m[1];
+            $id = self::markerId($line);
+            if ($id !== null) {
+                $ids[$id] = $id;
             }
         }
 
@@ -190,7 +202,7 @@ final class QuoteService
         $kept = [];
         $inQuote = false;
         foreach (self::lines($markdown) as $line) {
-            if (preg_match(self::MARKER, $line) === 1) {
+            if (self::markerId($line) !== null) {
                 $inQuote = true;
                 continue;
             }
@@ -222,8 +234,8 @@ final class QuoteService
         $out = [];
         $replacing = false;
         foreach (self::lines($markdown) as $line) {
-            if (preg_match(self::MARKER, $line, $m) === 1) {
-                $id = (int) $m[1];
+            $id = self::markerId($line);
+            if ($id !== null) {
                 $decided[$id] ??= $visible($id);
                 $state = $decided[$id];
                 $replacing = $state !== true;
@@ -241,6 +253,30 @@ final class QuoteService
         }
 
         return implode("\n", $out);
+    }
+
+    /**
+     * Ausgaberegel für Lese-APIs (Vertrag DESIGN-2b §1 Nr. 9): `body_html` verlässt keinen Dienst, `body` nur neutralisiert mit den
+     * Entscheidungen des Betrachters (`$visible` wie bei `neutralize()`). Gilt für volle Einträge (`view` fehlt oder `full`).
+     * Platzhalter (`view` ≠ `full`) tragen keinen Text: ein unerwartetes `body` entfällt dort ebenfalls (fail-closed).
+     *
+     * @param array<string, mixed> $item Eintrag wie `PostService::listPage()['items']` oder eine Beitragszeile
+     * @param \Closure(int): (bool|string) $visible
+     * @return array<string, mixed>
+     */
+    public static function presentable(array $item, \Closure $visible): array
+    {
+        unset($item['body_html']);
+        if (($item['view'] ?? 'full') !== 'full') {
+            unset($item['body']);
+
+            return $item;
+        }
+        if (isset($item['body']) && is_string($item['body'])) {
+            $item['body'] = self::neutralize($item['body'], $visible);
+        }
+
+        return $item;
     }
 
     /**

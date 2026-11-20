@@ -15,7 +15,9 @@
  *
  * Aktionen: `topic.create` (user, forum, title, body), `post.reply` (user, topic, body), `post.edit` (user, post, body, title),
  * `post.delete` (user, post), `topic.delete` (user, topic), `read.advance` (user, topic, post), `read.mark-forum` (user, forum),
- * `forum.create` (data), `none`.
+ * `forum.create` (data), `none`. Weitere Aktionen der Bereiche aus PR #2b liefern die Dateien `actions-*.php` (je Datei ein Besitzer):
+ * jede gibt `array<string, \Closure(array $args): array>` zurück und sieht beim Laden `$db`, `$settings`, `$access`, `$can`,
+ * `$dispatch`, `$topics`, `$posts`, `$reads`, `$forums` und `$job`. Ein doppelter Name beendet den Worker mit Exit 2.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -100,6 +102,19 @@ $posts = new PostService($db, $settings, null, $can, $dispatch);
 $reads = new ReadStateService($db, $settings, null, $can);
 $forums = new ForumRepository($db);
 
+// Aktionen der Bereiche aus PR #2b (Vertrag DESIGN-2b §1 Nr. 6), alphabetisch; Namen eindeutig, auch gegenüber den festen Aktionen.
+$actions = [];
+$builtIn = ['topic.create', 'post.reply', 'post.edit', 'post.delete', 'topic.delete', 'read.advance', 'read.mark-forum', 'forum.create', 'none'];
+foreach (glob(__DIR__ . '/actions-*.php') ?: [] as $part) {
+    foreach ((array) require $part as $name => $handler) {
+        if (isset($actions[$name]) || in_array($name, $builtIn, true) || !$handler instanceof \Closure) {
+            fwrite(STDERR, 'Worker: Aktion ' . $name . ' in ' . basename($part) . ' doppelt oder keine Closure' . PHP_EOL);
+            exit(2);
+        }
+        $actions[(string) $name] = $handler;
+    }
+}
+
 file_put_contents((string) $job['ready'], (string) getmypid());
 $deadline = microtime(true) + 30;
 while (!is_file((string) $job['start']) && microtime(true) < $deadline) {
@@ -120,7 +135,9 @@ try {
         'read.mark-forum' => ['success' => true, 'marked' => $reads->markForumRead((int) $args['user'], (int) $args['forum'])],
         'forum.create' => $forums->create((array) $args['data'], 3, gmdate('Y-m-d H:i:s')),
         'none' => ['success' => true],
-        default => throw new \InvalidArgumentException('unbekannte Aktion ' . $job['action']),
+        default => isset($actions[(string) $job['action']])
+            ? ($actions[(string) $job['action']])($args)
+            : throw new \InvalidArgumentException('unbekannte Aktion ' . $job['action']),
     };
 } catch (\Throwable $e) {
     $output['exception'] = $e::class . ': ' . $e->getMessage();

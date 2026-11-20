@@ -97,6 +97,97 @@ T::run('Abhängigkeiten: Composer-Manifest, Lockdatei und Bundles stimmen übere
     );
 });
 
+/** Pakete des CommonMark-Bündels (PR #2b, CMS/assets/commonmark/commonmark.php). */
+const DEPS_COMMONMARK_PACKAGES = ['league/commonmark', 'league/config', 'dflydev/dot-access-data', 'nette/schema', 'nette/utils'];
+
+T::run('Abhängigkeiten: CommonMark-Bündel entspricht Lockdatei, Prüfsumme und Lizenz', static function () use ($depsRoot, $depsJson, $depsRead, $depsNormalize): void {
+    $manifest = $depsJson('.github/deps/composer.json');
+    $pins = $manifest['require'] ?? [];
+    $lock = [];
+    foreach ($depsJson('.github/deps/composer.lock')['packages'] ?? [] as $package) {
+        $lock[(string) $package['name']] = ['version' => $depsNormalize((string) $package['version']), 'ref' => (string) ($package['dist']['reference'] ?? '')];
+    }
+    foreach (DEPS_COMMONMARK_PACKAGES as $package) {
+        T::check(isset($pins[$package]) && preg_match('/^\d+\.\d+\.\d+$/', (string) $pins[$package]) === 1, 'composer.json pinnt ' . $package, (string) ($pins[$package] ?? '–'));
+        T::same((string) ($pins[$package] ?? ''), $lock[$package]['version'] ?? '', 'composer.lock führt ' . $package . ' im gepinnten Stand');
+        T::check(preg_match('/^[0-9a-f]{40}$/', $lock[$package]['ref'] ?? '') === 1, 'composer.lock nennt die dist-Referenz von ' . $package);
+    }
+    T::check(isset($manifest['replace']['symfony/polyfill-php80']), 'symfony/polyfill-php80 ist per replace ausgeblendet (PHP ≥ 8.4)');
+    foreach (['psr/event-dispatcher', 'symfony/contracts'] as $provided) {
+        T::check(isset($pins[$provided]), $provided . ' ist gepinnt (Abhängigkeit von league/commonmark, liegt außerhalb des Bündels)');
+    }
+
+    $bundle = str_replace(["\r\n", "\r"], "\n", $depsRead('CMS/assets/commonmark/commonmark.php'));
+    $license = str_replace(["\r\n", "\r"], "\n", $depsRead('CMS/assets/commonmark/LICENSE'));
+    T::check($bundle !== '' && $license !== '', 'CMS/assets/commonmark/commonmark.php und LICENSE liegen vor');
+    $entries = array_values(array_diff(scandir($depsRoot . '/CMS/assets/commonmark') ?: [], ['.', '..']));
+    sort($entries);
+    T::same(['LICENSE', 'commonmark.php'], $entries, 'CMS/assets/commonmark/ enthält genau diese zwei Dateien');
+
+    // Kopf des Bündels: je Paket eine Zeile „Paket Version dist-Ref“ wie in der Lockdatei, in der Reihenfolge des Build-Skripts.
+    $head = substr($bundle, 0, (int) strpos($bundle, '*/'));
+    preg_match_all('/^ \*   (\S+)\s+(\d+\.\d+\.\d+)\s+([0-9a-f]{40})$/m', $head, $rows, PREG_SET_ORDER);
+    $header = [];
+    foreach ($rows as [, $package, $version, $ref]) {
+        $header[$package] = ['version' => $version, 'ref' => $ref];
+    }
+    T::same(DEPS_COMMONMARK_PACKAGES, array_keys($header), 'Kopf des Bündels nennt genau die fünf Pakete');
+    T::same(array_intersect_key($lock, array_flip(DEPS_COMMONMARK_PACKAGES)), array_replace(array_flip(array_keys(array_intersect_key($lock, array_flip(DEPS_COMMONMARK_PACKAGES)))), $header), 'Kopfzeilen des Bündels (Version, dist-Referenz) = composer.lock');
+    T::check(str_contains($head, 'GENERIERT, nicht von Hand ändern') && str_contains($head, 'build-commonmark-bundle.php'), 'Kopf kennzeichnet die Datei als generiert und nennt das Build-Skript');
+    T::check(str_starts_with(substr($bundle, strlen($head)), "*/\n\ndeclare(strict_types=1);\n\nnamespace {\n    if (!\\defined('ABSPATH')) {\n        return;\n    }\n}\n"), 'nach dem Kopf: declare(strict_types=1) und Wächter ohne ABSPATH');
+    T::same(1, substr_count($bundle, 'declare(strict_types=1);'), 'genau ein declare(strict_types=1)');
+
+    // Nur Namensräume unter CMS\Vendor\ (außer dem Wächter-Block `namespace {`).
+    preg_match_all('/^namespace\b(.*)$/m', $bundle, $spaces);
+    $foreign = array_values(array_filter($spaces[1], static fn (string $rest): bool => $rest !== ' {' && preg_match('/^ CMS\\\\Vendor\\\\(?:League\\\\CommonMark|League\\\\Config|Dflydev\\\\DotAccessData|Nette)(?:\\\\[A-Za-z0-9_]+)* \{$/', $rest) !== 1));
+    T::check(count($spaces[1]) > 100, 'Bündel besteht aus geklammerten namespace-Blöcken (' . count($spaces[1]) . ')');
+    T::same([], $foreign, 'keine namespace-Zeile außer „namespace {“ und „namespace CMS\\Vendor\\…“');
+    // Einfuhren auf oberster Ebene (Spalte 0) und voll qualifizierte Namen tragen das Präfix; Trait-Einfuhren in Klassen lösen über diese Aliase auf.
+    $unscoped = [];
+    $closing = 0;
+    foreach (token_get_all($bundle) as $token) {
+        if (is_array($token) && $token[0] === T_NAME_FULLY_QUALIFIED && preg_match('/^\\\\(?:League|Nette|Dflydev)\\\\/', $token[1]) === 1) {
+            $unscoped[] = $token[1];
+        }
+        $closing += is_array($token) && $token[0] === T_CLOSE_TAG ? 1 : 0;
+    }
+    preg_match_all('/^use\s+((?:League|Nette|Dflydev)\\\\[^;]*);/m', $bundle, $imports);
+    T::same([], array_values(array_unique(array_merge($unscoped, $imports[1]))), 'keine ungescopten Einfuhren oder voll qualifizierten Namen League\\, Nette\\, Dflydev\\');
+    T::same(0, $closing, 'kein schließendes ?> im Bündel');
+
+    // Prüfsummen über LF-normalisierte Bytes = Werte in DOC/assets/commonmark/README.md.
+    $readme = $depsRead('DOC/assets/commonmark/README.md');
+    preg_match_all('/^\| `(commonmark\.php|LICENSE)` \| (\d+) \| `([0-9a-f]{64})` \|$/m', $readme, $sums, PREG_SET_ORDER);
+    $documented = [];
+    foreach ($sums as [, $file, $bytes, $sha]) {
+        $documented[$file] = [(int) $bytes, $sha];
+    }
+    T::same(['commonmark.php' => [strlen($bundle), hash('sha256', $bundle)], 'LICENSE' => [strlen($license), hash('sha256', $license)]], $documented, 'Bytes und SHA-256 von commonmark.php und LICENSE = DOC/assets/commonmark/README.md');
+    foreach (DEPS_COMMONMARK_PACKAGES as $package) {
+        T::check(str_contains($readme, '| `' . $package . '` | ' . ($lock[$package]['version'] ?? '?') . ' | `' . ($lock[$package]['ref'] ?? '?') . '` |'), 'DOC/assets/commonmark/README.md nennt ' . $package . ' mit Version und dist-Referenz');
+        T::check(preg_match('/^-{72}\n' . preg_quote($package . ' ' . ($lock[$package]['version'] ?? '?') . ' (' . ($lock[$package]['ref'] ?? '?') . ')', '/') . '\n-{72}\n\n\S/m', $license) === 1, 'LICENSE enthält den Lizenztext von ' . $package . ' ' . ($lock[$package]['version'] ?? '?'));
+    }
+    T::check(preg_match('#^CMS/assets/commonmark/\* -text$#m', $depsRead('.gitattributes')) === 1, '.gitattributes: CMS/assets/commonmark/* -text (Zeilenenden stabil)');
+
+    // Reproduzierbarkeit: mit einem Vendor-Verzeichnis aus der Lockdatei baut das Skript byte-gleich (sonst nur ein Hinweis).
+    $script = $depsRoot . '/.github/deps/build-commonmark-bundle.php';
+    T::check(is_file($script) && str_contains((string) file_get_contents($script), "'verify'"), 'Build-Skript .github/deps/build-commonmark-bundle.php mit --verify vorhanden');
+    $vendor = (string) getenv('CMS_TEST_COMMONMARK_VENDOR');
+    if ($vendor === '') {
+        T::info('CommonMark-Bündel: Neubau übersprungen (CMS_TEST_COMMONMARK_VENDOR=<vendor> setzt die byte-gleiche Prüfung in Gang, Ablauf in DOC/assets/commonmark/README.md)');
+
+        return;
+    }
+    $command = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script) . ' --vendor=' . escapeshellarg($vendor) . ' --lock=.github/deps/composer.lock'
+        . ' --out=CMS/assets/commonmark/commonmark.php --license=CMS/assets/commonmark/LICENSE --prefix=' . escapeshellarg('CMS\\Vendor')
+        . ' --guard --roots-from=CMS/core/Services/Community/Support/ContentRenderer.php --verify 2>&1';
+    $cwd = getcwd();
+    chdir($depsRoot);
+    exec($command, $output, $exit);
+    chdir((string) $cwd);
+    T::same(0, $exit, 'Neubau aus der Lockdatei ist byte-gleich zum ausgelieferten Bündel (--verify)', implode(' | ', $output));
+});
+
 T::run('Abhängigkeiten: npm-Manifest, Lockdatei und JS-Bundles stimmen überein', static function () use ($depsJson, $depsRead, $depsDocVersions): void {
     $pins = $depsJson('.github/deps/package.json')['dependencies'] ?? [];
     T::check(count($pins) >= 30, 'package.json führt die gebündelten JS-Pakete', 'Anzahl: ' . count($pins));

@@ -36,6 +36,9 @@
  *   B4  Forum-Slug gleich `slug_en` eines anderen Forums: im Wettlauf entsteht nur eines (Abschnitt `slug`, Mutex-Zeile in `settings`)
  *   B5  `TopicRepository::lastPublished()` liest auch in einem ruhigen Forum nur wenige Index-Einträge (Abschnitt `explain`)
  *
+ * Abschnitte der Bereiche aus PR #2b stehen in `sections-*.php` (je Datei ein Besitzer, am Ende vor `T::finish()` geladen), ihre
+ * Worker-Aktionen in `actions-*.php` (geladen von `worker.php`).
+ *
  * Optional: läuft nur mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER (Recht CREATE/DROP DATABASE), sonst Hinweis (Exit 0), wie
  * `TESTS/schema-upgrade/run.php`. Gegenprobe: `TESTS/community-mutants` (Mutanten „db-…“ laufen nur mit Datenbank und lassen mit
  * `CMS_TEST_DB_SECTIONS=<Schlüsselanfänge>` nur den zuständigen Abschnitt laufen, z. B. `locks`, `race`, `explain`).
@@ -126,6 +129,11 @@ const CDB_ROLE_CAPS = [
 /** Einstellungen der Wettläufe: Freigabepflicht aus (sonst zählt nichts), sonst Standards (Abstände und Grenzen bleiben wirksam). */
 const CDB_RACE_SETTINGS = ['new_member_approval_posts' => 0, 'edit_window_minutes' => 0];
 
+/** Alle sechs Grenzen einer Vertrauensstufe auf -1 (unbegrenzt; Vertrag DESIGN-2b §3.1). */
+const CDB_UNLIMITED_LEVEL = [
+    'posts_per_day' => -1, 'topics_per_hour' => -1, 'links_per_post' => -1, 'images_per_post' => -1, 'attachments_per_post' => -1, 'attachments_per_day' => -1,
+];
+
 /**
  * Wie CDB_RACE_SETTINGS, aber ohne Abstände und Zählgrenzen: nur die Idempotenz (Inhaltsvergleich unter der Sperre) hält
  * doppelte Absendungen auf. Die Standardgrenzen (Abstand, Themen je Stunde) lehnen eine Wiederholung ohnehin ab und verdecken sie.
@@ -133,9 +141,9 @@ const CDB_RACE_SETTINGS = ['new_member_approval_posts' => 0, 'edit_window_minute
 const CDB_NOLIMIT_SETTINGS = CDB_RACE_SETTINGS + [
     'rate_post_seconds' => 0,
     'rate_topic_seconds' => 0,
+    // -1 = unbegrenzt in allen sechs Feldern (0 hieße ab PR #2b „keine“)
     'trust_limits' => [
-        0 => ['posts_per_day' => 0, 'topics_per_hour' => 0], 1 => ['posts_per_day' => 0, 'topics_per_hour' => 0], 2 => ['posts_per_day' => 0, 'topics_per_hour' => 0],
-        3 => ['posts_per_day' => 0, 'topics_per_hour' => 0], 4 => ['posts_per_day' => 0, 'topics_per_hour' => 0],
+        0 => CDB_UNLIMITED_LEVEL, 1 => CDB_UNLIMITED_LEVEL, 2 => CDB_UNLIMITED_LEVEL, 3 => CDB_UNLIMITED_LEVEL, 4 => CDB_UNLIMITED_LEVEL,
     ],
 ];
 
@@ -2223,5 +2231,11 @@ cdbSection('explain-forum-large', 'EXPLAIN-Gate: Forenliste eines großen Forums
     }
     $db->dispose();
 });
+
+// Abschnitte der Bereiche aus PR #2b (Vertrag DESIGN-2b §1 Nr. 6; je Datei genau ein Besitzer), alphabetisch; sie nutzen
+// cdbSection(), CdbWorld und die Hilfen dieser Datei. Worker-Aktionen dazu liegen in actions-*.php (worker.php).
+foreach (glob(__DIR__ . '/sections-*.php') ?: [] as $part) {
+    require $part;
+}
 
 T::finish();

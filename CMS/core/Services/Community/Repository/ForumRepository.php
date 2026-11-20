@@ -4,10 +4,13 @@
  * Forum-Moderatoren (`community_forum_moderators`).
  *
  * - Der Baum steht in `parent_id`, `depth` und `path` (`/3/17/` für Forum 17 unter Forum 3; der Pfad enthält die eigene ID).
- *   `tree()` liest alle Foren einmal je Instanz; Strukturänderungen über diese Klasse verwerfen den Zwischenspeicher.
- *   Zähler im Zwischenspeicher können veralten: für Zähler `find()` benutzen.
- * - Rechte: dieses Repository liefert nur Zeilen (`permissionRows()`, `hasPermissionRows()`); wer was darf, entscheidet
- *   `CommunityAccess`.
+ *   `tree()` liest alle Foren einmal je Instanz, mit der Spalte `category_visible` (Sichtbarkeit der Kategorie: ohne Kategorie 1,
+ *   fehlende Kategorie 0); Strukturänderungen über diese Klasse verwerfen den Zwischenspeicher. Zähler im Zwischenspeicher können
+ *   veralten: für Zähler `find()` benutzen.
+ * - Rechte: dieses Repository liefert nur Zeilen (`permissionRows()`, `hasPermissionRows()`, für viele Foren `permissionForumIds()` und
+ *   `permissionRowsMany()`); die Auswahl je Subjekt trifft `firstPerSubject()`, wer was darf, entscheidet `CommunityAccess`.
+ * - Forum-Moderatoren: `moderatorRows()` für ein Forum (`can()`), `moderatorAssignments()` für alle Foren eines Mitglieds
+ *   (Mengen-API, Moderationsbereich) und `moderates()` als einzige Regel für `include_children`; auch `moderatorRows()` filtert damit.
  * - Zähler (`applyCounters()`, `bumpCounters()`) ändern sich atomar in einer Anweisung und fallen nie unter 0.
  * - Sperrreihenfolge der Dienste: Forum, Thema, Beitrag, Benutzerstatistik (`lockForUpdate()`).
  * - Slug-Eindeutigkeit über beide Spalten (`slug`, `slug_en`): die zwei UNIQUE-Indizes sehen den Kreuzfall nicht (Slug des einen
@@ -54,6 +57,7 @@ final class ForumRepository extends AbstractRepository
     /** `option_name` der Mutex-Zeile: ohne Punkt, damit sie nicht zur Einstellungsgruppe `community` gehört. */
     public const SLUG_LOCK = 'community_lock_forum_slugs';
     private const TABLE = 'community_forums';
+    private const CATEGORIES = 'community_categories';
     private const PERMISSIONS = 'community_forum_permissions';
     private const MODERATORS = 'community_forum_moderators';
 
@@ -86,8 +90,17 @@ final class ForumRepository extends AbstractRepository
         'require_approval' => ['flag'], 'inherit_permissions' => ['flag'],
     ];
 
+    /** Höchstzahl der Foren-IDs je Abfrage von `permissionRowsMany()`. */
+    private const ROWS_CHUNK = 500;
+
+    /** Höchstzahl der Foren-IDs je Anweisung von `touch()`. */
+    private const TOUCH_CHUNK = 100;
+
     /** @var array<int, array<string, mixed>>|null */
     private ?array $tree = null;
+
+    /** @var list<int>|null Foren mit Rechte-Zeilen (Zwischenspeicher von `permissionForumIds()`) */
+    private ?array $permissionForums = null;
 
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
@@ -121,7 +134,9 @@ final class ForumRepository extends AbstractRepository
     }
 
     /**
-     * Alle Foren, Schlüssel = Forum-ID, Reihenfolge: Kategorie, Tiefe, Sortierung, ID. Je Instanz einmal gelesen.
+     * Alle Foren, Schlüssel = Forum-ID, Reihenfolge: Kategorie, Tiefe, Sortierung, ID. Je Instanz einmal gelesen. Jede Zeile trägt
+     * zusätzlich `category_visible` (int): 1 ohne Kategorie (`category_id = 0`) und bei sichtbarer Kategorie, 0 bei unsichtbarer und
+     * bei fehlender Kategorie (fail-closed). Die Kette der Vorfahren wertet `CommunityAccess` aus.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -129,7 +144,11 @@ final class ForumRepository extends AbstractRepository
     {
         if ($this->tree === null) {
             $tree = [];
-            foreach ($this->fetchAll('SELECT * FROM ' . $this->table(self::TABLE) . ' ORDER BY category_id ASC, depth ASC, sort_order ASC, id ASC') as $row) {
+            $sql = 'SELECT f.*, CASE WHEN f.category_id = 0 THEN 1 WHEN c.id IS NULL THEN 0 ELSE c.is_visible END AS category_visible FROM '
+                . $this->table(self::TABLE) . ' f LEFT JOIN ' . $this->table(self::CATEGORIES) . ' c ON c.id = f.category_id'
+                . ' ORDER BY f.category_id ASC, f.depth ASC, f.sort_order ASC, f.id ASC';
+            foreach ($this->fetchAll($sql) as $row) {
+                $row['category_visible'] = (int) $row['category_visible'];
                 $tree[(int) $row['id']] = $row;
             }
             $this->tree = $tree;
@@ -138,10 +157,14 @@ final class ForumRepository extends AbstractRepository
         return $this->tree;
     }
 
-    /** Verwirft den Zwischenspeicher von `tree()` (nötig, wenn ein anderer Schreiber den Baum geändert hat). */
+    /**
+     * Verwirft die Zwischenspeicher von `tree()` und `permissionForumIds()` (nötig, wenn ein anderer Schreiber den Baum, eine
+     * Kategorie oder Rechte-Zeilen geändert hat).
+     */
     public function forgetTree(): void
     {
         $this->tree = null;
+        $this->permissionForums = null;
     }
 
     /**
@@ -387,7 +410,8 @@ final class ForumRepository extends AbstractRepository
      * des ersten Forums der Kette zurück (eigenes Forum vor dem Elternforum; eine eigene Zeile ersetzt die geerbte).
      * Subjekte: immer `guest`; `role` mit `$role` (leer = keine Rollenzeilen); `group` mit `$groupIds`; `trust`-Zeilen mit
      * Schlüssel kleiner oder gleich `$level` (negativ = keine Stufenzeilen, für Gäste). Ob die Kette überhaupt Zeilen
-     * hat, sagt `hasPermissionRows()`; die Entscheidung trifft `CommunityAccess`.
+     * hat, sagt `hasPermissionRows()`; die Entscheidung trifft `CommunityAccess`. Eine Abfrage (`permissionRowsMany()` über die
+     * Kette), die Auswahl je Subjekt ist `firstPerSubject()`.
      *
      * @param list<int> $chain Ergebnis von `chainIds()` (das Forum zuerst)
      * @param list<int> $groupIds
@@ -399,36 +423,100 @@ final class ForumRepository extends AbstractRepository
         if ($chain === []) {
             return [];
         }
+
+        return self::firstPerSubject($chain, $this->permissionRowsMany($chain, $role, $groupIds, $level), $level);
+    }
+
+    /**
+     * Foren, für die es Rechte-Zeilen gibt (gleich für welches Subjekt), aufsteigend; eine Abfrage je Instanz
+     * (`SELECT DISTINCT forum_id`), `forgetTree()` und `savePermissions()` verwerfen den Zwischenspeicher. Für die Mengen-API:
+     * ein Forum, dessen Kette keines dieser Foren enthält, nutzt die Standards.
+     *
+     * @return list<int>
+     */
+    public function permissionForumIds(): array
+    {
+        if ($this->permissionForums === null) {
+            $rows = $this->fetchAll('SELECT DISTINCT forum_id FROM ' . $this->table(self::PERMISSIONS) . ' ORDER BY forum_id ASC');
+            $this->permissionForums = array_map(static fn (array $row): int => (int) $row['forum_id'], $rows);
+        }
+
+        return $this->permissionForums;
+    }
+
+    /**
+     * Alle Rechte-Zeilen der Foren für die Subjekte eines Mitglieds (Subjekte wie `permissionRows()`; `trust`-Zeilen aller Schlüssel,
+     * sobald `$level` nicht negativ ist, die Stufe wertet `firstPerSubject()` aus). Reihenfolge: Forum, Subjekttyp, Schlüssel;
+     * eine Abfrage je 500 Foren. Leere Liste: keine Abfrage.
+     *
+     * @param list<int> $forumIds
+     * @param list<int> $groupIds
+     * @return list<array{forum_id: int, subject_type: string, subject_key: string, permissions_json: string|null}>
+     */
+    public function permissionRowsMany(array $forumIds, string $role, array $groupIds, int $level): array
+    {
+        $forumIds = self::ids($forumIds);
+        if ($forumIds === []) {
+            return [];
+        }
         $where = ["subject_type = 'guest'"];
-        $params = $chain;
+        $subjectParams = [];
         if ($level >= 0) {
             $where[] = "subject_type = 'trust'";
         }
         if ($role !== '') {
             $where[] = "(subject_type = 'role' AND subject_key = ?)";
-            $params[] = $role;
+            $subjectParams[] = $role;
         }
         $groupKeys = array_map('strval', self::ids($groupIds));
         if ($groupKeys !== []) {
             $where[] = "(subject_type = 'group' AND subject_key IN (" . self::placeholders(count($groupKeys)) . '))';
-            array_push($params, ...$groupKeys);
+            array_push($subjectParams, ...$groupKeys);
         }
-        $rows = $this->fetchAll(
-            'SELECT forum_id, subject_type, subject_key, permissions_json FROM ' . $this->table(self::PERMISSIONS)
-            . ' WHERE forum_id IN (' . self::placeholders(count($chain)) . ') AND (' . implode(' OR ', $where) . ') ORDER BY subject_type ASC, subject_key ASC',
-            $params
-        );
+        $result = [];
+        foreach (array_chunk($forumIds, self::ROWS_CHUNK) as $chunk) {
+            $rows = $this->fetchAll(
+                'SELECT forum_id, subject_type, subject_key, permissions_json FROM ' . $this->table(self::PERMISSIONS)
+                . ' WHERE forum_id IN (' . self::placeholders(count($chunk)) . ') AND (' . implode(' OR ', $where) . ') ORDER BY forum_id ASC, subject_type ASC, subject_key ASC',
+                [...$chunk, ...$subjectParams]
+            );
+            foreach ($rows as $row) {
+                $result[] = [
+                    'forum_id' => (int) $row['forum_id'],
+                    'subject_type' => (string) $row['subject_type'],
+                    'subject_key' => (string) $row['subject_key'],
+                    'permissions_json' => $row['permissions_json'] === null ? null : (string) $row['permissions_json'],
+                ];
+            }
+        }
 
-        $rank = array_flip($chain);
+        return $result;
+    }
+
+    /**
+     * Je Subjekt (Typ + Schlüssel) die Zeile des ersten Forums der Kette: eine eigene Zeile ersetzt die geerbte. Zeilen von Foren
+     * außerhalb der Kette zählen nicht; `trust`-Zeilen nur mit Ziffernschlüssel bis `$level` (negativ = keine). Ergebnis sortiert
+     * nach Subjekttyp und Schlüssel. Dieselbe Regel für `can()` (`permissionRows()`) und die Mengen-API.
+     *
+     * @param list<int> $chain das Forum zuerst, dann die Vorfahren, deren Rechte es erbt
+     * @param list<array<string, mixed>> $rows Zeilen aus `permissionRowsMany()`
+     * @return list<array{forum_id: int, subject_type: string, subject_key: string, permissions_json: string|null}>
+     */
+    public static function firstPerSubject(array $chain, array $rows, int $level): array
+    {
+        $rank = array_flip(self::ids($chain));
         $best = [];
         foreach ($rows as $row) {
+            $forumId = (int) $row['forum_id'];
+            if (!isset($rank[$forumId])) {
+                continue;
+            }
             $type = (string) $row['subject_type'];
             $key = (string) $row['subject_key'];
             if ($type === 'trust' && (preg_match('/^\d+$/', $key) !== 1 || (int) $key > $level)) {
                 continue;
             }
             $slot = $type . "\0" . $key;
-            $forumId = (int) $row['forum_id'];
             if (!isset($best[$slot]) || $rank[$forumId] < $rank[(int) $best[$slot]['forum_id']]) {
                 $best[$slot] = [
                     'forum_id' => $forumId,
@@ -438,6 +526,7 @@ final class ForumRepository extends AbstractRepository
                 ];
             }
         }
+        ksort($best, SORT_STRING);
 
         return array_values($best);
     }
@@ -480,7 +569,8 @@ final class ForumRepository extends AbstractRepository
 
     /**
      * Moderator-Zeilen, die für ein Forum gelten: Einträge auf dem Forum selbst und auf Vorfahren mit `include_children = 1`,
-     * für das Mitglied (`user`) oder eine seiner Gruppen (`group`). Leere Liste = kein Moderator.
+     * für das Mitglied (`user`) oder eine seiner Gruppen (`group`). Leere Liste = kein Moderator. Die Abfrage liest alle Zeilen der
+     * Vorfahrenkette; welche davon gilt, entscheidet `moderates()` (einzige Kinderregel, Vertrag §3.7).
      *
      * @param list<int> $ancestorIds Ergebnis von `ancestorIds($forumId)` (Forum und alle Vorfahren)
      * @param list<int> $groupIds
@@ -491,7 +581,7 @@ final class ForumRepository extends AbstractRepository
         $ancestorIds = self::ids($ancestorIds);
         $groupIds = self::ids($groupIds);
         $subjects = [];
-        $params = [...$ancestorIds, $forumId];
+        $params = $ancestorIds;
         if ($userId > 0) {
             $subjects[] = "(subject_type = 'user' AND subject_id = ?)";
             $params[] = $userId;
@@ -505,17 +595,92 @@ final class ForumRepository extends AbstractRepository
         }
         $rows = $this->fetchAll(
             'SELECT forum_id, subject_type, subject_id, include_children FROM ' . $this->table(self::MODERATORS)
-            . ' WHERE forum_id IN (' . self::placeholders(count($ancestorIds)) . ') AND (forum_id = ? OR include_children = 1) AND ('
-            . implode(' OR ', $subjects) . ') ORDER BY forum_id ASC, subject_type ASC, subject_id ASC',
+            . ' WHERE forum_id IN (' . self::placeholders(count($ancestorIds)) . ') AND (' . implode(' OR ', $subjects)
+            . ') ORDER BY forum_id ASC, subject_type ASC, subject_id ASC',
             $params
         );
-
-        return array_map(static fn (array $row): array => [
+        $rows = array_map(static fn (array $row): array => [
             'forum_id' => (int) $row['forum_id'],
             'subject_type' => (string) $row['subject_type'],
             'subject_id' => (int) $row['subject_id'],
             'include_children' => (int) $row['include_children'],
         ], $rows);
+
+        return array_values(array_filter($rows, static fn (array $row): bool => self::moderates($ancestorIds, $forumId, [$row])));
+    }
+
+    /**
+     * Alle Moderator-Zuordnungen eines Mitglieds: Einträge für das Konto (`user`) und für seine Gruppen (`group`), je Forum eine
+     * Zeile (aufsteigend nach Forum; `include_children` = 1, wenn eine der Zuordnungen des Forums es setzt). Eine Abfrage über
+     * `idx_community_forum_moderators_subject`; Konto unter 1: `[]` ohne Abfrage. Welche Foren daraus folgen, sagt `moderates()`.
+     *
+     * @param list<int> $groupIds aktive Gruppen des Mitglieds
+     * @return list<array{forum_id: int, include_children: int}>
+     */
+    public function moderatorAssignments(int $userId, array $groupIds): array
+    {
+        if ($userId < 1) {
+            return [];
+        }
+        $groupIds = self::ids($groupIds);
+        $sql = 'SELECT forum_id, include_children FROM ' . $this->table(self::MODERATORS) . " WHERE (subject_type = 'user' AND subject_id = ?)";
+        $params = [$userId];
+        if ($groupIds !== []) {
+            $sql .= " OR (subject_type = 'group' AND subject_id IN (" . self::placeholders(count($groupIds)) . '))';
+            array_push($params, ...$groupIds);
+        }
+        $merged = [];
+        foreach ($this->fetchAll($sql . ' ORDER BY forum_id ASC', $params) as $row) {
+            $forumId = (int) $row['forum_id'];
+            $merged[$forumId] = max($merged[$forumId] ?? 0, (int) $row['include_children'] === 1 ? 1 : 0);
+        }
+        ksort($merged);
+        $assignments = [];
+        foreach ($merged as $forumId => $children) {
+            $assignments[] = ['forum_id' => $forumId, 'include_children' => $children];
+        }
+
+        return $assignments;
+    }
+
+    /**
+     * Moderiert, wer diese Zuordnungen hat, das Forum? Ja bei einer Zuordnung auf dem Forum selbst und bei einer Zuordnung auf einem
+     * Vorfahren mit `include_children` = 1 (genau die Zahl 1, sonst fail-closed). Einzige Stelle der Regel (Vertrag §3.7); `moderatorRows()`
+     * filtert seine Zeilen damit, die Mengen-API und der Moderationsbereich prüfen damit die Zuordnungen aus `moderatorAssignments()`.
+     *
+     * @param list<int> $ancestorIds Ergebnis von `ancestorIds($forumId)` (Forum und alle Vorfahren)
+     * @param list<array{forum_id: int, include_children: int}> $assignments Ergebnis von `moderatorAssignments()`
+     */
+    public static function moderates(array $ancestorIds, int $forumId, array $assignments): bool
+    {
+        $ancestors = array_flip(self::ids($ancestorIds));
+        foreach ($assignments as $assignment) {
+            $assigned = (int) ($assignment['forum_id'] ?? 0);
+            if ($assigned === $forumId || (isset($ancestors[$assigned]) && $assignment['include_children'] === 1)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Erhöht `version` der Foren um 1 und setzt `updated_at` (Cache der Listen, etwa nach Anheften oder Verschieben). IDs
+     * eindeutig und aufsteigend, je Anweisung höchstens 100; ohne gültige ID keine Anweisung. Unter einer Transaktion nur nach den
+     * Sperren der Foren (Vertrag DESIGN-2b §3.10).
+     *
+     * @param list<int> $ids
+     */
+    public function touch(array $ids, string $nowUtc): void
+    {
+        $ids = self::ids($ids);
+        sort($ids);
+        foreach (array_chunk($ids, self::TOUCH_CHUNK) as $chunk) {
+            $this->run(
+                'UPDATE ' . $this->table(self::TABLE) . ' SET version = version + 1, updated_at = ? WHERE id IN (' . self::placeholders(count($chunk)) . ')',
+                [$nowUtc, ...$chunk]
+            );
+        }
     }
 
     /**
@@ -569,6 +734,7 @@ final class ForumRepository extends AbstractRepository
                 $this->run("INSERT INTO {$table} (forum_id, subject_type, subject_key, permissions_json, updated_at) VALUES (?, ?, ?, ?, ?)", $params);
             }
         });
+        $this->permissionForums = null; // Foren mit Rechte-Zeilen neu lesen
     }
 
     /**

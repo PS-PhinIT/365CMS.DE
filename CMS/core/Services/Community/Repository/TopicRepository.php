@@ -5,8 +5,11 @@
  * - Schreibzugriffe laufen über `Database::execute()` und werfen bei Fehlern, damit eine umgebende Transaktion
  *   zurückrollt. Spalten kommen aus Allowlisten; unbekannte Spalten werfen `InvalidArgumentException`.
  * - Zeiten setzt der Aufrufer (UTC, `Y-m-d H:i:s`); dieses Repository hat keine Uhr.
- * - `reply_count` und `version` ändern sich nur atomar (`applyCounters()`, `bumpCounters()`, `update()`).
+ * - `reply_count`, `reaction_count` und `version` ändern sich nur atomar (`applyCounters()`, `bumpCounters()`, `bumpReactions()`,
+ *   `update()`).
  * - Listen sind Keyset-Listen (Zeit absteigend, ID als Tiebreaker), ohne Zeilenversatz: jede Zeile erscheint genau einmal.
+ * - Befristete Zustände (PR #2b): `expiredIds()` und `clearExpired()` nutzen je Art dieselbe Bedingung (EXPIRY); das Aufräumen
+ *   prüft sie erneut, damit eine inzwischen verlängerte Frist bleibt.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -37,6 +40,12 @@ final class TopicRepository extends AbstractRepository
      * etwas verliert (abgelaufene Pins gehören zum Strom).
      */
     public const MAX_PINNED = 50;
+    /** Höchstzahl der Ankündigungen je Abfrage (`listAnnouncements()`). */
+    public const MAX_ANNOUNCEMENTS = 20;
+    /** Höchstzahl der IDs je Aufruf von `expiredIds()` (Cron-Stapel). */
+    public const EXPIRE_MAX = 1000;
+    /** Höchstzahl der IDs je Anweisung (`IN (…)`); größere Mengen laufen in Stücken. */
+    public const CHUNK = 100;
 
     private const TABLE = 'community_topics';
     private const POSTS = 'community_posts';
@@ -59,6 +68,17 @@ final class TopicRepository extends AbstractRepository
 
     /** Status, die für Themen-Grenzen (je Stunde) zählen: nur gelöschte oder verschobene Themen geben den Platz frei. */
     private const COUNTED = ['published', 'pending', 'hidden'];
+
+    /**
+     * Abgelaufene befristete Zustände je Art: Bedingung (ein Parameter: jetzt, UTC), Sortierspalte und Zuweisung beim Aufräumen
+     * (`null` = Verweis-Thema löschen). Indizes `idx_community_topics_locked`, `idx_community_topics_pinned`, `idx_community_topics_moved`.
+     * Die Grenze ist einschließlich: eine Frist gleich „jetzt“ ist abgelaufen (wie `withEffectiveState()`).
+     */
+    private const EXPIRY = [
+        'lock' => ['is_locked = 1 AND locked_until IS NOT NULL AND locked_until <= ?', 'locked_until', 'is_locked = 0, locked_until = NULL'],
+        'pin' => ['is_pinned = 1 AND pinned_until IS NOT NULL AND pinned_until <= ?', 'pinned_until', 'is_pinned = 0, pinned_until = NULL'],
+        'moved' => ["status = 'moved' AND moved_expires_at IS NOT NULL AND moved_expires_at <= ?", 'moved_expires_at', null],
+    ];
 
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
@@ -253,6 +273,138 @@ final class TopicRepository extends AbstractRepository
     }
 
     /**
+     * Ankündigungen (PR #2b, G6): veröffentlichte Themen mit `is_announcement = 1` aus den genannten Foren, jüngste Aktivität zuerst
+     * (`idx_community_topics_announce`, `last_post_at` und der Primärschlüssel ordnen ohne Sortierschritt). Leere Forenliste: `[]`
+     * ohne Abfrage. `$limit` 1 bis MAX_ANNOUNCEMENTS. Zeilen wie die Rohzeilen von `listForum()` (alle Spalten); den wirksamen Zustand
+     * (`withEffectiveState()`) setzt der Dienst mit seiner Uhr. Welche Foren der Betrachter lesen darf, entscheidet der Aufrufer.
+     *
+     * @param array<array-key, mixed> $forumIds
+     * @return list<array<string, mixed>>
+     */
+    public function listAnnouncements(array $forumIds, int $limit = 10): array
+    {
+        $ids = self::ids($forumIds);
+        if ($ids === []) {
+            return [];
+        }
+        sort($ids);
+
+        return $this->fetchAll(
+            'SELECT * FROM ' . $this->table(self::TABLE) . " WHERE is_announcement = 1 AND status = 'published' AND forum_id IN ("
+            . self::placeholders(count($ids)) . ') ORDER BY last_post_at DESC, id DESC LIMIT ?',
+            [...$ids, max(1, min(self::MAX_ANNOUNCEMENTS, $limit))]
+        );
+    }
+
+    /**
+     * Wirksam angeheftete Themen eines Forums in allen Status, die ohne erneutes Anheften wieder veröffentlicht werden können
+     * (`published`, `pending`, `hidden`), für die Grenze MAX_PINNED beim Anheften (`idx_community_topics_forum_list`, Bereich).
+     */
+    public function countPinned(int $forumId, string $nowUtc): int
+    {
+        return (int) $this->fetchValue(
+            'SELECT COUNT(*) FROM ' . $this->table(self::TABLE)
+            . " WHERE forum_id = ? AND status IN ('published', 'pending', 'hidden') AND is_pinned = 1 AND (pinned_until IS NULL OR pinned_until > ?)",
+            [$forumId, $nowUtc]
+        );
+    }
+
+    /**
+     * Wirksame Verweis-Themen eines Forums (Status `moved`, `moved_expires_at` leer oder in der Zukunft), jüngste Aktivität zuerst
+     * (`idx_community_topics_forum_list`). `$limit` 1 bis MAX_LIMIT.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listMoved(int $forumId, string $nowUtc, int $limit = 20): array
+    {
+        return $this->fetchAll(
+            'SELECT * FROM ' . $this->table(self::TABLE) . " WHERE forum_id = ? AND status = 'moved' AND is_pinned = 0"
+            . ' AND (moved_expires_at IS NULL OR moved_expires_at > ?) ORDER BY last_post_at DESC, id DESC LIMIT ?',
+            [$forumId, $nowUtc, max(1, min(self::MAX_LIMIT, $limit))]
+        );
+    }
+
+    /**
+     * Verweis-Themen in `$forumId`, die auf `$topicId` zeigen (beim Zurückverschieben löscht der Dienst sie), aufsteigend
+     * (`idx_community_topics_forum_list`, sortiert in PHP: der Index ordnet nach `last_post_at`).
+     *
+     * @return list<int>
+     */
+    public function stubIdsFor(int $forumId, int $topicId): array
+    {
+        $ids = array_map('intval', array_column($this->fetchAll(
+            'SELECT id FROM ' . $this->table(self::TABLE) . " WHERE forum_id = ? AND status = 'moved' AND is_pinned = 0 AND moved_to_topic_id = ?",
+            [$forumId, $topicId]
+        ), 'id'));
+        sort($ids);
+
+        return $ids;
+    }
+
+    /** Löscht ein Verweis-Thema; jede andere Zeile bleibt (PRIMARY). Liefert `true`, wenn eine Zeile gelöscht wurde. */
+    public function deleteStub(int $id): bool
+    {
+        return $this->run('DELETE FROM ' . $this->table(self::TABLE) . " WHERE id = ? AND status = 'moved'", [$id]) === 1;
+    }
+
+    /**
+     * Themen, deren befristeter Zustand abgelaufen ist (Grenze einschließlich), früheste Frist zuerst. `$kind`: `lock`, `pin` oder
+     * `moved`; sonst `InvalidArgumentException`. `$limit` 1 bis EXPIRE_MAX.
+     *
+     * @return list<array{id: int, forum_id: int}>
+     */
+    public function expiredIds(string $kind, string $nowUtc, int $limit): array
+    {
+        [$condition, $order] = self::expiry($kind);
+        $rows = $this->fetchAll(
+            'SELECT id, forum_id FROM ' . $this->table(self::TABLE) . ' WHERE ' . $condition . ' ORDER BY ' . $order . ' ASC, id ASC LIMIT ?',
+            [$nowUtc, max(1, min(self::EXPIRE_MAX, $limit))]
+        );
+
+        return array_map(static fn (array $row): array => ['id' => (int) $row['id'], 'forum_id' => (int) $row['forum_id']], $rows);
+    }
+
+    /**
+     * Räumt abgelaufene Zustände der genannten Themen auf (Autocommit, je Stück eine Anweisung): `lock`/`pin` setzen Schalter und
+     * Frist zurück (`version + 1`, `updated_at`), `moved` löscht die Verweis-Themen. Die Bedingung wird erneut geprüft: eine
+     * inzwischen verlängerte Frist bleibt. Liefert die Zahl betroffener Zeilen; leere Liste: 0 ohne Anweisung.
+     *
+     * @param array<array-key, mixed> $ids
+     */
+    public function clearExpired(string $kind, array $ids, string $nowUtc): int
+    {
+        [$condition, , $assign] = self::expiry($kind);
+        $ids = self::ids($ids);
+        sort($ids);
+        $table = $this->table(self::TABLE);
+        $affected = 0;
+        foreach (array_chunk($ids, self::CHUNK) as $chunk) {
+            $in = 'id IN (' . self::placeholders(count($chunk)) . ')';
+            $affected += $assign === null
+                ? $this->run("DELETE FROM {$table} WHERE {$in} AND " . $condition, [...$chunk, $nowUtc])
+                : $this->run("UPDATE {$table} SET {$assign}, version = version + 1, updated_at = ? WHERE {$in} AND " . $condition, [$nowUtc, ...$chunk, $nowUtc]);
+        }
+
+        return $affected;
+    }
+
+    /**
+     * Reaktionszähler des Themas atomar ändern (nie unter 0) und `version` erhöhen (Cache der Listen). Mit `$nowUtc` auch
+     * `updated_at` (CounterBook beim Verschieben von Beiträgen).
+     */
+    public function bumpReactions(int $id, int $delta, ?string $nowUtc = null): void
+    {
+        $params = self::counterParams($delta);
+        $touch = '';
+        if ($nowUtc !== null) {
+            $touch = ', updated_at = ?';
+            $params[] = $nowUtc;
+        }
+        $params[] = $id;
+        $this->run('UPDATE ' . $this->table(self::TABLE) . ' SET ' . self::counter('reaction_count') . ', version = version + 1' . $touch . ' WHERE id = ?', $params);
+    }
+
+    /**
      * Doppeltes Absenden: ein Thema desselben Mitglieds im selben Forum seit `$sinceUtc` mit gleichem Titel (und, wenn
      * angegeben, gleichem Text des ersten Beitrags). Die Abfrage holt die zehn jüngsten Themen des Mitglieds im Fenster
      * (Index `idx_community_topics_user`, unabhängig von der Größe des Forums); Forum, Titel und Text werden exakt in PHP
@@ -368,6 +520,20 @@ final class TopicRepository extends AbstractRepository
         );
 
         return $row === null ? null : ['id' => (int) $row['id'], 'forum_id' => (int) $row['forum_id'], 'created_at' => (string) $row['created_at']];
+    }
+
+    /**
+     * Bedingung, Sortierspalte und Zuweisung einer Art aus EXPIRY.
+     *
+     * @return array{0: string, 1: string, 2: string|null}
+     */
+    private static function expiry(string $kind): array
+    {
+        if (!isset(self::EXPIRY[$kind])) {
+            throw new \InvalidArgumentException('Unbekannte Art befristeter Zustände: ' . $kind);
+        }
+
+        return self::EXPIRY[$kind];
     }
 
     /**

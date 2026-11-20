@@ -23,8 +23,13 @@
  *   CMS_TEST_MUTANTS=all CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/community-mutants/run.php   # mit MariaDB-Mutanten
  *
  * Umgebung: `CMS_TEST_MUTANTS` (quick|all), `CMS_TEST_MUTANT_JOBS` (parallele Prozesse, Standard Zahl der Kerne, 2 bis 6),
- * `CMS_TEST_MUTANT_TIMEOUT` (Sekunden je Mutante, Standard 180). Mutanten mit needsDb laufen nur mit CMS_TEST_DB_HOST und
- * CMS_TEST_DB_USER; alle anderen laufen mit leerer Datenbank-Umgebung (wie in der CI) und lassen die MariaDB-Fälle der Suiten aus.
+ * `CMS_TEST_MUTANT_TIMEOUT` (Sekunden je Mutante, Standard 180), `CMS_TEST_MUTANT_CATALOG` (nur diese Katalogdatei: Abnahme eines
+ * Umsetzers; die Zählregeln des ganzen Katalogs entfallen dann). Mutanten mit needsDb laufen nur mit CMS_TEST_DB_HOST und
+ * CMS_TEST_DB_USER, Mutanten mit `requires` nur mit den genannten PHP-Erweiterungen; alle anderen laufen mit leerer
+ * Datenbank-Umgebung (wie in der CI) und lassen die MariaDB-Fälle der Suiten aus.
+ *
+ * Suiten (PR #2b): jede `TESTS/community-<suite>/run.php` außer `community-mutants` und `community-settings` (`CM_SUITES` per glob).
+ * Die vier Suiten aus #2a brauchen je mindestens zehn Mutanten, jede weitere mindestens eine und davon eine in `quick`.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -39,13 +44,105 @@ require_once dirname(__DIR__) . '/lib/Mutant.php';
 T::$verbose = in_array('-v', $argv ?? [], true);
 
 const CM_ROOT = __DIR__ . '/../..';
-/** Suiten, gegen die Mutanten laufen (Suite => Skript). */
-const CM_SUITES = [
-    'community-repositories' => 'TESTS/community-repositories/run.php',
-    'community-access' => 'TESTS/community-access/run.php',
-    'community-content' => 'TESTS/community-content/run.php',
-    'community-db' => 'TESTS/community-db/run.php',
+
+/** Suiten aus #2a: je mindestens zehn Mutanten. */
+const CM_LEGACY_SUITES = ['community-repositories', 'community-access', 'community-content', 'community-db'];
+
+/** Suiten ohne Mutanten-Haken (`Mutant::load`) bzw. der Treiber selbst; sie stehen nie in CM_SUITES. */
+const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings'];
+
+/**
+ * Zieldateien außerhalb von `core/Services/Community/` (Vertrag DESIGN-2b §6 W0, GK2): die Core-Dateien, auf denen das Modul aufbaut
+ * und die PR #2b ändert. Jede andere Datei (z. B. `core/Services/SettingsService.php`) lehnt der Katalogtest ab.
+ */
+const CM_ALLOWED_CORE_FILES = [
+    'core/Hooks.php', 'core/Slug.php',
+    'core/Services/PurifierService.php', 'core/Services/NotificationService.php', 'core/Services/MailQueueService.php',
+    'core/Services/FeatureHooks/CommunityHooks.php',
 ];
+
+/**
+ * Suiten, gegen die Mutanten laufen (Suite => Skript, relativ zum Repository): `TESTS/community-<suite>/run.php` ohne CM_EXCLUDED_SUITES.
+ *
+ * @return array<string, string>
+ */
+function cmSuites(): array
+{
+    $suites = [];
+    foreach (glob(CM_ROOT . '/TESTS/community-*/run.php') ?: [] as $script) {
+        $name = basename(dirname($script));
+        if (!in_array($name, CM_EXCLUDED_SUITES, true)) {
+            $suites[$name] = 'TESTS/' . $name . '/run.php';
+        }
+    }
+    ksort($suites);
+
+    return $suites;
+}
+
+define('CM_SUITES', cmSuites());
+
+/** Darf eine Mutante diese Datei (relativ zu CMS/) ändern? Community-Code und CM_ALLOWED_CORE_FILES, nie mit `..`. */
+function cmFileAllowed(string $file): bool
+{
+    return !str_contains($file, '..') && (str_starts_with($file, 'core/Services/Community/') || in_array($file, CM_ALLOWED_CORE_FILES, true));
+}
+
+/**
+ * Probleme eines Katalogeintrags (leer = gültig): Name, Suite, Regel, needsDb, Zieldatei, Suchtext genau einmal, Ersatz, PHP-Syntax,
+ * env und requires.
+ *
+ * @param array{file: string, search: string, replace: string, suite: string, needsDb: bool, rule: string, quick: bool, env: array<string, string>, requires: list<string>} $entry
+ * @return list<string>
+ */
+function cmEntryProblems(string $name, array $entry): array
+{
+    $problems = [];
+    if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $name) !== 1) {
+        $problems[] = $name . ': Name nur aus Kleinbuchstaben, Ziffern und Bindestrichen';
+    }
+    if (!isset(CM_SUITES[$entry['suite']])) {
+        return [...$problems, $name . ': unbekannte Suite ' . $entry['suite']];
+    }
+    if ($entry['rule'] === '') {
+        $problems[] = $name . ': Regel fehlt';
+    }
+    if (($entry['suite'] === 'community-db') !== $entry['needsDb']) {
+        $problems[] = $name . ': needsDb muss genau für die Suite community-db gelten';
+    }
+    foreach (array_keys($entry['env']) as $variable) {
+        if (preg_match('/^CMS_TEST_[A-Z_]+$/', (string) $variable) !== 1) {
+            $problems[] = $name . ': env nur CMS_TEST_*-Variablen: ' . $variable;
+        }
+    }
+    foreach ($entry['requires'] as $extension) {
+        if (preg_match('/^[a-z0-9_]+$/', $extension) !== 1) {
+            $problems[] = $name . ': requires nennt nur Namen von PHP-Erweiterungen: ' . $extension;
+        }
+    }
+    if (!cmFileAllowed($entry['file'])) {
+        return [...$problems, $name . ': Datei liegt nicht unter core/Services/Community/ und nicht in der Allowlist (' . implode(', ', CM_ALLOWED_CORE_FILES) . '): ' . $entry['file']];
+    }
+    $path = Mutant::root() . $entry['file'];
+    if (!is_file($path)) {
+        return [...$problems, $name . ': Datei fehlt: ' . $entry['file']];
+    }
+    $text = (string) file_get_contents($path);
+    $hits = Mutant::occurrences($text, $entry['search']);
+    if ($hits !== 1) {
+        return [...$problems, $name . ': Suchtext kommt ' . $hits . 'x vor statt genau einmal in ' . $entry['file'] . ': ' . Mutant::excerpt($entry['search'])];
+    }
+    if ($entry['replace'] === $entry['search']) {
+        return [...$problems, $name . ': Ersatz ist gleich dem Suchtext (die Mutante ändert nichts)'];
+    }
+    try {
+        token_get_all((string) Mutant::mutate($text, $entry['search'], $entry['replace']), TOKEN_PARSE);
+    } catch (\ParseError $e) {
+        $problems[] = $name . ': die Mutante ist kein gültiges PHP: ' . $e->getMessage();
+    }
+
+    return $problems;
+}
 
 /** Ist eine echte Datenbank für die Mutanten mit needsDb konfiguriert? */
 function cmDbConfigured(): bool
@@ -151,8 +248,9 @@ $started = microtime(true);
 // ── Vorlauf: der Katalog selbst (ohne eine Suite zu starten) ──────────────────────────────────────────────────────────────
 
 T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, gültiges PHP, Suite, Regel', static function () use ($catalog): void {
+    $custom = (string) getenv('CMS_TEST_MUTANT_CATALOG') !== '';
     $source = '';
-    foreach (array_merge([__DIR__ . '/catalog.php'], glob(__DIR__ . '/catalog-*.php') ?: []) as $catalogFile) {
+    foreach (Mutant::catalogFiles() as $catalogFile) {
         $source .= (string) file_get_contents($catalogFile);
     }
     preg_match_all("/^    '([^']+)' => \\[/m", $source, $declared);
@@ -160,67 +258,65 @@ T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, 
     $duplicates = array_keys(array_filter(array_count_values($names), static fn (int $n): bool => $n > 1));
     T::same([], $duplicates, 'keine doppelten Namen (ein doppelter Schlüssel überschreibt im PHP-Array still den ersten)');
     T::same(count($names), count($catalog), 'jede Zeile des Katalogs ist ein Eintrag');
-    T::check(count($catalog) >= 60 && count($catalog) <= 250, 'der Katalog hat 60 bis 250 Mutanten', (string) count($catalog));
 
     $problems = [];
     $perSuite = array_fill_keys(array_keys(CM_SUITES), 0);
+    $quickPerSuite = array_fill_keys(array_keys(CM_SUITES), 0);
     $quick = 0;
     foreach ($catalog as $name => $entry) {
-        if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $name) !== 1) {
-            $problems[] = $name . ': Name nur aus Kleinbuchstaben, Ziffern und Bindestrichen';
+        array_push($problems, ...cmEntryProblems((string) $name, $entry));
+        if (isset($perSuite[$entry['suite']])) {
+            $perSuite[$entry['suite']]++;
+            $quickPerSuite[$entry['suite']] += $entry['quick'] ? 1 : 0;
         }
-        if (!isset(CM_SUITES[$entry['suite']])) {
-            $problems[] = $name . ': unbekannte Suite ' . $entry['suite'];
-            continue;
-        }
-        $perSuite[$entry['suite']]++;
         $quick += $entry['quick'] ? 1 : 0;
-        if ($entry['rule'] === '') {
-            $problems[] = $name . ': Regel fehlt';
-        }
-        if (($entry['suite'] === 'community-db') !== $entry['needsDb']) {
-            $problems[] = $name . ': needsDb muss genau für die Suite community-db gelten';
-        }
-        // Community-Klassen und die zwei Core-Dateien, auf denen sie aufbauen (Hooks: Filterkette und isolierte Verbraucher).
-        if ((!str_starts_with($entry['file'], 'core/Services/Community/') && !in_array($entry['file'], ['core/Hooks.php', 'core/Slug.php'], true)) || str_contains($entry['file'], '..')) {
-            $problems[] = $name . ': Datei liegt nicht unter core/Services/Community/ (oder core/Hooks.php, core/Slug.php)';
-            continue;
-        }
-        $path = Mutant::root() . $entry['file'];
-        if (!is_file($path)) {
-            $problems[] = $name . ': Datei fehlt: ' . $entry['file'];
-            continue;
-        }
-        $text = (string) file_get_contents($path);
-        $hits = Mutant::occurrences($text, $entry['search']);
-        if ($hits !== 1) {
-            $problems[] = $name . ': Suchtext kommt ' . $hits . 'x vor statt genau einmal in ' . $entry['file'] . ': ' . Mutant::excerpt($entry['search']);
-            continue;
-        }
-        if ($entry['replace'] === $entry['search']) {
-            $problems[] = $name . ': Ersatz ist gleich dem Suchtext (die Mutante ändert nichts)';
-            continue;
-        }
-        try {
-            token_get_all((string) Mutant::mutate($text, $entry['search'], $entry['replace']), TOKEN_PARSE);
-        } catch (\ParseError $e) {
-            $problems[] = $name . ': die Mutante ist kein gültiges PHP: ' . $e->getMessage();
-        }
-        foreach (array_keys($entry['env']) as $variable) {
-            if (preg_match('/^CMS_TEST_[A-Z_]+$/', (string) $variable) !== 1) {
-                $problems[] = $name . ': env nur CMS_TEST_*-Variablen: ' . $variable;
-            }
-        }
     }
-    T::same([], $problems, 'Katalog gültig (Dateien, Suchtexte genau einmal, Ersatz, PHP-Syntax, Suite, Regel, env)');
-    T::check(min($perSuite) >= 10, 'jede Suite hat mindestens zehn Mutanten', json_encode($perSuite));
-    T::check($quick >= 25 && $quick < count($catalog), 'die Teilmenge quick hat mindestens 25 Mutanten und ist kleiner als der Katalog', (string) $quick);
-    $quickSuites = array_unique(array_map(static fn (array $e): string => $e['suite'], array_filter($catalog, static fn (array $e): bool => $e['quick'])));
-    sort($quickSuites);
-    $suites = array_keys(CM_SUITES);
-    sort($suites);
-    T::same($suites, $quickSuites, 'quick enthält Mutanten jeder Suite');
+    T::same([], $problems, 'Katalog gültig (Dateien, Suchtexte genau einmal, Ersatz, PHP-Syntax, Suite, Regel, env, requires)');
+    T::same(CM_LEGACY_SUITES, array_values(array_intersect(CM_LEGACY_SUITES, array_keys(CM_SUITES))), 'CM_SUITES enthält die vier Suiten aus #2a');
+    T::same([], array_values(array_intersect(CM_EXCLUDED_SUITES, array_keys(CM_SUITES))), 'community-mutants und community-settings stehen nicht in CM_SUITES');
+    if ($custom) {
+        T::info('eigener Katalog (' . basename((string) getenv('CMS_TEST_MUTANT_CATALOG')) . '): Zählregeln des ganzen Katalogs entfallen; ' . count($catalog) . ' Mutanten, davon quick: ' . $quick);
+    } else {
+        T::check(count($catalog) >= 60 && count($catalog) <= 600, 'der Katalog hat 60 bis 600 Mutanten', (string) count($catalog));
+        $legacy = array_intersect_key($perSuite, array_flip(CM_LEGACY_SUITES));
+        T::check(min($legacy) >= 10, 'jede Suite aus #2a hat mindestens zehn Mutanten', json_encode($legacy));
+        T::same([], array_keys(array_filter($perSuite, static fn (int $n): bool => $n < 1)), 'jede Suite in CM_SUITES hat mindestens eine Mutante', json_encode($perSuite));
+        T::same([], array_keys(array_filter($quickPerSuite, static fn (int $n): bool => $n < 1)), 'jede Suite in CM_SUITES hat mindestens eine Mutante in quick', json_encode($quickPerSuite));
+        T::check($quick >= 25 && $quick < count($catalog), 'die Teilmenge quick hat mindestens 25 Mutanten und ist kleiner als der Katalog', (string) $quick);
+    }
     T::info(count($catalog) . ' Mutanten: ' . json_encode($perSuite) . ', davon quick: ' . $quick);
+});
+
+T::run('Katalog: Allowlist der Zieldateien, requires und Suiten per glob (Gegenproben)', static function (): void {
+    $entry = static fn (string $file, string $search, string $suite = 'community-access', array $requires = []): array => [
+        'file' => $file, 'search' => $search, 'replace' => $search . ' ', 'suite' => $suite, 'needsDb' => $suite === 'community-db',
+        'rule' => 'Gegenprobe', 'quick' => false, 'env' => [], 'requires' => $requires,
+    ];
+    $namespace = 'namespace CMS\\Services;';
+    T::same([1, 1], [Mutant::occurrences((string) file_get_contents(Mutant::root() . 'core/Services/SettingsService.php'), $namespace), Mutant::occurrences((string) file_get_contents(Mutant::root() . 'core/Services/PurifierService.php'), $namespace)], 'Voraussetzung: derselbe Suchtext kommt in SettingsService.php und PurifierService.php genau einmal vor');
+    $probe = cmEntryProblems('selftest-settings-service', $entry('core/Services/SettingsService.php', $namespace));
+    T::check($probe !== [] && str_contains($probe[0], 'Allowlist'), 'eine Mutante auf core/Services/SettingsService.php bleibt abgelehnt', implode(' | ', $probe));
+    T::check(cmEntryProblems('selftest-escape', $entry('core/Services/Community/../SettingsService.php', $namespace)) !== [], 'ein Pfad mit .. bleibt abgelehnt');
+    foreach (CM_ALLOWED_CORE_FILES as $file) {
+        T::check(cmFileAllowed($file), 'Allowlist: ' . $file);
+    }
+    foreach (['core/Services/SettingsService.php', 'core/Database.php', 'core/Services/Community', 'core/Services/FeatureHooks/Registry.php', 'core/Services/PurifierService.php.bak'] as $file) {
+        T::check(!cmFileAllowed($file), 'nicht erlaubt: ' . $file);
+    }
+    T::same([], cmEntryProblems('selftest-purifier', $entry('core/Services/PurifierService.php', $namespace)), 'eine gültige Mutante auf PurifierService.php ist erlaubt');
+    T::check(cmEntryProblems('selftest-requires', $entry('core/Services/PurifierService.php', $namespace, 'community-access', ['GD Lib'])) !== [], 'requires mit ungültigem Erweiterungsnamen wird abgelehnt');
+    T::same([], Mutant::missingExtensions(['requires' => ['json', 'pcre']]), 'requires: vorhandene Erweiterungen fehlen nicht');
+    T::same(['gibt_es_nicht'], Mutant::missingExtensions(['requires' => ['json', 'gibt_es_nicht']]), 'requires: fehlende Erweiterung wird genannt (Mutante wird übersprungen)');
+    $file = (string) tempnam(sys_get_temp_dir(), 'cms-mutant-catalog-');
+    file_put_contents($file, '<?php return ' . var_export(['selftest-requires-field' => ['core/Hooks.php', 'x', 'y', 'community-access', false, 'r', false, [], ['gd']]], true) . ';');
+    $code = 'putenv("CMS_TEST_MUTANT_CATALOG=" . ' . var_export($file, true) . '); require ' . var_export(dirname(__DIR__) . '/lib/Mutant.php', true) . '; echo json_encode(Mutant::catalog()["selftest-requires-field"]["requires"]);';
+    $out = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code));
+    unlink($file);
+    T::same('["gd"]', trim($out), 'Mutant::catalog() liest Feld 8 (requires)');
+    T::same(cmSuites(), CM_SUITES, 'CM_SUITES ist die glob-Liste');
+    foreach (CM_SUITES as $suite => $script) {
+        T::check(is_file(CM_ROOT . '/' . $script) && str_contains((string) file_get_contents(CM_ROOT . '/' . $script), 'Mutant::load('), $suite . ': Suite lädt ihre Klassen über Mutant::load');
+    }
 });
 
 T::run('Gegenprobe der Gegenprobe: ein harmloser Mutant überlebt (Exit 0), ein veralteter und ein nie angewendeter ergeben Exit 99', static function (): void {
@@ -263,6 +359,7 @@ T::run('Gegenprobe (' . $mode . '): jede Mutante lässt ihre Suite scheitern (Ex
     $db = cmDbConfigured();
     $selected = [];
     $skipped = [];
+    $withoutExtension = [];
     foreach ($catalog as $name => $entry) {
         if ($mode === 'quick' && !$entry['quick']) {
             continue;
@@ -271,11 +368,20 @@ T::run('Gegenprobe (' . $mode . '): jede Mutante lässt ihre Suite scheitern (Ex
             $skipped[] = $name;
             continue;
         }
+        $missing = Mutant::missingExtensions($entry);
+        if ($missing !== []) {
+            $withoutExtension[] = $name . ' (' . implode(', ', $missing) . ')';
+            continue;
+        }
         $selected[$name] = $entry;
     }
     if ($skipped !== []) {
         T::info('übersprungen (brauchen CMS_TEST_DB_HOST/CMS_TEST_DB_USER und pdo_mysql): ' . implode(', ', $skipped));
         echo '  Hinweis: ' . count($skipped) . ' Mutanten der MariaDB-Suite übersprungen (CMS_TEST_DB_HOST/CMS_TEST_DB_USER nicht gesetzt)' . PHP_EOL;
+    }
+    if ($withoutExtension !== []) {
+        T::info('übersprungen (PHP-Erweiterung fehlt): ' . implode(', ', $withoutExtension));
+        echo '  Hinweis: ' . count($withoutExtension) . ' Mutanten übersprungen (PHP-Erweiterung fehlt)' . PHP_EOL;
     }
     $timeout = max(10, (int) (getenv('CMS_TEST_MUTANT_TIMEOUT') ?: 180));
     $parallel = cmParallel();

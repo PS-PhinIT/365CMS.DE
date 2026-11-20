@@ -12,7 +12,8 @@
  * (Kopie des Codes: ensureFeatureSchema() legt ihn an, auch auf einer im selben Lauf nachgetragenen Spalte). Nach Neuinstallation
  * und jedem Update ist jeder Index aus REQUIRED_INDEXES vorhanden.
  *
- * Optional: läuft nur mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER (Recht CREATE/DROP DATABASE), sonst Hinweis.
+ * Optional: läuft nur mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER (Recht CREATE/DROP DATABASE), sonst Hinweis. Datenbanken heißen
+ * `cmsup<pid>_…` bzw. mit CMS_TEST_DB_PREFIX `<präfix><pid>_…`; aufgeräumt werden am Ende nur die mit diesem Anfang.
  *   CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-upgrade/run.php [-v]
  * Optional CMS_TEST_SQL_MODE (z. B. MySQL-8-Standard mit ONLY_FULL_GROUP_BY) für die Sitzungen der Prüfung.
  */
@@ -21,6 +22,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
 require_once dirname(__DIR__) . '/schema-v27/lib.php';
+require_once dirname(__DIR__) . '/lib/TestDatabasePrefix.php';
 T::$verbose = in_array('-v', $argv ?? [], true);
 
 $repo = dirname(__DIR__, 2);
@@ -39,7 +41,7 @@ $pdo = new PDO('mysql:host=' . $host . ';charset=utf8mb4', $user, $pass, [PDO::A
 // Zielmarke = Stand des Codes (Release 4.2.0, Entwicklungsstand: v27); Ausgangsstände sind die ausgelieferten Pakete.
 $target = preg_match("/public const SCHEMA_VERSION = '(v\d+)';/", (string) file_get_contents($repo . '/CMS/core/SchemaManager.php'), $targetMatch) === 1 ? $targetMatch[1] : 'v?';
 $tmp = sys_get_temp_dir() . '/cms-schema-upgrade-' . getmypid();
-$prefix = 'cmsup' . getmypid() . '_';
+$prefix = TestDatabasePrefix::resolve('cmsup') . getmypid() . '_';
 
 $copyTree = static function (string $from, string $to): void {
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($from, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);

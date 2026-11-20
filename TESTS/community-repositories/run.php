@@ -8,6 +8,8 @@
  * Mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER laufen dieselben Abläufe zusätzlich gegen eine echte MariaDB (frische Datenbank
  * `pr2a_*` je Ablauf, Sitzungszone +01:00), dazu die Fälle, die nur dort gelten (UTC-Werte bei Ortszeit der Sitzung, UNIQUE 1062).
  *
+ * Teildateien `part-*.php` (je Repository-Gruppe ein Besitzer, PR #2b) lädt die Suite am Ende vor `T::finish()`.
+ *
  *   php TESTS/community-repositories/run.php [-v]
  *   CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/community-repositories/run.php [-v]
  */
@@ -837,7 +839,8 @@ function rScenarioPosts(Database $db): void
     T::same(['hidden', 'Test', rt(5)], [$row['status'], $row['status_reason'], $row['updated_at']], 'update schreibt die Spalten');
     T::same(false, $repo->update($id, []), 'update ohne Spalten → false');
     T::same(false, $repo->update(99999, ['status' => 'hidden']), 'update: unbekannte ID → false');
-    foreach (['user_id', 'edit_count', 'created_at', 'id'] as $column) {
+    // Text und Cache nur über insert(), applyEdit(), storeRendered() und clearRendered() (PR #2b: Wächter des Nachrenderns).
+    foreach (['user_id', 'edit_count', 'created_at', 'id', 'body', 'body_html', 'rendered_version', 'ip_hash'] as $column) {
         try {
             $repo->update($id, [$column => 1]);
             T::check(false, "update lehnt Spalte {$column} ab");
@@ -2395,7 +2398,10 @@ T::run('Quelltext-Wächter: Repository-Code ohne Zeit, Dialekt und Schreibhelfer
     $files = glob(ABSPATH . 'core/Services/Community/Repository/*.php') ?: [];
     sort($files);
     $names = array_map('basename', $files);
-    T::same(['AbstractRepository.php', 'BanRepository.php', 'CategoryRepository.php', 'ForumRepository.php', 'MemberRepository.php', 'PostRepository.php', 'ReadStateRepository.php', 'TopicRepository.php', 'UserStatsRepository.php'], $names, 'alle neun Repository-Dateien sind vorhanden');
+    // PR #2b ergänzt Repositories (ModerationLogRepository, ReportRepository, …); jede Datei im Ordner durchläuft die Prüfungen unten.
+    $required = ['AbstractRepository.php', 'BanRepository.php', 'CategoryRepository.php', 'ForumRepository.php', 'MemberRepository.php', 'ModerationLogRepository.php', 'PostRepository.php', 'ReadStateRepository.php', 'ReportRepository.php', 'TopicRepository.php', 'UserStatsRepository.php'];
+    T::same([], array_values(array_diff($required, $names)), 'alle Repository-Dateien aus PR #2a und W1 (B1, B2) sind vorhanden');
+    T::same([], array_values(array_filter($names, static fn (string $name): bool => preg_match('/^[A-Z][A-Za-z]*Repository\.php$/', $name) !== 1)), 'im Ordner liegen nur Repository-Klassen (flach, Vertrag DESIGN-2b §1 Nr. 7)');
 
     $selfTest = rSourceViolations("<?php\n\$x = 'SELECT NOW()'; \$y = date('Y'); \$z = \$this->db->insert('t', []); \$q = 'LIMIT 5 OFFSET 2'; \$u = 'ON DUPLICATE KEY UPDATE'; \$g = 'GREATEST(a,b)'; \$t = time(); \$c = 'CURRENT_TIMESTAMP';");
     T::check(count($selfTest) >= 8 && in_array('NOW()', $selfTest, true) && in_array('date()', $selfTest, true) && in_array('Database::insert/update/delete', $selfTest, true), 'Gegenprobe: der Wächter erkennt einen absichtlich schlechten Quelltext', implode(', ', $selfTest));
@@ -2477,8 +2483,9 @@ if (MariaDbTestDatabase::configured()) {
             T::check($topics->update($topic, ['title' => 'X']), 'TopicRepository::update: auch ohne geänderten Wert true (version)');
             $posts = new PostRepository($db);
             $post = $posts->insert(['topic_id' => $topic, 'forum_id' => $forum, 'user_id' => $user, 'body' => 'a', 'created_at' => rt(), 'updated_at' => rt()]);
-            T::same(false, $posts->update($post, ['body' => 'a']), 'PostRepository::update ohne geänderten Wert: false (keine Versionsspalte, MariaDB zählt Änderungen)');
-            T::same(true, $posts->update($post, ['body' => 'b']), 'PostRepository::update mit Änderung: true');
+            $posts->update($post, ['status_reason' => 'a']);
+            T::same(false, $posts->update($post, ['status_reason' => 'a']), 'PostRepository::update ohne geänderten Wert: false (keine Versionsspalte, MariaDB zählt Änderungen)');
+            T::same(true, $posts->update($post, ['status_reason' => 'b']), 'PostRepository::update mit Änderung: true');
 
             $reads = new ReadStateRepository($db);
             $raw = static fn (string $sql, array $p): int => $db->execute($sql, $p)->rowCount();
@@ -2489,6 +2496,11 @@ if (MariaDbTestDatabase::configured()) {
             $db->dispose();
         }
     });
+}
+
+// Teildateien je Repository-Gruppe (Vertrag DESIGN-2b §1 Nr. 6; je Datei genau ein Besitzer), alphabetisch.
+foreach (glob(__DIR__ . '/part-*.php') ?: [] as $part) {
+    require $part;
 }
 
 T::finish();

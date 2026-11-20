@@ -48,6 +48,12 @@ final class Codes
         'slow_mode' => 429,
         'rate_limited' => 429,
         'filter_denied' => 403,
+        // PR #2b: Inhaltsgrenzen der Vertrauensstufe, Bearbeiten mit Prüfpflicht, ungeeignetes Ziel einer Moderationsaktion
+        'too_many_links' => 422,
+        'too_many_images' => 422,
+        'too_many_attachments' => 422,
+        'content_review' => 422,
+        'invalid_target' => 422,
     ];
 
     /**
@@ -72,6 +78,17 @@ final class Codes
         'slug_taken',
         'forum_depth',
         'db_error',
+        // PR #2b (Vertrag DESIGN-2b §3.2), je Gruppe der erzeugende Dienst
+        'render_failed',                                                        // RenderService, TopicService, PostService
+        'word_blocked', 'spam_rejected',                                        // ContentGuard
+        'pin_limit', 'reason_required', 'invalid_state', 'bulk_limit',          // ModerationService (reason_required auch BanService)
+        'member_not_found', 'ban_forbidden', 'ban_duration', 'already_banned', 'ban_not_found', // BanService
+        'message_required', 'not_reportable', 'report_not_found', 'report_closed', // ReportService
+        'reaction_unknown',                                                     // ReactionService
+        'invalid_token',                                                        // SubscriptionService
+        'attachment_invalid', 'attachment_too_large', 'attachment_type', 'attachment_image', 'attachment_dimensions',
+        'attachment_limit', 'attachment_not_found', 'storage_error',            // AttachmentService
+        'query_too_short',                                                      // CommunitySearch
     ];
 
     /** Sprachschlüssel eines Ablehnungsgrundes. */

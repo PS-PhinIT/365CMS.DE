@@ -8,6 +8,9 @@
  * (falls ein paralleler Aufruf die Zeile zwischen den Schritten mit einem kleineren Wert angelegt hat). Wiederbesuche
  * ohne neue Beiträge schreiben nichts. Beide Tabellen haben einen zusammengesetzten Schlüssel ohne AUTO_INCREMENT.
  *
+ * Mengenabfragen für die Zustellung (PR #2b): `forUsers()` (Lesestatus mehrerer Mitglieder in einem Thema) und `latestMarksFor()`
+ * (jüngste Marke je Mitglied über eine Forenkette), je Stück von höchstens 100 Mitgliedern eine Abfrage.
+ *
  * @package CMSv2\Core\Services\Community
  */
 
@@ -28,6 +31,9 @@ final class ReadStateRepository extends AbstractRepository
 
     /** Obergrenze für IDs je Abfrage (Platzhalter in `IN (…)`). */
     private const MAX_IDS = 500;
+
+    /** Mitglieder je Mengenabfrage (`forUsers()`, `latestMarksFor()`). */
+    private const USER_CHUNK = 100;
 
     /**
      * Setzt die zuletzt gelesene Beitrags-ID eines Themas, aber nur nach oben. Liefert `true`, wenn die Marke angelegt oder
@@ -78,6 +84,61 @@ final class ReadStateRepository extends AbstractRepository
         foreach ($rows as $row) {
             $map[(int) $row['topic_id']] = (int) $row['last_read_post_id'];
         }
+
+        return $map;
+    }
+
+    /**
+     * Lesestatus mehrerer Mitglieder in einem Thema (Empfänger eines Stapels: „schon gelesen“ und Tor der Themen-Abos). Mitglieder ohne
+     * Zeile fehlen; aufsteigend. Je Stück von höchstens USER_CHUNK Mitgliedern eine Abfrage über `idx_community_read_states_topic`.
+     *
+     * @param array<array-key, mixed> $userIds
+     * @return array<int, array{last_read_post_id: int, updated_at: string}>
+     */
+    public function forUsers(int $topicId, array $userIds): array
+    {
+        if ($topicId < 1) {
+            return [];
+        }
+        $map = [];
+        foreach (self::userBatches($userIds) as $batch) {
+            $rows = $this->fetchAll(
+                'SELECT user_id, last_read_post_id, updated_at FROM ' . $this->table(self::STATES)
+                . ' WHERE topic_id = ? AND user_id IN (' . self::placeholders(count($batch)) . ') ORDER BY user_id ASC',
+                [$topicId, ...$batch]
+            );
+            foreach ($rows as $row) {
+                $map[(int) $row['user_id']] = ['last_read_post_id' => (int) $row['last_read_post_id'], 'updated_at' => (string) $row['updated_at']];
+            }
+        }
+        ksort($map);
+
+        return $map;
+    }
+
+    /**
+     * Jüngste Marke „alles gelesen“ je Mitglied über die angegebenen Foren (Forum und Vorfahren) und immer über `0` (gesamte
+     * Community). Mitglieder ohne Marke fehlen; aufsteigend. Je Stück von höchstens USER_CHUNK Mitgliedern eine Abfrage über PRIMARY.
+     *
+     * @param array<array-key, mixed> $userIds
+     * @param list<int> $forumIds
+     * @return array<int, string> Mitglied => Zeitpunkt UTC
+     */
+    public function latestMarksFor(array $userIds, array $forumIds): array
+    {
+        $chain = [0, ...array_slice(self::ids($forumIds), 0, self::MAX_IDS)];
+        $map = [];
+        foreach (self::userBatches($userIds) as $batch) {
+            $rows = $this->fetchAll(
+                'SELECT user_id, MAX(marked_at) AS marked_at FROM ' . $this->table(self::MARKS) . ' WHERE user_id IN (' . self::placeholders(count($batch)) . ')'
+                . ' AND forum_id IN (' . self::placeholders(count($chain)) . ') GROUP BY user_id',
+                [...$batch, ...$chain]
+            );
+            foreach ($rows as $row) {
+                $map[(int) $row['user_id']] = (string) $row['marked_at'];
+            }
+        }
+        ksort($map);
 
         return $map;
     }
@@ -180,5 +241,19 @@ final class ReadStateRepository extends AbstractRepository
             . " AND t.status = 'published' AND t.is_pinned IN (0, 1) AND t.last_post_at > ? AND (rs.last_read_post_id IS NULL OR rs.last_read_post_id < t.last_post_id) LIMIT ?) unread",
             [$userId, ...$forumIds, $sinceUtc, max(1, $cap)]
         );
+    }
+
+    /**
+     * Mitglieder-IDs eindeutig, aufsteigend, in Stücken zu höchstens USER_CHUNK.
+     *
+     * @param array<array-key, mixed> $userIds
+     * @return list<list<int>>
+     */
+    private static function userBatches(array $userIds): array
+    {
+        $ids = self::ids($userIds);
+        sort($ids, SORT_NUMERIC);
+
+        return array_chunk($ids, self::USER_CHUNK);
     }
 }
