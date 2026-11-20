@@ -196,8 +196,13 @@ T::run('Die 27 Tabellen', static function () use ($queries, $migrationSource, $s
     T::check(str_contains($migrationSource, 'array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27)'), 'Update legt die v27-Tabellen über dieselben Definitionen an');
     T::check(str_contains($schemaSource, 'array_merge(self::FEATURE_TABLES, self::FEATURE_TABLES_V26, self::FEATURE_TABLES_V27)'), 'Laufzeitprüfung legt die v27-Tabellen über dieselben Definitionen an');
     T::check(str_contains($schemaSource, 'FEATURE_TABLES_V27 = ['), 'Liste ist eine Konstante des SchemaManagers');
-    // v27 ändert keine bestehende Tabelle: keine ALTER-Schritte für die Community im Update.
-    T::check(!preg_match('/ALTER TABLE[^\n]*community_/i', $migrationSource . $schemaSource), 'keine ALTER-Schritte: die Tabellen entstehen vollständig über CREATE');
+    // Das Update von v26 legt die Community-Tabellen vollständig über CREATE an: kein ALTER im MigrationManager. Die Laufzeitprüfung
+    // hat genau die ALTER-Schritte für die Nachträge nach PR #1 (Entwicklungsinstallationen, Abschnitt „Nachträge nach PR #1“).
+    T::check(!preg_match('/ALTER TABLE[^\n]*community_/i', $migrationSource), 'MigrationManager: keine ALTER-Schritte für community_* (die Tabellen entstehen vollständig über CREATE)');
+    preg_match_all('/"ALTER TABLE[^"\n]*community_[^"\n]*"/', $schemaSource, $alters);
+    T::same([
+        '"ALTER TABLE {$this->prefix}community_badges ADD COLUMN description_en VARCHAR(255) NULL AFTER description"',
+    ], $alters[0], 'SchemaManager: ALTER-Schritte für community_* nur für die Nachträge nach PR #1 (Indizes über REQUIRED_INDEXES und ensureRequiredIndexes())');
 });
 
 T::run('Strict-Mode: keine NOT-NULL-Spalte ohne Default', static function () use ($queries): void {
@@ -269,6 +274,9 @@ T::run('Indizes', static function () use ($queries): void {
             'idx_community_topics_unanswered' => ['forum_id', 'status', 'reply_count', 'created_at'],
             'idx_community_topics_activity' => ['status', 'last_post_at'],
             'idx_community_topics_user' => ['user_id', 'status', 'created_at'],
+            // Nachträge nach PR #1: globale Liste „Unbeantwortet“ und Filter „ungelöst“ (HANDOFF §2 Nr. 9 und 10).
+            'idx_community_topics_unanswered_all' => ['status', 'reply_count', 'created_at'],
+            'idx_community_topics_solved' => ['solved_at', 'forum_id', 'status', 'is_pinned', 'last_post_at'],
         ],
         'community_posts' => [
             'idx_community_posts_topic' => ['topic_id', 'status', 'id'],
@@ -294,6 +302,21 @@ T::run('Indizes', static function () use ($queries): void {
             T::same($columns, $indexes[$name]['columns'] ?? null, "{$table}.{$name}");
         }
     }
+    // Kein zweiter Index beginnt wie idx_community_topics_forum_list mit (forum_id, status, is_pinned): Mit einem solchen Index
+    // (idx_community_topics_solved in der ersten Form des Nachlaufs) wählte MariaDB 10.11 für Forenliste und lastPublished() je nach
+    // Schätzung idx_community_topics_activity und las in einem großen älteren Forum die jüngeren Themen aller Foren mit
+    // (HANDOFF §2 Nr. 9). Ob der Optimierer ausweicht, hängt vom Seitenlayout ab; die Regeln prüfen deshalb die Definition.
+    $topicIndexDefinitions = v27Indexes((string) $queries['community_topics']);
+    $sharing = array_keys(array_filter($topicIndexDefinitions, static fn (array $index): bool => array_slice($index['columns'], 0, 3) === ['forum_id', 'status', 'is_pinned']));
+    T::same(['idx_community_topics_forum_list'], $sharing, 'community_topics: nur idx_community_topics_forum_list beginnt mit (forum_id, status, is_pinned)');
+    // Außer idx_community_topics_forum_list überdeckt kein Index, der mit forum_id beginnt, die ID-Abfrage des Stroms von listForum()
+    // (forum_id, status, is_pinned, last_post_at): Mit idx_community_topics_solved in der zweiten Form (forum_id, solved_at, status,
+    // is_pinned, last_post_at) nahm MariaDB 10.11 in kleinen Foren (30 bis 1200 Themen) auf Folgeseiten ref über forum_id mit
+    // Filesort und las das ganze Forum (800 Themen: 801 statt 12 Lesezugriffe). Seit dem Nachlauf beginnt er mit solved_at.
+    $streamColumns = ['forum_id', 'status', 'is_pinned', 'last_post_at'];
+    $covering = array_keys(array_filter($topicIndexDefinitions, static fn (array $index): bool => ($index['columns'][0] ?? null) === 'forum_id' && array_diff($streamColumns, $index['columns']) === []));
+    T::same(['idx_community_topics_forum_list'], $covering, 'community_topics: nur idx_community_topics_forum_list beginnt mit forum_id und überdeckt die ID-Abfrage des Stroms (forum_id, status, is_pinned, last_post_at)');
+    T::same('solved_at', $topicIndexDefinitions['idx_community_topics_solved']['columns'][0] ?? null, 'idx_community_topics_solved beginnt mit solved_at (nur Abfragen mit Bedingung auf solved_at können ihn nutzen)');
     foreach (['community_forums' => 'uq_community_forums_slug', 'community_polls' => 'uq_community_polls_topic', 'community_badges' => 'uq_community_badges_slug', 'community_forum_permissions' => 'uq_community_forum_permissions_subject'] as $table => $name) {
         T::check(v27Indexes((string) $queries[$table])[$name]['unique'] ?? false, "{$table}.{$name} ist eindeutig");
     }
@@ -337,7 +360,7 @@ T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku
         T::same($expected['primary'], $doc['primary'], "HANDOFF {$table}: Primärschlüssel entspricht dem Snapshot");
         T::same($expected['indexes'], $doc['indexes'], "HANDOFF {$table}: Indextabelle entspricht dem Snapshot (Name, Art, Spalten)");
     }
-    T::same(62, $totalIndexes, 'insgesamt 62 Nicht-Primär-Indizes in den 27 Tabellen');
+    T::same(64, $totalIndexes, 'insgesamt 64 Nicht-Primär-Indizes in den 27 Tabellen (62 aus PR #1, zwei Nachträge an community_topics)');
 });
 
 T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void {
@@ -355,7 +378,8 @@ T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void 
     foreach (V27_TABLES as $table) {
         $total += count(v27Columns((string) $queries[$table]));
     }
-    T::same(268, $total, 'insgesamt 268 Spalten in den 27 Tabellen');
+    T::same(['id', 'slug', 'title', 'title_en', 'description', 'description_en', 'icon', 'tier', 'rule_json', 'is_active'], array_keys(v27Columns((string) $queries['community_badges'])), 'community_badges: Spalten und Reihenfolge (description_en nach description, wie title_en nach title)');
+    T::same(269, $total, 'insgesamt 269 Spalten in den 27 Tabellen (268 aus PR #1, dazu community_badges.description_en)');
 });
 
 T::run('Core-Tabelle notifications: Gruppenschlüssel und Zähler (Bündelung)', static function () use ($queries, $migrationSource, $schemaSource): void {
@@ -363,16 +387,91 @@ T::run('Core-Tabelle notifications: Gruppenschlüssel und Zähler (Bündelung)',
     T::check(preg_match('/\n\s+group_key VARCHAR\(120\) DEFAULT NULL/', $sql) === 1, 'notifications.group_key in der Neuinstallation (eigene Zeile)');
     T::check(preg_match('/\n\s+event_count INT UNSIGNED NOT NULL DEFAULT 1/', $sql) === 1, 'notifications.event_count in der Neuinstallation (NOT NULL mit Default)');
     T::check(str_contains($sql, 'INDEX idx_user_group (user_id, group_key, is_read)'), 'Index idx_user_group (user_id, group_key, is_read): ungelesener Hinweis eines Mitglieds mit Gruppenschlüssel');
-    T::check(str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD COLUMN `group_key` VARCHAR(120) DEFAULT NULL')
-        && str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD COLUMN `event_count` INT UNSIGNED NOT NULL DEFAULT 1')
-        && str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD INDEX `idx_user_group` (`user_id`, `group_key`, `is_read`)'), 'Update ergänzt Spalten und Index (Bestandszeilen: kein Schlüssel, Zähler 1)');
-    T::check(str_contains($schemaSource, 'ALTER TABLE {$this->prefix}notifications ADD COLUMN group_key VARCHAR(120) DEFAULT NULL')
-        && str_contains($schemaSource, 'ALTER TABLE {$this->prefix}notifications ADD COLUMN event_count INT UNSIGNED NOT NULL DEFAULT 1')
-        && str_contains($schemaSource, 'ALTER TABLE {$this->prefix}notifications ADD INDEX idx_user_group (user_id, group_key, is_read)'), 'Laufzeitprüfung ergänzt Spalten und Index');
+    // Update und Laufzeitprüfung nutzen die Definition aus dem CREATE (mit Kommentar). group_key erhält im ALTER zusätzlich eine
+    // ausdrückliche Kollation (ADD COLUMN erbt sonst die der Tabelle, aus 4.0.0 die Standardkollation des Servers); im CREATE bestimmt sie die
+    // Tabelle (feste Kollation utf8mb4_unicode_ci, keine Spaltenkollation in CREATE-Texten).
+    $definitions = v27Columns($sql);
+    T::check(str_contains($sql, 'DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci') && !preg_match('/\b(CHARACTER SET|COLLATE)\s+\w/i', $definitions['group_key'] ?? ''), 'CREATE: group_key ohne eigene Kollation, die Tabelle trägt utf8mb4_unicode_ci');
+    $expected = [
+        'group_key' => (string) preg_replace('/^VARCHAR\(120\)/', 'VARCHAR(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', $definitions['group_key'] ?? ''),
+        'event_count' => $definitions['event_count'] ?? '',
+    ];
+    T::check(str_contains($expected['group_key'], " COMMENT '") && str_contains($expected['event_count'], " COMMENT '"), 'CREATE: group_key und event_count mit Spaltenkommentar');
+    T::same($expected, SchemaManager::REQUIRED_COLUMN_DEFINITIONS['notifications'] ?? null, 'REQUIRED_COLUMN_DEFINITIONS: group_key/event_count mit der Definition aus dem CREATE (Laufzeitprüfung und Datenbank-Update)');
+    // Erweiterung nur zusammen mit ensureFeatureSchema(): Es liest ausdrücklich den Schlüssel notifications. Eine weitere Tabelle
+    // braucht dort einen eigenen ensureColumnExists()/alignColumnDefinitions()-Aufruf und einen Eintrag in REQUIRED_COLUMNS;
+    // sonst gleicht die Laufzeitprüfung nie an und das Datenbank-Update scheitert dauerhaft bzw. prüft die Spalte nicht.
+    T::same(['notifications'], array_keys(SchemaManager::REQUIRED_COLUMN_DEFINITIONS), 'REQUIRED_COLUMN_DEFINITIONS: nur notifications (eine weitere Tabelle braucht einen eigenen Schritt in ensureFeatureSchema() und einen Eintrag in REQUIRED_COLUMNS)');
+    foreach ($expected as $column => $definition) {
+        T::check(str_contains($migrationSource, '"ALTER TABLE `{$p}notifications` ADD COLUMN `' . $column . '` ' . $definition . '"'), "Update (MigrationManager): {$column} mit derselben Definition wie im CREATE", $definition);
+    }
+    T::check(str_contains($schemaSource, 'foreach (self::REQUIRED_COLUMN_DEFINITIONS[\'notifications\'] as $column => $definition) {')
+        && str_contains($schemaSource, '$notificationColumns[$column] = "ALTER TABLE {$this->prefix}notifications ADD COLUMN {$column} {$definition}";'), 'Laufzeitprüfung (ensureFeatureSchema): ADD COLUMN mit der Definition aus REQUIRED_COLUMN_DEFINITIONS');
+    T::check(str_contains($schemaSource, '$this->alignColumnDefinitions($this->prefix . \'notifications\', $notificationColumns);')
+        && str_contains($schemaSource, "'ALTER TABLE ' . \$table . ' MODIFY COLUMN ' . \$column . ' ' . \$definition"), 'Laufzeitprüfung: vorhandene Spalten mit abweichendem Kommentar oder abweichender Kollation werden per MODIFY COLUMN mit derselben Definition angeglichen (Entwicklungsinstallationen aus PR #1)');
+    T::same(['comment' => 'Bündelung gleichartiger Hinweise, z. B. community:topic:12', 'collation' => 'utf8mb4_unicode_ci'], SchemaManager::columnDefinitionAttributes($expected['group_key']), 'Kommentar und Kollation aus der Definition gelesen (Vergleich in Laufzeitprüfung und Datenbank-Update)');
+    T::same(['comment' => 'Anzahl gebündelter Ereignisse', 'collation' => null], SchemaManager::columnDefinitionAttributes($expected['event_count']), 'event_count: Kommentar, keine eigene Kollation');
+    T::check(!preg_match('/notifications`? ADD COLUMN `?(group_key|event_count)`?[^"\n]*\bAFTER\b/', $migrationSource . $schemaSource), 'ohne AFTER: beim Update hängen die Spalten an (wie die v26-Spalten von orders); verglichen werden Definition, Kommentar und Kollation, nicht die Position');
+    T::check(str_contains($migrationSource, 'ALTER TABLE `{$p}notifications` ADD INDEX `idx_user_group` (`user_id`, `group_key`, `is_read`)'), 'Update ergänzt den Index (Bestandszeilen: kein Schlüssel, Zähler 1)');
+    T::same(v27Indexes($sql)['idx_user_group']['columns'] ?? null, SchemaManager::REQUIRED_INDEXES['notifications']['idx_user_group'] ?? null, 'REQUIRED_INDEXES: idx_user_group mit den Spalten aus dem CREATE (Laufzeitprüfung und Datenbank-Update)');
+    T::check(str_contains($schemaSource, 'foreach (array_keys(self::REQUIRED_INDEXES) as $tableName) {'), 'Laufzeitprüfung ergänzt den Index (ensureRequiredIndexes() für jede Tabelle aus REQUIRED_INDEXES)');
     T::same(['group_key', 'event_count'], SchemaManager::REQUIRED_COLUMNS['notifications'] ?? null, 'Datenbank-Update prüft die Spalten (REQUIRED_COLUMNS)');
     foreach (['title', 'message', 'url'] as $unchanged) {
         T::check(isset(v27Columns($sql)[$unchanged]), "notifications.{$unchanged} unverändert vorhanden");
     }
+});
+
+T::run('Nachträge nach PR #1: Indizes an community_topics, community_badges.description_en (Entwicklungsinstallationen)', static function () use ($queries, $migrationSource, $schemaSource): void {
+    // Neuinstallation und Update von v26 erhalten sie über das CREATE, Entwicklungsinstallationen aus PR #1 über ensureFeatureSchema()
+    // (HANDOFF §2 Nr. 9). Definition in ensureFeatureSchema() = Definition im CREATE.
+    $topicIndexes = v27Indexes((string) $queries['community_topics']);
+    T::same(['idx_community_topics_unanswered_all', 'idx_community_topics_solved'], array_keys(SchemaManager::REQUIRED_INDEXES['community_topics'] ?? []), 'REQUIRED_INDEXES: genau die beiden Nachträge an community_topics');
+    foreach (['idx_community_topics_unanswered_all', 'idx_community_topics_solved'] as $name) {
+        T::same($topicIndexes[$name]['columns'] ?? null, SchemaManager::REQUIRED_INDEXES['community_topics'][$name] ?? null, "REQUIRED_INDEXES: {$name} mit den Spalten aus dem CREATE (Laufzeitprüfung und Datenbank-Update)");
+        T::check(!str_contains($migrationSource, $name), "MigrationManager: {$name} kommt über das CREATE (kein eigener Schritt)");
+    }
+    T::check(str_contains($schemaSource, 'foreach (array_keys(self::REQUIRED_INDEXES) as $tableName) {')
+        && str_contains($schemaSource, "if ((\$existing[\$name]['columns'] ?? null) === \$columns) {")
+        && str_contains($schemaSource, '$replace = isset($existing[$name]) ? "DROP INDEX {$name}, " : \'\';')
+        && str_contains($schemaSource, "error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.%s) failed: %s', \$tableName, \$name"), 'ensureFeatureSchema(): fehlende Indizes anlegen, einen gleichnamigen Index mit anderen Spalten in derselben Anweisung ersetzen, Fehler protokollieren');
+    $runner = (string) file_get_contents(dirname(__DIR__, 2) . '/CMS/core/DatabaseUpdateRunner.php');
+    T::check(str_contains($runner, 'foreach (SchemaManager::REQUIRED_INDEXES as $table => $required) {') && str_contains($runner, "\$missing[] = 'index:' . \$table . '.' . \$name;"), 'Datenbank-Update prüft die Indizes aus REQUIRED_INDEXES (Name und Spalten)');
+    T::check(str_contains($runner, 'foreach (SchemaManager::REQUIRED_COLUMN_DEFINITIONS as $table => $definitions) {') && str_contains($runner, "' (Kommentar/Kollation)'"), 'Datenbank-Update prüft Kommentar und Kollation der Spalten aus REQUIRED_COLUMN_DEFINITIONS');
+    $badge = v27Columns((string) $queries['community_badges']);
+    T::same('VARCHAR(255) NULL', $badge['description_en'] ?? null, 'community_badges.description_en: gleicher Typ wie description, NULL-fähig');
+    T::same($badge['description'] ?? null, $badge['description_en'] ?? null, 'description_en hat dieselbe Definition wie description');
+    T::check(str_contains($schemaSource, "'description_en',\n            \"ALTER TABLE {\$this->prefix}community_badges ADD COLUMN description_en " . ($badge['description_en'] ?? '?') . ' AFTER description"'), 'ensureFeatureSchema(): ensureColumnExists() mit der Definition aus dem CREATE, nach description');
+    T::same(['description_en'], SchemaManager::REQUIRED_COLUMNS['community_badges'] ?? null, 'Datenbank-Update prüft community_badges.description_en (REQUIRED_COLUMNS)');
+    T::check(!str_contains($migrationSource, 'description_en'), 'MigrationManager: description_en kommt beim Update von v26 über das CREATE');
+});
+
+T::run('REQUIRED_INDEXES: jede Tabelle im CREATE, in der Laufzeitprüfung und im Datenbank-Update (Strukturregel)', static function () use ($queries, $schemaSource): void {
+    // HANDOFF §2 Nr. 5: Ein nachträglicher Index braucht genau zwei Einträge, in getSchemaQueries() und in REQUIRED_INDEXES. Dafür
+    // steht jeder Eintrag im CREATE (Neuinstallation, Update von v26), und ensureFeatureSchema() behandelt jede Tabelle aus
+    // REQUIRED_INDEXES. Bisher rief es ensureRequiredIndexes() nur für notifications und community_topics auf: Ein Eintrag für eine
+    // weitere Tabelle wurde nie angelegt, und das Datenbank-Update scheiterte dauerhaft (Verhalten: TESTS/schema-upgrade).
+    foreach (SchemaManager::REQUIRED_INDEXES as $table => $required) {
+        T::check(isset($queries[$table]), "REQUIRED_INDEXES: {$table} hat eine Definition in getSchemaQueries()");
+        $indexes = v27Indexes((string) ($queries[$table] ?? ''));
+        foreach ($required as $name => $columns) {
+            T::same($columns, $indexes[$name]['columns'] ?? null, "REQUIRED_INDEXES: {$table}.{$name} steht mit denselben Spalten im CREATE");
+            T::same(false, $indexes[$name]['unique'] ?? null, "REQUIRED_INDEXES: {$table}.{$name} ist ein gewöhnlicher Index (ensureRequiredIndexes() legt ADD INDEX an)");
+            T::same([], array_values(array_filter($columns, static fn (string $column): bool => preg_match('/^[a-z_][a-z0-9_]*$/', $column) !== 1)), "REQUIRED_INDEXES: {$table}.{$name} nur ganze Spalten in Kleinschreibung (Vergleich mit information_schema ohne Präfixlänge)");
+        }
+    }
+    $redundant = (new ReflectionClassConstant(SchemaManager::class, 'REDUNDANT_INDEXES'))->getValue();
+    foreach (SchemaManager::REQUIRED_INDEXES as $table => $required) {
+        T::same([], array_values(array_intersect(array_keys($required), (array) ($redundant[$table] ?? []))), "REQUIRED_INDEXES: kein Index von {$table} steht in REDUNDANT_INDEXES (dropRedundantIndexes() läuft nach ensureFeatureSchema())");
+    }
+
+    T::check(preg_match('/private function ensureFeatureSchema\(\): void\n    \{\n(.*?)\n    \}\n/s', $schemaSource, $body) === 1, 'ensureFeatureSchema() im Quelltext gefunden');
+    $body = $body[1] ?? '';
+    $loop = "foreach (array_keys(self::REQUIRED_INDEXES) as \$tableName) {\n            \$this->ensureRequiredIndexes(\$tableName);\n        }";
+    $loopAt = strpos($body, $loop);
+    T::check($loopAt !== false, 'ensureFeatureSchema() ruft ensureRequiredIndexes() für jede Tabelle aus array_keys(self::REQUIRED_INDEXES) auf');
+    T::same(0, preg_match_all("/ensureRequiredIndexes\\('/", $schemaSource), 'keine Aufrufe von ensureRequiredIndexes() für einzelne Tabellen (eine Schleife über alle Schlüssel)');
+    T::check($loopAt !== false && $loopAt > (int) strrpos($body, 'ensureColumnExists(') && $loopAt > (int) strrpos($body, 'alignColumnDefinitions('), 'die Schleife steht nach allen Spaltennachträgen von ensureFeatureSchema() (Indizes auf Spalten, die derselbe Lauf nachträgt)');
+    T::check(str_contains($schemaSource, "\$existing = \$this->loadIndexes(\$table);\n        if (\$existing === []) {\n            return;\n        }"), 'ensureRequiredIndexes(): eine fehlende Tabelle wird übersprungen');
 });
 
 T::run('Rechte: Katalog und Standards (CommunityCapabilities)', static function () use ($src): void {

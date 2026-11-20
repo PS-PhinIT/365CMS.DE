@@ -1,6 +1,6 @@
 # 365CMS: Admin: Anmeldung mit Microsoft Entra ID (SSO)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
+> **Stand:** 2026-11-18 | **Version:** 4.1.0, Rolle `moderator` seit 4.2.0 (Entwicklung) | **Status:** Stable | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
 
 ## English (summary)
 
@@ -38,7 +38,9 @@ encrypted and never shown again. No tokens are stored.
 | Lokale Anmeldung (Passwort, Passkey, LDAP) | `all` · `disabled_for_linked` (verknüpfte Konten nur über Microsoft) · `admins_only` (lokal nur noch Admins). Gilt für **jeden** Weg an Microsoft vorbei: Passwort, Passkey und LDAP –, damit Conditional Access und das Deaktivieren eines Kontos in Entra auch im CMS wirken; ein vorher angelegter Passkey öffnet das Konto dann nicht mehr. Beim Einschalten enden laufende lokal begonnene Sitzungen betroffener Konten mit ihrer nächsten Anfrage (Audit `session_local_login_ended`); über Microsoft begonnene Sitzungen laufen weiter. Der wirksame Modus liegt als automatisch geladene Option `auth_entra.local_login_enforced` vor, die Prüfung kostet keine zusätzliche Datenbankabfrage (nur bei `disabled_for_linked` eine je Anfrage eines Nicht-Admins). Admins behalten immer den lokalen Notfallzugang; wirkt nur, solange SSO eingerichtet ist |
 | MFA aus Entra anerkennen | `amr` mit `mfa`, `ngcmfa`, `fido` oder `rsa` gilt für die Sitzung als zweiter Faktor (MFA-Zwang aus [LOGIN-THRESHOLDS.md](LOGIN-THRESHOLDS.md)) |
 | Rollen-Mapping | erste passende Zeile gewinnt; `admin` nur mit „Admin-Rolle erlauben“ |
-| Rollen synchronisieren | nur für über SSO angelegte Konten; Herabstufen erlaubt |
+| Rollen synchronisieren | nur für über SSO angelegte Konten; Herabstufen erlaubt: ohne Mapping-Treffer gilt die Standardrolle |
+
+**Hinweis zum Update auf 4.2.0:** `moderator` ist seit 4.2.0 eine Systemrolle (Community-Moderation, [RBAC.md](../users-groups/RBAC.md#community-rechte-und-rolle-moderator-seit-420)). Stand die Standardrolle vorher auf einer eigenen Rolle `moderator`, gilt jetzt `member` (`EntraSettings::normalize()`, zweite Sicherung in `IdentityLinker::defaultRole()`). Mit „Rollen synchronisieren“ setzt die nächste Anmeldung über SSO angelegte Konten mit der Rolle `moderator` ohne Mapping-Treffer auf `member` (`IdentityLinker::syncTarget()`); sie verlieren damit auch die Rechte, die die eigene Rolle hatte. Wer `moderator` weiter über SSO vergeben will, legt vor dem Update eine Mapping-Regel an (App-Rolle oder Gruppe → `moderator`).
 
 „Verbindung prüfen“ liest das Discovery-Dokument und ruft den Token-Endpunkt mit einem ungültigen Code auf:
 `invalid_grant` bedeutet, dass Client-ID und Secret angenommen wurden; `invalid_client` heißt falsches oder

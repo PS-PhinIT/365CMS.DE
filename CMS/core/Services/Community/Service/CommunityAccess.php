@@ -5,22 +5,39 @@
  * und Startseite, `limitsFor()` die Grenzen der Vertrauensstufe. Dienste rufen `can()` selbst; Controller dürfen sich
  * nicht darauf verlassen, dass ein Dienst es getan hat (SECURITY-PRIVACY §Rechte).
  *
- * Prüfreihenfolge (Entwurfsvertrag D1, Karte §1.3); jeder Schritt lehnt nur ab oder lässt durch:
+ * Prüfreihenfolge (Entwurfsvertrag D1, Karte §1.3). Jeder Schritt lehnt ab oder lässt durch, das heißt: er gibt an den nächsten
+ * Schritt weiter, und kein Schritt hebt die Ablehnung eines früheren auf. Eine Erlaubnis steht erst nach Schritt 8 fest und
+ * durchläuft dann den Filter (Schritt 9), der sie ablehnen oder verschärfen, aber nicht erweitern kann. Früher fest steht sie nur
+ * bei `ban`, `manage` und `view_private_data` (Schritt 4, die Schritte 5 bis 8 entfallen), bei Entscheidungen ohne Ziel (`read`
+ * und `search` mit `scope => 'global'`, `moderate` für globale Moderation; nach Schritt 4, die Schritte 5 bis 8 entfallen,
+ * `decideWithoutTarget()`) und beim erneuten Löschen eines schon gelöschten Beitrags (in Schritt 8 entfallen die übrigen
+ * Zustandsprüfungen und das Bearbeitungsfenster; der Dienst meldet `already_deleted`). Moderation (Schritte 4 und 5) ist
+ * Bedingung der Moderationsaktionen und lässt beim Lesen und bei Inhaltsaktionen einzelne Prüfungen der Schritte 6 bis 8
+ * entfallen (siehe „Festlegungen“):
  *   0 Aktion bekannt · 1 Modul aktiv (auch für `admin`) · 2 Konto (nicht aktiv = Gast, Schreibaktion als Gast =
  *   `login_required`, E-Mail-Pflicht außer `admin`) · 3 Sperre (außer `admin`) · 4 globale Capability (`community.view`,
- *   `community.participate`; globale Moderation = `admin` oder `community.moderate` springt über 6 und 7) · 5 Forum-Moderator
- *   (Mitglied oder aktive Gruppe, `include_children` über den Pfad; nur Moderationsaktionen) · 6 Forum-Recht (Rechte-Zeilen
- *   je Subjekt, Vereinigung, Vererbung; ohne Zeilen die Standards) · 7 Vertrauensstufe (nur Zeit- und Zählgrenzen) ·
- *   8 Zustand von Forum, Thema und Beitrag, Bearbeitungsfenster, Freigabepflicht · 9 Filter `cms_community_can`.
+ *   `community.participate`, für Moderationsaktionen genügt `view`; `ban`, `manage` und `view_private_data` je über ihre
+ *   Capability; globale Moderation = `admin` oder `community.moderate` braucht weder `view` noch `participate` und springt über
+ *   6 und 7) · 5 Forum-Moderator (Mitglied oder aktive Gruppe, `include_children` über den Pfad; gilt im eigenen Forum für die
+ *   Moderationsaktionen außer `topic.announce` und als Freigabe beim Lesen und bei Inhaltsaktionen) · 6 Forum-Recht
+ *   (Rechte-Zeilen je Subjekt, Vereinigung, Vererbung; ohne Zeilen die Standards) · 7 Vertrauensstufe (nur Zeit- und
+ *   Zählgrenzen) · 8 Zustand von Forum, Thema und Beitrag, Bearbeitungsfenster, Freigabepflicht · 9 Filter `cms_community_can`.
  * Die Abfragen, die Zeit oder Zahlen zählen (Abstände, Langsamer Modus, Tages- und Stundenlimit, Warteschlange), laufen
  * zuletzt.
  *
  * Festlegungen, die der Plan offenlässt (Bericht zu PR #2a):
- * - Wer ein Forum moderiert (globale Moderation oder Forum-Moderator), sieht alles in diesem Bereich, auch ohne `read` in
- *   der Rechtematrix, und unterliegt weder Bearbeitungsfenster, Langsamem Modus, Freigabepflicht noch den Abständen
- *   `rate_post_seconds`/`rate_topic_seconds` (D8). Die Rechtematrix und das Tages-/Stundenlimit der Vertrauensstufe gelten
- *   für Forum-Moderatoren bei gewöhnlichen Schreibaktionen weiter; globale Moderation überspringt beides (Schritt 4 springt
- *   über 6 und 7).
+ * - Wer ein Forum moderiert (globale Moderation oder Forum-Moderator), sieht alles in diesem Bereich außer Themen im Papierkorb
+ *   (`trash` sieht nur `admin`, `topicVisible()`), auch ohne `read` in der Rechtematrix und unter verborgenen Vorfahren
+ *   (gelöschte Beiträge voll nur mit `community.view_private_data`), bearbeitet und löscht fremde Beiträge, legt in Foren vom
+ *   Typ `announcements` Themen an, schreibt in `readonly`-Foren und in geschlossenen, wartenden und ausgeblendeten Themen,
+ *   markiert Lösungen auch in fremden Themen und außerhalb von Q&A-Foren und unterliegt weder Bearbeitungsfenster, Langsamem
+ *   Modus, Freigabepflicht noch den Abständen `rate_post_seconds`/`rate_topic_seconds` (D8). Die Rechtematrix bei gewöhnlichen
+ *   Schreibaktionen (`create_topic` außerhalb von Ankündigungsforen, `reply`, `upload`, `poll`, `vote`, `react`,
+ *   `mark_solution`) und das Tages-/Stundenlimit der Vertrauensstufe gelten für Forum-Moderatoren weiter; globale Moderation
+ *   überspringt beides (Schritt 4 springt über 6 und 7). Für beide gelten weiter: `archived` (sperrt auch Moderationsaktionen),
+ *   Foren vom Typ `link` (keine Themen, keine Antworten) und Themen in `deleted`, `trash` oder `moved` (keine Schreibaktion
+ *   darin). Moderationsaktionen prüfen den Zustand des Themas nicht (`decideModeration()`), das Thema muss aber sichtbar sein:
+ *   auf ein Thema im Papierkorb ergibt jede Aktion außer für `admin` `not_found`.
  * - Ein Forum unter einem `hidden`-Elternforum gilt als verborgen (nur Moderation sieht es).
  * - Wer ein Forum, Thema oder einen Beitrag nicht sehen darf, bekommt für jede Aktion `not_found`, auch bei Schreibaktionen.
  *   Bei unbekannten und unsichtbaren Zielen läuft dieselbe Abfragefolge (Platzhalter-Forum statt Abbruch), damit die Antwortzeit

@@ -1,10 +1,10 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Community-Modul (Forum)
-> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** PR #1 geliefert (Schema v27, Rechte `community.*`, Rolle `moderator`); Dienste, Admin, Frontend und DSGVO folgen · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Update:** 2026-11-17
+> **Stand:** 2026-11-19 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** PR #1 geliefert (Schema v27, Rechte `community.*`, Rolle `moderator`), PR #2a geliefert (Fundament der Dienste ohne Oberfläche); Darstellung, Moderation, Admin, Frontend und DSGVO folgen (PR #2b bis #5) · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Update:** 2026-11-19
 > **Ersetzt:** den früheren Integrationsfahrplan für das Plugin `cms-forum` · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)
 
-Planning set for a **Community module** in the 365CMS core: a phpBB/bbPress-style discussion forum with categories, sub-forums, topics, posts, moderation, reports, notifications, reactions, profiles, read tracking, attachments and GDPR tooling. It replaces the separate plugin `cms-forum` (365CMS.DE-PLUGINS, v3.0.4, ~11,000 lines, 17 tables `cmsforum_*`) the same way 4.0.0 absorbed cms-feed, cms-downloads, cms-contact, cms-knowledgebase and cms-newsletter: core module with data migrator, URL compatibility and plugin retirement. The documents below define features (with IDs and acceptance criteria), architecture, data model, permissions and moderation, workflows, security and privacy, theme/UI, migration from cms-forum, roadmap with work packages, and the test plan. Nothing is implemented yet; open decisions are listed in §4 and must be confirmed before work package 1 starts.
+Planning set for a **Community module** in the 365CMS core: a phpBB/bbPress-style discussion forum with categories, sub-forums, topics, posts, moderation, reports, notifications, reactions, profiles, read tracking, attachments and GDPR tooling. It replaces the separate plugin `cms-forum` (365CMS.DE-PLUGINS, v3.0.4, ~11,000 lines, 17 tables `cmsforum_*`) as a core module, like the plugins 4.0.0 absorbed (cms-feed, cms-downloads, cms-contact, cms-knowledgebase, cms-newsletter), but without data migration (decision E6: the plugin was not in use; no migrator, no redirects for plugin URLs). The documents below define features (with IDs and acceptance criteria), architecture, data model, permissions and moderation, workflows, security and privacy, theme/UI, a feature reference of cms-forum, roadmap with work packages, and the test plan. Implementation status: PR #1 (schema v27, capabilities, role `moderator`) and PR #2a (service foundation without user interface) are delivered; the implemented state, the tasks for PR #2b to #5 and the remaining open decisions are in HANDOFF-PR2-PR5.md. The core decisions are in §4 (all decided on 14.11.2026).
 
 ## Deutsch
 
@@ -16,8 +16,8 @@ Benachrichtigungen, Reaktionen, Profile, Gelesen-Status, Anhänge und DSGVO-Funk
 
 Das Modul baut auf vorhandenen Core-Diensten auf, statt sie nachzubauen (Benutzer, Rollen und Gruppen,
 Mitgliederbereich, Benachrichtigungen, Nachrichten, Mail-Warteschlange, Antispam, Purifier, Suche,
-Papierkorb, Löschfristen, privater Speicher, Admin-Menü). Das bisherige Plugin `cms-forum` wird mit
-Datenübernahme abgelöst; seine öffentlichen Adressen bleiben erreichbar.
+Papierkorb, Löschfristen, privater Speicher, Admin-Menü). Das bisherige Plugin `cms-forum` wird ohne
+Datenübernahme abgelöst (E6: kein Migrator, keine Weiterleitungen der Plugin-Adressen).
 
 ### 2. Dokumente
 
@@ -30,8 +30,8 @@ Datenübernahme abgelöst; seine öffentlichen Adressen bleiben erreichbar.
 | [WORKFLOWS.md](WORKFLOWS.md) | Abläufe für Gäste, Mitglieder, Moderation und Administration, Schritt für Schritt mit Diagrammen |
 | [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) | Bedrohungsmodell, Schutzmaßnahmen (XSS, CSRF, SQL, Uploads, Spam, Bots), DSGVO, Löschfristen |
 | [THEME-UI.md](THEME-UI.md) | Vorlagen, Theme-Overrides, Komponenten, Mobile-First, Barrierefreiheit, SEO, Auswirkungen auf `cms-phinit` |
-| [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) | Paritäts-Checkliste Plugin → Core, URL-Zuordnung, Datenübernahme, Plugin-Abschaltung |
-| [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übergabe nach PR #1**: umgesetzter Stand von Schema v27 (Tabellen, Spalten, Indizes), Capabilities und Rolle `moderator`, Aufgaben je Pull Request (PR #2 bis #5), Abweichungen von den Plänen und offene Entscheidungen |
+| [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) | Funktions-Referenz des Plugins (Paritäts-Checkliste Plugin → Core); Datenübernahme und Plugin-Weiterleitungen entfallen (E6) |
+| [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übergabe nach PR #1 und PR #2a**: umgesetzter Stand von Schema v27 (Tabellen, Spalten, Indizes), Capabilities und Rolle `moderator`, Fundament der Dienste (Festlegungen §2a), Aufgaben je Pull Request (PR #2b bis #5), Abweichungen von den Plänen und offene Entscheidungen |
 | [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Umsetzungsfahrplan 4.2.0**: Ausgangslage nach 4.1.0, Arbeitspakete P1 mit Lieferumfang, Sicherheits-Gate und Tests, Tabellen v27, Capabilities, Datenschutz-/Moderationsregeln, CSP-/Security-Vorgaben, Freigabe-Kriterien |
 | [ROADMAP.md](ROADMAP.md) | Phasen, Arbeitspakete mit Abhängigkeiten und Aufwand, Fortschritts-Checkliste |
 | [TEST-PLAN.md](TEST-PLAN.md) | Test-Suiten, Prüffälle, Gegenproben, Laufzeit- und Browserprüfungen |

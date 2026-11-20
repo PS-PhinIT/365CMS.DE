@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Benutzer
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-18 | **Version:** 4.1.0, Rolle `moderator` seit 4.2.0 (Entwicklung) | **Status:** Stable
 > **Route:** `/admin/users` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_users`
 
 ## English (summary)
@@ -52,7 +52,7 @@ Der eigene Account wird bei Sammelaktionen immer übersprungen; nicht (mehr) exi
 | E-Mail (`email`) | eindeutig, validiert; beim Bearbeiten gilt eine neue Adresse seit 4.0.0 erst nach Bestätigung, siehe [E-Mail-Adresse ändern](#e-mail-adresse-ändern) |
 | Vorname / Nachname | optional; beim Anlegen bilden sie den Anzeigenamen (`display_name`), ohne Namen wird der Benutzername verwendet (max. 100 Zeichen). Bis 3.5.6 fehlte der Anzeigename, und das Anlegen scheiterte auf MySQL/MariaDB im Strict-Mode mit „Datenbankfehler beim Erstellen“ |
 | Passwort (`password`) | beim Anlegen Pflicht; beim Bearbeiten leer lassen = unverändert. Es gilt die Passwortrichtlinie (Standard mind. 12 Zeichen, Groß-/Kleinbuchstaben, Ziffer, Sonderzeichen), siehe [AUTH-SETTINGS.md](AUTH-SETTINGS.md) |
-| Rolle (`role`) | `admin`, `editor`, `author`, `member` sowie eigene Rollen aus [RBAC.md](RBAC.md); unbekannte Werte werden zu `member` |
+| Rolle (`role`) | `admin`, `editor`, `author`, `member`, seit 4.2.0 die Systemrolle `moderator` (Community-Moderation, kein Zugang zu `/admin`, nie als Registrierungsrolle wählbar, siehe [RBAC.md](RBAC.md#community-rechte-und-rolle-moderator-seit-420)) sowie eigene Rollen aus [RBAC.md](RBAC.md); unbekannte Werte werden zu `member` |
 | Status (`status`) | `active`, `inactive`, `banned`, `unverified` („E-Mail unbestätigt“: Anmeldung erst nach Bestätigungslink, siehe [AUTH-SETTINGS.md](AUTH-SETTINGS.md#e-mail-verifizierung)); unbekannte Werte werden beim Anlegen zu `active` und beim Bearbeiten ignoriert |
 
 Die Bearbeitungsansicht zeigt zusätzlich Gruppen, Abo, MFA-/Passkey-Status und letzte Aktivitäten.

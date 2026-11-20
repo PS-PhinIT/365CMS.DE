@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Roadmap & Fortschritt
-> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** WP-C1 teilweise geliefert (PR #1) | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
+> **Stand:** 2026-11-18 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** WP-C1 bis WP-C3 teilweise geliefert (PR #1, PR #2a) | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
 
 ## English (summary)
 
@@ -83,9 +83,9 @@ flowchart LR
 |---|---|---|
 | Planung (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/community/` (14.11.2026), Umsetzungsfahrplan [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) (15.11.2026) |
 | WP-C0 Entscheidungen & Bibliotheken | ⬜ | |
-| WP-C1 Modul-Gerüst & Schema v27 | 🟡 | PR #1 (17.11.2026): Schema v27 mit allen 27 Tabellen (`TESTS/schema-v27`, `TESTS/schema-upgrade`: Neuinstallation = Update von v25/v26 gegen MariaDB 10.11), Capabilities `community.*`, Rolle `moderator`, Update-Schritt `capabilities_v27` ([HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md)). Offen: `CoreModuleService`-Eintrag, `CommunityHooks`, `Support/Settings`, Sprachschlüssel, Admin-Katalog, Core-Hook `user_role_changed` (bisher nur im SSO-Pfad) |
-| WP-C2 Struktur & Rechte | ⬜ | |
-| WP-C3 Themen, Beiträge, Gelesen-Status | ⬜ | |
+| WP-C1 Modul-Gerüst & Schema v27 | 🟡 | PR #1 (17.11.2026): Schema v27 mit allen 27 Tabellen (`TESTS/schema-v27`, `TESTS/schema-upgrade`: Neuinstallation = Update von v25/v26 gegen MariaDB 10.11), Capabilities `community.*`, Rolle `moderator`, Update-Schritt `capabilities_v27` ([HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md)); Nachlauf: zwei Indizes für `community_topics`, `community_badges.description_en` (HANDOFF §2 Nr. 9). PR #2a (#178, 18.11.2026): `CoreModuleService`-Eintrag (standardmäßig aus), `CommunityHooks`, `Support/Settings`, Sprachschlüssel `community.access.*`/`community.error.*`, Core-Hook `user_role_changed` auch außerhalb des SSO-Pfads (`TESTS/community-settings`, `TESTS/user-role-hook`). Offen: Admin-Katalog (PR #3) |
+| WP-C2 Struktur & Rechte | 🟡 | PR #2a (#178): `CommunityAccess` (Rechte je Forum mit Vererbung, Forum-Moderatoren, Sperren, Vertrauensstufen P1), Repositories für Kategorien und Foren (`TESTS/community-access`, `TESTS/community-repositories`, Gegenprobe `TESTS/community-mutants`). Offen: Admin „Struktur“ (Drag & Drop, Tastatur), Verwaltung von Forentypen, -status, Rechten und Forum-Moderatoren (PR #3) |
+| WP-C3 Themen, Beiträge, Gelesen-Status | 🟡 | PR #2a (#178): `TopicService`, `PostService` (anlegen, antworten, bearbeiten mit Verlauf, weich löschen, atomare Zähler, Position und Seite), `QuoteService`, `ReadStateService`, Keyset-Listen ohne `OFFSET` (`TESTS/community-content`, `TESTS/community-db` gegen MariaDB). Offen: Startseite, Forum- und Themenseiten, Listen „Neu/Aktiv/Unbeantwortet“, Permalinks als Routen (PR #4) |
 | WP-C4 Editor & Rendering | ⬜ | |
 | WP-C5 Sicherheit, Spam, Captcha, Warteschlange | ⬜ | |
 | WP-C6 Moderation & Meldungen | ⬜ | |

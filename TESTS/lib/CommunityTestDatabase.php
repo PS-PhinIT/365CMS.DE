@@ -385,6 +385,11 @@ final class CommunityTestDatabase extends Database
     public array $failOn = [];
     /** @var array<string, \Throwable> Regulärer Ausdruck => Ausnahme: passt der Ausdruck auf das SQL, wirft `execute()` genau diese (z. B. eine PDOException mit SQLSTATE 23000). */
     public array $throwOn = [];
+    /**
+     * @var array<string, \Closure(): void> Regulärer Ausdruck => Aufruf: passt der Ausdruck auf das SQL, läuft der Aufruf einmal vor
+     *      der Anweisung (der Eintrag wird vorher entfernt), z. B. um eine Zeile zwischen zwei Abfragen eines Repositorys zu ändern.
+     */
+    public array $beforeExecute = [];
     /** @var list<string> Alle ausgeführten SQL-Texte (vor der Übersetzung, ohne Parameter). */
     public array $log = [];
     /**
@@ -463,6 +468,12 @@ final class CommunityTestDatabase extends Database
 
     public function execute(string $sql, array $params = []): \PDOStatement
     {
+        foreach ($this->beforeExecute as $pattern => $hook) {
+            if (preg_match($pattern, $sql) === 1) {
+                unset($this->beforeExecute[$pattern]);
+                $hook();
+            }
+        }
         $this->logTx[count($this->log)] = $this->sqlite->inTransaction();
         $this->log[] = $sql;
         foreach ($this->failOn as $pattern) {

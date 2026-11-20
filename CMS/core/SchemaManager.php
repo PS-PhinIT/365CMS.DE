@@ -98,7 +98,9 @@ class SchemaManager
 
     /**
      * Spalten, die das Zielschema mindestens braucht (zusätzlich zu den Tabellen aus FEATURE_TABLES, FEATURE_TABLES_V26 und
-     * FEATURE_TABLES_V27; v27 ergänzt nur `notifications.group_key` und `notifications.event_count`).
+     * FEATURE_TABLES_V27). v27 ergänzt `notifications.group_key` und `notifications.event_count` sowie die nach PR #1
+     * hinzugekommene Spalte `community_badges.description_en` (Entwicklungsinstallationen aus PR #1 erhalten sie über
+     * ensureFeatureSchema()).
      * Grundlage der Integritätsprüfung im Datenbank-Update (DatabaseUpdateRunner, DB-410-04).
      *
      * @var array<string, list<string>>
@@ -113,11 +115,48 @@ class SchemaManager
         'user_subscriptions' => ['provider', 'provider_subscription_id', 'current_period_end'],
         'login_attempts' => ['action'],
         'notifications' => ['group_key', 'event_count'],
+        'community_badges' => ['description_en'],
         'mail_queue' => ['content_type', 'source', 'max_attempts', 'locked_at', 'last_attempt_at', 'error_category'],
         'post_revisions' => ['revision_type', 'created_by', 'fingerprint'],
         'page_revisions' => ['created_by'],
         'roles' => ['member_dashboard_access', 'sort_order'],
         'ai_quota_usage' => ['scope_name', 'period_key', 'user_id', 'provider_id', 'request_count', 'character_count'],
+    ];
+
+    /**
+     * Spaltendefinitionen (Text nach `ADD COLUMN <spalte>`), deren Kommentar und Kollation das Datenbank-Update zusätzlich prüft.
+     * Gilt nur für `notifications` (`group_key`, `event_count`): `ensureFeatureSchema()` liest ausdrücklich diesen Schlüssel, legt
+     * die Spalten damit an und gleicht abweichende per `MODIFY COLUMN` an (`alignColumnDefinitions()`); der MigrationManager nutzt
+     * denselben Text. Eine weitere Tabelle braucht einen eigenen `ensureColumnExists()`/`alignColumnDefinitions()`-Aufruf in
+     * `ensureFeatureSchema()` und einen Eintrag in REQUIRED_COLUMNS (nur für diese Tabellen liest das Datenbank-Update Kommentar
+     * und Kollation); TESTS/schema-v27 verlangt deshalb genau den Schlüssel `notifications`. `group_key` mit ausdrücklicher
+     * Kollation, weil `ADD COLUMN` sonst die der Tabelle erbt (aus 4.0.0 die Standardkollation des Servers).
+     *
+     * @var array<string, array<string, string>>
+     */
+    public const REQUIRED_COLUMN_DEFINITIONS = [
+        'notifications' => [
+            'group_key' => "VARCHAR(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Bündelung gleichartiger Hinweise, z. B. community:topic:12'",
+            'event_count' => "INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Anzahl gebündelter Ereignisse'",
+        ],
+    ];
+
+    /**
+     * Indizes (Name => Spalten in Indexreihenfolge), die das Datenbank-Update zusätzlich prüft: `notifications.idx_user_group`
+     * (entsteht beim Update per ALTER) und die nach PR #1 ergänzten Indizes an `community_topics` (HANDOFF §2 Nr. 9).
+     * `ensureFeatureSchema()` behandelt jede Tabelle dieser Liste (nach seinen Spaltennachträgen; eine fehlende Tabelle wird
+     * übersprungen): Es legt fehlende Indizes an und ersetzt einen gleichnamigen Index mit anderen Spalten. Ein nachträglicher Index
+     * braucht deshalb nur diesen Eintrag und die Zeile im CREATE von getSchemaQueries() (gewöhnlicher Index, ganze Spalten in
+     * Kleinschreibung; TESTS/schema-v27 prüft beides).
+     *
+     * @var array<string, array<string, list<string>>>
+     */
+    public const REQUIRED_INDEXES = [
+        'notifications' => ['idx_user_group' => ['user_id', 'group_key', 'is_read']],
+        'community_topics' => [
+            'idx_community_topics_unanswered_all' => ['status', 'reply_count', 'created_at'],
+            'idx_community_topics_solved' => ['solved_at', 'forum_id', 'status', 'is_pinned', 'last_post_at'],
+        ],
     ];
 
     private Database $db;
@@ -1836,7 +1875,9 @@ class SchemaManager
                 KEY idx_community_topics_moved (status, moved_expires_at),
                 KEY idx_community_topics_locked (is_locked, locked_until),
                 KEY idx_community_topics_pinned (is_pinned, pinned_until),
-                KEY idx_community_topics_trashed (trashed_at)
+                KEY idx_community_topics_trashed (trashed_at),
+                KEY idx_community_topics_unanswered_all (status, reply_count, created_at),
+                KEY idx_community_topics_solved (solved_at, forum_id, status, is_pinned, last_post_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Themen'",
 
             // v27: Beiträge. body = Markdown-Quelle, body_html = gereinigter Cache (rendered_version); ip_hash = HMAC der gekürzten IP.
@@ -2048,6 +2089,7 @@ class SchemaManager
                 title VARCHAR(80) NOT NULL DEFAULT '',
                 title_en VARCHAR(80) NULL,
                 description VARCHAR(255) NULL,
+                description_en VARCHAR(255) NULL,
                 icon VARCHAR(50) NULL,
                 tier VARCHAR(10) NOT NULL DEFAULT 'bronze',
                 rule_json LONGTEXT NULL,
@@ -2996,24 +3038,23 @@ class SchemaManager
         }
 
         // v27: Bündelung von Benachrichtigungen (Community: „3 neue Antworten in …“): Gruppenschlüssel und Zähler an der
-        // Core-Tabelle notifications.
-        $this->ensureColumnExists(
-            $this->prefix . 'notifications',
-            'group_key',
-            "ALTER TABLE {$this->prefix}notifications ADD COLUMN group_key VARCHAR(120) DEFAULT NULL"
-        );
-        $this->ensureColumnExists(
-            $this->prefix . 'notifications',
-            'event_count',
-            "ALTER TABLE {$this->prefix}notifications ADD COLUMN event_count INT UNSIGNED NOT NULL DEFAULT 1"
-        );
-        if (!isset($this->loadIndexes($this->prefix . 'notifications')['idx_user_group'])) {
-            try {
-                $this->db->getPdo()->exec("ALTER TABLE {$this->prefix}notifications ADD INDEX idx_user_group (user_id, group_key, is_read)");
-            } catch (\Throwable $e) {
-                error_log(sprintf('SchemaManager::ensureFeatureSchema(notifications.idx_user_group) failed: %s', $this->sanitizeDiagnosticText($e->getMessage())));
-            }
+        // Core-Tabelle notifications. Definition wie im CREATE (mit Kommentar) und wie im MigrationManager
+        // (REQUIRED_COLUMN_DEFINITIONS); der Index kommt mit den übrigen aus REQUIRED_INDEXES am Ende dieser Methode.
+        $notificationColumns = [];
+        foreach (self::REQUIRED_COLUMN_DEFINITIONS['notifications'] as $column => $definition) {
+            $notificationColumns[$column] = "ALTER TABLE {$this->prefix}notifications ADD COLUMN {$column} {$definition}";
+            $this->ensureColumnExists($this->prefix . 'notifications', $column, $notificationColumns[$column]);
         }
+        $this->alignColumnDefinitions($this->prefix . 'notifications', $notificationColumns);
+
+        // v27, nach PR #1 ergänzt (vor dem Release 4.2.0 ohne neue Marke, HANDOFF §2 Nr. 5, 6 und 9): Neuinstallation und Update
+        // von v26 erhalten Spalte und Indizes über die CREATE-Definition, Entwicklungsinstallationen aus PR #1 hier (die Indizes an
+        // community_topics über REQUIRED_INDEXES am Ende dieser Methode).
+        $this->ensureColumnExists(
+            $this->prefix . 'community_badges',
+            'description_en',
+            "ALTER TABLE {$this->prefix}community_badges ADD COLUMN description_en VARCHAR(255) NULL AFTER description"
+        );
 
         // v27 (capabilities_v27): Rechte `community.*` und die Standardrolle „moderator“, einmalig (Marker in settings).
         try {
@@ -3084,6 +3125,13 @@ class SchemaManager
                     error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.planned_at) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
                 }
             }
+        }
+
+        // Indizes aus REQUIRED_INDEXES für jede Tabelle dort (fehlende Tabelle: nichts zu tun), nach allen Spaltennachträgen
+        // dieser Methode, damit auch ein Index auf einer eben nachgetragenen Spalte entsteht. Ein neuer Eintrag in REQUIRED_INDEXES
+        // braucht hier keinen eigenen Aufruf (HANDOFF §2 Nr. 5).
+        foreach (array_keys(self::REQUIRED_INDEXES) as $tableName) {
+            $this->ensureRequiredIndexes($tableName);
         }
     }
 
@@ -3199,6 +3247,98 @@ class SchemaManager
         $columnType = strtolower(trim($columnType));
 
         return str_starts_with($columnType, 'enum(') && !str_contains($columnType, "'private'");
+    }
+
+    /**
+     * Gleicht vorhandene Spalten an ihre Definition an, wenn Kommentar oder Kollation abweichen (`MODIFY COLUMN` mit der
+     * Definition aus dem `ADD COLUMN`; die Position bleibt). Anlass: Entwicklungsinstallationen, die v27 mit dem Stand von
+     * PR #1 erreicht haben, tragen `notifications.group_key`/`event_count` ohne Kommentar, `group_key` mit der Kollation der
+     * Tabelle (aus 4.0.0 die Standardkollation des Servers). Typ, NULL und Default sind dort gleich. Ein zweiter Lauf findet
+     * keine Abweichung und ändert nichts.
+     *
+     * @param array<string, string> $alterSqls Spalte => "ALTER TABLE <tabelle> ADD COLUMN <spalte> <definition>"
+     */
+    private function alignColumnDefinitions(string $table, array $alterSqls): void
+    {
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || $alterSqls === []) {
+            return;
+        }
+
+        try {
+            $stmt = $this->db->getPdo()->query("SHOW FULL COLUMNS FROM {$table}");
+            $rows = $stmt instanceof \PDOStatement ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (\Throwable $e) {
+            error_log(sprintf('SchemaManager::alignColumnDefinitions(%s) failed: %s', $table, $this->sanitizeDiagnosticText($e->getMessage())));
+            return;
+        }
+
+        foreach ($rows as $row) {
+            $column = (string) ($row['Field'] ?? '');
+            $alterSql = $alterSqls[$column] ?? '';
+            $expectedPrefix = 'ALTER TABLE ' . $table . ' ADD COLUMN ' . $column . ' ';
+            if ($alterSql === '' || !str_starts_with($alterSql, $expectedPrefix)) {
+                continue;
+            }
+
+            $definition = substr($alterSql, strlen($expectedPrefix));
+            $expected = self::columnDefinitionAttributes($definition);
+            if ((string) ($row['Comment'] ?? '') === $expected['comment'] && ($expected['collation'] === null || (string) ($row['Collation'] ?? '') === $expected['collation'])) {
+                continue;
+            }
+
+            try {
+                $this->db->getPdo()->exec('ALTER TABLE ' . $table . ' MODIFY COLUMN ' . $column . ' ' . $definition);
+            } catch (\Throwable $e) {
+                error_log(sprintf('SchemaManager::alignColumnDefinitions(%s.%s) failed: %s', $table, $column, $this->sanitizeDiagnosticText($e->getMessage())));
+            }
+        }
+    }
+
+    /**
+     * Kommentar und Kollation einer Spaltendefinition (`… COLLATE <kollation> … COMMENT '<text>'`). Ohne `COLLATE` ist die
+     * Kollation `null`: Es gilt die der Tabelle, verglichen wird dann nur der Kommentar (alignColumnDefinitions(),
+     * DatabaseUpdateRunner::missingSchemaElements()).
+     *
+     * @return array{comment: string, collation: string|null}
+     */
+    public static function columnDefinitionAttributes(string $definition): array
+    {
+        return [
+            'comment' => preg_match("/ COMMENT '([^']*)'$/", $definition, $match) === 1 ? $match[1] : '',
+            'collation' => preg_match('/ COLLATE (\w+)/', $definition, $match) === 1 ? $match[1] : null,
+        ];
+    }
+
+    /**
+     * Legt die Indizes einer Tabelle aus REQUIRED_INDEXES an. Ein gleichnamiger Index mit anderen Spalten (Entwicklungsstand)
+     * wird in derselben Anweisung ersetzt (`DROP INDEX …, ADD INDEX …`). Fehlt die Tabelle, geschieht nichts. Fehler werden
+     * protokolliert; die Laufzeit-Flag wird trotzdem geschrieben, das Datenbank-Update meldet den Index dann als fehlend
+     * (`index:<tabelle>.<name>`) und holt ihn nach.
+     */
+    private function ensureRequiredIndexes(string $tableName): void
+    {
+        $table = $this->prefix . $tableName;
+        if (preg_match('/^[a-zA-Z0-9_]+$/', $table) !== 1) {
+            return;
+        }
+
+        $existing = $this->loadIndexes($table);
+        if ($existing === []) {
+            return;
+        }
+
+        foreach (self::REQUIRED_INDEXES[$tableName] ?? [] as $name => $columns) {
+            if (($existing[$name]['columns'] ?? null) === $columns) {
+                continue;
+            }
+
+            $replace = isset($existing[$name]) ? "DROP INDEX {$name}, " : '';
+            try {
+                $this->db->getPdo()->exec("ALTER TABLE {$table} {$replace}ADD INDEX {$name} (" . implode(', ', $columns) . ')');
+            } catch (\Throwable $e) {
+                error_log(sprintf('SchemaManager::ensureFeatureSchema(%s.%s) failed: %s', $tableName, $name, $this->sanitizeDiagnosticText($e->getMessage())));
+            }
+        }
     }
 
     private function ensureColumnExists(string $table, string $column, string $alterSql): void

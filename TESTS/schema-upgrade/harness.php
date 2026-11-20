@@ -6,7 +6,8 @@
  *   install = wie install.php: getSchemaQueries() + Schema-Version, danach erster Request
  *   boot    = erster Request nach dem Core-Tausch (Database::instance() → automatische Migration)
  *   update  = boot + DatabaseUpdateRunner::run() (Admin → Updates → Datenbank-Update)
- *   status  = boot + DatabaseUpdateRunner::missingSchemaElements()
+ *   status  = Request mit vorhandenen Flags (Database::instance() legt nichts an) + DatabaseUpdateRunner::missingSchemaElements()
+ *             und `schema_update_required` aus getStatus() (bietet die Updates-Seite das Datenbank-Update an?)
  *   Mit Suffix `_nofn` (z. B. update_nofn) bleibt includes/functions ungeladen, wie bei CMS/update.php (Updater ohne Funktionsdateien).
  *
  * Verbindung über CMS_TEST_DB_HOST, CMS_TEST_DB_USER, CMS_TEST_DB_PASS. Ausgabe: eine JSON-Zeile.
@@ -82,6 +83,7 @@ if ($mode === 'update') {
 }
 if ($mode === 'status' && method_exists(\CMS\DatabaseUpdateRunner::class, 'missingSchemaElements')) {
     $out['missing'] = (new \CMS\DatabaseUpdateRunner($db))->missingSchemaElements();
+    $out['update_required'] = (bool) ((new \CMS\DatabaseUpdateRunner($db))->getStatus()['schema_update_required'] ?? false);
 }
 $out['schema'] = (string) $db->get_var("SELECT option_value FROM cms_settings WHERE option_name = 'db_schema_version'");
 $log = (string) @file_get_contents($errorLog);

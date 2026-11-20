@@ -2301,6 +2301,40 @@ T::run('SQLite-Double: Übersetzung, Fehlerinjektion, Wächter für nicht portab
     }
 });
 
+T::run('Themen: Forenliste in zwei Schritten, Zeilen ändern sich zwischen den Schritten [SQLite-Double]', static function (): void {
+    $db = CommunityTestDatabase::create();
+    $repo = new TopicRepository($db);
+    $forum = $db->forum(['title' => 'Zwei Schritte']);
+    $other = $db->forum(['title' => 'Ziel']);
+    $user = $db->user();
+    $ids = [];
+    foreach ([100, 200, 300, 400, 500, 600] as $seconds) {
+        $ids[$seconds] = $db->topic(['forum' => $forum, 'user' => $user, 'last_post_at' => rt($seconds)]);
+    }
+    $db->log = [];
+    $plain = $repo->listForum($forum, rt(1000), null, 5);
+    $selects = array_values(array_filter($db->log, static fn (string $sql): bool => str_starts_with(ltrim($sql), 'SELECT')));
+    T::same([$ids[600], $ids[500], $ids[400], $ids[300], $ids[200]], rIds($plain->items), 'ohne Änderung: fünf Themen nach Aktivität');
+    T::check(str_starts_with($selects[0] ?? '', 'SELECT id, last_post_at FROM ') && str_contains($selects[0], 'is_pinned = 0'), 'erster Schritt: nur id und last_post_at über den Keyset (Index idx_community_topics_forum_list)', $selects[0] ?? '');
+    T::same(1, count(array_filter($selects, static fn (string $sql): bool => str_starts_with($sql, 'SELECT * FROM ') && str_contains($sql, ' WHERE id IN ('))), 'zweiter Schritt: die Zeilen über id IN (…)');
+
+    // Zwischen beiden Schritten: eines ausgeblendet, eines verschoben, eines angeheftet, eines entfernt.
+    $table = $db->getPrefix() . 'community_topics';
+    $db->beforeExecute = ['/ WHERE id IN \(/' => static function () use ($db, $table, $ids, $other): void {
+        $db->execute("UPDATE {$table} SET status = 'hidden' WHERE id = ?", [$ids[600]]);
+        $db->execute("UPDATE {$table} SET forum_id = ? WHERE id = ?", [$other, $ids[500]]);
+        $db->execute("UPDATE {$table} SET is_pinned = 1 WHERE id = ?", [$ids[400]]);
+        $db->execute("DELETE FROM {$table} WHERE id = ?", [$ids[300]]);
+    }];
+    $page = $repo->listForum($forum, rt(1000), null, 5);
+    T::same([], $db->beforeExecute, 'der Eingriff lief zwischen beiden Schritten');
+    T::same([$ids[400], $ids[200]], rIds($page->items), 'geändert zwischen beiden Schritten: ausgeblendet, verschoben und entfernt fehlen, das angeheftete steht nur oben bei den Pins');
+    T::same([], array_values(array_filter($page->items, static fn (array $row): bool => (string) $row['status'] !== 'published' || (int) $row['forum_id'] !== $forum)), 'keine Zeile mit anderem Status oder aus einem anderen Forum');
+    $cursor = Cursor::decode((string) $page->next);
+    T::check($cursor !== null && $cursor->id === $ids[200] && $cursor->at === rt(200), 'der Cursor stammt aus dem ersten Schritt (letzte ID-Zeile der Seite)');
+    T::same([$ids[100]], rIds($repo->listForum($forum, rt(1000), $cursor, 5)->items), 'die Folgeseite beginnt hinter dem Cursor, nichts geht verloren');
+});
+
 T::run('SQLite-Double: Fabrikhilfen', static function (): void {
     $db = CommunityTestDatabase::create();
     $a = $db->forum(['title' => 'A']);

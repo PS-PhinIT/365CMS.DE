@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Community: Umsetzungsfahrplan 4.2.0
 
-> **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** PR #1 geliefert (Schema v27, `capabilities_v27`, Rolle `moderator`), Rest direkt umsetzbar · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-18 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** PR #1 geliefert (Schema v27, `capabilities_v27`, Rolle `moderator`), PR #2a geliefert (Fundament der Dienste: Modul, Einstellungen, `CommunityAccess`, Themen und Beiträge, Lesestatus), PR #2b bis #5 offen; Abweichungen von diesem Plan: Übergabe §7 · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übersicht:** [README.md](README.md)
 > **Quellen:** [ROADMAP.md](ROADMAP.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## English (summary)
@@ -121,7 +121,7 @@ Neue Standardrolle **`moderator`** (Anzeigename „Moderator“). Die Entscheidu
 
 ### 9. Test-Anforderungen
 
-Suiten unter `TESTS/<suite>/run.php` mit `TESTS/lib/TestRunner.php`, aufrufbar über `php TESTS/run-all.php` (aktuell 31 Suiten). Beschreibung und Prüffälle: [TEST-PLAN.md](TEST-PLAN.md).
+Suiten unter `TESTS/<suite>/run.php` mit `TESTS/lib/TestRunner.php`, aufrufbar über `php TESTS/run-all.php` (alle Suiten `TESTS/*/run.php`; die aktuelle Zahl nennt die Ausgabe). Beschreibung und Prüffälle: [TEST-PLAN.md](TEST-PLAN.md).
 
 | Suite | Prüft | Paket |
 |---|---|---|

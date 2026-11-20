@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Rollen & Rechte (RBAC)
 
-> **Stand:** 2026-11-17 | **Version:** 4.1.8, Rolle `moderator` und Gruppe „Community“ seit 4.2.0 (Entwicklung, Schema v27) | **Status:** Stable
+> **Stand:** 2026-11-18 | **Version:** 4.1.8, Rolle `moderator` und Gruppe „Community“ seit 4.2.0 (Entwicklung, Schema v27) | **Status:** Stable
 > **Route:** `/admin/roles` (Alt-Route `/admin/rbac` leitet um) | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_roles`
 
 ## English (summary)
@@ -20,7 +20,7 @@ Roles and capabilities are managed at `/admin/roles` (`CMS/admin/roles.php` → 
 | `author` | Autor | `edit_own_posts`, `pages.view/create/edit`, `posts.view/create/edit`, `media.view/upload`, `comments.view`, `posts.publish` |
 | `member` | Mitglied | `read`, `edit_profile`, `view_content`, `*.view`, `community.view`, `community.participate` |
 | `moderator` | Moderator (seit 4.2.0, Systemrolle) | wie `member`, zusätzlich `community.moderate`; kein Zugang zu `/admin` |
-| `subscriber`, `contributor` | WordPress-kompatible Zusatzrollen | minimale Leserechte bzw. Beitragsentwürfe |
+| `subscriber`, `contributor` | WordPress-kompatible Zusatzrollen | minimale Leserechte bzw. Beitragsentwürfe; kein `community.*` (siehe [Community-Rechte](#community-rechte-und-rolle-moderator-seit-420)) |
 
 Alle Rollen besitzen `read`, `edit_profile` und `view_content`. Der Alias `administrator` wird auf `admin` normalisiert.
 
@@ -79,6 +79,10 @@ Das Community-Modul bringt sechs Capabilities (Gruppe „Community“ in `RolesM
 | `community.ban`, `community.manage`, `community.view_private_data` | nur `admin` (über die Rolle) |
 
 Der Schritt überschreibt nie eine vorhandene Zeile: Ein ausdrücklich entzogenes Recht (`granted = 0`) bleibt entzogen, ein zweiter Lauf ändert nichts. Die Grundrechte der Rolle `moderator` (wie `member`: `read`, `edit_profile`, `view_content`, `pages.view`, `posts.view`, `media.view`, `comments.view`) stehen nur in den Code-Standards (`cms_get_default_role_definitions()`), nicht als Zeilen: Zeilen für Rechte außerhalb des Katalogs erschienen im Rollen-Editor als „eigene Rechte“, und das Speichern der Matrix entzöge sie anderen Rollen. **Eine schon vorhandene eigene Rolle `moderator`** wird mit diesen Standards zur Systemrolle: Die Standards gelten zusätzlich zu ihren gespeicherten Zeilen (ein ausdrücklicher Entzug mit `granted = 0` bleibt wirksam); wer eine solche Rolle angelegt hat, prüft ihre Rechte vor dem Update. Schlägt der Schritt fehl, meldet *Updates → Datenbank-Update* den fehlenden Marker (`option:capabilities_v27`) und wiederholt ihn. Moderation für Nicht-Admins läuft im Frontend und Mitgliederbereich, nicht in `/admin` (siehe Hinweis oben). Technik: [../../workflow/specs/community/HANDOFF-PR2-PR5.md](../../workflow/specs/community/HANDOFF-PR2-PR5.md) §4.
+
+**Übrige Rollen (Entscheidung):** `subscriber`, `contributor` und eigene Rollen, die vor dem Update auf 4.2.0 bestehen, erhalten `community.view` und `community.participate` **nicht automatisch**. Konten dieser Rollen sehen die Community nicht, auch wenn Gäste sie lesen dürfen, und die Rechte je Forum ändern daran nichts. Wer sie beteiligen will, setzt im Rollen-Editor (Gruppe „Community“) die Haken bei `community.view` und gegebenenfalls `community.participate`. Eine nach dem Update angelegte Rolle übernimmt die Rechte ihrer Vorlage („Rechte übernehmen von“, Standard Mitglied), also auch die Community-Rechte.
+
+**SSO-Standardrolle:** War in *Einstellungen → SSO* eine eigene Rolle `moderator` als Standardrolle eingetragen, gilt ab 4.2.0 `member`; mit „Rollen synchronisieren“ fallen über SSO angelegte Konten mit der Rolle `moderator` ohne Mapping-Treffer bei der nächsten Anmeldung auf `member` zurück. Details: [../security/SSO-ENTRA.md](../security/SSO-ENTRA.md).
 
 ### Auflösung zur Laufzeit
 
