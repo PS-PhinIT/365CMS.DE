@@ -56,20 +56,28 @@ final class IpHash
     private array|false|null $keys = null;
 
     /**
-     * @param (\Closure(): ?string)|null $secret Geheimnis; Standard: erste Konstante aus NONCE_KEY, SECURE_AUTH_KEY, AUTH_KEY mit usableSecret()
+     * @param (\Closure(): ?string)|null $secret Geheimnis; Standard: `defaultSecret()`
      */
     public function __construct(?\Closure $secret = null)
     {
-        $this->secret = $secret ?? static function (): ?string {
-            foreach (self::SECRETS as $name) {
-                $value = defined($name) ? constant($name) : null;
-                if (self::usableSecret($value)) {
-                    return $value;
-                }
-            }
+        $this->secret = $secret ?? static fn (): ?string => self::defaultSecret();
+    }
 
-            return null;
-        };
+    /**
+     * Standard-Geheimnis der Community: die erste Konstante aus NONCE_KEY, SECURE_AUTH_KEY, AUTH_KEY mit `usableSecret()`, sonst `null`.
+     * Einzige Stelle der Reihenfolge; `CommunitySearch` (Indexname) und `SubscriptionService` (Abmeldelink) nutzen sie als Standard
+     * ihres `$secret` (Vertrag DESIGN-2b §3.6, „Standard wie IpHash“). Die Zwecke trennt HKDF mit eigener Info.
+     */
+    public static function defaultSecret(): ?string
+    {
+        foreach (self::SECRETS as $name) {
+            $value = defined($name) ? constant($name) : null;
+            if (self::usableSecret($value)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /** Netz einer IP: `203.0.113.0/24`, `2001:db8:abcd::/48`; `null` für leere, ungültige und Nulladressen. */

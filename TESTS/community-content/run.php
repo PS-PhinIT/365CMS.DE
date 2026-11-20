@@ -2220,14 +2220,9 @@ const CC_CODE_PATTERN = "/(?:failure\\('|'error' => '|=> '(?=topic_)|AccessDecis
 /**
  * Warteliste (Vertrag DESIGN-2b §3.2): Fehlercodes aus PR #2b, die W0 registriert, aber erst die Dienste der Wellen 1 bis 3
  * erzeugen. B46 überspringt sie; jeder J-Schritt streicht die Codes seiner Welle, J4 entfernt Konstante und Ausnahme.
+ * Seit J2 leer: die Dienste aus W2 erzeugen alle 27 Codes (render_failed bis query_too_short).
  */
-const CC_PENDING_CODES_2B = [
-    'render_failed', 'word_blocked', 'spam_rejected', 'pin_limit', 'reason_required', 'invalid_state', 'bulk_limit',
-    'member_not_found', 'ban_forbidden', 'ban_duration', 'already_banned', 'ban_not_found',
-    'message_required', 'not_reportable', 'report_not_found', 'report_closed', 'reaction_unknown', 'invalid_token',
-    'attachment_invalid', 'attachment_too_large', 'attachment_type', 'attachment_image', 'attachment_dimensions',
-    'attachment_limit', 'attachment_not_found', 'storage_error', 'query_too_short',
-];
+const CC_PENDING_CODES_2B = [];
 
 /** PHP-Quelltext ohne Kommentare und Docblöcke (Zeilen bleiben erhalten). */
 function ccCodeWithoutComments(string $source): string

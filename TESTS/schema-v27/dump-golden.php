@@ -1,6 +1,6 @@
 <?php
 /**
- * Erzeugt TESTS/schema-v27/golden.json neu: die kanonische Struktur der 27 Tabellen `community_*`, gelesen aus
+ * Erzeugt TESTS/schema-v27/golden.json neu: die kanonische Struktur der 28 Tabellen `community_*`, gelesen aus
  * `information_schema` einer echten MariaDB/MySQL, in die die Definitionen aus `SchemaManager::getSchemaQueries()` eingespielt
  * wurden. Das ist die Gegenprobe für TESTS/schema-v27 (Definition = Snapshot = Doku) und TESTS/schema-upgrade (Datenbank =
  * Snapshot). Eine Änderung am Schema ändert die Datei bewusst und sichtbar im Diff.

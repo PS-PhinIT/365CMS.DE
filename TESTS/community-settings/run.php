@@ -293,12 +293,8 @@ T::run('Definitionen: Typen, Standards und Grenzen laut Vertrag', static functio
     T::same(['jpg', 'png', 'webp', 'gif', 'pdf', 'zip', 'txt'], Settings::ATTACHMENT_TYPES, 'ATTACHMENT_TYPES: sieben Endungen');
     T::same(['jpg' => 1, 'png' => 1, 'webp' => 1, 'gif' => 1, 'pdf' => 1, 'zip' => 1, 'txt' => 0], Settings::DEFAULT_ATTACHMENT_TYPES, 'DEFAULT_ATTACHMENT_TYPES: alles außer txt');
     T::same(Settings::DEFAULT_ATTACHMENT_TYPES, $defaults['attachment_types'], 'attachment_types: Standard');
-    $service = 'CMS\\Services\\Community\\Service\\AttachmentService';
-    if (class_exists($service) && defined($service . '::TYPES')) {
-        T::same(Settings::ATTACHMENT_TYPES, array_keys(constant($service . '::TYPES')), 'ATTACHMENT_TYPES = array_keys(AttachmentService::TYPES)');
-    } else {
-        T::info('folgt in Welle 2: Abgleich ATTACHMENT_TYPES mit AttachmentService::TYPES');
-    }
+    // Seit J2 Pflicht (AttachmentService existiert): kein Rückfall auf einen Hinweis.
+    T::same(Settings::ATTACHMENT_TYPES, array_keys(\CMS\Services\Community\Service\AttachmentService::TYPES), 'ATTACHMENT_TYPES = array_keys(AttachmentService::TYPES)');
     T::same(
         ['read', 'create_topic', 'reply', 'edit_own', 'delete_own', 'upload', 'poll', 'vote', 'react', 'mark_solution', 'bypass_approval', 'bypass_slow_mode'],
         Settings::PERMISSION_KEYS,
@@ -1292,14 +1288,14 @@ T::run('Modul-Schalter über CoreModuleService und die Tabelle settings (SQLite-
 
 /**
  * Zusatzschlüssel nach `community.access.*` und `community.error.*` in dieser Reihenfolge (Vertrag DESIGN-2b §3.4 Nr. 3): 3 Zitat,
- * 5 Meldegründe, 4 Meldestatus, 2 Sperrumfang, 35 Hinweise, 14 Mails (63). Die drei Gruppen der Sanktionen leitet der Test aus
- * `ReportService::REASONS`/`::STATUSES` und `BanService::SCOPES` ab, sobald die Klassen existieren (J2).
+ * 5 Meldegründe, 4 Meldestatus, 2 Sperrumfang, 35 Hinweise, 14 Mails (63). Die drei Gruppen der Sanktionen stammen aus
+ * `ReportService::REASONS`/`::STATUSES` und `BanService::SCOPES` (J2): ein neuer Grund, Status oder Umfang verlangt seinen Sprachschlüssel.
  */
-const CS_EXTRA_KEYS = [
+define('CS_EXTRA_KEYS', [
     'community.quote.hidden', 'community.quote.removed', 'community.quote.source',
-    'community.report.reason.spam', 'community.report.reason.abuse', 'community.report.reason.offtopic', 'community.report.reason.illegal', 'community.report.reason.other',
-    'community.report.status.open', 'community.report.status.valid', 'community.report.status.invalid', 'community.report.status.resolved',
-    'community.ban.scope.write', 'community.ban.scope.full',
+    ...array_map(static fn (string $reason): string => 'community.report.reason.' . $reason, \CMS\Services\Community\Service\ReportService::REASONS),
+    ...array_map(static fn (string $status): string => 'community.report.status.' . $status, \CMS\Services\Community\Service\ReportService::STATUSES),
+    ...array_map(static fn (string $scope): string => 'community.ban.scope.' . $scope, \CMS\Services\Community\Service\BanService::SCOPES),
     'community.notify.deleted_member',
     'community.notify.reply.title', 'community.notify.reply.title_many', 'community.notify.reply.message', 'community.notify.reply.message_many',
     'community.notify.new_topic.title', 'community.notify.new_topic.title_many', 'community.notify.new_topic.message', 'community.notify.new_topic.message_many',
@@ -1315,7 +1311,7 @@ const CS_EXTRA_KEYS = [
     'community.mail.new_topic.subject', 'community.mail.new_topic.body', 'community.mail.new_topic.gate', 'community.mail.link',
     'community.mail.unsubscribe_topic', 'community.mail.unsubscribe_forum', 'community.mail.unsubscribe_all', 'community.mail.settings',
     'community.mail.ban.subject', 'community.mail.ban.contact',
-];
+]);
 
 T::run('Zusatzschlüssel CS_EXTRA_KEYS: Zahlen und Ableitung aus den Diensten', static function (): void {
     $group = static fn (string $prefix): array => array_values(array_filter(CS_EXTRA_KEYS, static fn (string $key): bool => str_starts_with($key, $prefix)));
@@ -1323,19 +1319,22 @@ T::run('Zusatzschlüssel CS_EXTRA_KEYS: Zahlen und Ableitung aus den Diensten', 
     T::same(count(CS_EXTRA_KEYS), count(array_unique(CS_EXTRA_KEYS)), 'Zusatzschlüssel eindeutig');
     T::same([3, 5, 4, 2, 35, 14], [count($group('community.quote.')), count($group('community.report.reason.')), count($group('community.report.status.')), count($group('community.ban.scope.')), count($group('community.notify.')), count($group('community.mail.'))], 'Gruppen: Zitat 3, Gründe 5, Status 4, Umfang 2, Hinweise 35, Mails 14');
     T::same(95, count(Codes::ACCESS_REASONS) - 23 + count(Codes::ERRORS) - 16 + count(CS_EXTRA_KEYS), '95 neue Schlüssel je Sprache in PR #2b (5 Gründe, 27 Codes, 63 Zusatzschlüssel)');
+    // Abgeleitete Gruppen: Werte und Reihenfolge der Dienste (= Repository-Konstanten), Sprachschlüssel in derselben Folge.
     $derived = [
-        'community.report.reason.' => ['CMS\\Services\\Community\\Service\\ReportService', 'REASONS'],
-        'community.report.status.' => ['CMS\\Services\\Community\\Service\\ReportService', 'STATUSES'],
-        'community.ban.scope.' => ['CMS\\Services\\Community\\Service\\BanService', 'SCOPES'],
+        'community.report.reason.' => [\CMS\Services\Community\Service\ReportService::REASONS, \CMS\Services\Community\Repository\ReportRepository::REASONS, 'ReportService::REASONS'],
+        'community.report.status.' => [\CMS\Services\Community\Service\ReportService::STATUSES, \CMS\Services\Community\Repository\ReportRepository::STATUSES, 'ReportService::STATUSES'],
+        'community.ban.scope.' => [\CMS\Services\Community\Service\BanService::SCOPES, \CMS\Services\Community\Repository\BanRepository::SCOPES, 'BanService::SCOPES'],
     ];
-    foreach ($derived as $prefix => [$class, $constant]) {
-        $fixed = array_map(static fn (string $key): string => substr($key, strlen($prefix)), $group($prefix));
-        if (class_exists($class) && defined($class . '::' . $constant)) {
-            T::same(array_values(constant($class . '::' . $constant)), $fixed, $prefix . '*: gleich ' . substr($class, strrpos($class, '\\') + 1) . '::' . $constant);
-        } else {
-            T::info('folgt in Welle 2: ' . $prefix . '* aus ' . substr($class, strrpos($class, '\\') + 1) . '::' . $constant . ' ableiten (bis dahin feste Liste)');
-        }
+    foreach ($derived as $prefix => [$service, $repository, $label]) {
+        $keys = array_map(static fn (string $key): string => substr($key, strlen($prefix)), $group($prefix));
+        T::same(array_values($service), $keys, $prefix . '*: abgeleitet aus ' . $label);
+        T::same(array_values($repository), array_values($service), $label . ' = Konstante des Repositorys');
     }
+    T::same(
+        [['spam', 'abuse', 'offtopic', 'illegal', 'other'], ['open', 'valid', 'invalid', 'resolved'], ['write', 'full']],
+        [\CMS\Services\Community\Service\ReportService::REASONS, \CMS\Services\Community\Service\ReportService::STATUSES, \CMS\Services\Community\Service\BanService::SCOPES],
+        'Register §3.4: Meldegründe, Meldestatus und Sperrumfang wie im Vertrag'
+    );
 });
 
 T::run('Codes ↔ Sprachschlüssel (de und en, zeilenparallel)', static function (): void {
@@ -1554,8 +1553,9 @@ T::run('Leser vorhanden: jeder Schlüssel in Settings::DEFINITIONS wird außerha
     foreach ($readers as $key => [$expectedFiles, $helper]) {
         foreach ($expectedFiles as $relative) {
             $path = CS_ROOT . $relative;
+            // Seit J2 Pflicht: alle Dienste aus W2 existieren.
             if (!is_file($path)) {
-                T::info('folgt in Welle 2: Leser von ' . $key . ' (' . $relative . ' fehlt noch)');
+                T::check(false, 'Leser von ' . $key . ': ' . $relative . ' vorhanden');
                 continue;
             }
             $tokens = csCodeTokens(csRead($path));
@@ -1593,8 +1593,9 @@ T::run('Wirkungstest vorhanden: Abschnitt „Wirkung: <schlüssel>“ je Einstel
 
     foreach ($suites as $key => $suite) {
         $path = dirname(__DIR__) . '/' . $suite . '/run.php';
+        // Seit J2 Pflicht: alle Suiten aus W2 existieren.
         if (!is_file($path)) {
-            T::info('folgt in Welle 2: Wirkungstest von ' . $key . ' (TESTS/' . $suite . '/run.php fehlt noch)');
+            T::check(false, 'Wirkungstest von ' . $key . ': TESTS/' . $suite . '/run.php vorhanden');
             continue;
         }
         $found = preg_match('/^[^\n]*Wirkung:[^\n]*\b' . preg_quote($key, '/') . '\b/m', csRead($path)) === 1;

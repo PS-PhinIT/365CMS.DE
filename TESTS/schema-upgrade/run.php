@@ -90,12 +90,12 @@ $structure = static function (string $db) use ($pdo): array {
 
     return $rows;
 };
-// Snapshot der 27 Community-Tabellen (TESTS/schema-v27/golden.json): die Datenbank muss ihm entsprechen (Spalten mit Typ, NULL,
+// Snapshot der 28 Community-Tabellen (TESTS/schema-v27/golden.json): die Datenbank muss ihm entsprechen (Spalten mit Typ, NULL,
 // Default, Primärschlüssel, Indizes), nicht nur der Neuinstallation.
 $golden = json_decode((string) file_get_contents(__DIR__ . '/../schema-v27/golden.json'), true) ?: [];
 $compareGolden = static function (PDO $pdo, string $db) use ($golden): void {
     $actual = v27ReadStructure($pdo, $db, 'cms_', array_keys($golden));
-    T::same(27, count($golden), 'Snapshot golden.json enthält 27 Tabellen');
+    T::same(28, count($golden), 'Snapshot golden.json enthält 28 Tabellen');
     foreach ($golden as $table => $expected) {
         T::same($expected['columns'], $actual[$table]['columns'], "{$table}: Spalten entsprechen dem Snapshot");
         T::same($expected['primary'], $actual[$table]['primary'], "{$table}: Primärschlüssel entspricht dem Snapshot");
@@ -528,9 +528,9 @@ try {
             $pdo->exec($queries[$table]);
         }
         $quoted = $pdo->quote($db);
-        T::same([], $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND TABLE_COLLATION <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle 27 Tabellen: utf8mb4_unicode_ci (nicht der Standard der Datenbank)');
+        T::same([], $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND TABLE_COLLATION <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle 28 Tabellen: utf8mb4_unicode_ci (nicht der Standard der Datenbank)');
         T::same([], $pdo->query("SELECT CONCAT(TABLE_NAME, '.', COLUMN_NAME) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND COLLATION_NAME IS NOT NULL AND COLLATION_NAME <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle Textspalten: utf8mb4_unicode_ci');
-        T::same(27, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%'")->fetchColumn(), 'alle 27 Tabellen angelegt');
+        T::same(28, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%'")->fetchColumn(), 'alle 28 Tabellen angelegt');
     });
 } finally {
     foreach ($pdo->query("SHOW DATABASES LIKE " . $pdo->quote(str_replace('_', '\\_', $prefix) . '%'))->fetchAll(PDO::FETCH_COLUMN) as $name) {

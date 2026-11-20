@@ -277,7 +277,7 @@ T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, 
     if ($custom) {
         T::info('eigener Katalog (' . basename((string) getenv('CMS_TEST_MUTANT_CATALOG')) . '): Zählregeln des ganzen Katalogs entfallen; ' . count($catalog) . ' Mutanten, davon quick: ' . $quick);
     } else {
-        T::check(count($catalog) >= 60 && count($catalog) <= 600, 'der Katalog hat 60 bis 600 Mutanten', (string) count($catalog));
+        T::check(count($catalog) >= 60 && count($catalog) <= 700, 'der Katalog hat 60 bis 700 Mutanten', (string) count($catalog));
         $legacy = array_intersect_key($perSuite, array_flip(CM_LEGACY_SUITES));
         T::check(min($legacy) >= 10, 'jede Suite aus #2a hat mindestens zehn Mutanten', json_encode($legacy));
         T::same([], array_keys(array_filter($perSuite, static fn (int $n): bool => $n < 1)), 'jede Suite in CM_SUITES hat mindestens eine Mutante', json_encode($perSuite));

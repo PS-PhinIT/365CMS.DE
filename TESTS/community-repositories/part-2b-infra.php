@@ -90,12 +90,10 @@ function r0Fixtures(Database $db, string $label): void
     $system = $db->row('community_moderation_log', ['id' => $db->moderationLog(['action' => 'user.ban', 'target_type' => 'user', 'target' => $user, 'created_at' => rt(7)])]);
     T::same([null, 'user', null, null, null, rt(7)], [$system['actor_id'], $system['target_type'], $system['forum_id'], $system['reason'], $system['details_json'], $system['created_at']], "[{$label}] moderationLog(): Systemaktion ohne Akteur, ohne details");
 
-    if ($db->tableExists($db->getPrefix() . 'community_notify_queue')) {
-        $job = $db->row('community_notify_queue', ['id' => $db->queueJob(['kind' => 'reply', 'topic' => $topic, 'post' => $post, 'actor' => $user])]);
-        T::same(['reply', $topic, $post, $user, null, 0, 0, null], [$job['kind'], (int) $job['topic_id'], (int) $job['post_id'], (int) $job['actor_id'], $job['detail'], (int) $job['phase'], (int) $job['cursor_user_id'], $job['locked_until']], "[{$label}] queueJob(): Auftrag ohne Lease");
-    } else {
-        T::info("[{$label}] queueJob(): Tabelle community_notify_queue folgt in Welle 2 (Einheit N)");
-    }
+    // Seit J2 Pflicht: community_notify_queue gehört zum Schema (Vertrag §3.9).
+    T::check($db->tableExists($db->getPrefix() . 'community_notify_queue'), "[{$label}] Tabelle community_notify_queue vorhanden");
+    $job = $db->row('community_notify_queue', ['id' => $db->queueJob(['kind' => 'reply', 'topic' => $topic, 'post' => $post, 'actor' => $user])]);
+    T::same(['reply', $topic, $post, $user, null, 0, 0, null], [$job['kind'], (int) $job['topic_id'], (int) $job['post_id'], (int) $job['actor_id'], $job['detail'], (int) $job['phase'], (int) $job['cursor_user_id'], $job['locked_until']], "[{$label}] queueJob(): Auftrag ohne Lease");
 
     foreach (['report' => ['target_type' => 'post'], 'subscription' => ['user' => $user], 'reaction' => ['post' => $post], 'moderationLog' => ['target' => 1]] as $fixture => $incomplete) {
         $thrown = false;

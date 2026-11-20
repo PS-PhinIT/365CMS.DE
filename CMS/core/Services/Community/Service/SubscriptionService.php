@@ -46,8 +46,6 @@ final class SubscriptionService
     /** HKDF-Info des Abmeldeschlüssels (Domänentrennung zu IpHash und FormSpamGuard). */
     public const TOKEN_INFO = '365cms:community:unsubscribe:v1';
     public const TOKEN_PATTERN = '/^([1-9][0-9]{0,9})\.(t[1-9][0-9]{0,9}|f[1-9][0-9]{0,9}|a)\.([0-9a-f]{32})$/D';
-    /** Geheimnisse in dieser Reihenfolge; das erste brauchbare (`IpHash::usableSecret()`) gilt. */
-    public const SECRETS = ['NONCE_KEY', 'SECURE_AUTH_KEY', 'AUTH_KEY'];
     /** Standard und Obergrenze von `subscriptions()`. */
     public const LIST_LIMIT = 50;
     public const LIST_MAX = 100;
@@ -83,7 +81,7 @@ final class SubscriptionService
      * @param \Closure(?int, string, array<string, mixed>): AccessDecision|null $can Standard `CommunityAccess::instance()->can()`
      * @param \Closure(string, mixed...): void|null $dispatch Standard `Events::fire()`
      * @param \Closure(string, ?int): array{allowed: bool, retry_after: int}|null $throttle Standard `ContentGuard::instance()->throttle()`
-     * @param \Closure(): ?string|null $secret Schlüsselmaterial; Standard die erste brauchbare Konstante aus SECRETS
+     * @param \Closure(): ?string|null $secret Schlüsselmaterial; Standard `IpHash::defaultSecret()` (erste brauchbare Konstante wie IpHash)
      * @param \Closure(): string|null $locale Sprache der Anfrage; Standard `I18n::requestLocale()`
      */
     public function __construct(
@@ -109,16 +107,7 @@ final class SubscriptionService
                 ? ContentGuard::instance()->throttle($action, $userId)
                 : ['allowed' => false, 'retry_after' => 60];
         };
-        $this->secret = $secret ?? static function (): ?string {
-            foreach (self::SECRETS as $name) {
-                $value = defined($name) ? constant($name) : null;
-                if (IpHash::usableSecret($value)) {
-                    return (string) $value;
-                }
-            }
-
-            return null;
-        };
+        $this->secret = $secret ?? static fn (): ?string => IpHash::defaultSecret();
         $this->locale = $locale ?? static fn (): string => I18n::requestLocale();
         $this->subscriptions = new SubscriptionRepository($this->db);
         $this->stats = new UserStatsRepository($this->db);

@@ -277,7 +277,7 @@ class MigrationManager
 
         // v25: Tabellen der in den Core übernommenen Funktionen (Formulare, Downloads, Feed-Aggregator) –
         // dieselben Definitionen wie bei der Neuinstallation, in Abhängigkeitsreihenfolge. v26 ergänzt die Tabellen von
-        // 4.1.0, v27 die 27 Tabellen des Community-Moduls (4.2.0).
+        // 4.1.0, v27 die 28 Tabellen des Community-Moduls (4.2.0).
         $schemaQueries = SchemaManager::getSchemaQueries($p, $charset);
         foreach (array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26, SchemaManager::FEATURE_TABLES_V27) as $featureTable) {
             if (isset($schemaQueries[$featureTable])) {

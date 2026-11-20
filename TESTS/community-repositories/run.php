@@ -2201,8 +2201,8 @@ T::run('SQLite-Double: Tabellen und Indizes aus den echten CREATE-Texten', stati
     $db = CommunityTestDatabase::create();
     $expected = [...CommunityTestSchema::CORE_TABLES, 'role_permissions', ...\CMS\SchemaManager::FEATURE_TABLES_V27];
     $missing = array_values(array_filter($expected, static fn (string $table): bool => !$db->tableExists('cms_' . $table)));
-    T::same([], $missing, 'alle Testtabellen sind angelegt (27 Community-Tabellen plus Core-Tabellen)');
-    T::same(27, count(\CMS\SchemaManager::FEATURE_TABLES_V27), 'die Community-Tabellen sind 27');
+    T::same([], $missing, 'alle Testtabellen sind angelegt (28 Community-Tabellen plus Core-Tabellen)');
+    T::same(28, count(\CMS\SchemaManager::FEATURE_TABLES_V27), 'die Community-Tabellen sind 28');
     T::same(false, $db->tableExists('cms_gibt_es_nicht'), 'tableExists: unbekannte Tabelle → false');
     foreach (['uq_community_forums_slug', 'uq_community_forums_slug_en', 'idx_community_forums_path', 'idx_community_topics_forum_list', 'idx_community_posts_topic', 'uq_community_forum_permissions_subject', 'idx_community_bans_user', 'unique_user_group'] as $index) {
         T::same(1, (int) $db->get_var("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?", [$index]), "Index {$index} ist angelegt");

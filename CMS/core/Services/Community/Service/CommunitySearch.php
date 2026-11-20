@@ -96,8 +96,6 @@ final class CommunitySearch
     private const EXCERPT_CHARS = 240;
     /** HKDF-Info des Index-Kennzeichens. */
     private const TAG_INFO = '365cms:community:index:v1';
-    /** Geheimnisse in der Reihenfolge von `IpHash` (erste brauchbare Konstante). */
-    private const SECRETS = ['NONCE_KEY', 'SECURE_AUTH_KEY', 'AUTH_KEY'];
     /** Erlaubte Filter. */
     private const FILTER_KEYS = ['forum_id', 'with_children', 'user_id', 'since', 'until', 'first_only', 'solved', 'sort'];
     /** Beiträge je Schritt der Themen-Expansion. */
@@ -193,16 +191,8 @@ final class CommunitySearch
         };
         $this->jobs = $jobs ?? static fn (): object => BatchJobService::getInstance();
         $this->locale = $locale;
-        $this->secret = $secret ?? static function (): ?string {
-            foreach (self::SECRETS as $name) {
-                $value = defined($name) ? constant($name) : null;
-                if (IpHash::usableSecret($value)) {
-                    return $value;
-                }
-            }
-
-            return null;
-        };
+        // Standard wie IpHash (Vertrag §3.6), gelesen erst bei der ersten Nutzung.
+        $this->secret = $secret ?? static fn (): ?string => IpHash::defaultSecret();
         $this->posts = new PostRepository($this->db);
         $this->search = new SearchRepository($this->db);
     }

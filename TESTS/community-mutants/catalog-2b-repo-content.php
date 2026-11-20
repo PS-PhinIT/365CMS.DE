@@ -6,6 +6,7 @@
  * über alle Kataloge eindeutig. Jeder Suchtext ist eine Pflichtschreibweise und steht genau einmal in seiner Datei (Vertrag DESIGN-2b §1 Nr. 5).
  * Die Zeilen aus render §6.5 und moderation §6.4 behalten ihre Namen; Ziel ist in Welle 1 die Suite `community-repositories`
  * (Teildatei `part-2b-content.php`), weil `community-moderation` und `community-render` G erst in Welle 2 entstehen.
+ * Seit J2 zielt `clear-rendered-keeps-count` auf `community-render` (Vertrag §7.4: Wächter in G); `community-repositories` erkennt sie weiterhin.
  *
  * @package CMSv2\Core\Services\Community
  */
@@ -18,7 +19,7 @@ return [
     'store-overwrites-current' => ['core/Services/Community/Repository/PostRepository.php', 'AND edit_count = ? AND rendered_version < ?', 'AND edit_count = ? AND rendered_version <= ?', 'community-repositories', false, 'storeRendered ohne replaceCurrent überschreibt keine Zeile mit derselben Version', false, []],
     'updatable-body' => ['core/Services/Community/Repository/PostRepository.php', '\'topic_id\', \'forum_id\', \'status\', \'status_reason\', \'edited_at\',', '\'topic_id\', \'forum_id\', \'status\', \'status_reason\', \'body\', \'edited_at\',', 'community-repositories', false, 'update() schreibt keinen Text (Text nur über applyEdit() mit edit_count + 1)', false, []],
     'job-window' => ['core/Services/Community/Repository/PostRepository.php', 'WHERE id > ? AND id <= ? AND rendered_version < ?', 'WHERE id > ? AND ? > 0 AND rendered_version < ?', 'community-repositories', false, 'renderBatch liest nur das Fenster bis untilId einschließlich', false, []],
-    'clear-rendered-keeps-count' => ['core/Services/Community/Repository/PostRepository.php', 'rendered_version = 0, edit_count = edit_count + 1, updated_at = ?', 'rendered_version = 0, updated_at = ?', 'community-repositories', false, 'clearRendered erhöht edit_count (Invariante: jede Änderung von Text oder Anhangsmenge erhöht edit_count, Vertrag R7)', false, []],
+    'clear-rendered-keeps-count' => ['core/Services/Community/Repository/PostRepository.php', 'rendered_version = 0, edit_count = edit_count + 1, updated_at = ?', 'rendered_version = 0, updated_at = ?', 'community-render', false, 'clearRendered erhöht edit_count (Invariante: jede Änderung von Text oder Anhangsmenge erhöht edit_count, Vertrag R7; Wächter in community-render G, Vertrag §7.4)', false, []],
     'apply-edit-not-atomic' => ['core/Services/Community/Repository/PostRepository.php', 'updated_at = ?, edit_count = edit_count + 1 WHERE id = ?', 'updated_at = ?, edit_count = 1 WHERE id = ?', 'community-repositories', false, 'applyEdit erhöht edit_count atomar auf dem Datenbankwert (edit-no-atomic aus catalog.php trifft seit PR #2b clearRendered)', false, []],
 
     // ── Moderation: Repository-Regeln (moderation §6.4; Ziel-Suite in W1 community-repositories, community-moderation folgt in W2)

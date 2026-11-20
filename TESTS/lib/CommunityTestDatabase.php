@@ -759,3 +759,75 @@ final class CommunityTestDatabase extends Database
         return (int) $this->sqlite->query("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = " . $this->sqlite->quote($table))->fetchColumn() > 0;
     }
 }
+
+/**
+ * Integrationsfälle über Einheitsgrenzen (Vertrag DESIGN-2b §6 J2, Fassung 3.1 GK6): die Standard-Closures `$throttle` der Dienste
+ * laufen gegen einen echten `ContentGuard` (Tabelle `THROTTLE`, Kennungen, Gäste-Eimer) als `ContentGuard::instance()`. Nur der
+ * Speicher ist ersetzt: der Limiter zählt im Speicher in der Zählweise aus §3.13 (voll ⇒ ablehnen ohne Eintrag, eintragen,
+ * nachzählen) und protokolliert jeden Aufruf. Die Wirkung gegen `login_attempts` prüft `community-db` (`race-throttle`).
+ *
+ * Aufruf: `$wiring = new CommunityWiring(); $result = $wiring->run(static fn () => $dienst->methode(…));`
+ */
+final class CommunityWiring
+{
+    /** @var list<array{0: string, 1: string, 2: int, 3: int}> Aufrufe des Limiters: Aktion (`community_…`), Kennung, Grenze, Fenster */
+    public array $calls = [];
+    public \CMS\Services\Community\Service\ContentGuard $guard;
+    /** @var array<string, int> Einträge je Aktion und Kennung */
+    private array $rows = [];
+
+    /** @param array{web: bool, ip: string, user_agent: string}|null $client Client des Guards; Standard CLI ohne IP (Gäste im Eimer `unknown`) */
+    public function __construct(?array $client = null)
+    {
+        $client ??= ['web' => false, 'ip' => '', 'user_agent' => ''];
+        $this->guard = new \CMS\Services\Community\Service\ContentGuard(
+            CommunityTestDatabase::create(),
+            \CMS\Services\Community\Support\Settings::fromArray([]),
+            client: static fn (): array => $client,
+            limiter: function (string $name, string $subject, int $max, int $window): bool {
+                $this->calls[] = [$name, $subject, $max, $window];
+                $key = $name . '|' . $subject;
+                if (($this->rows[$key] ?? 0) >= $max) {
+                    return false;
+                }
+                $this->rows[$key] = ($this->rows[$key] ?? 0) + 1;
+
+                return $this->rows[$key] <= $max;
+            },
+            ipHash: new \CMS\Services\Community\Support\IpHash(static fn (): string => 'community-wiring-secret-0123456789')
+        );
+    }
+
+    /**
+     * Führt `$fn` mit diesem Guard als `ContentGuard::instance()` aus; danach gilt wieder die vorige Instanz.
+     *
+     * @template T
+     * @param \Closure(): T $fn
+     * @return T
+     */
+    public function run(\Closure $fn): mixed
+    {
+        $previous = self::swap(\CMS\Services\Community\Service\ContentGuard::class, $this->guard);
+        try {
+            return $fn();
+        } finally {
+            self::swap(\CMS\Services\Community\Service\ContentGuard::class, $previous);
+        }
+    }
+
+    /** Aktionen und Kennungen der Limiter-Aufrufe ohne Wiederholung, in der Reihenfolge des ersten Auftretens. @return list<string> */
+    public function buckets(): array
+    {
+        return array_values(array_unique(array_map(static fn (array $c): string => $c[0] . ' ' . $c[1] . ' ' . $c[2] . '/' . $c[3], $this->calls)));
+    }
+
+    /** Setzt eine statische Eigenschaft (Standard: Singleton `instance`) und liefert den vorigen Wert. */
+    public static function swap(string $class, mixed $value, string $property = 'instance'): mixed
+    {
+        $reflection = new \ReflectionProperty($class, $property);
+        $previous = $reflection->getValue();
+        $reflection->setValue(null, $value);
+
+        return $previous;
+    }
+}
