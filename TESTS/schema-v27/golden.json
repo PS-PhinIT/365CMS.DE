@@ -132,7 +132,7 @@
             "idx_community_topics_locked": {"unique":false,"columns":["is_locked","locked_until"]},
             "idx_community_topics_moved": {"unique":false,"columns":["status","moved_expires_at"]},
             "idx_community_topics_pinned": {"unique":false,"columns":["is_pinned","pinned_until"]},
-            "idx_community_topics_solved": {"unique":false,"columns":["forum_id","solved_at","status","is_pinned","last_post_at"]},
+            "idx_community_topics_solved": {"unique":false,"columns":["solved_at","forum_id","status","is_pinned","last_post_at"]},
             "idx_community_topics_trashed": {"unique":false,"columns":["trashed_at"]},
             "idx_community_topics_unanswered": {"unique":false,"columns":["forum_id","status","reply_count","created_at"]},
             "idx_community_topics_unanswered_all": {"unique":false,"columns":["status","reply_count","created_at"]},

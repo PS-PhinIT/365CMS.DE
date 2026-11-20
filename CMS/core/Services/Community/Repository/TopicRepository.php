@@ -170,6 +170,9 @@ final class TopicRepository extends AbstractRepository
      *   `idx_community_topics_forum_list`), danach die Zeilen über `id IN (…)`. Mit `SELECT *` wählte MariaDB 10.11 in großen
      *   Foren bei einem Cursor in der oberen Hälfte der Liste `ref` statt `range`; der Keyset wirkte nur noch als Filter, und die
      *   Lesezugriffe wuchsen mit der Position (15.000 Themen: Position 6000 mit 6021, die ID-Abfrage mit 22; HANDOFF §2 Nr. 10).
+     *   Außer `idx_community_topics_forum_list` überdeckt kein Index, der mit `forum_id` beginnt, die ID-Abfrage (TESTS/schema-v27):
+     *   Mit `idx_community_topics_solved` in der Form (`forum_id`, `solved_at`, …) nahm MariaDB 10.11 in kleinen Foren auf
+     *   Folgeseiten `ref` über `forum_id` mit Filesort und las das ganze Forum (HANDOFF §2 Nr. 9).
      *   Gehört eine Zeile beim zweiten Schritt nicht mehr zur Liste (anderes Forum, anderer Status, angeheftet, gelöscht), fehlt
      *   sie auf dieser Seite; der Cursor bleibt der des ersten Schritts.
      *

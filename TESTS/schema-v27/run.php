@@ -276,7 +276,7 @@ T::run('Indizes', static function () use ($queries): void {
             'idx_community_topics_user' => ['user_id', 'status', 'created_at'],
             // Nachträge nach PR #1: globale Liste „Unbeantwortet“ und Filter „ungelöst“ (HANDOFF §2 Nr. 9 und 10).
             'idx_community_topics_unanswered_all' => ['status', 'reply_count', 'created_at'],
-            'idx_community_topics_solved' => ['forum_id', 'solved_at', 'status', 'is_pinned', 'last_post_at'],
+            'idx_community_topics_solved' => ['solved_at', 'forum_id', 'status', 'is_pinned', 'last_post_at'],
         ],
         'community_posts' => [
             'idx_community_posts_topic' => ['topic_id', 'status', 'id'],
@@ -305,9 +305,18 @@ T::run('Indizes', static function () use ($queries): void {
     // Kein zweiter Index beginnt wie idx_community_topics_forum_list mit (forum_id, status, is_pinned): Mit einem solchen Index
     // (idx_community_topics_solved in der ersten Form des Nachlaufs) wählte MariaDB 10.11 für Forenliste und lastPublished() je nach
     // Schätzung idx_community_topics_activity und las in einem großen älteren Forum die jüngeren Themen aller Foren mit
-    // (HANDOFF §2 Nr. 9). Ob der Optimierer ausweicht, hängt vom Seitenlayout ab; die Regel prüft deshalb die Definition.
-    $sharing = array_keys(array_filter(v27Indexes((string) $queries['community_topics']), static fn (array $index): bool => array_slice($index['columns'], 0, 3) === ['forum_id', 'status', 'is_pinned']));
+    // (HANDOFF §2 Nr. 9). Ob der Optimierer ausweicht, hängt vom Seitenlayout ab; die Regeln prüfen deshalb die Definition.
+    $topicIndexDefinitions = v27Indexes((string) $queries['community_topics']);
+    $sharing = array_keys(array_filter($topicIndexDefinitions, static fn (array $index): bool => array_slice($index['columns'], 0, 3) === ['forum_id', 'status', 'is_pinned']));
     T::same(['idx_community_topics_forum_list'], $sharing, 'community_topics: nur idx_community_topics_forum_list beginnt mit (forum_id, status, is_pinned)');
+    // Außer idx_community_topics_forum_list überdeckt kein Index, der mit forum_id beginnt, die ID-Abfrage des Stroms von listForum()
+    // (forum_id, status, is_pinned, last_post_at): Mit idx_community_topics_solved in der zweiten Form (forum_id, solved_at, status,
+    // is_pinned, last_post_at) nahm MariaDB 10.11 in kleinen Foren (30 bis 1200 Themen) auf Folgeseiten ref über forum_id mit
+    // Filesort und las das ganze Forum (800 Themen: 801 statt 12 Lesezugriffe). Seit dem Nachlauf beginnt er mit solved_at.
+    $streamColumns = ['forum_id', 'status', 'is_pinned', 'last_post_at'];
+    $covering = array_keys(array_filter($topicIndexDefinitions, static fn (array $index): bool => ($index['columns'][0] ?? null) === 'forum_id' && array_diff($streamColumns, $index['columns']) === []));
+    T::same(['idx_community_topics_forum_list'], $covering, 'community_topics: nur idx_community_topics_forum_list beginnt mit forum_id und überdeckt die ID-Abfrage des Stroms (forum_id, status, is_pinned, last_post_at)');
+    T::same('solved_at', $topicIndexDefinitions['idx_community_topics_solved']['columns'][0] ?? null, 'idx_community_topics_solved beginnt mit solved_at (nur Abfragen mit Bedingung auf solved_at können ihn nutzen)');
     foreach (['community_forums' => 'uq_community_forums_slug', 'community_polls' => 'uq_community_polls_topic', 'community_badges' => 'uq_community_badges_slug', 'community_forum_permissions' => 'uq_community_forum_permissions_subject'] as $table => $name) {
         T::check(v27Indexes((string) $queries[$table])[$name]['unique'] ?? false, "{$table}.{$name} ist eindeutig");
     }
@@ -389,6 +398,10 @@ T::run('Core-Tabelle notifications: Gruppenschlüssel und Zähler (Bündelung)',
     ];
     T::check(str_contains($expected['group_key'], " COMMENT '") && str_contains($expected['event_count'], " COMMENT '"), 'CREATE: group_key und event_count mit Spaltenkommentar');
     T::same($expected, SchemaManager::REQUIRED_COLUMN_DEFINITIONS['notifications'] ?? null, 'REQUIRED_COLUMN_DEFINITIONS: group_key/event_count mit der Definition aus dem CREATE (Laufzeitprüfung und Datenbank-Update)');
+    // Erweiterung nur zusammen mit ensureFeatureSchema(): Es liest ausdrücklich den Schlüssel notifications. Eine weitere Tabelle
+    // braucht dort einen eigenen ensureColumnExists()/alignColumnDefinitions()-Aufruf und einen Eintrag in REQUIRED_COLUMNS;
+    // sonst gleicht die Laufzeitprüfung nie an und das Datenbank-Update scheitert dauerhaft bzw. prüft die Spalte nicht.
+    T::same(['notifications'], array_keys(SchemaManager::REQUIRED_COLUMN_DEFINITIONS), 'REQUIRED_COLUMN_DEFINITIONS: nur notifications (eine weitere Tabelle braucht einen eigenen Schritt in ensureFeatureSchema() und einen Eintrag in REQUIRED_COLUMNS)');
     foreach ($expected as $column => $definition) {
         T::check(str_contains($migrationSource, '"ALTER TABLE `{$p}notifications` ADD COLUMN `' . $column . '` ' . $definition . '"'), "Update (MigrationManager): {$column} mit derselben Definition wie im CREATE", $definition);
     }
