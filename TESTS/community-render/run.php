@@ -4,7 +4,9 @@
  * Purifier-Profil `community`, CommonMark-Bündel, Zitatregel `QuoteService::markerId()` und Ausgaberegel `QuoteService::presentable()`.
  *
  * Abschnitte (Besitzer): A Bündel, B Darstellung R1 bis R10 mit „Pathologie“, D Zählung, E Purifier-Profil, F Version, I Sprache (V, W1);
- * G `RenderService` (R, W2) und H Dienste mit Renderer (T, W3, `part-services.php`). C (XSS-Korpus) liegt in `TESTS/community-xss`.
+ * G `RenderService` und die Mengen-API von `QuoteService` (R, W2: Nachrendern im Budget, Wächter `edit_count`, Zitate je Betrachter,
+ * Lecktests S1/S2, Zitatgrenzen, Filter, Job, Vorschau) und H Dienste mit Renderer (T, W3, `part-services.php`).
+ * C (XSS-Korpus) liegt in `TESTS/community-xss`.
  *
  * DB-frei. Die Pathologie-Fälle laufen in einem eigenen Prozess (`php run.php --pathology`), damit die Speicherspitze je Fall
  * messbar ist und eine Mutante ohne Grenzen den Prüflauf nicht mit Speichermangel abbricht (der Elternprozess wertet die Zeilen aus).
@@ -42,10 +44,17 @@ require_once ABSPATH . 'assets/autoload.php';
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
 require_once dirname(__DIR__) . '/lib/CommunityTestDatabase.php';
 
+use CMS\Services\Community\Repository\PostRepository;
+use CMS\Services\Community\Service\AccessDecision;
+use CMS\Services\Community\Service\CommunityAccess;
+use CMS\Services\Community\Service\PostService;
 use CMS\Services\Community\Service\QuoteService;
+use CMS\Services\Community\Service\RenderService;
+use CMS\Services\Community\Service\TopicService;
 use CMS\Services\Community\Support\ContentRenderer;
 use CMS\Services\Community\Support\I18n;
 use CMS\Services\Community\Support\Settings;
+use CMS\Services\Community\Support\Urls;
 use CMS\Services\PurifierService;
 
 T::$verbose = in_array('-v', $argv ?? [], true);
@@ -812,7 +821,885 @@ T::run('I Sprache: community.quote.* (DE = Konstanten von QuoteService, EN ≠ D
     }
 });
 
-// Teildateien weiterer Besitzer (R: G in W2, T: part-services.php in W3; Vertrag §1 Nr. 6).
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// G RenderService (SQLite-Double, echte CommunityAccess; Vertrag §4.3, §4.7, Entwurf render §6.1 G)
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Rollenrechte der Testwelt G (`admin` nimmt die Klasse selbst aus). */
+const CR_ROLE_CAPS = [
+    'member' => ['community.view', 'community.participate'],
+    'moderator' => ['community.view', 'community.participate', 'community.moderate'],
+];
+
+/** Uhr der Abschnitte G: 2026-11-15 12:00:00 UTC. */
+function crNow(): int
+{
+    return gmmktime(12, 0, 0, 11, 15, 2026);
+}
+
+/**
+ * Fake von `BatchJobService` (nur die Methoden, die `RenderService` braucht); protokolliert jeden Aufruf.
+ */
+final class CrJobs
+{
+    /** @var list<array<int, mixed>> */
+    public array $calls = [];
+    /** @var array<int, array<string, mixed>> */
+    public array $jobs = [];
+    public bool $busy = false;
+    public ?\Throwable $throw = null;
+    private int $seq = 0;
+
+    public function start(string $type, string $scope, int $total, array $state = [], ?int $userId = null): array
+    {
+        $this->calls[] = ['start', $type, $scope, $total, $state, $userId];
+        if ($this->throw !== null) {
+            throw $this->throw;
+        }
+        $active = $this->findActive($type, $scope);
+        if ($active !== null) {
+            return ['job' => $active, 'resumed' => true];
+        }
+        $id = ++$this->seq;
+        $this->jobs[$id] = ['id' => $id, 'type' => $type, 'scope' => $scope, 'status' => 'pending', 'total' => $total, 'processed' => 0, 'failed' => 0, 'state' => $state, 'created_by' => $userId];
+
+        return ['job' => $this->jobs[$id], 'resumed' => false];
+    }
+
+    public function step(int $jobId, callable $worker): array
+    {
+        $this->calls[] = ['step', $jobId];
+        $job = $this->jobs[$jobId] ?? throw new \RuntimeException('Job fehlt');
+        if ($this->busy) {
+            return $job + ['busy' => true];
+        }
+        if (!in_array($job['status'], ['pending', 'running'], true)) {
+            return $job;
+        }
+        $result = $worker($job + ['status' => 'running']);
+        $job['processed'] += (int) ($result['processed'] ?? 0);
+        $job['failed'] += (int) ($result['failed'] ?? 0);
+        $job['state'] = $result['state'] ?? $job['state'];
+        $job['status'] = !empty($result['done']) ? 'done' : 'running';
+
+        return $this->jobs[$jobId] = $job;
+    }
+
+    public function cancel(int $jobId): bool
+    {
+        $this->calls[] = ['cancel', $jobId];
+        if (!isset($this->jobs[$jobId]) || !in_array($this->jobs[$jobId]['status'], ['pending', 'running'], true)) {
+            return false;
+        }
+        $this->jobs[$jobId]['status'] = 'cancelled';
+
+        return true;
+    }
+
+    public function find(int $jobId): ?array
+    {
+        return $this->jobs[$jobId] ?? null;
+    }
+
+    public function findActive(string $type, string $scope = ''): ?array
+    {
+        foreach (array_reverse($this->jobs, true) as $job) {
+            if ($job['type'] === $type && $job['scope'] === $scope && in_array($job['status'], ['pending', 'running'], true)) {
+                return $job;
+            }
+        }
+
+        return null;
+    }
+
+    public function latest(string $type, string $scope = ''): ?array
+    {
+        $this->calls[] = ['latest', $type, $scope];
+        foreach (array_reverse($this->jobs, true) as $job) {
+            if ($job['type'] === $type && $job['scope'] === $scope) {
+                return $job;
+            }
+        }
+
+        return null;
+    }
+
+    public function toPublic(array $job): array
+    {
+        return ['id' => (int) $job['id'], 'type' => (string) $job['type'], 'status' => (string) $job['status'], 'total' => (int) $job['total'], 'processed' => (int) $job['processed'], 'failed' => (int) $job['failed'], 'busy' => !empty($job['busy'])];
+    }
+}
+
+/**
+ * Testwelt G: SQLite-Double, echte `CommunityAccess` (Rollen aus CR_ROLE_CAPS, Modul an, E-Mail bestätigt), Uhr, Rechte-Spion mit
+ * Überschreibung, zählender Purifier (= Zahl der Rendervorgänge mit HTML), Filter- und Drossel-Spion, Fake-Jobs. Konten: `member`
+ * (Leser), `author`, `moderator` (global), `banned` (Schreibsperre); Foren: offen und verborgen (`hidden`, nur für die Moderation).
+ */
+final class CrWorld
+{
+    public CommunityTestDatabase $db;
+    public Settings $settings;
+    public CommunityAccess $access;
+    public RenderService $render;
+    public CrJobs $jobs;
+    public int $now;
+    public int $clockReads = 0;
+    /** @var list<array{user: ?int, action: string, context: array<string, mixed>}> */
+    public array $canLog = [];
+    /** @var (\Closure(?int, string, array<string, mixed>): ?AccessDecision)|null Rückgabe null = echte Entscheidung */
+    public ?\Closure $rule = null;
+    public int $purifies = 0;
+    public bool $purifierMissing = false;
+    /** @var list<array{html: string, post_id: int}> */
+    public array $filterLog = [];
+    /** @var (\Closure(string, int): mixed)|null */
+    public ?\Closure $filter = null;
+    /** @var list<array{0: string, 1: ?int}> */
+    public array $throttleLog = [];
+    /** @var array{allowed: bool, retry_after: int} */
+    public array $throttle = ['allowed' => true, 'retry_after' => 0];
+    /** @var array<int, array<string, mixed>> Anhangszeilen für den Renderer */
+    public array $attachments = [];
+    public int $member;
+    public int $author;
+    public int $moderator;
+    public int $banned;
+    public int $open;
+    public int $secret;
+    public int $topic;
+    public int $secretTopic;
+
+    /** @param array<string, mixed> $settings */
+    public function __construct(array $settings = [])
+    {
+        $this->db = CommunityTestDatabase::create();
+        $this->now = crNow();
+        $this->settings = Settings::fromArray($settings + ['guests_can_read' => true, 'base_path' => 'forum']);
+        $this->access = new CommunityAccess(
+            $this->db,
+            $this->settings,
+            static fn (string $role, string $capability): bool => $role === 'admin' || in_array($capability, CR_ROLE_CAPS[$role] ?? [], true),
+            static fn (): bool => true,
+            fn (): int => $this->now,
+            static fn (int $userId): bool => true
+        );
+        $this->jobs = new CrJobs();
+        $renderer = new ContentRenderer(
+            purify: function (string $html): ?string {
+                $this->purifies++;
+                if ($this->purifierMissing) {
+                    return null;
+                }
+                $purifier = PurifierService::getInstance();
+
+                return $purifier->isAvailable() ? $purifier->purify($html, ContentRenderer::PROFILE) : null;
+            },
+            attachments: fn (array $ids): array => array_intersect_key($this->attachments, array_flip($ids)),
+        );
+        $this->render = new RenderService(
+            $this->db,
+            $this->settings,
+            function (): int {
+                $this->clockReads++;
+
+                return $this->now;
+            },
+            function (?int $userId, string $action, array $context): AccessDecision {
+                $this->canLog[] = ['user' => $userId, 'action' => $action, 'context' => $context];
+                $override = $this->rule !== null ? ($this->rule)($userId, $action, $context) : null;
+
+                return $override ?? $this->access->can($userId, $action, $context);
+            },
+            $renderer,
+            fn (): CrJobs => $this->jobs,
+            function (string $html, int $postId): mixed {
+                $this->filterLog[] = ['html' => $html, 'post_id' => $postId];
+
+                return $this->filter !== null ? ($this->filter)($html, $postId) : $html;
+            },
+            function (string $action, ?int $userId): array {
+                $this->throttleLog[] = [$action, $userId];
+
+                return $this->throttle;
+            }
+        );
+        $this->member = $this->db->user(['username' => 'leser']);
+        $this->author = $this->db->user(['username' => 'autor']);
+        $this->moderator = $this->db->user(['username' => 'moderation', 'role' => 'moderator']);
+        $this->banned = $this->db->user(['username' => 'gesperrt']);
+        $this->db->ban(['user' => $this->banned, 'scope' => 'write']);
+        $this->open = $this->db->forum(['title' => 'Offen']);
+        $this->secret = $this->db->forum(['title' => 'Verborgen', 'status' => 'hidden']);
+        $this->topic = $this->db->topic(['forum' => $this->open, 'user' => $this->author]);
+        $this->secretTopic = $this->db->topic(['forum' => $this->secret, 'user' => $this->author]);
+    }
+
+    /**
+     * Beitrag (Standard: veröffentlicht, im offenen Thema, vom Autor). `html` und `version` setzen den Cache.
+     *
+     * @param array<string, mixed> $o topic, user, status, html, version
+     */
+    public function post(string $body, array $o = []): int
+    {
+        $id = $this->db->post(['topic' => $o['topic'] ?? $this->topic, 'user' => $o['user'] ?? $this->author, 'status' => $o['status'] ?? 'published', 'body' => $body]);
+        if (array_key_exists('html', $o)) {
+            $this->db->execute('UPDATE cms_community_posts SET body_html = ?, rendered_version = ? WHERE id = ?', [$o['html'], $o['version'] ?? ContentRenderer::VERSION, $id]);
+        }
+
+        return $id;
+    }
+
+    /** @return array<string, mixed> Beitragszeile wie `PostRepository::find()` (mit `body` und `body_html`) */
+    public function row(int $id): array
+    {
+        return (array) (new PostRepository($this->db))->find($id);
+    }
+
+    /** @return array<string, mixed>|null Zeile direkt aus der Tabelle */
+    public function stored(int $id): ?array
+    {
+        return $this->db->row('community_posts', ['id' => $id]);
+    }
+
+    /**
+     * Einträge des echten `PostService::listPage()` ohne Renderer (Stand #2a: volle Einträge mit `body` und `body_html`).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listPage(?int $viewer, ?int $topic = null): array
+    {
+        $posts = new PostService($this->db, $this->settings, fn (): int => $this->now, fn (?int $u, string $a, array $c): AccessDecision => $this->access->can($u, $a, $c));
+        $page = $posts->listPage($viewer, $topic ?? $this->topic, null, 100);
+        T::same(true, $page['success'] ?? null, 'Vorbedingung: listPage liefert Einträge', json_encode($page));
+
+        return $page['items'] ?? [];
+    }
+
+    /** Indizes der Anweisungen im Protokoll, die auf das Muster passen. @return list<int> */
+    public function logged(string $pattern): array
+    {
+        return array_keys(array_filter($this->db->log, static fn (string $sql): bool => preg_match($pattern, $sql) === 1));
+    }
+
+    /** Alle gebundenen Parameter der passenden Anweisungen hintereinander. @return list<mixed> */
+    public function loggedParams(string $pattern): array
+    {
+        $params = [];
+        foreach ($this->logged($pattern) as $index) {
+            array_push($params, ...$this->db->paramsAt($index));
+        }
+
+        return $params;
+    }
+}
+
+/** Muster der Anweisungen: Nachrendern speichern, Beiträge nach ID lesen (`findMany`), Schreiben überhaupt. */
+const CR_STORE_SQL = '/^UPDATE cms_community_posts SET body_html = \?, rendered_version = \? WHERE id = \? AND edit_count = \? AND rendered_version < \?$/';
+const CR_FIND_MANY_SQL = '/FROM cms_community_posts WHERE id IN \(/';
+const CR_WRITE_SQL = '/^\s*(?:INSERT|UPDATE|DELETE|REPLACE)\b/i';
+
+/** Zitat-Block eines Beitrags im Markdown (Markerzeile plus Textzeilen), wie `QuoteService::format()` ihn schreibt. */
+function crQuote(int $postId, string ...$lines): string
+{
+    return implode("\n", array_merge(['> [quote=post:' . $postId . ']'], array_map(static fn (string $line): string => '> ' . $line, $lines)));
+}
+
+T::run('G present(): Cache NULL wird gerendert und im Autocommit mit Wächter gespeichert, aktueller Cache bleibt, unter MIN_SERVE nie', static function (): void {
+    $w = new CrWorld();
+    $fresh = $w->post('**fett** und _kursiv_');
+    $current = $w->post('Neuer Text', ['html' => "<p>GESPEICHERT</p>\n"]);
+    $old = $w->post('Text der alten Fassung', ['html' => '<p>ALT-UNSICHER</p>', 'version' => ContentRenderer::MIN_SERVE_VERSION - 1]);
+    $w->db->log = [];
+    $out = $w->render->present($w->member, [$w->row($fresh), $w->row($current), $w->row($old)]);
+    T::same("<p><strong>fett</strong> und <em>kursiv</em></p>\n", $out[0]['html'] ?? null, 'Cache NULL: gerendert');
+    T::same(["<p><strong>fett</strong> und <em>kursiv</em></p>\n", ContentRenderer::VERSION], [$w->stored($fresh)['body_html'], (int) $w->stored($fresh)['rendered_version']], 'Cache NULL: HTML mit VERSION gespeichert');
+    T::same("<p>GESPEICHERT</p>\n", $out[1]['html'] ?? null, 'aktueller Cache (rendered_version = VERSION) wird unverändert ausgeliefert');
+    T::same("<p>Text der alten Fassung</p>\n", $out[2]['html'] ?? null, 'Cache unter MIN_SERVE_VERSION: neu gerendert, nie ausgeliefert');
+    T::same(2, $w->purifies, 'genau zwei Rendervorgänge (Cache NULL und unter MIN_SERVE), keiner für den aktuellen Cache');
+    $stores = $w->logged(CR_STORE_SQL);
+    T::same(2, count($stores), 'zwei Speicherungen über storeRendered (UPDATE … WHERE id = ? AND edit_count = ? AND rendered_version < ?)', json_encode($w->db->log));
+    T::same([false, false], array_map(static fn (int $i): bool => $w->db->txAt($i), $stores), 'beide im Autocommit (außerhalb von BEGIN)');
+    T::same(["<p><strong>fett</strong> und <em>kursiv</em></p>\n", ContentRenderer::VERSION, $fresh, 0, ContentRenderer::VERSION], $w->db->paramsAt($stores[0] ?? -1), 'Parameter: HTML, VERSION, ID, gelesenes edit_count, VERSION (Wächter)');
+    T::same($stores, $w->logged(CR_WRITE_SQL), 'sonst schreibt present() nichts');
+    foreach ($out as $item) {
+        T::check(!array_key_exists('body_html', $item), 'present(): kein body_html im Eintrag ' . ($item['id'] ?? '?'));
+    }
+    T::same('Neuer Text', $out[1]['body'] ?? null, 'body bleibt (ohne Zitate unverändert)');
+
+    // Zweiter Aufruf: alles aktuell, kein Rendern, kein Schreiben.
+    $w->db->log = [];
+    $w->purifies = 0;
+    $again = $w->render->present($w->member, [$w->row($fresh), $w->row($old)]);
+    T::same([0, []], [$w->purifies, $w->logged(CR_WRITE_SQL)], 'zweiter Aufruf: aktueller Cache, weder Rendern noch Schreiben');
+    T::same([$out[0]['html'], $out[2]['html']], [$again[0]['html'] ?? null, $again[1]['html'] ?? null], 'zweiter Aufruf: dasselbe HTML');
+});
+
+T::run('G present(): Budget je Instanz (Mitglied 20/200.000, Gast 5/50.000), flush(), offene Transaktion, Fehler beim Speichern', static function (): void {
+    $w = new CrWorld();
+    $ids = [];
+    for ($i = 1; $i <= RenderService::LAZY_MAX_POSTS + 1; $i++) {
+        $ids[] = $w->post('Beitrag Nummer ' . $i);
+    }
+    $rows = array_map(static fn (int $id): array => $w->row($id), $ids);
+    $w->db->log = [];
+    $out = $w->render->present($w->member, $rows);
+    T::same(RenderService::LAZY_MAX_POSTS, $w->purifies, 'Mitglied: höchstens LAZY_MAX_POSTS = 20 Beiträge je Instanz nachgerendert');
+    T::same('<p class="cms-plain">Beitrag Nummer 21</p>', $out[20]['html'] ?? null, 'der 21. Beitrag: Ausweichpfad (Klartext), ohne Rendern');
+    T::same(RenderService::LAZY_MAX_POSTS, count($w->logged(CR_STORE_SQL)), 'nur die gerenderten werden gespeichert, der 21. nicht');
+    T::same(null, $w->stored($ids[20])['body_html'], 'der 21. Beitrag bleibt ohne Cache');
+    $w->purifies = 0;
+    $w->render->present($w->member, [$w->row($ids[20])]);
+    T::same(0, $w->purifies, 'Budget gilt je Instanz über Aufrufe hinweg');
+    $w->render->flush();
+    $w->render->present($w->member, [$w->row($ids[20])]);
+    T::same(1, $w->purifies, 'flush() setzt das Budget zurück');
+    $unsafe = $w->post('Klartext der alten Fassung', ['html' => '<p>ALT-UNSICHER</p>', 'version' => ContentRenderer::MIN_SERVE_VERSION - 1]);
+    for ($i = 1; $i < RenderService::LAZY_MAX_POSTS; $i++) {
+        $w->render->present($w->member, [$w->row($w->post('Füller ' . $i))]);
+    }
+    $w->purifies = 0;
+    $out = $w->render->present($w->member, [$w->row($unsafe)]);
+    T::same([0, '<p class="cms-plain">Klartext der alten Fassung</p>'], [$w->purifies, $out[0]['html'] ?? null], 'Budget erschöpft: HTML unter MIN_SERVE_VERSION wird nie ausgeliefert, sondern Klartext');
+
+    // Zeichenbudget: zwei Beiträge zu je 100.005 Zeichen (Mitglied: 200.000 je Instanz).
+    $w = new CrWorld();
+    $long = str_repeat('Wort ', 20001);
+    $a = $w->post($long);
+    $b = $w->post($long);
+    $out = $w->render->present($w->member, [$w->row($a), $w->row($b)]);
+    T::same(1, $w->purifies, 'Mitglied: der zweite Beitrag sprengt LAZY_MAX_CHARS = 200.000 und wird nicht gerendert');
+    T::check(str_starts_with((string) ($out[1]['html'] ?? ''), '<p class="cms-plain">'), 'Mitglied: zweiter langer Beitrag im Ausweichpfad');
+
+    // Gäste: 5 Beiträge und 50.000 Zeichen (Vertrag §4.7 Nr. 4).
+    $w = new CrWorld();
+    $ids = [];
+    for ($i = 1; $i <= RenderService::LAZY_GUEST_POSTS + 1; $i++) {
+        $ids[] = $w->post('Gastbeitrag ' . $i);
+    }
+    $out = $w->render->present(null, array_map(static fn (int $id): array => $w->row($id), $ids));
+    T::same(RenderService::LAZY_GUEST_POSTS, $w->purifies, 'Gast: höchstens LAZY_GUEST_POSTS = 5 Beiträge je Instanz');
+    T::same('<p class="cms-plain">Gastbeitrag 6</p>', $out[5]['html'] ?? null, 'Gast: der 6. Beitrag im Ausweichpfad');
+    $w->render->flush();
+    $w->purifies = 0;
+    $w->render->present(0, [$w->row($ids[5])]);
+    T::same(1, $w->purifies, 'Betrachter 0 gilt als Gast, nach flush() wieder im Budget');
+    $w = new CrWorld();
+    $mid = str_repeat('Satz ', 6000);
+    $c = $w->post($mid);
+    $d = $w->post($mid);
+    $w->render->present(null, [$w->row($c), $w->row($d)]);
+    T::same(1, $w->purifies, 'Gast: zwei Beiträge zu je 30.000 Zeichen sprengen LAZY_GUEST_CHARS = 50.000');
+    $w->render->flush();
+    $w->purifies = 0;
+    $w->render->present($w->member, [$w->row($c), $w->row($d)]);
+    T::same(1, $w->purifies, 'Mitglied: der erste aus dem Cache (beim Gast gespeichert), der zweite im Budget des Mitglieds gerendert');
+
+    // Offene Transaktion: rendern, aber nicht speichern.
+    $w = new CrWorld();
+    $p = $w->post('In der Transaktion');
+    $w->db->log = [];
+    $w->db->getPdo()->beginTransaction();
+    $out = $w->render->present($w->member, [$w->row($p)]);
+    $w->db->getPdo()->rollBack();
+    T::same(["<p>In der Transaktion</p>\n", []], [$out[0]['html'] ?? null, $w->logged(CR_STORE_SQL)], 'offene Transaktion: HTML angezeigt, kein storeRendered');
+
+    // Fehler beim Speichern (z. B. Lock-Timeout): Warnung, die Anzeige läuft weiter.
+    $w = new CrWorld();
+    $p = $w->post('Speichern scheitert');
+    $w->db->failOn = ['/SET body_html = \?, rendered_version = \?/'];
+    $out = $w->render->present($w->member, [$w->row($p)]);
+    T::same("<p>Speichern scheitert</p>\n", $out[0]['html'] ?? null, 'storeRendered wirft: die Anzeige nutzt das frische HTML');
+
+    // Ohne edit_count im Eintrag kein Schreiben (der Wächter braucht den gelesenen Stand).
+    $w = new CrWorld();
+    $p = $w->post('Ohne Zähler');
+    $row = $w->row($p);
+    unset($row['edit_count']);
+    $w->db->log = [];
+    $out = $w->render->present($w->member, [$row]);
+    T::same(["<p>Ohne Zähler</p>\n", []], [$out[0]['html'] ?? null, $w->logged(CR_STORE_SQL)], 'Eintrag ohne edit_count: angezeigt, nicht gespeichert');
+});
+
+T::run('G present(): Wächter edit_count verhindert alten Cache (Bearbeitung und Anhangsänderung dazwischen, R7)', static function (): void {
+    $w = new CrWorld();
+    $posts = new PostRepository($w->db);
+    // Anhang hinzugefügt oder entfernt: clearRendered() zwischen dem Lesen der Zeile und dem Speichern.
+    $p = $w->post('Text mit Anhang', ['html' => '<p>ALT</p>', 'version' => 0]);
+    $row = $w->row($p);
+    $w->db->beforeExecute[CR_STORE_SQL] = static function () use ($posts, $p, $w): void {
+        $posts->clearRendered($p, gmdate('Y-m-d H:i:s', $w->now));
+    };
+    $out = $w->render->present($w->member, [$row]);
+    T::same("<p>Text mit Anhang</p>\n", $out[0]['html'] ?? null, 'Anzeige mit dem frisch gerenderten HTML');
+    $stored = $w->stored($p);
+    T::same([null, 0, 1], [$stored['body_html'], (int) $stored['rendered_version'], (int) $stored['edit_count']], 'clearRendered dazwischen: der Wächter verhindert das Speichern, der Cache bleibt NULL');
+
+    // Bearbeitung dazwischen: die gelesene Zeile ist veraltet.
+    $q = $w->post('Erste Fassung');
+    $stale = $w->row($q);
+    $posts->applyEdit($q, 'Zweite Fassung', $w->author, null, gmdate('Y-m-d H:i:s', $w->now));
+    $w->render->present($w->member, [$stale]);
+    T::same([null, 'Zweite Fassung'], [$w->stored($q)['body_html'], $w->stored($q)['body']], 'veraltetes edit_count: HTML der alten Fassung wird nicht gespeichert');
+    $w->render->present($w->member, [$w->row($q)]);
+    T::same("<p>Zweite Fassung</p>\n", $w->stored($q)['body_html'], 'mit aktuellem edit_count: gespeichert');
+});
+
+T::run('G present(): Zitate je Betrachter (sichtbar, entfernt, nicht sichtbar, verschachtelt), DE und EN, eine findMany-Abfrage', static function (): void {
+    $w = new CrWorld();
+    $visible = $w->post('Sichtbare Quelle');
+    $hidden = $w->post('Ausgeblendete Quelle', ['status' => 'hidden']);
+    $deleted = $w->post('Gelöschte Quelle', ['status' => 'deleted']);
+    $pending = $w->post('Wartende Quelle', ['status' => 'pending']);
+    $secret = $w->post('Quelle im verborgenen Forum', ['topic' => $w->secretTopic]);
+    $secretHidden = $w->post('Ausgeblendet im verborgenen Forum', ['topic' => $w->secretTopic, 'status' => 'hidden']);
+    $body = implode("\n\n", [
+        'Vorwort',
+        crQuote($visible, 'ZITAT-SICHTBAR'),
+        crQuote($hidden, 'GEHEIM-AUSGEBLENDET', '', '> GEHEIM-VERSCHACHTELT', '', 'GEHEIM-NACH-DER-SCHACHTEL'),
+        crQuote($deleted, 'GEHEIM-GELOESCHT'),
+        crQuote($pending, 'GEHEIM-WARTEND'),
+        crQuote($secret, 'GEHEIM-VERBORGEN'),
+        crQuote($secretHidden, 'GEHEIM-VERBORGEN-AUSGEBLENDET'),
+        crQuote(999999, 'GEHEIM-UNBEKANNT'),
+        'Nachwort',
+    ]);
+    $citing = $w->post($body, ['user' => $w->member]);
+    $citingRow = $w->row($citing);
+    $w->db->log = [];
+    $out = $w->render->present($w->member, [$citingRow], 'de');
+    $html = (string) ($out[0]['html'] ?? '');
+    T::check(!str_contains($html, 'GEHEIM'), 'kein Text einer nicht sichtbaren, entfernten oder unbekannten Quelle im HTML', $html);
+    T::check(str_contains($html, 'ZITAT-SICHTBAR'), 'die sichtbare Quelle bleibt lesbar');
+    T::check(str_contains($html, '<blockquote class="cms-quote" data-quote-post="' . $visible . '"><p class="cms-quote__source"><a href="' . htmlspecialchars(Urls::post($visible, 'de')) . '">Zum zitierten Beitrag</a></p>'), 'sichtbar: Quellverweis mit Urls::post() direkt nach dem öffnenden Tag', $html);
+    $block = static fn (int $id, string $notice): string => '<blockquote class="cms-quote cms-quote--hidden" data-quote-post="' . $id . '"><p>' . $notice . '</p></blockquote>';
+    foreach ([$hidden => QuoteService::REMOVED_NOTICE, $deleted => QuoteService::REMOVED_NOTICE, $pending => QuoteService::HIDDEN_NOTICE, $secret => QuoteService::HIDDEN_NOTICE, $secretHidden => QuoteService::HIDDEN_NOTICE, 999999 => QuoteService::HIDDEN_NOTICE] as $id => $notice) {
+        T::check(str_contains($html, $block($id, $notice)), 'Platzhalter für Quelle ' . $id . ': ' . $notice, $html);
+    }
+    T::same(1, substr_count($html, 'data-quote-post="' . $hidden . '"'), 'verschachtelter Block wird als Ganzes ersetzt (ein öffnendes Tag, kein Rest)');
+    T::check(!str_contains($html, 'GEHEIM-NACH-DER-SCHACHTEL'), 'auch der Text hinter dem verschachtelten Blockzitat gehört zum ersetzten Block');
+    T::same(7, substr_count($html, '<blockquote'), 'sieben Zitat-Blöcke, vom verschachtelten Blockzitat bleibt nichts');
+    T::same(1, count($w->logged(CR_FIND_MANY_SQL)), 'alle Zitate der Seite über genau eine findMany-Abfrage');
+    T::same([], $w->logged('/FROM cms_community_posts WHERE id = \?/'), 'keine Einzelabfrage je Zitat');
+    $reads = array_values(array_filter($w->canLog, static fn (array $c): bool => $c['action'] === 'read'));
+    T::check($reads !== [] && array_reduce($reads, static fn (bool $ok, array $c): bool => $ok && ($c['context']['now'] ?? null) === $w->now && isset($c['context']['post']), true), 'jede Leseprüfung der Quellen bekommt now und die Zeile');
+    T::same(1, $w->clockReads, 'present(): die Uhr wird einmal gelesen');
+
+    $text = (string) ($out[0]['body'] ?? '');
+    T::check(!str_contains($text, 'GEHEIM') && str_contains($text, 'ZITAT-SICHTBAR'), 'body ist neutralisiert (§1 Nr. 9): sichtbar bleibt, Geheimes fehlt', $text);
+    T::check(str_contains($text, "> [quote=post:{$hidden}]\n> " . QuoteService::REMOVED_NOTICE), 'body: entfernte Quelle als Platzhalter');
+    T::check(!array_key_exists('body_html', $out[0]), 'kein body_html');
+
+    $en = (string) ($w->render->present($w->member, [$w->row($citing)], 'en')[0]['html'] ?? '');
+    T::check(str_contains($en, $block($hidden, '[Quote removed]')) && str_contains($en, $block($secret, '[Quote from an area you cannot see]')), 'EN: Platzhalter in der Sprache des Betrachters', $en);
+    T::check(str_contains($en, '<a href="' . htmlspecialchars(Urls::post($visible, 'en')) . '">Go to the quoted post</a>'), 'EN: Quellverweis mit EN-URL und EN-Text', $en);
+
+    // Moderation: sieht ausgeblendete Quellen voll, gelöschte bleiben entfernt.
+    $mod = (string) ($w->render->present($w->moderator, [$w->row($citing)])[0]['html'] ?? '');
+    T::check(str_contains($mod, '<p>GEHEIM-VERBORGEN</p>'), 'Moderation: Quelle im verborgenen Forum lesbar', $mod);
+    T::check(!str_contains($mod, 'GEHEIM-AUSGEBLENDET') && !str_contains($mod, 'GEHEIM-VERBORGEN-AUSGEBLENDET') && str_contains($mod, $block($hidden, QuoteService::REMOVED_NOTICE)), 'Moderation: ausgeblendete Quelle erscheint als „entfernt“ (der Status entscheidet nach dem Recht)', $mod);
+});
+
+T::run('G present(): Datenbankfehler ⇒ alle Zitate verborgen; Zitatgrenzen (20 je Text, 200 Auflösungen je Aufruf)', static function (): void {
+    $w = new CrWorld();
+    $visible = $w->post('Sichtbar');
+    $citing = $w->post(crQuote($visible, 'ZITAT-SICHTBAR') . "\n\nAntwort", ['user' => $w->member]);
+    $w->db->failOn = [CR_FIND_MANY_SQL];
+    $out = $w->render->present($w->member, [$w->row($citing)]);
+    $html = (string) ($out[0]['html'] ?? '');
+    T::check(!str_contains($html, 'ZITAT-SICHTBAR') && str_contains($html, QuoteService::HIDDEN_NOTICE), 'Fehler der Auflösung: auch sichtbare Quellen gelten als nicht sichtbar (fail-closed)', $html);
+    T::check(!str_contains((string) ($out[0]['body'] ?? ''), 'ZITAT-SICHTBAR'), 'auch body ist fail-closed neutralisiert');
+    T::check(str_contains($html, '<p>Antwort</p>'), 'der eigene Text bleibt sichtbar');
+
+    // 25 Zitat-Blöcke in einem Text: höchstens MAX_QUOTES = 20 IDs gehen in findMany, der Überlauf erscheint als „[…]“.
+    $w = new CrWorld();
+    $sources = [];
+    for ($i = 1; $i <= 25; $i++) {
+        $sources[] = $w->post('Quelle ' . $i);
+    }
+    $citing = $w->post(implode("\n\n", array_map(static fn (int $id): string => crQuote($id, 'QUELLTEXT-' . $id), $sources)), ['user' => $w->member]);
+    $w->db->log = [];
+    $html = (string) ($w->render->present($w->member, [$w->row($citing)])[0]['html'] ?? '');
+    $asked = $w->loggedParams(CR_FIND_MANY_SQL);
+    T::same(array_slice($sources, 0, ContentRenderer::MAX_QUOTES), $asked, '25 Marker: genau die ersten 20 IDs in findMany');
+    T::same(ContentRenderer::MAX_QUOTES, substr_count($html, 'cms-quote__source'), '20 sichtbare Zitate mit Quellverweis');
+    T::same(5, substr_count($html, '<blockquote class="cms-quote cms-quote--hidden"><p>' . QuoteService::OMISSION . '</p></blockquote>'), '5 Überlauf-Blöcke „[…]“ ohne Kennzeichen');
+    foreach (array_slice($sources, ContentRenderer::MAX_QUOTES) as $id) {
+        T::check(!str_contains($html, 'QUELLTEXT-' . $id . '<'), 'Überlauf: kein Text der Quelle ' . $id);
+    }
+
+    // Mehr als 200 IDs in einem Aufruf: die ersten 200 werden aufgelöst, der Rest gilt ohne Abfrage als nicht sichtbar.
+    $w = new CrWorld();
+    $sources = [];
+    for ($i = 1; $i <= 220; $i++) {
+        $sources[] = $w->post('Q' . $i);
+    }
+    $items = [];
+    foreach (array_chunk($sources, 20) as $chunk) {
+        $items[] = $w->row($w->post(implode("\n\n", array_map(static fn (int $id): string => crQuote($id, 'LESBAR-' . $id), $chunk)), ['user' => $w->member]));
+    }
+    $w->db->log = [];
+    $out = $w->render->present($w->member, $items);
+    $asked = $w->loggedParams(CR_FIND_MANY_SQL);
+    T::same(array_slice($sources, 0, RenderService::MAX_QUOTE_LOOKUPS), $asked, 'höchstens MAX_QUOTE_LOOKUPS = 200 IDs je Aufruf in findMany (zwei Stücke zu 100)');
+    T::same(2, count($w->logged(CR_FIND_MANY_SQL)), 'zwei Stücke zu je 100 IDs');
+    $last = (string) ($out[10]['html'] ?? '');
+    T::same([0, 20], [substr_count($last, 'cms-quote__source'), substr_count($last, '<p>' . QuoteService::HIDDEN_NOTICE . '</p>')], 'IDs 201 bis 220: verborgen, obwohl lesbar (feste Kosten je Seite)');
+    T::check(!str_contains($last, 'LESBAR-'), 'IDs über der Grenze: kein Text der Quelle');
+    T::same(20, substr_count((string) ($out[9]['html'] ?? ''), 'cms-quote__source'), 'IDs 181 bis 200: noch aufgelöst und sichtbar');
+});
+
+T::run('G Lecktests (S1/S2): json_encode von present()/presentRow() ohne Geheimtext bei Cache, Cache NULL, Budget erschöpft, Purifier fehlt, Cache unter MIN_SERVE', static function (): void {
+    $scenarios = ['Cache', 'Cache NULL', 'Budget erschöpft', 'Purifier fehlt', 'Cache unter MIN_SERVE'];
+    foreach ($scenarios as $scenario) {
+        foreach (['Mitglied', 'Gast'] as $who) {
+            $w = new CrWorld();
+            $viewer = $who === 'Mitglied' ? $w->member : null;
+            $visible = $w->post('Sichtbar');
+            $secret = $w->post('Quelle', ['topic' => $w->secretTopic]);
+            $body = "Ich zitiere:\n\n" . crQuote($secret, 'GEHEIMTEXT eins', 'GEHEIMTEXT zwei') . "\n\n" . crQuote($visible, 'LESBARES ZITAT') . "\n\nEnde";
+            $citing = $w->post($body, ['user' => $w->member]);
+            $render = new ContentRenderer();
+            $full = (string) $render->render($body, ['post_id' => $citing])['html'];
+            T::check(str_contains($full, 'GEHEIMTEXT'), "{$scenario}/{$who}: Vorbedingung, das gespeicherte HTML enthält den Geheimtext");
+            switch ($scenario) {
+                case 'Cache':
+                    $w->db->execute('UPDATE cms_community_posts SET body_html = ?, rendered_version = ? WHERE id = ?', [$full, ContentRenderer::VERSION, $citing]);
+                    break;
+                case 'Budget erschöpft':
+                    for ($i = 0; $i < RenderService::LAZY_MAX_POSTS; $i++) {
+                        $w->render->present($viewer, [$w->row($w->post('Füller ' . $i))]);
+                    }
+                    break;
+                case 'Purifier fehlt':
+                    $w->purifierMissing = true;
+                    break;
+                case 'Cache unter MIN_SERVE':
+                    $w->db->execute('UPDATE cms_community_posts SET body_html = ?, rendered_version = ? WHERE id = ?', [$full, ContentRenderer::MIN_SERVE_VERSION - 1, $citing]);
+                    for ($i = 0; $i < RenderService::LAZY_MAX_POSTS; $i++) {
+                        $w->render->present($viewer, [$w->row($w->post('Füller ' . $i))]);
+                    }
+                    break;
+            }
+            $items = $w->listPage($viewer);
+            $presented = $w->render->present($viewer, $items);
+            $json = (string) json_encode($presented, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            T::check(!str_contains($json, 'GEHEIMTEXT'), "{$scenario}/{$who}: json_encode(present(listPage-Einträge)) enthält den Geheimtext nicht", $json);
+            T::check(str_contains($json, 'LESBARES ZITAT'), "{$scenario}/{$who}: das lesbare Zitat bleibt lesbar (Entscheidungen statt pauschal verborgen)");
+            T::check(!str_contains($json, '"body_html"'), "{$scenario}/{$who}: kein body_html in der Ausgabe");
+            $mine = array_values(array_filter($presented, static fn (array $item): bool => ($item['id'] ?? 0) === $citing))[0] ?? [];
+            T::check(is_string($mine['html'] ?? null) && str_contains($mine['html'], 'Ende'), "{$scenario}/{$who}: der zitierende Beitrag hat html");
+            if ($scenario !== 'Cache') {
+                T::check(str_starts_with((string) ($mine['html'] ?? ''), $scenario === 'Cache NULL' ? '<p>Ich zitiere:</p>' : '<p class="cms-plain">'), "{$scenario}/{$who}: erwarteter Weg (" . ($scenario === 'Cache NULL' ? 'nachgerendert' : 'Ausweichpfad') . ')', (string) ($mine['html'] ?? ''));
+            }
+            $row = $w->render->presentRow($viewer, $w->row($citing));
+            T::check(!str_contains($row, 'GEHEIMTEXT') && str_contains($row, 'LESBARES ZITAT'), "{$scenario}/{$who}: presentRow() ohne Geheimtext, lesbares Zitat bleibt", $row);
+        }
+    }
+});
+
+T::run('G present(): Filter cms_community_render_post erhält neutralisiertes HTML und die ID; Ausnahme oder Nicht-String ⇒ Eingang; nie gespeichert', static function (): void {
+    $w = new CrWorld();
+    $secret = $w->post('Quelle', ['topic' => $w->secretTopic]);
+    $p = $w->post(crQuote($secret, 'GEHEIM') . "\n\nText", ['user' => $w->member]);
+    $w->filter = static fn (string $html, int $postId): string => $html . '<p>FILTER ' . $postId . '</p>';
+    $out = $w->render->present($w->member, [$w->row($p)]);
+    T::same(1, count($w->filterLog), 'der Filter läuft einmal je vollem Eintrag');
+    T::same($p, $w->filterLog[0]['post_id'] ?? null, 'Filter erhält die Beitrags-ID');
+    T::check(!str_contains($w->filterLog[0]['html'] ?? 'GEHEIM', 'GEHEIM') && str_contains($w->filterLog[0]['html'] ?? '', QuoteService::HIDDEN_NOTICE), 'Filter erhält das neutralisierte HTML (nach der Zitatauflösung)');
+    T::check(str_ends_with((string) ($out[0]['html'] ?? ''), '<p>FILTER ' . $p . '</p>'), 'Ergebnis des Filters wird ausgegeben');
+    T::check(!str_contains((string) $w->stored($p)['body_html'], 'FILTER'), 'Ergebnis des Filters wird nicht gespeichert');
+
+    $expected = (string) ($w->render->present($w->member, [$w->row($p)])[0]['html'] ?? '');
+    $w->filter = static fn (string $html, int $postId): int => 42;
+    T::same(str_replace('<p>FILTER ' . $p . '</p>', '', $expected), $w->render->present($w->member, [$w->row($p)])[0]['html'] ?? null, 'Filter liefert keinen String: Eingang wird verwendet');
+    $w->filter = static function (string $html, int $postId): string {
+        throw new \RuntimeException('Plugin kaputt');
+    };
+    T::same(str_replace('<p>FILTER ' . $p . '</p>', '', $expected), $w->render->present($w->member, [$w->row($p)])[0]['html'] ?? null, 'Filter wirft: Eingang wird verwendet, present() wirft nicht');
+    $w->filter = null;
+    $w->filterLog = [];
+    $w->render->present($w->member, [['view' => 'placeholder', 'id' => 9, 'status' => 'hidden']]);
+    T::same([], $w->filterLog, 'Platzhalter: kein Filteraufruf');
+});
+
+T::run('G present(): Eintragsformen (Platzhalter, Zeile ohne view, fremde Felder) und quoteSpans()', static function (): void {
+    $w = new CrWorld();
+    $placeholder = ['view' => 'placeholder', 'id' => 3, 'topic_id' => $w->topic, 'status' => 'hidden', 'body' => 'roh', 'body_html' => '<p>roh</p>', 'html' => '<p>roh</p>'];
+    $out = $w->render->present($w->member, [$placeholder]);
+    T::same(['view' => 'placeholder', 'id' => 3, 'topic_id' => $w->topic, 'status' => 'hidden'], $out[0] ?? null, 'Platzhalter: weder Text noch HTML (fail-closed)');
+    T::same([], $w->render->present($w->member, []), 'leere Liste: leere Liste');
+    T::same('', $w->render->presentRow($w->member, $placeholder), 'presentRow() für einen Platzhalter: leer');
+    $p = $w->post('Zeile');
+    T::same("<p>Zeile</p>\n", $w->render->presentRow($w->member, $w->row($p)), 'presentRow(): Beitragszeile ohne view gilt als voll');
+
+    $html = '<p>a</p><blockquote><p>normal</p></blockquote><blockquote data-quote-post="7" class="cms-quote"><p>x</p><blockquote><p>y</p></blockquote><p>z</p></blockquote>'
+        . '<blockquote class="cms-quote cms-quote--hidden"><p>[…]</p></blockquote><BLOCKQUOTE class="cms-quote" data-quote-post="12"><p>w</p></BLOCKQUOTE>';
+    $spans = RenderService::quoteSpans($html);
+    T::same([7, 12], array_column($spans, 'id'), 'quoteSpans(): nur Blöcke mit data-quote-post, Attributreihenfolge und Groß-/Kleinschreibung beliebig');
+    $first = $spans[0] ?? ['start' => 0, 'open_end' => 0, 'end' => 0];
+    T::same('<blockquote data-quote-post="7" class="cms-quote">', substr($html, $first['start'], $first['open_end'] - $first['start']), 'quoteSpans(): start/open_end umfassen das öffnende Tag');
+    T::same('<blockquote data-quote-post="7" class="cms-quote"><p>x</p><blockquote><p>y</p></blockquote><p>z</p></blockquote>', substr($html, $first['start'], $first['end'] - $first['start']), 'quoteSpans(): end liegt hinter dem passenden </blockquote> (verschachtelte gezählt)');
+    $open = RenderService::quoteSpans('<blockquote class="cms-quote" data-quote-post="5"><p>offen');
+    T::same([['id' => 5, 'start' => 0, 'open_end' => 50, 'end' => 58]], $open, 'quoteSpans(): fehlt das schließende Tag, reicht der Block bis zum Ende (fail-closed)');
+    T::same([], RenderService::quoteSpans('<blockquote class="cms-quote" data-quote-post="0x5"><p>x</p></blockquote>'), 'quoteSpans(): nur Dezimalzahlen ab 1');
+});
+
+T::run('G QuoteService: resolveMany(), quotableMany(), isQuotable() und resolver() (eine Regel, eine Abfrage, fail-closed)', static function (): void {
+    $w = new CrWorld();
+    $quotes = new QuoteService($w->db, $w->settings, null, fn (?int $u, string $a, array $c): AccessDecision => $w->access->can($u, $a, $c));
+    $visible = $w->post('Sichtbar');
+    $hidden = $w->post('Ausgeblendet', ['status' => 'hidden']);
+    $deleted = $w->post('Gelöscht', ['status' => 'deleted']);
+    $pending = $w->post('Wartend', ['status' => 'pending']);
+    $rejected = $w->post('Abgelehnt', ['status' => 'rejected']);
+    $secret = $w->post('Verborgen', ['topic' => $w->secretTopic]);
+    $secretHidden = $w->post('Verborgen ausgeblendet', ['topic' => $w->secretTopic, 'status' => 'hidden']);
+    $ids = [$visible, $hidden, $deleted, $pending, $rejected, $secret, $secretHidden, 999999];
+    $expected = [$visible => true, $hidden => QuoteService::REMOVED, $deleted => QuoteService::REMOVED, $pending => false, $rejected => false, $secret => false, $secretHidden => false, 999999 => false];
+
+    $w->db->log = [];
+    T::same($expected, $quotes->resolveMany($w->member, $ids, $w->now), 'resolveMany(): sichtbar, entfernt, nicht sichtbar, unbekannt; ausgeblendet im nicht lesbaren Forum ⇒ nicht sichtbar (nie „entfernt“)');
+    T::same(1, count($w->logged(CR_FIND_MANY_SQL)), 'resolveMany(): eine findMany-Abfrage für alle IDs');
+    T::same([], $w->logged('/FROM cms_community_posts WHERE id = \?/'), 'resolveMany(): keine Einzelabfrage eines Beitrags');
+    $resolver = $quotes->resolver($w->member);
+    T::same($expected, array_combine($ids, array_map($resolver, $ids)), 'resolver(): dieselbe Regel (stateOf)');
+    T::same([$visible => true, $hidden => QuoteService::REMOVED, $secret => true, $secretHidden => QuoteService::REMOVED], $quotes->resolveMany($w->moderator, [$visible, $hidden, $secret, $secretHidden], $w->now), 'resolveMany() Moderation: verborgenes Forum lesbar, ausgeblendet ⇒ entfernt');
+    T::same([$visible => true], $quotes->resolveMany(null, [$visible, $visible, 0, -3, '7', 1.5], $w->now), 'resolveMany(): nur ganze Zahlen ≥ 1, doppelte einmal; Gast liest das offene Forum');
+    T::same([], $quotes->resolveMany($w->member, [], $w->now), 'resolveMany(): leere Liste ohne Abfrage');
+    $w->db->failOn = [CR_FIND_MANY_SQL];
+    T::same(array_fill_keys([$visible, $hidden], false), $quotes->resolveMany($w->member, [$visible, $hidden], $w->now), 'resolveMany(): Datenbankfehler ⇒ alle false');
+    T::same(array_fill_keys([$visible], false), $quotes->quotableMany($w->member, [$visible], $w->now), 'quotableMany(): Datenbankfehler ⇒ alle false');
+    T::same(false, $quotes->isQuotable($visible, $w->member), 'isQuotable(): Datenbankfehler ⇒ nicht zitierbar');
+    $w->db->failOn = [];
+
+    $w->db->log = [];
+    T::same([$visible => true, $hidden => false, $deleted => false, $pending => false, $rejected => false, $secret => false, $secretHidden => false, 999999 => false], $quotes->quotableMany($w->member, $ids, $w->now), 'quotableMany() Mitglied: nur veröffentlicht und lesbar');
+    T::same(1, count($w->logged(CR_FIND_MANY_SQL)), 'quotableMany(): eine findMany-Abfrage');
+    T::same([$visible => true, $hidden => true, $deleted => false, $pending => false, $secret => true, $secretHidden => true], $quotes->quotableMany($w->moderator, [$visible, $hidden, $deleted, $pending, $secret, $secretHidden], $w->now), 'quotableMany() Moderation: ausgeblendet zitierbar, gelöscht und wartend nicht');
+    T::same([$visible => true, $hidden => false], [$visible => $quotes->isQuotable($visible, $w->member), $hidden => $quotes->isQuotable($hidden, $w->member)], 'isQuotable(): dieselbe Regel wie quotableMany()');
+    T::same(true, $quotes->isQuotable($hidden, $w->moderator), 'isQuotable(): Moderation zitiert Ausgeblendetes');
+    T::same(false, $quotes->isQuotable(0, $w->member), 'isQuotable(0): nein');
+    T::same(null, $quotes->build($hidden, $w->member), 'build(): ausgeblendet für Mitglieder nicht zitierbar (Regel unverändert)');
+    T::same(crQuote($hidden, 'Ausgeblendet'), $quotes->build($hidden, $w->moderator), 'build(): Moderation zitiert Ausgeblendetes mit Text');
+});
+
+T::run('G step(): Fenster, STEP_LIMIT, Zeichenbudget, Fortschritt, done, Modus all, Fehlerzeile', static function (): void {
+    $w = new CrWorld();
+    $insert = static function (int $id, string $body, ?string $html = null, int $version = 0) use ($w): void {
+        $w->db->execute('INSERT INTO cms_community_posts (id, topic_id, forum_id, user_id, is_first_post, status, body, body_html, rendered_version, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)', [$id, $w->topic, $w->open, $w->author, 'published', $body, $html, $version, '2026-11-15 10:00:00', '2026-11-15 10:00:00']);
+    };
+    foreach ([1, 2, 3, 6000, 6001] as $id) {
+        $insert($id, 'Beitrag ' . $id);
+    }
+    $insert(4, 'Aktuell', "<p>ALT-AKTUELL</p>\n", ContentRenderer::VERSION);
+    $insert(5, "kaputt \xFF");
+    $state = ['after_id' => 0, 'max_id' => 6001, 'all' => false, 'version' => ContentRenderer::VERSION];
+    $w->db->log = [];
+    $first = $w->render->step($state);
+    $batch = $w->logged('/FROM cms_community_posts WHERE id > \? AND id <= \? AND rendered_version < \?/');
+    T::same([0, 5000, ContentRenderer::VERSION, RenderService::STEP_LIMIT], $w->db->paramsAt($batch[0] ?? -1), 'renderBatch(after, after + STEP_WINDOW, VERSION, STEP_LIMIT): nur das Fenster bis 5000');
+    T::same(['processed' => 5000, 'failed' => 1, 'done' => false], array_intersect_key($first, ['processed' => 0, 'failed' => 0, 'done' => 0]), 'erster Schritt: Fortschritt 5000 IDs, eine Fehlerzeile (ungültiges UTF-8), nicht fertig');
+    T::same(5000, $first['state']['after_id'] ?? null, 'after_id rückt auf das Fensterende');
+    T::same(['<p>Beitrag 1</p>' . "\n", "<p>ALT-AKTUELL</p>\n", null, null], [$w->stored(1)['body_html'], $w->stored(4)['body_html'], $w->stored(5)['body_html'], $w->stored(6000)['body_html']], 'gerendert im Fenster; aktuelle Zeile unberührt; Fehlerzeile übersprungen; außerhalb des Fensters nichts');
+    T::same([false], array_values(array_unique(array_map(static fn (int $i): bool => $w->db->txAt($i), $w->logged(CR_STORE_SQL)))), 'Speichern im Autocommit');
+    $second = $w->render->step($first['state']);
+    T::same(['processed' => 1001, 'done' => true, 'after_id' => 6001], ['processed' => $second['processed'], 'done' => $second['done'], 'after_id' => $second['state']['after_id']], 'zweiter Schritt: bis max_id, fertig');
+    T::same('', $second['message'], 'message leer (die Oberfläche formatiert aus dem Zustand)');
+    T::same(['processed' => 0, 'done' => true], array_intersect_key($w->render->step($second['state']), ['processed' => 0, 'done' => 0]), 'nach dem Ende: nichts zu tun, fertig');
+
+    // Modus all: auch aktuelle Zeilen (rendered_version < VERSION + 1), mit replaceCurrent.
+    $w->db->log = [];
+    $w->render->step(['after_id' => 3, 'max_id' => 4, 'all' => true, 'version' => ContentRenderer::VERSION]);
+    T::same([3, 4, ContentRenderer::VERSION + 1, RenderService::STEP_LIMIT], $w->db->paramsAt($w->logged('/FROM cms_community_posts WHERE id > \?/')[0] ?? -1), 'Modus all: renderBatch mit VERSION + 1');
+    T::same("<p>Aktuell</p>\n", $w->stored(4)['body_html'], 'Modus all: aktuelle Zeile neu gerendert (replaceCurrent)');
+
+    // STEP_LIMIT: 55 Beiträge im Fenster ⇒ 50 je Schritt, after_id = letzte bearbeitete ID.
+    $w = new CrWorld();
+    $ids = [];
+    for ($i = 0; $i < 55; $i++) {
+        $ids[] = $w->post('Massenbeitrag ' . $i);
+    }
+    $max = max($ids);
+    $one = $w->render->step(['after_id' => 0, 'max_id' => $max, 'all' => false]);
+    T::same([$ids[49], $ids[49], false], [$one['state']['after_id'], $one['processed'], $one['done']], 'STEP_LIMIT = 50: after_id = 50. bearbeitete ID');
+    $two = $w->render->step($one['state']);
+    T::same([$max, true], [$two['state']['after_id'], $two['done']], 'zweiter Schritt: Rest, fertig');
+    T::same(55, (int) $w->db->get_var("SELECT COUNT(*) FROM cms_community_posts WHERE rendered_version = ? AND body_html IS NOT NULL AND body LIKE 'Massenbeitrag%'", [ContentRenderer::VERSION]), 'alle 55 gerendert');
+
+    // Zeichenbudget STEP_MAX_CHARS = 500.000: zwei Beiträge zu je 260.000 Zeichen ⇒ ein Beitrag je Schritt.
+    $w = new CrWorld();
+    $a = $w->post(str_repeat('Wort ', 52000));
+    $b = $w->post(str_repeat('Satz ', 52000));
+    $one = $w->render->step(['after_id' => 0, 'max_id' => $b, 'all' => false]);
+    T::same([$a, false], [$one['state']['after_id'], $one['done']], 'Zeichenbudget: Abbruch innerhalb des Fensters nach dem ersten Beitrag');
+    T::same(null, $w->stored($b)['body_html'], 'Zeichenbudget: der zweite Beitrag wartet auf den nächsten Schritt');
+    $two = $w->render->step($one['state']);
+    T::same([$b, true], [$two['state']['after_id'], $two['done']], 'nächster Schritt: der zweite Beitrag (mindestens einer je Schritt)');
+
+    // Purifier fehlt: jede Zeile zählt als failed, der Job läuft trotzdem durch.
+    $w = new CrWorld();
+    $p = $w->post('Ohne Purifier');
+    $w->purifierMissing = true;
+    $done = $w->render->step(['after_id' => 0, 'max_id' => $p, 'all' => false]);
+    T::same([1, true, null], [$done['failed'], $done['done'], $w->stored($p)['body_html']], 'Purifier fehlt: failed, kein Schreiben, Ende');
+});
+
+T::run('G Job: startJob(), runJobStep(), cancelJob(), jobStatus(), cronTick() mit Fake-BatchJobService', static function (): void {
+    $w = new CrWorld();
+    $p1 = $w->post('Eins');
+    $p2 = $w->post('Zwei');
+    $started = $w->render->startJob();
+    T::same(['start', RenderService::JOB_TYPE, 'v' . ContentRenderer::VERSION, $p2, ['after_id' => 0, 'max_id' => $p2, 'all' => false, 'version' => ContentRenderer::VERSION], null], $w->jobs->calls[0] ?? null, 'startJob(): Typ community_render, Scope v<VERSION>, total = maxId, Startzustand');
+    T::same([true, false], [$started['success'] ?? null, $started['resumed'] ?? null], 'startJob(): neu');
+    T::same(true, $w->render->startJob()['resumed'] ?? null, 'startJob() erneut: der aktive Job wird fortgesetzt');
+    $all = $w->render->startJob(true, $w->moderator);
+    T::same(['v' . ContentRenderer::VERSION . ':all', true, $w->moderator], [$w->jobs->calls[2][2] ?? null, $w->jobs->calls[2][4]['all'] ?? null, $w->jobs->calls[2][5] ?? null], 'startJob(true, user): Scope v<VERSION>:all, Zustand all, Ersteller');
+    $id = (int) ($started['job']['id'] ?? 0);
+    $stepped = $w->render->runJobStep($id);
+    T::same([true, 'done', $p2], [$stepped['success'] ?? null, $stepped['job']['status'] ?? null, $stepped['job']['processed'] ?? null], 'runJobStep(): ein Schritt über BatchJobService::step(), Ergebnis toPublic()');
+    T::same("<p>Zwei</p>\n", $w->stored($p2)['body_html'], 'runJobStep(): gerendert');
+    $w->jobs->jobs[99] = ['id' => 99, 'type' => 'other_job', 'scope' => '', 'status' => 'running', 'total' => 0, 'processed' => 0, 'failed' => 0, 'state' => []];
+    T::same(['invalid_input', 'invalid_input', 'invalid_input'], [$w->render->runJobStep(99)['error'] ?? null, $w->render->runJobStep(12345)['error'] ?? null, $w->render->runJobStep(0)['error'] ?? null], 'runJobStep(): fremder Typ, unbekannte ID, 0 ⇒ invalid_input');
+    T::same(['invalid_input', true, false], [$w->render->cancelJob(99)['error'] ?? null, $w->render->cancelJob((int) $all['job']['id'])['success'] ?? null, $w->render->cancelJob((int) $all['job']['id'])['success'] ?? null], 'cancelJob(): fremder Typ abgelehnt, eigener abgebrochen, zweimal nicht');
+    T::same([(int) $all['job']['id'], 'cancelled'], [$w->render->jobStatus()['id'] ?? null, $w->render->jobStatus()['status'] ?? null], 'jobStatus(): ohne aktiven Job der jüngste dieser VERSION (beide Scopes)');
+    $w->render->startJob();
+    T::same(['pending'], [$w->render->jobStatus()['status'] ?? null], 'jobStatus(): ein aktiver Job geht vor');
+    $w->jobs->throw = new \RuntimeException('batch_jobs fehlt');
+    T::same(['success' => false, 'error' => 'db_error'], $w->render->startJob(), 'startJob(): Fehler ⇒ db_error');
+
+    // cronTick(): fertiger Job ⇒ nichts; sonst Start und Schritte bis zum Ende; busy ⇒ Ende; wirft nie.
+    $w = new CrWorld();
+    $p = $w->post('Für den Cron');
+    $w->render->cronTick();
+    T::same(['latest', 'start', 'step'], array_map(static fn (array $c): string => $c[0], $w->jobs->calls), 'cronTick(): kein fertiger Job ⇒ start und Schritte bis fertig');
+    T::same("<p>Für den Cron</p>\n", $w->stored($p)['body_html'], 'cronTick(): gerendert');
+    $w->jobs->calls = [];
+    $w->render->cronTick();
+    T::same(['latest'], array_map(static fn (array $c): string => $c[0], $w->jobs->calls), 'cronTick(): fertiger Job dieser VERSION ⇒ nichts');
+    $w = new CrWorld();
+    for ($i = 0; $i < 3; $i++) {
+        $w->post('Beitrag ' . $i);
+    }
+    $w->jobs->busy = true;
+    $w->render->cronTick();
+    T::same(1, count(array_filter($w->jobs->calls, static fn (array $c): bool => $c[0] === 'step')), 'cronTick(): busy ⇒ nach dem ersten Schritt Ende');
+    $w->jobs->throw = new \RuntimeException('kaputt');
+    $w->jobs->jobs = [];
+    $w->render->cronTick();
+    T::check(true, 'cronTick(): ein Fehler wirft nicht');
+    // Viele Schritte: höchstens CRON_STEPS je Lauf.
+    $w = new CrWorld();
+    $w->db->execute('INSERT INTO cms_community_posts (id, topic_id, forum_id, user_id, is_first_post, status, body, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)', [RenderService::STEP_WINDOW * (RenderService::CRON_STEPS + 5), $w->topic, $w->open, $w->author, 'published', 'weit hinten', '2026-11-15 10:00:00', '2026-11-15 10:00:00']);
+    $w->render->cronTick();
+    T::same(RenderService::CRON_STEPS, count(array_filter($w->jobs->calls, static fn (array $c): bool => $c[0] === 'step')), 'cronTick(): höchstens CRON_STEPS = 20 Schritte je Lauf');
+});
+
+T::run('G preview(): Schreibrecht am Ziel, Grenzgründe erlaubt, Drossel, Eingaben, nichts geschrieben', static function (): void {
+    $w = new CrWorld(['post_max' => 200, 'edit_window_minutes' => 0]);
+    $own = $w->post('Eigener Beitrag', ['user' => $w->member]);
+    $foreign = $w->post('Fremder Beitrag');
+    $w->attachments = [
+        5 => ['id' => 5, 'post_id' => $own, 'user_id' => $w->member, 'mime_type' => 'image/png', 'width' => 10, 'height' => 10, 'has_preview' => 0],
+        6 => ['id' => 6, 'post_id' => $foreign, 'user_id' => $w->author, 'mime_type' => 'image/png', 'width' => 10, 'height' => 10, 'has_preview' => 0],
+    ];
+    foreach (['leer' => [], 'zwei Ziele' => ['forum_id' => $w->open, 'topic_id' => $w->topic], 'unbekannt' => ['thread_id' => 1], 'Text statt Zahl' => ['topic_id' => (string) $w->topic], 'null' => ['topic_id' => 0], 'negativ' => ['post_id' => -1], 'Liste' => [$w->topic]] as $name => $target) {
+        T::same('invalid_input', $w->render->preview($w->member, 'Text', $target)['error'] ?? null, 'Ziel ' . $name . ' ⇒ invalid_input');
+    }
+    T::same('invalid_input', $w->render->preview($w->member, "\xFF", ['topic_id' => $w->topic])['error'] ?? null, 'ungültiges UTF-8 ⇒ invalid_input');
+    T::same('body_too_short', $w->render->preview($w->member, "  \u{200B} ", ['topic_id' => $w->topic])['error'] ?? null, 'leer nach Normalisierung ⇒ body_too_short (post_min)');
+    T::same('body_too_long', $w->render->preview($w->member, str_repeat('x', 201), ['topic_id' => $w->topic])['error'] ?? null, 'über post_max ⇒ body_too_long');
+    T::same([0, [], 0], [$w->clockReads, $w->canLog, $w->purifies], 'Eingabefehler: keine Uhr, keine Rechteprüfung, kein Parsen');
+
+    T::same('login_required', $w->render->preview(null, 'Gastvorschau', ['topic_id' => $w->topic])['error'] ?? null, 'Gast ⇒ login_required');
+    T::same('login_required', $w->render->preview(0, 'Gastvorschau', ['forum_id' => $w->open])['error'] ?? null, 'Betrachter 0 gilt als Gast');
+    T::same('banned_write', $w->render->preview($w->banned, 'Gesperrt', ['topic_id' => $w->topic])['error'] ?? null, 'Schreibsperre ⇒ banned_write (Lesen allein genügt nicht)');
+    T::same('banned_write', $w->render->preview($w->banned, 'Gesperrt', ['forum_id' => $w->open])['error'] ?? null, 'Schreibsperre beim neuen Thema ⇒ banned_write');
+    T::same('not_found', $w->render->preview($w->member, 'Verborgen', ['topic_id' => $w->secretTopic])['error'] ?? null, 'Ziel im verborgenen Forum ⇒ not_found');
+    // 404-Regel (Vertrag §1 Nr. 8): fehlendes und unsichtbares Ziel ergeben dasselbe Ergebnis, je Zielart.
+    $secretPost = $w->post('Beitrag im verborgenen Forum', ['topic' => $w->secretTopic, 'user' => $w->member]);
+    $secretForum = $w->secret;
+    foreach ([
+        'Thema' => [['topic_id' => 999999], ['topic_id' => $w->secretTopic]],
+        'Forum' => [['forum_id' => 999999], ['forum_id' => $secretForum]],
+        'Beitrag' => [['post_id' => 999999], ['post_id' => $secretPost]],
+    ] as $kind => [$missing, $invisible]) {
+        $a = $w->render->preview($w->member, 'Probe', $missing);
+        $b = $w->render->preview($w->member, 'Probe', $invisible);
+        T::same([false, 'not_found'], [$a['success'] ?? null, $a['error'] ?? null], "404-Regel {$kind}: fehlendes Ziel ⇒ not_found");
+        T::same($a, $b, "404-Regel {$kind}: unsichtbares Ziel ergibt dasselbe Ergebnis wie ein fehlendes", json_encode([$a, $b]));
+    }
+    $foreignResult = $w->render->preview($w->member, '![b](attachment:6)', ['post_id' => $foreign]);
+    T::check(in_array($foreignResult['error'] ?? null, ['not_found', 'no_permission'], true), 'fremder Beitrag bei edit ⇒ not_found bzw. no_permission', json_encode($foreignResult));
+    T::same([[], 0], [$w->throttleLog, $w->purifies], 'Abgelehnte lösen weder Drossel noch Parsen aus');
+
+    $w->canLog = [];
+    $w->clockReads = 0;
+    $w->db->log = [];
+    $result = $w->render->preview($w->member, "**Vorschau** mit ![b](attachment:5)", ['topic_id' => $w->topic]);
+    T::same(true, $result['success'] ?? null, 'Antwort-Vorschau erlaubt', json_encode($result));
+    T::same(['user' => $w->member, 'action' => 'reply', 'context' => ['topic_id' => $w->topic, 'now' => $w->now]], $w->canLog[0] ?? null, 'Rechteprüfung: Schreibaktion am Ziel mit now, ohne content');
+    T::same([['preview', $w->member]], $w->throttleLog, 'Drossel preview nach erlaubter Rechteprüfung');
+    T::same(1, $w->clockReads, 'Uhr einmal');
+    T::check(!str_contains((string) ($result['html'] ?? ''), '<img'), 'Antwort: ein Anhang eines Beitrags wird nicht eingebettet (post_id nur bei edit)', (string) ($result['html'] ?? ''));
+    T::same(['images' => 1, 'attachments' => [5]], array_intersect_key($result['stats'] ?? [], ['images' => 0, 'attachments' => 0]), 'Zählung der Vorschau');
+    T::same([], $w->logged(CR_WRITE_SQL), 'Vorschau schreibt nichts');
+    T::same(0, $w->filterLog[0]['post_id'] ?? null, 'Filter mit postId 0');
+    $edit = $w->render->preview($w->member, "Bearbeitet ![b](attachment:5)", ['post_id' => $own]);
+    T::check(str_contains((string) ($edit['html'] ?? ''), '<img'), 'Bearbeiten des eigenen Beitrags: dessen Anhang wird eingebettet (post_id)', json_encode($edit));
+    $w->canLog = [];
+    T::same(true, $w->render->preview($w->member, 'Neues Thema', ['forum_id' => $w->open])['success'] ?? null, 'Vorschau eines neuen Themas erlaubt');
+    T::same(['create_topic', ['forum_id' => $w->open, 'now' => $w->now]], [$w->canLog[0]['action'] ?? null, $w->canLog[0]['context'] ?? null], 'forum_id ⇒ create_topic am Forum');
+    $w->canLog = [];
+    $w->render->preview($w->member, 'Bearbeitet', ['post_id' => $own]);
+    T::same(['edit', ['post_id' => $own, 'now' => $w->now]], [$w->canLog[0]['action'] ?? null, $w->canLog[0]['context'] ?? null], 'post_id ⇒ edit am Beitrag');
+
+    // Grenzgründe gelten als erlaubt, andere Gründe nicht.
+    foreach (TopicService::LIMIT_REASONS as $reason) {
+        $w->rule = static fn (?int $u, string $a, array $c): ?AccessDecision => $a === 'reply' ? AccessDecision::deny($reason, 30) : null;
+        T::same(true, $w->render->preview($w->member, 'Trotz Grenze', ['topic_id' => $w->topic])['success'] ?? null, 'Grenzgrund ' . $reason . ': Vorschau erlaubt');
+    }
+    $w->rule = static fn (?int $u, string $a, array $c): ?AccessDecision => $a === 'reply' ? AccessDecision::deny('topic_locked') : null;
+    T::same('topic_locked', $w->render->preview($w->member, 'Gesperrtes Thema', ['topic_id' => $w->topic])['error'] ?? null, 'anderer Grund: abgelehnt mit dem Grund');
+    $w->rule = null;
+
+    // Drossel: 10 je 60 s (der Dienst drosselt selbst).
+    $w->throttleLog = [];
+    $w->purifies = 0;
+    $w->throttle = ['allowed' => false, 'retry_after' => 60];
+    T::same(['success' => false, 'error' => 'rate_limited', 'retry_after' => 60], $w->render->preview($w->member, 'Zu oft', ['topic_id' => $w->topic]), 'Drossel abgelehnt ⇒ rate_limited mit retry_after');
+    T::same([[['preview', $w->member]], 0], [$w->throttleLog, $w->purifies], 'Drossel abgelehnt: kein Parsen');
+    $w->throttle = ['allowed' => true, 'retry_after' => 0];
+
+    // Zitate in der Vorschau: wie present(), Betrachter = Schreibender.
+    $secret = $w->post('Verborgen', ['topic' => $w->secretTopic]);
+    $visible = $w->post('Sichtbar');
+    $quoted = $w->render->preview($w->member, crQuote($secret, 'GEHEIM') . "\n\n" . crQuote($visible, 'LESBAR') . "\n\nAntwort", ['topic_id' => $w->topic]);
+    T::check(!str_contains((string) ($quoted['html'] ?? 'GEHEIM'), 'GEHEIM') && str_contains((string) ($quoted['html'] ?? ''), 'LESBAR') && str_contains((string) ($quoted['html'] ?? ''), 'cms-quote__source'), 'Vorschau: Zitate je Recht des Schreibenden aufgelöst', (string) ($quoted['html'] ?? ''));
+    $w->purifierMissing = true;
+    $plain = $w->render->preview($w->member, crQuote($secret, 'GEHEIM') . "\n\nAntwort", ['topic_id' => $w->topic]);
+    T::check(str_starts_with((string) ($plain['html'] ?? ''), '<p class="cms-plain">') && !str_contains((string) ($plain['html'] ?? 'GEHEIM'), 'GEHEIM'), 'Vorschau ohne Purifier: neutralisierter Klartext', (string) ($plain['html'] ?? ''));
+    $w->purifierMissing = false;
+    $big = new CrWorld(['post_max' => 50000]);
+    T::same('render_failed', $big->render->preview($big->member, str_repeat('[', 25000), ['topic_id' => $big->topic])['error'] ?? null, 'Grenze überschritten (25.000 Begrenzer) ⇒ render_failed');
+});
+
+T::run('G Schreib-Rendern und Zählung delegieren an ContentRenderer; Konstruktor ohne Datenbank', static function (): void {
+    $w = new CrWorld();
+    T::same("<p><strong>x</strong></p>\n", $w->render->render('**x**', ['post_id' => null, 'uploader_id' => $w->member])['html'] ?? null, 'render(): HTML des Renderers');
+    T::same(['ok' => false, 'error' => 'render_failed'], array_intersect_key($w->render->render("\xFF"), ['ok' => 0, 'error' => 0]), 'render(): ungültiges UTF-8 ⇒ render_failed');
+    $analysis = $w->render->analyze('[a](https://example.org) ![b](https://bild.example/x.png)');
+    T::same([true, 1], [$analysis['ok'], $analysis['stats']['images']], 'analyze(): Zählung ohne HTML');
+    T::check($analysis['stats']['external_links'] >= 1, 'analyze(): externer Link gezählt');
+    T::same(['ok' => false, 'error' => 'render_failed'], array_intersect_key($w->render->analyze("\xFF"), ['ok' => 0, 'error' => 0]), 'analyze(): render_failed');
+    $db = CommunityTestDatabase::create();
+    $db->log = [];
+    new RenderService($db, Settings::fromArray([]), static fn (): int => 0, static fn (?int $u, string $a, array $c): AccessDecision => AccessDecision::allow());
+    T::same([], $db->log, 'Konstruktor: keine Abfrage');
+    T::same(['create_topic', 'reply', 'edit'], array_values(RenderService::PREVIEW_ACTIONS), 'PREVIEW_ACTIONS: forum_id ⇒ create_topic, topic_id ⇒ reply, post_id ⇒ edit');
+    T::same([5, 50000, 200, 20, 200000], [RenderService::LAZY_GUEST_POSTS, RenderService::LAZY_GUEST_CHARS, RenderService::MAX_QUOTE_LOOKUPS, RenderService::LAZY_MAX_POSTS, RenderService::LAZY_MAX_CHARS], 'Grenzen laut Vertrag §3.6');
+});
+
+// Teildateien weiterer Besitzer (T: part-services.php in W3; Vertrag §1 Nr. 6).
 foreach (glob(__DIR__ . '/part-*.php') ?: [] as $part) {
     require $part;
 }

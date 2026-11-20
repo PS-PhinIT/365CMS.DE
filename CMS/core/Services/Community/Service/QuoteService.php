@@ -24,6 +24,12 @@
  * Datenbank. `markerId()` ist die einzige Marker-Regel: der Renderer (PR #2b, `Support\ContentRenderer`) erkennt Zitat-Blöcke über
  * dieselbe Methode an ihrer Quellzeile.
  *
+ * Mengen-API (PR #2b, Vertrag DESIGN-2b §3.6, §4.3, §4.7 Nr. 9): `resolveMany()` liefert die Entscheidungen eines Betrachters für
+ * alle Zitate einer Seite, `quotableMany()` die Zitierbarkeit neuer Marker beim Schreiben. Beide lesen mit genau einer
+ * `PostRepository::findMany()` (Stücke zu 100 IDs) und fragen je ID `can('read')` mit dem Zwischenspeicher der Anfrage. Ein
+ * Datenbankfehler ergibt für alle IDs `false` (fail-closed) und eine Warnung. Die Zuordnung „Beitrag + Entscheidung → Zustand“
+ * steht nur in `stateOf()`, die Zitierbarkeit nur in `quotableRow()`.
+ *
  * @package CMSv2\Core\Services\Community
  */
 
@@ -32,6 +38,7 @@ declare(strict_types=1);
 namespace CMS\Services\Community\Service;
 
 use CMS\Database;
+use CMS\Logger;
 use CMS\Services\Community\Repository\PostRepository;
 use CMS\Services\Community\Support\Settings;
 
@@ -110,11 +117,41 @@ final class QuoteService
 
     /**
      * Darf das Mitglied diesen Beitrag zitieren (lesen mit voller Ansicht, veröffentlicht oder als Moderation ausgeblendet)?
-     * Dieselbe Regel wie `build()`, ohne Text; `PostService::reply()` prüft damit `quote_of_post_id`.
+     * Dieselbe Regel wie `build()`, ohne Text; `PostService::reply()` prüft damit `quote_of_post_id`. Delegiert an `quotableMany()`
+     * (ein Datenbankfehler ergibt `false`).
      */
     public function isQuotable(int $postId, ?int $viewerId): bool
     {
-        return $this->quotablePost($postId, $viewerId) !== null;
+        return $postId > 0 && ($this->quotableMany($viewerId, [$postId])[$postId] ?? false);
+    }
+
+    /**
+     * Zitierbarkeit mehrerer Beiträge für ein Mitglied (Zitatmarker beim Schreiben, Vertrag §4.1 Schritt 7a): je ID dieselbe Regel
+     * wie `isQuotable()`. Eine Abfrage `findMany()`, danach je ID `can('read')` (mit `now`, wenn angegeben). Fehlende IDs und alle
+     * IDs bei einem Datenbankfehler ergeben `false`. Nur ganze Zahlen ≥ 1 zählen, doppelte einmal.
+     *
+     * @param array<array-key, mixed> $postIds
+     * @return array<int, bool> Beitrags-ID => zitierbar, in der Reihenfolge des ersten Auftretens
+     */
+    public function quotableMany(?int $userId, array $postIds, ?int $now = null): array
+    {
+        $ids = self::positiveIds($postIds);
+        if ($ids === []) {
+            return [];
+        }
+        try {
+            $found = $this->posts->findMany($ids);
+            $quotable = [];
+            foreach ($ids as $id) {
+                $quotable[$id] = isset($found[$id]) && $this->quotableRow($found[$id], $userId, $now);
+            }
+
+            return $quotable;
+        } catch (\PDOException | \RuntimeException $e) {
+            self::warn('quotableMany', $e, count($ids));
+
+            return array_fill_keys($ids, false);
+        }
     }
 
     /**
@@ -282,6 +319,7 @@ final class QuoteService
     /**
      * Prüfer für `neutralize()` aus den Rechten eines Mitglieds: sichtbar, wenn das Mitglied den Beitrag voll lesen darf und er
      * veröffentlicht ist; ausgeblendet oder gelöscht → `REMOVED`; sonst (unbekannt, nicht lesbar, wartend, abgelehnt) → `false`.
+     * Je Aufruf eine Abfrage; für ganze Seiten `resolveMany()`.
      *
      * @return \Closure(int): (bool|string)
      */
@@ -292,17 +330,38 @@ final class QuoteService
             if ($post === null) {
                 return false;
             }
-            $decision = ($this->can)($viewerId, 'read', ['post_id' => $postId, 'post' => $post]);
-            if (!$decision->allowed) {
-                return false;
+
+            return self::stateOf($post, ($this->can)($viewerId, 'read', ['post_id' => $postId, 'post' => $post]));
+        };
+    }
+
+    /**
+     * Entscheidungen eines Betrachters für viele Zitatquellen (Vertrag DESIGN-2b §4.3, eine Abfrage je Seite): Regel wie `resolver()`.
+     * Eine Abfrage `findMany()`, danach je ID `can($viewerId, 'read', ['post_id', 'post', 'now'])`. Fehlende IDs ergeben `false`;
+     * ein Datenbankfehler ergibt `false` für alle IDs (fail-closed) und eine Warnung. Nur ganze Zahlen ≥ 1 zählen, doppelte einmal.
+     *
+     * @param array<array-key, mixed> $postIds
+     * @return array<int, bool|string> Beitrags-ID => `true` | `QuoteService::REMOVED` | `false`
+     */
+    public function resolveMany(?int $viewerId, array $postIds, ?int $now = null): array
+    {
+        $ids = self::positiveIds($postIds);
+        if ($ids === []) {
+            return [];
+        }
+        try {
+            $rows = $this->posts->findMany($ids);
+            $states = [];
+            foreach ($ids as $id) {
+                $states[$id] = isset($rows[$id]) ? self::stateOf($rows[$id], ($this->can)($viewerId, 'read', self::readContext($rows[$id], $now))) : false;
             }
 
-            return match ((string) $post['status']) {
-                'published' => $decision->view !== 'placeholder',
-                'hidden', 'deleted' => self::REMOVED,
-                default => false,
-            };
-        };
+            return $states;
+        } catch (\PDOException | \RuntimeException $e) {
+            self::warn('resolveMany', $e, count($ids));
+
+            return array_fill_keys($ids, false);
+        }
     }
 
     // ── Hilfen ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -314,7 +373,27 @@ final class QuoteService
     }
 
     /**
-     * Zeile des Beitrags, wenn er für das Mitglied zitierbar ist.
+     * Zustand einer Zitatquelle für einen Betrachter (einzige Stelle der Zuordnung, `resolver()` und `resolveMany()`). Die Entscheidung
+     * kommt vor dem Status (Vertrag §4.7 Nr. 9): ein ausgeblendeter Beitrag in einem nicht lesbaren Forum ist „nicht sichtbar“, nie
+     * `REMOVED` (sonst verriete der Platzhalter, dass dort etwas ausgeblendet wurde).
+     *
+     * @param array<string, mixed> $post
+     */
+    private static function stateOf(array $post, AccessDecision $d): bool|string
+    {
+        if (!$d->allowed) {
+            return false;
+        }
+
+        return match ((string) ($post['status'] ?? '')) {
+            'published' => $d->view !== 'placeholder',
+            'hidden', 'deleted' => self::REMOVED,
+            default => false,
+        };
+    }
+
+    /**
+     * Zeile des Beitrags, wenn er für das Mitglied zitierbar ist (mit Text, für `build()`).
      *
      * @return array<string, mixed>|null
      */
@@ -324,23 +403,67 @@ final class QuoteService
             return null;
         }
         $post = $this->posts->find($postId);
-        if ($post === null) {
-            return null;
-        }
-        $decision = ($this->can)($viewerId, 'read', ['post_id' => $postId, 'post' => $post]);
+
+        return $post !== null && $this->quotableRow($post, $viewerId, null) ? $post : null;
+    }
+
+    /**
+     * Zitierregel (einzige Stelle, `build()`, `isQuotable()`, `quotableMany()`): lesbar mit voller Ansicht und veröffentlicht, oder
+     * ausgeblendet für die Moderation des Forums.
+     *
+     * @param array<string, mixed> $post Beitragszeile (mit oder ohne Text)
+     */
+    private function quotableRow(array $post, ?int $viewerId, ?int $now): bool
+    {
+        $decision = ($this->can)($viewerId, 'read', self::readContext($post, $now));
         if (!$decision->allowed || $decision->view === 'placeholder') {
-            return null;
+            return false;
         }
         $status = (string) $post['status'];
-        if ($status !== 'published' && !($status === 'hidden' && $this->moderates($viewerId, (int) $post['forum_id']))) {
-            return null;
-        }
 
-        return $post;
+        return $status === 'published' || ($status === 'hidden' && $this->moderates($viewerId, (int) $post['forum_id']));
     }
 
     private function moderates(?int $userId, int $forumId): bool
     {
         return $userId !== null && $userId > 0 && ($this->can)($userId, 'moderate', ['forum_id' => $forumId])->allowed;
+    }
+
+    /**
+     * Kontext der Leseprüfung einer Beitragszeile; `now` nur, wenn angegeben (#2a-Aufrufe ohne Uhr bleiben unverändert).
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private static function readContext(array $post, ?int $now): array
+    {
+        return ['post_id' => (int) $post['id'], 'post' => $post] + ($now !== null ? ['now' => $now] : []);
+    }
+
+    /**
+     * Ganze Zahlen ≥ 1, ohne Doppelte, in der Reihenfolge des ersten Auftretens.
+     *
+     * @param array<array-key, mixed> $ids
+     * @return list<int>
+     */
+    private static function positiveIds(array $ids): array
+    {
+        $out = [];
+        foreach ($ids as $id) {
+            if (is_int($id) && $id > 0) {
+                $out[$id] = $id;
+            }
+        }
+
+        return array_values($out);
+    }
+
+    private static function warn(string $operation, \Throwable $e, int $count): void
+    {
+        Logger::instance()->withChannel('community')->warning('Community-Zitate: {operation} fehlgeschlagen ({count} IDs): {exception}', [
+            'operation' => $operation,
+            'count' => $count,
+            'exception' => $e,
+        ]);
     }
 }

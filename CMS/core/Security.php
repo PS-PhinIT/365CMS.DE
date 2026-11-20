@@ -785,6 +785,32 @@ class Security
     }
 
     /**
+     * Löscht Einträge in `login_attempts`, deren Aktion mit `$actionPrefix` beginnt und die älter als `$olderThanSeconds` sind
+     * (`idx_action`). Für Request-Grenzen mit eigenem Präfix (Community: `community_`, stündlich), deren Zeilen sonst nur das
+     * zufällige Aufräumen von checkDbRateLimit() erreicht. Ortszeit wie countDbIdentifierAttempts(). Leeres Präfix oder
+     * Datenbankfehler: 0 (Fehler im Fehlerlog).
+     */
+    public static function pruneDbRateLimitAttempts(string $actionPrefix, int $olderThanSeconds): int
+    {
+        if ($actionPrefix === '') {
+            return 0;
+        }
+
+        try {
+            $db = Database::instance();
+
+            return $db->execute(
+                "DELETE FROM {$db->getPrefix()}login_attempts WHERE action LIKE ? AND attempted_at < ?",
+                [addcslashes($actionPrefix, '%_\\') . '%', date('Y-m-d H:i:s', time() - max(0, $olderThanSeconds))]
+            )->rowCount();
+        } catch (\Throwable $e) {
+            error_log('Security::pruneDbRateLimitAttempts() Fehler: ' . self::sanitizeDiagnosticText($e->getMessage()));
+
+            return 0;
+        }
+    }
+
+    /**
      * Nimmt den jüngsten eigenen Eintrag wieder zurück. Für Limits, die den Versuch vor der teuren Prüfung
      * zählen (damit parallele Anfragen einander sehen) und ihn bei Erfolg nicht als Fehlversuch behalten.
      */
