@@ -14,9 +14,10 @@
  *      Mitglieder in verschiedenen Foren, gemischte Last; keine Deadlock-Fehler nach außen (Wiederholung in
  *      `Transaction::run` ist erlaubt, ein durchgereichtes 1213 ist ein Fehler).
  *  (d) EXPLAIN-Gate mit 24.000 Themen und 100.000 Beiträgen: Themenliste (Strom als ID-Abfrage, Folgeseite, Pins ohne Frist,
- *      mit abgelaufener und mit künftiger Frist, auch in einem großen älteren Forum), Beitragsliste, Platzhalter, Position,
- *      Dubletten- und Zählabfragen, die globale Liste „Unbeantwortet“ (ohne Forenfilter und mit `forum_id IN …`, jeweils als
- *      ID-Abfrage, auch auf Folgeseiten) und der Filter „ungelöst“ je Forum nutzen ihre Indizes ohne Tabellenscan und ohne
+ *      mit abgelaufener und mit künftiger Frist, auch in einem großen älteren und im ruhigen Forum mit 60 Themen), Beitragsliste,
+ *      Platzhalter, Position, Dubletten- und Zählabfragen, die globale Liste „Unbeantwortet“ (ohne Forenfilter und mit
+ *      `forum_id IN …`, jeweils als ID-Abfrage, auch auf Folgeseiten) und der Filter „ungelöst“ je Forum (ID-Abfrage samt
+ *      ungelösten abgelaufenen Pins, HANDOFF §2 Nr. 10) nutzen ihre Indizes ohne Tabellenscan und ohne
  *      Filesort (außer Platzhalter, Dubletten, `lastOfUser()` und abgelaufene Pins über wenige Zeilen); Prüfung über EXPLAIN und
  *      Handler-Zähler, nicht über Zeit. Abschnitt `explain-unanswered`: die globale Liste „Unbeantwortet“ mit 60.000 Themen und
  *      einem Cursor im ersten Viertel (dort wählte MariaDB 10.11 für `SELECT *` `ref` statt `range`; die ID-Form bleibt `range`).
@@ -1745,7 +1746,7 @@ cdbSection('slug', 'UNIQUE-Wettlauf: mehrere Prozesse legen dasselbe Forum mit d
  * wenige angepinnt, je fünf Themen mit gleichem Zeitstempel, etwa jedes siebte ohne Antwort), 100.000 Beiträge (je Thema fünf;
  * Themenstarts zuerst, 3 % ausgeblendet, 1,4 % gelöscht), ein Thema mit 5000 weiteren Beiträgen, ein ruhiges Forum mit 60 alten
  * Themen und ein großes älteres Forum mit 4000 Themen (16,6 % der Tabelle); das vierte Forum ist ein Q&A-Forum (alle Themen beantwortet, bis auf etwa 15 gelöst: `solution_post_id` und `solved_at`
- * gemeinsam, HANDOFF §2); danach ANALYZE TABLE.
+ * gemeinsam, HANDOFF §2; dazu ein ungelöstes Thema mit abgelaufener Anheftung); danach ANALYZE TABLE.
  *
  * @return array{forums: list<int>, quiet: int, old: int, qa: int, users: list<int>, bigTopic: int, now: string, since: string}
  */
@@ -1817,6 +1818,9 @@ function cdbBulkLoad(MariaDbTestDatabase $db): array
     // Pins (5 je Forum): je Forum mindestens einer ohne Frist, einer abgelaufen (vor 'now') und einer mit Frist in der Zukunft.
     // Ohne Frist liefe die Abfrage nach abgelaufenen Anheftungen in listForum() immer leer, und ihr Plan bliebe ungeprüft.
     $pdo->exec("UPDATE cms_community_topics SET pinned_until = CASE id MOD 3 WHEN 0 THEN NULL WHEN 1 THEN TIMESTAMP('{$base}') + INTERVAL 10000 SECOND ELSE TIMESTAMP('{$base}') + INTERVAL 40000 SECOND END WHERE is_pinned = 1");
+    // Im Q&A-Forum ist die abgelaufene Anheftung ungelöst: Sie behält is_pinned = 1 bis zum Cron, listForum() zeigt sie im Strom,
+    // und „ungelöst“ findet sie nur über die zweite Abfrage (HANDOFF §2 Nr. 10).
+    $pdo->exec("UPDATE cms_community_topics SET solution_post_id = NULL, solved_at = NULL, solved_by = NULL WHERE forum_id = {$qa} AND is_pinned = 1 AND pinned_until <= TIMESTAMP('{$base}') + INTERVAL 10000 SECOND");
     $pdo->exec(
         "INSERT INTO cms_community_read_states (user_id, topic_id, last_read_post_id, updated_at)
          SELECT {$userBase}, n + 1, n + 1 + 40000, '{$base}' FROM cdb_numbers WHERE n < 20000 AND n MOD 2 = 0"
@@ -1893,9 +1897,10 @@ function cdbMeasure(MariaDbTestDatabase $db, \Closure $call): array
  * Prüft die Pläne einer Messung gegen Regeln: kein Tabellenscan (`type` ALL), ein Index (`key`), erwarteter Index, kein Filesort
  * (außer erlaubt), keine temporäre Tabelle, wenige Handler-Lesezugriffe und kein Scan-Schritt. Der zweite Schritt einer
  * ID-Abfrage (`WHERE id IN (…)`) muss den Primärschlüssel nutzen; mit `coveringIds` lesen die ID-Abfragen (`SELECT id, …`) nur
- * den Index (`covering` verlangt das für jede Anweisung).
+ * den Index (`covering` verlangt das für jede Anweisung). `expiredKeys` ersetzt `keys` für die Abfrage nach abgelaufenen
+ * Anheftungen (dazu immer `idx_community_topics_pinned`).
  *
- * @param array{keys?: list<string>, filesort?: bool, maxReads: int, maxScan?: int, covering?: bool, coveringIds?: bool, statements?: int} $rule
+ * @param array{keys?: list<string>, expiredKeys?: list<string>, filesort?: bool, maxReads: int, maxScan?: int, covering?: bool, coveringIds?: bool, statements?: int} $rule
  * @return list<string> Verstöße
  */
 function cdbPlanProblems(array $measure, array $rule): array
@@ -1915,7 +1920,7 @@ function cdbPlanProblems(array $measure, array $rule): array
                 continue;   // abgeleitete Tabelle
             }
             $where = $row['table'] . ' [' . ($row['type'] ?? '?') . ', key ' . ($row['key'] ?? 'NULL') . ', rows ' . ($row['rows'] ?? '?') . ', ' . ($row['Extra'] ?? '') . ']';
-            $keys = $byIds ? ['PRIMARY'] : ($rule['keys'] ?? null);
+            $keys = $byIds ? ['PRIMARY'] : ($expiredPins && isset($rule['expiredKeys']) ? $rule['expiredKeys'] : ($rule['keys'] ?? null));
             if ($expiredPins && $keys !== null) {
                 $keys[] = 'idx_community_topics_pinned';
             }
@@ -1987,13 +1992,47 @@ cdbSection('explain', 'EXPLAIN-Gate: Listen, Position, Dubletten- und Zählabfra
     $readableIn = ' AND forum_id IN (' . implode(', ', array_fill(0, count($readable), '?')) . ')';
     $unansweredRow = $db->execute($unansweredIds . ' ORDER BY created_at DESC, id DESC LIMIT 1 OFFSET 1500', ['published'])->fetch(\PDO::FETCH_ASSOC);
     $readableRow = $db->execute($unansweredIds . $readableIn . ' ORDER BY created_at DESC, id DESC LIMIT 1 OFFSET 1500', ['published', ...$readable])->fetch(\PDO::FETCH_ASSOC);
-    // „ungelöst“: erst die IDs über den überdeckenden Index (nur Indexzugriff), dann die Zeilen über den Primärschlüssel. Mit
-    // SELECT * wich MariaDB 10.11 ohne Spaltenstatistik (nur ANALYZE TABLE) auf idx_community_topics_forum_list aus, die dieselbe
-    // Sortierung liefert, und las das ganze Forum (926 Lesezugriffe für 14 Treffer).
+    // „ungelöst“ (HANDOFF §2 Nr. 10): die IDs über den überdeckenden Index (nur Indexzugriff) und, wie in listForum(), die
+    // ungelösten Themen mit abgelaufener Anheftung (is_pinned = 1 bis zum Cron); beide auf 21 begrenzt und nach (last_post_at, id)
+    // zusammengeführt, danach die Zeilen der ID-Abfrage über den Primärschlüssel. Ohne die zweite Abfrage fehlte die abgelaufene
+    // Anheftung, die listForum() im Strom zeigt. Mit SELECT * statt der ID-Abfrage wich MariaDB 10.11 ohne Spaltenstatistik (nur
+    // ANALYZE TABLE) auf idx_community_topics_forum_list aus, die dieselbe Sortierung liefert, und las das ganze Forum (926
+    // Lesezugriffe für 14 Treffer). Es gibt dafür noch keinen Dienst; geprüft wird die Abfrageform.
     $unsolved = 'SELECT id, last_post_at FROM cms_community_topics WHERE forum_id = ? AND status = ? AND is_pinned = 0 AND solved_at IS NULL';
+    $unsolvedExpired = 'SELECT * FROM cms_community_topics WHERE forum_id = ? AND status = ? AND is_pinned = 1 AND pinned_until IS NOT NULL AND pinned_until <= ? AND solved_at IS NULL';
     $byActivity = ' ORDER BY last_post_at DESC, id DESC LIMIT ?';
     $activityKeyset = ' AND (last_post_at < ? OR (last_post_at = ? AND id < ?))';
-    $unsolvedRow = $db->execute($unsolved . ' ORDER BY last_post_at DESC, id DESC LIMIT 1 OFFSET 5', [$data['qa'], 'published'])->fetch(\PDO::FETCH_ASSOC);
+    $unsolvedPage = static function (int $forumId, ?array $after) use ($db, $now, $unsolved, $unsolvedExpired, $byActivity, $activityKeyset): array {
+        $keyset = $after === null ? '' : $activityKeyset;
+        $keysetParams = $after === null ? [] : [(string) $after['last_post_at'], (string) $after['last_post_at'], (int) $after['id']];
+        $entries = [];
+        foreach ($db->execute($unsolved . $keyset . $byActivity, [$forumId, 'published', ...$keysetParams, 21])->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $entries[] = [(string) $row['last_post_at'], (int) $row['id'], false];
+        }
+        foreach ($db->execute($unsolvedExpired . $keyset . $byActivity, [$forumId, 'published', $now, ...$keysetParams, 21])->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $entries[] = [(string) $row['last_post_at'], (int) $row['id'], true];
+        }
+        usort($entries, static fn (array $a, array $b): int => [$b[0], $b[1]] <=> [$a[0], $a[1]]);
+        $entries = array_slice($entries, 0, 21);
+        $ids = array_values(array_map(static fn (array $entry): int => $entry[1], array_filter($entries, static fn (array $entry): bool => !$entry[2])));
+        if ($ids !== []) {
+            $db->execute('SELECT * FROM cms_community_topics WHERE id IN (' . implode(', ', array_fill(0, count($ids), '?')) . ')', $ids)->fetchAll();
+        }
+
+        return array_map(static fn (array $entry): int => $entry[1], $entries);
+    };
+    // Vergleich: eine Abfrage über die ungelösten Themen des Stroms samt abgelaufener Anheftungen (Reihenfolge der Forenliste).
+    $unsolvedWhere = "forum_id = ? AND status = 'published' AND (is_pinned = 0 OR (pinned_until IS NOT NULL AND pinned_until <= ?)) AND solved_at IS NULL";
+    $unsolvedExpected = static fn (int $forumId, ?array $after): array => array_map('intval', array_column($db->execute(
+        'SELECT id FROM cms_community_topics WHERE ' . $unsolvedWhere . ($after === null ? '' : $activityKeyset) . $byActivity,
+        [$forumId, $now, ...($after === null ? [] : [(string) $after['last_post_at'], (string) $after['last_post_at'], (int) $after['id']]), 21]
+    )->fetchAll(\PDO::FETCH_ASSOC), 'id'));
+    $unsolvedRow = $db->execute('SELECT last_post_at, id FROM cms_community_topics WHERE ' . $unsolvedWhere . ' ORDER BY last_post_at DESC, id DESC LIMIT 1 OFFSET 5', [$data['qa'], $now])->fetch(\PDO::FETCH_ASSOC);
+    // Ruhiges Forum (60 Themen, alle veröffentlicht, ohne Pins), Folgeseite: Mit idx_community_topics_solved in der Form (forum_id,
+    // solved_at, status, is_pinned, last_post_at) nahm MariaDB 10.11 für die ID-Abfrage des Stroms ref über forum_id (key_len 4) mit
+    // Filesort und las das ganze Forum (83 statt 44 Lesezugriffe; HANDOFF §2 Nr. 9).
+    $quietRow = $db->execute("SELECT last_post_at, id FROM cms_community_topics WHERE forum_id = ? AND status = 'published' AND is_pinned = 0 ORDER BY last_post_at DESC, id DESC LIMIT 1 OFFSET 19", [$data['quiet']])->fetch(\PDO::FETCH_ASSOC);
+    $quietCursor = new Cursor((string) $quietRow['last_post_at'], (int) $quietRow['id']);
     $unansweredAll = ['idx_community_topics_unanswered_all'];
     $solvedIndex = ['idx_community_topics_solved'];
 
@@ -2025,11 +2064,12 @@ cdbSection('explain', 'EXPLAIN-Gate: Listen, Position, Dubletten- und Zählabfra
         'Unbeantwortet global, Folgeseite (Keyset, Position 1500, IDs)' => [static fn () => $db->execute($unansweredIds . $createdKeyset . $byCreated, ['published', $unansweredRow['created_at'], $unansweredRow['created_at'], (int) $unansweredRow['id'], 21])->fetchAll(), ['keys' => $unansweredAll, 'covering' => true, 'maxReads' => 100, 'statements' => 1]],
         'Unbeantwortet in lesbaren Foren (forum_id IN, 15 von 20 Foren), erste Seite (IDs)' => [static fn () => $db->execute($unansweredIds . $readableIn . $byCreated, ['published', ...$readable, 21])->fetchAll(), ['keys' => $unansweredAll, 'maxReads' => 100, 'statements' => 1]],
         'Unbeantwortet in lesbaren Foren, Folgeseite (Keyset, Position 1500, IDs)' => [static fn () => $db->execute($unansweredIds . $readableIn . $createdKeyset . $byCreated, ['published', ...$readable, $readableRow['created_at'], $readableRow['created_at'], (int) $readableRow['id'], 21])->fetchAll(), ['keys' => $unansweredAll, 'maxReads' => 100, 'statements' => 1]],
-        // Vorher: idx_community_topics_forum_list liest das ganze Forum (etwa 900 Einträge plus Zeilenzugriffe) für 15 Treffer.
-        'Ungelöst im Q&A-Forum (etwa 15 von 900), erste Seite (IDs)' => [static fn () => $db->execute($unsolved . $byActivity, [$data['qa'], 'published', 21])->fetchAll(), ['keys' => $solvedIndex, 'covering' => true, 'maxReads' => 50, 'statements' => 1]],
-        'Ungelöst im Q&A-Forum, Folgeseite (Keyset, IDs)' => [static fn () => $db->execute($unsolved . $activityKeyset . $byActivity, [$data['qa'], 'published', $unsolvedRow['last_post_at'], $unsolvedRow['last_post_at'], (int) $unsolvedRow['id'], 21])->fetchAll(), ['keys' => $solvedIndex, 'covering' => true, 'maxReads' => 50, 'statements' => 1]],
+        // Vorher: idx_community_topics_forum_list liest das ganze Forum (etwa 900 Einträge plus Zeilenzugriffe) für 15 Treffer. Die
+        // abgelaufenen Anheftungen liest die Pin-Abfrage über idx_community_topics_forum_list oder idx_community_topics_solved.
+        'Ungelöst im Q&A-Forum (etwa 15 von 900, dazu eine abgelaufene Anheftung), erste Seite' => [static fn () => $unsolvedPage($data['qa'], null), ['keys' => $solvedIndex, 'expiredKeys' => [...$forumList, ...$solvedIndex], 'coveringIds' => true, 'maxReads' => 80, 'statements' => 3]],
+        'Ungelöst im Q&A-Forum, Folgeseite (Keyset)' => [static fn () => $unsolvedPage($data['qa'], $unsolvedRow), ['keys' => $solvedIndex, 'expiredKeys' => [...$forumList, ...$solvedIndex], 'coveringIds' => true, 'maxReads' => 80, 'statements' => 3]],
         // Diskussionsforum ohne gelöste Themen: jeder Eintrag ist ein Treffer, beide Indizes lesen nur eine Seite.
-        'Ungelöst im Diskussionsforum (kein Thema gelöst, IDs)' => [static fn () => $db->execute($unsolved . $byActivity, [$forum, 'published', 21])->fetchAll(), ['keys' => [...$forumList, ...$solvedIndex], 'maxReads' => 100, 'statements' => 1]],
+        'Ungelöst im Diskussionsforum (kein Thema gelöst)' => [static fn () => $unsolvedPage($forum, null), ['keys' => [...$forumList, ...$solvedIndex], 'expiredKeys' => [...$forumList, ...$solvedIndex], 'coveringIds' => true, 'maxReads' => 100, 'statements' => 3]],
         // Die Forenliste (auch der zweite Strom von „ungelöste zuerst“) bleibt im Q&A-Forum auf idx_community_topics_forum_list; die
     // ID-Abfrage des Stroms liest nur den Index, die Zeilen kommen über den Primärschlüssel.
         'Themenliste im Q&A-Forum (Pins und Strom)' => [static fn () => $topics->listForum($data['qa'], $now, null, 20), ['keys' => $forumList, 'coveringIds' => true, 'maxReads' => 400, 'statements' => 4]],
@@ -2039,6 +2079,7 @@ cdbSection('explain', 'EXPLAIN-Gate: Listen, Position, Dubletten- und Zählabfra
         // der Form (forum_id, status, is_pinned, solved_at, last_post_at) wich MariaDB 10.11 in einem solchen Forum je nach Seitenlayout
         // auf idx_community_topics_activity aus (40.060 Themen: 5955 statt 67 Lesezugriffe); in diesen Daten blieb der Plan auch mit
         // jener Form. Die Definition prüft deshalb zusätzlich TESTS/schema-v27 (HANDOFF §2 Nr. 9).
+        'Themenliste im ruhigen Forum (60 Themen), Folgeseite (Position 20)' => [static fn () => $topics->listForum($data['quiet'], $now, $quietCursor, 20), ['keys' => $forumList, 'coveringIds' => true, 'maxReads' => 100, 'statements' => 3]],
         'Themenliste im großen älteren Forum, erste Seite (Pins und Strom)' => [static fn () => $topics->listForum($data['old'], $now, null, 20), ['keys' => $forumList, 'coveringIds' => true, 'maxReads' => 400, 'statements' => 4]],
         'Themenliste im großen älteren Forum, erste Seite mit 100 Themen' => [static fn () => $topics->listForum($data['old'], $now, null, 100), ['keys' => $forumList, 'coveringIds' => true, 'maxReads' => 600, 'statements' => 4]],
         'Letztes Thema im großen älteren Forum (lastPublished)' => [static fn () => $topics->lastPublished($data['old']), ['keys' => $forumList, 'maxReads' => 100, 'statements' => 2]],
@@ -2089,9 +2130,26 @@ cdbSection('explain', 'EXPLAIN-Gate: Listen, Position, Dubletten- und Zählabfra
     T::check(min($pinKinds) >= 1, 'Testdaten: Pins ohne Frist, abgelaufen und mit Frist in der Zukunft', implode('/', $pinKinds));
     T::check((int) cdbScalar($db, "SELECT COUNT(*) FROM cms_community_topics WHERE forum_id = ? AND status = 'published' AND is_pinned = 1 AND pinned_until <= ? AND (last_post_at < ? OR (last_post_at = ? AND id < ?))", [$forum, $now, $mid->at, $mid->at, $mid->id]) >= 1, 'Folgeseite oben: abgelaufene Anheftungen hinter dem Cursor vorhanden');
     T::same($pinKinds[0] + $pinKinds[2], count(array_filter($first->items, static fn (array $row): bool => (int) $row['is_pinned'] === 1)), 'erste Seite: nur Pins ohne Frist oder mit künftiger Frist gelten als angeheftet');
-    $unsolvedPage = $measured['Ungelöst im Q&A-Forum (etwa 15 von 900), erste Seite (IDs)']['result'];
-    $unsolvedCount = (int) cdbScalar($db, "SELECT COUNT(*) FROM cms_community_topics WHERE forum_id = ? AND status = 'published' AND is_pinned = 0 AND solved_at IS NULL", [$data['qa']]);
-    T::check($unsolvedCount >= 8 && $unsolvedCount <= 21 && count($unsolvedPage) === $unsolvedCount, 'Ungelöst im Q&A-Forum: alle ' . $unsolvedCount . ' ungelösten Themen auf der ersten Seite (Daten wie im Befund: wenige ungelöste in einem großen Forum)');
+    // „ungelöst“: samt der ungelösten abgelaufenen Anheftung, die listForum() im Strom zeigt; dieselben Themen in derselben
+    // Reihenfolge wie eine Abfrage über Strom und abgelaufene Anheftungen zusammen.
+    $expiredUnsolved = array_map('intval', array_column($db->execute("SELECT id FROM cms_community_topics WHERE forum_id = ? AND status = 'published' AND is_pinned = 1 AND pinned_until IS NOT NULL AND pinned_until <= ? AND solved_at IS NULL", [$data['qa'], $now])->fetchAll(\PDO::FETCH_ASSOC), 'id'));
+    T::check(count($expiredUnsolved) >= 1, 'Testdaten: ungelöstes Thema mit abgelaufener Anheftung im Q&A-Forum', implode(',', $expiredUnsolved));
+    $qaStreamAll = array_map(static fn (array $row): int => (int) $row['id'], array_slice($measured['Themenliste im Q&A-Forum (Pins und Strom)']['result']->items, count($topics->pinned($data['qa'], $now))));
+    for ($page = $measured['Themenliste im Q&A-Forum (Pins und Strom)']['result']; $page->next !== null;) {
+        $page = $topics->listForum($data['qa'], $now, Cursor::decode($page->next), 100);
+        array_push($qaStreamAll, ...array_map(static fn (array $row): int => (int) $row['id'], $page->items));
+    }
+    T::same([], array_values(array_diff($expiredUnsolved, $qaStreamAll)), 'listForum() im Q&A-Forum: die ungelöste abgelaufene Anheftung steht im Strom');
+    $unsolvedFirst = $measured['Ungelöst im Q&A-Forum (etwa 15 von 900, dazu eine abgelaufene Anheftung), erste Seite']['result'];
+    $unsolvedCount = (int) cdbScalar($db, 'SELECT COUNT(*) FROM cms_community_topics WHERE ' . $unsolvedWhere, [$data['qa'], $now]);
+    T::check($unsolvedCount >= 8 && $unsolvedCount <= 21 && count($unsolvedFirst) === $unsolvedCount, 'Ungelöst im Q&A-Forum: alle ' . $unsolvedCount . ' ungelösten Themen auf der ersten Seite (Daten wie im Befund: wenige ungelöste in einem großen Forum)');
+    T::same([], array_values(array_diff($expiredUnsolved, $unsolvedFirst)), 'Ungelöst im Q&A-Forum: die ungelöste abgelaufene Anheftung steht in der Liste (wie im Strom von listForum())');
+    T::same(true, array_intersect($expiredUnsolved, $unsolvedExpected($data['qa'], $unsolvedRow)) !== [], 'Ungelöst im Q&A-Forum, Folgeseite: die abgelaufene Anheftung liegt hinter dem Cursor (die Pin-Abfrage mit Keyset findet sie)');
+    foreach (['Ungelöst im Q&A-Forum (etwa 15 von 900, dazu eine abgelaufene Anheftung), erste Seite' => [$data['qa'], null], 'Ungelöst im Q&A-Forum, Folgeseite (Keyset)' => [$data['qa'], $unsolvedRow], 'Ungelöst im Diskussionsforum (kein Thema gelöst)' => [$forum, null]] as $label => [$forumId, $after]) {
+        T::same($unsolvedExpected($forumId, $after), $measured[$label]['result'], $label . ': dieselben Themen in derselben Reihenfolge wie eine Abfrage über Strom und abgelaufene Anheftungen');
+    }
+    $quietPage = $measured['Themenliste im ruhigen Forum (60 Themen), Folgeseite (Position 20)']['result'];
+    T::same([20, 'Altes Thema 39'], [count($quietPage->items), (string) ($quietPage->items[0]['title'] ?? '')], 'ruhiges Forum, Folgeseite: 20 Themen ab dem 21. jüngsten');
 
     // Keyset in diesem Forum (rund 900 Themen): die tiefe Seite kostet nicht mehr als die erste (OFFSET 700 würde über 700 Einträge
     // lesen). Ob das auch in großen Foren gilt, hängt vom Plan ab: dort prüft der Abschnitt explain-forum-large Cursor bis Position 6000.

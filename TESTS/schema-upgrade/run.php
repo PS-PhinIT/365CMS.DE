@@ -290,56 +290,59 @@ try {
     });
 
     // Entwicklungsstand aus PR #1: Marke v27, community_topics ohne idx_community_topics_unanswered_all, community_badges ohne
-    // description_en; idx_community_topics_solved in der ersten Form des Nachlaufs (forum_id, status, is_pinned, solved_at,
-    // last_post_at). Der MigrationManager läuft dort nicht mehr; ensureFeatureSchema() muss nachtragen bzw. ersetzen, ein zweiter
-    // Lauf ändert nichts.
-    T::run('Entwicklungsinstallation ' . $target . ' aus PR #1: Laufzeitprüfung ergänzt Indizes und Spalte', static function () use ($createDb, $step, $tmp, $prefix, $pdo, $structure, $freshStructure, $target, $compareGolden): void {
-        $db = $prefix . 'devpr1';
-        $createDb($db);
-        $install = $step($tmp . '/v41', $db, 'install');
-        T::same([], $install['install_errors'] ?? ['?'], 'Neuinstallation ' . $target);
-        $quoted = $pdo->quote($db);
-        $late = ['idx_community_topics_unanswered_all' => ['status', 'reply_count', 'created_at'], 'idx_community_topics_solved' => ['forum_id', 'solved_at', 'status', 'is_pinned', 'last_post_at']];
-        $topicIndexes = static function () use ($pdo, $quoted, $late): array {
-            $out = [];
-            foreach (array_keys($late) as $name) {
-                $out[$name] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME = 'cms_community_topics' AND INDEX_NAME = " . $pdo->quote($name) . ' ORDER BY SEQ_IN_INDEX')->fetchAll(PDO::FETCH_COLUMN);
+    // description_en; idx_community_topics_solved in einer der beiden früheren Formen des Nachlaufs: (forum_id, status, is_pinned,
+    // solved_at, last_post_at) oder (forum_id, solved_at, status, is_pinned, last_post_at) aus Commit 5a400cf (HANDOFF §2 Nr. 9).
+    // Der MigrationManager läuft dort nicht mehr; ensureFeatureSchema() muss nachtragen bzw. ersetzen, ein zweiter Lauf ändert nichts.
+    foreach (['a' => ['forum_id', 'status', 'is_pinned', 'solved_at', 'last_post_at'], 'b' => ['forum_id', 'solved_at', 'status', 'is_pinned', 'last_post_at']] as $form => $oldSolved) {
+        T::run('Entwicklungsinstallation ' . $target . ' aus PR #1 (idx_community_topics_solved als ' . implode(', ', $oldSolved) . '): Laufzeitprüfung ergänzt Indizes und Spalte', static function () use ($createDb, $step, $tmp, $prefix, $pdo, $structure, $freshStructure, $target, $compareGolden, $form, $oldSolved): void {
+            $db = $prefix . 'devpr1' . $form;
+            $createDb($db);
+            $install = $step($tmp . '/v41', $db, 'install');
+            T::same([], $install['install_errors'] ?? ['?'], 'Neuinstallation ' . $target);
+            $quoted = $pdo->quote($db);
+            $late = ['idx_community_topics_unanswered_all' => ['status', 'reply_count', 'created_at'], 'idx_community_topics_solved' => ['solved_at', 'forum_id', 'status', 'is_pinned', 'last_post_at']];
+            T::same($late['idx_community_topics_solved'], \CMS\SchemaManager::REQUIRED_INDEXES['community_topics']['idx_community_topics_solved'] ?? null, 'Zielform von idx_community_topics_solved wie in REQUIRED_INDEXES');
+            $topicIndexes = static function () use ($pdo, $quoted, $late): array {
+                $out = [];
+                foreach (array_keys($late) as $name) {
+                    $out[$name] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME = 'cms_community_topics' AND INDEX_NAME = " . $pdo->quote($name) . ' ORDER BY SEQ_IN_INDEX')->fetchAll(PDO::FETCH_COLUMN);
+                }
+
+                return $out;
+            };
+            $badgeColumns = static fn (): array => $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME = 'cms_community_badges' ORDER BY ORDINAL_POSITION")->fetchAll(PDO::FETCH_COLUMN);
+            // Stand aus PR #1 herstellen (nur entfernen, was vorhanden ist: ohne IF EXISTS, das MySQL bei DROP INDEX/COLUMN nicht kennt).
+            foreach ($topicIndexes() as $name => $columns) {
+                if ($columns !== []) {
+                    $pdo->exec("ALTER TABLE `{$db}`.cms_community_topics DROP INDEX {$name}");
+                }
             }
-
-            return $out;
-        };
-        $badgeColumns = static fn (): array => $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME = 'cms_community_badges' ORDER BY ORDINAL_POSITION")->fetchAll(PDO::FETCH_COLUMN);
-        // Stand aus PR #1 herstellen (nur entfernen, was vorhanden ist: ohne IF EXISTS, das MySQL bei DROP INDEX/COLUMN nicht kennt).
-        foreach ($topicIndexes() as $name => $columns) {
-            if ($columns !== []) {
-                $pdo->exec("ALTER TABLE `{$db}`.cms_community_topics DROP INDEX {$name}");
+            if (in_array('description_en', $badgeColumns(), true)) {
+                $pdo->exec("ALTER TABLE `{$db}`.cms_community_badges DROP COLUMN description_en");
             }
-        }
-        if (in_array('description_en', $badgeColumns(), true)) {
-            $pdo->exec("ALTER TABLE `{$db}`.cms_community_badges DROP COLUMN description_en");
-        }
-        $pdo->exec("ALTER TABLE `{$db}`.cms_community_topics ADD INDEX idx_community_topics_solved (forum_id, status, is_pinned, solved_at, last_post_at)");
-        T::same(['idx_community_topics_unanswered_all' => [], 'idx_community_topics_solved' => ['forum_id', 'status', 'is_pinned', 'solved_at', 'last_post_at']], $topicIndexes(), 'Ausgangslage: ohne idx_community_topics_unanswered_all, idx_community_topics_solved in der ersten Form');
-        $status = $step($tmp . '/v41', $db, 'status');
-        T::same(['column:community_badges.description_en', 'index:community_topics.idx_community_topics_unanswered_all', 'index:community_topics.idx_community_topics_solved'], $status['missing'] ?? ['?'], 'Integritätsprüfung meldet die fehlende Spalte (REQUIRED_COLUMNS), den fehlenden Index und den Index mit anderen Spalten (REQUIRED_INDEXES)');
-        T::same(true, $status['update_required'] ?? null, 'Updates-Seite bietet das Datenbank-Update an (schema_update_required)');
+            $pdo->exec("ALTER TABLE `{$db}`.cms_community_topics ADD INDEX idx_community_topics_solved (" . implode(', ', $oldSolved) . ')');
+            T::same(['idx_community_topics_unanswered_all' => [], 'idx_community_topics_solved' => $oldSolved], $topicIndexes(), 'Ausgangslage: ohne idx_community_topics_unanswered_all, idx_community_topics_solved in der früheren Form ' . $form);
+            $status = $step($tmp . '/v41', $db, 'status');
+            T::same(['column:community_badges.description_en', 'index:community_topics.idx_community_topics_unanswered_all', 'index:community_topics.idx_community_topics_solved'], $status['missing'] ?? ['?'], 'Integritätsprüfung meldet die fehlende Spalte (REQUIRED_COLUMNS), den fehlenden Index und den Index mit anderen Spalten (REQUIRED_INDEXES)');
+            T::same(true, $status['update_required'] ?? null, 'Updates-Seite bietet das Datenbank-Update an (schema_update_required)');
 
-        $boot = $step($tmp . '/v41', $db, 'boot');
-        T::same($target, $boot['schema'] ?? '', 'Marke bleibt ' . $target . ' (MigrationManager lief nicht)');
-        T::same([], $boot['errors'] ?? ['?'], 'Laufzeitprüfung ohne Fehler im Log');
-        T::same($late, $topicIndexes(), 'ensureFeatureSchema(): idx_community_topics_unanswered_all angelegt, idx_community_topics_solved ersetzt, beide mit den Spalten aus dem CREATE');
-        $columns = $badgeColumns();
-        T::same('description', $columns[(int) array_search('description_en', $columns, true) - 1] ?? null, 'ensureFeatureSchema(): community_badges.description_en direkt nach description (Reihenfolge wie bei der Neuinstallation)');
-        T::same([], $step($tmp . '/v41', $db, 'status')['missing'] ?? ['?'], 'Integritätsprüfung: nichts fehlt');
-        $compareGolden($pdo, $db);
-        $repaired = $structure($db);
-        T::same([], array_values(array_diff($freshStructure, $repaired)), 'nichts fehlt gegenüber der Neuinstallation');
-        T::same([], array_values(array_diff($repaired, $freshStructure)), 'nichts Zusätzliches gegenüber der Neuinstallation');
+            $boot = $step($tmp . '/v41', $db, 'boot');
+            T::same($target, $boot['schema'] ?? '', 'Marke bleibt ' . $target . ' (MigrationManager lief nicht)');
+            T::same([], $boot['errors'] ?? ['?'], 'Laufzeitprüfung ohne Fehler im Log');
+            T::same($late, $topicIndexes(), 'ensureFeatureSchema(): idx_community_topics_unanswered_all angelegt, idx_community_topics_solved ersetzt, beide mit den Spalten aus dem CREATE');
+            $columns = $badgeColumns();
+            T::same('description', $columns[(int) array_search('description_en', $columns, true) - 1] ?? null, 'ensureFeatureSchema(): community_badges.description_en direkt nach description (Reihenfolge wie bei der Neuinstallation)');
+            T::same([], $step($tmp . '/v41', $db, 'status')['missing'] ?? ['?'], 'Integritätsprüfung: nichts fehlt');
+            $compareGolden($pdo, $db);
+            $repaired = $structure($db);
+            T::same([], array_values(array_diff($freshStructure, $repaired)), 'nichts fehlt gegenüber der Neuinstallation');
+            T::same([], array_values(array_diff($repaired, $freshStructure)), 'nichts Zusätzliches gegenüber der Neuinstallation');
 
-        $again = $step($tmp . '/v41', $db, 'boot');
-        T::same([], $again['errors'] ?? ['?'], 'zweiter Lauf ohne Fehler im Log');
-        T::same($repaired, $structure($db), 'zweiter Lauf der Laufzeitprüfung ändert nichts');
-    });
+            $again = $step($tmp . '/v41', $db, 'boot');
+            T::same([], $again['errors'] ?? ['?'], 'zweiter Lauf ohne Fehler im Log');
+            T::same($repaired, $structure($db), 'zweiter Lauf der Laufzeitprüfung ändert nichts');
+        });
+    }
 
     // Entwicklungsinstallation, die v27 mit dem Code aus PR #1 (5ab828e) per Update von 4.0.0 bzw. 4.1.8 erreicht hat: group_key
     // und event_count stammen aus den damaligen ALTER-Anweisungen (ohne Kommentar, group_key mit der Kollation der Tabelle). Die

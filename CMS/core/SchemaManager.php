@@ -125,9 +125,12 @@ class SchemaManager
 
     /**
      * Spaltendefinitionen (Text nach `ADD COLUMN <spalte>`), deren Kommentar und Kollation das Datenbank-Update zusätzlich prüft.
-     * `ensureFeatureSchema()` legt die Spalten damit an und gleicht abweichende per `MODIFY COLUMN` an; der MigrationManager nutzt
-     * denselben Text (TESTS/schema-v27). `group_key` mit ausdrücklicher Kollation, weil `ADD COLUMN` sonst die der Tabelle erbt
-     * (aus 4.0.0 die Standardkollation des Servers).
+     * Gilt nur für `notifications` (`group_key`, `event_count`): `ensureFeatureSchema()` liest ausdrücklich diesen Schlüssel, legt
+     * die Spalten damit an und gleicht abweichende per `MODIFY COLUMN` an (`alignColumnDefinitions()`); der MigrationManager nutzt
+     * denselben Text. Eine weitere Tabelle braucht einen eigenen `ensureColumnExists()`/`alignColumnDefinitions()`-Aufruf in
+     * `ensureFeatureSchema()` und einen Eintrag in REQUIRED_COLUMNS (nur für diese Tabellen liest das Datenbank-Update Kommentar
+     * und Kollation); TESTS/schema-v27 verlangt deshalb genau den Schlüssel `notifications`. `group_key` mit ausdrücklicher
+     * Kollation, weil `ADD COLUMN` sonst die der Tabelle erbt (aus 4.0.0 die Standardkollation des Servers).
      *
      * @var array<string, array<string, string>>
      */
@@ -152,7 +155,7 @@ class SchemaManager
         'notifications' => ['idx_user_group' => ['user_id', 'group_key', 'is_read']],
         'community_topics' => [
             'idx_community_topics_unanswered_all' => ['status', 'reply_count', 'created_at'],
-            'idx_community_topics_solved' => ['forum_id', 'solved_at', 'status', 'is_pinned', 'last_post_at'],
+            'idx_community_topics_solved' => ['solved_at', 'forum_id', 'status', 'is_pinned', 'last_post_at'],
         ],
     ];
 
@@ -1874,7 +1877,7 @@ class SchemaManager
                 KEY idx_community_topics_pinned (is_pinned, pinned_until),
                 KEY idx_community_topics_trashed (trashed_at),
                 KEY idx_community_topics_unanswered_all (status, reply_count, created_at),
-                KEY idx_community_topics_solved (forum_id, solved_at, status, is_pinned, last_post_at)
+                KEY idx_community_topics_solved (solved_at, forum_id, status, is_pinned, last_post_at)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Themen'",
 
             // v27: Beiträge. body = Markdown-Quelle, body_html = gereinigter Cache (rendered_version); ip_hash = HMAC der gekürzten IP.
