@@ -9,6 +9,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * GD-Bildverarbeitung für Uploads: WebP-Begleitdatei, Vorschaubilder, Skalieren auf Maximalmaße.
+ *
+ * GD verwirft beim Speichern alle Metadaten. Deshalb wird die EXIF-Ausrichtung von JPEG-Dateien nach dem Laden auf die
+ * Pixel angewendet (`ImageOrientation`), Maße werden am ausgerichteten Bild gemessen.
+ */
 final class ImageProcessor
 {
     public function convertToWebP(string $filePath, int $quality = 85): bool|WP_Error
@@ -37,6 +43,9 @@ final class ImageProcessor
 
         if ($source === false) {
             return new WP_Error('image_load_failed', 'Bild konnte nicht geladen werden');
+        }
+        if ($mimeType === 'image/jpeg' && $source instanceof \GdImage) {
+            $source = ImageOrientation::orient($source, $filePath);
         }
 
         $targetPath = preg_replace('/\.[^.]+$/', '.webp', $filePath);
@@ -86,8 +95,8 @@ final class ImageProcessor
         }
 
         $generatedPaths = [];
-        $sourceWidth = (int) ($imageInfo[0] ?? 0);
-        $sourceHeight = (int) ($imageInfo[1] ?? 0);
+        $sourceWidth = imagesx($source);
+        $sourceHeight = imagesy($source);
 
         foreach ($sizes as $name => $dimensions) {
             $maxWidth = max(1, (int) ($dimensions[0] ?? 0));
@@ -134,17 +143,23 @@ final class ImageProcessor
             return new WP_Error('invalid_image_dimensions', 'Ungültige Bilddimensionen');
         }
 
+        // Maximalmaße gelten für das aufrecht angezeigte Bild (EXIF-Ausrichtung 5–8 vertauscht Breite und Höhe).
+        $mimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
+        $orientation = $mimeType === 'image/jpeg' ? ImageOrientation::read($filePath) : ImageOrientation::NORMAL;
+        if (ImageOrientation::swapsDimensions($orientation)) {
+            [$sourceWidth, $sourceHeight] = [$sourceHeight, $sourceWidth];
+        }
+
         if ($sourceWidth <= $maxWidth && $sourceHeight <= $maxHeight) {
             return true;
         }
 
-        $mimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
-        $source = $this->createImageResource($filePath, $mimeType);
+        $source = $this->createImageResource($filePath, $mimeType, $orientation);
         if ($source === false) {
             return new WP_Error('image_load_failed', 'Bild konnte nicht geladen werden');
         }
 
-        $resized = $this->createResizedCanvas($source, $sourceWidth, $sourceHeight, $maxWidth, $maxHeight, $mimeType);
+        $resized = $this->createResizedCanvas($source, imagesx($source), imagesy($source), $maxWidth, $maxHeight, $mimeType);
         unset($source);
 
         if ($resized === false) {
@@ -166,9 +181,14 @@ final class ImageProcessor
         return $this->runGdOperation(static fn() => getimagesize($filePath));
     }
 
-    private function createImageResource(string $filePath, string $mimeType)
+    /**
+     * Bild laden; JPEG wird gemäß EXIF-Ausrichtung gedreht/gespiegelt (`$orientation` null = aus der Datei lesen).
+     *
+     * @return \GdImage|false
+     */
+    private function createImageResource(string $filePath, string $mimeType, ?int $orientation = null)
     {
-        return match ($mimeType) {
+        $image = match ($mimeType) {
             'image/jpeg' => $this->createImageFromJpeg($filePath),
             'image/png' => $this->createImageFromPng($filePath),
             'image/gif' => $this->createImageFromGif($filePath),
@@ -176,6 +196,13 @@ final class ImageProcessor
             'image/bmp', 'image/x-bmp' => $this->createImageFromBmp($filePath),
             default => false,
         };
+        if (!$image instanceof \GdImage) {
+            return false;
+        }
+
+        return $mimeType === 'image/jpeg'
+            ? ImageOrientation::apply($image, $orientation ?? ImageOrientation::read($filePath))
+            : $image;
     }
 
     private function createImageFromJpeg(string $filePath)

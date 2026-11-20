@@ -7,6 +7,8 @@ use CMS\Auth;
 use CMS\Contracts\LoggerInterface;
 use CMS\Json;
 use CMS\Logger;
+use CMS\Services\Media\ImageMetadataStripper;
+use CMS\Services\Media\ImageOrientation;
 use CMS\Services\Media\ImageProcessor;
 use CMS\Services\Media\MediaRepository;
 use CMS\Services\Media\UploadHandler;
@@ -927,6 +929,8 @@ class MediaService {
 
     private function saveReplacementGdImage(\GdImage $image, string $targetPath, string $extension, int $quality): bool
     {
+        $this->prepareGdImageAlpha($image);
+
         return match (strtolower($extension)) {
             'jpg', 'jpeg' => imagejpeg($image, $targetPath, $quality),
             'png' => imagepng($image, $targetPath, max(0, min(9, (int) round((100 - $quality) / 10)))),
@@ -1075,6 +1079,7 @@ class MediaService {
             return false;
         }
 
+        $this->prepareGdImageAlpha($image);
         $saved = match ($ext) {
             'jpg', 'jpeg' => imagejpeg($image, $path, $quality),
             'png' => imagepng($image, $path, max(0, min(9, (int)round((100 - $quality) / 10)))),
@@ -1092,7 +1097,8 @@ class MediaService {
      * Bestimmte Clipboard-/Browser-Uploads lassen sich via GD laden und zu WebP wandeln,
      * hinterlassen aber trotzdem ein Original, das einzelne Browser nicht mehr sauber
      * rendern. Für klassische Browserformate schreiben wir das gespeicherte Original daher
-     * einmal als saubere Datei neu.
+     * einmal als saubere Datei neu (aufrecht gedreht, Transparenz erhalten, ohne Metadaten).
+     * WebP und JPEG/PNG, die GD nicht neu kodieren kann, verlieren ihre Metadaten verlustfrei.
      *
      * @param array<string,mixed> $settings
      */
@@ -1103,7 +1109,7 @@ class MediaService {
         }
 
         $extension = strtolower((string) pathinfo($storedName, PATHINFO_EXTENSION));
-        if (!in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
+        if (!in_array($extension, ImageMetadataStripper::EXTENSIONS, true)) {
             return;
         }
 
@@ -1112,7 +1118,48 @@ class MediaService {
         }
 
         $quality = max(60, min(100, (int) ($settings['jpeg_quality'] ?? 85)));
-        $this->reEncodeImage($absolutePath, $extension, $quality);
+        if ($extension !== 'webp' && $this->reEncodeImage($absolutePath, $extension, $quality)) {
+            return;
+        }
+
+        $this->stripImageMetadataLosslessly($absolutePath, $settings);
+    }
+
+    /**
+     * `strip_exif` für originalerhaltende Uploads (Mediathek, Mitgliederbereich, Bildersatz, Bilder im Editor):
+     * EXIF/GPS, XMP, IPTC und Kommentare entfernen, ohne neu zu kodieren. Die Bilddaten bleiben unverändert, eine
+     * gesetzte Ausrichtung bleibt als einziges Tag stehen (Media\ImageMetadataStripper).
+     *
+     * @param array<string,mixed> $settings
+     */
+    private function stripImageMetadataLosslessly(string $absolutePath, array $settings): void
+    {
+        if (empty($settings['strip_exif'])) {
+            return;
+        }
+
+        $extension = strtolower((string) pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($extension, ImageMetadataStripper::EXTENSIONS, true) || !is_file($absolutePath)) {
+            return;
+        }
+
+        $status = ImageMetadataStripper::stripFile($absolutePath);
+        if ($status === ImageMetadataStripper::STATUS_FAILED || $status === ImageMetadataStripper::STATUS_UNSUPPORTED) {
+            $this->logger->warning('Bild-Metadaten konnten nach dem Upload nicht entfernt werden.', [
+                'path' => $absolutePath,
+                'status' => $status,
+            ]);
+        }
+    }
+
+    /**
+     * GD schreibt den Alphakanal von PNG nur mit `imagesavealpha(true)`; Standard ist `false`, ein RGBA-PNG würde
+     * deckend. Palettenbilder behalten ihren transparenten Index ohnehin.
+     */
+    private function prepareGdImageAlpha(\GdImage $image): void
+    {
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
     }
 
     /**
@@ -1127,7 +1174,9 @@ class MediaService {
 
         $quality = max(60, min(100, (int) ($settings['jpeg_quality'] ?? 85)));
 
-        if (!$preserveOriginalImage) {
+        if ($preserveOriginalImage) {
+            $this->stripImageMetadataLosslessly($absolutePath, $settings);
+        } else {
             $this->repairUploadedBrowserImage($absolutePath, $storedName, $settings);
 
             $maxWidth = max(1, (int) ($settings['max_width'] ?? 2560));
@@ -1308,8 +1357,12 @@ class MediaService {
         }
 
         $result = $this->runImageOperation($loader, $path, 'reencode', static fn () => $loader($path));
+        if (!$result instanceof \GdImage) {
+            return false;
+        }
 
-        return $result instanceof \GdImage ? $result : false;
+        // GD verwirft die EXIF-Daten beim Speichern: Ausrichtung vorher auf die Pixel anwenden (nur JPEG).
+        return in_array($ext, ['jpg', 'jpeg'], true) ? ImageOrientation::orient($result, $path) : $result;
     }
 
     private function runImageOperation(string $operation, string $path, string $context, callable $callback): mixed
@@ -1613,7 +1666,9 @@ class MediaService {
         $storedRelativePath = trim(($targetPath !== '' ? trim($targetPath, '/\\') . '/' : '') . $storedName, '/');
         $storedAbsolutePath = rtrim($this->uploadPath, '/\\') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedRelativePath);
 
-        if (!$preserveOriginalImage) {
+        if ($preserveOriginalImage) {
+            $this->stripImageMetadataLosslessly($storedAbsolutePath, $settings);
+        } else {
             $this->repairUploadedBrowserImage($storedAbsolutePath, $storedName, $settings);
         }
 
@@ -1653,6 +1708,12 @@ class MediaService {
         $storedAbsolutePath = rtrim($this->uploadPath, '/\\') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedRelativePath);
         $this->processManagedImageUpload($storedAbsolutePath, (string) ($result['name'] ?? basename($storedRelativePath)), $settings, true);
         $this->applyManagedMediaFileMode($storedAbsolutePath, $storedRelativePath);
+
+        // strip_exif kann die Datei verkleinert haben.
+        clearstatcache(true, $storedAbsolutePath);
+        if (isset($result['size']) && is_file($storedAbsolutePath)) {
+            $result['size'] = (int) filesize($storedAbsolutePath);
+        }
 
         return $result;
     }

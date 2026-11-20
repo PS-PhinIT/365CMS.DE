@@ -1,10 +1,10 @@
 # 365CMS Projektdokumentation | Workflow: Medien-Upload
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
-> **Quellen:** `CMS/admin/media.php`, `CMS/admin/modules/media/MediaModule.php`, `CMS/core/Services/MediaService.php`, `CMS/core/Services/Media/UploadHandler.php`, `CMS/core/Services/Media/ImageProcessor.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/MediaDeliveryService.php`, `CMS/core/Services/EditorJsService.php`
+> **Quellen:** `CMS/admin/media.php`, `CMS/admin/modules/media/MediaModule.php`, `CMS/core/Services/MediaService.php`, `CMS/core/Services/Media/UploadHandler.php`, `CMS/core/Services/Media/ImageProcessor.php`, `CMS/core/Services/Media/ImageOrientation.php`, `CMS/core/Services/Media/ImageMetadataStripper.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/MediaDeliveryService.php`, `CMS/core/Services/EditorJsService.php`
 
 ## English (summary)
 
-There are three upload entry points: the admin media library (`/admin/media`, form POST), the generic JSON endpoint `POST /api/upload` (CSRF action `media_action`, field `file` or `filepond`, optional `target_path`) and the Editor.js endpoint `/api/media` (token `editorjs_media`). All of them end in `MediaService` → `UploadHandler`: extension allowlist, dangerous-extension block, `finfo` MIME check, image decoding, filename sanitising/uniqueness, then `ImageProcessor` (EXIF strip, resize, WebP, thumbnails). Members may upload only when `member_uploads_enabled` is on, only below `member/user-<id>/`, with their own size/type limits. Protected files are served via `GET /media-file`.
+There are three upload entry points: the admin media library (`/admin/media`, form POST), the generic JSON endpoint `POST /api/upload` (CSRF action `media_action`, field `file` or `filepond`, optional `target_path`) and the Editor.js endpoint `/api/media` (token `editorjs_media`). All of them end in `MediaService` → `UploadHandler`: extension allowlist, dangerous-extension block, `finfo` MIME check, image decoding, filename sanitising/uniqueness, then `ImageProcessor` (resize, WebP, thumbnails). `strip_exif` removes EXIF/GPS, XMP and IPTC on every path: originals that are preserved (media library, member uploads, replace, Editor.js images) are cleaned without re-encoding (`ImageMetadataStripper`), the others are re-encoded with GD. The EXIF orientation is applied to every GD output (`ImageOrientation`), PNG transparency is kept. Members may upload only when `member_uploads_enabled` is on, only below `member/user-<id>/`, with their own size/type limits. Protected files are served via `GET /media-file`.
 
 ## Deutsch
 
@@ -56,7 +56,7 @@ Fehler liefern `{"error":"…","new_token":"…"}` und werden über den Logger p
 
 ### Nachverarbeitung
 
-`ImageProcessor`: EXIF entfernen (`strip_exif`), auf `max_width`/`max_height` (Standard 2560 px) skalieren, JPEG-Qualität (85), WebP-Variante (`auto_webp`), Vorschaubilder (`generate_thumbnails`: 150×150, 300×300, 1024×1024, 1200×400). Bestehende Dateien lassen sich nachträglich über den Verarbeitungsjob der Medienseite (Modi `all`, `webp`, `thumbnails`; 5 Dateien je Schritt, max. 1000 Kandidaten, Dateien > 1 MB werden übersprungen) bearbeiten.
+Metadaten entfernen (`strip_exif`; erhaltene Originale ohne Neukodierung, sonst mit GD neu kodiert, siehe [MEDIA.md](../admin/media/MEDIA.md), Abschnitt „Metadaten, Ausrichtung und Transparenz“). `ImageProcessor` wendet die EXIF-Ausrichtung an und skaliert auf `max_width`/`max_height` (Standard 2560 px) skalieren, JPEG-Qualität (85), WebP-Variante (`auto_webp`), Vorschaubilder (`generate_thumbnails`: 150×150, 300×300, 1024×1024, 1200×400). Bestehende Dateien lassen sich nachträglich über den Verarbeitungsjob der Medienseite (Modi `all`, `webp`, `thumbnails`; 5 Dateien je Schritt, max. 1000 Kandidaten, Dateien > 1 MB werden übersprungen) bearbeiten.
 
 ### Auslieferung
 

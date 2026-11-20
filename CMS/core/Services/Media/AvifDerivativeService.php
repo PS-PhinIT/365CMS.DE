@@ -468,6 +468,9 @@ final class AvifDerivativeService
         if (!$image instanceof \GdImage) {
             return false;
         }
+        if ($loader === 'imagecreatefromjpeg') {
+            $image = ImageOrientation::orient($image, $source); // GD übernimmt keine EXIF-Ausrichtung
+        }
         imagepalettetotruecolor($image);
         imagealphablending($image, true);
         imagesavealpha($image, true);

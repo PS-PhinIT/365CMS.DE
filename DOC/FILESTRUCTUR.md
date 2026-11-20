@@ -68,6 +68,7 @@ Verified top-level entries of this repository:
 | `TESTS/login-showcase/` | directory | login showcase and theme colour import: settings validation, getShowcase() shape, partial escaping, core login view, theme override: `php TESTS/login-showcase/run.php [-v]` |
 | `TESTS/member-area/` | directory | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup: `php TESTS/member-area/run.php [-v]` |
 | `TESTS/media-avif/` | directory | AVIF derivatives: detection, keep-only-if-smaller, pixel budget, `<picture>` markup, deletion, batch steps: `php TESTS/media-avif/run.php [-v]` |
+| `TESTS/media-images/` | directory | image processing on upload: PNG transparency, EXIF orientation, `strip_exif` without re-encoding: `php TESTS/media-images/run.php [-v]` |
 | `TESTS/media-usage/` | directory | media usage index: extraction, contexts, reindex, unused, rebuild: `php TESTS/media-usage/run.php [-v]` |
 | `TESTS/mfa-enforcement/` | directory | Role-based MFA enforcement and account gate: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | directory | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping: `php TESTS/newsletter-member/run.php [-v]` |
@@ -139,6 +140,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/login-showcase/` | Verzeichnis | Login-Showcase und Theme-Farbimport: Validierung der Einstellungen, Datenform von getShowcase(), Escaping des Partials, Core-Loginseite, Theme-Override: `php TESTS/login-showcase/run.php [-v]` |
 | `TESTS/member-area/` | Verzeichnis | Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit: `php TESTS/member-area/run.php [-v]` |
 | `TESTS/media-avif/` | Verzeichnis | AVIF-Derivate: Erkennung, „nur wenn kleiner“, Pixel-Budget, `<picture>`-Markup, Löschen, Batch-Schritte: `php TESTS/media-avif/run.php [-v]` |
+| `TESTS/media-images/` | Verzeichnis | Bildverarbeitung beim Upload: PNG-Transparenz, EXIF-Ausrichtung, `strip_exif` ohne Neukodierung: `php TESTS/media-images/run.php [-v]` |
 | `TESTS/media-usage/` | Verzeichnis | Verwendungsnachweis für Medien: Extraktion, Kontexte, Neuindizieren, ungenutzt, Neuaufbau: `php TESTS/media-usage/run.php [-v]` |
 | `TESTS/mfa-enforcement/` | Verzeichnis | Rollenbasierter MFA-Zwang und Konto-Weiche: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | Verzeichnis | Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping: `php TESTS/newsletter-member/run.php [-v]` |

@@ -11,6 +11,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 - Actions: `upload`, `replace_item`, `replace_items`, `create_folder`, `rename_item`, `move_item`, `delete_item`, `bulk_items`, `assign_category`, `add_category`, `delete_category`, `save_settings`, `start/process/cancel_media_processing_job`.
 - Upload batch: max. 20 files and 100 MB per request, file names max. 180 characters.
 - Delivery of protected files goes through `GET /media-file?path=…` (`MediaDeliveryService`).
+- `strip_exif` (default on) removes EXIF/GPS, XMP, IPTC and comments from JPEG, PNG and WebP on every upload path. Preserved originals (library, member uploads, replace, Editor.js images) are cleaned without re-encoding (`ImageMetadataStripper`, pixels unchanged, only colour profile and orientation remain); other paths re-encode with GD. Every GD output applies the EXIF orientation (`ImageOrientation`, all eight values) and keeps PNG transparency.
 - Optional AVIF derivatives (`auto_avif`, `AvifDerivativeService`) with `<picture>` output (`display: contents`), deleting an image also removes its generated sizes/WebP/AVIF, and a persistent usage index (`media_usage`, `MediaUsageIndex`, extensible via `cms_register_media_reference_extractors`).
 
 ## Deutsch
@@ -23,6 +24,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 | Modul | `CMS/admin/modules/media/MediaModule.php` | Listen, Filter, Dateiaktionen, Einstellungen, Verarbeitungsjobs |
 | Views | `CMS/admin/views/media/library.php`, `featured.php`, `check.php`, `categories.php`, `settings.php` | Tabs |
 | Services | `CMS/core/Services/MediaService.php` (Fassade), `Media/MediaRepository.php`, `Media/UploadHandler.php`, `Media/ImageProcessor.php` | Dateisystem, Metadaten, Upload-Validierung, Bildverarbeitung |
+| Bildmetadaten | `Media/ImageOrientation.php`, `Media/ImageMetadataStripper.php` | EXIF-Ausrichtung für GD-Ausgaben, `strip_exif` ohne Neukodierung |
 | Nutzung | `CMS/core/Services/MediaUsageService.php` (Fassade), `Media/MediaUsageIndex.php`, `Media/MediaReferenceExtractor.php`, `Media/MediaUsageRebuildService.php`, `Media/Usage/*` | Wo wird eine Datei verwendet (Verwendungsnachweis über alle Inhaltsarten) |
 | AVIF | `Media/AvifDerivativeService.php`, `Media/AvifRegenerationService.php` | AVIF-Fassungen erzeugen, prüfen und nachgenerieren |
 | Auslieferung | `CMS/core/Services/MediaDeliveryService.php` → `GET /media-file` | Geschützte Dateien, Member-Uploads |
@@ -85,6 +87,21 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 
 `protect_uploads_dir` schreibt eine `.htaccess` in `CMS/uploads/` (Apache): `Options -Indexes`, `X-Content-Type-Options: nosniff`, Download-Disposition für alle Nicht-Bilddateien, Inline-Auslieferung mit Cache-Header (Browser-Cache aus *Performance → Einstellungen*) für Bildformate. Wird die Option deaktiviert, entfernt das CMS die Datei wieder. Unter nginx müssen gleichwertige Regeln in der Serverkonfiguration gesetzt werden.
 
+### Metadaten, Ausrichtung und Transparenz
+
+`strip_exif` („Metadaten entfernen (EXIF, GPS, XMP, IPTC)“, Standard an; in *Performance → Medien* als `perf_strip_exif`) gilt für JPEG, PNG und WebP auf allen Upload-Wegen. Wie entfernt wird, hängt davon ab, ob der Weg das Original erhält (seit 3.0.8):
+
+| Upload-Weg | Original | Mit `strip_exif` |
+|---|---|---|
+| Mediathek (`uploadManagedFile()`), Mitgliederbereich (`FileUploadService`), Bild ersetzen (`replaceManagedFile()`), Editor.js-Bildblock (`uploadFile(…, true)`) | bleibt erhalten | Metadaten werden ohne Neukodierung entfernt (`Media\ImageMetadataStripper`). Die komprimierten Bilddaten bleiben Byte für Byte gleich, Qualität und Farbtiefe ändern sich nicht. |
+| Theme-Logos (`uploadFile($file, 'theme-logos')`), Editor.js-Dateianhänge und andere Aufrufe von `uploadFile()` ohne Originalschutz | wird neu geschrieben | JPEG und PNG werden mit GD neu kodiert (aufrecht gedreht, Transparenz erhalten, ohne Metadaten). WebP und Dateien, die GD nicht lesen kann, werden wie oben ohne Neukodierung bereinigt. |
+
+Entfernt werden EXIF (Kamera, Aufnahmezeit, GPS, eingebettetes Vorschaubild), XMP, IPTC, Kommentare, PNG-Textblöcke (`tEXt`, `zTXt`, `iTXt`, `tIME`) und an die Datei angehängte Daten (z. B. Zusatzbilder oder Bewegtbilder nach dem Bildende). Es bleiben ICC-Farbprofil, Gamma und Farbraum, Pixeldichte, Alphakanal und Animation. Ist eine EXIF-Ausrichtung ungleich 1 gesetzt, bleibt im erhaltenen Original genau dieses Tag stehen, damit Browser das Bild weiter aufrecht zeigen. Urheber und Copyright liest die Vorbelegung (`UploadHandler`) vorher aus. Ist `strip_exif` aus, bleiben erhaltene Originale unverändert.
+
+**Ausrichtung:** GD verwirft beim Kodieren alle Metadaten. Vor jedem Neukodieren, Skalieren und vor dem Erzeugen von WebP-, AVIF- und Vorschaubildern wendet `Media\ImageOrientation` die EXIF-Ausrichtung eines JPEG auf die Pixel an (alle acht Werte, auch gespiegelte; gelesen mit `exif_read_data`, also nur mit `ext-exif`). Hochformat-Fotos vom Smartphone erscheinen dadurch in allen Fassungen aufrecht, Maximalmaße gelten für das aufrecht angezeigte Bild. `ImageService` (`autoOrient()`, Konvertierung nach WebP unter *Performance → Medien*) wendet die Ausrichtung ebenso an. Eine Ausrichtung in PNG (`eXIf`) oder WebP liest PHP nicht; sie wirkt dort nur im Original.
+
+**Transparenz:** Vor dem Speichern setzt die Verarbeitung `imagealphablending(false)` und `imagesavealpha(true)`. RGBA-PNGs wie Logos bleiben transparent, auch in halbtransparenten Bereichen; Palettenbilder behalten ihren transparenten Index.
+
 ### Nachträgliche Bildverarbeitung
 
 Über die Jobs `start_media_processing_job` / `process_media_processing_job` / `cancel_media_processing_job` können bestehende Bilder nachträglich verarbeitet werden. Modi: `all`, `webp`, `thumbnails`. Der Job arbeitet in Schritten zu 5 Dateien, höchstens 1000 Kandidaten und überspringt Dateien über 1 MB. Fortschritt wird per AJAX abgefragt; ein Abbruch ist jederzeit möglich. Alle Vorschaubilder nach geänderten Größen neu erzeugen, mit Fortschritt und Fortsetzung im Cron, geht unter *Medien → Medien-Werkzeuge* ([MEDIA-TOOLS.md](MEDIA-TOOLS.md)); dort stehen auch die Schalter für Urheberangaben.
@@ -94,7 +111,7 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 1. Anzahl (≤ 20) und Gesamtgröße (≤ 100 MB) des Batches, Dateinamenslänge (≤ 180).
 2. Erweiterung gegen `allowed_types`; gefährliche Endungen (`php`, `php3`–`php5`, `phtml`, `phar`, `exe`, `com`, `bat`, `cmd`, `ps1`, `sh`, `pl`, `cgi`, `jar`, `msi`, `vbs`, `scr`, `dll`, `asp`, `aspx`, `jspx`) werden abgelehnt, solange `block_dangerous_types` aktiv ist.
 3. MIME-Typ via `finfo` gegen die Erweiterung; Bilder werden bei `validate_image_content` dekodiert.
-4. Dateiname bereinigen und eindeutig machen, dann Bildverarbeitung (EXIF entfernen, skalieren, WebP, Thumbnails).
+4. Dateiname bereinigen und eindeutig machen, dann Bildverarbeitung (Metadaten entfernen und EXIF-Ausrichtung anwenden, siehe „Metadaten, Ausrichtung und Transparenz“; skalieren, WebP, Thumbnails).
 
 ### Auslieferung geschützter Dateien
 

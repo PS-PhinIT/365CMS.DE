@@ -68,6 +68,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/mfa-enforcement/` | Role-based MFA enforcement and account gate / Rollenbasierter MFA-Zwang und Konto-Weiche (`php TESTS/mfa-enforcement/run.php`) |
 | `TESTS/password-policy/` | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration / Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung (`php TESTS/password-policy/run.php [-v]`) |
 | `TESTS/media-avif/` | AVIF derivatives: detection, keep-only-if-smaller, pixel budget, `<picture>` markup, deletion, batch steps / AVIF-Derivate: Erkennung, „nur wenn kleiner“, Pixel-Budget, `<picture>`-Markup, Löschen, Batch-Schritte (`php TESTS/media-avif/run.php [-v]`) |
+| `TESTS/media-images/` | image processing on upload: PNG transparency, all eight EXIF orientations in re-encoded originals and derivatives, `strip_exif` without re-encoding (JPEG, PNG, WebP), GD-generated test images / Bildverarbeitung beim Upload: PNG-Transparenz, alle acht EXIF-Ausrichtungen in neu kodierten Originalen und Derivaten, `strip_exif` ohne Neukodierung (JPEG, PNG, WebP), Testbilder aus GD (`php TESTS/media-images/run.php [-v]`) |
 | `TESTS/sso-entra/` | Entra ID sign-in via OpenID Connect: ID-token checks, state/nonce/PKCE, account linking incl. attacks, provisioning, role mapping / Entra-ID-Anmeldung über OpenID Connect: ID-Token-Prüfungen, state/nonce/PKCE, Kontozuordnung inkl. Angriffe, Provisioning, Rollen-Mapping (`php TESTS/sso-entra/run.php [-v]`) |
 | `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
@@ -242,7 +243,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | System | `AdminToolbarService` (cache, maintenance), `LoginThrottleSettings`, `EnvironmentInfoService`, `DataRetentionService` + `Retention/` |
 | Extension points | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
 | Identity & security | `Security/PasswordPolicyService`, `Security/MfaEnforcementService`, `Auth/SSO/` (Entra ID), `Routing/SsoRouter` |
-| Media | `Media/AvifDerivativeService`, `Media/AvifRegenerationService`, `Media/MediaUsageIndex`, `Media/MediaReferenceExtractor`, `Media/Usage/` |
+| Media | `Media/AvifDerivativeService`, `Media/AvifRegenerationService`, `Media/ImageOrientation`, `Media/ImageMetadataStripper`, `Media/MediaUsageIndex`, `Media/MediaReferenceExtractor`, `Media/Usage/` |
 | Editorial | `Content/ContentStatus`, `Content/ContentWorkflow`, `Content/ContentExpiryService`, `ReusableBlocks/ReusableBlockService` |
 | Operations | `Backup/OffsiteBackupService` (+ `S3Client`, `SigV4Signer`), `Webhooks/WebhookService`, `Payments/PaymentService` (Stripe, Mollie), `Routing/PaymentRouter` |
 | Landing | `LandingPageService` + `Services/Landing/` |

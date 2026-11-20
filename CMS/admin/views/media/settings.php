@@ -133,10 +133,13 @@ $s = is_array($settings) ? $settings : [];
                                     </label>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-check form-switch mb-2">
-                                        <input type="checkbox" class="form-check-input" name="strip_exif" value="1" <?php echo !empty($s['strip_exif']) ? 'checked' : ''; ?>>
-                                        <span class="form-check-label">EXIF-Daten entfernen</span>
+                                    <label class="form-check form-switch mb-1">
+                                        <input type="checkbox" class="form-check-input" name="strip_exif" value="1" aria-describedby="stripExifHint" <?php echo !empty($s['strip_exif']) ? 'checked' : ''; ?>>
+                                        <span class="form-check-label">Metadaten entfernen (EXIF, GPS, XMP, IPTC)</span>
                                     </label>
+                                    <div class="form-hint" id="stripExifHint">
+                                        JPEG, PNG und WebP, bei jedem Upload. In Mediathek, Mitgliederbereich und Editor-Bildern bleiben die Bilddaten unverändert; nur Farbprofil und Ausrichtung bleiben stehen. Logos und Editor-Dateianhänge werden neu kodiert. Urheberangaben werden vorher übernommen.
+                                    </div>
                                 </div>
                             </div>
                             <?php $avifSupported = !empty($data['avif_supported']); ?>
