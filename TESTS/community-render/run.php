@@ -231,6 +231,12 @@ if (in_array('--pathology', $argv ?? [], true)) {
         return null;
     });
     $renderer->render('Aufwärmen mit **fett** und [Link](https://x.example)');
+    // Wächter: Ohne Vorprüfung würde jeder folgende Fall ungebremst geparst (Sekunden und Hunderte MiB je Fall), die Laufzeit der
+    // Gegenprobe `render-no-precheck` hinge dann von der Maschine ab. Ein billiger Fall über der Begrenzergrenze muss abgelehnt werden.
+    if ($renderer->render(str_repeat('*', ContentRenderer::MAX_DELIMITERS + 1))['ok']) {
+        echo json_encode(['abort' => 'Vorprüfung fehlt: ' . (ContentRenderer::MAX_DELIMITERS + 1) . ' Begrenzer wurden geparst']) . "\n";
+        exit(0);
+    }
     foreach (crPathologyCases() as $name => [$make]) {
         $markdown = $make();
         $calls = 0;
@@ -476,11 +482,19 @@ T::run('B Pathologie: Grenzen vor und nach dem Parsen, Speicherspitze < 64 MiB u
     $exit = proc_close($process);
     T::same(0, $exit, 'Kindprozess endet regulär', trim(substr($err, -300)));
     $results = [];
+    $abort = null;
     foreach (explode("\n", trim($out)) as $line) {
         $row = json_decode($line, true);
+        if (is_array($row) && isset($row['abort'])) {
+            $abort = (string) $row['abort'];
+        }
         if (is_array($row) && isset($row['name'])) {
             $results[(string) $row['name']] = $row;
         }
+    }
+    T::same(null, $abort, 'Wächter im Kindprozess: Begrenzer über der Grenze werden vor dem Parsen abgelehnt');
+    if ($abort !== null) {
+        return;
     }
     $cases = crPathologyCases();
     T::same(array_keys($cases), array_keys($results), 'jeder Fall hat ein Ergebnis');
