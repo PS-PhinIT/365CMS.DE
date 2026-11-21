@@ -505,6 +505,36 @@ function rScenarioPermissions(Database $db): void
     T::same([['guest', null], ['trust', '{}']], array_map(static fn (array $r): array => [$r['subject_type'], $r['permissions_json']], $db->rows('community_forum_permissions', ['forum_id' => $f], 'subject_type')), 'bestehende Zeilen bleiben bei Fehlern erhalten');
 }
 
+function rScenarioRoleSubjects(Database $db): void
+{
+    $repo = new ForumRepository($db);
+    $a = $db->forum(['title' => 'RA']);
+    $b = $db->forum(['title' => 'RB']);
+    $c = $db->forum(['title' => 'RC']);
+    $repo->savePermissions($a, [
+        ['subject_type' => 'role', 'subject_key' => 'helfer', 'permissions' => ['read' => 1]],
+        ['subject_type' => 'role', 'subject_key' => 'member', 'permissions' => ['read' => 1]],
+    ], rt());
+    $repo->savePermissions($b, [['subject_type' => 'role', 'subject_key' => 'neu', 'permissions' => ['read' => 0]]], rt());
+    $repo->savePermissions($c, [['subject_type' => 'group', 'subject_key' => '4', 'permissions' => ['read' => 1]]], rt());
+    $versionBefore = (int) $repo->find($a)['version'];
+
+    T::same(2, $repo->renameRoleSubject('helfer', 'neu', rt(5)), 'Umbenennen meldet die betroffenen Foren (Zeilen des alten und stale Zeilen des neuen Slugs)');
+    $keys = static fn (int $forum): array => array_map(static fn (array $row): string => $row['subject_type'] . ':' . $row['subject_key'], $repo->permissionRowsOf($forum));
+    T::same(['role:member', 'role:neu'], $keys($a), 'Zeile der Rolle trägt den neuen Slug');
+    T::same([], $keys($b), 'stale Zeile des neuen Slugs entfällt (die umgeschriebene Rolle behält nur ihre eigenen Rechte)');
+    T::same(['group:4'], $keys($c), 'Gruppen-Zeilen bleiben unberührt');
+    T::same(1, (int) $repo->permissionRowsOf($a)[1]['permissions']['read'], 'umgeschriebene Zeile behält die Rechte der alten Rolle');
+    T::check((int) $repo->find($a)['version'] > $versionBefore, 'version des Forums steigt (Cache)');
+    T::same(0, $repo->renameRoleSubject('x', 'x', rt()), 'gleicher Slug: nichts zu tun');
+
+    T::same(1, $repo->deleteRoleSubject('neu', rt(6)), 'Löschen entfernt die Zeilen der Rolle');
+    T::same(['role:member'], $keys($a), 'nur die Zeile der gelöschten Rolle entfällt');
+    T::same(0, $repo->deleteRoleSubject('gibtsnicht', rt()), 'unbekannte Rolle: keine Foren betroffen');
+    // Eine neue Rolle mit dem alten Slug erbt nichts.
+    T::same([], array_values(array_filter($keys($a), static fn (string $k): bool => $k === 'role:helfer')), 'neue Rolle mit dem alten Slug erbt keine Zeilen');
+}
+
 function rScenarioModerators(Database $db): void
 {
     $repo = new ForumRepository($db);
@@ -1969,6 +1999,7 @@ $scenarios = [
     'Foren: Slug-Prüfung unter der Mutex-Zeile (B4)' => 'rScenarioForumSlugMutex',
     'Foren: Zähler atomar, nie unter 0, letzter Beitrag' => 'rScenarioForumCounters',
     'Foren: Rechte-Zeilen über die Vererbungskette, mehrere Subjekte' => 'rScenarioPermissions',
+    'Foren: Rechte-Zeilen bei Rollen umbenennen und löschen' => 'rScenarioRoleSubjects',
     'Foren: Moderatoren mit include_children' => 'rScenarioModerators',
     'Themen: CRUD, Whitelist, version, Zähler, Sperre, Grenzen' => 'rScenarioTopics',
     'Themen: Keyset-Liste mit drei Zeitstempeln, ungültige Cursor' => 'rScenarioTopicKeyset',

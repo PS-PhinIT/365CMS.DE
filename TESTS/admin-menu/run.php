@@ -83,8 +83,6 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
-    'admin/community-structure.php' => 'PR #3 Teil 2',
-    'admin/community-permissions.php' => 'PR #3 Teil 2',
 ];
 
 /**

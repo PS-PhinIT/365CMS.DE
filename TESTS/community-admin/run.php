@@ -33,7 +33,7 @@ use CMS\Services\Community\Support\Settings;
 $read = static fn (string $file): string => (string) file_get_contents(ABSPATH . $file);
 
 T::run('Einstiegsdateien und Gates', static function () use ($read): void {
-    $manage = ['ranks', 'settings'];
+    $manage = ['ranks', 'settings', 'structure', 'permissions'];
     foreach (CommunityAdminModule::SECTIONS as $section => [$path, $title, $caps]) {
         $file = 'admin/' . substr($path, strlen('/admin/')) . '.php';
         T::check(is_file(ABSPATH . $file), $section . ': Einstiegsdatei ' . $file);
@@ -50,6 +50,17 @@ T::run('Einstiegsdateien und Gates', static function () use ($read): void {
     T::check(str_contains($entry, "hasCapability(\$manage ? 'community.manage' : 'community.moderate')"), 'entry.php: Capability je Aktion beim POST');
     T::check(str_contains($entry, "'csrf_action' => 'admin_community'"), 'entry.php: CSRF-Aktion');
     T::check(str_contains($entry, 'array_flip([\'cursor\', \'type\', \'forum_id\', \'status\', \'action\', \'actor_id\'])'), 'entry.php: Rücksprung nur mit erlaubten Abfrageschlüsseln');
+});
+
+T::run('Rollen-Hooks und Hinweise (Quelltext)', static function () use ($read): void {
+    $roles = $read('admin/modules/users/RolesModule.php');
+    T::check(preg_match("/announceRoleChanges\\([^;]*ROLE_SOURCE_ROLE_RENAMED\\);\\s*\\\$this->announceRole\\('cms_role_renamed', \\\$currentRole, \\\$newRole\\)/", $roles) === 1, 'updateRole feuert cms_role_renamed nach dem Commit');
+    T::check(preg_match("/announceRoleChanges\\([^;]*ROLE_SOURCE_ROLE_DELETED\\);\\s*\\\$this->announceRole\\('cms_role_deleted', \\\$role, \\\$fallbackRole\\)/", $roles) === 1, 'deleteRole feuert cms_role_deleted nach dem Commit');
+    $hooks = $read('core/Services/FeatureHooks/CommunityHooks.php');
+    $gate = strpos($hooks, 'if (!CommunityModule::isEnabled())');
+    T::check($gate !== false && strpos($hooks, "'cms_role_renamed'") < $gate && strpos($hooks, "'cms_role_deleted'") < $gate, 'Listener für Rollen liegen vor dem Modul-Gate (wirken auch bei abgeschaltetem Modul)');
+    T::check(strpos($hooks, "registerCheck('Community-Warteschlange'") > $gate, 'Hinweis „Warteschlange älter als 24 Stunden“ nur bei aktivem Modul');
+    T::check(str_contains((string) file_get_contents(dirname(ABSPATH) . '/DOC/core/HOOKS-REFERENCE.md'), '`cms_role_renamed`') && str_contains((string) file_get_contents(dirname(ABSPATH) . '/DOC/core/HOOKS-REFERENCE.md'), '`cms_role_deleted`'), 'Hooks in HOOKS-REFERENCE.md dokumentiert');
 });
 
 T::run('Ansicht', static function () use ($read): void {

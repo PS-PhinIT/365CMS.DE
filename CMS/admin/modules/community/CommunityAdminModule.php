@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 use CMS\Database;
+use CMS\Services\Community\Repository\CategoryRepository;
 use CMS\Services\Community\Repository\ForumRepository;
 use CMS\Services\Community\Repository\TopicRepository;
 use CMS\Services\Community\Service\BanService;
@@ -24,7 +25,9 @@ use CMS\Services\Community\Service\RankService;
 use CMS\Services\Community\Service\ReportService;
 use CMS\Services\Community\Support\Codes;
 use CMS\Services\Community\Support\Cursor;
+use CMS\Services\Community\Service\CommunityAccess;
 use CMS\Services\Community\Support\I18n;
+use CMS\Services\Community\Support\Slugger;
 use CMS\Services\Community\Support\Settings;
 
 final class CommunityAdminModule
@@ -37,11 +40,19 @@ final class CommunityAdminModule
         'topics' => ['/admin/community-topics', 'Themen', ['community.moderate']],
         'sanctions' => ['/admin/community-sanctions', 'Sperren', ['community.moderate']],
         'log' => ['/admin/community-log', 'Moderationsprotokoll', ['community.moderate']],
+        'structure' => ['/admin/community-structure', 'Struktur', ['community.manage']],
+        'permissions' => ['/admin/community-permissions', 'Rechte', ['community.manage']],
         'ranks' => ['/admin/community-ranks', 'Ränge', ['community.manage']],
         'settings' => ['/admin/community-settings', 'Community-Einstellungen', ['community.manage']],
     ];
 
     public const PER_PAGE = 25;
+
+    /** Höchste Verschachtelung der Foren (Ebenen; ein Forum der Tiefe 2 hat zwei Elternforen). */
+    public const MAX_FORUM_DEPTH = 3;
+
+    /** Aktionen, die `community.manage` verlangen (die Einstiegslogik prüft das je POST). */
+    public const MANAGE_ACTIONS = ['save_settings', 'save_rank', 'delete_rank', 'save_category', 'save_forum', 'move', 'save_permissions'];
 
     /** Zeitangaben der Sperre: Auswahl in Tagen (0 = dauerhaft, nur mit `community.ban`, der Dienst prüft das). */
     public const BAN_DAYS = [1, 3, 7, 14, 30, 90, 365, 0];
@@ -85,6 +96,8 @@ final class CommunityAdminModule
             'topics' => $this->topicsData($query),
             'sanctions' => $this->sanctionsData($userId, $query),
             'log' => $this->logData($userId, $query),
+            'structure' => $this->structureData(),
+            'permissions' => $this->permissionsData($query),
             'ranks' => ['ranks' => RankService::instance()->all()],
             'settings' => $this->settingsData(),
             default => $this->overviewData($userId),
@@ -245,6 +258,10 @@ final class CommunityAdminModule
             'save_rank' => $this->saveRank($post, $userId),
             'delete_rank' => $this->outcome(RankService::instance()->delete($userId, (int) ($post['id'] ?? 0)), 'Rang gelöscht.'),
             'save_settings' => $this->saveSettings($post),
+            'save_category' => $this->saveCategory($post),
+            'save_forum' => $this->saveForum($post),
+            'move' => $this->move($post),
+            'save_permissions' => $this->savePermissions($post),
             default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
         };
     }
@@ -310,6 +327,257 @@ final class CommunityAdminModule
             'message' => sprintf('%d erledigt, %d fehlgeschlagen.', (int) ($result['done'] ?? 0), $failed),
             'error' => sprintf('%d erledigt, %d fehlgeschlagen.', (int) ($result['done'] ?? 0), $failed),
         ];
+    }
+
+
+    // ── Struktur ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    /** @return array<string, mixed> */
+    private function structureData(): array
+    {
+        $db = Database::instance();
+        $categories = [];
+        try {
+            $categories = $db->get_results('SELECT * FROM ' . $db->getPrefix() . 'community_categories ORDER BY sort_order ASC, id ASC') ?: [];
+        } catch (\Throwable) {
+        }
+        $forums = (new ForumRepository())->tree();
+
+        return [
+            'categories' => array_map(static fn ($row): array => (array) $row, $categories),
+            'forums' => $forums,
+            'types' => ForumRepository::TYPES,
+            'statuses' => ForumRepository::STATUSES,
+            'max_depth' => self::MAX_FORUM_DEPTH,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function saveCategory(array $post): array
+    {
+        $repo = new CategoryRepository();
+        $id = (int) ($post['id'] ?? 0);
+        $title = trim((string) ($post['title'] ?? ''));
+        if ($title === '') {
+            return ['success' => false, 'error' => self::errorText('invalid_input')];
+        }
+        $slug = trim((string) ($post['slug'] ?? ''));
+        $data = [
+            'title' => $title,
+            'slug' => $slug !== '' ? $slug : Slugger::slugify($title, 100),
+            'description' => trim((string) ($post['description'] ?? '')) ?: null,
+            'is_visible' => isset($post['is_visible']) ? 1 : 0,
+        ];
+        $now = gmdate('Y-m-d H:i:s');
+        if ($id > 0) {
+            $result = $repo->update($id, $data, $now);
+        } else {
+            $data['sort_order'] = $this->nextSort('community_categories');
+            $result = $repo->create($data, $now);
+        }
+        $this->flush();
+
+        return $this->outcome($result, 'Kategorie gespeichert.');
+    }
+
+    /** @return array<string, mixed> */
+    private function saveForum(array $post): array
+    {
+        $repo = new ForumRepository();
+        $id = (int) ($post['id'] ?? 0);
+        $title = trim((string) ($post['title'] ?? ''));
+        if ($title === '') {
+            return ['success' => false, 'error' => self::errorText('invalid_input')];
+        }
+        $slug = trim((string) ($post['slug'] ?? ''));
+        if ($slug === '') {
+            $slug = Slugger::forumSlug($title, function (string $candidate, ?int $ignore) use ($repo): bool {
+                $found = $repo->findBySlug($candidate);
+
+                return $found !== null && (int) $found['id'] !== (int) $ignore;
+            }, $id > 0 ? $id : null);
+        }
+        $data = [
+            'category_id' => (int) ($post['category_id'] ?? 0),
+            'title' => $title,
+            'slug' => $slug,
+            'description' => trim((string) ($post['description'] ?? '')) ?: null,
+            'type' => (string) ($post['type'] ?? 'discussion'),
+            'status' => (string) ($post['status'] ?? 'open'),
+            'require_approval' => isset($post['require_approval']) ? 1 : 0,
+            'inherit_permissions' => isset($post['inherit_permissions']) ? 1 : 0,
+            'slow_mode_seconds' => max(0, (int) ($post['slow_mode_seconds'] ?? 0)),
+        ];
+        $now = gmdate('Y-m-d H:i:s');
+        if ($id > 0) {
+            $result = $repo->update($id, $data, $now);
+        } else {
+            $data['parent_id'] = (int) ($post['parent_id'] ?? 0);
+            $data['sort_order'] = $this->nextSort('community_forums');
+            $result = $repo->create($data, self::MAX_FORUM_DEPTH, $now);
+        }
+        $this->flush();
+
+        return $this->outcome($result, 'Forum gespeichert.');
+    }
+
+    /** Neue Position am Ende (alle Zeilen der Tabelle; die Reihenfolge gilt je Ebene). */
+    private function nextSort(string $table): int
+    {
+        $db = Database::instance();
+
+        return ((int) ($db->get_var('SELECT COALESCE(MAX(sort_order), 0) FROM ' . $db->getPrefix() . $table) ?? 0)) + 10;
+    }
+
+    /**
+     * Eine Position nach oben oder unten (Tastatur-Alternative zum Ziehen): tauscht mit dem Nachbarn derselben Ebene und nummeriert
+     * die Geschwister neu (10, 20, …).
+     *
+     * @return array<string, mixed>
+     */
+    private function move(array $post): array
+    {
+        $kind = (string) ($post['kind'] ?? '');
+        $id = (int) ($post['id'] ?? 0);
+        $delta = (string) ($post['dir'] ?? '') === 'up' ? -1 : 1;
+        $now = gmdate('Y-m-d H:i:s');
+        if ($kind === 'category') {
+            $repo = new CategoryRepository();
+            $siblings = array_map(static fn (array $row): int => (int) $row['id'], array_values(array_map(static fn ($r): array => (array) $r, Database::instance()->get_results('SELECT id FROM ' . Database::instance()->getPrefix() . 'community_categories ORDER BY sort_order ASC, id ASC') ?: [])));
+            $apply = static fn (int $rowId, int $order) => $repo->update($rowId, ['sort_order' => $order], $now);
+        } elseif ($kind === 'forum') {
+            $repo = new ForumRepository();
+            $forum = $repo->find($id);
+            if ($forum === null) {
+                return ['success' => false, 'error' => self::errorText('forum_not_found')];
+            }
+            $siblings = [];
+            foreach ($repo->tree() as $row) {
+                if ((int) $row['category_id'] === (int) $forum['category_id'] && (int) ($row['parent_id'] ?? 0) === (int) ($forum['parent_id'] ?? 0)) {
+                    $siblings[] = (int) $row['id'];
+                }
+            }
+            $apply = static fn (int $rowId, int $order) => $repo->update($rowId, ['sort_order' => $order], $now);
+        } else {
+            return ['success' => false, 'error' => self::errorText('invalid_input')];
+        }
+        $index = array_search($id, $siblings, true);
+        $target = $index === false ? false : $index + $delta;
+        if ($index === false || $target < 0 || $target >= count($siblings)) {
+            return ['success' => true, 'message' => 'Position unverändert.'];
+        }
+        [$siblings[$index], $siblings[$target]] = [$siblings[$target], $siblings[$index]];
+        foreach ($siblings as $position => $rowId) {
+            $apply($rowId, ($position + 1) * 10);
+        }
+        $this->flush();
+
+        return ['success' => true, 'message' => 'Reihenfolge geändert.'];
+    }
+
+    // ── Rechte ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+    /** @return array<string, mixed> */
+    private function permissionsData(array $query): array
+    {
+        $repo = new ForumRepository();
+        $forums = $repo->tree();
+        $forumId = (int) ($query['forum_id'] ?? 0);
+        if (!isset($forums[$forumId])) {
+            $forumId = 0;
+        }
+        $rows = [];
+        $moderators = [];
+        if ($forumId > 0) {
+            foreach ($repo->permissionRowsOf($forumId) as $row) {
+                $rows[$row['subject_type'] . ':' . $row['subject_key']] = $row['permissions'] ?? [];
+            }
+            $moderators = $repo->moderatorRowsOf($forumId);
+        }
+
+        return ['forums' => $forums, 'forum_id' => $forumId, 'rows' => $rows, 'moderators' => $moderators, 'roles' => $this->roleSlugs(), 'keys' => Settings::PERMISSION_KEYS];
+    }
+
+    /** @return list<string> Rollen, die als Subjekt der Matrix wählbar sind (ohne `admin`/`moderator`: sie wirken über ihre Capabilities). */
+    private function roleSlugs(): array
+    {
+        $db = Database::instance();
+        $roles = ['member', 'author', 'editor'];
+        foreach (['users', 'role_permissions'] as $table) {
+            try {
+                foreach ($db->get_col('SELECT DISTINCT role FROM ' . $db->getPrefix() . $table) ?: [] as $role) {
+                    if (is_string($role) && preg_match('/^[a-z0-9_-]{1,50}$/', $role) === 1) {
+                        $roles[] = $role;
+                    }
+                }
+            } catch (\Throwable) {
+            }
+        }
+        $roles = array_values(array_unique(array_diff($roles, ['admin', 'moderator'])));
+        sort($roles);
+
+        return $roles;
+    }
+
+    /**
+     * Zelle der Matrix: '' = nicht festgelegt (Zeile ohne diesen Schlüssel), '1' = erlaubt, '0' = verboten.
+     *
+     * @return array<string, mixed>
+     */
+    private function savePermissions(array $post): array
+    {
+        $repo = new ForumRepository();
+        $forumId = (int) ($post['forum_id'] ?? 0);
+        if ($repo->find($forumId) === null) {
+            return ['success' => false, 'error' => self::errorText('forum_not_found')];
+        }
+        $rows = [];
+        $matrix = is_array($post['perm'] ?? null) ? $post['perm'] : [];
+        foreach ($matrix as $subject => $cells) {
+            if (!is_string($subject) || !is_array($cells) || !str_contains($subject, ':')) {
+                continue;
+            }
+            [$type, $key] = explode(':', $subject, 2);
+            $permissions = [];
+            foreach (Settings::PERMISSION_KEYS as $permission) {
+                $value = $cells[$permission] ?? '';
+                if ($value === '1' || $value === '0') {
+                    $permissions[$permission] = (int) $value;
+                }
+            }
+            if ($permissions !== []) {
+                $rows[] = ['subject_type' => $type, 'subject_key' => $key, 'permissions' => $permissions];
+            }
+        }
+        $moderators = [];
+        $includeChildren = isset($post['mod_children']) ? 1 : 0;
+        foreach (preg_split('/[\s,;]+/', trim((string) ($post['moderators'] ?? ''))) ?: [] as $token) {
+            if (preg_match('/^([ug])(\d{1,10})$/i', $token, $m) === 1) {
+                $moderators[] = ['subject_type' => strtolower($m[1]) === 'g' ? 'group' : 'user', 'subject_id' => (int) $m[2], 'include_children' => $includeChildren];
+            } elseif ($token !== '') {
+                return ['success' => false, 'error' => 'Moderatoren bitte als u<ID> (Mitglied) oder g<ID> (Gruppe) angeben, z. B. u12 g3.'];
+            }
+        }
+        try {
+            $now = gmdate('Y-m-d H:i:s');
+            $repo->savePermissions($forumId, $rows, $now);
+            $repo->saveModerators($forumId, $moderators);
+            $repo->touch([$forumId], $now);
+        } catch (\InvalidArgumentException $e) {
+            return ['success' => false, 'error' => 'Ungültige Eingabe: ' . $e->getMessage()];
+        }
+        $this->flush();
+
+        return ['success' => true, 'message' => 'Rechte gespeichert.'];
+    }
+
+    /** Rechte-Cache und Baum verwerfen (Struktur oder Rechte haben sich geändert). */
+    private function flush(): void
+    {
+        try {
+            CommunityAccess::instance()->flush();
+        } catch (\Throwable) {
+        }
     }
 
     /** @return array<string, mixed> */

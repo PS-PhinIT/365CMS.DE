@@ -363,6 +363,7 @@ class RolesModule
 
             // Erst nach dem Commit; ein Fehler eines Verbrauchers ändert am Ergebnis nichts (UserService::announceRoleChange()).
             $this->announceRoleChanges($affectedUserIds, $currentRole, $newRole, UserService::ROLE_SOURCE_ROLE_RENAMED);
+            $this->announceRole('cms_role_renamed', $currentRole, $newRole);
 
             return ['success' => true, 'message' => 'Rolle wurde aktualisiert.'];
         } catch (\Throwable $e) {
@@ -430,6 +431,7 @@ class RolesModule
             }
 
             $this->announceRoleChanges($affectedUserIds, $role, $fallbackRole, UserService::ROLE_SOURCE_ROLE_DELETED);
+            $this->announceRole('cms_role_deleted', $role, $fallbackRole);
 
             return ['success' => true, 'message' => 'Rolle wurde gelöscht.'];
         } catch (\Throwable $e) {
@@ -469,6 +471,19 @@ class RolesModule
     {
         foreach ($userIds as $userId) {
             UserService::announceRoleChange($userId, $fromRole, $toRole, $source);
+        }
+    }
+
+    /**
+     * Hooks `cms_role_renamed($oldSlug, $newSlug)` und `cms_role_deleted($slug, $fallbackSlug)` (4.2.0): einmal je Vorgang, nach dem
+     * Commit. Ein Fehler eines Verbrauchers wird protokolliert und ändert das Ergebnis nicht.
+     */
+    private function announceRole(string $hook, string $role, string $other): void
+    {
+        try {
+            \CMS\Hooks::doAction($hook, $role, $other);
+        } catch (\Throwable $e) {
+            Logger::instance()->withChannel('admin.roles')->warning('Ein Verbraucher von ' . $hook . ' ist fehlgeschlagen.', ['exception' => $e]);
         }
     }
 

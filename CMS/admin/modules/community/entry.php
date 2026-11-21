@@ -58,8 +58,8 @@ $sectionPageConfig = [
     },
     'post_handler' => static function (CommunityAdminModule $module, string $section, array $post): array {
         $uid = (int) (Auth::instance()->currentUser()->id ?? 0);
-        // Capability je Aktion: Einstellungen, Ränge nur mit community.manage; alles andere mit community.moderate.
-        $manage = in_array((string) ($post['action'] ?? ''), ['save_settings', 'save_rank', 'delete_rank'], true);
+        // Capability je Aktion: Einstellungen, Ränge, Struktur und Rechte nur mit community.manage; alles andere mit community.moderate.
+        $manage = in_array((string) ($post['action'] ?? ''), CommunityAdminModule::MANAGE_ACTIONS, true);
         $allowed = Auth::instance()->hasCapability($manage ? 'community.manage' : 'community.moderate');
         if (!$allowed) {
             return ['success' => false, 'error' => 'Dafür fehlt die Berechtigung.'];

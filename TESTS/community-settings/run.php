@@ -1107,11 +1107,11 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
 
     $hooksSource = csRead(ABSPATH . 'core/Services/FeatureHooks/CommunityHooks.php');
     T::check(
-        (int) strpos($hooksSource, 'CommunityModule::isEnabled()') > 0 && strpos($hooksSource, 'CommunityModule::isEnabled()') < strpos($hooksSource, 'Hooks::addAction'),
-        'Quelltext: Modul-Gate steht vor der ersten Hook-Anmeldung'
+        (int) strpos($hooksSource, 'CommunityModule::isEnabled()') > 0 && strpos($hooksSource, 'CommunityModule::isEnabled()') < strpos($hooksSource, "Hooks::addAction('user_role_changed'"),
+        'Quelltext: Modul-Gate steht vor den Listenern für user_role_changed und user_email_verified (die Rollen-Listener cms_role_* laufen bewusst immer, PR #3)'
     );
     T::check(str_contains($hooksSource, 'class_exists(CommunityAccess::class)') && str_contains($hooksSource, 'CommunityAccess::instance()->forgetUser($userId)'), 'Quelltext: forgetUser() nur bei vorhandener Klasse');
-    T::same(2, substr_count($hooksSource, 'Hooks::addAction('), 'Quelltext: genau zwei Listener');
+    T::same(4, substr_count($hooksSource, 'Hooks::addAction('), 'Quelltext: vier Listener (zwei hinter dem Modul-Gate, cms_role_renamed und cms_role_deleted davor)');
     T::check(!preg_match('/Database|get_var|get_row|get_results|execute\(/', $hooksSource), 'keine Datenbankzugriffe zur Registrierungszeit');
 
     if (!$real) {

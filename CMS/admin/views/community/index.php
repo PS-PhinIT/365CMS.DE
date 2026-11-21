@@ -348,6 +348,168 @@ $failure = static function (mixed $result): ?string {
         <?= $more($result['next'] ?? null, ['action' => $filter['action'] ?? '', 'actor_id' => $filter['actor_id'] ?? 0]) ?>
     <?php endif; ?>
 
+<?php elseif ($cs === 'structure'): ?>
+    <?php
+    $categories = (array) ($cd['categories'] ?? []);
+    $forums = (array) ($cd['forums'] ?? []);
+    $types = ['discussion' => 'Diskussion', 'qa' => 'Fragen & Antworten', 'announcements' => 'Ankündigungen', 'link' => 'Link'];
+    $statuses = ['open' => 'Offen', 'readonly' => 'Nur lesen', 'archived' => 'Archiviert', 'hidden' => 'Versteckt'];
+    $moveForm = static function (string $kind, int $id) use ($formOpen): string {
+        $html = '';
+        foreach (['up' => ['arrow-up', 'nach oben'], 'down' => ['arrow-down', 'nach unten']] as $dir => [$icon, $label]) {
+            $html .= $formOpen('move', ['kind' => $kind, 'id' => $id, 'dir' => $dir])
+                . '<button class="btn btn-sm btn-icon" type="submit" aria-label="' . $label . ' verschieben"><i class="ti ti-' . $icon . '" aria-hidden="true"></i></button></form>';
+        }
+
+        return $html;
+    };
+    $forumFields = static function (array $forum, string $prefix) use ($e, $types, $statuses, $categories): string {
+        $html = '<div class="row g-2 w-100">'
+            . '<div class="col-md-4"><label class="form-label" for="' . $prefix . 'ti">Titel</label><input class="form-control" id="' . $prefix . 'ti" name="title" required maxlength="150" value="' . $e($forum['title'] ?? '') . '"></div>'
+            . '<div class="col-md-3"><label class="form-label" for="' . $prefix . 'sl">Adresse (leer = automatisch)</label><input class="form-control" id="' . $prefix . 'sl" name="slug" maxlength="160" value="' . $e($forum['slug'] ?? '') . '"></div>'
+            . '<div class="col-md-3"><label class="form-label" for="' . $prefix . 'ca">Kategorie</label><select class="form-select" id="' . $prefix . 'ca" name="category_id"><option value="0">–</option>';
+        foreach ($categories as $category) {
+            $html .= '<option value="' . (int) $category['id'] . '"' . ((int) ($forum['category_id'] ?? 0) === (int) $category['id'] ? ' selected' : '') . '>' . $e($category['title']) . '</option>';
+        }
+        $html .= '</select></div>'
+            . '<div class="col-md-2"><label class="form-label" for="' . $prefix . 'ty">Art</label><select class="form-select" id="' . $prefix . 'ty" name="type">';
+        foreach ($types as $value => $label) {
+            $html .= '<option value="' . $value . '"' . (($forum['type'] ?? 'discussion') === $value ? ' selected' : '') . '>' . $label . '</option>';
+        }
+        $html .= '</select></div>'
+            . '<div class="col-md-2"><label class="form-label" for="' . $prefix . 'st">Status</label><select class="form-select" id="' . $prefix . 'st" name="status">';
+        foreach ($statuses as $value => $label) {
+            $html .= '<option value="' . $value . '"' . (($forum['status'] ?? 'open') === $value ? ' selected' : '') . '>' . $label . '</option>';
+        }
+        $html .= '</select></div>'
+            . '<div class="col-md-2"><label class="form-label" for="' . $prefix . 'sm">Langsamer Modus (s)</label><input class="form-control" id="' . $prefix . 'sm" type="number" min="0" name="slow_mode_seconds" value="' . (int) ($forum['slow_mode_seconds'] ?? 0) . '"></div>'
+            . '<div class="col-md-4"><label class="form-label" for="' . $prefix . 'de">Beschreibung</label><input class="form-control" id="' . $prefix . 'de" name="description" value="' . $e($forum['description'] ?? '') . '"></div>'
+            . '<div class="col-md-4 d-flex align-items-end gap-3">'
+            . '<label class="form-check"><input class="form-check-input" type="checkbox" name="require_approval" value="1"' . (!empty($forum['require_approval']) ? ' checked' : '') . '><span class="form-check-label">Freigabepflicht</span></label>'
+            . '<label class="form-check"><input class="form-check-input" type="checkbox" name="inherit_permissions" value="1"' . (!isset($forum['inherit_permissions']) || !empty($forum['inherit_permissions']) ? ' checked' : '') . '><span class="form-check-label">Rechte erben</span></label>'
+            . '</div></div>';
+
+        return $html;
+    };
+    ?>
+    <p class="text-secondary">Reihenfolge ändern mit den Pfeil-Schaltflächen (per Tastatur bedienbar). Ziehen mit der Maus folgt später. Kategorien und Foren lassen sich ausblenden oder archivieren, aber (noch) nicht löschen.</p>
+
+    <div class="card mb-4"><div class="card-header"><h3 class="card-title">Kategorien</h3></div><div class="list-group list-group-flush">
+        <?php foreach ($categories as $category): ?>
+            <div class="list-group-item">
+                <div class="d-flex flex-wrap gap-2 align-items-end">
+                    <div class="d-flex gap-1"><?= $moveForm('category', (int) $category['id']) ?></div>
+                    <?= $formOpen('save_category', ['id' => (int) $category['id']]) ?>
+                        <div><label class="form-label" for="cat-t<?= (int) $category['id'] ?>">Titel</label><input class="form-control" id="cat-t<?= (int) $category['id'] ?>" name="title" required maxlength="150" value="<?= $e($category['title']) ?>"></div>
+                        <div><label class="form-label" for="cat-s<?= (int) $category['id'] ?>">Adresse</label><input class="form-control" id="cat-s<?= (int) $category['id'] ?>" name="slug" maxlength="160" value="<?= $e($category['slug']) ?>"></div>
+                        <div class="align-self-end"><label class="form-check"><input class="form-check-input" type="checkbox" name="is_visible" value="1"<?= !empty($category['is_visible']) ? ' checked' : '' ?>><span class="form-check-label">Sichtbar</span></label></div>
+                        <div class="align-self-end"><button class="btn btn-sm btn-primary" type="submit">Speichern</button></div>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        <div class="list-group-item">
+            <?= $formOpen('save_category') ?>
+                <div><label class="form-label" for="cat-new-t">Neue Kategorie</label><input class="form-control" id="cat-new-t" name="title" required maxlength="150"></div>
+                <input type="hidden" name="is_visible" value="1">
+                <div class="align-self-end"><button class="btn btn-sm btn-primary" type="submit">Anlegen</button></div>
+            </form>
+        </div>
+    </div></div>
+
+    <div class="card mb-4"><div class="card-header"><h3 class="card-title">Foren</h3></div><div class="list-group list-group-flush">
+        <?php foreach ($forums as $forum): ?>
+            <div class="list-group-item">
+                <div class="d-flex flex-wrap gap-2 align-items-start">
+                    <div class="d-flex gap-1"><?= $moveForm('forum', (int) $forum['id']) ?></div>
+                    <?= $formOpen('save_forum', ['id' => (int) $forum['id']]) ?>
+                        <div class="w-100 fw-bold"><?= $e(str_repeat('— ', (int) $forum['depth'])) ?>#<?= (int) $forum['id'] ?> · <?= (int) ($forum['topic_count'] ?? 0) ?> Themen</div>
+                        <?= $forumFields($forum, 'f' . (int) $forum['id']) ?>
+                        <div class="w-100"><button class="btn btn-sm btn-primary" type="submit">Speichern</button></div>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        <div class="list-group-item">
+            <?= $formOpen('save_forum') ?>
+                <div class="w-100 fw-bold">Neues Forum</div>
+                <?= $forumFields([], 'fnew') ?>
+                <div class="col-md-3"><label class="form-label" for="fnew-pa">Oberforum</label>
+                    <select class="form-select" id="fnew-pa" name="parent_id"><option value="0">– (oberste Ebene)</option>
+                        <?php foreach ($forums as $forum): if ((int) $forum['depth'] + 1 >= (int) ($cd['max_depth'] ?? 3)) { continue; } ?>
+                            <option value="<?= (int) $forum['id'] ?>"><?= $e(str_repeat('– ', (int) $forum['depth']) . $forum['title']) ?></option>
+                        <?php endforeach; ?>
+                    </select></div>
+                <div class="w-100"><button class="btn btn-primary" type="submit">Forum anlegen</button></div>
+            </form>
+        </div>
+    </div></div>
+
+<?php elseif ($cs === 'permissions'): ?>
+    <?php
+    $forums = (array) ($cd['forums'] ?? []);
+    $permLabels = ['read' => 'Lesen', 'create_topic' => 'Thema', 'reply' => 'Antwort', 'edit_own' => 'Bearb.', 'delete_own' => 'Lösch.', 'upload' => 'Upload', 'poll' => 'Umfrage', 'vote' => 'Stimme', 'react' => 'Reaktion', 'mark_solution' => 'Lösung', 'bypass_approval' => 'o. Freigabe', 'bypass_slow_mode' => 'o. Bremse'];
+    $subjects = ['guest:' => 'Gäste'];
+    foreach ((array) ($cd['roles'] ?? []) as $role) {
+        $subjects['role:' . $role] = 'Rolle ' . $role;
+    }
+    foreach ([0, 1, 2, 3, 4] as $level) {
+        $subjects['trust:' . $level] = 'Vertrauensstufe ' . $level;
+    }
+    ?>
+    <form method="get" class="row g-2 mb-3 align-items-end">
+        <div class="col-md-5"><label class="form-label" for="pm-forum">Forum</label>
+            <select class="form-select" id="pm-forum" name="forum_id">
+                <option value="">– wählen –</option>
+                <?php foreach ($forums as $id => $forum): ?><option value="<?= (int) $id ?>"<?= (int) $id === (int) ($cd['forum_id'] ?? 0) ? ' selected' : '' ?>><?= $e(str_repeat('– ', (int) ($forum['depth'] ?? 0)) . ($forum['title'] ?? '')) ?></option><?php endforeach; ?>
+            </select></div>
+        <div class="col-auto"><button class="btn btn-primary" type="submit">Anzeigen</button></div>
+    </form>
+    <?php if ((int) ($cd['forum_id'] ?? 0) === 0): ?>
+        <div class="empty"><p class="empty-title">Forum wählen, um die Rechte zu bearbeiten.</p></div>
+    <?php else: ?>
+        <?php $forum = $forums[(int) $cd['forum_id']]; ?>
+        <?php if (!empty($forum['inherit_permissions']) && (int) ($forum['parent_id'] ?? 0) > 0): ?>
+            <div class="alert alert-info">Dieses Forum erbt die Rechte des Oberforums, solange hier keine eigenen Zeilen stehen. Eigene Zeilen ersetzen die geerbten vollständig.</div>
+        <?php elseif ((array) ($cd['rows'] ?? []) === []): ?>
+            <div class="alert alert-info">Ohne eigene Zeilen gelten die Standardrechte aus den Einstellungen.</div>
+        <?php endif; ?>
+        <form method="post" class="vstack gap-4">
+            <input type="hidden" name="csrf_token" value="<?= $e($csrfToken) ?>">
+            <input type="hidden" name="action" value="save_permissions">
+            <input type="hidden" name="forum_id" value="<?= (int) $cd['forum_id'] ?>">
+            <input type="hidden" name="return" value="<?= $returnQuery ?>">
+            <div class="card"><div class="card-body pb-0"><p class="text-secondary">Je Zelle: „–“ = nicht festgelegt, „Ja“ = erlaubt, „Nein“ = verboten. Eine Zeile ohne Festlegung wird nicht gespeichert. Administration und Moderation wirken über ihre Rechte, nicht über diese Matrix.</p></div>
+            <div class="table-responsive"><table class="table table-vcenter card-table">
+                <thead><tr><th scope="col">Wer</th><?php foreach ($permLabels as $label): ?><th scope="col"><?= $e($label) ?></th><?php endforeach; ?></tr></thead>
+                <tbody>
+                <?php foreach ($subjects as $key => $label): $row = (array) (($cd['rows'] ?? [])[$key] ?? []); ?>
+                    <tr><th scope="row"><?= $e($label) ?></th>
+                    <?php foreach ($permLabels as $perm => $permLabel): $value = array_key_exists($perm, $row) ? (string) (int) $row[$perm] : ''; ?>
+                        <td><select class="form-select form-select-sm" name="perm[<?= $e($key) ?>][<?= $e($perm) ?>]" aria-label="<?= $e($label . ': ' . $permLabel) ?>">
+                            <option value="">–</option><option value="1"<?= $value === '1' ? ' selected' : '' ?>>Ja</option><option value="0"<?= $value === '0' ? ' selected' : '' ?>>Nein</option>
+                        </select></td>
+                    <?php endforeach; ?></tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div></div>
+            <?php
+            $modTokens = [];
+            $modChildren = true;
+            foreach ((array) ($cd['moderators'] ?? []) as $moderator) {
+                $modTokens[] = ($moderator['subject_type'] === 'group' ? 'g' : 'u') . $moderator['subject_id'];
+                $modChildren = $modChildren && !empty($moderator['include_children']);
+            }
+            ?>
+            <div class="card"><div class="card-header"><h3 class="card-title">Forum-Moderatoren</h3></div><div class="card-body">
+                <label class="form-label" for="pm-mods">Mitglieder (u&lt;ID&gt;) und Gruppen (g&lt;ID&gt;), getrennt durch Leerzeichen</label>
+                <input class="form-control mb-2" id="pm-mods" name="moderators" value="<?= $e(implode(' ', $modTokens)) ?>" placeholder="u12 u40 g3">
+                <label class="form-check"><input class="form-check-input" type="checkbox" name="mod_children" value="1"<?= $modChildren ? ' checked' : '' ?>><span class="form-check-label">gilt auch für Unterforen</span></label>
+            </div></div>
+            <div><button class="btn btn-primary" type="submit"><i class="ti ti-device-floppy me-1" aria-hidden="true"></i>Rechte speichern</button></div>
+        </form>
+    <?php endif; ?>
+
 <?php elseif ($cs === 'ranks'): ?>
     <?php $ranks = (array) ($cd['ranks'] ?? []); ?>
     <div class="card mb-4"><div class="table-responsive"><table class="table table-vcenter card-table">
