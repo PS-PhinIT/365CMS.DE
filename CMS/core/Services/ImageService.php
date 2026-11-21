@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace CMS\Services;
 
 use CMS\Logger;
+use CMS\Services\Media\ImageOrientation;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -402,7 +403,8 @@ final class ImageService
     }
 
     /**
-     * EXIF-Orientierung automatisch korrigieren (z. B. Smartphone-Fotos).
+     * EXIF-Orientierung automatisch korrigieren (z. B. Smartphone-Fotos): alle acht Werte, auch gespiegelte.
+     * Das Bild wird aufrecht neu gespeichert, ohne EXIF-Daten.
      *
      * @param string $sourcePath  Bildpfad (JPEG)
      *
@@ -410,33 +412,25 @@ final class ImageService
      */
     public function autoOrient(string $sourcePath): bool
     {
-        if (!$this->gdAvailable || !function_exists('exif_read_data')) {
+        if (!$this->gdAvailable) {
             return false;
         }
 
         $ext = strtolower(pathinfo($sourcePath, PATHINFO_EXTENSION));
-        if (!in_array($ext, ['jpg', 'jpeg'], true)) {
+        if (!in_array($ext, ['jpg', 'jpeg'], true) || ImageOrientation::read($sourcePath) === ImageOrientation::NORMAL) {
             return false;
         }
 
-        $exif = $this->readExifData($sourcePath);
-        if ($exif === false || !isset($exif['Orientation'])) {
+        // loadImage() wendet die Ausrichtung bereits an.
+        $image = $this->loadImage($sourcePath);
+        if ($image === null) {
             return false;
         }
 
-        $orientation = (int)$exif['Orientation'];
-        $angle = match ($orientation) {
-            3 => 180,
-            6 => 90,
-            8 => -90,
-            default => 0,
-        };
+        $saved = $this->saveImage($image, $sourcePath, $this->defaultQuality);
+        unset($image);
 
-        if ($angle === 0) {
-            return false;
-        }
-
-        return $this->rotate($sourcePath, (float)$angle) !== null;
+        return $saved;
     }
 
     /**
@@ -608,8 +602,12 @@ final class ImageService
             'avif'        => $this->avifSupport ? $this->loadImageViaFunction('imagecreatefromavif', $path) : false,
             default       => false,
         };
+        if (!$image instanceof \GdImage) {
+            return null;
+        }
 
-        return ($image instanceof \GdImage) ? $image : null;
+        // GD verwirft die EXIF-Daten beim Speichern: Ausrichtung vorher auf die Pixel anwenden (nur JPEG).
+        return in_array($ext, ['jpg', 'jpeg'], true) ? ImageOrientation::orient($image, $path) : $image;
     }
 
     /**
@@ -639,6 +637,10 @@ final class ImageService
         if (!is_dir($dir) && !$this->ensureDirectoryExists($dir)) {
             return false;
         }
+
+        // Ohne imagesavealpha(true) schreibt GD ein RGBA-PNG deckend (z. B. nach rotate() oder crop()).
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
 
         return match ($ext) {
             'jpg', 'jpeg' => imagejpeg($image, $path, $quality),
@@ -691,11 +693,6 @@ final class ImageService
 
         $result = $this->runFilesystemOperation('unlink', $path, static fn (): bool => unlink($path));
         return $result === true;
-    }
-
-    private function readExifData(string $path): array|false
-    {
-        return $this->runFilesystemOperation('exif_read_data', $path, static fn (): array|false => exif_read_data($path));
     }
 
     private function readImageSize(string $path): array|false

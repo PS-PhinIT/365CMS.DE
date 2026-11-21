@@ -33,7 +33,7 @@ All performance screens are rendered by `CMS/admin/performance-page.php` with th
 | `perf_lazy_loading_eager_images` | 1 | Anzahl (0–5) der ersten Bilder am Seitenanfang, die sofort geladen werden (Schutz für Hero-/LCP-Bilder) |
 | `perf_minify_css` / `perf_minify_js` | aus | Minifizierte Auslieferung über `AssetOptimizerService` |
 | `perf_webp_uploads` | an | WebP-Variante beim Upload |
-| `perf_strip_exif` | an | EXIF-Daten beim Upload entfernen |
+| `perf_strip_exif` | an | Metadaten (EXIF, GPS, XMP, IPTC) beim Upload entfernen; entspricht `strip_exif` der Medien-Einstellungen (Verhalten je Upload-Weg: `admin/media/MEDIA.md`, Abschnitt „Metadaten, Ausrichtung und Transparenz“) |
 | `perf_session_timeout_admin` | 28800 s (8 h) | Session-Lebensdauer für Administratoren |
 | `perf_session_timeout_member` | 2592000 s (30 Tage) | Session-Lebensdauer für Mitglieder |
 
