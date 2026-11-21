@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
 
 final class PublicController
 {
-    private const VIEWS = ['index', 'forum', 'topic', 'not-found'];
+    private const VIEWS = ['index', 'forum', 'topic', 'not-found', 'compose'];
 
     private static ?self $instance = null;
 
@@ -128,7 +128,9 @@ final class PublicController
                 $children[] = $child;
             }
         }
+        $canCreate = $viewer === null || CommunityAccess::instance()->can($viewer, 'create_topic', ['forum_id' => $forumId])->allowed;
         $this->render('forum', [
+            'can_create' => $canCreate, 'new_topic_url' => Urls::newTopic($own, $locale),
             'forum' => $forum, 'children' => $children, 'topics' => $items, 'accounts' => $accounts, 'next' => $result['next'] ?? null,
             'locale' => $locale, 'viewer' => $viewer, 'canonical' => $canonical,
         ]);
@@ -207,7 +209,18 @@ final class PublicController
             'prev' => $page > 1 ? Urls::topic((int) $topic['id'], (string) $topic['slug'], $locale, $page - 1) : null,
             'next' => $page < $pages ? Urls::topic((int) $topic['id'], (string) $topic['slug'], $locale, $page + 1) : null,
         ];
+        $access = CommunityAccess::instance();
+        $canReply = $viewer === null || $access->can($viewer, 'reply', ['topic_id' => (int) $topic['id']])->allowed;
+        $editable = [];
+        if ($viewer !== null) {
+            foreach ($items as $item) {
+                if (($item['view'] ?? '') === 'full' && $access->can($viewer, 'edit', ['post_id' => (int) $item['id']])->allowed) {
+                    $editable[(int) $item['id']] = true;
+                }
+            }
+        }
         $this->render('topic', [
+            'can_reply' => $canReply, 'editable' => $editable,
             'topic' => $topic, 'forum' => $forum, 'posts' => $items, 'accounts' => $accounts, 'page' => $page, 'pages' => $pages,
             'locale' => $locale, 'viewer' => $viewer, 'canonical' => $canonical,
         ]);
@@ -231,6 +244,27 @@ final class PublicController
     }
 
     // ── Hilfen ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+    /** Für `ComposeController`: Seite mit Kopfdaten ausgeben (gleiche Hülle, Cache-Kopf und Vorlagenwahl wie die Leseseiten). */
+    public function renderPage(string $view, array $vars, array $meta, int $status = 200): void
+    {
+        $this->meta = $meta;
+        if ($status !== 200) {
+            http_response_code($status);
+        }
+        $this->render($view, $vars, $status);
+    }
+
+    /** Für `ComposeController`: 404 wie bei den Leseseiten. */
+    public function showNotFound(): void
+    {
+        $this->notFound();
+    }
+
+    public function currentViewerId(): ?int
+    {
+        return $this->viewerId();
+    }
 
     private function viewerId(): ?int
     {
@@ -299,6 +333,9 @@ final class PublicController
             $view = 'not-found';
         }
         $meta = $this->meta;
+        // Hinweis aus einem Schreibvorgang (z. B. „wartet auf Freigabe“) einmal anzeigen.
+        $vars['flash'] = $_SESSION['community_flash'] ?? null;
+        unset($_SESSION['community_flash']);
         Hooks::addAction('head', static function () use ($meta): void {
             echo self::headTags($meta);
         }, 5);

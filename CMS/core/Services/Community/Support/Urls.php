@@ -33,6 +33,9 @@ final class Urls
         'unread' => ['de' => 'ungelesen', 'en' => 'unread'],
         'attachment' => ['de' => 'anhang', 'en' => 'attachment'],
         'preview' => ['de' => 'vorschau', 'en' => 'preview'],
+        'new_topic' => ['de' => 'neues-thema', 'en' => 'new-topic'],
+        'reply' => ['de' => 'antworten', 'en' => 'reply'],
+        'edit' => ['de' => 'bearbeiten', 'en' => 'edit'],
     ];
 
     /**
@@ -49,6 +52,10 @@ final class Urls
         $path = static fn (string $suffix): string => FeedI18n::path($base . $suffix, $locale);
 
         return [
+            // Schreibseiten zuerst: `/thema/12/antworten` und `/<forum>/neues-thema` passten sonst auf `topic_page` bzw. `forum_page`.
+            'reply' => $path('/' . $topic . '/:id/' . self::segment('reply', $locale)),
+            'new_topic' => $path('/:slug/' . self::segment('new_topic', $locale)),
+            'edit' => $path('/' . $post . '/:id/' . self::segment('edit', $locale)),
             'topic' => $path('/' . $topic . '/:ref'),
             'topic_page' => $path('/' . $topic . '/:ref/:page'),
             'post' => $path('/' . $post . '/:id'),
@@ -93,6 +100,25 @@ final class Urls
             self::basePath() . '/' . self::segment('topic', $locale) . '/' . $segment . self::pageSuffix($page, $locale),
             $locale
         );
+    }
+
+    /** Formular „Neues Thema“ eines Forums: `/forum/<slug>/neues-thema`. */
+    public static function newTopic(string $forumSlug, string $locale = 'de'): string
+    {
+        return FeedI18n::path(self::basePath() . '/' . rawurlencode($forumSlug) . '/' . self::segment('new_topic', $locale), $locale);
+    }
+
+    /** Antwortformular: `/forum/thema/12/antworten`, optional mit `?zitat=<Beitrags-ID>`. */
+    public static function reply(int $topicId, string $locale = 'de', ?int $quotePostId = null): string
+    {
+        return FeedI18n::path(self::basePath() . '/' . self::segment('topic', $locale) . '/' . $topicId . '/' . self::segment('reply', $locale), $locale)
+            . ($quotePostId !== null && $quotePostId > 0 ? '?zitat=' . $quotePostId : '');
+    }
+
+    /** Bearbeiten-Formular eines Beitrags: `/forum/beitrag/7/bearbeiten`. */
+    public static function edit(int $postId, string $locale = 'de'): string
+    {
+        return FeedI18n::path(self::basePath() . '/' . self::segment('post', $locale) . '/' . $postId . '/' . self::segment('edit', $locale), $locale);
     }
 
     /** Dauerlink eines Beitrags (löst später auf Thema, Seite und Anker auf). */

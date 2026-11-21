@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Community – Thema mit Beiträgen. Der HTML-Text eines Beitrags (`html`) kommt aus `RenderService::present()` und ist bereits gereinigt.
- * Variablen: $topic, $forum, $posts, $accounts (Mitglieds-ID => Konto), $page, $pages, $locale, $viewer, $canonical, $e.
+ * Variablen: $can_reply, $editable (Beitrags-ID => true: bearbeitbar), $flash (Hinweis eines Schreibvorgangs oder null), $topic, $forum, $posts, $accounts (Mitglieds-ID => Konto), $page, $pages, $locale, $viewer, $canonical, $e.
  */
 
 use CMS\Services\Community\Support\I18n;
@@ -20,6 +20,7 @@ $forumSlug = $forum !== null ? Urls::forumSlugFor((string) $forum['slug'], $foru
 $pageUrl = static fn (int $n): string => Urls::topic((int) $topic['id'], (string) ($topic['slug'] ?? ''), $locale, $n);
 ?>
 <main id="main" class="cms-community">
+    <?php if (!empty($flash)): ?><p class="cms-community-flash" role="status"><?= $e($flash) ?></p><?php endif; ?>
     <nav aria-label="Brotkrumen" class="cms-community-crumbs">
         <a href="<?= $e(Urls::index($locale)) ?>">Community</a>
         <?php if ($forum !== null): ?> › <a href="<?= $e(Urls::forum($forumSlug, $locale)) ?>"><?= $e($locale === 'en' && !empty($forum['title_en']) ? $forum['title_en'] : $forum['title']) ?></a><?php endif; ?>
@@ -48,9 +49,19 @@ $pageUrl = static fn (int $n): string => Urls::topic((int) $topic['id'], (string
                 <?php if ((int) ($topic['solution_post_id'] ?? 0) === $postId): ?><span class="cms-community-badge cms-community-badge--ok">Lösung</span><?php endif; ?>
             </header>
             <div class="cms-community-post__body"><?= (string) ($post['html'] ?? '') ?></div>
+            <?php if (!empty($can_reply) || isset($editable[$postId])): ?>
+                <footer class="cms-community-post__actions">
+                    <?php if (!empty($can_reply)): ?><a href="<?= $e(Urls::reply((int) $topic['id'], $locale, $postId)) ?>">Zitieren</a><?php endif; ?>
+                    <?php if (isset($editable[$postId])): ?><a href="<?= $e(Urls::edit($postId, $locale)) ?>">Bearbeiten</a><?php endif; ?>
+                </footer>
+            <?php endif; ?>
         </article>
     <?php endforeach; ?>
     </div>
+
+    <?php if (!empty($can_reply)): ?>
+        <p class="cms-community-actions"><a class="cms-community-button" href="<?= $e(Urls::reply((int) $topic['id'], $locale)) ?>">Antworten</a></p>
+    <?php endif; ?>
 
     <?php if ($pages > 1): ?>
         <nav class="cms-community-pager" aria-label="Seiten">

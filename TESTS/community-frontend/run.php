@@ -79,6 +79,15 @@ T::run('Routenmuster', static function () use ($route): void {
         T::same(['index', []], $route('/en/forum', 'en'), 'englische Startseite');
         T::same(['forum_page', ['thema', '12']], $route('/en/forum/thema/12', 'en'), 'deutsches Segment unter /en ist nur ein Forum-Slug mit Seite: „thema“ ist reserviert, es gibt kein solches Forum (404)');
         T::same(null, $route('/forum/a/b/c'), 'tiefere Pfade gehören nicht zur Community');
+        T::same(['reply', ['12']], $route('/forum/thema/12/antworten'), 'Antwortformular geht vor topic_page (sonst wäre „antworten“ eine Seite)');
+        T::same(['new_topic', ['allgemein']], $route('/forum/allgemein/neues-thema'), 'Neues Thema geht vor forum_page');
+        T::same(['edit', ['7']], $route('/forum/beitrag/7/bearbeiten'), 'Bearbeiten-Formular');
+        T::same(['reply', ['12']], $route('/en/forum/topic/12/reply', 'en'), 'englisches Antwortformular');
+        T::same(['new_topic', ['general']], $route('/en/forum/general/new-topic', 'en'), 'englisches Formular „Neues Thema“');
+        T::same(['edit', ['7']], $route('/en/forum/post/7/edit', 'en'), 'englisches Bearbeiten-Formular');
+        T::same('/forum/allgemein/neues-thema', Urls::newTopic('allgemein'), 'Urls::newTopic');
+        T::same('/forum/thema/12/antworten?zitat=5', Urls::reply(12, 'de', 5), 'Urls::reply mit Zitat');
+        T::same('/en/forum/post/7/edit', Urls::edit(7, 'en'), 'Urls::edit (en)');
 
         $order = array_keys(Urls::routePatterns('de'));
         T::check(array_search('topic', $order, true) < array_search('forum_page', $order, true) && array_search('post', $order, true) < array_search('forum', $order, true), 'feste Segmente werden vor dem Forum-Slug eingetragen');
@@ -124,8 +133,46 @@ T::run('cursorForPage', static function (): void {
     T::same(3, count(array_filter($page2['items'], static fn (array $i): bool => ($i['status'] ?? '') === 'published')), 'Seite 2 zeigt die übrigen drei veröffentlichten Beiträge');
 });
 
+T::run('Schreibseiten', static function (): void {
+    $controller = (string) file_get_contents(ABSPATH . 'core/Services/Community/Http/ComposeController.php');
+    T::check(str_contains($controller, "generateToken('form_guard')"), 'Formulare tragen ein frisches form_guard-Token');
+    T::check(str_contains($controller, 'TopicService::instance()->create(') && str_contains($controller, 'PostService::instance()->reply(') && str_contains($controller, 'PostService::instance()->edit('), 'geschrieben wird nur über die Dienste');
+    T::check(!str_contains($controller, 'Database') && !str_contains($controller, '->execute('), 'kein eigener Datenbankzugriff im Controller');
+    T::check(substr_count($controller, 'header(\'Location: \' . $path, true, 303)') === 1, 'Post/Redirect/Get mit 303');
+    T::check(str_contains($controller, "'edit_count' => (int) (\$post['edit_count'] ?? 0)") && str_contains($controller, '$form[\'edit_count\']);'), 'Bearbeiten sendet den Stand edit_count mit (Konflikterkennung)');
+    T::check(str_contains($controller, "'seen_last_post_id'"), 'Antwort sendet seen_last_post_id (neue Beiträge erkennen)');
+    T::check(str_contains($controller, "\$page->showNotFound()"), 'nicht lesbar: 404');
+    $hooks = (string) file_get_contents(ABSPATH . 'core/Services/FeatureHooks/CommunityHooks.php');
+    T::check(strpos($hooks, 'ComposeController::instance()->registerRoutes') < strpos($hooks, 'PublicController::instance()->registerRoutes'), 'Schreibseiten werden vor den Leseseiten angemeldet');
+
+    $e = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    $render = static function (array $vars) use ($e): string {
+        extract($vars, EXTR_SKIP);
+        ob_start();
+        include ABSPATH . 'views/community/compose.php';
+
+        return (string) ob_get_clean();
+    };
+    $base = ['heading' => 'X', 'submit_label' => 'Senden', 'cancel_url' => '/forum', 'title' => '<b>t</b>', 'body' => '</textarea><script>1</script>', 'reason' => '', 'seen' => 4, 'edit_count' => 2, 'error' => null, 'new_posts' => false, 'token' => 'tok"1'];
+    $html = $render(array_merge($base, ['mode' => 'new', 'show_title' => true]));
+    T::check(str_contains($html, 'name="csrf_token" value="tok&quot;1"'), 'compose: Token maskiert im Formular');
+    T::check(!str_contains($html, '<script>1') && str_contains($html, '&lt;/textarea&gt;&lt;script&gt;'), 'compose: Eingaben maskiert (kein Ausbruch aus textarea)');
+    T::check(str_contains($html, 'name="title"'), 'compose: Titelfeld bei neuem Thema');
+    $html = $render(array_merge($base, ['mode' => 'reply', 'show_title' => false, 'quote' => 3, 'new_posts' => true]));
+    T::check(!str_contains($html, 'name="title"') && str_contains($html, 'name="seen_last_post_id" value="4"') && str_contains($html, 'name="force"'), 'compose: Antwort ohne Titel, mit seen_last_post_id und „Trotzdem senden“ bei neuen Beiträgen');
+    $html = $render(array_merge($base, ['mode' => 'edit', 'show_title' => false]));
+    T::check(str_contains($html, 'name="edit_count" value="2"') && str_contains($html, 'name="reason"'), 'compose: Bearbeiten mit edit_count und Grund');
+    $html = $render(array_merge($base, ['mode' => 'edit', 'show_title' => false, 'readonly' => true, 'error' => 'Nein', 'login_url' => '/login']));
+    T::check(!str_contains($html, '<form') && str_contains($html, 'role="alert"') && str_contains($html, '/login'), 'compose: nur Hinweis ohne Formular (nicht angemeldet oder keine Berechtigung)');
+
+    $text = new \ReflectionMethod(\CMS\Services\Community\Http\ComposeController::class, 'errorText');
+    T::same('Bitte warte 7 Sekunden.', substr($text->invoke(null, ['error' => 'zzz_unbekannt', 'retry_after' => 7]), -23), 'errorText: unbekannter Code, Wartezeit');
+    $status = new \ReflectionMethod(\CMS\Services\Community\Http\ComposeController::class, 'statusOf');
+    T::same([401, 429, 422], [$status->invoke(null, ['error' => 'login_required']), $status->invoke(null, ['error' => 'rate_limited']), $status->invoke(null, ['error' => 'body_too_short'])], 'statusOf: Ablehnungsgründe mit ihrem Status, Eingabefehler 422');
+});
+
 T::run('Ansichten und Controller (Quelltext)', static function (): void {
-    foreach (['index', 'forum', 'topic', 'not-found'] as $view) {
+    foreach (['index', 'forum', 'topic', 'not-found', 'compose'] as $view) {
         $source = (string) file_get_contents(ABSPATH . 'views/community/' . $view . '.php');
         T::check(stripos($source, '<script') === false && stripos($source, '<style') === false && preg_match('/\sstyle\s*=/i', $source) !== 1, $view . ': kein Inline-Skript oder -Style');
         T::check(preg_match('/\son[a-z]+\s*=/i', $source) !== 1, $view . ': keine Ereignisattribute');

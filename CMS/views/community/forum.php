@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Community – Forum: Unterforen und Themenliste (Keyset: „Weiter“ über ?nach=…).
- * Variablen: $forum, $children, $topics (Themenzeilen), $accounts (Mitglieds-ID => Konto), $next (Cursor oder null), $locale, $viewer, $canonical, $e.
+ * Variablen: $can_create, $new_topic_url (Schaltfläche „Neues Thema“), $flash (Hinweis eines Schreibvorgangs oder null), $forum, $children, $topics (Themenzeilen), $accounts (Mitglieds-ID => Konto), $next (Cursor oder null), $locale, $viewer, $canonical, $e.
  */
 
 use CMS\Services\Community\Support\I18n;
@@ -19,9 +19,14 @@ $name = static function (?array $account): string {
 };
 ?>
 <main id="main" class="cms-community">
+    <?php if (!empty($flash)): ?><p class="cms-community-flash" role="status"><?= $e($flash) ?></p><?php endif; ?>
     <nav aria-label="Brotkrumen" class="cms-community-crumbs"><a href="<?= $e(Urls::index($locale)) ?>">Community</a> › <span aria-current="page"><?= $e($ftitle) ?></span></nav>
     <h1><?= $e($ftitle) ?></h1>
     <?php if (!empty($forum['description'])): ?><p class="cms-community__lead"><?= $e($forum['description']) ?></p><?php endif; ?>
+
+    <?php if (!empty($can_create)): ?>
+        <p class="cms-community-actions"><a class="cms-community-button" href="<?= $e($new_topic_url) ?>">Neues Thema</a></p>
+    <?php endif; ?>
 
     <?php if ($children !== []): ?>
         <h2 class="visually-hidden">Unterforen</h2>
