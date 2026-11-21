@@ -65,6 +65,27 @@ final class Urls
         ];
     }
 
+    /** Routenmuster der JSON-API (`/forum/api/:action`, `/en/forum/api/:action`); gleiche Adresse in beiden Sprachen. */
+    public static function apiPattern(string $locale = 'de'): string
+    {
+        return FeedI18n::path(self::basePath() . '/api/:action', $locale);
+    }
+
+    /** Basisadresse der JSON-API mit Schrägstrich am Ende (`/forum/api/`), die Seite hängt die Aktion an. */
+    public static function apiBase(string $locale = 'de'): string
+    {
+        return FeedI18n::path(self::basePath() . '/api/', $locale);
+    }
+
+    /** Ist `$uri` (Pfad ohne Abfrage, mit oder ohne `/en`) eine Adresse der JSON-API? */
+    public static function isApiPath(string $uri): bool
+    {
+        $path = (string) parse_url($uri, PHP_URL_PATH);
+        $api = self::basePath() . '/api/';
+
+        return str_starts_with($path, $api) || str_starts_with($path, '/en' . $api);
+    }
+
     /** Seitennummer aus `seite-3`/`page-3` (nur die Segmente der Sprache); sonst `null`. */
     public static function parsePageSegment(string $segment, string $locale = 'de'): ?int
     {

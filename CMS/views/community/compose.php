@@ -9,10 +9,15 @@ if (!defined('ABSPATH')) {
  * Community – Formular für neues Thema, Antwort und Bearbeiten (POST an dieselbe Adresse, 303 zurück).
  * Variablen: $mode (new|reply|edit), $heading, $submit_label, $cancel_url, $show_title, $title, $body, $reason, $seen (letzter bekannter
  * Beitrag, nur Antwort), $edit_count (nur Bearbeiten), $quote (Beitrag, der zitiert wird, oder 0), $error, $new_posts, $readonly (nur Hinweis,
- * kein Formular), $login_url, $token (einmaliges form_guard-Token), $topic, $forum, $locale, $e.
+ * kein Formular), $api (JSON-API oder null), $login_url, $token (einmaliges form_guard-Token), $topic, $forum, $locale, $e.
  */
 ?>
-<main id="main" class="cms-community cms-community--compose">
+<?php
+$previewKey = $mode === 'reply' ? 'topic_id' : ($mode === 'edit' ? 'post_id' : 'forum_id');
+$previewId = $mode === 'reply' ? (int) ($topic['id'] ?? 0) : ($mode === 'edit' ? (int) ($post['id'] ?? 0) : (int) ($forum['id'] ?? 0));
+?>
+<main id="main" class="cms-community cms-community--compose"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="{}" data-cc-reason-required="0"<?php endif; ?>>
+    <p id="cc-status" class="cms-community-flash" hidden></p>
     <h1><?= $e($heading) ?></h1>
     <?php if (!empty($error)): ?>
         <p class="cms-community-alert" role="alert"><?= $e($error) ?></p>
@@ -46,8 +51,10 @@ if (!defined('ABSPATH')) {
         <?php endif; ?>
         <p class="cms-community-form__actions">
             <button class="cms-community-button" type="submit"><?= $e($submit_label) ?></button>
+            <?php if (!empty($api) && $previewId > 0): ?><button type="button" data-cc-action="preview" data-target-key="<?= $e($previewKey) ?>" data-target-id="<?= $previewId ?>">Vorschau</button><?php endif; ?>
             <a href="<?= $e($cancel_url) ?>">Abbrechen</a>
         </p>
     </form>
+    <div id="cc-preview" class="cms-community-preview cms-community-post__body" hidden aria-live="polite"></div>
     <?php endif; ?>
 </main>

@@ -19,6 +19,7 @@ use CMS\Hooks;
 use CMS\Logger;
 use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
+use CMS\Services\Community\Http\ApiController;
 use CMS\Services\Community\Http\ComposeController;
 use CMS\Services\Community\Http\PublicController;
 use CMS\Services\Community\Repository\ForumRepository;
@@ -63,10 +64,14 @@ final class CommunityHooks
         Hooks::addAction('register_routes', static function (mixed $router = null): void {
             if (is_object($router)) {
                 // Schreibseiten zuerst: ihre Muster sind enger als `topic_page`/`forum_page`.
+                self::guard(static fn () => ApiController::instance()->registerRoutes($router));
                 self::guard(static fn () => ComposeController::instance()->registerRoutes($router));
                 self::guard(static fn () => PublicController::instance()->registerRoutes($router));
             }
         }, 20);
+
+        // Dauerhaftes CSRF-Token für die JSON-API (mehrere Aufrufe je Seite); der Router prüft es vor der Route.
+        Hooks::addFilter(\CMS\Router::PUBLIC_FORM_TOKEN_FILTER, [ApiController::class, 'tokenFilter'], 10);
 
         // Hinweis im Admin: Warteschlange wartet länger als 24 Stunden.
         AdminNoticeService::registerCheck('Community-Warteschlange', static fn (): ?array => self::queueNotice());
