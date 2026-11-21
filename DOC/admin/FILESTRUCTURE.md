@@ -17,7 +17,7 @@ CMS/admin/
 ├── *-page.php                 # gemeinsame Controller für Seitengruppen (siehe unten)
 ├── logs/                      # /admin/logs/<section>: index, operational, security-audit, php-errors, channels
 ├── modules/                   # Fachlogik je Bereich
-│   ├── comments/  content/  dashboard/  downloads/  feeds/  forms/  hub/
+│   ├── comments/  community/  content/  dashboard/  downloads/  feeds/  forms/  hub/
 │   ├── knowledgebase/  landing/  legal/  media/  member/  menus/  newsletter/
 │   ├── pages/  plugins/  posts/  reusable-blocks/  security/  seo/  settings/  subscriptions/
 │   └── system/  tables/  themes/  toc/  trash/  users/

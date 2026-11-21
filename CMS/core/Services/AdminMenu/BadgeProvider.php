@@ -39,11 +39,14 @@ final class BadgeProvider
     /** Zur Prüfung eingereichte Beiträge/Seiten, die das Konto freigeben dürfte (Vier-Augen-Prinzip, 4.1.0). */
     public const CONTENT_PENDING_POSTS = 'content_pending_posts';
     public const CONTENT_PENDING_PAGES = 'content_pending_pages';
+    /** Community (4.2.0): wartende Beiträge und offene Meldungen im Moderationsbereich des Kontos. */
+    public const COMMUNITY_QUEUE = 'community_queue';
+    public const COMMUNITY_REPORTS = 'community_reports';
 
     /** Badge-Schlüssel, die Katalogeinträge tragen dürfen. */
     public const KEYS = [
         self::UPDATES, self::COMMENTS, self::FORM_SUBMISSIONS, self::PRIVACY_REQUESTS, self::LOGS,
-        self::CONTENT_PENDING_POSTS, self::CONTENT_PENDING_PAGES,
+        self::CONTENT_PENDING_POSTS, self::CONTENT_PENDING_PAGES, self::COMMUNITY_QUEUE, self::COMMUNITY_REPORTS,
     ];
 
     /** Schlüssel mit eingebauter Quelle; register() kann sie nicht überschreiben. */
@@ -61,6 +64,8 @@ final class BadgeProvider
         self::LOGS => ['1 ungelesener Hinweis', '%d ungelesene Hinweise'],
         self::CONTENT_PENDING_POSTS => ['1 Beitrag wartet auf Prüfung', '%d Beiträge warten auf Prüfung'],
         self::CONTENT_PENDING_PAGES => ['1 Seite wartet auf Prüfung', '%d Seiten warten auf Prüfung'],
+        self::COMMUNITY_QUEUE => ['1 Beitrag wartet auf Freigabe', '%d Beiträge warten auf Freigabe'],
+        self::COMMUNITY_REPORTS => ['1 offene Meldung', '%d offene Meldungen'],
     ];
 
     /** @var array<string, \Closure(array<string, mixed>): int> */

@@ -61,7 +61,7 @@ T::$verbose = in_array('-v', $argv ?? [], true);
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Badge-Schlüssel, die die Sidebar frisch (ungecacht) auswertet. */
-const KNOWN_BADGES = ['updates', 'comments', 'form_submissions', 'privacy_requests', 'logs', 'content_pending_posts', 'content_pending_pages'];
+const KNOWN_BADGES = ['updates', 'comments', 'form_submissions', 'privacy_requests', 'logs', 'content_pending_posts', 'content_pending_pages', 'community_queue', 'community_reports'];
 
 /**
  * Optionale Module (KLARSTELLUNGEN §7): eigene Hauptpunkte erlaubt, aber nur bei aktivem Modul sichtbar.
@@ -74,6 +74,7 @@ const OPTIONAL_MODULES = [
     'subscription_admin_packages' => 'subscriptions.',
     'subscription_admin_orders' => 'subscriptions.',
     'subscription_admin_settings' => 'subscriptions.',
+    'community' => 'community.',
 ];
 
 /**
@@ -82,6 +83,8 @@ const OPTIONAL_MODULES = [
  * fehl, bis sie hier entfernt ist – ab dann gilt der normale Zugriffsvergleich aus Teil 2.
  */
 const RESERVED_FILES = [
+    'admin/community-structure.php' => 'PR #3 Teil 2',
+    'admin/community-permissions.php' => 'PR #3 Teil 2',
 ];
 
 /**
@@ -934,7 +937,7 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
     $classic = $menus[ProfileLayouts::CLASSIC];
     $classicTop = am_top_ids($classic);
     $classicPositions = am_item_positions($classic);
-    T::same(['dashboard', 'system.updates', 'posts', 'media', 'building-blocks', 'content.comments', 'forms', 'ai', 'design', 'plugins', 'seo', 'users', 'members', 'subscriptions', 'tools', 'settings', 'health'],
+    T::same(['dashboard', 'system.updates', 'posts', 'media', 'building-blocks', 'content.comments', 'forms', 'ai', 'design', 'plugins', 'seo', 'users', 'members', 'community', 'community-setup', 'subscriptions', 'tools', 'settings', 'health'],
         $classicTop, 'classic: Hauptpunkte mit allen Modulen');
     T::same(['sep.work', 'sep.design', 'sep.manage'], array_column($classic['sections'], 'id'), 'classic: Abschnitte Arbeit, Gestaltung, Verwaltung');
     T::same(['Arbeit', 'Gestaltung', 'Verwaltung'], array_column($classic['sections'], 'label'), 'classic: Abschnittsbeschriftungen');
@@ -960,7 +963,7 @@ T::run('Teil 4: Profile', static function () use ($catalogList, $tabler, $option
 
     $structured = $menus[ProfileLayouts::STRUCTURED];
     $structuredTop = am_top_ids($structured);
-    T::same(['dashboard', 'system.updates', 'content', 'media', 'editorial', 'ai', 'structure', 'design', 'seo', 'extend', 'people', 'members', 'subscriptions', 'configuration', 'reports'],
+    T::same(['dashboard', 'system.updates', 'content', 'media', 'editorial', 'ai', 'structure', 'design', 'seo', 'extend', 'people', 'members', 'community', 'community-setup', 'subscriptions', 'configuration', 'reports'],
         $structuredTop, 'structured: Hauptpunkte mit allen Modulen');
     T::same(['main'], array_column($structured['sections'], 'id'), 'structured: ein Abschnitt ohne Trenner');
     T::same(['content.pages', 'content.posts', 'content.comments', 'content.knowledgebase', 'content.forms', 'content.form-submissions', 'content.newsletter', 'content.trash'],
@@ -2236,7 +2239,7 @@ T::run('Teil 6: Installer-Schritt „Admin-Layout“ (eigener Prozess, ohne Auto
 
         return $previews;
     };
-    T::same($mirror(array_fill_keys($moduleSlugs, true)), $data['on'], 'Skizzen (alle Module aktiv) = echter MenuBuilder mit allen Rechten und vorhandenen Seitendateien');
+    T::same($mirror($data['modules']), $data['on'], 'Skizzen (Standard-Modulzustände des Installers, community aus) = echter MenuBuilder mit allen Rechten und vorhandenen Seitendateien');
     T::same($mirror(array_fill_keys($moduleSlugs, false)), $data['off'], 'Skizzen (alle Module aus) = echter MenuBuilder');
 
     $labels = static fn (array $preview): array => array_merge([], ...array_map(static fn (array $section): array => array_column($section['nodes'], 'label'), $preview['sections']));

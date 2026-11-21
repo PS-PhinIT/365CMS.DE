@@ -136,6 +136,8 @@ final class ProfileLayouts
                     'people.users', 'people.groups', 'people.roles', 'people.profile', 'people.settings',
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
+                self::group('community', 'Community', 'messages', self::communityItems()),
+                self::group('community-setup', 'Community-Verwaltung', 'adjustments', self::communitySetupItems()),
                 self::group('subscriptions', 'Abos', 'credit-card', [
                     'subscriptions.packages', 'subscriptions.orders', 'subscriptions.invoices', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
@@ -160,6 +162,8 @@ final class ProfileLayouts
                 'ai.translation' => 'Übersetzung',
                 'people.settings' => 'Einstellungen',
                 'subscriptions.settings' => 'Einstellungen',
+                'community.overview' => 'Übersicht',
+                'community.settings' => 'Einstellungen',
             ],
             'icons' => [],
             'hidden' => [],
@@ -210,6 +214,8 @@ final class ProfileLayouts
                     'people.users', 'people.groups', 'people.roles', 'people.settings', 'people.profile',
                 ]),
                 self::group('members', 'Mitgliederbereich', 'id-badge-2', self::memberItems(), LayoutValidator::DISPLAY_TILES),
+                self::group('community', 'Community', 'messages', self::communityItems()),
+                self::group('community-setup', 'Community-Verwaltung', 'adjustments', self::communitySetupItems()),
                 self::group('subscriptions', 'Abos', 'credit-card', [
                     'subscriptions.packages', 'subscriptions.orders', 'subscriptions.invoices', 'subscriptions.payments', 'subscriptions.settings',
                 ]),
@@ -227,6 +233,8 @@ final class ProfileLayouts
             'labels' => [
                 'ai.translation' => 'Übersetzung',
                 'subscriptions.settings' => 'Einstellungen',
+                'community.overview' => 'Übersicht',
+                'community.settings' => 'Einstellungen',
             ],
             'icons' => [],
             'hidden' => [],
@@ -240,6 +248,20 @@ final class ProfileLayouts
             'seo.dashboard', 'seo.analytics', 'seo.audit', 'seo.meta', 'seo.social',
             'seo.schema', 'seo.sitemap', 'seo.search-engines', 'seo.technical',
         ];
+    }
+
+    /** @return list<string> */
+    private static function communityItems(): array
+    {
+        return [
+            'community.overview', 'community.queue', 'community.reports', 'community.topics', 'community.sanctions', 'community.log',
+        ];
+    }
+
+    /** @return list<string> */
+    private static function communitySetupItems(): array
+    {
+        return ['community.structure', 'community.permissions', 'community.ranks', 'community.settings'];
     }
 
     /** @return list<string> */

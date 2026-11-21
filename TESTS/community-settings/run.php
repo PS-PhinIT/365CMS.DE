@@ -1046,7 +1046,7 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
     T::same(false, $entry['default_enabled'] ?? null, 'community ist standardmäßig aus');
     T::same(true, $entry['toggleable'] ?? null, 'community ist schaltbar');
     T::same(['content', 'Inhalte & Community', 50], [$entry['category'] ?? null, $entry['category_label'] ?? null, $entry['order'] ?? null], 'Kategorie Inhalte & Community, Reihenfolge 50');
-    T::same(['Community', [], [], [], null, null], [$entry['label'] ?? null, $entry['dependencies'] ?? null, $entry['admin_pages'] ?? null, $entry['admin_labels'] ?? null, $entry['sidebar_group'] ?? null, $entry['legacy_setting'] ?? null], 'Bezeichnung; keine Abhängigkeiten, Admin-Seiten oder Legacy-Einstellung');
+    T::same(['Community', [], ['community', 'community-structure', 'community-topics', 'community-queue', 'community-reports', 'community-sanctions', 'community-log', 'community-permissions', 'community-ranks', 'community-settings'], ['Community'], null, null], [$entry['label'] ?? null, $entry['dependencies'] ?? null, $entry['admin_pages'] ?? null, $entry['admin_labels'] ?? null, $entry['sidebar_group'] ?? null, $entry['legacy_setting'] ?? null], 'Bezeichnung; keine Abhängigkeiten oder Legacy-Einstellung, Admin-Seiten (PR #3)');
     T::check(is_string($entry['description'] ?? null) && $entry['description'] !== '', 'Beschreibung vorhanden');
     $others = array_filter($modules, static fn (array $module, string $slug): bool => $slug !== 'community' && $module['default_enabled'] === false, ARRAY_FILTER_USE_BOTH);
     T::same([], array_keys($others), 'community ist das einzige Modul mit default_enabled = false');

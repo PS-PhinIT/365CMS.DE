@@ -48,8 +48,11 @@ const CM_ROOT = __DIR__ . '/../..';
 /** Suiten aus #2a: je mindestens zehn Mutanten. */
 const CM_LEGACY_SUITES = ['community-repositories', 'community-access', 'community-content', 'community-db'];
 
-/** Suiten ohne Mutanten-Haken (`Mutant::load`) bzw. der Treiber selbst; sie stehen nie in CM_SUITES. */
-const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings'];
+/**
+ * Suiten ohne Mutanten-Haken (`Mutant::load`) bzw. der Treiber selbst; sie stehen nie in CM_SUITES.
+ * `community-admin` (PR #3) prüft Dateien unter `CMS/admin/`, die keine erlaubten Mutanten-Ziele sind (nur Oberfläche und Quelltextprüfung).
+ */
+const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin'];
 
 /**
  * Zieldateien außerhalb von `core/Services/Community/` (Vertrag DESIGN-2b §6 W0, GK2): die Core-Dateien, auf denen das Modul aufbaut
