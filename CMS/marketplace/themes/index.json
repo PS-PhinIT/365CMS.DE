@@ -1,6 +1,18 @@
 {
   "themes": [
     {
+      "slug": "cms-default",
+      "name": "Meridian CMS Default",
+      "description": "Standard-Theme für 365CMS mit Landingpage-, Blog- und Auth-Templates.",
+      "version": "1.1.0",
+      "author": "PS-easyIT",
+      "requires_cms": "4.0.0",
+      "requires_php": "8.4",
+      "is_paid": false,
+      "install_supported": false,
+      "update_url": "https://365cms.de/themes/cms-default/update.json"
+    },
+    {
       "slug": "academy365",
       "name": "Academy365",
       "type": "theme",
@@ -337,18 +349,6 @@
       "min_php": "8.4.1",
       "tested_up_to": "4.2.0",
       "released": "2026-11-18"
-    },
-    {
-      "slug": "cms-default",
-      "name": "Meridian CMS Default",
-      "description": "Standard-Theme für 365CMS mit Landingpage-, Blog- und Auth-Templates.",
-      "version": "1.1.0",
-      "author": "PS-easyIT",
-      "requires_cms": "4.0.0",
-      "requires_php": "8.4",
-      "is_paid": false,
-      "install_supported": false,
-      "update_url": "https://365cms.de/themes/cms-default/update.json"
     }
   ]
 }

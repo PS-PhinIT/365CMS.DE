@@ -1,6 +1,68 @@
 {
   "plugins": [
     {
+      "slug": "cms-importer",
+      "name": "CMS WordPress Importer",
+      "description": "Importiert WordPress-WXR-, SEO-, Kommentar- und Medien-Daten nach 365CMS.",
+      "version": "3.0.3",
+      "author": "PS-easyIT",
+      "requires_cms": "3.0.0",
+      "requires_php": "8.1",
+      "is_paid": false,
+      "install_supported": false,
+      "update_url": "https://365cms.de/plugins/cms-importer/update.json"
+    },
+    {
+      "slug": "cms-feed",
+      "name": "CMS Feed",
+      "description": "RSS-/Atom-Feeds und Feed-Aggregator. Seit 365CMS 4.0.0 Teil des Cores (Einstellungen › Feeds).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-downloads",
+      "name": "CMS Downloads",
+      "description": "Download-Verwaltung mit Versionen, Zugriffsregeln und Statistik. Seit 365CMS 4.0.0 Teil des Cores (Medien › Downloads).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-contact",
+      "name": "CMS Contact",
+      "description": "Kontakt- und Formularbaukasten mit Eingangsfach. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Formulare).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-knowledgebase",
+      "name": "CMS Knowledgebase",
+      "description": "Wissensdatenbank und Glossar mit Auto-Verlinkung von Fachbegriffen und Tooltips. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Knowledgebase).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
+      "slug": "cms-newsletter",
+      "name": "CMS Newsletter",
+      "description": "Newsletter mit Double-Opt-In, Abonnenten, Vorlagen und Kampagnenversand. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Newsletter).",
+      "author": "365 Network",
+      "requires_cms": "3.4.00",
+      "is_paid": false,
+      "install_supported": false,
+      "integrated_in_core": "4.0.0"
+    },
+    {
       "slug": "cms-365neteventsandspeaker",
       "name": "365CMS | Events & Speaker",
       "type": "plugin",
@@ -155,68 +217,6 @@
       "min_php": "8.4.1",
       "tested_up_to": "4.1.8",
       "released": "2026-11-17"
-    },
-    {
-      "slug": "cms-importer",
-      "name": "CMS WordPress Importer",
-      "description": "Importiert WordPress-WXR-, SEO-, Kommentar- und Medien-Daten nach 365CMS.",
-      "version": "3.0.3",
-      "author": "PS-easyIT",
-      "requires_cms": "3.0.0",
-      "requires_php": "8.1",
-      "is_paid": false,
-      "install_supported": false,
-      "update_url": "https://365cms.de/plugins/cms-importer/update.json"
-    },
-    {
-      "slug": "cms-feed",
-      "name": "CMS Feed",
-      "description": "RSS-/Atom-Feeds und Feed-Aggregator. Seit 365CMS 4.0.0 Teil des Cores (Einstellungen › Feeds).",
-      "author": "365 Network",
-      "requires_cms": "3.4.00",
-      "is_paid": false,
-      "install_supported": false,
-      "integrated_in_core": "4.0.0"
-    },
-    {
-      "slug": "cms-downloads",
-      "name": "CMS Downloads",
-      "description": "Download-Verwaltung mit Versionen, Zugriffsregeln und Statistik. Seit 365CMS 4.0.0 Teil des Cores (Medien › Downloads).",
-      "author": "365 Network",
-      "requires_cms": "3.4.00",
-      "is_paid": false,
-      "install_supported": false,
-      "integrated_in_core": "4.0.0"
-    },
-    {
-      "slug": "cms-contact",
-      "name": "CMS Contact",
-      "description": "Kontakt- und Formularbaukasten mit Eingangsfach. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Formulare).",
-      "author": "365 Network",
-      "requires_cms": "3.4.00",
-      "is_paid": false,
-      "install_supported": false,
-      "integrated_in_core": "4.0.0"
-    },
-    {
-      "slug": "cms-knowledgebase",
-      "name": "CMS Knowledgebase",
-      "description": "Wissensdatenbank und Glossar mit Auto-Verlinkung von Fachbegriffen und Tooltips. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Knowledgebase).",
-      "author": "365 Network",
-      "requires_cms": "3.4.00",
-      "is_paid": false,
-      "install_supported": false,
-      "integrated_in_core": "4.0.0"
-    },
-    {
-      "slug": "cms-newsletter",
-      "name": "CMS Newsletter",
-      "description": "Newsletter mit Double-Opt-In, Abonnenten, Vorlagen und Kampagnenversand. Seit 365CMS 4.0.0 Teil des Cores (Inhalte › Newsletter).",
-      "author": "365 Network",
-      "requires_cms": "3.4.00",
-      "is_paid": false,
-      "install_supported": false,
-      "integrated_in_core": "4.0.0"
     }
   ]
 }
