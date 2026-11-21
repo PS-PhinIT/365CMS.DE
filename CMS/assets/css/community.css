@@ -30,3 +30,21 @@
 .cms-community-pager { display: flex; gap: 1rem; align-items: center; justify-content: center; margin: 1.5rem 0; }
 .cms-community-button { display: inline-block; padding: .5rem 1rem; border: 1px solid var(--cc-accent); border-radius: .375rem; text-decoration: none; }
 .cms-community .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cms-community-flash { padding: .5rem 1rem; border: 1px solid var(--cc-accent); border-radius: .375rem; }
+.cms-community-alert { padding: .5rem 1rem; border: 1px solid #b42318; border-radius: .375rem; color: #b42318; }
+.cms-community-form label { display: block; font-weight: 600; margin-bottom: .25rem; }
+.cms-community-form label input[type="checkbox"] { display: inline; }
+.cms-community-input { width: 100%; box-sizing: border-box; padding: .5rem; border: 1px solid var(--cc-border); border-radius: .375rem; background: var(--cc-bg); color: inherit; font: inherit; }
+.cms-community-form__actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.cms-community-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 0 0 1rem; }
+button.cms-community-button { background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.cms-community-post__actions { display: flex; gap: 1rem; margin-top: .5rem; font-size: .9rem; }
+.cms-community-reactions { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .5rem; }
+.cms-community-reactions button, .cms-community-toolbar button { padding: .125rem .5rem; border: 1px solid var(--cc-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.cms-community-reactions button[aria-pressed="true"], .cms-community-toolbar button[aria-pressed="true"] { border-color: var(--cc-accent); background: color-mix(in srgb, var(--cc-accent) 15%, transparent); }
+.cms-community-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; }
+.cms-community-dialog { max-width: 28rem; width: calc(100% - 2rem); border: 1px solid var(--cc-border); border-radius: .5rem; background: var(--cc-bg); color: inherit; }
+.cms-community-dialog label { display: block; margin-bottom: .75rem; font-weight: 600; }
+.cms-community-dialog menu { display: flex; gap: .75rem; justify-content: flex-end; padding: 0; margin: 0; }
+.cms-community-preview { margin-top: 1rem; padding: .75rem 1rem; border: 1px dashed var(--cc-border); border-radius: .5rem; }
+.cms-community-link { padding: 0; border: 0; background: none; color: var(--cc-accent); font: inherit; cursor: pointer; text-decoration: underline; }
