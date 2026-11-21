@@ -1103,7 +1103,8 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
     CommunityModule::setGate(static fn (): bool => true);
     CommunityHooks::register();
     T::check(Hooks::hasAction('user_role_changed') && Hooks::hasAction('user_email_verified'), 'Modul an: Listener für user_role_changed und user_email_verified');
-    T::check(!Hooks::hasAction('cms_cron_daily') && !Hooks::hasAction('register_routes') && !Hooks::hasAction('dsgvo_export_data'), 'in #2a keine Routen-, Cron- oder DSGVO-Hooks');
+    T::check(!Hooks::hasAction('cms_cron_daily') && !Hooks::hasAction('dsgvo_export_data'), 'noch keine Cron- oder DSGVO-Hooks (PR #5)');
+    T::check(Hooks::hasAction('register_routes'), 'Modul an: Leseseiten melden ihre Routen an (PR #4)');
 
     $hooksSource = csRead(ABSPATH . 'core/Services/FeatureHooks/CommunityHooks.php');
     T::check(
@@ -1111,7 +1112,7 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
         'Quelltext: Modul-Gate steht vor den Listenern für user_role_changed und user_email_verified (die Rollen-Listener cms_role_* laufen bewusst immer, PR #3)'
     );
     T::check(str_contains($hooksSource, 'class_exists(CommunityAccess::class)') && str_contains($hooksSource, 'CommunityAccess::instance()->forgetUser($userId)'), 'Quelltext: forgetUser() nur bei vorhandener Klasse');
-    T::same(4, substr_count($hooksSource, 'Hooks::addAction('), 'Quelltext: vier Listener (zwei hinter dem Modul-Gate, cms_role_renamed und cms_role_deleted davor)');
+    T::same(5, substr_count($hooksSource, 'Hooks::addAction('), 'Quelltext: fünf Listener (drei hinter dem Modul-Gate: Routen, user_role_changed, user_email_verified; cms_role_renamed und cms_role_deleted davor)');
     T::check(!preg_match('/Database|get_var|get_row|get_results|execute\(/', $hooksSource), 'keine Datenbankzugriffe zur Registrierungszeit');
 
     if (!$real) {

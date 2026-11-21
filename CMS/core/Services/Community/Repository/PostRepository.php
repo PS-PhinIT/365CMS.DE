@@ -460,6 +460,30 @@ final class PostRepository extends AbstractRepository
         );
     }
 
+    /** Größte Position, die `idAtPosition()` auflöst (Tiefe der Seitenadresse `seite-N` eines Themas). */
+    public const POSITION_MAX = 5000;
+
+    /**
+     * ID des `$position`-ten veröffentlichten Beitrags eines Themas (1 = Themenstart), `null` hinter dem Ende oder über POSITION_MAX.
+     * Für die Seitenadresse `seite-N`: liest höchstens POSITION_MAX IDs eines einzigen Themas aus dem Index (`topic_id`, `status`, `id`)
+     * ohne Zeilenversatz; die Kosten wachsen nur mit der Seitentiefe dieses Themas, nicht mit der Größe des Forums.
+     */
+    public function idAtPosition(int $topicId, int $position): ?int
+    {
+        if ($position < 1 || $position > self::POSITION_MAX) {
+            return null;
+        }
+        $rows = $this->fetchAll(
+            'SELECT id FROM ' . $this->table(self::TABLE) . " WHERE topic_id = ? AND status = 'published' ORDER BY id ASC LIMIT ?",
+            [$topicId, $position]
+        );
+        if (count($rows) < $position) {
+            return null;
+        }
+
+        return (int) $rows[$position - 1]['id'];
+    }
+
     /**
      * Legt eine Revision an (die ersetzte Fassung) und liefert ihre ID.
      *

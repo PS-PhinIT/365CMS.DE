@@ -35,6 +35,40 @@ final class Urls
         'preview' => ['de' => 'vorschau', 'en' => 'preview'],
     ];
 
+    /**
+     * Routenmuster je Sprache für den Router (`:name` = ein Pfadsegment). Reihenfolge = Reihenfolge der Eintragung: feste Segmente
+     * (`thema`, `beitrag`) vor dem Forum-Slug, sonst verdeckte `/forum/:slug/:page` die Themenadressen.
+     *
+     * @return array<string, string> Name => Muster
+     */
+    public static function routePatterns(string $locale = 'de'): array
+    {
+        $base = self::basePath();
+        $topic = self::segment('topic', $locale);
+        $post = self::segment('post', $locale);
+        $path = static fn (string $suffix): string => FeedI18n::path($base . $suffix, $locale);
+
+        return [
+            'topic' => $path('/' . $topic . '/:ref'),
+            'topic_page' => $path('/' . $topic . '/:ref/:page'),
+            'post' => $path('/' . $post . '/:id'),
+            'index' => $path(''),
+            'forum' => $path('/:slug'),
+            'forum_page' => $path('/:slug/:page'),
+        ];
+    }
+
+    /** Seitennummer aus `seite-3`/`page-3` (nur die Segmente der Sprache); sonst `null`. */
+    public static function parsePageSegment(string $segment, string $locale = 'de'): ?int
+    {
+        $prefix = self::segment('page', $locale) . '-';
+        if (!str_starts_with($segment, $prefix) || preg_match('/^[1-9]\d{0,5}$/D', substr($segment, strlen($prefix))) !== 1) {
+            return null;
+        }
+
+        return (int) substr($segment, strlen($prefix));
+    }
+
     /** Pfad des Abmeldelinks (ohne Sprachpräfix, außerhalb von `base_path`). */
     private const UNSUBSCRIBE_PATH = '/cms-community-unsubscribe/';
 

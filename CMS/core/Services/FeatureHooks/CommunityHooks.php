@@ -19,6 +19,7 @@ use CMS\Hooks;
 use CMS\Logger;
 use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
+use CMS\Services\Community\Http\PublicController;
 use CMS\Services\Community\Repository\ForumRepository;
 use CMS\Services\Community\Repository\PostRepository;
 use CMS\Services\Community\Service\CommunityAccess;
@@ -56,6 +57,13 @@ final class CommunityHooks
             BadgeProvider::COMMUNITY_REPORTS,
             static fn (): int => self::currentUserId() > 0 ? ReportService::instance()->countOpen(self::currentUserId()) : 0
         );
+
+        // Öffentliche Routen (vor den Beitragsmustern des Routers registrieren).
+        Hooks::addAction('register_routes', static function (mixed $router = null): void {
+            if (is_object($router)) {
+                self::guard(static fn () => PublicController::instance()->registerRoutes($router));
+            }
+        }, 20);
 
         // Hinweis im Admin: Warteschlange wartet länger als 24 Stunden.
         AdminNoticeService::registerCheck('Community-Warteschlange', static fn (): ?array => self::queueNotice());
