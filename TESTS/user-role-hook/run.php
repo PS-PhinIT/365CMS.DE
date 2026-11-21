@@ -6,7 +6,8 @@
  * `UserService::announceRoleChange()` (nur bei echtem Wechsel, Vergleich ohne Groß-/Kleinschreibung, Ausnahmeschutz).
  *
  * Das Verhalten läuft wirklich: gegen eine SQLite-Attrappe im Speicher (immer) und gegen eine echte MariaDB
- * (mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER; Datenbank `pr2a_<pid>_urh`, wird am Ende gelöscht), dort zusätzlich der
+ * (mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER; Datenbank `pr2a_<pid>_urh`, mit CMS_TEST_DB_PREFIX `<präfix><pid>_urh`, wird am Ende
+ * gelöscht), dort zusätzlich der
  * Nachweis, dass `SELECT … FOR UPDATE` die Konten bis zum Commit festhält. Geprüft werden Randfälle der Karte
  * (unverändert/Groß-Kleinschreibung, Fehler vor dem Schreiben, Rollback, Rolle ohne Konten, werfender Verbraucher).
  * Quelltext-Prüfungen (Auslösestellen, Reihenfolge, Doku, Schreibstellen auf `users.role`) laufen mit Gegenprobe auf
@@ -275,14 +276,18 @@ function urhMariaConfigured(): bool
     return (string) getenv('CMS_TEST_DB_HOST') !== '' && (string) getenv('CMS_TEST_DB_USER') !== '' && extension_loaded('pdo_mysql');
 }
 
-/** Legt (einmal je Prozess) die Datenbank `pr2a_<pid>_urh` mit den echten Tabellen `users`, `user_meta`, `activity_log` an und löscht sie am Ende. */
+/**
+ * Legt (einmal je Prozess) die Datenbank `pr2a_<pid>_urh` (Präfix aus `CMS_TEST_DB_PREFIX`, `TESTS/lib/TestDatabasePrefix.php`) mit den
+ * echten Tabellen `users`, `user_meta`, `activity_log` an und löscht sie am Ende.
+ */
 function urhMariaDatabase(): UrhMariaDatabase
 {
     static $db = null;
     if ($db !== null) {
         return $db;
     }
-    $name = 'pr2a_' . getmypid() . '_urh';
+    require_once dirname(__DIR__) . '/lib/TestDatabasePrefix.php';
+    $name = TestDatabasePrefix::resolve('pr2a_') . getmypid() . '_urh';
     $admin = urhMariaConnect();
     $admin->exec("DROP DATABASE IF EXISTS `{$name}`");
     $admin->exec("CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");

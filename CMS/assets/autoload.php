@@ -117,6 +117,24 @@ spl_autoload_register(static function (string $class): void {
         return;
     }
 
+    // Gebündelte Einzeldateien: gescopte Namensräume (CMS\Vendor\…), eine Datei je Bündel, geladen beim ersten Bedarf.
+    // Erzeugt von .github/deps/build-commonmark-bundle.php; Prüfsumme in DOC/assets/commonmark/README.md.
+    static $bundles = [
+        'CMS\\Vendor\\League\\CommonMark\\'     => 'commonmark/commonmark.php',
+        'CMS\\Vendor\\League\\Config\\'         => 'commonmark/commonmark.php',
+        'CMS\\Vendor\\Dflydev\\DotAccessData\\' => 'commonmark/commonmark.php',
+        'CMS\\Vendor\\Nette\\'                  => 'commonmark/commonmark.php',
+    ];
+    foreach ($bundles as $prefix => $bundle) {
+        if (strncmp($prefix, $class, strlen($prefix)) === 0) {
+            $file = CMS_VENDOR_PATH . str_replace('/', DIRECTORY_SEPARATOR, $bundle);
+            if (is_file($file)) {
+                require_once $file;
+            }
+            return;
+        }
+    }
+
     foreach (cms_vendor_psr4_map() as $prefix => $dirs) {
         if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
             continue;

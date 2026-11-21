@@ -37,7 +37,7 @@ class SchemaManager
      * über getSchemaQueries() an, Updates über MigrationManager (Schritt v26) und zusätzlich die Laufzeitprüfung
      * ensureFeatureSchema() (DOC/workflow/specs/v4.1/SCHEMA-v26.md §1).
      *
-     * v27 (Release 4.2.0, Entwicklungsstand): die 27 Tabellen FEATURE_TABLES_V27 des Community-Moduls und der
+     * v27 (Release 4.2.0, Entwicklungsstand): die 28 Tabellen FEATURE_TABLES_V27 des Community-Moduls und der
      * einmalige Update-Schritt `capabilities_v27` (Rechte `community.*`, Rolle `moderator`); gleicher Aufbau wie v26
      * (DOC/workflow/specs/community/DATA-MODEL.md, HANDOFF-PR2-PR5.md).
      */
@@ -83,6 +83,8 @@ class SchemaManager
     /**
      * v27 (Release 4.2.0): Tabellen des Community-Moduls (Präfix community_), in der Reihenfolge von DATA-MODEL.md §2.
      * Neuinstallation, Update (MigrationManager) und Laufzeitprüfung nutzen dieselbe Liste und dieselben Definitionen.
+     * `community_notify_queue` kam nach PR #1 hinzu (PR #2b, Zustellaufträge der Benachrichtigungen; HANDOFF §2 Nr. 6): Bestehende
+     * v27-Installationen erhalten sie über ensureFeatureSchema() (`CREATE TABLE IF NOT EXISTS`), ohne neue Marke.
      *
      * @var list<string>
      */
@@ -93,7 +95,7 @@ class SchemaManager
         'community_polls', 'community_poll_options', 'community_poll_votes', 'community_ignores',
         'community_user_stats', 'community_ranks', 'community_badges', 'community_user_badges',
         'community_reports', 'community_warnings', 'community_bans', 'community_moderation_log',
-        'community_stats_daily', 'community_redirects',
+        'community_stats_daily', 'community_redirects', 'community_notify_queue',
     ];
 
     /**
@@ -2202,6 +2204,26 @@ class SchemaManager
                 PRIMARY KEY (source_type, source_key),
                 KEY idx_community_redirects_target (target_type, target_id)
             ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: Weiterleitungen'",
+
+            // v27 (PR #2b): offene Zustellaufträge der Benachrichtigungen; erledigte Aufträge werden gelöscht. Lease mit Token
+            // (lease_token, locked_until), Cursor je Phase (phase, cursor_user_id). Index auf kind für die Stufen der Zustellung.
+            'community_notify_queue' => "CREATE TABLE IF NOT EXISTS {$p}community_notify_queue (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                kind VARCHAR(12) NOT NULL DEFAULT '' COMMENT 'reply|new_topic|reaction|solution|moderation|report',
+                topic_id INT UNSIGNED NOT NULL DEFAULT 0,
+                post_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'bei report die Meldungs-ID',
+                actor_id INT UNSIGNED NOT NULL DEFAULT 0,
+                detail VARCHAR(20) NULL COMMENT 'Reaktion, approved|rejected|hidden|moved bzw. Meldestatus',
+                phase TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                cursor_user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                steps INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'steigt bei jedem Schreibzugriff (rowCount verlässlich)',
+                lease_token CHAR(32) NULL,
+                locked_until DATETIME NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_community_notify_queue_kind (kind)
+            ) ENGINE=InnoDB DEFAULT CHARSET={$c} COMMENT='Community: offene Zustellaufträge (Benachrichtigungen)'",
         ];
     }
 

@@ -97,7 +97,8 @@ final class I18n
         self::$timezone = $timezone;
     }
 
-    private static function siteLocale(): string
+    /** Sprache der Website (`de` oder `en`), einmal je Prozess gelesen. */
+    public static function siteLocale(): string
     {
         if (self::$siteLocale !== null) {
             return self::$siteLocale;
@@ -115,7 +116,7 @@ final class I18n
     }
 
     /** Sprache der aktuellen Anfrage, sonst Websitesprache. */
-    private static function requestLocale(): string
+    public static function requestLocale(): string
     {
         if (self::$requestLocale !== null) {
             return self::$requestLocale;

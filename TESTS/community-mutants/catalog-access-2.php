@@ -58,9 +58,9 @@ return [
     ],
     'announce-not-global-only' => [
         'core/Services/Community/Service/CommunityAccess.php',
-        'if (!$moderating || ($action === \'topic.announce\' && !$global)) {',
+        'if (!$moderating || (in_array($action, self::GLOBAL_ONLY, true) && !$global)) {',
         'if (!$moderating) {',
-        'community-access', false, 'topic.announce nur für globale Moderation, nicht für Forum-Moderatoren', false, [],
+        'community-access', false, 'topic.announce und topic.unannounce nur für globale Moderation, nicht für Forum-Moderatoren', false, [],
     ],
     'deleted-topic-visible-to-author' => [
         'core/Services/Community/Service/CommunityAccess.php',
@@ -190,8 +190,8 @@ return [
     ],
     'limit-hourly-topics-dropped' => [
         'core/Services/Community/Service/CommunityAccess.php',
-        'if ($creating && $limits[\'topics_per_hour\'] > 0 &&',
-        'if (false && $limits[\'topics_per_hour\'] > 0 &&',
+        'if ($creating && $limits[\'topics_per_hour\'] !== Settings::UNLIMITED &&',
+        'if (false && $limits[\'topics_per_hour\'] !== Settings::UNLIMITED &&',
         'community-access', false, 'Themen je Stunde der Vertrauensstufe', false, [],
     ],
     'ban-future-start' => [
@@ -208,8 +208,8 @@ return [
     ],
     'readable-skips-hidden-chain' => [
         'core/Services/Community/Service/CommunityAccess.php',
-        '$visible = ($matrix[\'read\'] && !$this->hiddenInChain($forum)) ||',
-        '$visible = $matrix[\'read\'] ||',
+        '$visible = $matrix[\'read\'] && !$this->hiddenInChain($forum);',
+        '$visible = $matrix[\'read\'];',
         'community-access', false, 'die Mengen-API beachtet verborgene Elternforen', false, [],
     ],
     'readable-ignores-guest-gate' => [
@@ -446,17 +446,13 @@ return [
         '$recent = $this->posts->lastOfUser($uid, gmdate(\'Y-m-d H:i:s\', $now - $topicSlow), null, null, self::QUOTA_POST_STATUSES);',
         'community-access', false, 'der Langsame Modus eines Themas gilt nur für Beiträge in diesem Thema', false, [],
     ],
+    // PR #2b (J1): Die Mengen-API heißt readableAmong(). `readable-assumes-rows` geht in `access-bulk-has-rows` (catalog-2b-access.php) auf;
+    // die Gegenrichtung bleibt hier mit dem neuen Suchtext.
     'readable-assumes-no-rows' => [
         'core/Services/Community/Service/CommunityAccess.php',
-        '$anyRows = $this->forums->hasPermissionRows(array_values($chainIds));',
-        '$anyRows = false;',
-        'community-access', false, 'Mengen-API: gibt es in den Ketten Rechte-Zeilen, gilt die Whitelist statt der Standards (B31)', false, [],
-    ],
-    'readable-assumes-rows' => [
-        'core/Services/Community/Service/CommunityAccess.php',
-        '$anyRows = $this->forums->hasPermissionRows(array_values($chainIds));',
-        '$anyRows = true;',
-        'community-access', false, 'Mengen-API: ohne Rechte-Zeilen in allen Ketten genügt eine Abfrage für alle Foren (B31)', false, [],
+        '$has = array_intersect($chain, $withRows) !== [];',
+        '$has = false;',
+        'community-access', false, 'Mengen-API: gibt es in der Kette Rechte-Zeilen, gilt die Whitelist statt der Standards (B31)', false, [],
     ],
     'readable-global-moderator-asks-matrix' => [
         'core/Services/Community/Service/CommunityAccess.php',

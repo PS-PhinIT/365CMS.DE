@@ -12,8 +12,8 @@ Hand-over briefing after **PR #1** (#176) and **PR #2a** (#178) of the 4.2.0 Com
 
 | Bereich | Stand | Wo |
 |---|---|---|
-| Schema v27 | 27 Tabellen `community_*` und zwei Spalten an der Core-Tabelle `notifications` (`group_key`, `event_count`); `SCHEMA_VERSION = 'v27'` in `SchemaManager` und `MigrationManager`, Liste `SchemaManager::FEATURE_TABLES_V27`; Neuinstallation = Update (von v25 und v26) = Laufzeitprüfung (Typ, NULL, Default und Indizes, bei `notifications` auch Kommentar und Kollation; beim Update hängen neue Spalten an Bestandstabellen am Ende an, §2 Nr. 7) | `CMS/core/SchemaManager.php`, `CMS/core/MigrationManager.php` |
-| Datenbank-Update | `DatabaseUpdateRunner::missingSchemaElements()` prüft die 27 Tabellen mit (`table:community_…`), die Spalten an `notifications` samt Kommentar und Kollation (`REQUIRED_COLUMN_DEFINITIONS`), die Indizes aus `REQUIRED_INDEXES` (`index:…`, §2 Nr. 9) und den Marker `capabilities_v27` (`option:capabilities_v27`) | `CMS/core/DatabaseUpdateRunner.php` |
+| Schema v27 | 27 Tabellen `community_*` (PR #2b ergänzt `community_notify_queue`: 28, 118 insgesamt, 65 Nicht-Primär-Indizes und 283 Spalten in den Community-Tabellen) und zwei Spalten an der Core-Tabelle `notifications` (`group_key`, `event_count`); `SCHEMA_VERSION = 'v27'` in `SchemaManager` und `MigrationManager`, Liste `SchemaManager::FEATURE_TABLES_V27`; Neuinstallation = Update (von v25 und v26) = Laufzeitprüfung (Typ, NULL, Default und Indizes, bei `notifications` auch Kommentar und Kollation; beim Update hängen neue Spalten an Bestandstabellen am Ende an, §2 Nr. 7) | `CMS/core/SchemaManager.php`, `CMS/core/MigrationManager.php` |
+| Datenbank-Update | `DatabaseUpdateRunner::missingSchemaElements()` prüft die Tabellen aus `FEATURE_TABLES_V27` (27, seit PR #2b 28) mit (`table:community_…`), die Spalten an `notifications` samt Kommentar und Kollation (`REQUIRED_COLUMN_DEFINITIONS`), die Indizes aus `REQUIRED_INDEXES` (`index:…`, §2 Nr. 9) und den Marker `capabilities_v27` (`option:capabilities_v27`) | `CMS/core/DatabaseUpdateRunner.php` |
 | Capabilities | sechs `community.*`, Standardrechte, Rolle `moderator` | `CMS/core/Services/Community/Support/CommunityCapabilities.php`, `CMS/includes/functions/roles.php`, `CMS/admin/modules/users/RolesModule.php`, `CMS/core/Services/UserService.php` |
 | Update-Schritt | `capabilities_v27`: einmalig, Marker `capabilities_v27` in `settings`, überschreibt nie | `CommunityCapabilities::migrate()`, aufgerufen von `MigrationManager::run()` und `SchemaManager::ensureFeatureSchema()` |
 | Tests | `TESTS/schema-v27` (ohne Datenbank), `TESTS/schema-upgrade` (optional, echte MariaDB/MySQL: Neuinstallation und Updates von 4.0.0/v25 und 4.1.8/v26 ergeben dieselbe Struktur, Rechte-Schritt inklusive) | `TESTS/` |
@@ -28,7 +28,7 @@ PR #2 ist auf Wunsch des Auftraggebers in zwei Pull Requests geteilt: **#2a** (F
 | Bereich | Stand | Wo (`CMS/core/Services/Community/`, sonst angegeben) |
 |---|---|---|
 | Modul | Eintrag `community` in `CoreModuleService::MODULES` (erstes Modul mit `default_enabled = false`), `FeatureHooks\CommunityHooks` (fail-closed Modul-Gate, Listener `user_role_changed`/`user_email_verified` leeren den Rechte-Cache), Eintrag in `FeatureHooks\Registry` | `CMS/core/Services/CoreModuleService.php`, `CMS/core/Services/FeatureHooks/` |
-| Support | `Settings` (21 Einstellungen, Gruppe `community`, flache snake_case-Schlüssel, jede mit Leser und Wirkungstest), `Slugger`, `Urls`, `I18n`, `Events` (Hook-Namen, `fire()` nach Commit, `applyFilter()`), `CommunityModule`, `Codes` (alle Ablehnungsgründe und Fehlercodes), `Cursor`, `Page`, `Transaction` | `Support/` |
+| Support | `Settings` (21 Einstellungen, PR #2b: 33, Gruppe `community`, flache snake_case-Schlüssel, jede mit Leser und Wirkungstest), `Slugger`, `Urls`, `I18n`, `Events` (Hook-Namen, `fire()` nach Commit, `applyFilter()`), `CommunityModule`, `Codes` (alle Ablehnungsgründe und Fehlercodes), `Cursor`, `Page`, `Transaction` | `Support/` |
 | Repositories | `CategoryRepository`, `ForumRepository` (Rechte-Zeilen, Moderatoren, Vererbungskette), `TopicRepository` (Keyset), `PostRepository` (Verlauf), `ReadStateRepository` (inkl. Foren-Marken), `MemberRepository`, `BanRepository` (nur lesend), `UserStatsRepository` | `Repository/` |
 | Rechte | `CommunityAccess::can()` (neun Schritte laut PERMISSIONS-MODERATION §4, im Code zusätzlich Schritt 0 „Aktion bekannt“; Freigabepfade siehe §2a Nr. 5; `AccessDecision` mit `initialStatus`/`view`), `filterReadable()`, `readableForumIds()`, `limitsFor()`, `forgetUser()`; `BasicTrustPolicy` (Vertrauensstufen P1) | `Service/` |
 | Dienste | `TopicService` (anlegen, löschen, Liste), `PostService` (antworten, bearbeiten, löschen, Liste, Position/Seite), `QuoteService`, `ReadStateService` | `Service/` |
@@ -89,7 +89,7 @@ PR #2 ist auf Wunsch des Auftraggebers in zwei Pull Requests geteilt: **#2a** (F
 
 ### 3. Schema v27
 
-27 Tabellen mit Präfix `{prefix}community_` (Standard `cms_community_…`); Engine InnoDB, Kollation `utf8mb4_unicode_ci`. Einstellungen liegen in `settings` (Gruppe `community`), nicht in einer Tabelle. Die Spalten- und Indexlisten wurden aus einer echten MariaDB-Installation erzeugt; `TESTS/schema-v27` vergleicht sie mit den Definitionen. Die Wertebereiche der Statusfelder stehen im Text je Tabelle (keine Datenbank-ENUMs, wie `posts.status` seit v26).
+28 Tabellen mit Präfix `{prefix}community_` (Standard `cms_community_…`; 27 aus PR #1, dazu `community_notify_queue` aus PR #2b, Block „Betrieb“); Engine InnoDB, Kollation `utf8mb4_unicode_ci`. Einstellungen liegen in `settings` (Gruppe `community`), nicht in einer Tabelle. Die Spalten- und Indexlisten wurden aus einer echten MariaDB-Installation erzeugt; `TESTS/schema-v27` vergleicht sie mit den Definitionen. Die Wertebereiche der Statusfelder stehen im Text je Tabelle (keine Datenbank-ENUMs, wie `posts.status` seit v26).
 
 Pflege der Zähler (DATA-MODEL §4): `forums.topic_count/post_count/last_*` und `topics.reply_count/last_*` ändern die Dienste in derselben Transaktion wie den Beitrag (`version++`); `topics.view_count` wird gepuffert (Cache, Cron alle 5 Minuten); `community_user_stats` pflegen Dienst und nächtlicher Abgleich; `poll_options.vote_count` und `polls.voter_count` gehören in die Transaktion der Stimme. Reparatur: Batch-Job „Community-Zähler neu berechnen“ (`BatchJobService`).
 
@@ -734,6 +734,32 @@ Weiterleitungen nach Zusammenführen oder Umbenennen: `source_type` `topic` oder
 |---|---|---|---|
 | PRIMARY | Primärschlüssel | `source_type`, `source_key` |  |
 | `idx_community_redirects_target` | Index | `target_type`, `target_id` | Weiterleitungen eines Ziels beim Löschen aufräumen |
+
+#### `community_notify_queue`
+
+Offene Zustellaufträge der Benachrichtigungen (PR #2b, einzige Schemaänderung nach PR #1; Vertrag DESIGN-2b §3.9, §4.5). Ein Auftrag je Ereignis, angelegt von den Listenern nach dem Commit des Auslösers, zugestellt im Cron (`NotificationDispatcher::runQueue()`); erledigte Aufträge werden gelöscht, Aufträge älter als 48 Stunden verfallen. `kind`: `reply` · `new_topic` · `reaction` · `solution` · `moderation` · `report`. `post_id` trägt bei `report` die Meldungs-ID. `detail`: Reaktion, `approved` · `rejected` · `hidden` · `moved` bzw. der Meldestatus. `phase` und `cursor_user_id` sind der Cursor des Fan-outs (genau einmal je Auftrag und Empfänger), `lease_token` und `locked_until` die Lease eines Laufs, `attempts` zählt abgebrochene Leases (über 5: gelöscht). Bestandsinstallationen v27 erhalten die Tabelle über `ensureFeatureSchema()`. PR #5: Löschfrist und DSGVO-Behandlung von `actor_id`.
+
+| Spalte | Typ | Eigenschaften |
+|---|---|---|
+| `id` | bigint(20) unsigned | NOT NULL, AUTO_INCREMENT |
+| `kind` | varchar(12) | NOT NULL, Default '' |
+| `topic_id` | int(10) unsigned | NOT NULL, Default 0 |
+| `post_id` | bigint(20) unsigned | NOT NULL, Default 0 |
+| `actor_id` | int(10) unsigned | NOT NULL, Default 0 |
+| `detail` | varchar(20) | NULL |
+| `phase` | tinyint(3) unsigned | NOT NULL, Default 0 |
+| `cursor_user_id` | int(10) unsigned | NOT NULL, Default 0 |
+| `attempts` | tinyint(3) unsigned | NOT NULL, Default 0 |
+| `steps` | int(10) unsigned | NOT NULL, Default 0 |
+| `lease_token` | char(32) | NULL |
+| `locked_until` | datetime | NULL |
+| `created_at` | datetime | NOT NULL, Default current_timestamp() |
+| `updated_at` | datetime | NOT NULL, Default current_timestamp() |
+
+| Schlüssel | Art | Spalten | Zweck |
+|---|---|---|---|
+| PRIMARY | Primärschlüssel | `id` |  |
+| `idx_community_notify_queue_kind` | Index | `kind` | Stufen der Zustellung (`dueIds()` je Stufe, innerhalb nach `id`) |
 
 ### 4. Capabilities und Rolle
 

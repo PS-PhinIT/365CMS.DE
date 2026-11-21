@@ -413,6 +413,7 @@ final class VendorRegistry
             'symfony/ai-platform' => ['url' => 'https://github.com/symfony/ai', 'label' => 'GitHub'],
             'symfony-contracts' => ['url' => 'https://github.com/symfony/contracts', 'label' => 'GitHub'],
             'htmlpurifier' => ['url' => 'https://github.com/ezyang/htmlpurifier', 'label' => 'GitHub'],
+            'league/commonmark' => ['url' => 'https://github.com/thephpleague/commonmark', 'label' => 'GitHub'],
             'tntsearch' => ['url' => 'https://github.com/teamtnt/tntsearch', 'label' => 'GitHub'],
             'carbon' => ['url' => 'https://carbon.nesbot.com/', 'label' => 'Website'],
             'symfony/translation' => ['url' => 'https://github.com/symfony/translation', 'label' => 'GitHub'],
@@ -520,6 +521,22 @@ final class VendorRegistry
                 'symbol' => 'HTMLPurifier',
                 'symbol_type' => 'class',
                 'notes' => 'HTML-Sanitizing für Rich-Content-Pfade.',
+            ],
+            [
+                'package' => 'league/commonmark',
+                'label' => 'CommonMark (Bündel)',
+                'paths' => [$file('commonmark', 'commonmark.php'), $file('commonmark', 'LICENSE')],
+                'symbol' => '\\CMS\\Vendor\\League\\CommonMark\\MarkdownConverter',
+                'symbol_type' => 'class',
+                'probe' => static function (): void {
+                    $environment = new \CMS\Vendor\League\CommonMark\Environment\Environment(['html_input' => 'escape', 'allow_unsafe_links' => false]);
+                    $environment->addExtension(new \CMS\Vendor\League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension());
+                    $html = (string) (new \CMS\Vendor\League\CommonMark\MarkdownConverter($environment))->convert('**x** <b>');
+                    if (!str_contains($html, '<strong>x</strong>') || str_contains($html, '<b>')) {
+                        throw new \RuntimeException('CommonMark-Bündel rendert nicht wie erwartet.');
+                    }
+                },
+                'notes' => 'Markdown-Renderer der Community (ContentRenderer): league/commonmark 2.10.7 mit league/config 1.2.0, dflydev/dot-access-data 3.0.3, nette/schema 1.4.0 und nette/utils 4.1.6 als eine gescopte Datei (Namensraum CMS\\Vendor\\, PHP ab 8.2). Gebaut aus .github/deps/composer.lock, Prüfsummen in DOC/assets/commonmark/README.md.',
             ],
             [
                 'package' => 'tntsearch',

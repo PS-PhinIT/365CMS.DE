@@ -4,9 +4,10 @@
  * und die gemeinsamen Hilfen für Schema und Testdaten (`CommunityTestSchema`, `CommunityFixtures`).
  *
  * Das Double ist eine echte Unterklasse von `CMS\Database` ohne Singleton. Die Tabellen entstehen aus den echten
- * CREATE-Texten von `SchemaManager::getSchemaQueries()` (27 Community-Tabellen plus `users`, `user_meta`, `user_groups`,
- * `user_group_members`, `settings` und `role_permissions`), umgeschrieben für SQLite (Muster `TESTS/invoices/run.php`
- * plus `INT UNSIGNED AUTO_INCREMENT PRIMARY KEY` und verschachtelte Klammern bei Präfixindizes).
+ * CREATE-Texten von `SchemaManager::getSchemaQueries()` (die Community-Tabellen aus `FEATURE_TABLES_V27` plus `users`,
+ * `notifications`, `user_meta`, `user_groups`, `user_group_members`, `settings`, `mail_queue` und `role_permissions`),
+ * umgeschrieben für SQLite (Muster `TESTS/invoices/run.php` plus `INT UNSIGNED AUTO_INCREMENT PRIMARY KEY`, verschachtelte
+ * Klammern bei Präfixindizes und `ENUM(…)` als `TEXT CHECK (… IN (…))`).
  *
  * Übersetzt wird an einer Stelle (`translate()`): `INSERT IGNORE` wird zu `INSERT OR IGNORE`, ` FOR UPDATE` entfällt (SQLite
  * hat keine Zeilensperren; die Parallelfälle prüft die MariaDB-Suite). Zwei Eigenschaften machen das Double strenger als
@@ -34,8 +35,11 @@ use CMS\SchemaManager;
  */
 final class CommunityTestSchema
 {
-    /** Core-Tabellen, die Community-Code liest (Reihenfolge: `user_meta` hängt an `users`). */
-    public const CORE_TABLES = ['users', 'user_meta', 'user_groups', 'user_group_members', 'settings'];
+    /**
+     * Core-Tabellen, die Community-Code liest oder schreibt (Reihenfolge: `notifications` und `user_meta` hängen an `users`;
+     * `notifications` und `mail_queue` für Hinweise und Mails ab PR #2b).
+     */
+    public const CORE_TABLES = ['users', 'notifications', 'user_meta', 'user_groups', 'user_group_members', 'settings', 'mail_queue'];
 
     /** Quelle: `cms_ensure_role_permissions_table()` in `CMS/includes/functions/roles.php` (die Suite vergleicht beide). */
     public const ROLE_PERMISSIONS = "CREATE TABLE IF NOT EXISTS {prefix}role_permissions (
@@ -68,7 +72,9 @@ final class CommunityTestSchema
 
     /**
      * Schreibt einen MySQL-CREATE-Text für SQLite um und liefert die Anweisungen (Tabelle zuerst, dann Indizes).
-     * Community-Tabellen verlieren `DEFAULT CURRENT_TIMESTAMP` bei `DATETIME NOT NULL` (siehe Kopfkommentar).
+     * Community-Tabellen verlieren `DEFAULT CURRENT_TIMESTAMP` bei `DATETIME NOT NULL` (siehe Kopfkommentar). `<spalte> ENUM('a', …)`
+     * wird `<spalte> TEXT CHECK (<spalte> IN ('a', …))`: SQLite kennt kein ENUM, der CHECK weist fremde Werte ab wie MariaDB im
+     * strikten Modus (sonst scheitert schon das Anlegen von `mail_queue`).
      *
      * @return list<string>
      */
@@ -78,6 +84,7 @@ final class CommunityTestSchema
         $sql = (string) preg_replace('/\b(\w+)\s+(?:BIG)?INT(?:\s+UNSIGNED)?\s+AUTO_INCREMENT\s+PRIMARY\s+KEY\b/i', '$1 INTEGER PRIMARY KEY AUTOINCREMENT', $sql);
         $sql = (string) preg_replace("/\\s+COMMENT\\s+'[^']*'/i", '', $sql);
         $sql = (string) preg_replace('/\s+ON\s+UPDATE\s+CURRENT_TIMESTAMP/i', '', $sql);
+        $sql = (string) preg_replace("/\\b(\\w+)\\s+ENUM\\s*\\(((?:\\s*'[^']*'\\s*,?)+)\\)/i", '$1 TEXT CHECK ($1 IN ($2))', $sql);
         $sql = (string) preg_replace('/,\s*FOREIGN\s+KEY\s*\([^)]*\)\s*REFERENCES\s+\w+\s*\([^)]*\)(?:\s+ON\s+(?:DELETE|UPDATE)\s+(?:CASCADE|SET\s+NULL|RESTRICT|NO\s+ACTION))*/i', '', $sql);
         preg_match('/CREATE TABLE IF NOT EXISTS (\w+)/', $sql, $table);
         $tableName = (string) ($table[1] ?? '');
@@ -246,22 +253,203 @@ trait CommunityFixtures
     }
 
     /**
-     * Sperre. Optionen: `user` (Pflicht), `scope` (Standard `write`), `reason`, `internal_note`, `starts_at`
-     * (Standard 2026-01-01 00:00:00), `ends_at`, `lifted_at`.
+     * Sperre. Optionen: `user` (Pflicht), `scope` (Standard `write`), `reason`, `internal_note`, `issued_by`, `starts_at`
+     * (Standard 2026-01-01 00:00:00), `ends_at`, `lifted_at`, `lifted_by`, `created_at` (Standard `starts_at`).
      *
      * @param array<string, mixed> $o
      */
     public function ban(array $o): int
     {
+        $starts = $o['starts_at'] ?? '2026-01-01 00:00:00';
+
         return $this->fixtureInsert('community_bans', [
             'user_id' => (int) ($o['user'] ?? throw new \InvalidArgumentException('Fixture ban(): `user` fehlt.')),
             'scope' => $o['scope'] ?? 'write',
             'reason' => $o['reason'] ?? 'Testsperre',
             'internal_note' => $o['internal_note'] ?? null,
-            'starts_at' => $o['starts_at'] ?? '2026-01-01 00:00:00',
+            'issued_by' => $o['issued_by'] ?? null,
+            'starts_at' => $starts,
             'ends_at' => $o['ends_at'] ?? null,
             'lifted_at' => $o['lifted_at'] ?? null,
-            'created_at' => $o['starts_at'] ?? '2026-01-01 00:00:00',
+            'lifted_by' => $o['lifted_by'] ?? null,
+            'created_at' => $o['created_at'] ?? $starts,
+        ]);
+    }
+
+    /**
+     * Kategorie. Optionen: `title`, `slug`, `title_en`, `slug_en`, `visible` (Standard true), `sort`, `created_at`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function category(array $o = []): int
+    {
+        $n = ++$this->fixtureSeq;
+        $at = (string) ($o['created_at'] ?? self::FIXTURE_TIME);
+
+        return $this->fixtureInsert('community_categories', [
+            'title' => $o['title'] ?? 'Kategorie ' . $n,
+            'title_en' => $o['title_en'] ?? null,
+            'slug' => $o['slug'] ?? 'kategorie-' . $n,
+            'slug_en' => $o['slug_en'] ?? null,
+            'sort_order' => (int) ($o['sort'] ?? 0),
+            'is_visible' => ($o['visible'] ?? true) ? 1 : 0,
+            'created_at' => $at,
+            'updated_at' => $at,
+        ]);
+    }
+
+    /**
+     * Meldung. Optionen: `target` (Pflicht), `target_type` (Standard `post`), `forum`, `reporter`, `reason` (Standard `spam`),
+     * `message`, `status` (Standard `open`), `notify` (Standard 1), `resolution_note`, `handled_by`, `handled_at`, `created_at`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function report(array $o): int
+    {
+        return $this->fixtureInsert('community_reports', [
+            'target_type' => $o['target_type'] ?? 'post',
+            'target_id' => (int) ($o['target'] ?? throw new \InvalidArgumentException('Fixture report(): `target` fehlt.')),
+            'forum_id' => $o['forum'] ?? null,
+            'reporter_id' => $o['reporter'] ?? null,
+            'reason' => $o['reason'] ?? 'spam',
+            'message' => $o['message'] ?? null,
+            'status' => $o['status'] ?? 'open',
+            'resolution_note' => $o['resolution_note'] ?? null,
+            'notify_reporter' => (int) ($o['notify'] ?? 1),
+            'handled_by' => $o['handled_by'] ?? null,
+            'handled_at' => $o['handled_at'] ?? null,
+            'created_at' => $o['created_at'] ?? self::FIXTURE_TIME,
+        ]);
+    }
+
+    /**
+     * Abo (Schlüssel aus Mitglied, Zieltyp und Ziel). Optionen: `user` und `target` (Pflicht), `target_type` (Standard `topic`),
+     * `mode` (Standard `instant`), `notified_at`, `created_at`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function subscription(array $o): void
+    {
+        $this->fixtureInsert('community_subscriptions', [
+            'user_id' => (int) ($o['user'] ?? throw new \InvalidArgumentException('Fixture subscription(): `user` fehlt.')),
+            'target_type' => $o['target_type'] ?? 'topic',
+            'target_id' => (int) ($o['target'] ?? throw new \InvalidArgumentException('Fixture subscription(): `target` fehlt.')),
+            'mode' => $o['mode'] ?? 'instant',
+            'notified_at' => $o['notified_at'] ?? null,
+            'created_at' => $o['created_at'] ?? self::FIXTURE_TIME,
+        ]);
+    }
+
+    /**
+     * Reaktion (Schlüssel aus Beitrag und Mitglied). Optionen: `post` und `user` (Pflicht), `reaction` (Standard `like`), `created_at`.
+     * Zähler (`reaction_count`, `reactions_*`) setzt die Fixture nicht.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function reaction(array $o): void
+    {
+        $this->fixtureInsert('community_reactions', [
+            'post_id' => (int) ($o['post'] ?? throw new \InvalidArgumentException('Fixture reaction(): `post` fehlt.')),
+            'user_id' => (int) ($o['user'] ?? throw new \InvalidArgumentException('Fixture reaction(): `user` fehlt.')),
+            'reaction' => $o['reaction'] ?? 'like',
+            'created_at' => $o['created_at'] ?? self::FIXTURE_TIME,
+        ]);
+    }
+
+    /**
+     * Rang. Optionen: `title`, `title_en`, `min_posts` (Standard 0, `null` = nur manuell), `color`, `icon`, `sort`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function rank(array $o = []): int
+    {
+        $n = ++$this->fixtureSeq;
+
+        return $this->fixtureInsert('community_ranks', [
+            'title' => $o['title'] ?? 'Rang ' . $n,
+            'title_en' => $o['title_en'] ?? null,
+            'min_posts' => array_key_exists('min_posts', $o) ? $o['min_posts'] : 0,
+            'color' => $o['color'] ?? null,
+            'icon' => $o['icon'] ?? null,
+            'sort_order' => (int) ($o['sort'] ?? 0),
+        ]);
+    }
+
+    /**
+     * Zustellauftrag in `community_notify_queue` (Tabelle ab PR #2b, Einheit N). Optionen: `kind` (Standard `reply`), `topic`,
+     * `post`, `actor`, `detail`, `phase`, `cursor`, `attempts`, `steps`, `lease_token`, `locked_until`, `created_at`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function queueJob(array $o = []): int
+    {
+        $at = (string) ($o['created_at'] ?? self::FIXTURE_TIME);
+
+        return $this->fixtureInsert('community_notify_queue', [
+            'kind' => $o['kind'] ?? 'reply',
+            'topic_id' => (int) ($o['topic'] ?? 0),
+            'post_id' => (int) ($o['post'] ?? 0),
+            'actor_id' => (int) ($o['actor'] ?? 0),
+            'detail' => $o['detail'] ?? null,
+            'phase' => (int) ($o['phase'] ?? 0),
+            'cursor_user_id' => (int) ($o['cursor'] ?? 0),
+            'attempts' => (int) ($o['attempts'] ?? 0),
+            'steps' => (int) ($o['steps'] ?? 0),
+            'lease_token' => $o['lease_token'] ?? null,
+            'locked_until' => $o['locked_until'] ?? null,
+            'created_at' => $at,
+            'updated_at' => $at,
+        ]);
+    }
+
+    /**
+     * Anhang. Optionen: `post` (fehlt = noch nicht zugeordnet), `user`, `token` (`upload_token`), `storage_path`, `original_name`,
+     * `mime_type`, `extension` (Standard `txt`), `file_size`, `sha256`, `width`, `height`, `preview` (bool), `downloads`, `created_at`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function attachment(array $o = []): int
+    {
+        $n = ++$this->fixtureSeq;
+        $extension = (string) ($o['extension'] ?? 'txt');
+
+        return $this->fixtureInsert('community_attachments', [
+            'post_id' => $o['post'] ?? null,
+            'user_id' => $o['user'] ?? null,
+            'storage_path' => $o['storage_path'] ?? 'community/test/' . $n . '.' . $extension,
+            'original_name' => $o['original_name'] ?? 'datei-' . $n . '.' . $extension,
+            'mime_type' => $o['mime_type'] ?? 'text/plain',
+            'extension' => $extension,
+            'file_size' => (int) ($o['file_size'] ?? 100),
+            'sha256' => $o['sha256'] ?? hash('sha256', 'anhang-' . $n),
+            'width' => $o['width'] ?? null,
+            'height' => $o['height'] ?? null,
+            'has_preview' => !empty($o['preview']) ? 1 : 0,
+            'download_count' => (int) ($o['downloads'] ?? 0),
+            'upload_token' => $o['token'] ?? null,
+            'created_at' => $o['created_at'] ?? self::FIXTURE_TIME,
+        ]);
+    }
+
+    /**
+     * Eintrag im Moderationsprotokoll. Optionen: `action` und `target` (Pflicht), `actor` (`null` = System), `target_type`
+     * (Standard `post`), `forum`, `reason`, `details` (Array → JSON wie `ModerationLogRepository`, Text unverändert), `created_at`.
+     *
+     * @param array<string, mixed> $o
+     */
+    public function moderationLog(array $o): int
+    {
+        $details = $o['details'] ?? null;
+
+        return $this->fixtureInsert('community_moderation_log', [
+            'actor_id' => $o['actor'] ?? null,
+            'action' => (string) ($o['action'] ?? throw new \InvalidArgumentException('Fixture moderationLog(): `action` fehlt.')),
+            'target_type' => $o['target_type'] ?? 'post',
+            'target_id' => (int) ($o['target'] ?? throw new \InvalidArgumentException('Fixture moderationLog(): `target` fehlt.')),
+            'forum_id' => $o['forum'] ?? null,
+            'reason' => $o['reason'] ?? null,
+            'details_json' => is_array($details) ? json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) : $details,
+            'created_at' => $o['created_at'] ?? self::FIXTURE_TIME,
         ]);
     }
 
@@ -399,6 +587,11 @@ final class CommunityTestDatabase extends Database
      *                       `$log = []` zählt der Index neu, ältere Einträge werden überschrieben: nur `txAt()` benutzen.
      */
     public array $logTx = [];
+    /**
+     * @var array<int, list<mixed>> Zum Eintrag `$log[$i]`: die gebundenen Parameter (z. B. IDs einer Sperrfolge in aufsteigender
+     *                              Reihenfolge prüfen). Gleiche Indexregel wie `$logTx`: nur über `paramsAt()` lesen.
+     */
+    public array $logParams = [];
 
     /** @param string|null $file SQLite-Datei statt Arbeitsspeicher (zwei Verbindungen auf dieselben Daten) */
     public function __construct(?string $file = null)
@@ -466,6 +659,16 @@ final class CommunityTestDatabase extends Database
         return isset($this->log[$index]) && ($this->logTx[$index] ?? false);
     }
 
+    /**
+     * Gebundene Parameter der Anweisung `$log[$index]` (`[]` für unbekannte Indizes).
+     *
+     * @return list<mixed>
+     */
+    public function paramsAt(int $index): array
+    {
+        return isset($this->log[$index]) ? ($this->logParams[$index] ?? []) : [];
+    }
+
     public function execute(string $sql, array $params = []): \PDOStatement
     {
         foreach ($this->beforeExecute as $pattern => $hook) {
@@ -475,6 +678,7 @@ final class CommunityTestDatabase extends Database
             }
         }
         $this->logTx[count($this->log)] = $this->sqlite->inTransaction();
+        $this->logParams[count($this->log)] = array_values($params);
         $this->log[] = $sql;
         foreach ($this->failOn as $pattern) {
             if (preg_match($pattern, $sql) === 1) {
@@ -553,5 +757,77 @@ final class CommunityTestDatabase extends Database
     public function tableExists(string $table): bool
     {
         return (int) $this->sqlite->query("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = " . $this->sqlite->quote($table))->fetchColumn() > 0;
+    }
+}
+
+/**
+ * Integrationsfälle über Einheitsgrenzen (Vertrag DESIGN-2b §6 J2, Fassung 3.1 GK6): die Standard-Closures `$throttle` der Dienste
+ * laufen gegen einen echten `ContentGuard` (Tabelle `THROTTLE`, Kennungen, Gäste-Eimer) als `ContentGuard::instance()`. Nur der
+ * Speicher ist ersetzt: der Limiter zählt im Speicher in der Zählweise aus §3.13 (voll ⇒ ablehnen ohne Eintrag, eintragen,
+ * nachzählen) und protokolliert jeden Aufruf. Die Wirkung gegen `login_attempts` prüft `community-db` (`race-throttle`).
+ *
+ * Aufruf: `$wiring = new CommunityWiring(); $result = $wiring->run(static fn () => $dienst->methode(…));`
+ */
+final class CommunityWiring
+{
+    /** @var list<array{0: string, 1: string, 2: int, 3: int}> Aufrufe des Limiters: Aktion (`community_…`), Kennung, Grenze, Fenster */
+    public array $calls = [];
+    public \CMS\Services\Community\Service\ContentGuard $guard;
+    /** @var array<string, int> Einträge je Aktion und Kennung */
+    private array $rows = [];
+
+    /** @param array{web: bool, ip: string, user_agent: string}|null $client Client des Guards; Standard CLI ohne IP (Gäste im Eimer `unknown`) */
+    public function __construct(?array $client = null)
+    {
+        $client ??= ['web' => false, 'ip' => '', 'user_agent' => ''];
+        $this->guard = new \CMS\Services\Community\Service\ContentGuard(
+            CommunityTestDatabase::create(),
+            \CMS\Services\Community\Support\Settings::fromArray([]),
+            client: static fn (): array => $client,
+            limiter: function (string $name, string $subject, int $max, int $window): bool {
+                $this->calls[] = [$name, $subject, $max, $window];
+                $key = $name . '|' . $subject;
+                if (($this->rows[$key] ?? 0) >= $max) {
+                    return false;
+                }
+                $this->rows[$key] = ($this->rows[$key] ?? 0) + 1;
+
+                return $this->rows[$key] <= $max;
+            },
+            ipHash: new \CMS\Services\Community\Support\IpHash(static fn (): string => 'community-wiring-secret-0123456789')
+        );
+    }
+
+    /**
+     * Führt `$fn` mit diesem Guard als `ContentGuard::instance()` aus; danach gilt wieder die vorige Instanz.
+     *
+     * @template T
+     * @param \Closure(): T $fn
+     * @return T
+     */
+    public function run(\Closure $fn): mixed
+    {
+        $previous = self::swap(\CMS\Services\Community\Service\ContentGuard::class, $this->guard);
+        try {
+            return $fn();
+        } finally {
+            self::swap(\CMS\Services\Community\Service\ContentGuard::class, $previous);
+        }
+    }
+
+    /** Aktionen und Kennungen der Limiter-Aufrufe ohne Wiederholung, in der Reihenfolge des ersten Auftretens. @return list<string> */
+    public function buckets(): array
+    {
+        return array_values(array_unique(array_map(static fn (array $c): string => $c[0] . ' ' . $c[1] . ' ' . $c[2] . '/' . $c[3], $this->calls)));
+    }
+
+    /** Setzt eine statische Eigenschaft (Standard: Singleton `instance`) und liefert den vorigen Wert. */
+    public static function swap(string $class, mixed $value, string $property = 'instance'): mixed
+    {
+        $reflection = new \ReflectionProperty($class, $property);
+        $previous = $reflection->getValue();
+        $reflection->setValue(null, $value);
+
+        return $previous;
     }
 }

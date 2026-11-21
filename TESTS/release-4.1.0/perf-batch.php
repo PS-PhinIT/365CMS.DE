@@ -99,9 +99,10 @@ T::run('PERF batch:0: Aufbewahrung für Mail-Queue und Mail-Protokoll', static f
 });
 
 T::run('PERF batch:1: Transaktionsmails vor Massenversand', static function () use ($src, $perfBatchSqliteDb, $perfBatchInstance, $perfBatchCall): void {
-    T::same(['newsletter', 'cms-feed-digest'], \CMS\Services\MailQueueService::BULK_SOURCES, 'Newsletter und Feed-Digest gelten als Massenversand');
+    T::same(['newsletter', 'cms-feed-digest', 'community'], \CMS\Services\MailQueueService::BULK_SOURCES, 'Newsletter, Feed-Digest und (ab 4.2.0) Community-Benachrichtigungen gelten als Massenversand');
     T::check(str_contains($src('core/Services/Newsletter/NewsletterMailer.php'), "MAIL_SOURCE = 'newsletter';"), 'Quelle des Newsletters stimmt');
     T::check(str_contains($src('core/Services/Feed/DigestMailer.php'), "MAIL_SOURCE = 'cms-feed-digest';"), 'Quelle des Feed-Digests stimmt');
+    T::check(str_contains($src('core/Services/Community/Service/NotificationDispatcher.php'), "MAIL_SOURCE = 'community';"), 'Quelle der Community-Benachrichtigungen stimmt (Vertrag DESIGN-2b §3.8)');
 
     $db = $perfBatchSqliteDb(["CREATE TABLE cms_mail_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT, status TEXT, available_at TEXT, created_at TEXT, recipient TEXT)"]);
     $rows = [
@@ -111,6 +112,7 @@ T::run('PERF batch:1: Transaktionsmails vor Massenversand', static function () u
         ['cms_mail_helper', '2020-01-01 09:00:00'],
         ['forms', '2020-01-01 09:30:00'],
         ['newsletter', '2020-01-01 07:00:00'],
+        ['community', '2020-01-01 09:45:00'],
     ];
     foreach ($rows as [$source, $at]) {
         $db->execute("INSERT INTO cms_mail_queue (source, status, available_at, created_at) VALUES (?, 'pending', ?, ?)", [$source, $at, $at]);
@@ -120,7 +122,8 @@ T::run('PERF batch:1: Transaktionsmails vor Massenversand', static function () u
     $jobs = $perfBatchCall($queue, 'getDueJobs', [3]);
     T::same(['cms_mail_helper', 'forms', 'newsletter'], array_map(static fn (object $job): string => (string) $job->source, $jobs), 'Passwort-Reset (cms_mail_helper) und Formulare vor dem Newsletter');
     T::same(6, (int) ($jobs[2]->id ?? 0), 'innerhalb des Massenversands weiter FIFO (ältester zuerst)');
-    T::same(6, count($perfBatchCall($queue, 'getDueJobs', [100])), 'nicht fällige Jobs bleiben außen vor');
+    T::same(7, count($perfBatchCall($queue, 'getDueJobs', [100])), 'nicht fällige Jobs bleiben außen vor');
+    T::same(['cms_mail_helper', 'forms', 'newsletter', 'newsletter', 'newsletter', 'cms-feed-digest', 'community'], array_map(static fn (object $job): string => (string) $job->source, $perfBatchCall($queue, 'getDueJobs', [100])), 'Community-Mails wie Massenversand hinter den Transaktionsmails, darin FIFO');
 });
 
 T::run('PERF batch:2: Zeitbudget und Zeitstempel des Web-Crons', static function () use ($src): void {

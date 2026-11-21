@@ -30,9 +30,10 @@ class MailQueueService
      * Release-Prüfung 4.1.0 (PERF, batch:1): Quellen für Massenversand (Newsletter, Feed-Digest). Ihre Jobs werden
      * erst nach allen anderen fälligen Jobs abgearbeitet, damit Passwort-Reset, Registrierung, E-Mail-Änderung
      * und MFA-Hinweise nicht hinter einer laufenden Kampagne warten. Die Werte entsprechen
-     * NewsletterMailer::MAIL_SOURCE und DigestMailer::MAIL_SOURCE.
+     * NewsletterMailer::MAIL_SOURCE, DigestMailer::MAIL_SOURCE und (ab 4.2.0) NotificationDispatcher::MAIL_SOURCE
+     * der Community.
      */
-    public const BULK_SOURCES = ['newsletter', 'cms-feed-digest'];
+    public const BULK_SOURCES = ['newsletter', 'cms-feed-digest', 'community'];
 
     /**
      * Release-Prüfung 4.1.0 (PERF, batch:0): Standardfrist für erledigte Jobs (versendet oder endgültig
@@ -175,6 +176,28 @@ class MailQueueService
     }
 
     /**
+     * Klartext-Mail in die Queue, für Aufrufer in einer eigenen Transaktion (Community-Benachrichtigungen, Vertrag DESIGN-2b §3.8):
+     * dieselben Prüfungen wie `enqueuePlain()` (Adresse, Betreff, Kopfzeilen), geschrieben über `Database::execute()` auf derselben
+     * Verbindung. Datenbankfehler (`\PDOException`) werden nicht gefangen, damit `Transaction::run()` einen Deadlock wiederholt und die
+     * Transaktion samt Hinweis zurücknimmt. `0` heißt nur fachliche Ablehnung (ungültige Adresse, leerer Betreff), sonst die neue ID.
+     *
+     * @param array<string, string> $headers
+     */
+    public function enqueuePlainStrict(string $recipient, string $subject, string $plainBody, array $headers = [], string $source = 'system'): int
+    {
+        $row = $this->queueRow($recipient, $subject, $plainBody, $headers, null, $source, null, 'plain');
+        if (!isset($row['row'])) {
+            return 0;
+        }
+        $columns = array_keys($row['row']);
+        $sql = "INSERT INTO {$this->prefix}mail_queue (" . implode(', ', $columns) . ') VALUES (' . implode(', ', array_fill(0, count($columns), '?')) . ')';
+        $params = array_values($row['row']);
+        $this->db->execute($sql, $params);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
      * @param array<string, string> $headers
      * @return array{success:bool,message?:string,error?:string,id?:int}
      */
@@ -247,41 +270,13 @@ class MailQueueService
         ?string $attachmentName = null,
         ?string $attachmentMime = null
     ): array {
-        $recipient = trim($recipient);
-        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
-            return ['success' => false, 'error' => 'Ungültige Empfänger-E-Mail-Adresse für die Queue.'];
+        $prepared = $this->queueRow($recipient, $subject, $body, $headers, $availableAt, $source, $maxAttempts, $contentType, $attachmentPath, $attachmentName, $attachmentMime);
+        if (!isset($prepared['row'])) {
+            return ['success' => false, 'error' => $prepared['error'] ?? 'Mail-Queue-Eintrag ungültig.'];
         }
-
-        $subject = $this->sanitizeSubject($subject);
-        if ($subject === '') {
-            return ['success' => false, 'error' => 'Für die Queue ist ein Betreff erforderlich.'];
-        }
-
-        $headers = $this->sanitizeHeaders($headers);
-
-        $contentType = $contentType === 'plain' ? 'plain' : 'html';
-
-        $config = $this->getConfiguration();
-        $insertId = $this->db->insert('mail_queue', [
-            'recipient' => $recipient,
-            'subject' => $subject,
-            'body' => $body,
-            'headers' => $this->encodeHeaders($headers),
-            'content_type' => $contentType,
-            'source' => trim($source) !== '' ? trim($source) : 'system',
-            'status' => 'pending',
-            'attempts' => 0,
-            'max_attempts' => $maxAttempts !== null ? min(20, max(1, $maxAttempts)) : (int) $config['max_attempts'],
-            'available_at' => ($availableAt ?? new \DateTimeImmutable())->format('Y-m-d H:i:s'),
-            'sent_at' => null,
-            'locked_at' => null,
-            'last_attempt_at' => null,
-            'attachment_path' => $attachmentPath,
-            'attachment_name' => $attachmentName,
-            'attachment_mime' => $attachmentMime,
-            'error_category' => null,
-            'last_error' => null,
-        ]);
+        $recipient = (string) $prepared['row']['recipient'];
+        $subject = (string) $prepared['row']['subject'];
+        $insertId = $this->db->insert('mail_queue', $prepared['row']);
 
         if ($insertId === false) {
             $this->logger->error('Mail-Queue-Eintrag konnte nicht gespeichert werden', [
@@ -298,6 +293,62 @@ class MailQueueService
             'message' => 'E-Mail wurde in die Queue aufgenommen.',
             'id' => (int) $insertId,
         ];
+    }
+
+    /**
+     * Gemeinsame Prüfung und Zeile eines Queue-Eintrags für `enqueueMessage()` und `enqueuePlainStrict()`: gültige Adresse, bereinigter
+     * Betreff (nicht leer), bereinigte Kopfzeilen. `{row: array}` oder `{error: string}`.
+     *
+     * @param array<string, string> $headers
+     * @return array{row?: array<string, mixed>, error?: string}
+     */
+    private function queueRow(
+        string $recipient,
+        string $subject,
+        string $body,
+        array $headers,
+        ?\DateTimeInterface $availableAt,
+        string $source,
+        ?int $maxAttempts,
+        string $contentType,
+        ?string $attachmentPath = null,
+        ?string $attachmentName = null,
+        ?string $attachmentMime = null
+    ): array {
+        $recipient = trim($recipient);
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
+            return ['error' => 'Ungültige Empfänger-E-Mail-Adresse für die Queue.'];
+        }
+
+        $subject = $this->sanitizeSubject($subject);
+        if ($subject === '') {
+            return ['error' => 'Für die Queue ist ein Betreff erforderlich.'];
+        }
+
+        $headers = $this->sanitizeHeaders($headers);
+        $contentType = $contentType === 'plain' ? 'plain' : 'html';
+        $maxAttempts = $maxAttempts !== null ? min(20, max(1, $maxAttempts)) : (int) $this->getConfiguration()['max_attempts'];
+
+        return ['row' => [
+            'recipient' => $recipient,
+            'subject' => $subject,
+            'body' => $body,
+            'headers' => $this->encodeHeaders($headers),
+            'content_type' => $contentType,
+            'source' => trim($source) !== '' ? trim($source) : 'system',
+            'status' => 'pending',
+            'attempts' => 0,
+            'max_attempts' => $maxAttempts,
+            'available_at' => ($availableAt ?? new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'sent_at' => null,
+            'locked_at' => null,
+            'last_attempt_at' => null,
+            'attachment_path' => $attachmentPath,
+            'attachment_name' => $attachmentName,
+            'attachment_mime' => $attachmentMime,
+            'error_category' => null,
+            'last_error' => null,
+        ]];
     }
 
     /**

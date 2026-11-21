@@ -12,7 +12,8 @@
  * (Kopie des Codes: ensureFeatureSchema() legt ihn an, auch auf einer im selben Lauf nachgetragenen Spalte). Nach Neuinstallation
  * und jedem Update ist jeder Index aus REQUIRED_INDEXES vorhanden.
  *
- * Optional: läuft nur mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER (Recht CREATE/DROP DATABASE), sonst Hinweis.
+ * Optional: läuft nur mit CMS_TEST_DB_HOST und CMS_TEST_DB_USER (Recht CREATE/DROP DATABASE), sonst Hinweis. Datenbanken heißen
+ * `cmsup<pid>_…` bzw. mit CMS_TEST_DB_PREFIX `<präfix><pid>_…`; aufgeräumt werden am Ende nur die mit diesem Anfang.
  *   CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-upgrade/run.php [-v]
  * Optional CMS_TEST_SQL_MODE (z. B. MySQL-8-Standard mit ONLY_FULL_GROUP_BY) für die Sitzungen der Prüfung.
  */
@@ -21,6 +22,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
 require_once dirname(__DIR__) . '/schema-v27/lib.php';
+require_once dirname(__DIR__) . '/lib/TestDatabasePrefix.php';
 T::$verbose = in_array('-v', $argv ?? [], true);
 
 $repo = dirname(__DIR__, 2);
@@ -39,7 +41,7 @@ $pdo = new PDO('mysql:host=' . $host . ';charset=utf8mb4', $user, $pass, [PDO::A
 // Zielmarke = Stand des Codes (Release 4.2.0, Entwicklungsstand: v27); Ausgangsstände sind die ausgelieferten Pakete.
 $target = preg_match("/public const SCHEMA_VERSION = '(v\d+)';/", (string) file_get_contents($repo . '/CMS/core/SchemaManager.php'), $targetMatch) === 1 ? $targetMatch[1] : 'v?';
 $tmp = sys_get_temp_dir() . '/cms-schema-upgrade-' . getmypid();
-$prefix = 'cmsup' . getmypid() . '_';
+$prefix = TestDatabasePrefix::resolve('cmsup') . getmypid() . '_';
 
 $copyTree = static function (string $from, string $to): void {
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($from, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
@@ -88,12 +90,12 @@ $structure = static function (string $db) use ($pdo): array {
 
     return $rows;
 };
-// Snapshot der 27 Community-Tabellen (TESTS/schema-v27/golden.json): die Datenbank muss ihm entsprechen (Spalten mit Typ, NULL,
+// Snapshot der 28 Community-Tabellen (TESTS/schema-v27/golden.json): die Datenbank muss ihm entsprechen (Spalten mit Typ, NULL,
 // Default, Primärschlüssel, Indizes), nicht nur der Neuinstallation.
 $golden = json_decode((string) file_get_contents(__DIR__ . '/../schema-v27/golden.json'), true) ?: [];
 $compareGolden = static function (PDO $pdo, string $db) use ($golden): void {
     $actual = v27ReadStructure($pdo, $db, 'cms_', array_keys($golden));
-    T::same(27, count($golden), 'Snapshot golden.json enthält 27 Tabellen');
+    T::same(28, count($golden), 'Snapshot golden.json enthält 28 Tabellen');
     foreach ($golden as $table => $expected) {
         T::same($expected['columns'], $actual[$table]['columns'], "{$table}: Spalten entsprechen dem Snapshot");
         T::same($expected['primary'], $actual[$table]['primary'], "{$table}: Primärschlüssel entspricht dem Snapshot");
@@ -526,9 +528,9 @@ try {
             $pdo->exec($queries[$table]);
         }
         $quoted = $pdo->quote($db);
-        T::same([], $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND TABLE_COLLATION <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle 27 Tabellen: utf8mb4_unicode_ci (nicht der Standard der Datenbank)');
+        T::same([], $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND TABLE_COLLATION <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle 28 Tabellen: utf8mb4_unicode_ci (nicht der Standard der Datenbank)');
         T::same([], $pdo->query("SELECT CONCAT(TABLE_NAME, '.', COLUMN_NAME) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%' AND COLLATION_NAME IS NOT NULL AND COLLATION_NAME <> 'utf8mb4_unicode_ci'")->fetchAll(PDO::FETCH_COLUMN), 'alle Textspalten: utf8mb4_unicode_ci');
-        T::same(27, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%'")->fetchColumn(), 'alle 27 Tabellen angelegt');
+        T::same(28, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = {$quoted} AND TABLE_NAME LIKE 'cms\\_community\\_%'")->fetchColumn(), 'alle 28 Tabellen angelegt');
     });
 } finally {
     foreach ($pdo->query("SHOW DATABASES LIKE " . $pdo->quote(str_replace('_', '\\_', $prefix) . '%'))->fetchAll(PDO::FETCH_COLUMN) as $name) {

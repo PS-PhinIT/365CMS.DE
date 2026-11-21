@@ -343,6 +343,9 @@ function ccGuardHits(string $source, bool $isAbstractRepository = false): array
         'CURDATE()' => '/\bCURDATE\s*\(/i',
         'UTC_TIMESTAMP' => '/\bUTC_TIMESTAMP\b/i',
         'date(' => '/(?<![\w$>:])(?<!function )date\s*\(/',
+        'strtotime(' => '/(?<![\w$>:])(?<!function )strtotime\s*\(/',
+        'mktime(' => '/(?<![\w$>:])(?<!function )mktime\s*\(/',
+        'date_create(' => '/(?<![\w$>:])(?<!function )date_create(?:_immutable)?\s*\(/',
         'OFFSET' => '/\bOFFSET\b/i',
         'ON DUPLICATE KEY' => '/\bON\s+DUPLICATE\s+KEY\b/i',
         'GREATEST' => '/\bGREATEST\s*\(/i',
@@ -2109,13 +2112,33 @@ T::run('Wirkung: duplicate_window_seconds (Fenster für doppeltes Absenden; Gren
 // Quelltext-Wächter
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Uhr-Karte (Vertrag DESIGN-2b §3.6): Datei unter `Services/Community/` => Zahl der `time(`-Aufrufe (1 = Standard der Uhr-Closure,
+ * 0 = keine Uhr). Cron-Schleifen lesen die Closure mehrfach, `time(` steht trotzdem nur einmal in der Datei (§1 Nr. 10).
+ */
+/** Andere Uhren als die Closure: strtotime, microtime, hrtime, mktime, gmmktime, date_create, `new DateTime(…)` (nicht `DateTimeZone`). */
+const CC_OTHER_CLOCKS = '/(?<![\w>:$])(?:strtotime|microtime|hrtime|mktime|gmmktime|date_create)\s*\(|\bnew\s+\\\\?DateTime(?:Immutable)?\s*\(/';
+
+const CC_CLOCK_MAP = [
+    // #2a
+    'Service/AccessDecision.php' => 0, 'Service/BasicTrustPolicy.php' => 0, 'Service/CommunityAccess.php' => 1, 'Service/PostService.php' => 1,
+    'Service/QuoteService.php' => 0, 'Service/ReadStateService.php' => 1, 'Service/TopicService.php' => 1, 'Service/TrustLevelPolicy.php' => 0,
+    // #2b
+    'Service/RenderService.php' => 1, 'Service/ContentGuard.php' => 0, 'Service/CounterBook.php' => 0, 'Service/ModerationService.php' => 1,
+    'Service/ReportService.php' => 1, 'Service/BanService.php' => 1, 'Service/NotificationDispatcher.php' => 1, 'Service/SubscriptionService.php' => 1,
+    'Service/ReactionService.php' => 1, 'Service/RankService.php' => 1, 'Service/AttachmentService.php' => 1, 'Service/CommunitySearch.php' => 1,
+    'Service/CommunityMediaExtractor.php' => 0,
+    'Support/ContentRenderer.php' => 0, 'Support/IpHash.php' => 0,
+];
+
 T::run('Quelltext-Wächter: Services/Community/** ohne verbotene Muster (Vertrag §1), mit gebauter Gegenprobe', static function (): void {
     $bad = "SELECT NOW(), CURRENT_TIMESTAMP, CURDATE(), UTC_TIMESTAMP() FROM t WHERE (a, b) < (?, ?) LIMIT 5 OFFSET 10 ON DUPLICATE KEY UPDATE x = GREATEST(a, b), LEAST(a, b), FIELD(a, 'x'), JSON_EXTRACT(a, '\$.x') UNION SELECT 1 FOR UPDATE;\n"
-        . "\$d = date('Y-m-d H:i:s'); \$this->db->insert('t', []); \$db->update('t', [], []); \$this->database->delete('t', []); \$n = \$x->affected_rows(); \$d = Database::instance();";
-    $names = ['NOW()', 'CURRENT_TIMESTAMP', 'CURDATE()', 'UTC_TIMESTAMP', 'date(', 'OFFSET', 'ON DUPLICATE KEY', 'GREATEST', 'LEAST', 'FIELD', 'JSON_*', 'UNION', 'Zeilenkonstruktor', 'insert/update/delete der Datenbank', 'affected_rows', 'Database::instance() außerhalb des Konstruktor-Standards', 'FOR UPDATE außerhalb von AbstractRepository'];
-    T::same($names, ccGuardHits($bad), 'Gegenprobe: ein schlechtes Beispiel trifft alle siebzehn Muster');
+        . "\$d = date('Y-m-d H:i:s'); \$t = strtotime('+1 day'); \$m = mktime(0, 0, 0); \$c = date_create('now'); \$this->db->insert('t', []); \$db->update('t', [], []); \$this->database->delete('t', []); \$n = \$x->affected_rows(); \$d = Database::instance();";
+    $names = ['NOW()', 'CURRENT_TIMESTAMP', 'CURDATE()', 'UTC_TIMESTAMP', 'date(', 'strtotime(', 'mktime(', 'date_create(', 'OFFSET', 'ON DUPLICATE KEY', 'GREATEST', 'LEAST', 'FIELD', 'JSON_*', 'UNION', 'Zeilenkonstruktor', 'insert/update/delete der Datenbank', 'affected_rows', 'Database::instance() außerhalb des Konstruktor-Standards', 'FOR UPDATE außerhalb von AbstractRepository'];
+    T::same($names, ccGuardHits($bad), 'Gegenprobe: ein schlechtes Beispiel trifft alle zwanzig Muster');
     $single = [
         'NOW()' => 'WHERE a < NOW()', 'CURRENT_TIMESTAMP' => 'DEFAULT CURRENT_TIMESTAMP', 'CURDATE()' => 'CURDATE()', 'UTC_TIMESTAMP' => 'UTC_TIMESTAMP()', 'date(' => '$x = date("Y");',
+        'strtotime(' => '$t = strtotime($utc . " UTC");', 'mktime(' => '$m = mktime(1, 2, 3, 4, 5, 2026);', 'date_create(' => '$c = date_create_immutable("@0");',
         'OFFSET' => 'LIMIT 1 offset 5', 'ON DUPLICATE KEY' => 'on duplicate key update', 'GREATEST' => 'GREATEST(a, 0)', 'LEAST' => 'LEAST(a, 0)', 'FIELD' => 'ORDER BY FIELD(x, 1)',
         'JSON_*' => 'JSON_EXTRACT(a, 1)', 'UNION' => 'SELECT 1 UNION ALL SELECT 2', 'Zeilenkonstruktor' => 'WHERE (a, id) < (?, ?)', 'insert/update/delete der Datenbank' => '$this->db->delete("t", [])',
         'affected_rows' => '$db->affected_rows()', 'Database::instance() außerhalb des Konstruktor-Standards' => '$x = Database::instance();', 'FOR UPDATE außerhalb von AbstractRepository' => "SELECT 1 FOR UPDATE",
@@ -2124,6 +2147,7 @@ T::run('Quelltext-Wächter: Services/Community/** ohne verbotene Muster (Vertrag
         T::same([$name], ccGuardHits($sample), 'Gegenprobe: Muster ' . $name . ' schlägt einzeln an');
     }
     $good = "gmdate('Y-m-d H:i:s', \$ts); I18n::date(\$utc, 'd.m.'); \$this->date(1); function date(string \$x) {} \$this->posts->update(1, []); \$repo->insert([]); validate(2); date_default_timezone_get(); getOffset(); "
+        . "\$this->strtotime(1); Clock::mktime(2); function date_create() {} \$time = \\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', \$utc); my_mktime(3); "
         . "\$this->db = \$db ?? Database::instance(); JSON_UNESCAPED_UNICODE; ' FOR UPDATE'; (\$a, \$b) = [1, 2]; max(\$a, \$b) < 3;";
     T::same(['FOR UPDATE außerhalb von AbstractRepository'], ccGuardHits($good), 'Gegenprobe: erlaubte Schreibweisen schlagen nicht an (nur FOR UPDATE außerhalb der Hilfsmethode, wie gewollt)');
     T::same([], ccGuardHits($good, true), 'Gegenprobe: in AbstractRepository ist die Hilfsmethode für FOR UPDATE erlaubt');
@@ -2151,24 +2175,54 @@ T::run('Quelltext-Wächter: Services/Community/** ohne verbotene Muster (Vertrag
         T::same($patterns, array_values(array_intersect($hits, $patterns)), 'Ausnahme ' . $relative . ' gilt noch (sonst streichen)');
     }
 
-    // Uhr: nur der Standard `time()` der Closure; kein strtotime, microtime, mktime, new DateTime, date_create.
+    // Uhr-Karte (Vertrag DESIGN-2b §3.6): `time(` je Datei genau so oft wie erwartet (1 = Standard der Uhr-Closure, 0 = keine Uhr), sonst
+    // keine Uhr (strtotime, microtime, mktime, new DateTime, date_create). Gilt für alle `Service/*.php` und die zwei Support-Klassen mit
+    // Rechenarbeit; eine Datei ohne Eintrag ist ein Fehler, eine erwartete, noch fehlende Datei ein Hinweis.
     $clockUse = [];
-    foreach (['TopicService' => 1, 'PostService' => 1, 'ReadStateService' => 1, 'QuoteService' => 0] as $class => $expectedTime) {
-        $code = ccCodeWithoutComments((string) file_get_contents(ABSPATH . 'core/Services/Community/Service/' . $class . '.php'));
-        $time = preg_match_all('/(?<![\w>:$])(?<!function )time\s*\(/', $code);
-        $other = preg_match('/(?<![\w>:$])(?:strtotime|microtime|hrtime|mktime|gmmktime|date_create)\s*\(|\bnew\s+\\\\?DateTime/', $code);
-        if ($time !== $expectedTime || $other !== 0) {
-            $clockUse[] = $class . ' (time(): ' . $time . ', andere Uhren: ' . $other . ')';
+    $present = array_map(static fn (string $f): string => substr($f, strlen(ABSPATH . 'core/Services/Community/')), glob(ABSPATH . 'core/Services/Community/Service/*.php') ?: []);
+    foreach (['Support/ContentRenderer.php', 'Support/IpHash.php'] as $support) {
+        if (is_file(ABSPATH . 'core/Services/Community/' . $support)) {
+            $present[] = $support;
         }
     }
-    T::same([], $clockUse, 'Dienste benutzen nur den Standard `time()` in der Closure der Uhr, sonst keine Uhr');
+    T::same([], array_values(array_diff($present, array_keys(CC_CLOCK_MAP))), 'jede Datei unter Service/ (und ContentRenderer, IpHash) steht in der Uhr-Karte');
+    foreach (CC_CLOCK_MAP as $relative => $expectedTime) {
+        $path = ABSPATH . 'core/Services/Community/' . $relative;
+        if (!is_file($path)) {
+            T::info('folgt: ' . $relative . ' (Uhr-Karte erwartet ' . $expectedTime . '× time())');
+            continue;
+        }
+        $code = ccCodeWithoutComments((string) file_get_contents($path));
+        $time = preg_match_all('/(?<![\w>:$])(?<!function )time\s*\(/', $code);
+        $other = preg_match(CC_OTHER_CLOCKS, $code);
+        if ($time !== $expectedTime || $other !== 0) {
+            $clockUse[] = $relative . ' (time(): ' . $time . ' statt ' . $expectedTime . ', andere Uhren: ' . $other . ')';
+        }
+    }
+    T::same([], $clockUse, 'Dienste benutzen nur den Standard `time()` in der Closure der Uhr (Uhr-Karte), sonst keine Uhr');
     T::same(
         [1, 0, 0],
         [preg_match_all('/(?<![\w>:$])(?<!function )time\s*\(/', "\$c = fn () => time();\n"), preg_match('/(?<![\w>:$])(?<!function )time\s*\(/', '$this->time(1); $x->time (2); function time() {}'), preg_match('/(?<![\w>:$])(?:strtotime|microtime)\s*\(/', 'mytime(); $d->strtotime(1)')],
         'Gegenprobe der Uhr-Erkennung: Aufruf trifft, Methoden und Namensanfänge nicht'
     );
+    T::same(
+        [1, 1, 1, 0, 0],
+        [preg_match(CC_OTHER_CLOCKS, '$d = new DateTime();'), preg_match(CC_OTHER_CLOCKS, '$d = new \\DateTimeImmutable("now");'), preg_match(CC_OTHER_CLOCKS, 'gmmktime();'),
+            preg_match(CC_OTHER_CLOCKS, 'new \\DateTimeZone("UTC");'), preg_match(CC_OTHER_CLOCKS, '\\DateTimeImmutable::createFromFormat("!Y-m-d", $x);')],
+        'Gegenprobe: new DateTime(…) und gmmktime() sind Uhren, DateTimeZone und createFromFormat() nicht'
+    );
     T::same("<?php\n\n\n\$a = 1;", ccCodeWithoutComments("<?php\n// NOW()\n/** date( */\n\$a = 1;"), 'Gegenprobe: Kommentare werden vor der Prüfung entfernt, die Zeilen bleiben');
 });
+
+/** Muster des Codes-Scanners: Fehlercodes in `failure('…')`, `'error' => '…'`, `=> 'topic_…'` und `AccessDecision::deny('…')`. */
+const CC_CODE_PATTERN = "/(?:failure\\('|'error' => '|=> '(?=topic_)|AccessDecision::deny\\(')([a-z_]+)'/";
+
+/**
+ * Warteliste (Vertrag DESIGN-2b §3.2): Fehlercodes aus PR #2b, die W0 registriert, aber erst die Dienste der Wellen 1 bis 3
+ * erzeugen. B46 überspringt sie; jeder J-Schritt streicht die Codes seiner Welle, J4 entfernt Konstante und Ausnahme.
+ * Seit J2 leer: die Dienste aus W2 erzeugen alle 27 Codes (render_failed bis query_too_short).
+ */
+const CC_PENDING_CODES_2B = [];
 
 /** PHP-Quelltext ohne Kommentare und Docblöcke (Zeilen bleiben erhalten). */
 function ccCodeWithoutComments(string $source): string
@@ -2189,9 +2243,13 @@ T::run('Dienste: jeder zurückgegebene Fehlercode ist in Support\Codes bekannt',
     $known = array_merge(Codes::ERRORS, array_keys(Codes::ACCESS_REASONS));
     $unknown = [];
     $found = 0;
-    foreach (['TopicService', 'PostService', 'QuoteService', 'ReadStateService'] as $class) {
-        $code = ccCodeWithoutComments((string) file_get_contents(ABSPATH . 'core/Services/Community/Service/' . $class . '.php'));
-        preg_match_all("/(?:failure\\('|'error' => '|=> '(?=topic_)|AccessDecision::deny\\(')([a-z_]+)'/", $code, $m);
+    // Codes-Scanner über alle Dienste (Vertrag DESIGN-2b §6 W0): jede Datei unter Service/, auch die neuen Klassen von PR #2b.
+    $services = glob(ABSPATH . 'core/Services/Community/Service/*.php') ?: [];
+    T::check(count($services) >= 8, 'der Scanner liest alle Dienste unter Service/ (' . count($services) . ' Dateien)');
+    foreach ($services as $file) {
+        $class = basename($file, '.php');
+        $code = ccCodeWithoutComments((string) file_get_contents($file));
+        preg_match_all(CC_CODE_PATTERN, $code, $m);
         foreach ($m[1] as $error) {
             $found++;
             if (!in_array($error, $known, true)) {
@@ -2199,6 +2257,8 @@ T::run('Dienste: jeder zurückgegebene Fehlercode ist in Support\Codes bekannt',
             }
         }
     }
+    preg_match_all(CC_CODE_PATTERN, "return self::failure('erfunden_a'); return ['success' => false, 'error' => 'erfunden_b']; return AccessDecision::deny('erfunden_c'); // failure('kommentar')", $probe);
+    T::same(['erfunden_a', 'erfunden_b', 'erfunden_c', 'kommentar'], $probe[1], 'Gegenprobe des Scanners: failure(), error-Schlüssel und deny() werden erkannt (Kommentare entfernt vorher ccCodeWithoutComments)');
     T::check($found >= 20, 'die Erkennung findet die Fehlercodes im Quelltext (' . $found . ' Stellen)');
     T::same([], $unknown, 'alle Fehlercodes der Dienste stehen in Codes::ERRORS oder Codes::ACCESS_REASONS (Sprachschlüssel dafür prüft community-settings)');
     foreach (['title_too_short', 'title_too_long', 'body_too_short', 'body_too_long', 'forum_not_found', 'topic_not_found', 'post_not_found', 'first_post', 'has_replies', 'edit_conflict', 'new_posts', 'quote_unavailable', 'db_error', 'invalid_input'] as $code) {
@@ -3332,8 +3392,13 @@ T::run('B46: jeder Fehlercode in Codes::ERRORS wird irgendwo erzeugt (keine tote
             $produced .= ccCodeWithoutComments((string) file_get_contents($file));
         }
     }
-    $dead = array_values(array_filter(Codes::ERRORS, static fn (string $code): bool => !str_contains($produced, "'" . $code . "'")));
-    T::same([], $dead, 'alle Codes aus Codes::ERRORS kommen als Zeichenkette im Quelltext der Dienste oder Repositories vor');
+    T::same([], array_values(array_diff(CC_PENDING_CODES_2B, Codes::ERRORS)), 'Warteliste CC_PENDING_CODES_2B: nur registrierte Codes');
+    $dead = array_values(array_filter(Codes::ERRORS, static fn (string $code): bool => !in_array($code, CC_PENDING_CODES_2B, true) && !str_contains($produced, "'" . $code . "'")));
+    T::same([], $dead, 'alle Codes aus Codes::ERRORS kommen als Zeichenkette im Quelltext der Dienste oder Repositories vor (außer der Warteliste)');
+    $producedPending = array_values(array_filter(CC_PENDING_CODES_2B, static fn (string $code): bool => str_contains($produced, "'" . $code . "'")));
+    if ($producedPending !== []) {
+        T::info('Warteliste: schon erzeugt, im J-Schritt streichen: ' . implode(', ', $producedPending));
+    }
     T::check(!in_array('not_deletable', Codes::ERRORS, true), 'not_deletable ist entfernt (wurde nie erzeugt)');
     // Gegenprobe: die Erkennung findet einen nie erzeugten Code
     T::same(['nirgends_erzeugt'], array_values(array_filter(['db_error', 'nirgends_erzeugt'], static fn (string $code): bool => !str_contains($produced, "'" . $code . "'"))), 'Gegenprobe: ein erfundener Code wird als tot erkannt');

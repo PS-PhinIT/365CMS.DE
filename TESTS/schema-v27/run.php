@@ -1,6 +1,7 @@
 <?php
 /**
- * Schema v27 (Release 4.2.0, Community-Modul): Neuinstallation, Update und Laufzeitprüfung legen dieselben 27 Tabellen an,
+ * Schema v27 (Release 4.2.0, Community-Modul): Neuinstallation, Update und Laufzeitprüfung legen dieselben 28 Tabellen an
+ * (27 aus PR #1, dazu `community_notify_queue` aus PR #2b, Vertrag DESIGN-2b §3.9),
  * und der einmalige Update-Schritt `capabilities_v27` vergibt die Community-Rechte, ohne etwas zu überschreiben.
  *
  * Ohne Datenbank: prüft die Definitionen in SchemaManager::getSchemaQueries(), die Liste FEATURE_TABLES_V27, die Einbindung
@@ -48,7 +49,7 @@ const V27_TABLES = [
     'community_polls', 'community_poll_options', 'community_poll_votes', 'community_ignores',
     'community_user_stats', 'community_ranks', 'community_badges', 'community_user_badges',
     'community_reports', 'community_warnings', 'community_bans', 'community_moderation_log',
-    'community_stats_daily', 'community_redirects',
+    'community_stats_daily', 'community_redirects', 'community_notify_queue',
 ];
 
 /**
@@ -175,12 +176,12 @@ T::run('Versionsstand', static function () use ($migrationSource, $root): void {
     T::check((int) substr((string) ($manifest['schema_version'] ?? 'v0'), 1) <= (int) substr($version, 1), 'das Manifest des veröffentlichten Pakets eilt der Entwicklung nicht voraus');
 });
 
-T::run('Die 27 Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
-    T::same(V27_TABLES, SchemaManager::FEATURE_TABLES_V27, 'FEATURE_TABLES_V27 enthält genau die 27 Tabellen in der Reihenfolge von DATA-MODEL.md');
-    T::same(27, count(SchemaManager::FEATURE_TABLES_V27), 'Anzahl 27');
-    T::same(117, count($queries), 'Gesamtstand: 117 Tabellendefinitionen (90 bis v26 + 27)');
-    T::same(117, count(array_unique(array_keys($queries))), 'jede Tabelle genau einmal definiert');
-    T::same(array_values(SchemaManager::FEATURE_TABLES_V27), array_slice(array_keys($queries), -27), 'Definitionen stehen am Ende von getSchemaQueries() in derselben Reihenfolge');
+T::run('Die 28 Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
+    T::same(V27_TABLES, SchemaManager::FEATURE_TABLES_V27, 'FEATURE_TABLES_V27 enthält genau die 28 Tabellen (Reihenfolge von DATA-MODEL.md, dazu community_notify_queue am Ende)');
+    T::same(28, count(SchemaManager::FEATURE_TABLES_V27), 'Anzahl 28');
+    T::same(118, count($queries), 'Gesamtstand: 118 Tabellendefinitionen (90 bis v26 + 28)');
+    T::same(118, count(array_unique(array_keys($queries))), 'jede Tabelle genau einmal definiert');
+    T::same(array_values(SchemaManager::FEATURE_TABLES_V27), array_slice(array_keys($queries), -28), 'Definitionen stehen am Ende von getSchemaQueries() in derselben Reihenfolge');
     T::same([], array_values(array_intersect(SchemaManager::FEATURE_TABLES_V27, array_merge(SchemaManager::FEATURE_TABLES, SchemaManager::FEATURE_TABLES_V26))), 'keine Überschneidung mit v25/v26');
 
     foreach (V27_TABLES as $table) {
@@ -243,7 +244,7 @@ T::run('Indizes', static function () use ($queries): void {
         foreach ($indexes as $name => $index) {
             T::check(strlen($name) <= 64, "{$table}.{$name}: Bezeichner höchstens 64 Zeichen");
             T::check(str_starts_with($name, $index['unique'] ? 'uq_' : 'idx_') && str_contains($name, substr($table, 10)), "{$table}.{$name}: Name nach Schema uq_/idx_ + Tabelle");
-            T::check(!isset($names[$name]), "{$table}.{$name}: Indexname unter den 27 Tabellen eindeutig (wie v26)");
+            T::check(!isset($names[$name]), "{$table}.{$name}: Indexname unter den 28 Tabellen eindeutig (wie v26)");
             $names[$name] = true;
             $bytes = 0;
             foreach ($index['columns'] as $part) {
@@ -295,6 +296,8 @@ T::run('Indizes', static function () use ($queries): void {
         'community_post_revisions' => ['idx_community_post_revisions_post' => ['post_id', 'created_at'], 'idx_community_post_revisions_created' => ['created_at']],
         'community_polls' => ['uq_community_polls_topic' => ['topic_id']],
         'community_badges' => ['uq_community_badges_slug' => ['slug']],
+        // PR #2b: Stufen der Zustellung (Vertrag DESIGN-2b §3.9, §4.5; InnoDB hängt id an, Reihenfolge innerhalb einer Stufe nach ID).
+        'community_notify_queue' => ['idx_community_notify_queue_kind' => ['kind']],
     ];
     foreach ($expected as $table => $wanted) {
         $indexes = v27Indexes((string) $queries[$table]);
@@ -336,7 +339,7 @@ T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku
     $golden = json_decode((string) @file_get_contents(__DIR__ . '/golden.json'), true);
     T::check(is_array($golden), 'golden.json lesbar (Neu erzeugen: CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-v27/dump-golden.php)');
     $golden = is_array($golden) ? $golden : [];
-    T::same(V27_TABLES, array_keys($golden), 'der Snapshot enthält genau die 27 Tabellen in der Reihenfolge von FEATURE_TABLES_V27');
+    T::same(V27_TABLES, array_keys($golden), 'der Snapshot enthält genau die 28 Tabellen in der Reihenfolge von FEATURE_TABLES_V27');
     $handoff = (string) @file_get_contents(dirname($root) . '/DOC/workflow/specs/community/HANDOFF-PR2-PR5.md');
     $totalIndexes = 0;
     foreach (V27_TABLES as $table) {
@@ -360,7 +363,7 @@ T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku
         T::same($expected['primary'], $doc['primary'], "HANDOFF {$table}: Primärschlüssel entspricht dem Snapshot");
         T::same($expected['indexes'], $doc['indexes'], "HANDOFF {$table}: Indextabelle entspricht dem Snapshot (Name, Art, Spalten)");
     }
-    T::same(64, $totalIndexes, 'insgesamt 64 Nicht-Primär-Indizes in den 27 Tabellen (62 aus PR #1, zwei Nachträge an community_topics)');
+    T::same(65, $totalIndexes, 'insgesamt 65 Nicht-Primär-Indizes in den 28 Tabellen (62 aus PR #1, zwei Nachträge an community_topics, idx_community_notify_queue_kind aus PR #2b)');
 });
 
 T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void {
@@ -379,7 +382,8 @@ T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void 
         $total += count(v27Columns((string) $queries[$table]));
     }
     T::same(['id', 'slug', 'title', 'title_en', 'description', 'description_en', 'icon', 'tier', 'rule_json', 'is_active'], array_keys(v27Columns((string) $queries['community_badges'])), 'community_badges: Spalten und Reihenfolge (description_en nach description, wie title_en nach title)');
-    T::same(269, $total, 'insgesamt 269 Spalten in den 27 Tabellen (268 aus PR #1, dazu community_badges.description_en)');
+    T::same(['id', 'kind', 'topic_id', 'post_id', 'actor_id', 'detail', 'phase', 'cursor_user_id', 'attempts', 'steps', 'lease_token', 'locked_until', 'created_at', 'updated_at'], array_keys(v27Columns((string) $queries['community_notify_queue'])), 'community_notify_queue: Spalten und Reihenfolge (PR #2b, DDL interaktion §5)');
+    T::same(283, $total, 'insgesamt 283 Spalten in den 28 Tabellen (268 aus PR #1, dazu community_badges.description_en und die 14 Spalten von community_notify_queue)');
 });
 
 T::run('Core-Tabelle notifications: Gruppenschlüssel und Zähler (Bündelung)', static function () use ($queries, $migrationSource, $schemaSource): void {
@@ -719,7 +723,7 @@ T::run('Dokumentation stimmt mit dem Schema überein', static function () use ($
         T::check(str_contains($handoff, "`{$capability}`"), "HANDOFF nennt {$capability}");
     }
     T::check(str_contains($handoff, '`' . Caps::MARKER . '`') && str_contains($handoff, '`moderator`'), 'HANDOFF nennt den Marker capabilities_v27 und die Rolle moderator');
-    T::check(str_contains($schemaDoc, 'The base schema (117 tables)'), 'DATABASE-SCHEMA.md nennt 117 Tabellen');
+    T::check(str_contains($schemaDoc, 'The base schema (118 tables)'), 'DATABASE-SCHEMA.md nennt 118 Tabellen');
     foreach (['FILELIST.md', 'FILESTRUCTUR.md'] as $inventory) {
         T::check(str_contains((string) file_get_contents($repo . '/DOC/' . $inventory), '`TESTS/schema-v27/`'), "DOC/{$inventory} nennt TESTS/schema-v27");
     }

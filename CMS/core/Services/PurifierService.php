@@ -11,13 +11,16 @@
  *
  * Profile:
  *   - 'default'  → Standard CMS-Whitelist (Posts, Seiten)
+ *   - 'hub'      → Hub-Seiten mit Struktur-Tags (section, article, nav …)
  *   - 'table'    → Tabellen-/Beschreibungstexte mit Struktur-Tags
  *   - 'table_cell' → Nur Inline-Formatierung und Links für Tabellenzellen
  *   - 'strict'   → Nur Text-Formatierung (Kommentare, User-Bio)
  *   - 'minimal'  → Nur Inline-Tags (Nachrichten)
+ *   - 'community' → Community-Beiträge nach CommonMark (ContentRenderer): eigene Schema- und Klassenliste, keine fremden Bilder
  *
  * Externe Links redaktioneller Profile bleiben „follow“; nur nutzergenerierte Inhalte
- * ('strict', 'minimal') erhalten rel="nofollow ugc". Links auf die eigene Domain gelten als intern.
+ * ('strict', 'minimal', 'community') erhalten rel="nofollow ugc". Links auf die eigene Domain (exakter Host aus SITE_URL)
+ * gelten als intern; protokollrelative Ziele (`//host`) gelten wie https.
  *
  * @package CMSv2\Core\Services
  */
@@ -33,10 +36,10 @@ if (!defined('ABSPATH')) {
 class PurifierService
 {
     private static ?self $instance = null;
-    private const HTML_DEFINITION_REVISION = 2026100201;
+    private const HTML_DEFINITION_REVISION = 2026112001;
 
     /** Profile für nutzergenerierte Inhalte: externe Links erhalten rel="nofollow ugc". */
-    private const UGC_PROFILES = ['strict', 'minimal'];
+    private const UGC_PROFILES = ['strict', 'minimal', 'community'];
 
     /** @var array<string, \HTMLPurifier> Gecachte Purifier-Instanzen pro Profil */
     private array $purifiers = [];
@@ -49,10 +52,16 @@ class PurifierService
 
     private ?string $siteHost = null;
 
+    /** URI-Schemata aller Profile ohne eigene Angabe. */
+    private const DEFAULT_SCHEMES = ['http', 'https', 'mailto', 'tel'];
+
     /**
      * Bekannte Sanitierungs-Profile mit erlaubten HTML-Elementen
      *
-     * @var array<string, array{elements: string, attributes: string}>
+     * Optionale Schlüssel (nur gesetzte wirken, die übrigen Profile bleiben unverändert): `schemes` (URI.AllowedSchemes statt
+     * DEFAULT_SCHEMES), `classes` (Attr.AllowedClasses), `external_resources` (false → URI.DisableExternalResources).
+     *
+     * @var array<string, array{elements: string, attributes: string, schemes?: list<string>, classes?: list<string>, external_resources?: bool}>
      */
     private const PROFILES = [
         'default' => [
@@ -78,6 +87,20 @@ class PurifierService
         'minimal' => [
             'elements'   => 'strong,b,em,i,u,br,code,a',
             'attributes' => 'a.href',
+        ],
+        // Community-Beiträge (Markdown → CommonMark → hier). Keine Klassen außer der Allowlist (Sprachen aus ContentRenderer::LANGUAGES,
+        // Ausrichtung, Aufgaben, Zitate inkl. Überlauf der Zitatgrenze, Spoiler), keine fremden Bilder, nur http/https/mailto;
+        // Kennzeichen der Zitat-Blöcke (data-quote-post) für die Neutralisierung je Betrachter.
+        'community' => [
+            'elements'   => 'p,br,strong,em,del,a,code,pre,blockquote,ul,ol,li,h3,h4,hr,table,thead,tbody,tr,th,td,img,span,details,summary',
+            'attributes' => 'a.href,a.title,a.rel,ol.start,code.class,th.class,td.class,img.src,img.alt,img.width,img.height,img.loading,img.decoding,span.class,blockquote.class,blockquote.data-quote-post,details.class',
+            'schemes'    => ['http', 'https', 'mailto'],
+            'classes'    => [
+                'language-php', 'language-javascript', 'language-typescript', 'language-xml', 'language-css', 'language-sql', 'language-bash',
+                'language-powershell', 'language-json', 'language-yaml', 'language-python', 'language-csharp', 'language-diff', 'language-ini',
+                'language-plaintext', 'text-start', 'text-center', 'text-end', 'cms-task', 'cms-task--done', 'cms-quote', 'cms-quote--hidden', 'cms-spoiler',
+            ],
+            'external_resources' => false,
         ],
     ];
 
@@ -178,13 +201,20 @@ class PurifierService
             $config->set('URI.Host', $siteHost);
         }
 
-        // URI-Schema einschränken
-        $config->set('URI.AllowedSchemes', [
-            'http'  => true,
-            'https' => true,
-            'mailto' => true,
-            'tel'   => true,
-        ]);
+        // URI-Schema einschränken (Profil kann enger sein)
+        $config->set('URI.AllowedSchemes', array_fill_keys($profileConfig['schemes'] ?? self::DEFAULT_SCHEMES, true));
+        if (isset($profileConfig['schemes'])) {
+            // Sonst liefert die prozessweite Schema-Registry von HTMLPurifier ein Schema, das ein anderes Profil (z. B. tel:
+            // in 'strict') im selben Prozess schon geladen hat, ohne URI.AllowedSchemes erneut zu prüfen.
+            $config->set('URI.OverrideAllowedSchemes', false);
+        }
+        if (isset($profileConfig['classes'])) {
+            $config->set('Attr.AllowedClasses', $profileConfig['classes']);
+        }
+        if (($profileConfig['external_resources'] ?? true) === false) {
+            // Bilder u. a. nur vom eigenen Host (URI.Host) oder relativ; Links bleiben unberührt.
+            $config->set('URI.DisableExternalResources', true);
+        }
 
         // AutoFormat
         $config->set('AutoFormat.RemoveEmpty', true);
@@ -243,6 +273,8 @@ class PurifierService
         $this->ensureHtmlAttribute($definition, 'div', 'data-cms-editorjs-spacing', 'Text');
         $this->ensureHtmlAttribute($definition, 'div', 'data-cms-editorjs-align', 'Text');
         $this->ensureHtmlAttribute($definition, 'span', 'aria-hidden', 'Enum#true,false');
+        // Community: Kennzeichen eines Zitat-Blocks (Beitrags-ID), nur im Profil 'community' erlaubt.
+        $this->ensureHtmlAttribute($definition, 'blockquote', 'data-quote-post', 'Number');
     }
 
     /**
@@ -444,6 +476,9 @@ class PurifierService
     private function isForeignUrl(string $uri): bool
     {
         $uri = trim(html_entity_decode($uri, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if (str_starts_with($uri, '//')) {
+            $uri = 'https:' . $uri; // protokollrelativ: wie https behandeln (fremder Host → nofollow ugc)
+        }
         if (!in_array(strtolower((string) parse_url($uri, PHP_URL_SCHEME)), ['http', 'https'], true)) {
             return false;
         }

@@ -1,5 +1,5 @@
 # 365CMS Asset-Dokumentation
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktuell | **Update:** 2026-11-15
+> **Stand:** 2026-11-20 | **Version:** 4.2.0 | **Status:** Aktuell | **Update:** 2026-11-20
 
 ## Inhaltsverzeichnis
 - <a>Tabellarische Übersicht</a>
@@ -29,6 +29,7 @@
 | Mail | `mime` | `8.1.10` | MIME-Objekte / Anhänge | System |
 | Mail | `egulias-email-validator` + `doctrine-lexer` | `4.0.4` / `3.0.3` | RFC-Adressvalidierung (Pflicht für `Mime\Address` / SMTP) | System |
 | Search | `tntsearch` | `5.3.0` | Volltextsuche | Suche |
+| Markdown | `commonmark` (Bündel) | `2.10.7` (mit `league/config` 1.2.0, `dflydev/dot-access-data` 3.0.3, `nette/schema` 1.4.0, `nette/utils` 4.1.6; eine gescopte Datei) | Markdown-Renderer der Community (`ContentRenderer`) | Community |
 | SEO | `melbahja-seo` | `3.0.3` (5 Dateien lokal angepasst) | SEO-Helfer | SEO |
 | Security | `htmlpurifier` | `4.19.0` | XSS-Schutz | System |
 | Security | `dompurify` + `js/cms-csp-runtime.js` | `3.4.17` | Trusted-Types-`default`-Policy, Style-Nonce für dynamische `<style>` | Admin / Member / Frontend |
@@ -63,6 +64,7 @@ Hinweise zum Abgleich:
 - `symfony/polyfill-ctype` und `symfony/property-access` haben keinen eigenen Split-Tag für jeden Monorepo-Stand: maßgeblich ist der letzte Tag, in dem sich die Komponente geändert hat (`1.37.0` bzw. `8.1.4`), auch wenn die Dateien aus `polyfill-1.43.0.zip` bzw. `symfony-8.1.8.zip` stammen.
 - `melbahja/seo` ist Stand `3.0.3` mit fünf lokal angepassten Dateien (`src/Utils/Utils.php`, `src/Utils/HttpClient.php` – ohne `curl_close()`, seit PHP 8.5 veraltet –, `src/Sitemap/LinksBuilder.php`, `src/Sitemap/IndexBuilder.php`, `src/Interfaces/SitemapBuilderInterface.php`); `lbuchs/webauthn` 2.2.0 ist in `WebAuthn.php` lokal angepasst (`_checkOrigin()` nur exakte RP-ID oder Subdomain, ohne `curl_close()`; Release-Prüfung 4.1.0, SEC-410-17/FUN-410-40); `poliander/cron` 3.3.1 ist ebenfalls lokal angepasst (`CronExpression.php`).
 - `@tabler/core` 1.6.1 enthält in `tabler.min.js` Bootstrap `5.3.8` und `@popperjs/core` `2.11.8`; beide werden in `.github/deps/package.json` mitgeführt.
+- `league/commonmark` und seine vier Abhängigkeiten liegen nicht als Ordnerkopie vor, sondern als **eine gescopte Datei** `CMS/assets/commonmark/commonmark.php` (Namensraum `CMS\Vendor\…`, nur die transitiv benötigten 240 von 375 Dateien, Kommentare entfernt). Die Zeilen oben nennen deshalb dieselbe Datei; Bau, Prüfsummen und Lizenzen stehen in [commonmark/README.md](commonmark/README.md). `symfony/polyfill-php80` ist per `replace` ausgeblendet (PHP ≥ 8.4), `symfony/deprecation-contracts` deckt `symfony/contracts` ab, `psr/event-dispatcher` liegt schon unter `CMS/assets/psr/`.
 
 ### PHP- und JS-Bundles unter `CMS/assets/`
 
@@ -84,6 +86,11 @@ Hinweise zum Abgleich:
 | Mail | `egulias/email-validator` | `CMS/assets/egulias-email-validator/` | 4.0.4 | 4.0.4 | MIT | [packagist.org/packages/egulias/email-validator](https://packagist.org/packages/egulias/email-validator) | [egulias/EmailValidator](https://github.com/egulias/EmailValidator) |
 | Mail | `doctrine/lexer` | `CMS/assets/doctrine-lexer/` | 3.0.3 | 3.0.3 | MIT | [doctrine-project.org/projects/lexer.html](https://www.doctrine-project.org/projects/lexer.html) | [doctrine/lexer](https://github.com/doctrine/lexer) |
 | Search | `teamtnt/tntsearch` | `CMS/assets/tntsearchsrc/`, `CMS/assets/tntsearchhelper/` | 5.3.0 | 5.3.0 | MIT | [packagist.org/packages/teamtnt/tntsearch](https://packagist.org/packages/teamtnt/tntsearch) | [teamtnt/tntsearch](https://github.com/teamtnt/tntsearch) |
+| Markdown (Bündel) | `league/commonmark` | `CMS/assets/commonmark/commonmark.php` | 2.10.7 | 2.10.7 | BSD-3-Clause | [commonmark.thephpleague.com](https://commonmark.thephpleague.com/) | [thephpleague/commonmark](https://github.com/thephpleague/commonmark) |
+| Markdown (Bündel) | `league/config` | `CMS/assets/commonmark/commonmark.php` | 1.2.0 | 1.2.0 | BSD-3-Clause | [config.thephpleague.com](https://config.thephpleague.com/) | [thephpleague/config](https://github.com/thephpleague/config) |
+| Markdown (Bündel) | `dflydev/dot-access-data` | `CMS/assets/commonmark/commonmark.php` | 3.0.3 | 3.0.3 | MIT | [packagist.org/packages/dflydev/dot-access-data](https://packagist.org/packages/dflydev/dot-access-data) | [dflydev/dflydev-dot-access-data](https://github.com/dflydev/dflydev-dot-access-data) |
+| Markdown (Bündel) | `nette/schema` | `CMS/assets/commonmark/commonmark.php` | 1.4.0 | 1.4.0 | BSD-3-Clause (gewählt; auch GPL-2.0/GPL-3.0) | [nette.org](https://nette.org/) | [nette/schema](https://github.com/nette/schema) |
+| Markdown (Bündel) | `nette/utils` | `CMS/assets/commonmark/commonmark.php` | 4.1.6 | 4.1.6 | BSD-3-Clause (gewählt; auch GPL-2.0/GPL-3.0) | [nette.org](https://nette.org/) | [nette/utils](https://github.com/nette/utils) |
 | SEO | `melbahja/seo` | `CMS/assets/melbahja-seo/` | 3.0.3 | 3.0.6 | MIT | [packagist.org/packages/melbahja/seo](https://packagist.org/packages/melbahja/seo) | [melbahja/seo](https://github.com/melbahja/seo) |
 | Security | `ezyang/htmlpurifier` | `CMS/assets/htmlpurifier/` | 4.19.0 | 4.19.1 | LGPL-2.1-or-later | [htmlpurifier.org](https://htmlpurifier.org/) | [ezyang/htmlpurifier](https://github.com/ezyang/htmlpurifier) |
 | Cron | `poliander/cron` | `CMS/assets/cron/` | 3.3.1 | 3.3.1 | GPL-3.0-or-later | [packagist.org/packages/poliander/cron](https://packagist.org/packages/poliander/cron) | [poliander/cron](https://github.com/poliander/cron) |
@@ -183,6 +190,7 @@ Die Bundles unter `CMS/assets/` und `CMS/vendor/dompdf/` sind Kopien ohne Lockfi
 1. Version in `.github/deps/composer.json` bzw. `package.json` anpassen.
 2. Lockdatei neu erzeugen: `composer update --no-install --ignore-platform-reqs` bzw. `npm install --package-lock-only --ignore-scripts && node prune-lock.mjs` (jeweils in `.github/deps/`).
 3. Spalte *Runtime-Stand* in diesem Dokument und in `ASSET.md` nachziehen, dann `php TESTS/run-all.php`.
+4. Nur CommonMark-Bündel: Bündel und `LICENSE` mit `.github/deps/build-commonmark-bundle.php` neu bauen, Prüfsummen in `DOC/assets/commonmark/README.md` eintragen und `ContentRenderer::VERSION` erhöhen (Ablauf dort).
 
 Grenzen: Die lokal gebauten Editor.js-Plugins `link`, `hyperlink` und `anchor` sind keinem Upstream-Build exakt zuordenbar und mit dem nächstliegenden Stand eingetragen. Ein Dependabot-PR ändert nur das Manifest, nie die Kopie unter `CMS/assets/`; das Bundle muss von Hand aktualisiert werden.
 
@@ -228,6 +236,7 @@ cms_asset_url('images/LOGO_365CMS-75px.png')
 - **Zentraler Autoloader:** `CMS/assets/autoload.php`: PSR-4-Map (`cms_vendor_psr4_map()`), Composer-`files`-Bootstraps (Polyfills, `trigger_deprecation()`, `Clock\now()`, `String\u()`) und Classmap für den `Normalizer`-Stub
 - **Neue Library aufnehmen:** Paket ohne Tests/Tooling nach `CMS/assets/<name>/` kopieren, Präfix in `cms_vendor_psr4_map()` eintragen, ggf. `files` ergänzen und in `CMS/core/VendorRegistry.php` (Bundle + ggf. Funktions-Probe) registrieren
 - **Vendor-Sonderfall:** `CMS/vendor/dompdf/` wird separat über `CMS/vendor/dompdf/autoload.php` geladen
+- **Gescopte Bündel:** Eine Bibliothek mit vielen kleinen Dateien und Abhängigkeiten, die Plugins ebenfalls mitbringen könnten (heute nur `league/commonmark`), liegt als eine Datei unter `CMS/assets/<name>/<name>.php` mit allen Namensräumen unter `CMS\Vendor\` (keine Kollision mit fremden Kopien, die sonst einen Fatal Error auslösen). Der Assets-Autoloader lädt die Datei beim ersten Zugriff auf ein Präfix (`static $bundles` in `autoload.php`). Die Datei ist generiert und wird nie von Hand geändert: Build-Skript in `.github/deps/`, Eingabe ist die Lockdatei, `--verify` prüft byte-gleiche Reproduzierbarkeit, `.gitattributes` hält die Zeilenenden fest (`-text`), `TESTS/security/dependencies.php` vergleicht Kopf, Prüfsumme und Lizenz mit Lockdatei und `DOC/assets/<name>/README.md`.
 - **SunEditor-Sonderfall:** Die Runtime wird aus `dist/` plus `src/langs/de.js` übernommen; das Archiv `CMS_ASSETS/suneditor-3.4.3.zip` enthält dafür den Inhalt des npm-Pakets `suneditor@3.4.3` (GitHub-Quellarchive enthalten kein `dist/`). Seit 3.x müssen Toolbar-Plugins beim `SUNEDITOR.create()` explizit übergeben werden (`plugins`), Inhalte laufen über `value`/`$.html.get()`/`$.html.set()` und Änderungen über `events.onChange`
 - **Editor.js-Sonderfall:** Der Runtime-Vertrag folgt `CMS/core/Services/EditorJs/EditorJsAssetService.php`, nicht dem kompletten Plugin-Baum; `delimiter.umd.js` entspricht dem npm-Build `@coolbytes/editorjs-delimiter@1.0.4` (`dist/bundle.js` ohne `sourceMappingURL`-Kommentar)
 - **JS/CSS-Ladung:** erfolgt weiterhin manuell über Admin-Partials, Theme-Templates und Service-spezifische Loader; es gibt keine zentrale Bundling-Pipeline
@@ -294,6 +303,7 @@ Abgleich mit `CMS/assets/`, `CMS/assets/autoload.php` und `CMS/core/VendorRegist
 | `mailer` / `mime` | 8.1.7 / 8.1.10 | `MailService` |
 | `translation` / `yaml` | 8.1.5 / 8.1.11 | `TranslationService` (Kataloge `CMS/lang/*.yaml`) |
 | `tntsearch` | 5.3.0 | `SearchService` (Index `cache/search/`); die Seitensuche `/search` nutzt seit 3.4.06 `SiteSearchService` |
+| `commonmark` (Bündel) | 2.10.7 (4.2.0) | `Community\Support\ContentRenderer` (Markdown der Community) über `assets/autoload.php` (Präfixe `CMS\Vendor\…`); Probe in `VendorRegistry` |
 | `Carbon` | 3.14.2 | `time_ago()` in `includes/functions/redirects-auth.php` |
 | `suneditor` | 3.4.3 | `EditorService` (Member-Profil), nur bei `setting_editor_type = suneditor` |
 | `dompdf` | 3.1.6 | `CMS/vendor/dompdf/`, `PdfService` (z. B. PDF-Export im Router) |

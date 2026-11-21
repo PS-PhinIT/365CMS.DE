@@ -2,7 +2,8 @@
 /**
  * Die einzige Entscheidungsstelle für Zugriffe im Community-Modul: `can()` beantwortet „darf dieses Mitglied das?“ für
  * Lesen, Schreiben und Moderation, `filterReadable()`/`readableForumIds()` liefern die lesbaren Foren für Listen, Suche
- * und Startseite, `limitsFor()` die Grenzen der Vertrauensstufe. Dienste rufen `can()` selbst; Controller dürfen sich
+ * und Startseite, `limitsFor()` die Grenzen der Vertrauensstufe, `moderationScope()` den Moderationsbereich für Warteschlange,
+ * Protokoll und Meldungen, `authority()`/`outranks()` den Rang für Sperren. Dienste rufen `can()` selbst; Controller dürfen sich
  * nicht darauf verlassen, dass ein Dienst es getan hat (SECURITY-PRIVACY §Rechte).
  *
  * Prüfreihenfolge (Entwurfsvertrag D1, Karte §1.3). Jeder Schritt lehnt ab oder lässt durch, das heißt: er gibt an den nächsten
@@ -50,12 +51,25 @@
  *   dessen `path` leer oder beschädigt ist oder nicht zum Elternforum passt (nur Moderation sieht es).
  * - Das Kontingent (Tageslimit, Stundenlimit, Abstände, Langsamer Modus) zählt jeden im Fenster angelegten Beitrag und jedes
  *   Thema, gleich welchen Status er heute hat: eigenes Löschen und Löschen durch die Moderation geben nichts frei.
+ * - Grenzen der Stufe (`trust_limits`): `-1` = unbegrenzt, `0` = keine.
  *
- * Kontext (`$context` von `can()`): kommt ausschließlich aus Dienst- oder Controller-Code, nie aus Anfragedaten. `now`, `fresh`
- * und übergebene Zeilen (`forum`, `topic`, `post`) werden vertraut; ein Controller gibt nur IDs weiter und prüft sie vorher als
- * Zahl. Eine ID unter `*_id` ist nie eine Zeile (ein Array dort gilt als unbekanntes Ziel). Ohne jedes Ziel sind `read` und
- * `search` nur mit `scope => 'global'` erlaubt (Frage „darf dieses Konto die Community betreten“); ein vergessenes oder leeres
- * Ziel (`forum_id => null`) ergibt `not_found`.
+ * Ergänzungen aus PR #2b (Vertrag DESIGN-2b §3.5):
+ * - Inhaltsgrenzen (Kontext `content`, beim Bearbeiten `content_before`) nach dem Bearbeitungsfenster, nicht für Moderation;
+ *   Prüfpflicht (`review`) macht neue Inhalte wartend und lehnt das Bearbeiten veröffentlichter Beiträge ab (`content_review`).
+ * - Reagieren nur auf veröffentlichte Beiträge in veröffentlichten Themen, auch für die Moderation.
+ * - Moderationsaktionen: `topic.announce`/`topic.unannounce` nur global; Thema gelöscht oder im Papierkorb `topic_deleted` (außer
+ *   `post.reject`), Verweis `topic_moved`. Verschieben: ein fehlendes oder unsichtbares Zielforum ist `not_found`, ein sichtbares ohne
+ *   Moderation `no_permission`; erst danach `forum_archived`, Themenzustand, `invalid_target` (Ziel = Quelle) und `forum_link`.
+ * - Melden eines Mitglieds (`report` mit `member_id`): Ziel ist ein aktives Konto und nicht man selbst; unbekannte und nicht aktive
+ *   Konten ergeben mit derselben Abfrage `not_found`.
+ * - Eine unsichtbare oder fehlende Kategorie des Forums oder eines Vorfahren verbirgt das Forum wie `hidden` (`category_id = 0`
+ *   gilt als sichtbar). Die Sichtbarkeit steht im Forenbaum; nach einer Änderung an Kategorien ruft die Verwaltung `flush()`.
+ *
+ * Kontext (`$context` von `can()`): kommt ausschließlich aus Dienst- oder Controller-Code, nie aus Anfragedaten. `now`, `fresh`,
+ * `content`, `content_before`, `review` und übergebene Zeilen (`forum`, `topic`, `post`) werden vertraut; ein Controller gibt nur
+ * IDs weiter und prüft sie vorher als Zahl. Eine ID unter `*_id` ist nie eine Zeile (ein Array dort gilt als unbekanntes Ziel).
+ * Ohne jedes Ziel sind `read` und `search` nur mit `scope => 'global'` erlaubt (Frage „darf dieses Konto die Community betreten“);
+ * ein vergessenes oder leeres Ziel (`forum_id => null`) ergibt `not_found`.
  *
  * Filter `cms_community_can`: jeder Filter läuft einzeln, eine Ablehnung (auch durch eine Ausnahme im Filter) steht fest und
  * wird von keinem späteren Filter aufgehoben; bei `read` und `search` wird sie zu `not_found` (kein Existenzkanal).
@@ -106,17 +120,35 @@ final class CommunityAccess
 
     /** Moderationsaktionen (Namen wie die Protokolleinträge) und die Sammelabfrage `moderate`. */
     public const MODERATION_ACTIONS = [
-        'moderate', 'topic.lock', 'topic.unlock', 'topic.pin', 'topic.unpin', 'topic.rename', 'topic.announce',
-        'topic.move', 'topic.merge', 'topic.split', 'topic.approve', 'post.hide', 'post.restore', 'post.move',
-        'post.approve', 'post.reject',
+        'moderate', 'topic.lock', 'topic.unlock', 'topic.pin', 'topic.unpin', 'topic.rename', 'topic.announce', 'topic.unannounce',
+        'topic.move', 'topic.merge', 'topic.split', 'topic.approve', 'topic.hide', 'topic.restore', 'topic.reject', 'post.hide',
+        'post.restore', 'post.move', 'post.approve', 'post.reject',
     ];
 
-    /** Aktionen, die nur eine globale Capability brauchen: Aktion => Capability. */
+    /** Aktionen, die nur eine globale Capability brauchen: Aktion => Capability (`ban_temporary`: befristete Sperren, Sperrlisten, Verlauf). */
     public const CAPABILITY_ACTIONS = [
         'ban' => CommunityCapabilities::BAN,
+        'ban_temporary' => CommunityCapabilities::MODERATE,
         'manage' => CommunityCapabilities::MANAGE,
         'view_private_data' => CommunityCapabilities::VIEW_PRIVATE_DATA,
     ];
+
+    /** Rang für Sperren (`authority()`): Gast oder unbekanntes Konto. */
+    public const AUTHORITY_NONE = 0;
+    /** Jedes Konto ohne die Rechte darüber, auch Forum-Moderatoren. */
+    public const AUTHORITY_MEMBER = 1;
+    /** Rolle mit `community.moderate`. */
+    public const AUTHORITY_MODERATOR = 2;
+    /** Rolle mit `community.ban` oder `community.manage`. */
+    public const AUTHORITY_MANAGER = 3;
+    /** Rolle `admin`. */
+    public const AUTHORITY_ADMIN = 4;
+
+    /**
+     * Kennung eines nicht vorhandenen Forums, Themas, Beitrags oder Kontos: Abfragen bei unbekanntem Ziel laufen mit ihr genauso wie
+     * bei bekanntem. Dienste setzen sie für fehlende oder gemischte Ziele ein (Vertrag DESIGN-2b §1 Nr. 8).
+     */
+    public const DECOY_ID = 4294967295;
 
     /** Schlüssel der Rechtematrix je Inhaltsaktion (`edit`/`delete` gelten für eigene Beiträge). */
     public const PERMISSION_KEYS = [
@@ -124,14 +156,27 @@ final class CommunityAccess
         'upload' => 'upload', 'poll' => 'poll', 'vote' => 'vote', 'react' => 'react', 'mark_solution' => 'mark_solution',
     ];
 
-    /** Moderationsaktionen mit Ziel-Forum (`target_forum_id`): die Moderation muss in beiden Foren gelten. */
-    private const MOVING_ACTIONS = ['topic.move', 'topic.merge', 'topic.split'];
+    /** Moderationsaktionen mit Ziel-Forum (`target_forum_id`): das Ziel muss sichtbar sein und die Moderation in beiden Foren gelten. */
+    private const MOVING_ACTIONS = ['topic.move', 'topic.merge', 'topic.split', 'post.move'];
+
+    /** Moderationsaktionen nur für die globale Moderation (Ankündigungen erscheinen in allen Foren der Kategorie). */
+    private const GLOBAL_ONLY = ['topic.announce', 'topic.unannounce'];
+
+    /** Inhaltsaktionen mit Inhaltsgrenzen der Stufe (Kontext `content`) und Prüfpflicht (`review`). */
+    private const CONTENT_LIMITED_ACTIONS = ['create_topic', 'reply', 'edit'];
+
+    /** Inhaltsgrenzen: Schlüssel in `content` => [Feld in `trust_limits`, Ablehnungsgrund], in Prüfreihenfolge. */
+    private const CONTENT_LIMITS = [
+        'links' => ['links_per_post', 'too_many_links'],
+        'images' => ['images_per_post', 'too_many_images'],
+        'attachments' => ['attachments_per_post', 'too_many_attachments'],
+    ];
+
+    /** Kontextschlüssel von `moderationScope()`; alle anderen entfallen (ein Ziel macht aus Forum-Moderation keine globale). */
+    private const SCOPE_CONTEXT = ['now' => true, 'fresh' => true];
 
     /** Stufe, ab der `edit_window_minutes_trusted` gilt. */
     private const TRUSTED_LEVEL = 3;
-
-    /** Kennung eines nicht vorhandenen Forums: Abfragen bei unbekanntem Ziel laufen mit ihr genauso wie bei bekanntem. */
-    private const DECOY_ID = 4294967295;
 
     /** Kontextschlüssel, die ein Ziel nennen (Zeile oder ID). */
     private const TARGET_KEYS = ['post', 'post_id', 'topic', 'topic_id', 'forum', 'forum_id'];
@@ -173,6 +218,8 @@ final class CommunityAccess
     private array $verified = [];
     /** @var array<string, bool> */
     private array $roleRights = [];
+    /** @var array<string, true> Rollenrechte, deren Abfrage warf (für `roleHas()` „nicht erlaubt“, bis `forgetUser()`/`flush()`) */
+    private array $roleFailures = [];
     /** @var array<string, bool> `<Konto>:<Forum>` => Forum-Moderator */
     private array $moderators = [];
     /** @var array<string, array{rows: list<array<string, mixed>>, has: bool}> `<Konto>:<Forum>:<Stufe>` */
@@ -325,9 +372,10 @@ final class CommunityAccess
     }
 
     /**
-     * Zeit- und Zählgrenzen der Vertrauensstufe des Mitglieds (Gäste und Unbekannte: Stufe 0).
+     * Zeit-, Zähl- und Inhaltsgrenzen der Vertrauensstufe des Mitglieds (Gäste und Unbekannte: Stufe 0). Alle Felder aus
+     * `Settings::LIMIT_FIELDS`: `-1` = unbegrenzt, `0` = keine.
      *
-     * @return array{level: int, posts_per_day: int, topics_per_hour: int, edit_window_minutes: int}
+     * @return array{level: int, posts_per_day: int, topics_per_hour: int, links_per_post: int, images_per_post: int, attachments_per_post: int, attachments_per_day: int, edit_window_minutes: int}
      */
     public function limitsFor(?int $userId): array
     {
@@ -337,14 +385,119 @@ final class CommunityAccess
         if ($account['member']) {
             $level = $this->levelOf($account['id'], $this->stats->get($account['id']));
         }
-        $limits = $this->settings->limitsForLevel($level);
 
-        return [
-            'level' => $level,
-            'posts_per_day' => $limits['posts_per_day'],
-            'topics_per_hour' => $limits['topics_per_hour'],
-            'edit_window_minutes' => $this->editWindowMinutes($level),
-        ];
+        return ['level' => $level] + $this->settings->limitsForLevel($level) + ['edit_window_minutes' => $this->editWindowMinutes($level)];
+    }
+
+    /**
+     * Rang eines Kontos für Sperren und ihr Aufheben, aus `users.role` und den Rollenrechten, unabhängig von `users.status`:
+     * `admin` 4, `community.ban` oder `community.manage` 3, `community.moderate` 2, sonst 1; Gast und unbekanntes Konto 0. Das Konto
+     * wird je Aufruf gelesen (kein Zwischenspeicher). `null` = nicht ermittelbar (Datenbank- oder Rollenfehler, protokolliert).
+     */
+    public function authority(?int $userId): ?int
+    {
+        $uid = $userId !== null && $userId > 0 ? $userId : 0;
+        if ($uid === 0) {
+            return self::AUTHORITY_NONE;
+        }
+        try {
+            $row = $this->members->find($uid);
+            if ($row === null) {
+                return self::AUTHORITY_NONE;
+            }
+            $role = (string) $row['role'];
+            if ($role === 'admin') {
+                return self::AUTHORITY_ADMIN;
+            }
+            if ($this->roleCapability($role, CommunityCapabilities::BAN)
+                || $this->roleCapability($role, CommunityCapabilities::MANAGE)
+            ) {
+                return self::AUTHORITY_MANAGER;
+            }
+
+            return $this->roleCapability($role, CommunityCapabilities::MODERATE) ? self::AUTHORITY_MODERATOR : self::AUTHORITY_MEMBER;
+        } catch (\Throwable $e) {
+            $this->log('Rang nicht ermittelbar: {exception}', ['exception' => $e]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Steht der Akteur im Rang über dem Ziel? Nur bei verschiedenen Konten und echt höherem Rang; ein Fehler bei einem der beiden
+     * ergibt `false` (fail-closed). Gleichrangige stehen nicht übereinander.
+     */
+    public function outranks(int $actorId, int $targetId): bool
+    {
+        if ($actorId <= 0 || $actorId === $targetId) {
+            return false;
+        }
+        $actor = $this->authority($actorId);
+        $target = $this->authority($targetId);
+
+        return $actor !== null && $target !== null && $actor > $target;
+    }
+
+    /**
+     * Moderationsbereich des Kontos für Warteschlange, Protokoll und Meldungen. Kontext nur `now` (int) und `fresh` (bool), alle
+     * anderen Schlüssel entfallen.
+     * - `{global: false, forum_ids: []}`: Modul aus, Gast, Sperre (außer `admin`), E-Mail-Pflicht, `community.view` fehlt, ein Filter
+     *   lehnt `moderate` ab, kein Forum-Moderator (Prüfung: `can($uid, 'moderate', $ctx)` lehnt mit einem anderen Grund als
+     *   `no_permission` ab); Fehler beim Lesen.
+     * - `{global: true, forum_ids: alle}`: `can('moderate')` ohne Ziel erlaubt und kein Forum vom Filter `cms_community_can` entfernt.
+     * - `{global: false, forum_ids: [...]}`: Forum-Moderator über `ForumRepository::moderatorAssignments()` und `moderates()` je Forum des
+     *   Baums; oder globale Moderation, bei der der Filter Foren entfernt hat. Je Forum läuft der Filter mit `moderate` und `forum_id`.
+     * Archivierte und verborgene Foren bleiben im Bereich (Aktionen darin sperrt weiter `can()`); Reihenfolge des Forenbaums.
+     *
+     * @param array<string, mixed> $context
+     * @return array{global: bool, forum_ids: list<int>}
+     */
+    public function moderationScope(?int $userId, array $context = []): array
+    {
+        $none = ['global' => false, 'forum_ids' => []];
+        $ctx = array_intersect_key($context, self::SCOPE_CONTEXT);
+        $gate = $this->can($userId, 'moderate', $ctx);
+        $uid = $userId !== null && $userId > 0 ? $userId : 0;
+        $filterContext = isset($ctx['now']) && is_int($ctx['now']) ? ['now' => $ctx['now']] : [];
+        try {
+            if ($gate->allowed) {
+                $tree = $this->forums->tree();
+                $forumIds = [];
+                foreach (array_keys($tree) as $forumId) {
+                    if ($this->scopeAllows($uid, (int) $forumId, $filterContext)) {
+                        $forumIds[] = (int) $forumId;
+                    }
+                }
+
+                return ['global' => count($forumIds) === count($tree), 'forum_ids' => $forumIds];
+            }
+            if ($gate->reason !== 'no_permission') {
+                return $none;
+            }
+            $account = $this->account($uid);
+            if (!$account['member']) {
+                return $none;
+            }
+            $assignments = $this->forums->moderatorAssignments($account['id'], $this->groupIds($account['id']));
+            if ($assignments === []) {
+                return $none;
+            }
+            $forumIds = [];
+            foreach (array_keys($this->forums->tree()) as $forumId) {
+                $forumId = (int) $forumId;
+                if (ForumRepository::moderates($this->ancestorIds($forumId), $forumId, $assignments)
+                    && $this->scopeAllows($account['id'], $forumId, $filterContext)
+                ) {
+                    $forumIds[] = $forumId;
+                }
+            }
+
+            return ['global' => false, 'forum_ids' => $forumIds];
+        } catch (\Throwable $e) {
+            $this->log('Moderationsbereich nicht ermittelbar: {exception}', ['exception' => $e]);
+
+            return $none;
+        }
     }
 
     /** Verwirft alles, was über dieses Mitglied zwischengespeichert ist (nach Rollen-, Gruppen-, Sperren- oder Moderatorenänderung). */
@@ -363,6 +516,7 @@ final class CommunityAccess
             }
         }
         $this->roleRights = [];
+        $this->roleFailures = [];
     }
 
     /** Verwirft alle Zwischenspeicher einschließlich des Forenbaums. */
@@ -372,6 +526,7 @@ final class CommunityAccess
         $this->groups = [];
         $this->verified = [];
         $this->roleRights = [];
+        $this->roleFailures = [];
         $this->moderators = [];
         $this->permissionRows = [];
         $this->banCache = [];
@@ -449,6 +604,11 @@ final class CommunityAccess
             }
         }
 
+        // Melden eines Mitglieds: das Ziel ist ein Konto, kein Inhalt (Forum, Thema und Beitrag entfallen)
+        if ($action === 'report' && array_key_exists('member_id', $ctx)) {
+            return $this->decideMemberReport($uid, $ctx);
+        }
+
         // Ziel auflösen (Beitrag → Thema → Forum)
         $target = $this->resolve($ctx);
         if (!$target['requested']) {
@@ -494,7 +654,7 @@ final class CommunityAccess
             return AccessDecision::allow(null, $action === 'read' ? $view : null);
         }
         if (in_array($action, self::MODERATION_ACTIONS, true)) {
-            return $this->decideModeration($action, $ctx, $account, $forum, $globalModerator, $moderating);
+            return $this->decideModeration($action, $ctx, $account, ['forum' => $forum, 'topic' => $topic, 'level' => $level], $globalModerator, $moderating);
         }
         if (in_array($action, self::META_ACTIONS, true)) {
             return $this->decideMeta($action, $uid, $forum, $topic, $target['post']);
@@ -506,7 +666,12 @@ final class CommunityAccess
             $target,
             $matrix,
             ['global' => $globalModerator, 'moderating' => $moderating],
-            ['stats' => $stats, 'level' => $level, 'now' => $now]
+            [
+                'stats' => $stats, 'level' => $level, 'now' => $now,
+                'has_content' => array_key_exists('content', $ctx), 'content' => $ctx['content'] ?? null,
+                'content_before' => $ctx['content_before'] ?? null,
+                'review' => ($ctx['review'] ?? false) === true,
+            ]
         );
     }
 
@@ -529,23 +694,36 @@ final class CommunityAccess
     }
 
     /**
-     * Moderationsaktionen: nur Moderation des Forums (`topic.announce` nur global, Verschieben in Quelle und Ziel).
-     * Ein archiviertes Forum sperrt auch die Moderation.
+     * Moderationsaktionen: nur Moderation des Forums (`GLOBAL_ONLY` nur global). Verschiebende Aktionen mit Ziel (`target_forum_id`):
+     * das Zielforum muss sichtbar sein (dieselbe Regel wie für Quellforen; fehlend und unsichtbar ergeben mit derselben Abfragefolge
+     * `not_found`) und moderiert werden (sonst `no_permission`). Erst nach den Rechten folgen die fachlichen Gründe (Vertrag DESIGN-2b
+     * §1 Nr. 8): archiviertes Ziel oder archivierte Quelle (sperrt auch die Moderation), Thema gelöscht oder im Papierkorb
+     * (`topic_deleted`, außer `post.reject`: wartende Beiträge abgelehnter Themen bleiben ablehnbar) bzw. Verweis (`topic_moved`), bei
+     * `topic.move` Ziel = Quelle (`invalid_target`), Ziel vom Typ `link` (`forum_link`). `moderate` prüft keinen Themenzustand.
      *
      * @param array<string, mixed> $ctx
      * @param array{id: int, member: bool, role: string, admin: bool} $account
-     * @param array<string, mixed> $forum
+     * @param array{forum: array<string, mixed>, topic: array<string, mixed>|null, level: int} $place
      */
-    private function decideModeration(string $action, array $ctx, array $account, array $forum, bool $global, bool $moderating): AccessDecision
+    private function decideModeration(string $action, array $ctx, array $account, array $place, bool $global, bool $moderating): AccessDecision
     {
-        if (!$moderating || ($action === 'topic.announce' && !$global)) {
+        $forum = $place['forum'];
+        if (!$moderating || (in_array($action, self::GLOBAL_ONLY, true) && !$global)) {
             return AccessDecision::deny('no_permission');
         }
+        $targetForum = null;
+        $targetId = 0;
         if (in_array($action, self::MOVING_ACTIONS, true) && isset($ctx['target_forum_id'])) {
-            $targetId = (int) $ctx['target_forum_id'];
+            $targetId = self::intId($ctx['target_forum_id']);
             $targetForum = $this->forums->find($targetId > 0 ? $targetId : self::DECOY_ID);
+            // Fehlendes Ziel: dieselben Abfragen wie ein vorhandenes (Platzhalter-ID), dann dasselbe Ergebnis wie ein unsichtbares
+            $targetRead = $this->matrixFor($account, $targetForum, $place['level'])['read'];
+            $targetModerated = $global || $this->isForumModerator($account, $targetForum);
             if ($targetForum === null) {
                 return AccessDecision::deny('not_found');
+            }
+            if (!self::forumVisible($targetRead, $this->hiddenInChain($targetForum), $targetModerated)) {
+                return AccessDecision::deny('not_found'); // Zielforum unsichtbar
             }
             if (!$global && !$this->isForumModerator($account, $targetForum)) {
                 return AccessDecision::deny('no_permission');
@@ -556,6 +734,53 @@ final class CommunityAccess
         }
         if ((string) $forum['status'] === 'archived') {
             return AccessDecision::deny('forum_archived');
+        }
+        $topic = $place['topic'];
+        if ($topic !== null && $action !== 'moderate') {
+            $state = match ((string) $topic['status']) {
+                'deleted', 'trash' => $action === 'post.reject' ? null : 'topic_deleted',
+                'moved' => 'topic_moved',
+                default => null,
+            };
+            if ($state !== null) {
+                return AccessDecision::deny($state);
+            }
+        }
+        if ($targetForum !== null) {
+            if ($action === 'topic.move' && $targetId === (int) $forum['id']) {
+                return AccessDecision::deny('invalid_target');
+            }
+            if ((string) $targetForum['type'] === 'link') {
+                return AccessDecision::deny('forum_link');
+            }
+        }
+
+        return AccessDecision::allow();
+    }
+
+    /**
+     * Melden eines Mitglieds (`report` mit `member_id`; die Schritte 0 bis 4 sind durchlaufen): kein weiterer Zielschlüssel im
+     * Kontext, Ziel ein aktives Konto (unbekannt und nicht aktiv mit derselben Abfrage, ungültige IDs als Platzhalter-ID:
+     * `not_found`), nicht man selbst (`no_permission`). `fresh` liest auch das Zielkonto neu.
+     *
+     * @param array<string, mixed> $ctx
+     */
+    private function decideMemberReport(int $uid, array $ctx): AccessDecision
+    {
+        if (array_intersect(self::TARGET_KEYS, array_keys($ctx)) !== []) {
+            return AccessDecision::deny('not_found');
+        }
+        $memberId = self::intId($ctx['member_id']);
+        $memberId = $memberId > 0 ? $memberId : self::DECOY_ID;
+        if (!empty($ctx['fresh'])) {
+            unset($this->accounts[$memberId]);
+        }
+        $target = $this->account($memberId);
+        if (!$target['member']) {
+            return AccessDecision::deny('not_found');
+        }
+        if ($memberId === $uid) {
+            return AccessDecision::deny('no_permission');
         }
 
         return AccessDecision::allow();
@@ -589,7 +814,7 @@ final class CommunityAccess
      * @param array{forum: array<string, mixed>|null, topic: array<string, mixed>|null, post: array<string, mixed>|null} $target
      * @param array<string, bool> $matrix
      * @param array{global: bool, moderating: bool} $mod
-     * @param array{stats: array<string, mixed>|null, level: int, now: int} $run
+     * @param array{stats: array<string, mixed>|null, level: int, now: int, has_content: bool, content: mixed, content_before: mixed, review: bool} $run
      */
     private function decideContent(string $action, array $account, array $target, array $matrix, array $mod, array $run): AccessDecision
     {
@@ -670,12 +895,27 @@ final class CommunityAccess
             }
         }
 
+        // 7 Inhaltsgrenzen der Stufe und Prüfpflicht beim Bearbeiten (nicht für Moderation)
+        if (!$moderating && in_array($action, self::CONTENT_LIMITED_ACTIONS, true)) {
+            $tooMany = $this->contentReason($action, $run);
+            if ($tooMany !== null) {
+                return AccessDecision::deny($tooMany);
+            }
+            if ($action === 'edit' && $run['review'] && (string) ($post['status'] ?? '') !== 'pending') {
+                return AccessDecision::deny('content_review');
+            }
+        }
+        // 8 Reagieren nur auf veröffentlichte Beiträge in veröffentlichten Themen, auch für die Moderation (Platzhalter bleiben lesbar)
+        if ($action === 'react' && ((string) ($post['status'] ?? '') !== 'published' || (string) ($topic['status'] ?? '') !== 'published')) {
+            return AccessDecision::deny('no_permission');
+        }
+
         if (!in_array($action, ['create_topic', 'reply'], true)) {
             return AccessDecision::allow();
         }
 
         // 8 Freigabepflicht
-        $initial = $this->initialStatus($forum, $matrix, $run['stats'], $moderating);
+        $initial = $this->initialStatus($forum, $matrix, $run['stats'], $moderating, $run['review']);
 
         // 7 Zeit- und Zählgrenzen (zuletzt: sie fragen die Datenbank); globale Moderation überspringt sie
         if (!$mod['global']) {
@@ -716,16 +956,23 @@ final class CommunityAccess
     }
 
     /**
-     * Freigabepflicht: `pending`, wenn das Forum sie verlangt oder das Mitglied weniger als `new_member_approval_posts`
-     * veröffentlichte Beiträge hat; `bypass_approval` und Moderation sind ausgenommen.
+     * Freigabepflicht in dieser Folge: Moderation veröffentlicht; Prüfpflicht (`review`) wartet, auch mit `bypass_approval`;
+     * `bypass_approval` veröffentlicht; sonst `pending`, wenn das Forum Freigabe verlangt oder das Mitglied weniger als
+     * `new_member_approval_posts` veröffentlichte Beiträge hat.
      *
      * @param array<string, mixed> $forum
      * @param array<string, bool> $matrix
      * @param array<string, mixed>|null $stats
      */
-    private function initialStatus(array $forum, array $matrix, ?array $stats, bool $moderating): string
+    private function initialStatus(array $forum, array $matrix, ?array $stats, bool $moderating, bool $review): string
     {
-        if ($moderating || $matrix['bypass_approval']) {
+        if ($moderating) {
+            return 'published';
+        }
+        if ($review) {
+            return 'pending';
+        }
+        if ($matrix['bypass_approval']) {
             return 'published';
         }
         if ((int) ($forum['require_approval'] ?? 0) === 1) {
@@ -737,11 +984,50 @@ final class CommunityAccess
     }
 
     /**
+     * Inhaltsgrenze der Stufe, die der Inhalt überschreitet (`too_many_links|images|attachments`, in dieser Folge), sonst null. Ohne
+     * `content` im Kontext keine Prüfung (Menüabfrage). Ein fehlender, negativer oder nicht ganzzahliger Wert und `content` ohne
+     * Array zählen als unendlich groß (fail-closed, auch bei unbegrenzter Grenze). Beim Bearbeiten gilt je Feld die größere Zahl aus
+     * Grenze und Vorfassung (`content_before`; ungültig zählt 0): eine Korrektur scheitert nicht an Inhalt, der schon da war.
+     *
+     * @param array{level: int, has_content: bool, content: mixed, content_before: mixed} $run
+     */
+    private function contentReason(string $action, array $run): ?string
+    {
+        if (!$run['has_content']) {
+            return null;
+        }
+        $limits = $this->settings->limitsForLevel($run['level']);
+        $content = $run['content'];
+        $before = $action === 'edit' ? $run['content_before'] : null;
+        foreach (self::CONTENT_LIMITS as $key => [$field, $reason]) {
+            $count = self::contentCount($content, $key, PHP_INT_MAX);
+            $limit = $limits[$field];
+            if ($limit === Settings::UNLIMITED) {
+                $limit = PHP_INT_MAX - 1; // unbegrenzt: nur eine ungültige Zählung liegt darüber
+            }
+            $allowed = max($limit, self::contentCount($before, $key, 0));
+            if ($count > $allowed) {
+                return $reason;
+            }
+        }
+
+        return null;
+    }
+
+    /** Zahl unter `$key` in einer Inhaltszählung; `$invalid`, wenn sie fehlt, kein int ist, negativ ist oder `PHP_INT_MAX` erreicht. */
+    private static function contentCount(mixed $content, string $key, int $invalid): int
+    {
+        $value = is_array($content) ? ($content[$key] ?? null) : null;
+
+        return is_int($value) && $value >= 0 && $value < PHP_INT_MAX ? $value : $invalid;
+    }
+
+    /**
      * Zeit- und Zählgrenzen für `create_topic` und `reply`: größte Restzeit aus Abstand (`rate_limited`) und Langsamem Modus
      * (`slow_mode`) mit `retry_after` (entfällt für Forum-Moderatoren im eigenen Forum), danach Tages- und Stundenlimit der
-     * Stufe (`trust_limit`) und der Deckel für wartende Beiträge (`pending_limit`). Gezählt wird, was das Mitglied im Fenster
-     * angelegt hat, auch Gelöschtes (`QUOTA_*_STATUSES`): Löschen gibt kein Kontingent frei, weder das eigene noch das durch die
-     * Moderation. Die Statuslisten gehen als zusätzlicher Parameter an `countSince()`/`lastOfUser()` der Repositories.
+     * Stufe (`trust_limit`; `-1` = unbegrenzt, `0` = keine) und der Deckel für wartende Beiträge (`pending_limit`). Gezählt wird,
+     * was das Mitglied im Fenster angelegt hat, auch Gelöschtes (`QUOTA_*_STATUSES`): Löschen gibt kein Kontingent frei, weder das
+     * eigene noch das durch die Moderation. Die Statuslisten gehen als zusätzlicher Parameter an `countSince()`/`lastOfUser()` der Repositories.
      *
      * @param array<string, mixed> $forum
      * @param array<string, mixed>|null $topic
@@ -786,10 +1072,10 @@ final class CommunityAccess
         }
 
         $limits = $this->settings->limitsForLevel($level);
-        if ($limits['posts_per_day'] > 0 && $this->posts->countSince($uid, gmdate('Y-m-d H:i:s', $now - 86400), self::QUOTA_POST_STATUSES) >= $limits['posts_per_day']) {
+        if ($limits['posts_per_day'] !== Settings::UNLIMITED && $this->posts->countSince($uid, gmdate('Y-m-d H:i:s', $now - 86400), self::QUOTA_POST_STATUSES) >= $limits['posts_per_day']) {
             return AccessDecision::deny('trust_limit');
         }
-        if ($creating && $limits['topics_per_hour'] > 0 && $this->topics->countSince($uid, gmdate('Y-m-d H:i:s', $now - 3600), self::QUOTA_TOPIC_STATUSES) >= $limits['topics_per_hour']) {
+        if ($creating && $limits['topics_per_hour'] !== Settings::UNLIMITED && $this->topics->countSince($uid, gmdate('Y-m-d H:i:s', $now - 3600), self::QUOTA_TOPIC_STATUSES) >= $limits['topics_per_hour']) {
             return AccessDecision::deny('trust_limit');
         }
         if ($initial === 'pending' && $this->posts->countSince($uid, '1970-01-01 00:00:00', ['pending']) >= $this->settings->int('max_pending_per_user')) {
@@ -973,7 +1259,8 @@ final class CommunityAccess
     /**
      * Gilt das Forum als verborgen (nur Moderation sieht es)? Ja bei `hidden`, bei einem unbekannten Status, bei einem
      * beschädigten Pfad und wenn eines seiner Elternforen aus demselben Grund verborgen ist (fail-closed: Importe oder
-     * Eingriffe in die Datenbank dürfen ein Forum nie öffnen).
+     * Eingriffe in die Datenbank dürfen ein Forum nie öffnen). Ebenso, wenn die Kategorie des Forums oder eines Vorfahren
+     * unsichtbar ist oder fehlt (`category_visible` aus dem Forenbaum; ohne Kategorie sichtbar).
      *
      * @param array<string, mixed> $forum
      */
@@ -986,6 +1273,14 @@ final class CommunityAccess
         $forumId = (int) $forum['id'];
         foreach ($this->ancestorIds($forumId) as $ancestorId) {
             if ($ancestorId !== $forumId && !in_array((string) ($tree[$ancestorId]['status'] ?? ''), self::OPEN_FORUM_STATUSES, true)) {
+                return true;
+            }
+        }
+        // Kategorie: den Baum erst nach ancestorIds() lesen (ein unbekanntes Forum lädt ihn dort neu)
+        $chain = $this->ancestorIds($forumId);
+        $tree = $this->forums->tree();
+        foreach ($chain as $id) {
+            if ((int) ($tree[$id]['category_visible'] ?? 0) !== 1) {
                 return true;
             }
         }
@@ -1024,31 +1319,26 @@ final class CommunityAccess
      * Rechtematrix des Mitglieds im Forum. Ohne Rechte-Zeilen in der ganzen Vererbungskette gelten die Standards
      * (Gast: `guest`; Mitglied: `guest` und `member`); sonst gelten nur die Zeilen, vereinigt über Gast, Rolle, aktive Gruppen
      * und Stufe (`trust:N` = ab Stufe N). Mit `$forum` = null (unbekanntes Ziel) laufen dieselben Abfragen auf die Platzhalter-ID.
-     * `$lean` (nur die Mengen-API): erst fragen, ob die Kette Zeilen hat, und die Rechte-Zeilen nur dann lesen; `can()` liest immer
-     * beides, damit „gibt es nicht“ und „darfst du nicht sehen“ dieselbe Abfragefolge haben.
+     * Es liest immer Rechte-Zeilen und „hat die Kette Zeilen“, damit „gibt es nicht“ und „darfst du nicht sehen“ dieselbe Abfragefolge
+     * haben; die Mengen-API liest dieselben Daten gemeinsam für alle Foren (`readableAmong()`).
      *
      * @param array{id: int, member: bool, role: string, admin: bool} $account
      * @param array<string, mixed>|null $forum
      * @return array<string, bool>
      */
-    private function matrixFor(array $account, ?array $forum, int $level, bool $lean = false): array
+    private function matrixFor(array $account, ?array $forum, int $level): array
     {
         $forumId = $forum !== null ? (int) $forum['id'] : self::DECOY_ID;
         $cacheKey = $account['id'] . ':' . $forumId . ':' . $level;
         if (!isset($this->permissionRows[$cacheKey])) {
             $chain = $forum !== null ? $this->chainIds($forumId) : [self::DECOY_ID];
-            $load = fn (): array => $this->forums->permissionRows(
+            $rows = $this->forums->permissionRows(
                 $chain,
                 $account['member'] ? $account['role'] : '',
                 $account['member'] ? $this->groupIds($account['id']) : [],
                 $account['member'] ? $level : -1
             );
-            if ($lean) {
-                $has = $this->forums->hasPermissionRows($chain);
-                $this->permissionRows[$cacheKey] = ['rows' => $has ? $load() : [], 'has' => $has];
-            } else {
-                $this->permissionRows[$cacheKey] = ['rows' => $load(), 'has' => $this->forums->hasPermissionRows($chain)];
-            }
+            $this->permissionRows[$cacheKey] = ['rows' => $rows, 'has' => $this->forums->hasPermissionRows($chain)];
         }
         ['rows' => $rows, 'has' => $has] = $this->permissionRows[$cacheKey];
 
@@ -1167,23 +1457,38 @@ final class CommunityAccess
         return $this->accounts[$uid];
     }
 
-    /** Recht einer Rolle; `admin` hat alles, ein Fehler der Rollenabfrage gilt als „nicht erlaubt“. */
+    /**
+     * Recht einer Rolle; `admin` hat alles, ein Fehler der Rollenabfrage gilt als „nicht erlaubt“ und wird bis `forgetUser()` bzw.
+     * `flush()` gemerkt (eine Warnung, keine wiederholten Abfragen).
+     */
     private function roleHas(string $role, string $capability): bool
+    {
+        $key = $role . '|' . $capability;
+        if (isset($this->roleFailures[$key])) {
+            return false;
+        }
+        try {
+            return $this->roleCapability($role, $capability);
+        } catch (\Throwable $e) {
+            $this->log('Rollenrecht {capability} nicht lesbar: {exception}', ['capability' => $capability, 'exception' => $e]);
+            $this->roleFailures[$key] = true;
+
+            return false;
+        }
+    }
+
+    /**
+     * Recht einer Rolle ohne Rückfall: `admin` hat alles, ein Fehler der Rollenabfrage wirft (für `authority()`, das dann `null`
+     * liefert). Nur erfolgreiche Antworten sind zwischengespeichert.
+     */
+    private function roleCapability(string $role, string $capability): bool
     {
         if ($role === 'admin') {
             return true;
         }
         $key = $role . '|' . $capability;
-        if (!isset($this->roleRights[$key])) {
-            try {
-                $this->roleRights[$key] = ($this->roleCan)($role, $capability) === true;
-            } catch (\Throwable $e) {
-                $this->log('Rollenrecht {capability} nicht lesbar: {exception}', ['capability' => $capability, 'exception' => $e]);
-                $this->roleRights[$key] = false;
-            }
-        }
 
-        return $this->roleRights[$key];
+        return $this->roleRights[$key] ??= ($this->roleCan)($role, $capability) === true;
     }
 
     private function isEmailVerified(int $uid): bool
@@ -1256,6 +1561,11 @@ final class CommunityAccess
     // ── Lesbare Foren (Mengen-API) ──────────────────────────────────────────────────────────────────────────────
 
     /**
+     * Lesbare unter den Foren, Ergebnis gleich `can('read', ['forum_id' => …])` je Forum (medien §2.8): dieselben globalen Schritte,
+     * dann gemeinsam geladene Daten für alle Foren, höchstens zehn Abfragen unabhängig von der Forenzahl (Konto, Sperre, Baum,
+     * Stufe, Gruppen, Foren mit Rechte-Zeilen, deren Zeilen, Moderator-Zuordnungen). Die Zwischenspeicher von `can()` (Rechte-Zeilen,
+     * Forum-Moderatoren) bleiben unberührt, `can()` behält seine Abfragefolge.
+     *
      * @param list<int> $wanted
      * @return list<int>
      */
@@ -1291,27 +1601,42 @@ final class CommunityAccess
                 $forums[$forumId] = $tree[$forumId];
             }
         }
-        // Eine Abfrage für alle Foren: gibt es in ihren Ketten überhaupt Rechte-Zeilen? Wenn nicht, gelten überall die
-        // Standards und je Forum ist keine Abfrage nötig; sonst fragt `matrixFor()` je Forum nur noch die Rechte-Zeilen der
-        // Ketten ab, die welche haben.
-        $anyRows = false;
+        // Ketten in PHP; die Rechte-Zeilen aller Foren, deren Kette welche hat, in einer Abfrage
+        $chains = [];
+        $rows = [];
         if ($forums !== [] && !$globalModerator) {
-            $chainIds = [];
+            $withRows = $this->forums->permissionForumIds();
+            $rowForums = [];
             foreach (array_keys($forums) as $forumId) {
-                foreach ($this->chainIds($forumId) as $id) {
-                    $chainIds[$id] = $id;
+                $chain = $this->chainIds($forumId);
+                $has = array_intersect($chain, $withRows) !== [];
+                $chains[$forumId] = ['chain' => $chain, 'has' => $has];
+                foreach ($has ? array_intersect($chain, $withRows) : [] as $id) {
+                    $rowForums[$id] = $id;
                 }
             }
-            $anyRows = $this->forums->hasPermissionRows(array_values($chainIds));
+            $rows = $this->forums->permissionRowsMany(
+                array_values($rowForums),
+                $account['member'] ? $account['role'] : '',
+                $account['member'] && $rowForums !== [] ? $this->groupIds($account['id']) : [],
+                $level
+            );
         }
-        $defaults = $anyRows ? [] : $this->mergeMatrix($account['member'], [], false);
+        $defaults = $this->mergeMatrix($account['member'], [], false);
+        $assignments = null;
         $readable = [];
         foreach ($forums as $forumId => $forum) {
             // Globale Moderation sieht jedes vorhandene Forum (wie in `can()`): weder Matrix noch Moderatorenabfrage nötig
             $visible = $globalModerator;
             if (!$visible) {
-                $matrix = $anyRows ? $this->matrixFor($account, $forum, $level, true) : $defaults;
-                $visible = ($matrix['read'] && !$this->hiddenInChain($forum)) || $this->isForumModerator($account, $forum);
+                $matrix = $chains[$forumId]['has']
+                    ? $this->mergeMatrix($account['member'], ForumRepository::firstPerSubject($chains[$forumId]['chain'], $rows, $level), true)
+                    : $defaults;
+                $visible = $matrix['read'] && !$this->hiddenInChain($forum);
+                if (!$visible && $account['member']) {
+                    $assignments ??= $this->forums->moderatorAssignments($account['id'], $this->groupIds($account['id']));
+                    $visible = ForumRepository::moderates($this->ancestorIds($forumId), $forumId, $assignments);
+                }
             }
             if ($visible && $this->applyFilter(AccessDecision::allow(), $account['id'], 'read', ['forum_id' => $forumId])->allowed) {
                 $readable[] = $forumId;
@@ -1319,6 +1644,16 @@ final class CommunityAccess
         }
 
         return $readable;
+    }
+
+    /**
+     * Bleibt das Forum nach dem Filter `cms_community_can` (Aktion `moderate`) im Moderationsbereich?
+     *
+     * @param array<string, mixed> $filterContext
+     */
+    private function scopeAllows(int $uid, int $forumId, array $filterContext): bool
+    {
+        return $this->applyFilter(AccessDecision::allow(), $uid, 'moderate', ['forum_id' => $forumId] + $filterContext)->allowed;
     }
 
     // ── Filter cms_community_can ────────────────────────────────────────────────────────────────────────────────
@@ -1404,8 +1739,9 @@ final class CommunityAccess
     /**
      * UTC-Text `Y-m-d H:i:s` → Unix-Zeit; null bei fehlendem oder ungültigem Wert. Auch ein Datum, das PHP nur durch Überlauf
      * auflöst (`2026-13-45`, `0000-00-00 00:00:00`), ist ungültig: sonst entstünde ein Zeitpunkt in der Zukunft, der ein Fenster offen hält.
+     * Die einzige Umrechnung UTC-Text → Unix im Community-Modul (Vertrag DESIGN-2b §1 Nr. 10).
      */
-    private static function utcTimestamp(mixed $value): ?int
+    public static function utcTimestamp(mixed $value): ?int
     {
         if (!is_string($value) || $value === '') {
             return null;
@@ -1417,6 +1753,12 @@ final class CommunityAccess
         }
 
         return $date->getTimestamp();
+    }
+
+    /** Ganzzahlige ID aus dem Kontext: int oder Ziffernfolge, alles andere (Array, Kommazahl, Text mit Rest) ergibt 0. */
+    private static function intId(mixed $value): int
+    {
+        return is_int($value) ? $value : (is_string($value) && ctype_digit($value) ? (int) $value : 0);
     }
 
     /** @param array<string, mixed> $context */

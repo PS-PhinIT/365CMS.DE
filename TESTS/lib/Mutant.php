@@ -13,10 +13,12 @@
  *   Suite: die Datei wird nicht geladen). Unterprozesse einer Suite (Wettlauf-Worker) erben die Variable und setzen
  *   `Mutant::$requireApplied = false`, weil sie nicht jede Datei laden.
  *
- * Katalogeintrag (Liste): `[Datei relativ zu CMS/, Suchtext, Ersatz, Suite, needsDb, Regel, quick, env]`; ab `needsDb` ist alles
- * optional (`false`, leer, `false`, `[]`). `env` sind zusätzliche Umgebungsvariablen für den Suite-Prozess (z. B.
- * `CMS_TEST_DB_SECTIONS` der Suite `community-db`). Der Treiber `TESTS/community-mutants/run.php` startet je Mutante die Suite in
- * einem eigenen Prozess. `CMS_TEST_MUTANT_CATALOG=<Datei>` ersetzt den Katalog (nur für die Selbstprüfung des Treibers).
+ * Katalogeintrag (Liste): `[Datei relativ zu CMS/, Suchtext, Ersatz, Suite, needsDb, Regel, quick, env, requires]`; ab `needsDb` ist
+ * alles optional (`false`, leer, `false`, `[]`, `[]`). `env` sind zusätzliche Umgebungsvariablen für den Suite-Prozess (z. B.
+ * `CMS_TEST_DB_SECTIONS` der Suite `community-db`). `requires` (Feld 8, PR #2b) nennt PHP-Erweiterungen, ohne die die Mutante nicht
+ * läuft (z. B. `['gd']`): fehlt eine, überspringt der Treiber sie wie eine Mutante mit `needsDb` ohne Datenbank. Der Treiber
+ * `TESTS/community-mutants/run.php` startet je Mutante die Suite in einem eigenen Prozess. `CMS_TEST_MUTANT_CATALOG=<Datei>`
+ * ersetzt den Katalog (Selbstprüfung des Treibers und Abnahme eines einzelnen Katalogs).
  *
  * Nutzung im Autoloader einer Suite:
  *
@@ -46,7 +48,7 @@ final class Mutant
     private static bool $applied = false;
     private static bool $registered = false;
     private static ?string $directory = null;
-    /** @var array<string, array{file: string, search: string, replace: string, suite: string, needsDb: bool, rule: string, quick: bool, env: array<string, string>}>|null */
+    /** @var array<string, array{file: string, search: string, replace: string, suite: string, needsDb: bool, rule: string, quick: bool, env: array<string, string>, requires: list<string>}>|null */
     private static ?array $catalog = null;
 
     /** Name der aktiven Mutante, leer ohne Gegenprobe. */
@@ -64,19 +66,13 @@ final class Mutant
     /**
      * Der Katalog mit benannten Feldern.
      *
-     * @return array<string, array{file: string, search: string, replace: string, suite: string, needsDb: bool, rule: string, quick: bool, env: array<string, string>}>
+     * @return array<string, array{file: string, search: string, replace: string, suite: string, needsDb: bool, rule: string, quick: bool, env: array<string, string>, requires: list<string>}>
      */
     public static function catalog(): array
     {
         if (self::$catalog === null) {
-            $path = (string) getenv('CMS_TEST_MUTANT_CATALOG');
-            if ($path !== '') {
-                $files = [$path];
-            } else {
-                // catalog.php und ergänzende Dateien catalog-*.php (je Umsetzer eine; gleiches Format, Namen eindeutig)
-                $dir = dirname(__DIR__) . '/community-mutants';
-                $files = array_merge([$dir . '/catalog.php'], glob($dir . '/catalog-*.php') ?: []);
-            }
+            // catalog.php und ergänzende Dateien catalog-*.php (je Umsetzer eine; gleiches Format, Namen eindeutig)
+            $files = self::catalogFiles();
             /** @var array<string, array<int, mixed>> $raw */
             $raw = [];
             foreach ($files as $file) {
@@ -99,11 +95,34 @@ final class Mutant
                     'rule' => (string) ($row[5] ?? ''),
                     'quick' => (bool) ($row[6] ?? false),
                     'env' => array_map('strval', (array) ($row[7] ?? [])),
+                    'requires' => array_values(array_map('strval', (array) ($row[8] ?? []))),
                 ];
             }
         }
 
         return self::$catalog;
+    }
+
+    /**
+     * Die Katalogdateien in Ladereihenfolge: `CMS_TEST_MUTANT_CATALOG`, sonst `catalog.php` und alle `catalog-*.php`.
+     *
+     * @return list<string>
+     */
+    public static function catalogFiles(): array
+    {
+        $path = (string) getenv('CMS_TEST_MUTANT_CATALOG');
+        if ($path !== '') {
+            return [$path];
+        }
+        $dir = dirname(__DIR__) . '/community-mutants';
+
+        return array_merge([$dir . '/catalog.php'], glob($dir . '/catalog-*.php') ?: []);
+    }
+
+    /** Erweiterungen aus `requires`, die in diesem PHP fehlen (leer = die Mutante kann laufen). */
+    public static function missingExtensions(array $entry): array
+    {
+        return array_values(array_filter((array) ($entry['requires'] ?? []), static fn (string $extension): bool => !extension_loaded($extension)));
     }
 
     /** Wie oft kommt der Suchtext im Quelltext vor? (Der Katalog verlangt genau einmal.) */

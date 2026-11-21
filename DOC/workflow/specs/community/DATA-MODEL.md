@@ -1,10 +1,10 @@
 # 365CMS Projektdokumentation | Community: Datenmodell
 > **Stand:** 2026-11-17 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** umgesetzt in PR #1 (Abweichungen unten) | **Übersicht:** [README.md](README.md)
-> **Umsetzungsstand:** Die Tabellen liegen in `SchemaManager::getSchemaQueries()` (`FEATURE_TABLES_V27`, 27 Tabellen, 117 insgesamt). **Maßgeblich für Spalten, Typen und Indizes ist [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) §3** (aus einer echten Datenbank erzeugt, durch `TESTS/schema-v27` geprüft). Die SQL-Entwürfe in §3 unten sind der ursprüngliche Plan und weichen so ab: keine `legacy_id`/`legacy_source`-Spalten (E6); `community_redirects` nur für `topic`/`forum`; keine `NOT NULL`-Spalte ohne Default (Strict Mode), Textspalten (`TEXT`, `MEDIUMTEXT`, `LONGTEXT`) `NULL`-fähig und `DATETIME NOT NULL` mit Default `CURRENT_TIMESTAMP`; Indexnamen `uq_/idx_community_<tabelle>_<zweck>`; zusätzliche Indizes für Löschfristen, Cron und Listen (u. a. `idx_community_posts_created`, `idx_community_topics_moved`/`_locked`/`_pinned`/`_trashed`, `idx_community_warnings_expires`, `idx_community_post_revisions_created`, `idx_community_forum_permissions_lookup`, `idx_community_forums_parent`); Index `(user_id, status, created_at)` statt `(user_id, created_at)` an Themen und Beiträgen; Index `(forum_id, status, created_at)` statt `(forum_id, created_at)` an Beiträgen.
+> **Umsetzungsstand:** Die Tabellen liegen in `SchemaManager::getSchemaQueries()` (`FEATURE_TABLES_V27`, 28 Tabellen, 118 insgesamt; PR #1 legte 27 an, PR #2b ergänzt `community_notify_queue`). **Maßgeblich für Spalten, Typen und Indizes ist [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) §3** (aus einer echten Datenbank erzeugt, durch `TESTS/schema-v27` geprüft). Die SQL-Entwürfe in §3 unten sind der ursprüngliche Plan und weichen so ab: keine `legacy_id`/`legacy_source`-Spalten (E6); `community_redirects` nur für `topic`/`forum`; keine `NOT NULL`-Spalte ohne Default (Strict Mode), Textspalten (`TEXT`, `MEDIUMTEXT`, `LONGTEXT`) `NULL`-fähig und `DATETIME NOT NULL` mit Default `CURRENT_TIMESTAMP`; Indexnamen `uq_/idx_community_<tabelle>_<zweck>`; zusätzliche Indizes für Löschfristen, Cron und Listen (u. a. `idx_community_posts_created`, `idx_community_topics_moved`/`_locked`/`_pinned`/`_trashed`, `idx_community_warnings_expires`, `idx_community_post_revisions_created`, `idx_community_forum_permissions_lookup`, `idx_community_forums_parent`); Index `(user_id, status, created_at)` statt `(user_id, created_at)` an Themen und Beiträgen; Index `(forum_id, status, created_at)` statt `(forum_id, created_at)` an Beiträgen.
 
 ## English (summary)
 
-Database design of the Community module: 27 tables with prefix `community_`, created by
+Database design of the Community module: 28 tables with prefix `community_` (27 from PR #1, `community_notify_queue` from PR #2b), created by
 `SchemaManager::getSchemaQueries()` (schema v27, idempotent, one definition shared by fresh
 install, update and runtime check; there is no separate installer class). It lists columns, keys and indexes, denormalised counters and their maintenance,
 status values, what is reused from existing core tables (users, roles, user_groups, notifications, messages,
@@ -33,7 +33,7 @@ favorites, mail_queue) and the column-level mapping from the `cms-forum` plugin 
 | Interaktion | `community_reactions`, `community_subscriptions`, `community_read_states`, `community_forum_read_marks`, `community_polls`, `community_poll_options`, `community_poll_votes`, `community_ignores` |
 | Mitglieder | `community_user_stats`, `community_ranks`, `community_badges`, `community_user_badges` |
 | Moderation | `community_reports`, `community_warnings`, `community_bans`, `community_moderation_log` |
-| Betrieb | `community_stats_daily`, `community_redirects` |
+| Betrieb | `community_stats_daily`, `community_redirects`, `community_notify_queue` (PR #2b) |
 
 Einstellungen stehen in der Core-Tabelle `settings` (Gruppe `community`), nicht in einer eigenen Tabelle (Plugin: `cmsforum_settings`).
 
@@ -381,7 +381,26 @@ CREATE TABLE {p}community_redirects (                  -- alte Plugin-IDs/Slugs 
   created_at DATETIME NOT NULL,
   PRIMARY KEY (source_type, source_key)
 );
+
+CREATE TABLE {p}community_notify_queue (               -- PR #2b: offene Zustellaufträge der Benachrichtigungen
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  kind VARCHAR(12) NOT NULL DEFAULT '',               -- reply | new_topic | reaction | solution | moderation | report
+  topic_id INT UNSIGNED NOT NULL DEFAULT 0,
+  post_id BIGINT UNSIGNED NOT NULL DEFAULT 0,         -- bei report die Meldungs-ID
+  actor_id INT UNSIGNED NOT NULL DEFAULT 0,
+  detail VARCHAR(20) NULL,                            -- Reaktion, approved | rejected | hidden | moved bzw. Meldestatus
+  phase TINYINT UNSIGNED NOT NULL DEFAULT 0, cursor_user_id INT UNSIGNED NOT NULL DEFAULT 0,   -- Cursor des Fan-outs
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0, steps INT UNSIGNED NOT NULL DEFAULT 0,
+  lease_token CHAR(32) NULL, locked_until DATETIME NULL,                                       -- Lease eines Laufs
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_community_notify_queue_kind (kind)        -- Stufen der Zustellung, innerhalb nach id
+);
 ```
+
+`community_notify_queue` (PR #2b, einzige Schemaänderung nach PR #1, Begründung im Vertrag DESIGN-2b §3.9): ein Auftrag je Ereignis, angelegt von den Listenern
+nach dem Commit des Auslösers, zugestellt im Cron (`NotificationDispatcher::runQueue()`), genau einmal je Auftrag und Empfänger. Erledigte Aufträge werden gelöscht,
+Aufträge älter als 48 Stunden verfallen, mehr als 5 abgebrochene Leases löschen den Auftrag. Maßgeblich für Spalten und Index ist HANDOFF §3 „Betrieb“.
+Bestandsinstallationen v27 erhalten die Tabelle über `ensureFeatureSchema()`. PR #5: Löschfrist und DSGVO-Behandlung von `actor_id`.
 
 ### 4. Zähler und ihre Pflege
 
@@ -390,7 +409,7 @@ CREATE TABLE {p}community_redirects (                  -- alte Plugin-IDs/Slugs 
 | `forums.topic_count/post_count/last_*` | Thema/Beitrag erstellt, freigegeben, ausgeblendet, gelöscht, verschoben, zusammengeführt | `TopicService`/`PostService`/`ModerationService` in derselben Transaktion; `version++` |
 | `topics.reply_count/last_*/reaction_count` | Antwort, Statuswechsel, Reaktion | dito |
 | `topics.view_count` | Aufruf | gepuffert im Cache, Cron verbucht alle 5 min (keine Schreiblast je Aufruf) |
-| `user_stats.*` | Beitrag, Reaktion, Lösung, Verwarnung | Dienst + nächtlicher Abgleich |
+| `user_stats.*` | Beitrag, Reaktion, Lösung, Verwarnung | Dienst + nächtlicher Abgleich; Status- und Ortswechsel bucht seit PR #2b nur `CounterBook` |
 | `poll_options.vote_count`, `polls.voter_count` | Stimme | Transaktion mit `community_poll_votes` |
 
 Reparatur: Batch-Job „Community-Zähler neu berechnen“ (`BatchJobService`) je Forum, mit Fortschritt im Admin.

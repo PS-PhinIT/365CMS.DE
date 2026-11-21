@@ -57,7 +57,8 @@ function memberTestDatabase(): Database
             $this->sqlite = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
             $this->sqlite->exec('CREATE TABLE cms_user_meta (user_id INTEGER, meta_key TEXT, meta_value TEXT, UNIQUE (user_id, meta_key))');
             $this->sqlite->exec("CREATE TABLE cms_notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, type TEXT DEFAULT 'system', title TEXT,
-                message TEXT, url TEXT, is_read INTEGER NOT NULL DEFAULT 0, read_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)");
+                message TEXT, url TEXT, group_key TEXT DEFAULT NULL, event_count INTEGER NOT NULL DEFAULT 1, is_read INTEGER NOT NULL DEFAULT 0, read_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP)");
             $this->sqlite->exec("CREATE TABLE cms_posts (id INTEGER PRIMARY KEY, title TEXT, title_en TEXT, slug TEXT, slug_en TEXT, status TEXT,
                 author_id INTEGER, published_at TEXT, created_at TEXT, trashed_at TEXT)");
             $this->sqlite->exec('CREATE TABLE cms_favorites (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, post_id INTEGER,
