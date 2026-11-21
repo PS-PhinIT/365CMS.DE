@@ -707,6 +707,19 @@ final class PostService
         return $this->posts->positionOf($topicId, $postId);
     }
 
+    /**
+     * Cursor (`$afterId` für `listPage()`) der Seite `$page` eines Themas: 0 für Seite 1, sonst die ID des letzten Beitrags der Vorseite;
+     * `null`, wenn die Seite hinter dem Ende liegt. Keine Rechteprüfung (nur Zahlen; `listPage()` prüft danach).
+     */
+    public function cursorForPage(int $topicId, int $page): ?int
+    {
+        if ($page <= 1) {
+            return 0;
+        }
+
+        return $this->posts->idAtPosition($topicId, ($page - 1) * $this->settings->int('posts_per_page'));
+    }
+
     /** Seite eines Beitrags: `ceil(Position / posts_per_page)`, mindestens 1. */
     public function pageOf(int $topicId, int $postId): int
     {

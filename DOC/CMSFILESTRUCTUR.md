@@ -60,7 +60,7 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
 | `CMS/views/` | 21 |
-| `CMS/assets/css/` | 33 stylesheets |
+| `CMS/assets/css/` | 34 stylesheets |
 | `CMS/assets/js/` | 59 scripts + 22 ES modules (`admin-shell/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
 ---
@@ -352,6 +352,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `admin.css`
 - `cms-cookie-consent.css`
 - `cms-mfa.css`
+- `community.css`
 - `downloads.css`
 - `editorjs-content.css`
 - `feeds.css`
