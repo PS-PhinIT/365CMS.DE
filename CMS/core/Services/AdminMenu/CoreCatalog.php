@@ -53,6 +53,7 @@ final class CoreCatalog
         'people' => 'Personen',
         'members' => 'Mitgliederbereich',
         'subscriptions' => 'Abos',
+        'community' => 'Community',
         'settings' => 'Einstellungen',
         'security' => 'Sicherheit',
         'legal' => 'Recht & Datenschutz',
@@ -66,6 +67,7 @@ final class CoreCatalog
     private const START_IDS = ['dashboard', 'system.updates'];
 
     private const SETTINGS = ['manage_settings'];
+    private const COMMUNITY_ANY = ['community.moderate', 'community.manage'];
     private const SETTINGS_OR_SYSTEM = ['manage_settings', 'manage_system'];
 
     /** @var list<AdminMenuItem>|null */
@@ -227,6 +229,18 @@ final class CoreCatalog
             ['id' => 'members.profile-fields', 'label' => 'Mitgliederbereich: Profil-Felder', 'tile' => 'Profil-Felder', 'route' => '/admin/member-dashboard-profile-fields', 'icon' => 'id', 'caps' => ['manage_users'], 'file' => 'admin/member-dashboard-profile-fields.php', 'page' => 'member-dashboard-profile-fields', 'category' => 'members', 'desc' => 'Felder im Profil der Mitglieder festlegen.'],
             ['id' => 'members.notifications', 'label' => 'Mitgliederbereich: Benachrichtigungen', 'tile' => 'Benachrichtigungen', 'route' => '/admin/member-dashboard-notifications', 'icon' => 'bell', 'caps' => self::SETTINGS, 'file' => 'admin/member-dashboard-notifications.php', 'page' => 'member-dashboard-notifications', 'category' => 'members', 'desc' => 'Benachrichtigungen an Mitglieder einstellen.'],
             ['id' => 'members.onboarding', 'label' => 'Mitgliederbereich: Onboarding', 'tile' => 'Onboarding', 'route' => '/admin/member-dashboard-onboarding', 'icon' => 'rocket', 'caps' => self::SETTINGS, 'file' => 'admin/member-dashboard-onboarding.php', 'page' => 'member-dashboard-onboarding', 'category' => 'members', 'desc' => 'Erste Schritte für neue Mitglieder.'],
+
+            // ── Community (4.2.0, Modul `community`) ────────────────────────────────
+            ['id' => 'community.overview', 'label' => 'Community: Übersicht', 'tile' => 'Übersicht', 'route' => '/admin/community', 'icon' => 'messages', 'caps' => self::COMMUNITY_ANY, 'file' => 'admin/community.php', 'page' => 'community'],
+            ['id' => 'community.structure', 'label' => 'Struktur', 'route' => '/admin/community-structure', 'icon' => 'sitemap', 'caps' => ['community.manage'], 'file' => 'admin/community-structure.php', 'page' => 'community-structure'],
+            ['id' => 'community.topics', 'label' => 'Themen', 'route' => '/admin/community-topics', 'icon' => 'message-circle', 'caps' => ['community.moderate'], 'file' => 'admin/community-topics.php', 'page' => 'community-topics'],
+            ['id' => 'community.queue', 'label' => 'Freigaben', 'route' => '/admin/community-queue', 'icon' => 'checklist', 'caps' => ['community.moderate'], 'file' => 'admin/community-queue.php', 'page' => 'community-queue', 'badge' => 'community_queue'],
+            ['id' => 'community.reports', 'label' => 'Meldungen', 'route' => '/admin/community-reports', 'icon' => 'flag', 'caps' => ['community.moderate'], 'file' => 'admin/community-reports.php', 'page' => 'community-reports', 'badge' => 'community_reports'],
+            ['id' => 'community.sanctions', 'label' => 'Sperren', 'route' => '/admin/community-sanctions', 'icon' => 'user-off', 'caps' => ['community.moderate'], 'file' => 'admin/community-sanctions.php', 'page' => 'community-sanctions'],
+            ['id' => 'community.log', 'label' => 'Moderationsprotokoll', 'route' => '/admin/community-log', 'icon' => 'history', 'caps' => ['community.moderate'], 'file' => 'admin/community-log.php', 'page' => 'community-log'],
+            ['id' => 'community.permissions', 'label' => 'Rechte', 'route' => '/admin/community-permissions', 'icon' => 'lock-access', 'caps' => ['community.manage'], 'file' => 'admin/community-permissions.php', 'page' => 'community-permissions'],
+            ['id' => 'community.ranks', 'label' => 'Ränge', 'route' => '/admin/community-ranks', 'icon' => 'medal', 'caps' => ['community.manage'], 'file' => 'admin/community-ranks.php', 'page' => 'community-ranks'],
+            ['id' => 'community.settings', 'label' => 'Community-Einstellungen', 'tile' => 'Einstellungen', 'route' => '/admin/community-settings', 'icon' => 'settings-2', 'caps' => ['community.manage'], 'file' => 'admin/community-settings.php', 'page' => 'community-settings'],
 
             // ── Abos (Modul subscriptions) ──────────────────────────────────────────
             ['id' => 'subscriptions.packages', 'label' => 'Pakete', 'route' => '/admin/packages', 'icon' => 'package', 'caps' => self::SETTINGS, 'file' => 'admin/packages.php', 'page' => 'packages'],

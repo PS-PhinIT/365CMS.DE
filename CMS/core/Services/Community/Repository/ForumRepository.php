@@ -738,6 +738,83 @@ final class ForumRepository extends AbstractRepository
     }
 
     /**
+     * Alle Rechte-Zeilen eines Forums für die Verwaltung (`permissions` als Matrix, NULL = keine Rechte), Reihenfolge Typ, Schlüssel.
+     *
+     * @return list<array{subject_type: string, subject_key: string, permissions: array<string, int>|null}>
+     */
+    public function permissionRowsOf(int $forumId): array
+    {
+        $rows = $this->fetchAll('SELECT subject_type, subject_key, permissions_json FROM ' . $this->table(self::PERMISSIONS) . ' WHERE forum_id = ? ORDER BY subject_type ASC, subject_key ASC', [$forumId]);
+
+        return array_map(static fn (array $row): array => [
+            'subject_type' => (string) $row['subject_type'],
+            'subject_key' => (string) $row['subject_key'],
+            'permissions' => $row['permissions_json'] === null ? null : self::decodePermissions((string) $row['permissions_json']),
+        ], $rows);
+    }
+
+    /**
+     * Moderatoren eines Forums für die Verwaltung.
+     *
+     * @return list<array{subject_type: string, subject_id: int, include_children: int}>
+     */
+    public function moderatorRowsOf(int $forumId): array
+    {
+        $rows = $this->fetchAll('SELECT subject_type, subject_id, include_children FROM ' . $this->table(self::MODERATORS) . ' WHERE forum_id = ? ORDER BY subject_type ASC, subject_id ASC', [$forumId]);
+
+        return array_map(static fn (array $row): array => [
+            'subject_type' => (string) $row['subject_type'],
+            'subject_id' => (int) $row['subject_id'],
+            'include_children' => (int) $row['include_children'],
+        ], $rows);
+    }
+
+    /**
+     * Rechte-Zeilen einer umbenannten Rolle (`subject_type = 'role'`) auf den neuen Slug umschreiben. Zeilen, die der neue Slug schon
+     * hatte (Reste einer früher gelöschten Rolle), entfallen zuerst: die umbenannte Rolle behält ihre eigenen Rechte. Betroffene Foren
+     * erhalten eine neue `version`. Liefert die Zahl der umgeschriebenen Zeilen.
+     */
+    public function renameRoleSubject(string $from, string $to, string $nowUtc): int
+    {
+        if ($from === '' || $to === '' || $from === $to) {
+            return 0;
+        }
+        $table = $this->table(self::PERMISSIONS);
+        $changed = Transaction::run($this->db, function () use ($table, $from, $to): array {
+            $forums = array_map(static fn (array $row): int => (int) $row['forum_id'], $this->fetchAll("SELECT forum_id FROM {$table} WHERE subject_type = 'role' AND subject_key IN (?, ?)", [$from, $to]));
+            $this->run("DELETE FROM {$table} WHERE subject_type = 'role' AND subject_key = ?", [$to]);
+            $this->run("UPDATE {$table} SET subject_key = ? WHERE subject_type = 'role' AND subject_key = ?", [$to, $from]);
+
+            return $forums;
+        });
+        $this->permissionForums = null;
+        $this->touch($changed, $nowUtc);
+        $this->forgetTree();
+
+        return count($changed);
+    }
+
+    /** Rechte-Zeilen einer gelöschten Rolle entfernen (die Konten hängen an der Ersatzrolle). Liefert die Zahl der betroffenen Foren. */
+    public function deleteRoleSubject(string $role, string $nowUtc): int
+    {
+        if ($role === '') {
+            return 0;
+        }
+        $table = $this->table(self::PERMISSIONS);
+        $forums = Transaction::run($this->db, function () use ($table, $role): array {
+            $forums = array_map(static fn (array $row): int => (int) $row['forum_id'], $this->fetchAll("SELECT forum_id FROM {$table} WHERE subject_type = 'role' AND subject_key = ?", [$role]));
+            $this->run("DELETE FROM {$table} WHERE subject_type = 'role' AND subject_key = ?", [$role]);
+
+            return $forums;
+        });
+        $this->permissionForums = null;
+        $this->touch($forums, $nowUtc);
+        $this->forgetTree();
+
+        return count($forums);
+    }
+
+    /**
      * Ersetzt alle Moderatoren eines Forums. Zeilenform: `['subject_type' => 'user'|'group', 'subject_id' => 7, 'include_children' => 1]`
      * (`include_children` Standard 1). Ungültige Eingaben werfen `InvalidArgumentException`, bevor etwas geschrieben wird.
      *
