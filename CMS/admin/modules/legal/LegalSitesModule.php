@@ -21,7 +21,7 @@ class LegalSitesModule
     private const MAX_PROFILE_VALUE_LENGTH = 500;
     private const MAX_PROFILE_TEXTAREA_LENGTH = 4000;
     private const MAX_ERROR_CONTEXT_LENGTH = 180;
-    private const TEMPLATE_VERSION = '2026.07.27';
+    private const TEMPLATE_VERSION = '2026.11.22';
 
     private readonly \CMS\Database $db;
     private readonly \CMS\PageManager $pageManager;
@@ -1161,6 +1161,8 @@ class LegalSitesModule
             $html .= '<h3>8. Kommentare und Beiträge</h3><p>Beim Hinterlassen von Kommentaren können neben dem Inhalt auch technische Metadaten wie Zeitstempel und IP-Adresse verarbeitet werden, um die Kommentarfunktion bereitzustellen und Missbrauch zu verhindern.</p>';
         }
 
+        $html .= $this->buildCommunityPrivacySection();
+
         if ($profile['legal_profile_has_analytics'] === '1') {
             $html .= '<h3>9. Analyse und Reichweitenmessung</h3><p>';
             if ($analyticsSelfHosted) {
@@ -1212,6 +1214,25 @@ class LegalSitesModule
         $html .= '<h3>15. Beschwerderecht</h3><p>Wenn Sie der Auffassung sind, dass die Verarbeitung Ihrer personenbezogenen Daten rechtswidrig erfolgt, können Sie sich bei einer zuständigen Datenschutzaufsichtsbehörde beschweren.</p>';
 
         return sanitize_html($html, 'default');
+    }
+
+    /**
+     * Abschnitt „Forum (Community)“ der Datenschutzerklärung (Baustein des Community-Moduls, `CommunityLegal`): nur bei aktivem Modul, aus den
+     * wirksamen Einstellungen und Löschfristen. Ein Fehler lässt den Abschnitt weg, die übrige Vorlage bleibt unberührt.
+     */
+    private function buildCommunityPrivacySection(): string
+    {
+        try {
+            if (!class_exists(\CMS\Services\Community\Support\CommunityModule::class) || !\CMS\Services\Community\Support\CommunityModule::isEnabled()) {
+                return '';
+            }
+
+            return \CMS\Services\Community\CommunityLegal::privacySection(\CMS\Services\Community\CommunityLegal::facts());
+        } catch (\Throwable $e) {
+            $this->logger->warning('Datenschutz-Baustein der Community nicht erzeugt: {exception}', ['exception' => $e]);
+
+            return '';
+        }
     }
 
     private function buildMinimalPrivacyModeSection(array $profile): string

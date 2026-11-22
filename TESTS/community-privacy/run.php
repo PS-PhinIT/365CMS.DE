@@ -34,6 +34,7 @@ require_once dirname(__DIR__) . '/lib/CommunityTestDatabase.php';
 
 use CMS\Database;
 use CMS\Hooks;
+use CMS\Services\Community\CommunityLegal;
 use CMS\Services\Community\CommunityPrivacy;
 use CMS\Services\Community\CommunityRetention;
 use CMS\Services\Community\Support\Settings;
@@ -303,6 +304,82 @@ T::run('Löschung', static function (): void {
     T::same(1, $db->count('community_user_stats', ['user_id' => $b]), 'Statistik des anderen Mitglieds bleibt');
     T::same([], $privacy->collect($a), 'nach der Löschung gibt es keine Auskunft mehr');
     T::same(0, array_sum((new CommunityPrivacy($db))->erase(0)), 'Konto 0: nichts');
+});
+
+T::run('Legal-Baustein: Abschnitt „Forum (Community)“ der Datenschutzerklärung folgt den Einstellungen und Fristen', static function (): void {
+    $days = ['ip_hash' => 30] + CommunityRetention::DEFAULTS;
+    $facts = static fn (array $over = []): array => $over + ['guests_can_read' => false, 'notify_mail' => true, 'captcha_mode' => 'first_post', 'days' => $days];
+    $html = CommunityLegal::privacySection($facts());
+    T::check(str_starts_with($html, '<h3>8a. Forum (Community)</h3>'), 'Überschrift 8a (die übrigen Abschnitte behalten ihre Nummern)');
+
+    // Wohlgeformt: lässt sich als HTML-Fragment ohne Fehler lesen, nur erlaubte Tags
+    $dom = new \DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="utf-8"?><body>' . $html . '</body>');
+    T::same([], array_map(static fn (\LibXMLError $e): string => trim($e->message), libxml_get_errors()), 'das HTML-Fragment ist wohlgeformt');
+    libxml_clear_errors();
+    $tags = [];
+    foreach ($dom->getElementsByTagName('*') as $node) {
+        $tags[$node->nodeName] = true;
+    }
+    unset($tags['html'], $tags['body']);
+    T::same(['h3', 'p', 'ul', 'li'], array_keys($tags), 'nur h3, p, ul und li (der Purifier des Legal-Moduls lässt sie zu)');
+
+    // Fristen: dieselben Zahlen wie die Aufbewahrungsregeln
+    T::check(str_contains($html, 'Lesestatus: 180 Tage nach der letzten Änderung;') && str_contains($html, 'Entwürfe auf dem Server: 30 Tage nach der letzten Änderung;'), 'Lesestatus 180 Tage, Entwürfe 30 Tage (Standardfristen)');
+    T::check(str_contains($html, 'Anhänge, die keinem Beitrag zugeordnet wurden: 1 Tag nach dem Hochladen;'), 'verwaiste Uploads: 1 Tag (Singular)');
+    T::check(str_contains($html, 'erledigte Meldungen: 365 Tage nach der Bearbeitung;') && str_contains($html, 'Moderationsprotokoll: 365 Tage nach dem Eintrag;'), 'Meldungen und Protokoll 365 Tage');
+    T::check(str_contains($html, 'Verwarnungen: 730 Tage nach ihrem Ablauf (Verwarnungen ohne Ablauf höchstens fünf Jahre') && str_contains($html, 'Sperren: 365 Tage nach der Aufhebung oder dem Ablauf (unbefristete Sperren bleiben'), 'Verwarnungen 730 Tage, Sperren 365 Tage, Höchstdauer genannt');
+    T::check(str_contains($html, 'frühere Fassungen bearbeiteter Beiträge: 365 Tage nach der Bearbeitung (die jüngste Fassung bleibt)'), 'Bearbeitungsverlauf 365 Tage');
+    T::same(CommunityRetention::WARNING_OPEN_DAYS, 1825, 'fünf Jahre = 1825 Tage (Höchstdauer unbefristeter Verwarnungen)');
+    $changed = CommunityLegal::privacySection($facts(['days' => ['read_states' => 7, 'drafts' => 0, 'ip_hash' => 1] + $days]));
+    T::check(str_contains($changed, 'Lesestatus: 7 Tage nach der letzten Änderung;') && str_contains($changed, 'Entwürfe auf dem Server: ohne feste Frist;') && str_contains($changed, 'für 1 Tag;'), 'geänderte Fristen erscheinen; 0 = ohne feste Frist; 1 Tag im Singular');
+
+    // IP-Kennung nur, wenn sie gespeichert wird
+    T::check(str_contains($html, 'gekürzte und nicht umkehrbar verschlüsselte Kennung der IP-Adresse') && str_contains($html, 'für 30 Tage;'), 'IP-Kennung genannt, mit Frist');
+    $noIp = CommunityLegal::privacySection($facts(['days' => ['ip_hash' => 0] + $days]));
+    T::check(!str_contains($noIp, 'Kennung der IP-Adresse') && !str_contains($noIp, 'Spam-Abwehr und Moderation') && !str_contains($noIp, 'IP-Kennung'), 'ip_hash_days = 0: keine IP-Kennung im Text');
+
+    // Captcha nur, wenn verlangt
+    $when = ['first_post' => 'vor dem ersten Beitrag eines neuen Mitglieds', 'trust0' => 'solange ein Mitglied die niedrigste Vertrauensstufe hat', 'always' => 'vor jedem neuen Thema und jeder Antwort'];
+    foreach ($when as $mode => $text) {
+        $section = CommunityLegal::privacySection($facts(['captcha_mode' => $mode]));
+        T::check(str_contains($section, 'Sicherheitsprüfung (Captcha)') && str_contains($section, $text) && str_contains($section, 'keine Daten an Dritte übermittelt'), 'Captcha-Modus ' . $mode . ': genannt, lokal, ohne Dritte');
+    }
+    $off = CommunityLegal::privacySection($facts(['captcha_mode' => 'off']));
+    $junk = CommunityLegal::privacySection($facts(['captcha_mode' => 'turnstile']));
+    T::check(!str_contains($off, 'Captcha') && !str_contains($junk, 'Captcha'), 'Modus aus (oder unbekannt): kein Captcha im Text');
+
+    // Benachrichtigungen, Sichtbarkeit
+    T::check(str_contains($html, 'Benachrichtigungen: ') && !str_contains(CommunityLegal::privacySection($facts(['notify_mail' => false])), 'Benachrichtigungen: '), 'E-Mail-Benachrichtigungen nur, wenn sie an sind');
+    T::check(str_contains($html, 'nur für angemeldete und berechtigte Mitglieder sichtbar') && str_contains(CommunityLegal::privacySection($facts(['guests_can_read' => true])), 'ohne Anmeldung gelesen werden'), 'Sichtbarkeit folgt guests_can_read');
+    T::check(str_contains($html, 'Art. 6 Abs. 1 lit. b DSGVO') && str_contains($html, 'Art. 6 Abs. 1 lit. f DSGVO') && str_contains($html, 'Gelöschtes Mitglied'), 'Rechtsgrundlagen und Anonymisierung genannt');
+
+    // Fakten aus den Einstellungen
+    $fromSettings = CommunityLegal::facts(Settings::fromArray(['guests_can_read' => true, 'notify_mail' => false, 'captcha_mode' => 'always']), $days);
+    T::same(['guests_can_read' => true, 'notify_mail' => false, 'captcha_mode' => 'always', 'days' => $days], $fromSettings, 'facts(): Einstellungen und Fristen');
+    $defaults = CommunityLegal::facts(Settings::fromArray([]), $days);
+    T::same([false, true, 'first_post'], [$defaults['guests_can_read'], $defaults['notify_mail'], $defaults['captcha_mode']], 'facts(): Standardeinstellungen');
+    // Der Abschnitt nennt jede Frist der Aufbewahrungsregeln (kein Eintrag fehlt)
+    $missing = [];
+    foreach (array_keys($days) as $key) {
+        $probe = CommunityLegal::privacySection($facts(['days' => [$key => 4242] + $days]));
+        if (!str_contains($probe, '4242 Tag')) {
+            $missing[] = $key;
+        }
+    }
+    T::same([], $missing, 'jede Frist (' . implode(', ', array_keys($days)) . ') wirkt auf den Text');
+
+    // Einbindung in den Datenschutztext
+    $module = (string) file_get_contents(ABSPATH . 'admin/modules/legal/LegalSitesModule.php');
+    $body = substr($module, (int) strpos($module, 'private function buildPrivacyTemplate'));
+    $community = strpos($body, '$this->buildCommunityPrivacySection()');
+    T::check($community !== false && $community > strpos($body, '8. Kommentare und Beiträge') && $community < strpos($body, '9. Analyse und Reichweitenmessung'), 'Datenschutztext: der Abschnitt steht zwischen 8 und 9');
+    $helper = substr($module, (int) strpos($module, 'private function buildCommunityPrivacySection'), 900);
+    T::check(str_contains($helper, 'CommunityModule::isEnabled()') && str_contains($helper, 'catch (\Throwable') && str_contains($helper, "return '';"), 'nur bei aktivem Modul; ein Fehler lässt den Abschnitt weg');
+    T::check(str_contains($module, "TEMPLATE_VERSION = '2026.11.22'"), 'Vorlagenversion angehoben (Betreiber werden auf die geänderte Vorlage hingewiesen)');
+    $source = (string) file_get_contents(ABSPATH . 'core/Services/Community/CommunityLegal.php');
+    T::check(!preg_match('~https?://~', (string) preg_replace('~/\*.*?\*/~s', '', $source)), 'der Baustein nennt keinen Drittanbieter und keine Adresse');
 });
 
 T::run('Einbindung (Quelltext)', static function (): void {
