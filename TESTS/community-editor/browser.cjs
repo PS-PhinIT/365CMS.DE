@@ -90,7 +90,7 @@ const server = http.createServer((req, res) => {
     res.end(html);
 });
 
-async function newPage(browser, name, violations, errors) {
+async function newPage(browser, name, errors) {
     const page = await browser.newPage();
     page.on('console', (m) => { if (m.type() === 'error') { errors.push(m.text()); } });
     page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -110,7 +110,7 @@ async function newPage(browser, name, violations, errors) {
     // ── Markdown-Brücke (reine Funktionen im Browser) ──
     {
         const errors = [];
-        const page = await newPage(browser, 'new.html', [], errors);
+        const page = await newPage(browser, 'new.html', errors);
         const cases = await page.evaluate(async () => {
             const { htmlToMarkdown, splitQuotePrefix, isVisualSafe, escapeText } = await import('/assets/js/community/md-bridge.js');
             const t = (html) => htmlToMarkdown(html);
@@ -177,7 +177,7 @@ async function newPage(browser, name, violations, errors) {
     // ── Visueller Editor: neues Thema ──
     {
         const errors = [];
-        const page = await newPage(browser, 'new.html', [], errors);
+        const page = await newPage(browser, 'new.html', errors);
         await page.waitForSelector('.cms-community-editor__visual .sun-editor', { timeout: 15000 });
         check(await page.locator('#cc-body').isHidden(), 'visuell: Markdown-Textfeld ist verborgen');
         check((await page.locator('.cms-community-editor__tabs button[aria-pressed="true"]').textContent()) === 'Visuell', 'visuell: Reiter „Visuell“ aktiv');
@@ -211,7 +211,10 @@ async function newPage(browser, name, violations, errors) {
         await page.click('button[type="submit"]');
         await page.waitForLoadState('load');
         check(posted.length === 1 && posted[0].body.replace(/\r\n/g, '\n') === 'Vorab Hallo **Welt**' && posted[0].title === 'Mein Titel' && typeof posted[0].csrf_token === 'string', 'Absenden schickt Titel, Token und den Markdown-Text', JSON.stringify(posted));
+        // Außer dem bekannten style-Attribut von SunEditor darf das CSP nichts blockieren (Skripte, Trusted Types, Verbindungen).
         const violations = await page.evaluate(() => window.__violations || []);
+        const foreign = violations.filter((entry) => !/^style-src/.test(entry));
+        check(foreign.length === 0, 'visuell: keine CSP-Verletzung außer dem style-Attribut von SunEditor', foreign.join(' | '));
         check(realErrors(errors).length === 0, 'visuell: keine Konsolenfehler (inklusive Trusted Types)', realErrors(errors).join(' | '));
         await page.close();
     }
@@ -219,7 +222,7 @@ async function newPage(browser, name, violations, errors) {
     // ── Leeres Absenden im visuellen Modus ──
     {
         const errors = [];
-        const page = await newPage(browser, 'new.html', [], errors);
+        const page = await newPage(browser, 'new.html', errors);
         await page.waitForSelector('.cms-community-editor__visual .sun-editor', { timeout: 15000 });
         await page.fill('input[name="title"]', 'Nur Titel');
         posted.length = 0;
@@ -234,7 +237,7 @@ async function newPage(browser, name, violations, errors) {
     // ── Antwort mit Zitat-Präfix ──
     {
         const errors = [];
-        const page = await newPage(browser, 'reply.html', [], errors);
+        const page = await newPage(browser, 'reply.html', errors);
         await page.waitForSelector('.cms-community-editor__visual .sun-editor', { timeout: 15000 });
         check(await page.locator('.cms-community-editor__prefix').isVisible(), 'Antwort: Zitat wird über dem Editor angezeigt');
         const shown = await page.locator('.cms-community-editor__prefix').textContent();
@@ -254,7 +257,7 @@ async function newPage(browser, name, violations, errors) {
     // ── Bearbeiten: startet in Markdown, komplexe Quelle bleibt unangetastet ──
     {
         const errors = [];
-        const page = await newPage(browser, 'edit.html', [], errors);
+        const page = await newPage(browser, 'edit.html', errors);
         await page.waitForSelector('.cms-community-editor__tabs');
         check(await page.locator('#cc-body').isVisible(), 'Bearbeiten: startet mit der Markdown-Quelle');
         check((await page.locator('#cc-body').inputValue()).includes('| a | b |'), 'Bearbeiten: Quelle unverändert (Tabelle)');
