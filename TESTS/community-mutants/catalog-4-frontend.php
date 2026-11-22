@@ -15,6 +15,8 @@ $repo = 'core/Services/Community/Repository/PostRepository.php';
 $suite = 'community-frontend';
 $api = 'core/Services/Community/Http/ApiController.php';
 $apiSuite = 'community-api';
+$topics = 'core/Services/Community/Repository/TopicRepository.php';
+$attach = 'core/Services/Community/Http/AttachmentController.php';
 
 return [
     'route-topic-pattern' => [$urls, "'topic' => \$path('/' . \$topic . '/:ref'),", "'topic' => \$path('/' . \$topic . '/:ref/x'),", $suite, false, 'Das Themenmuster trifft /forum/thema/<id>-<slug>', true, []],
@@ -25,6 +27,12 @@ return [
     'route-new-topic-after-forum' => [$urls, "'new_topic' => \$path('/:slug/' . self::segment('new_topic', \$locale)),", "'new_topic' => \$path('/:slug/' . self::segment('new_topic', \$locale) . '/x'),", $suite, false, 'Das Muster „Neues Thema“ trifft /forum/<slug>/neues-thema', true, []],
     'route-reply-pattern' => [$urls, "'reply' => \$path('/' . \$topic . '/:id/' . self::segment('reply', \$locale)),", "'reply' => \$path('/' . \$topic . '/:id/' . self::segment('post', \$locale)),", $suite, false, 'Das Antwortmuster trifft /forum/thema/<id>/antworten (Segment der Sprache)', false, []],
     'position-past-end' => [$repo, 'if (count($rows) < $position) {', 'if (false) {', $suite, false, 'Eine Seite hinter dem Ende hat keinen Cursor (404 statt letzter Seite)', false, []],
+
+    // ── Listen, Ungelesen, Anhänge (community-frontend)
+    'route-unread-pattern' => [$urls, "'unread' => \$path('/' . \$topic . '/:id/' . self::segment('unread', \$locale)),", "'unread' => \$path('/' . \$topic . '/:id/x'),", $suite, false, 'Das Muster „Ungelesen“ trifft /forum/thema/<id>/ungelesen', true, []],
+    'listing-unanswered-any' => [$topics, "\$where .= ' AND reply_count = 0';", "\$where .= '';", $suite, false, '„Unbeantwortet“ zeigt nur Themen ohne Antwort', true, []],
+    'listing-status-any' => [$topics, "\"status = 'published' AND forum_id IN (\"", "\"status <> 'trash' AND forum_id IN (\"", $suite, false, 'Globale Listen zeigen nur veröffentlichte Themen (nicht ausgeblendete oder wartende)', true, []],
+    'attachment-name-untrimmed' => [$attach, "\$clean = trim(\$clean, \" ._\");", "\$clean = \$clean;", $suite, false, 'Dateiname im Kopf ohne führende Punkte und Leerraum', false, []],
 
     // ── JSON-API (community-api)
     'api-op-allowlist' => [$api, 'if (!in_array($op, self::MODERATION_OPS, true) || $id < 1) {', 'if ($id < 1) {', $apiSuite, false, 'Moderationsaktionen der API nur aus der Allowlist (kein Löschen über die API)', true, []],

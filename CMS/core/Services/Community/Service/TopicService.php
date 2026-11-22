@@ -508,6 +508,35 @@ final class TopicService
     }
 
     /**
+     * Globale Liste über alle für das Mitglied lesbaren Foren: `new` (neueste Themen), `active` (jüngste Aktivität) oder `unanswered`
+     * (ohne Antwort). Keyset wie `listForum()`; ohne lesbares Forum eine leere Seite. Fehlerfrei bei ungültigem Cursor (erste Seite).
+     *
+     * @return array{success: bool, error?: string, items?: list<array<string, mixed>>, next?: string|null, has_more?: bool}
+     */
+    public function listGlobal(?int $viewerId, string $kind, ?string $cursor = null, ?int $limit = null): array
+    {
+        if (!in_array($kind, TopicRepository::GLOBAL_KINDS, true)) {
+            return self::failure('invalid_input');
+        }
+        $viewer = $viewerId !== null && $viewerId > 0 ? $viewerId : null;
+        $limit = max(1, min(TopicRepository::MAX_LIMIT, $limit ?? $this->settings->int('topics_per_page')));
+
+        try {
+            $forumIds = CommunityAccess::instance()->readableForumIds($viewer);
+            $page = $this->topics->listGlobal($kind, $forumIds, Cursor::decode($cursor), $limit);
+        } catch (\PDOException | \RuntimeException $e) {
+            return $this->databaseError('topic.list_global', $e, ['kind' => $kind]);
+        }
+
+        return [
+            'success' => true,
+            'items' => array_map(static fn (array $row): array => self::typed($row), $page->items),
+            'next' => $page->next,
+            'has_more' => $page->next !== null,
+        ];
+    }
+
+    /**
      * Thema lesen: die Zeile mit wirksamem Zustand (`is_pinned`/`is_locked` nach Ablauf von `pinned_until`/`locked_until`).
      * `null`, wenn es das Thema nicht gibt oder das Mitglied es nicht lesen darf (beides ununterscheidbar).
      *

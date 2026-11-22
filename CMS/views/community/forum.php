@@ -20,6 +20,7 @@ $name = static function (?array $account): string {
 ?>
 <main id="main" class="cms-community">
     <?php if (!empty($flash)): ?><p class="cms-community-flash" role="status"><?= $e($flash) ?></p><?php endif; ?>
+    <?php include __DIR__ . '/partials/nav.php'; ?>
     <nav aria-label="Brotkrumen" class="cms-community-crumbs"><a href="<?= $e(Urls::index($locale)) ?>">Community</a> › <span aria-current="page"><?= $e($ftitle) ?></span></nav>
     <h1><?= $e($ftitle) ?></h1>
     <?php if (!empty($forum['description'])): ?><p class="cms-community__lead"><?= $e($forum['description']) ?></p><?php endif; ?>

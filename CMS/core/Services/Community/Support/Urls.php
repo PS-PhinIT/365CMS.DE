@@ -36,7 +36,14 @@ final class Urls
         'new_topic' => ['de' => 'neues-thema', 'en' => 'new-topic'],
         'reply' => ['de' => 'antworten', 'en' => 'reply'],
         'edit' => ['de' => 'bearbeiten', 'en' => 'edit'],
+        'search' => ['de' => 'suche', 'en' => 'search'],
+        'new' => ['de' => 'neu', 'en' => 'new'],
+        'active' => ['de' => 'aktiv', 'en' => 'active'],
+        'unanswered' => ['de' => 'unbeantwortet', 'en' => 'unanswered'],
     ];
+
+    /** Globale Listen (Pfadsegment = Schlüssel in SEGMENTS). */
+    public const LISTINGS = ['new', 'active', 'unanswered'];
 
     /**
      * Routenmuster je Sprache für den Router (`:name` = ein Pfadsegment). Reihenfolge = Reihenfolge der Eintragung: feste Segmente
@@ -53,6 +60,13 @@ final class Urls
 
         return [
             // Schreibseiten zuerst: `/thema/12/antworten` und `/<forum>/neues-thema` passten sonst auf `topic_page` bzw. `forum_page`.
+            'unread' => $path('/' . $topic . '/:id/' . self::segment('unread', $locale)),
+            'attachment_preview' => $path('/' . self::segment('attachment', $locale) . '/:id/' . self::segment('preview', $locale)),
+            'attachment' => $path('/' . self::segment('attachment', $locale) . '/:id'),
+            'search' => $path('/' . self::segment('search', $locale)),
+            'list_new' => $path('/' . self::segment('new', $locale)),
+            'list_active' => $path('/' . self::segment('active', $locale)),
+            'list_unanswered' => $path('/' . self::segment('unanswered', $locale)),
             'reply' => $path('/' . $topic . '/:id/' . self::segment('reply', $locale)),
             'new_topic' => $path('/:slug/' . self::segment('new_topic', $locale)),
             'edit' => $path('/' . $post . '/:id/' . self::segment('edit', $locale)),
@@ -121,6 +135,22 @@ final class Urls
             self::basePath() . '/' . self::segment('topic', $locale) . '/' . $segment . self::pageSuffix($page, $locale),
             $locale
         );
+    }
+
+    /** Suche: `/forum/suche`, Abfrage als `?q=`. */
+    public static function search(string $locale = 'de'): string
+    {
+        return FeedI18n::path(self::basePath() . '/' . self::segment('search', $locale), $locale);
+    }
+
+    /** Globale Liste `new`, `active` oder `unanswered`: `/forum/neu`, `/forum/aktiv`, `/forum/unbeantwortet`. */
+    public static function listing(string $kind, string $locale = 'de'): string
+    {
+        if (!in_array($kind, self::LISTINGS, true)) {
+            throw new \InvalidArgumentException('Unbekannte Liste: ' . $kind);
+        }
+
+        return FeedI18n::path(self::basePath() . '/' . self::segment($kind, $locale), $locale);
     }
 
     /** Formular „Neues Thema“ eines Forums: `/forum/<slug>/neues-thema`. */

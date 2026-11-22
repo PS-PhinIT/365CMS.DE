@@ -21,6 +21,7 @@ use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
 use CMS\Services\Community\CommunityMemberSection;
 use CMS\Services\Community\Http\ApiController;
+use CMS\Services\Community\Http\AttachmentController;
 use CMS\Services\Community\Http\ComposeController;
 use CMS\Services\Community\Http\PublicController;
 use CMS\Services\Community\Repository\ForumRepository;
@@ -66,6 +67,7 @@ final class CommunityHooks
             if (is_object($router)) {
                 // Schreibseiten zuerst: ihre Muster sind enger als `topic_page`/`forum_page`.
                 self::guard(static fn () => ApiController::instance()->registerRoutes($router));
+                self::guard(static fn () => AttachmentController::instance()->registerRoutes($router));
                 self::guard(static fn () => ComposeController::instance()->registerRoutes($router));
                 self::guard(static fn () => PublicController::instance()->registerRoutes($router));
             }

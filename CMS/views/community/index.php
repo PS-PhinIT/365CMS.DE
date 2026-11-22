@@ -16,6 +16,7 @@ $title = static fn (array $row): string => $locale === 'en' && !empty($row['titl
 $desc = static fn (array $row): string => $locale === 'en' && !empty($row['description_en']) ? (string) $row['description_en'] : (string) ($row['description'] ?? '');
 ?>
 <main id="main" class="cms-community">
+    <?php $active = 'index'; include __DIR__ . '/partials/nav.php'; ?>
     <h1>Community</h1>
     <?php if ($groups === []): ?>
         <p class="cms-community__empty">Noch keine Foren.</p>

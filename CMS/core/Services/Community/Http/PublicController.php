@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
 
 final class PublicController
 {
-    private const VIEWS = ['index', 'forum', 'topic', 'not-found', 'compose'];
+    private const VIEWS = ['index', 'forum', 'topic', 'not-found', 'compose', 'listing', 'search'];
 
     private static ?self $instance = null;
 
@@ -53,6 +53,12 @@ final class PublicController
         }
         foreach (['de', 'en'] as $locale) {
             $p = Urls::routePatterns($locale);
+            // Feste Adressen zuerst: `/thema/12/ungelesen` und `/forum/suche` passten sonst auf `topic_page` bzw. `forum`.
+            $router->addRoute('GET', $p['unread'], fn (string $id) => $this->unread((int) $id));
+            $router->addRoute('GET', $p['search'], fn () => $this->search());
+            foreach (Urls::LISTINGS as $kind) {
+                $router->addRoute('GET', $p['list_' . $kind], fn () => $this->listing($kind));
+            }
             $router->addRoute('GET', $p['topic'], fn (string $ref) => $this->topic($ref, null));
             $router->addRoute('GET', $p['topic_page'], fn (string $ref, string $page) => $this->topic($ref, $page));
             $router->addRoute('GET', $p['post'], fn (string $id) => $this->post($id));
@@ -238,6 +244,76 @@ final class PublicController
             'topic' => $topic, 'forum' => $forum, 'posts' => $items, 'accounts' => $accounts, 'page' => $page, 'pages' => $pages,
             'locale' => $locale, 'viewer' => $viewer, 'canonical' => $canonical,
         ]);
+    }
+
+    /** Globale Listen `/forum/neu`, `/forum/aktiv`, `/forum/unbeantwortet` über alle lesbaren Foren (Keyset über `?nach=`). */
+    public function listing(string $kind): void
+    {
+        $locale = I18n::requestLocale();
+        $viewer = $this->viewerId();
+        $cursor = is_string($_GET['nach'] ?? null) ? (string) $_GET['nach'] : null;
+        $result = TopicService::instance()->listGlobal($viewer, $kind, $cursor);
+        if (empty($result['success'])) {
+            $this->notFound();
+
+            return;
+        }
+        $items = (array) $result['items'];
+        $forums = (new ForumRepository())->tree();
+        $titles = ['new' => 'Neue Themen', 'active' => 'Aktive Themen', 'unanswered' => 'Unbeantwortete Themen'];
+        $canonical = Urls::listing($kind, $locale);
+        // Listen sind ein Überblick, kein eigener Inhalt: nicht indizieren.
+        $this->meta = ['title' => $titles[$kind] . ' – Community', 'canonical' => $canonical, 'noindex' => true];
+        $this->render('listing', [
+            'kind' => $kind, 'heading' => $titles[$kind], 'topics' => $items, 'forums' => $forums,
+            'accounts' => $this->accounts(array_map(static fn (array $t): int => (int) ($t['user_id'] ?? 0), $items)),
+            'next' => $result['next'] ?? null, 'locale' => $locale, 'viewer' => $viewer, 'canonical' => $canonical,
+        ]);
+    }
+
+    /** Suche `/forum/suche?q=…&forum=…&seite=N` (nur GET; Rechte, Drossel und Gäste-Regeln entscheidet `CommunitySearch`). */
+    public function search(): void
+    {
+        $locale = I18n::requestLocale();
+        $viewer = $this->viewerId();
+        $query = is_string($_GET['q'] ?? null) ? trim((string) $_GET['q']) : '';
+        $forumId = is_string($_GET['forum'] ?? null) && preg_match('/^[1-9]\d{0,9}$/D', (string) $_GET['forum']) === 1 ? (int) $_GET['forum'] : 0;
+        $page = is_string($_GET['seite'] ?? null) && preg_match('/^[1-9]\d{0,3}$/D', (string) $_GET['seite']) === 1 ? (int) $_GET['seite'] : 1;
+        $result = null;
+        if ($query !== '') {
+            $filters = $forumId > 0 ? ['forum_id' => $forumId] : [];
+            $result = \CMS\Services\Community\Service\CommunitySearch::instance()->search($viewer, $query, $filters, $page);
+        }
+        // Suchergebnisse gehören nicht in einen Suchindex (Gleichheit mit den Listen).
+        $this->meta = ['title' => 'Suche – Community', 'canonical' => Urls::search($locale), 'noindex' => true];
+        $forums = [];
+        $access = CommunityAccess::instance();
+        $readable = array_flip($access->readableForumIds($viewer));
+        foreach ((new ForumRepository())->tree() as $id => $forum) {
+            if (isset($readable[(int) $id])) {
+                $forums[(int) $id] = $forum;
+            }
+        }
+        $this->render('search', ['query' => $query, 'forum_id' => $forumId, 'forums' => $forums, 'result' => $result, 'page' => $page, 'locale' => $locale, 'viewer' => $viewer]);
+    }
+
+    /** `/forum/thema/{id}/ungelesen`: zum ersten ungelesenen Beitrag, sonst zum Thema. Gäste und nicht lesbare Themen: wie das Thema. */
+    public function unread(int $id): void
+    {
+        $locale = I18n::requestLocale();
+        $viewer = $this->viewerId();
+        $topic = TopicService::instance()->get($viewer, $id);
+        if ($topic === null) {
+            $this->notFound();
+
+            return;
+        }
+        $postId = $viewer === null ? null : ReadStateService::instance()->firstUnreadPostId($viewer, $id);
+        if ($postId === null) {
+            $this->redirect(Urls::topic((int) $topic['id'], (string) ($topic['slug'] ?? ''), $locale), 302);
+        }
+        $page = PostService::instance()->pageOf((int) $topic['id'], $postId);
+        $this->redirect(Urls::topic((int) $topic['id'], (string) ($topic['slug'] ?? ''), $locale, $page) . '#post-' . $postId, 302);
     }
 
     /** Dauerlink `/forum/beitrag/{id}`: weiter zu Thema, Seite und Anker. */
