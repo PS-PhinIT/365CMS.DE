@@ -26,6 +26,8 @@
  *   unverändert. Zähler bucht `CounterBook::topicUnpublished()` (Semantik S1): Forum `topic_count − 1` und `post_count − Beiträge`,
  *   jeder Autor veröffentlichter Beiträge `post_count − n`, der Themenstarter zusätzlich `topic_count − 1`. Das Wiederherstellen
  *   aus dem Papierkorb (`TopicTrashService`) bucht `topicPublished()` als genaue Umkehrung.
+ * - Schutzschichten (nur mit Guard, `WriteGate`): Wortfilter und Zählung vor `can()` (`content` im Kontext), `screen()` nach erlaubtem `can()` und vor
+ *   `ensure()` und der Transaktion (`word_blocked`, `spam_rejected`; `review` ⇒ `pending` über `can(fresh)`), `ip_hash` am ersten Beitrag, Sicherheitsprotokoll nach dem Vorgang.
  * - Ergebnisse sind Arrays `{success, error?, retry_after?, …}`; `error` ist ein Code aus `Support\Codes`.
  *
  * @package CMSv2\Core\Services\Community

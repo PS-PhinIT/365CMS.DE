@@ -26,8 +26,8 @@
  * - Zähler (Matrix §3.6): veröffentlichte Beiträge zählen, wartende nirgends. Forumzähler zählen nur Beiträge in
  *   veröffentlichten Themen (die Freigabe eines wartenden Themas bucht in PR #2b nach).
  * - Hooks laufen nach dem Commit über `Events::fire()`; eine Ausnahme im Hook bricht nichts ab.
- * - Zeit: UTC (`gmdate`), die Uhr wird je Aufruf einmal gelesen. `body_html` bleibt NULL (`rendered_version` 0) und `ip_hash`
- *   NULL; es gibt kein Auto-Abo.
+ * - Zeit: UTC (`gmdate`), die Uhr wird je Aufruf einmal gelesen. `body_html` bleibt NULL (`rendered_version` 0); `ip_hash` bleibt NULL,
+ *   solange kein Guard übergeben ist (`WriteGate`, sonst der Wert aus `ContentGuard::screen()`); es gibt kein Auto-Abo.
  * - Ergebnisse sind Arrays `{success, error?, retry_after?, …}`; `error` ist ein Code aus `Support\Codes`. Datenbankfehler
  *   rollen die Transaktion zurück, werden protokolliert und ergeben `error = db_error`.
  *
