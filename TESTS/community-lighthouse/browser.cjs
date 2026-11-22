@@ -42,6 +42,15 @@ function send(req, res, body, type, headers) {
     res.end(out);
 }
 
+/** Datei lesen oder null (ohne vorherige Prüfung, damit zwischen Prüfen und Lesen nichts dazwischenkommt). */
+function readOrNull(file) {
+    try {
+        return fs.readFileSync(file);
+    } catch (error) {
+        return null;
+    }
+}
+
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     if (url.pathname === '/favicon.ico') {
@@ -55,8 +64,9 @@ const server = http.createServer((req, res) => {
     }
     if (url.pathname.startsWith('/assets/')) {
         const file = path.join(assets, url.pathname.slice('/assets/'.length));
-        if (file.startsWith(assets) && fs.existsSync(file) && fs.statSync(file).isFile()) {
-            send(req, res, fs.readFileSync(file), types[path.extname(file)] || 'application/octet-stream', { 'Cache-Control': 'public, max-age=31536000, immutable' });
+        const body = file.startsWith(assets) ? readOrNull(file) : null;
+        if (body !== null) {
+            send(req, res, body, types[path.extname(file)] || 'application/octet-stream', { 'Cache-Control': 'public, max-age=31536000, immutable' });
             return;
         }
         res.writeHead(404);
@@ -64,8 +74,9 @@ const server = http.createServer((req, res) => {
         return;
     }
     const file = path.join(dir, path.basename(url.pathname === '/' ? 'index.html' : url.pathname));
-    if (fs.existsSync(file) && fs.statSync(file).isFile()) {
-        send(req, res, fs.readFileSync(file), 'text/html; charset=utf-8', { 'Cache-Control': 'private, no-store' });
+    const page = readOrNull(file);
+    if (page !== null) {
+        send(req, res, page, 'text/html; charset=utf-8', { 'Cache-Control': 'private, no-store' });
         return;
     }
     res.writeHead(404);

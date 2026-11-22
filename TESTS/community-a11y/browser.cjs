@@ -33,6 +33,15 @@ function check(ok, label, detail) {
     }
 }
 
+/** Datei lesen oder null (ohne vorherige Prüfung, damit zwischen Prüfen und Lesen nichts dazwischenkommt). */
+function readOrNull(file) {
+    try {
+        return fs.readFileSync(file);
+    } catch (error) {
+        return null;
+    }
+}
+
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     if (req.method === 'POST') {
@@ -45,9 +54,10 @@ const server = http.createServer((req, res) => {
     }
     if (url.pathname.startsWith('/assets/')) {
         const file = path.join(assets, url.pathname.slice('/assets/'.length));
-        if (file.startsWith(assets) && fs.existsSync(file) && fs.statSync(file).isFile()) {
+        const body = file.startsWith(assets) ? readOrNull(file) : null;
+        if (body !== null) {
             res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' });
-            fs.createReadStream(file).pipe(res);
+            res.end(body);
             return;
         }
         res.writeHead(404);
@@ -55,9 +65,10 @@ const server = http.createServer((req, res) => {
         return;
     }
     const file = path.join(dir, path.basename(url.pathname));
-    if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+    const page = readOrNull(file);
+    if (page !== null) {
         res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'text/html; charset=utf-8' });
-        fs.createReadStream(file).pipe(res);
+        res.end(page);
         return;
     }
     res.writeHead(404);
