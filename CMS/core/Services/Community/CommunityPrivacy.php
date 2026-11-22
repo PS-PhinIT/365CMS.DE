@@ -43,7 +43,7 @@ final class CommunityPrivacy
     public const EXPORT_KEEP_DAYS = 30;
     public const MAX_ROWS = 20000;
     private const REACTION_BLOCK = 200;
-    private const FILE_PATTERN = '/^community-\d{8}-\d{6}-[a-f0-9]{12}\.json$/';
+    private const FILE_PATTERN = '/^community-\d{8}-\d{6}-[a-f0-9]{12}\.json$/D';
 
     private string $prefix;
 
@@ -184,6 +184,36 @@ final class CommunityPrivacy
         usort($files, static fn (array $a, array $b): int => strcmp($b['name'], $a['name']));
 
         return $files;
+    }
+
+    /**
+     * Absoluter Pfad einer Exportdatei (Admin: Herunterladen), `null` bei ungültigem Namen oder fehlender Datei. Nur Namen der Form
+     * `community-YYYYMMDD-HHMMSS-<12 hex>.json` aus der privaten Ablage gelten; Pfadteile, andere Endungen und fremde Dateien nie.
+     */
+    public static function exportPath(string $name): ?string
+    {
+        if (preg_match(self::FILE_PATTERN, $name) !== 1) {
+            return null;
+        }
+        try {
+            $path = PrivateStorageService::getInstance()->resolve(self::EXPORT_AREA, $name);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return is_string($path) && is_file($path) ? $path : null;
+    }
+
+    /** Löscht eine Exportdatei auf Wunsch der Administration (vor der Frist von EXPORT_KEEP_DAYS Tagen); `false` bei ungültigem Namen oder Fehler. */
+    public static function deleteExport(string $name, int $actorId = 0): bool
+    {
+        $path = self::exportPath($name);
+        if ($path === null || !@unlink($path)) {
+            return false;
+        }
+        AuditLogger::instance()->log(AuditLogger::CAT_SETTING, 'community.privacy.export_delete', 'DSGVO-Auskunft: Exportdatei der Community gelöscht', 'community_export', null, ['file' => $name, 'user_id' => $actorId], 'info');
+
+        return true;
     }
 
     /** Entfernt Exportdateien, die älter als `$days` Tage sind (täglicher Cron); liefert die Zahl. */

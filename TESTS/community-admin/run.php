@@ -85,6 +85,32 @@ T::run('Aktionen', static function (): void {
     T::same('/admin/community-queue?cursor=abc', CommunityAdminModule::url('queue', ['cursor' => 'abc', 'type' => '']), 'url(): leere Parameter entfallen');
 });
 
+T::run('Exportdateien der DSGVO-Auskunft: Liste, Herunterladen und Löschen nur für community.manage, nur gültige Namen', static function () use ($read): void {
+    T::check(in_array('export_download', CommunityAdminModule::MANAGE_ACTIONS, true) && in_array('export_delete', CommunityAdminModule::MANAGE_ACTIONS, true), 'beide Aktionen verlangen community.manage (nicht die Moderation)');
+    $module = new CommunityAdminModule('settings');
+    foreach (['', '../../etc/passwd', 'community-x.json', "community-20260101-000000-abcdefabcdef.json\n", 'community-20260101-000000-abcdefabcdef.json/../x', 'COMMUNITY-20260101-000000-abcdefabcdef.json', 'community-20260101-000000-abcdefabcdeg.json', ['community-20260101-000000-abcdefabcdef.json'], null] as $bad) {
+        $label = json_encode($bad);
+        $download = $module->handlePost(['action' => 'export_download', 'file' => $bad], 1);
+        $delete = $module->handlePost(['action' => 'export_delete', 'file' => $bad], 1);
+        T::same([false, false], [$download['success'] ?? null, $delete['success'] ?? null], 'ungültiger Dateiname ' . $label . ': weder Download noch Löschen');
+        T::same(null, \CMS\Services\Community\CommunityPrivacy::exportPath(is_string($bad) ? $bad : ''), 'exportPath(' . $label . '): null');
+    }
+    T::same(false, \CMS\Services\Community\CommunityPrivacy::deleteExport('../x.json'), 'deleteExport(): ungültiger Name');
+
+    $privacy = $read('core/Services/Community/CommunityPrivacy.php');
+    T::check(str_contains($privacy, "\\.json\$/D'"), 'der Dateiname wird streng geprüft (D: kein Zeilenumbruch am Ende)');
+    $moduleSource = $read('admin/modules/community/CommunityAdminModule.php');
+    $download = substr($moduleSource, (int) strpos($moduleSource, 'private function exportDownload'), 1700);
+    T::check(str_contains($download, 'CommunityPrivacy::exportPath($name)') && strpos($download, 'AuditLogger') < strpos($download, 'readfile($path)'), 'Download: Pfad nur über exportPath(), Audit-Eintrag vor dem Senden');
+    foreach (['Content-Type: application/json; charset=utf-8', 'Content-Disposition: attachment', 'X-Content-Type-Options: nosniff', 'Cache-Control: private, no-store'] as $header) {
+        T::check(str_contains($download, $header), 'Download-Kopf: ' . $header);
+    }
+    $view = $read('admin/views/community/index.php');
+    T::check(str_contains($view, 'id="community-exports"') && str_contains($view, "\$formOpen('export_download'") && str_contains($view, "\$formOpen('export_delete'"), 'Ansicht: Karte mit Herunterladen und Löschen über die Aktionsformulare (csrf_token)');
+    T::check(str_contains($view, "(\$cd['exports'] ?? [])") && str_contains($view, 'Keine Exportdateien vorhanden.'), 'Ansicht: Liste und Leerzustand');
+    T::check(str_contains($moduleSource, "'exports' => CommunityPrivacy::listExports()"), 'Einstellungsdaten enthalten die Dateiliste');
+});
+
 T::run('Einstellungen: Rundlauf', static function (): void {
     $store = [];
     Settings::setInstance(new Settings(static function () use (&$store): array {

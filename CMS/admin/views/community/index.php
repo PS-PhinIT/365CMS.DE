@@ -646,6 +646,42 @@ $failure = static function (mixed $result): ?string {
 
         <div><button class="btn btn-primary" type="submit"><i class="ti ti-device-floppy me-1" aria-hidden="true"></i>Einstellungen speichern</button></div>
     </form>
+
+    <?php
+    $exports = (array) ($cd['exports'] ?? []);
+    $keepDays = (int) ($cd['export_keep_days'] ?? 30);
+    ?>
+    <div class="card mt-4" id="community-exports">
+        <div class="card-header"><h3 class="card-title">Datenschutz: Exportdateien der Auskunft</h3></div>
+        <div class="card-body">
+            <p class="text-secondary mb-0">Jede DSGVO-Auskunft legt eine JSON-Datei mit den Forumsdaten des Mitglieds in der privaten Ablage ab (ohne IP-Kennung). Der tägliche Cron löscht sie nach <?= $keepDays ?> Tagen; hier lassen sie sich vorher herunterladen oder löschen. Jeder Abruf und jedes Löschen steht im Audit-Protokoll.</p>
+        </div>
+        <?php if ($exports === []): ?>
+            <div class="card-body border-top text-secondary">Keine Exportdateien vorhanden.</div>
+        <?php else: ?>
+            <div class="table-responsive"><table class="table table-vcenter card-table">
+                <thead><tr><th scope="col">Datei</th><th scope="col">Größe</th><th scope="col">Erstellt</th><th scope="col">Wird gelöscht am</th><th scope="col"><span class="visually-hidden">Aktionen</span></th></tr></thead>
+                <tbody>
+                <?php foreach ($exports as $export): ?>
+                    <?php
+                    $createdTs = strtotime((string) $export['created_at'] . ' UTC');
+                    $expires = $createdTs === false ? '' : gmdate('Y-m-d H:i:s', $createdTs + $keepDays * 86400);
+                    ?>
+                    <tr>
+                        <td><code><?= $e((string) $export['name']) ?></code></td>
+                        <td><?= $e(number_format(max(1, (int) round(((int) $export['size']) / 1024)), 0, ',', '.')) ?> KB</td>
+                        <td><?= $e(CommunityAdminModule::date($export['created_at'])) ?></td>
+                        <td><?= $e(CommunityAdminModule::date($expires)) ?></td>
+                        <td class="text-end text-nowrap">
+                            <?= $formOpen('export_download', ['file' => (string) $export['name']]) ?><button class="btn btn-sm btn-outline-primary" type="submit"><i class="ti ti-download me-1" aria-hidden="true"></i>Herunterladen</button></form>
+                            <?= $formOpen('export_delete', ['file' => (string) $export['name']]) ?><button class="btn btn-sm btn-outline-danger" type="submit">Löschen</button></form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div>
+        <?php endif; ?>
+    </div>
 <?php endif; ?>
     </div>
 </div>
