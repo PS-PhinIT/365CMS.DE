@@ -441,6 +441,15 @@ final class PublicController
         // Angemeldete Mitglieder erhalten die JSON-API (Reaktion, Abo, Melden, Vorschau, Moderation): Basisadresse und dauerhaftes Token.
         $vars['api'] = $this->apiInfo();
         $this->meta['js'] = $vars['api'] !== null;
+        // Visueller Editor im Schreibformular (SunEditor, lokal): neu und Antwort visuell, Bearbeiten zuerst als Markdown (verlustfrei).
+        $editable = $view === 'compose' && $vars['api'] !== null && empty($vars['readonly']);
+        $vars['editor'] = $editable ? [
+            'mode' => ($vars['mode'] ?? '') === 'edit' ? 'markdown' : 'visual',
+            'css' => cms_asset_url('suneditor/css/suneditor.min.css'),
+            'js' => cms_asset_url('suneditor/suneditor.min.js'),
+            'lang' => cms_asset_url('suneditor/lang/de.js'),
+        ] : null;
+        $this->meta['editor'] = $vars['editor'] !== null;
         $meta = $this->meta;
         // Hinweis aus einem Schreibvorgang (z. B. „wartet auf Freigabe“) einmal anzeigen.
         $vars['flash'] = $_SESSION['community_flash'] ?? null;
@@ -470,6 +479,9 @@ final class PublicController
         $out = '<link rel="stylesheet" href="' . $e(cms_asset_url('css/community.css')) . '">' . "\n";
         if (!empty($meta['js'])) {
             $out .= '<script type="module" src="' . $e(cms_asset_url('js/community/community.js')) . '"></script>' . "\n";
+        }
+        if (!empty($meta['editor'])) {
+            $out .= '<script type="module" src="' . $e(cms_asset_url('js/community/editor.js')) . '"></script>' . "\n";
         }
         if (!empty($meta['noindex'])) {
             $out .= '<meta name="robots" content="noindex, follow">' . "\n";
