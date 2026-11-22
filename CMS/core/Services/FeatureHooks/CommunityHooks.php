@@ -20,6 +20,8 @@ use CMS\Logger;
 use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
 use CMS\Services\Community\CommunityMemberSection;
+use CMS\Services\Community\CommunityPrivacy;
+use CMS\Services\Community\CommunityRetention;
 use CMS\Services\Community\Http\ApiController;
 use CMS\Services\Community\Http\AttachmentController;
 use CMS\Services\Community\Http\ComposeController;
@@ -47,6 +49,30 @@ final class CommunityHooks
         Hooks::addAction('cms_role_deleted', static function (mixed $role = ''): void {
             self::guard(static fn () => self::roleDeleted((string) $role));
         });
+
+        // Datenschutz und Aufbewahrung gelten immer, auch bei abgeschaltetem Modul: die Daten bleiben beim Abschalten erhalten.
+        Hooks::addAction('dsgvo_export_data', static function (mixed $userId = null, mixed $email = null): void {
+            self::guard(static fn () => CommunityPrivacy::handleExport($userId, $email));
+        }, 12);
+        Hooks::addAction('dsgvo_delete_data', static function (mixed $userId = null, mixed $email = null): void {
+            self::guard(static fn () => CommunityPrivacy::handleDelete($userId, $email));
+        }, 12);
+        // Konto endgültig gelöscht (auch ohne Löschantrag über den Admin): dieselbe Anonymisierung, idempotent.
+        Hooks::addAction('cms_user_deleted', static function (mixed $userId = null): void {
+            self::guard(static fn () => CommunityPrivacy::handleDelete($userId, null));
+        }, 12);
+        Hooks::addFilter('cms_member_export_data', static function (mixed $export = [], mixed $userId = 0): mixed {
+            return CommunityPrivacy::memberExport($export, $userId);
+        }, 26);
+        Hooks::addAction('cms_init_admin', static function (): void {
+            self::guard(static fn () => CommunityRetention::registerAll());
+        }, 5);
+        Hooks::addAction('cms_cron_daily', static function (): void {
+            self::guard(static fn () => CommunityRetention::registerAll());
+        }, 1);
+        Hooks::addAction('cms_cron_daily', static function (): void {
+            self::guard(static fn () => CommunityPrivacy::pruneExports());
+        }, 47);
 
         if (!CommunityModule::isEnabled()) {
             return;

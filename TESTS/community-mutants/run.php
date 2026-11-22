@@ -50,9 +50,10 @@ const CM_LEGACY_SUITES = ['community-repositories', 'community-access', 'communi
 
 /**
  * Suiten ohne Mutanten-Haken (`Mutant::load`) bzw. der Treiber selbst; sie stehen nie in CM_SUITES.
- * `community-admin` (PR #3) prüft Dateien unter `CMS/admin/`, die keine erlaubten Mutanten-Ziele sind (nur Oberfläche und Quelltextprüfung).
+ * `community-admin` (PR #3) prüft Dateien unter `CMS/admin/`, die keine erlaubten Mutanten-Ziele sind (nur Oberfläche und Quelltextprüfung);
+ * `community-editor` prüft Skripte, Vorlage und einen Browser (kein PHP-Ziel mit `Mutant::load`).
  */
-const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin'];
+const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin', 'community-editor'];
 
 /**
  * Zieldateien außerhalb von `core/Services/Community/` (Vertrag DESIGN-2b §6 W0, GK2): die Core-Dateien, auf denen das Modul aufbaut
@@ -280,7 +281,7 @@ T::run('Katalog: Namen eindeutig, Dateien und Suchtexte (genau einmal), Ersatz, 
     if ($custom) {
         T::info('eigener Katalog (' . basename((string) getenv('CMS_TEST_MUTANT_CATALOG')) . '): Zählregeln des ganzen Katalogs entfallen; ' . count($catalog) . ' Mutanten, davon quick: ' . $quick);
     } else {
-        T::check(count($catalog) >= 60 && count($catalog) <= 700, 'der Katalog hat 60 bis 700 Mutanten', (string) count($catalog));
+        T::check(count($catalog) >= 60 && count($catalog) <= 800, 'der Katalog hat 60 bis 800 Mutanten', (string) count($catalog));
         $legacy = array_intersect_key($perSuite, array_flip(CM_LEGACY_SUITES));
         T::check(min($legacy) >= 10, 'jede Suite aus #2a hat mindestens zehn Mutanten', json_encode($legacy));
         T::same([], array_keys(array_filter($perSuite, static fn (int $n): bool => $n < 1)), 'jede Suite in CM_SUITES hat mindestens eine Mutante', json_encode($perSuite));
