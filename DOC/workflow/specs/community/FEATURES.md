@@ -110,8 +110,7 @@ Jede Funktion gilt erst als fertig, wenn alle Akzeptanzkriterien erfüllt und im
 | COM-PLUS-08 | **Tags und Präfixe** | Themen-Tags (frei oder aus Liste, je Forum); Präfixe wie „[Gelöst]“, „[Frage]“; Filter in Listen. | neu | P3 | ⬜ |
 | COM-PLUS-09 | **Automatisches Schließen** | Themen ohne Aktivität seit X Tagen automatisch schließen (je Forum). | `CronRunnerService` | P2 | ⚠️ Einstellung ohne Wirkung |
 | COM-PLUS-10 | **Webhooks / Integrationen** | Ereignisse (neues Thema, Meldung) an Discord/Teams/Slack-Webhook; Hooks für Plugins (siehe ARCHITECTURE §6). | `Hooks` | P3 | ⬜ |
-| COM-PLUS-11 | **KI-Unterstützung (optional)** | Bei aktivem Modul „AI Services“: Spam-Einschätzung als zusätzliches Signal (nie alleinige Entscheidung), Zusammenfassung langer Themen, Vorschlag ähnlicher Lösungen. Abschaltbar, Hinweis im Datenschutztext. | `AI`-Dienste | P3 | ⬜ |
-| COM-PLUS-12 | **Feeds** | RSS je Forum und für neueste Themen (nur öffentlich lesbare Foren). | `FeedService` | P2 | ⬜ |
+| COM-PLUS-11 | **Feeds** | RSS je Forum und für neueste Themen (nur öffentlich lesbare Foren). | `FeedService` | P2 | ⬜ |
 
 ### 6. Administration
 
