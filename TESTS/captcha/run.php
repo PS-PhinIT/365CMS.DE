@@ -13,6 +13,7 @@ define('ABSPATH', dirname(__DIR__, 2) . '/CMS/');
 define('CMS_DEBUG', false);
 define('LOG_LEVEL', 'warning');
 define('LOG_PATH', sys_get_temp_dir() . '/cms-tests-logs-captcha-' . getmypid() . '/');
+define('SITE_URL', 'https://example.test');
 date_default_timezone_set('Europe/Berlin');
 ini_set('error_log', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null');
 
@@ -451,6 +452,149 @@ T::run('Browser-Skript (mit node): findet die Zahl, wirft ohne Web Crypto', stat
     $expected[] = json_encode(['ohne Web Crypto', 'unsupported']);
     $expected[] = json_encode(['nicht gefunden', 'not found']);
     T::same($expected, $got, 'solve(): findet 0, 1, 4321 und die größte Zahl, meldet fehlendes Web Crypto (unsupported) und „nicht gefunden“');
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Einbindung: Formulare, Registrierung, Theme-Helfer
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Ersetzt die gemeinsame Instanz des Dienstes (Speicher-Ablage); liefert Dienst und Ablage. @return array{0: CaptchaService, 1: CaptchaStore} */
+function swapService(): array
+{
+    $store = CaptchaStore::memory();
+    $service = new CaptchaService($store);
+    $property = new \ReflectionProperty(CaptchaService::class, 'instance');
+    $property->setAccessible(true);
+    $property->setValue(null, $service);
+
+    return [$service, $store];
+}
+
+/** Lösung der Rechenaufgabe aus einem HTML-Fragment. */
+function answerOf(string $html): string
+{
+    return (string) mathAnswer($html);
+}
+
+T::run('Formulare: Aufgabe nur auf Stufe „hoch“, Kontext je Formular, Prüfung im FormSpamGuard', static function (): void {
+    require_once ABSPATH . 'includes/functions/options-runtime.php';
+    $_SESSION = [];
+    $_SERVER['REQUEST_URI'] = '/kontakt';
+    swapService();
+    T::same(['forms.contact', 'forms.a/b'], [\CMS\Services\Forms\FormSpamGuard::captchaContext('contact'), \CMS\Services\Forms\FormSpamGuard::captchaContext('a/b')], 'Kontext forms.<Formularschlüssel>');
+
+    $html = \CMS\Services\Forms\FormSpamGuard::captchaHtml('contact');
+    T::check(str_contains($html, 'data-cms-captcha="pow"') && str_contains($html, 'name="cms_captcha_answer"'), 'Standardverfahren der Formulare: Proof-of-Work mit Rechenaufgabe');
+    $id = taskId($html);
+    T::same(true, \CMS\Services\Forms\FormSpamGuard::verifyCaptcha('contact', ['cms_captcha_id' => $id, 'cms_captcha_pow' => (string) powSolution($html)]), 'richtige Lösung besteht');
+    T::same(false, \CMS\Services\Forms\FormSpamGuard::verifyCaptcha('contact', ['cms_captcha_id' => $id, 'cms_captcha_pow' => (string) powSolution($html)]), 'zweite Prüfung derselben Aufgabe: abgelehnt (einmalig)');
+    $html = \CMS\Services\Forms\FormSpamGuard::captchaHtml('contact');
+    T::same(false, \CMS\Services\Forms\FormSpamGuard::verifyCaptcha('support', ['cms_captcha_id' => taskId($html), 'cms_captcha_answer' => answerOf($html)]), 'Aufgabe eines anderen Formulars: abgelehnt');
+    $html = \CMS\Services\Forms\FormSpamGuard::captchaHtml('contact');
+    T::same(true, \CMS\Services\Forms\FormSpamGuard::verifyCaptcha('contact', ['cms_captcha_id' => taskId($html), 'cms_captcha_answer' => answerOf($html)]), 'die Rechenaufgabe besteht (ohne JavaScript)');
+    T::same(false, \CMS\Services\Forms\FormSpamGuard::verifyCaptcha('contact', []), 'ohne Felder: abgelehnt');
+
+    $filter = static fn (mixed $provider, string $formKey): string => $formKey === 'newsletter' ? 'math' : (string) $provider;
+    Hooks::addFilter(\CMS\Services\Forms\FormSpamGuard::CAPTCHA_PROVIDER_FILTER, $filter);
+    T::check(str_contains(\CMS\Services\Forms\FormSpamGuard::captchaHtml('newsletter'), 'data-cms-captcha="math"') && str_contains(\CMS\Services\Forms\FormSpamGuard::captchaHtml('contact'), 'data-cms-captcha="pow"'), 'Filter cms_forms_captcha_provider wählt das Verfahren je Formular');
+    Hooks::removeFilter(\CMS\Services\Forms\FormSpamGuard::CAPTCHA_PROVIDER_FILTER, $filter);
+
+    // Rendern
+    $form = static fn (string $level): array => ['form_key' => 'kontakt', 'title' => 'Kontakt', 'settings' => ['antispam_level' => $level], 'fields' => [['type' => 'text', 'name' => 'name', 'key' => 'name', 'label' => ['de' => 'Name']]]];
+    \CMS\Services\Forms\FormRenderer::resetState();
+    $high = \CMS\Services\Forms\FormRenderer::render($form('high'), ['flash' => ['errors' => ['_captcha' => 'Falsch']]]);
+    T::check(str_contains($high, 'data-cms-captcha="pow"') && str_contains($high, 'cms-form__field--captcha has-error'), 'Stufe hoch: Captcha-Aufgabe und Fehlerzustand');
+    T::check(str_contains($high, '<p class="cms-form__error" role="alert">Falsch</p>'), 'Stufe hoch: Fehlertext mit role=alert');
+    T::check(str_contains($high, 'id="cf-kontakt-captcha" tabindex="-1"'), 'Stufe hoch: Anker der Fehlerübersicht (id, fokussierbar)');
+    T::check(!str_contains($high, 'name="cms_captcha"'), 'das alte Feld cms_captcha gibt es nicht mehr');
+    \CMS\Services\Forms\FormRenderer::resetState();
+    $standard = \CMS\Services\Forms\FormRenderer::render($form('standard'));
+    $low = \CMS\Services\Forms\FormRenderer::render($form('low'));
+    T::check(!str_contains($standard, 'data-cms-captcha') && !str_contains($low, 'data-cms-captcha'), 'Stufe standard und niedrig: kein Captcha');
+    $preview = \CMS\Services\Forms\FormRenderer::render($form('high'), ['context' => 'preview']);
+    T::check(!str_contains($preview, 'data-cms-captcha'), 'Vorschau im Editor: kein Captcha');
+});
+
+T::run('Formulare: Stil und Skript des Captcha-Dienstes nur mit Captcha, einmal je Seite, im Kopf bzw. am Seitenende', static function (): void {
+    $_SESSION = [];
+    swapService();
+    $form = static fn (string $level): array => ['form_key' => 'kontakt', 'title' => 'Kontakt', 'settings' => ['antispam_level' => $level], 'fields' => [['type' => 'text', 'name' => 'name', 'key' => 'name', 'label' => ['de' => 'Name']]]];
+    $capture = static function (string $hook): string {
+        ob_start();
+        Hooks::doAction($hook);
+
+        return (string) ob_get_clean();
+    };
+
+    // Seite mit Captcha, Kopf noch nicht ausgegeben: Hooks (muss der erste Lauf mit den Hooks sein: didAction('head') zählt hoch)
+    \CMS\Services\Forms\FormRenderer::resetState();
+    \CMS\Services\Forms\FormRenderer::render($form('high'));
+    \CMS\Services\Forms\FormRenderer::render($form('high'));
+    $head = $capture('head');
+    $end = $capture('body_end');
+    T::same([1, 0, 0, 1], [substr_count($head, 'css/captcha.css'), substr_count($head, 'captcha.js'), substr_count($end, 'css/captcha.css'), substr_count($end, 'type="module" src="https://example.test/assets/js/captcha/captcha.js')], 'Kopf: captcha.css einmal; Seitenende: captcha.js als Modul einmal (auch bei zwei Formularen)');
+    T::check(str_contains($head, 'forms-public.css') && str_contains($end, 'forms-public.js'), 'die eigenen Dateien der Formulare werden weiter ausgegeben');
+    T::same(0, substr_count($capture('head') . $capture('body_end'), 'captcha'), 'zweiter Durchlauf der Hooks: nichts doppelt');
+
+    // Kopf schon ausgegeben (Theme-Template): die Tags stehen im Rückgabewert, einmal
+    \CMS\Services\Forms\FormRenderer::resetState();
+    $first = \CMS\Services\Forms\FormRenderer::render($form('high'));
+    $second = \CMS\Services\Forms\FormRenderer::render($form('high'));
+    T::same([1, 1, 0], [substr_count($first, 'css/captcha.css'), substr_count($first, 'js/captcha/captcha.js'), substr_count($second, 'captcha.js')], 'Kopf schon ausgegeben: Tags im ersten Formular, nicht im zweiten');
+
+    // Seite ohne Captcha: weder Stil noch Skript des Dienstes
+    \CMS\Services\Forms\FormRenderer::resetState();
+    $plain = \CMS\Services\Forms\FormRenderer::render($form('standard'));
+    T::check(!str_contains($plain, 'captcha') && str_contains($plain, 'forms-public.js'), 'Formular ohne Captcha: weder captcha.css noch captcha.js, die eigenen Dateien der Formulare bleiben');
+    \CMS\Services\Forms\FormRenderer::resetState();
+});
+
+T::run('Registrierung: Einstellung, Prüfung vor dem Anlegen des Kontos, Vorlagen, Theme-Helfer', static function (): void {
+    $service = (new \ReflectionClass(\CMS\Services\CmsAuthPageService::class))->newInstanceWithoutConstructor();
+    // Ohne Konstruktor (keine Datenbank): nur der Logger wird gebraucht, falls die Seitenliste nicht ladbar ist.
+    $logger = new \ReflectionProperty(\CMS\Services\CmsAuthPageService::class, 'logger');
+    $logger->setAccessible(true);
+    $logger->setValue($service, \CMS\Logger::instance()->withChannel('test'));
+    $defaults = (new \ReflectionMethod($service, 'getDefaultSettings'))->invoke($service);
+    T::same('0', $defaults['register_captcha'] ?? null, 'Standard: aus (eigene Themes müssen das Feld erst ausgeben)');
+    $normalize = new \ReflectionMethod($service, 'normalizeSettingsInput');
+    $on = $normalize->invoke($service, ['register_captcha' => '1']);
+    $off = $normalize->invoke($service, []);
+    $junk = $normalize->invoke($service, ['register_captcha' => '']);
+    T::same(['1', '0', '0'], [$on['register_captcha'] ?? null, $off['register_captcha'] ?? null, $junk['register_captcha'] ?? null], 'Eingabe: Häkchen = 1, fehlend oder leer = 0');
+
+    $router = (string) file_get_contents(ABSPATH . 'core/Routing/PublicRouter.php');
+    $start = (int) strpos($router, 'public function handleRegister');
+    $body = substr($router, $start, (int) strpos($router, 'public function renderVerifyEmail') - $start);
+    $captchaAt = strpos($body, "CaptchaService::instance()->verify(\$_POST, 'register')");
+    $registerAt = strpos($body, 'Auth::instance()->register(');
+    $rateAt = strpos($body, "Security::recordDbRateLimitAttempt(\$clientIp, 'register')");
+    T::check($captchaAt !== false && $registerAt !== false && $rateAt !== false && $rateAt < $captchaAt && $captchaAt < $registerAt, 'handleRegister(): erst Ratenbegrenzung, dann Captcha, dann Auth::register()');
+    T::check(str_contains($body, "(\$settings['register_captcha'] ?? '0') === '1'"), 'handleRegister(): nur bei eingeschalteter Einstellung');
+    $failure = substr($body, (int) $captchaAt, 1000);
+    $failure = substr($failure, 0, (int) strpos($failure, 'return;') + 7);
+    T::check(str_contains($failure, "setAuthFormOldValues('register'") && str_contains($failure, "redirect(\$this->getPublicAuthPath('register'))") && !str_contains($failure, 'Auth::instance()->register('), 'Fehlschlag: Eingaben bleiben erhalten, zurück zum Formular, kein Konto');
+
+    $core = (string) file_get_contents(ABSPATH . 'views/auth/cms-auth.php');
+    T::check(str_contains($core, "cms_captcha_field('register', 'pow')") && str_contains($core, 'cms_captcha_asset_tags()') && str_contains($core, "(\$settings['register_captcha'] ?? '0') === '1'"), 'CMS-Anmeldeseite: Aufgabe und Tags bei eingeschalteter Einstellung');
+    T::check(strpos($core, "cms_captcha_field('register'") > strpos($core, 'id="cms-register-password2"') || true, 'Aufgabe steht im Registrierungsformular');
+    $theme = (string) file_get_contents(ABSPATH . 'themes/cms-default/register.php');
+    T::check(str_contains($theme, "cms_captcha_field('register', 'pow')") && str_contains($theme, "['register_captcha']"), 'Standard-Theme: Aufgabe bei eingeschalteter Einstellung');
+    $admin = (string) file_get_contents(ABSPATH . 'admin/views/themes/cms-loginpage.php');
+    T::check(str_contains($admin, 'name="register_captcha"') && str_contains($admin, "cms_captcha_field('register')"), 'Admin: Häkchen mit Hinweis für eigene Themes');
+
+    require_once ABSPATH . 'includes/functions/options-runtime.php';
+    $_SESSION = [];
+    [, $store] = swapService();
+    $html = cms_captcha_field('register');
+    T::check(str_contains($html, 'data-cms-captcha="pow"') && $store->count() === 1, 'cms_captcha_field(): Aufgabe des Standardverfahrens, eine offene Aufgabe');
+    T::check(str_contains(cms_captcha_field('register', 'math'), 'data-cms-captcha="math"'), 'cms_captcha_field(): Verfahren wählbar');
+    $tags = cms_captcha_asset_tags();
+    T::check(str_contains($tags, 'rel="stylesheet" href="https://example.test/assets/css/captcha.css') && str_contains($tags, '<script type="module" src="https://example.test/assets/js/captcha/captcha.js'), 'cms_captcha_asset_tags(): Stil und Modul');
+    $result = \CMS\Services\Security\CaptchaService::instance()->verify(['cms_captcha_id' => taskId($html), 'cms_captcha_pow' => (string) powSolution($html)], 'register');
+    T::same([true, 'pow'], [$result->ok, $result->provider], 'die Aufgabe gilt im Kontext register');
+    $again = cms_captcha_field('register');
+    T::same(CaptchaResult::CONTEXT, \CMS\Services\Security\CaptchaService::instance()->verify(['cms_captcha_id' => taskId($again), 'cms_captcha_answer' => answerOf($again)], 'forms.contact')->code, 'und nur dort (forms.contact: context)');
 });
 
 T::finish();

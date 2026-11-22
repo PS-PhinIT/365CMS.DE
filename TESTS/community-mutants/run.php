@@ -69,6 +69,8 @@ const CM_ALLOWED_CORE_FILES = [
     // PR #188 (Captcha-Dienst des Core, Suite `captcha`)
     'core/Services/Security/CaptchaService.php', 'core/Services/Security/Captcha/CaptchaStore.php', 'core/Services/Security/Captcha/ProofOfWorkProvider.php',
     'core/Services/Security/Captcha/MathChallenge.php', 'core/Services/Security/Captcha/ImageProvider.php',
+    // PR #190 (Einbindung in Formulare und Registrierung, Suite `captcha`)
+    'core/Services/Forms/FormSpamGuard.php', 'core/Services/Forms/FormRenderer.php', 'core/Services/CmsAuthPageService.php',
 ];
 
 /**

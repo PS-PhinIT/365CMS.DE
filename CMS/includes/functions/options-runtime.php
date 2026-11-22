@@ -686,6 +686,31 @@ function cms_asset_version(string $relativePath, string|int|null $fallback = '')
 }
 
 /**
+ * Captcha-Aufgabe des Core-Dienstes für ein Formular im Theme (`<?= cms_captcha_field('register') ?>` innerhalb des `<form>`): HTML mit
+ * Feldern und Beschriftung, alle Werte maskiert. Die Aufgabe gilt nur für `$context` (der Server prüft mit demselben Kontext, z. B.
+ * `register` bei der Registrierung). Verfahren `pow` (Proof-of-Work, mit Rechenaufgabe als Alternative), `image` oder `math`; ein
+ * nicht verfügbares fällt auf die Rechenaufgabe zurück. Liefert bei einem Fehler einen leeren Text (das Formular bleibt dann ohne
+ * Captcha; der Server lehnt die Absendung ab, wenn er eines verlangt).
+ */
+function cms_captcha_field(string $context, string $provider = 'pow'): string {
+    try {
+        return \CMS\Services\Security\CaptchaService::instance()->render($context, $provider);
+    } catch (\Throwable) {
+        return '';
+    }
+}
+
+/**
+ * Stil und Skript des Captcha-Dienstes als `<link>`/`<script type="module">`-Tags (einmal je Seite einbinden, wenn `cms_captcha_field()` benutzt wird).
+ */
+function cms_captcha_asset_tags(): string {
+    $paths = \CMS\Services\Security\CaptchaService::assetPaths();
+
+    return '<link rel="stylesheet" href="' . htmlspecialchars(cms_asset_url($paths['css']), ENT_QUOTES, 'UTF-8') . '">' . "\n"
+        . '<script type="module" src="' . htmlspecialchars(cms_asset_url($paths['js']), ENT_QUOTES, 'UTF-8') . '"></script>' . "\n";
+}
+
+/**
  * Liefert eine Asset-URL optional mit zentraler Versionierung.
  */
 function cms_asset_url(string $relativePath, bool $withVersion = true, string|int|null $fallbackVersion = ''): string {

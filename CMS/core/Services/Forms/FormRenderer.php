@@ -15,6 +15,7 @@ namespace CMS\Services\Forms;
 
 use CMS\Hooks;
 use CMS\Security;
+use CMS\Services\Security\CaptchaService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -30,6 +31,10 @@ final class FormRenderer
 
     private static bool $assetsQueued = false;
     private static bool $assetsPrinted = false;
+    /** Ein Formular mit Captcha (Antispam-Stufe „hoch“) wurde gerendert: Stil und Skript des Captcha-Dienstes mit ausgeben. */
+    private static bool $captchaAssets = false;
+    private static bool $captchaCssPrinted = false;
+    private static bool $captchaJsPrinted = false;
     private static int $nesting = 0;
 
     /** @var array<string, int> */
@@ -74,6 +79,9 @@ final class FormRenderer
         }
         $style = self::styleVars();
 
+        if (!$preview && ($settings['antispam_level'] ?? 'standard') === 'high') {
+            self::$captchaAssets = true;
+        }
         $html = $preview ? '' : self::assetTags();
         if (!$preview && trim((string) ($settings['custom_css'] ?? '')) !== '') {
             $html .= '<style ' . Security::instance()->nonceAttr() . '>' . str_replace('</', '<\/', (string) $settings['custom_css']) . '</style>';
@@ -150,8 +158,9 @@ final class FormRenderer
      */
     public static function assetTags(): string
     {
+        $captcha = self::captchaTags();
         if (self::$assetsPrinted) {
-            return '';
+            return $captcha;
         }
 
         $css = self::assetUrl('css/forms-public.css');
@@ -162,11 +171,33 @@ final class FormRenderer
         if (Hooks::didAction('head') > 0) {
             self::$assetsPrinted = true;
 
-            return $cssTag . "\n" . $jsTag . "\n";
+            return $cssTag . "\n" . $jsTag . "\n" . $captcha;
         }
         self::enqueueAssets();
 
         return '';
+    }
+
+    /**
+     * Stil und Skript des Captcha-Dienstes (Core): nur für Formulare mit Captcha und nur, wenn der Kopf schon ausgegeben wurde (sonst
+     * übernehmen die Hooks aus `enqueueAssets()`); je einmal je Seite.
+     */
+    private static function captchaTags(): string
+    {
+        if (!self::$captchaAssets || Hooks::didAction('head') === 0) {
+            return '';
+        }
+        $out = '';
+        if (!self::$captchaCssPrinted) {
+            self::$captchaCssPrinted = true;
+            $out .= '<link rel="stylesheet" href="' . self::esc(self::assetUrl(CaptchaService::assetPaths()['css'])) . '">' . "\n";
+        }
+        if (!self::$captchaJsPrinted) {
+            self::$captchaJsPrinted = true;
+            $out .= '<script type="module" src="' . self::esc(self::assetUrl(CaptchaService::assetPaths()['js'])) . '"></script>' . "\n";
+        }
+
+        return $out;
     }
 
     public static function enqueueAssets(): void
@@ -191,6 +222,19 @@ final class FormRenderer
             self::$assetsPrinted = true;
             echo '<script src="' . self::esc($js) . '" defer></script>' . "\n";
         }, 20);
+        // Captcha-Dienst: Stil im Kopf, Skript am Ende, nur wenn ein Formular mit Captcha auf der Seite war (Flag beim Ausgeben geprüft).
+        Hooks::addAction('head', static function (): void {
+            if (self::$captchaAssets && !self::$captchaCssPrinted) {
+                self::$captchaCssPrinted = true;
+                echo '<link rel="stylesheet" href="' . self::esc(self::assetUrl(CaptchaService::assetPaths()['css'])) . '">' . "\n";
+            }
+        }, 41);
+        Hooks::addAction('body_end', static function (): void {
+            if (self::$captchaAssets && !self::$captchaJsPrinted) {
+                self::$captchaJsPrinted = true;
+                echo '<script type="module" src="' . self::esc(self::assetUrl(CaptchaService::assetPaths()['js'])) . '"></script>' . "\n";
+            }
+        }, 21);
     }
 
     /**
@@ -279,16 +323,12 @@ final class FormRenderer
         $html .= '</div>';
 
         if (($settings['antispam_level'] ?? 'standard') === 'high' && !$preview) {
-            $question = FormSpamGuard::captchaQuestion($key);
+            // Captcha des Core-Dienstes (Proof-of-Work, mit Rechenaufgabe als Alternative); die Aufgabe gilt nur für dieses Formular.
             $captchaId = $prefix . 'captcha';
             $captchaError = $errors['_captcha'] ?? '';
-            $html .= '<div class="cms-form__field cms-form__field--captcha is-required' . ($captchaError !== '' ? ' has-error' : '') . '">'
-                . '<label class="cms-form__label" for="' . self::esc($captchaId) . '">'
-                . self::esc(sprintf(FormI18n::t('forms.captcha.question', $locale), $question['a'], $question['b']))
-                . ' <span class="cms-form__req" aria-hidden="true">*</span></label>'
-                . '<input class="cms-form__input" type="text" inputmode="numeric" autocomplete="off" id="' . self::esc($captchaId) . '" name="' . FormSpamGuard::CAPTCHA_FIELD . '" required aria-required="true"'
-                . ($captchaError !== '' ? ' aria-invalid="true" aria-describedby="' . self::esc($captchaId . '-error') . '"' : '') . '>'
-                . ($captchaError !== '' ? '<p class="cms-form__error" id="' . self::esc($captchaId . '-error') . '">' . self::esc($captchaError) . '</p>' : '')
+            $html .= '<div class="cms-form__field cms-form__field--captcha' . ($captchaError !== '' ? ' has-error' : '') . '" id="' . self::esc($captchaId) . '" tabindex="-1">'
+                . ($captchaError !== '' ? '<p class="cms-form__error" role="alert">' . self::esc($captchaError) . '</p>' : '')
+                . FormSpamGuard::captchaHtml($key)
                 . '</div>';
         }
 
@@ -760,6 +800,9 @@ final class FormRenderer
     public static function resetState(): void
     {
         self::$assetsQueued = false;
+        self::$captchaAssets = false;
+        self::$captchaCssPrinted = false;
+        self::$captchaJsPrinted = false;
         self::$assetsPrinted = false;
         self::$instances = [];
         self::$nesting = 0;

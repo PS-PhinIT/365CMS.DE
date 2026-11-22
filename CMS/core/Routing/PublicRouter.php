@@ -634,6 +634,20 @@ final class PublicRouter
         }
         Security::recordDbRateLimitAttempt($clientIp, 'register');
 
+        // Captcha (Einstellung `register_captcha`, Core-Dienst; die Aufgabe gilt nur für den Kontext `register`). Ein Fehlschlag zählt als Versuch.
+        if (($settings['register_captcha'] ?? '0') === '1'
+            && !Services\Security\CaptchaService::instance()->verify($_POST, 'register')->ok
+        ) {
+            $_SESSION['error'] = Services\Security\Captcha\CaptchaText::t('captcha.error.failed', 'Die Sicherheitsprüfung wurde nicht bestanden. Bitte löse die neue Aufgabe und sende noch einmal ab.');
+            $this->setAuthFormOldValues('register', [
+                'email' => $this->requestString($_POST['email'] ?? '', 254),
+                'username' => $this->requestString($_POST['username'] ?? '', 80),
+                'terms' => !empty($_POST['terms']) ? '1' : '0',
+            ]);
+            $this->router->redirect($this->getPublicAuthPath('register'));
+            return;
+        }
+
         $registerPassword = $this->requestString($_POST['password'] ?? '', 4096, false);
         $registerPassword2 = $this->requestString($_POST['password2'] ?? '', 4096, false);
 
