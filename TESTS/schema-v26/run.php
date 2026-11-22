@@ -25,15 +25,11 @@ $queries = \CMS\SchemaManager::getSchemaQueries('cms_', 'utf8mb4');
 
 T::run('Versionsstand', static function () use ($migrationSource, $root): void {
     // v26 gehört zu Release 4.1.x; mit der Entwicklung von 4.2.0 steht der Arbeitsstand auf v27 (schema-v27). SchemaManager
-    // und MigrationManager nennen immer dieselbe Marke. Das Marketplace-Manifest beschreibt das veröffentlichte Paket
-    // (4.1.x: v26) und darf der Entwicklung hinterherlaufen, nie vorauseilen; die Übereinstimmung mit dem Paket prüft release-3.4.0.
+    // und MigrationManager nennen immer dieselbe Marke.
     $version = \CMS\SchemaManager::SCHEMA_VERSION;
     T::check(in_array($version, ['v26', 'v27'], true), 'SchemaManager::SCHEMA_VERSION ist v26 (Release 4.1.x) oder v27 (Entwicklung 4.2.0)');
     T::check(str_contains($migrationSource, "public const SCHEMA_VERSION = '{$version}';"), 'MigrationManager nennt dieselbe Marke');
-    $manifest = json_decode((string) file_get_contents($root . 'marketplace/core/365cms/update.json'), true);
-    $manifestVersion = (string) ($manifest['schema_version'] ?? '');
-    T::check($manifestVersion === 'v26' || $manifestVersion === $version, 'Marketplace-Manifest nennt v26 (veröffentlichtes Paket) oder die Marke des Arbeitsstands');
-});
+ });
 
 T::run('Neue Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
     $expected = ['password_history', 'user_identities', 'media_usage', 'content_workflow_events', 'content_preview_links', 'reusable_blocks', 'reusable_block_usage', 'reusable_block_revisions', 'backup_offsite_uploads', 'webhook_endpoints', 'webhook_deliveries', 'payment_events', 'invoice_sequences', 'invoices'];

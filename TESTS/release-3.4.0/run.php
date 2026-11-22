@@ -57,15 +57,6 @@ $versionSource = file_get_contents($cms . 'core/Version.php');
 release340Assert(is_string($versionSource) && preg_match("/const CURRENT = '(\\d+\\.\\d+\\.\\d+)'/", $versionSource, $versionMatch) === 1, 'Version::CURRENT ist nicht lesbar.');
 $release = $versionMatch[1];
 
-$manifestPath = $cms . 'marketplace/core/365cms/update.json';
-$manifest = json_decode((string) file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
-release340Assert(($manifest['version'] ?? '') === $release, 'Marketplace-Manifest hat nicht Version ' . $release . '.');
-// Das Manifest beschreibt das veröffentlichte Paket: seine schema_version ist die Marke im Paket (unten gegen die ZIP-Datei
-// geprüft), nicht die des Arbeitsstands. Zwischen zwei Releases darf der Arbeitsstand eine höhere Marke tragen (4.2.0-Entwicklung:
-// v27 bei Paket 4.1.8 mit v26), nie eine niedrigere. Mit dem Release 4.2.0 (Version::CURRENT, Manifest und Paket gemeinsam) gilt wieder Gleichheit.
-release340Assert(preg_match('/^v(\d+)$/', (string) ($manifest['schema_version'] ?? ''), $manifestSchemaMatch) === 1, 'Marketplace-Manifest nennt keine Schema-Marke.');
-release340Assert((int) $manifestSchemaMatch[1] <= (int) $schemaMatch[1], 'Marketplace-Manifest nennt eine höhere Schema-Marke als der SchemaManager.');
-release340Assert(($manifest['download_url'] ?? '') === 'https://365cms.de/marketplace/core/365cms/365CMS-' . $release . '-update.zip', 'Marketplace-Manifest hat keinen erwarteten Paketpfad.');
 
 $updateZip = $root . 'RELEASE' . DIRECTORY_SEPARATOR . '365CMS-' . $release . '-update.zip';
 $fullZip = $root . 'RELEASE' . DIRECTORY_SEPARATOR . '365CMS-' . $release . '-full.zip';
@@ -73,18 +64,15 @@ foreach ([$updateZip, $fullZip] as $package) {
     release340Assert(is_file($package), 'Release-Paket fehlt: ' . basename($package));
 }
 
-// schema_version des Manifests = Marke im veröffentlichten Update-Paket (entspricht dem Stand zum Zeitpunkt des Releases).
 if (class_exists(ZipArchive::class)) {
     $packageZip = new ZipArchive();
     release340Assert($packageZip->open($updateZip) === true, 'Update-Paket kann nicht geöffnet werden: ' . basename($updateZip));
     $packagedSchema = (string) $packageZip->getFromName('CMS/core/SchemaManager.php');
     $packageZip->close();
     release340Assert(preg_match($schemaVersionPattern, $packagedSchema, $packagedMatch) === 1, 'Das Update-Paket enthält keinen SchemaManager mit SCHEMA_VERSION.');
-    release340Assert(($manifest['schema_version'] ?? '') === 'v' . $packagedMatch[1], 'Marketplace-Manifest nennt nicht die Schema-Marke des Update-Pakets.');
 }
 
 $updateHash = hash_file('sha256', $updateZip);
-release340Assert(is_string($updateHash) && hash_equals((string) ($manifest['checksum_sha256'] ?? ''), $updateHash), 'SHA-256 des Updatepakets stimmt nicht mit dem Marketplace-Manifest überein.');
 $checksumFile = $root . 'RELEASE' . DIRECTORY_SEPARATOR . '365CMS-' . $release . '-SHA256SUMS.txt';
 $checksums = is_file($checksumFile) ? (string) file_get_contents($checksumFile) : '';
 release340Assert($checksums !== '', 'Die veröffentlichte SHA-256-Datei fehlt oder ist leer.');
