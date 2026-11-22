@@ -97,6 +97,9 @@ Verified top-level entries of this repository:
 | `TESTS/community-captcha/` | directory | captcha in the community (modes, provider, write form): `php TESTS/community-captcha/run.php [-v]` |
 | `TESTS/community-trash/` | directory | trash of the community (topics): `php TESTS/community-trash/run.php [-v]` |
 | `TESTS/community-editor/` | directory | visual editor of the write form: source checks and browser checks (Chromium via Playwright, skipped without it): `php TESTS/community-editor/run.php [-v]` |
+| `TESTS/community-performance/` | directory | query budget per page, no N+1, no `OFFSET`, EXPLAIN, request read scope: `php TESTS/community-performance/run.php [-v]` |
+| `TESTS/community-a11y/` | directory | accessibility (axe rules without a browser, axe-core in Chromium, keyboard, focus, reflow; browser part skipped without it): `php TESTS/community-a11y/run.php [-v]` |
+| `TESTS/community-lighthouse/` | directory | Lighthouse targets (weight, SEO, Lighthouse mobile ≥ 90; browser part skipped without it): `php TESTS/community-lighthouse/run.php [-v]` |
 | `TESTS/community-frontend/` | directory | public read pages (PR #4): route patterns and order, page segments, page cursor, views without inline script: `php TESTS/community-frontend/run.php [-v]` |
 | `TESTS/community-member/` | directory | member area (PR #4): tabs, registry registration, POST evaluation, "my topics/replies" lists: `php TESTS/community-member/run.php [-v]` |
 | `TESTS/community-api/` | directory | JSON API (PR #4): actions and input checks, status mapping, CSRF filter, route registration, JS module: `php TESTS/community-api/run.php [-v]` |
@@ -183,6 +186,9 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/community-captcha/` | Verzeichnis | Captcha in der Community (Modus, Verfahren, Schreibformular): `php TESTS/community-captcha/run.php [-v]` |
 | `TESTS/community-trash/` | Verzeichnis | Papierkorb der Community (Themen): `php TESTS/community-trash/run.php [-v]` |
 | `TESTS/community-editor/` | Verzeichnis | Visueller Editor des Schreibformulars: Quelltextprüfung und Browser-Prüfung (Chromium über Playwright, ohne Playwright übersprungen): `php TESTS/community-editor/run.php [-v]` |
+| `TESTS/community-performance/` | Verzeichnis | Abfragebudget je Seite, keine N+1-Abfragen, kein `OFFSET`, EXPLAIN, Lesebereich einer Anfrage: `php TESTS/community-performance/run.php [-v]` |
+| `TESTS/community-a11y/` | Verzeichnis | Barrierefreiheit (axe-Regeln ohne Browser, axe-core in Chromium, Tastatur, Fokus, Reflow; Browser-Teil ohne Voraussetzungen übersprungen): `php TESTS/community-a11y/run.php [-v]` |
+| `TESTS/community-lighthouse/` | Verzeichnis | Lighthouse-Vorgaben (Gewicht, SEO, Lighthouse mobil ≥ 90; Browser-Teil ohne Voraussetzungen übersprungen): `php TESTS/community-lighthouse/run.php [-v]` |
 | `TESTS/community-frontend/` | Verzeichnis | Öffentliche Leseseiten (PR #4): Routenmuster und -reihenfolge, Seitensegmente, Seitencursor, Ansichten ohne Inline-Skript: `php TESTS/community-frontend/run.php [-v]` |
 | `TESTS/community-member/` | Verzeichnis | Mitgliederbereich (PR #4): Reiter, Anmeldung bei der Registry, POST-Auswertung, Listen „Meine Themen/Antworten“: `php TESTS/community-member/run.php [-v]` |
 | `TESTS/community-api/` | Verzeichnis | JSON-API (PR #4): Aktionen und Eingabeprüfung, Statusabbildung, CSRF-Filter, Routenanmeldung, JS-Modul: `php TESTS/community-api/run.php [-v]` |

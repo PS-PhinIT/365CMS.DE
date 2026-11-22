@@ -1,6 +1,5 @@
-/* Community (4.2.0): Leseseiten. Mobile-first, nur Variablen des Themes mit Rückfallwerten; Dark Mode über prefers-color-scheme. */
+/* Community (4.2.0): Leseseiten. Mobile-first, nur Variablen des Themes mit (hellen) Rückfallwerten. Einen Dunkelmodus liefert das Theme über dieselben Variablen: dunkle Rückfallwerte allein machten den Text in einem hellen Theme unlesbar (dunkle Fläche, dunkle Schrift). */
 .cms-community { --cc-border: var(--border-color, #d9dee5); --cc-muted: var(--text-muted, #5b6573); --cc-bg: var(--card-bg, #fff); --cc-accent: var(--primary, #2563eb); max-width: 62rem; margin: 0 auto; padding: 1rem; }
-@media (prefers-color-scheme: dark) { .cms-community { --cc-border: var(--border-color, #343b46); --cc-muted: var(--text-muted, #a4adba); --cc-bg: var(--card-bg, #1b2028); } }
 .cms-community h1 { margin: .25rem 0 1rem; font-size: clamp(1.4rem, 4vw, 2rem); }
 .cms-community-crumbs { color: var(--cc-muted); font-size: .9rem; }
 .cms-community__lead, .cms-community__empty { color: var(--cc-muted); }
@@ -15,7 +14,7 @@
 .cms-community-topic.is-pinned { border-left: 4px solid var(--cc-accent); }
 .cms-community-topic__meta { margin: .25rem 0 0; color: var(--cc-muted); font-size: .9rem; }
 .cms-community-badge { display: inline-block; padding: 0 .5rem; border: 1px solid var(--cc-border); border-radius: 999px; font-size: .8rem; }
-.cms-community-badge--ok { border-color: #1a7f37; color: #1a7f37; }
+.cms-community-badge--ok { border-color: #1a7f37; }
 @media (min-width: 40rem) { .cms-community-forum, .cms-community-topic { grid-template-columns: 1fr auto; align-items: center; } }
 .cms-community-posts { display: grid; gap: 1rem; }
 .cms-community-post { background: var(--cc-bg); border: 1px solid var(--cc-border); border-radius: .5rem; padding: .75rem 1rem; }
@@ -24,6 +23,7 @@
 .cms-community-post__head { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; margin-bottom: .5rem; }
 .cms-community-post__date, .cms-community-post__edited { color: var(--cc-muted); font-size: .85rem; }
 .cms-community-post__body { overflow-wrap: anywhere; }
+.cms-community-post__body a { text-decoration: underline; }
 .cms-community-post__body img { max-width: 100%; height: auto; }
 .cms-community-post__body pre { overflow: auto; }
 .cms-community-post__body blockquote { margin: .5rem 0; padding: .25rem .75rem; border-left: 3px solid var(--cc-border); color: var(--cc-muted); }
@@ -31,7 +31,7 @@
 .cms-community-button { display: inline-block; padding: .5rem 1rem; border: 1px solid var(--cc-accent); border-radius: .375rem; text-decoration: none; }
 .cms-community .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .cms-community-flash { padding: .5rem 1rem; border: 1px solid var(--cc-accent); border-radius: .375rem; }
-.cms-community-alert { padding: .5rem 1rem; border: 1px solid #b42318; border-radius: .375rem; color: #b42318; }
+.cms-community-alert { padding: .5rem 1rem; border: 1px solid #b42318; border-left-width: .375rem; border-radius: .375rem; }
 .cms-community-form label { display: block; font-weight: 600; margin-bottom: .25rem; }
 .cms-community-form label input[type="checkbox"] { display: inline; }
 .cms-community-input { width: 100%; box-sizing: border-box; padding: .5rem; border: 1px solid var(--cc-border); border-radius: .375rem; background: var(--cc-bg); color: inherit; font: inherit; }
@@ -40,7 +40,7 @@
 button.cms-community-button { background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .cms-community-post__actions { display: flex; gap: 1rem; margin-top: .5rem; font-size: .9rem; }
 .cms-community-reactions { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .5rem; }
-.cms-community-reactions button, .cms-community-toolbar button { padding: .125rem .5rem; border: 1px solid var(--cc-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.cms-community-reactions button, .cms-community-toolbar button { min-height: 1.75rem; padding: .125rem .5rem; border: 1px solid var(--cc-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .cms-community-reactions button[aria-pressed="true"], .cms-community-toolbar button[aria-pressed="true"] { border-color: var(--cc-accent); background: color-mix(in srgb, var(--cc-accent) 15%, transparent); }
 .cms-community-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; }
 .cms-community-dialog { max-width: 28rem; width: calc(100% - 2rem); border: 1px solid var(--cc-border); border-radius: .5rem; background: var(--cc-bg); color: inherit; }
@@ -52,8 +52,8 @@ button.cms-community-button { background: transparent; color: inherit; font: inh
 .cms-community-nav { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
 .cms-community-nav ul { display: flex; flex-wrap: wrap; gap: .25rem 1rem; list-style: none; margin: 0; padding: 0; }
 .cms-community-nav a[aria-current="page"] { font-weight: 700; text-decoration: none; }
-.cms-community-nav__search { display: flex; gap: .5rem; }
-.cms-community-nav__search .cms-community-input { width: auto; min-width: 12rem; }
+.cms-community-nav__search { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 100%; }
+.cms-community-nav__search .cms-community-input { width: auto; min-width: 0; flex: 1 1 10rem; }
 .cms-community-editor { margin-bottom: .75rem; }
 .cms-community-editor__tabs { display: flex; gap: .5rem; margin-bottom: .5rem; }
 .cms-community-editor__tabs button { padding: .125rem .75rem; border: 1px solid var(--cc-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }

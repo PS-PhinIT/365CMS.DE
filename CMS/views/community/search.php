@@ -18,7 +18,7 @@ $hits = is_array($result) && !empty($result['success']) ? (array) $result['resul
 $pages = is_array($result) && !empty($result['success']) ? (int) ($result['pages'] ?? 1) : 1;
 $link = static fn (int $n): string => Urls::search($locale) . '?q=' . rawurlencode($query) . ($forum_id > 0 ? '&forum=' . $forum_id : '') . ($n > 1 ? '&seite=' . $n : '');
 ?>
-<main id="main" class="cms-community">
+<div id="main" class="cms-community">
     <?php include __DIR__ . '/partials/nav.php'; ?>
     <h1>Suche</h1>
     <form method="get" class="cms-community-form" action="<?= $e(Urls::search($locale)) ?>">
@@ -65,4 +65,4 @@ $link = static fn (int $n): string => Urls::search($locale) . '?q=' . rawurlenco
             </nav>
         <?php endif; ?>
     <?php endif; ?>
-</main>
+</div>

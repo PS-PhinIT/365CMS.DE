@@ -16,10 +16,12 @@ use CMS\Services\Community\Support\Urls;
 $name = static function (?array $account): string {
     return $account === null ? 'Gelöschtes Mitglied' : (string) ($account['display_name'] ?: $account['username']);
 };
+// Namen der Reaktionen für Screenreader und Sprachsteuerung (aria-label der Schaltfläche: Name, Zähler; WCAG 2.5.3 „Name enthält sichtbaren Text“)
+$reactionNames = ['like' => 'Gefällt mir', 'love' => 'Liebe', 'laugh' => 'Lustig', 'idea' => 'Gute Idee', 'thanks' => 'Danke', 'wow' => 'Beeindruckend', 'sad' => 'Traurig', 'celebrate' => 'Glückwunsch'];
 $forumSlug = $forum !== null ? Urls::forumSlugFor((string) $forum['slug'], $forum['slug_en'] ?? null, $locale) : '';
 $pageUrl = static fn (int $n): string => Urls::topic((int) $topic['id'], (string) ($topic['slug'] ?? ''), $locale, $n);
 ?>
-<main id="main" class="cms-community"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="<?= $e($api['reasons']) ?>" data-cc-reason-required="<?= !empty($api['reason_required']) ? '1' : '0' ?>"<?php endif; ?>>
+<div id="main" class="cms-community"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="<?= $e($api['reasons']) ?>" data-cc-reason-required="<?= !empty($api['reason_required']) ? '1' : '0' ?>"<?php endif; ?>>
     <p id="cc-status" class="cms-community-flash" hidden></p>
     <?php if (!empty($flash)): ?><p class="cms-community-flash" role="status"><?= $e($flash) ?></p><?php endif; ?>
     <nav aria-label="Brotkrumen" class="cms-community-crumbs">
@@ -67,7 +69,7 @@ $pageUrl = static fn (int $n): string => Urls::topic((int) $topic['id'], (string
             <?php if (!empty($api) && !empty($reactions['available'])): $mine = $reactions['summaries'][$postId]['mine'] ?? null; $counts = $reactions['summaries'][$postId]['counts'] ?? []; ?>
                 <div class="cms-community-reactions" data-cc-reactions role="group" aria-label="Reaktionen">
                     <?php foreach ($reactions['available'] as $key): ?>
-                        <button type="button" data-cc-action="react" data-post-id="<?= $postId ?>" data-reaction="<?= $e($key) ?>" aria-pressed="<?= ($mine === $key) ? 'true' : 'false' ?>" aria-label="<?= $e($key) ?>"><?= $e($reactions['emoji'][$key] ?? $key) ?> <?= (int) ($counts[$key] ?? 0) ?></button>
+                        <button type="button" data-cc-action="react" data-post-id="<?= $postId ?>" data-reaction="<?= $e($key) ?>" aria-pressed="<?= ($mine === $key) ? 'true' : 'false' ?>" aria-label="<?= $e(($reactionNames[$key] ?? $key) . ', ' . (int) ($counts[$key] ?? 0)) ?>"><span aria-hidden="true"><?= $e($reactions['emoji'][$key] ?? $key) ?></span> <?= (int) ($counts[$key] ?? 0) ?></button>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -104,4 +106,4 @@ $pageUrl = static fn (int $n): string => Urls::topic((int) $topic['id'], (string
             </form>
         </dialog>
     <?php endif; ?>
-</main>
+</div>

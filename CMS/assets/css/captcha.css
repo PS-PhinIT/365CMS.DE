@@ -58,5 +58,7 @@
 }
 
 .cms-captcha--unavailable {
-    color: var(--cms-danger-color, #b42318);
+    /* Textfarbe vom Theme (Kontrast auf hellem und dunklem Grund), die Warnfarbe als Rand */
+    border-color: var(--cms-danger-color, #b42318);
+    border-left-width: 0.375rem;
 }

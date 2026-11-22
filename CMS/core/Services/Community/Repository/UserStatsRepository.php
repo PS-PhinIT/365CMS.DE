@@ -28,6 +28,8 @@ declare(strict_types=1);
 
 namespace CMS\Services\Community\Repository;
 
+use CMS\Services\Community\Support\ReadScope;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -71,7 +73,11 @@ final class UserStatsRepository extends AbstractRepository
      */
     public function get(int $userId): ?array
     {
-        return $this->fetchOne('SELECT ' . self::COLUMNS . ' FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? LIMIT 1', [$userId]);
+        // Im Lesebereich einer Seitenanfrage (`ReadScope`) wird die Zeile je Mitglied nur einmal gelesen (die Rechteprüfung fragt sie je Beitrag).
+        return ReadScope::remember(
+            ReadScope::key($this->db, 'stats', $userId),
+            fn (): ?array => $this->fetchOne('SELECT ' . self::COLUMNS . ' FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? LIMIT 1', [$userId])
+        );
     }
 
     /**

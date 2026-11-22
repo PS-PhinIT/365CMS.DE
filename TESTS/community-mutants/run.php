@@ -51,9 +51,10 @@ const CM_LEGACY_SUITES = ['community-repositories', 'community-access', 'communi
 /**
  * Suiten ohne Mutanten-Haken (`Mutant::load`) bzw. der Treiber selbst; sie stehen nie in CM_SUITES.
  * `community-admin` (PR #3) prüft Dateien unter `CMS/admin/`, die keine erlaubten Mutanten-Ziele sind (nur Oberfläche und Quelltextprüfung);
- * `community-editor` prüft Skripte, Vorlage und einen Browser (kein PHP-Ziel mit `Mutant::load`).
+ * `community-editor` prüft Skripte, Vorlage und einen Browser (kein PHP-Ziel mit `Mutant::load`); `community-a11y` prüft Vorlagen, Stile, Skripte und
+ * die Regeln von `TESTS/lib/A11yRules.php` im Browser (Regelwerk mit eigener Gegenprobe an fehlerhaften Dokumenten in der Suite).
  */
-const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin', 'community-editor'];
+const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin', 'community-editor', 'community-a11y'];
 
 /** Weitere Suiten mit Mutanten-Haken (`Mutant::load`) außerhalb des Musters `community-*`. */
 const CM_EXTRA_SUITES = ['captcha'];

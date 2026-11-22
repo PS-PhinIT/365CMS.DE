@@ -20,6 +20,8 @@ declare(strict_types=1);
 
 namespace CMS\Services\Community\Repository;
 
+use CMS\Services\Community\Support\ReadScope;
+
 use CMS\Services\Community\Support\Cursor;
 use CMS\Services\Community\Support\Page;
 
@@ -84,7 +86,11 @@ final class PostRepository extends AbstractRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        return $this->fetchOne('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1', [$id]);
+        // Im Lesebereich einer Seitenanfrage (`ReadScope`) wird jede Zeile nur einmal gelesen; `listPublished()` legt die Zeilen der Seite vor.
+        return ReadScope::remember(
+            ReadScope::key($this->db, 'post', $id),
+            fn (): ?array => $this->fetchOne('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1', [$id])
+        );
     }
 
     /**
@@ -428,6 +434,10 @@ final class PostRepository extends AbstractRepository
         );
         $more = count($rows) > $limit;
         $rows = array_slice($rows, 0, $limit);
+        // Die Rechteprüfung je Beitrag (bearbeiten, löschen) fragt dieselben Zeilen mit `find()`: im Lesebereich liegen sie schon vor.
+        foreach ($rows as $row) {
+            ReadScope::put(ReadScope::key($this->db, 'post', (int) $row['id']), $row);
+        }
 
         return new Page($rows, $more && $rows !== [] ? (string) $rows[count($rows) - 1]['id'] : null);
     }

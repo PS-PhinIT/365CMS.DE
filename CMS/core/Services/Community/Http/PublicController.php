@@ -24,6 +24,7 @@ use CMS\Services\Community\Service\ReadStateService;
 use CMS\Services\Community\Service\RenderService;
 use CMS\Services\Community\Service\TopicService;
 use CMS\Services\Community\Support\I18n;
+use CMS\Services\Community\Support\ReadScope;
 use CMS\Services\Community\Support\Settings;
 use CMS\Services\Community\Support\Urls;
 use CMS\Services\Security\CaptchaService;
@@ -39,12 +40,26 @@ final class PublicController
 
     private static ?self $instance = null;
 
+    /**
+     * Prüfstelle (nur Tests: Abfragebudget, Barrierefreiheit): statt Theme und Vorlage bekommt sie Ansicht, Variablen, Kopfdaten und Status
+     * (`TESTS/community-performance`, `community-a11y`). Im Betrieb nie gesetzt.
+     *
+     * @var \Closure(string, array<string, mixed>, array<string, mixed>, int): void|null
+     */
+    private static ?\Closure $sink = null;
+
     /** @var array<string, mixed> Kopfdaten der aktuellen Seite (Titel, noindex, kanonische Adresse, Vor/Zurück) */
     private array $meta = [];
 
     public static function instance(): self
     {
         return self::$instance ??= new self();
+    }
+
+    /** Setzt die Prüfstelle (nur Tests); `null` stellt die Ausgabe über Theme und Vorlage wieder her. */
+    public static function setSink(?\Closure $sink): void
+    {
+        self::$sink = $sink;
     }
 
     public function registerRoutes(object $router): void
@@ -73,6 +88,12 @@ final class PublicController
 
     public function index(): void
     {
+        // Ein Lesebereich je Seitenanfrage: Forum und Thema werden nur einmal gelesen (`Support\ReadScope`).
+        ReadScope::run(fn () => $this->indexPage());
+    }
+
+    private function indexPage(): void
+    {
         $locale = I18n::requestLocale();
         $viewer = $this->viewerId();
         $access = CommunityAccess::instance();
@@ -95,11 +116,20 @@ final class PublicController
         }
         $groups = array_filter($groups, static fn (array $group): bool => $group['forums'] !== []);
 
-        $this->meta = ['title' => $this->siteTitle($locale), 'canonical' => Urls::index($locale), 'noindex' => $groups === []];
+        $this->meta = [
+            'title' => $this->siteTitle($locale), 'canonical' => Urls::index($locale), 'noindex' => $groups === [],
+            'description' => $locale === 'en' ? 'Community forum: ask questions, find answers and join the discussion.' : 'Community-Forum: Fragen stellen, Antworten finden und mitdiskutieren.',
+        ];
         $this->render('index', ['groups' => $groups, 'locale' => $locale, 'viewer' => $viewer]);
     }
 
     public function forum(string $slug, ?string $pageSegment): void
+    {
+        // Ein Lesebereich je Seitenanfrage: Forum und Thema werden nur einmal gelesen (`Support\ReadScope`).
+        ReadScope::run(fn () => $this->forumPage($slug, $pageSegment));
+    }
+
+    private function forumPage(string $slug, ?string $pageSegment): void
     {
         $locale = I18n::requestLocale();
         $repo = new ForumRepository();
@@ -128,6 +158,7 @@ final class PublicController
             'canonical' => $canonical,
             // Keyset statt Seitenzahl: Folgeseiten und leere Foren nicht indizieren.
             'noindex' => $cursor !== null || $items === [] || !$this->isPublic($forumId),
+            'description' => self::excerpt($this->localized($forum, 'description', $locale)) ?: ($locale === 'en' ? 'Topics and questions in the forum “' . $this->localized($forum, 'title', $locale) . '”.' : 'Themen und Fragen im Forum „' . $this->localized($forum, 'title', $locale) . '“.'),
         ];
         $children = [];
         foreach ($repo->tree() as $id => $child) {
@@ -144,6 +175,12 @@ final class PublicController
     }
 
     public function topic(string $ref, ?string $pageSegment): void
+    {
+        // Ein Lesebereich je Seitenanfrage: Forum und Thema werden nur einmal gelesen (`Support\ReadScope`).
+        ReadScope::run(fn () => $this->topicPage($ref, $pageSegment));
+    }
+
+    private function topicPage(string $ref, ?string $pageSegment): void
     {
         $locale = I18n::requestLocale();
         $parsed = Urls::parseSegment($ref);
@@ -213,6 +250,8 @@ final class PublicController
             'title' => (string) $topic['title'] . ' – ' . $this->siteTitle($locale),
             'canonical' => $canonical,
             'noindex' => !$public || ($topic['status'] ?? '') !== 'published',
+            // Beschreibung für Suchmaschinen und Link-Vorschauen: Anfang des ersten gezeigten Beitrags (nur Beiträge, die die Seite im Volltext zeigt)
+            'description' => self::excerpt((string) (array_values(array_filter($items, static fn (array $p): bool => ($p['view'] ?? '') === 'full'))[0]['html'] ?? '')),
             'prev' => $page > 1 ? Urls::topic((int) $topic['id'], (string) $topic['slug'], $locale, $page - 1) : null,
             'next' => $page < $pages ? Urls::topic((int) $topic['id'], (string) $topic['slug'], $locale, $page + 1) : null,
         ];
@@ -250,6 +289,12 @@ final class PublicController
     /** Globale Listen `/forum/neu`, `/forum/aktiv`, `/forum/unbeantwortet` über alle lesbaren Foren (Keyset über `?nach=`). */
     public function listing(string $kind): void
     {
+        // Ein Lesebereich je Seitenanfrage: Forum und Thema werden nur einmal gelesen (`Support\ReadScope`).
+        ReadScope::run(fn () => $this->listingPage($kind));
+    }
+
+    private function listingPage(string $kind): void
+    {
         $locale = I18n::requestLocale();
         $viewer = $this->viewerId();
         $cursor = is_string($_GET['nach'] ?? null) ? (string) $_GET['nach'] : null;
@@ -274,6 +319,12 @@ final class PublicController
 
     /** Suche `/forum/suche?q=…&forum=…&seite=N` (nur GET; Rechte, Drossel und Gäste-Regeln entscheidet `CommunitySearch`). */
     public function search(): void
+    {
+        // Ein Lesebereich je Seitenanfrage: Forum und Thema werden nur einmal gelesen (`Support\ReadScope`).
+        ReadScope::run(fn () => $this->searchPage());
+    }
+
+    private function searchPage(): void
     {
         $locale = I18n::requestLocale();
         $viewer = $this->viewerId();
@@ -413,6 +464,25 @@ final class PublicController
         return $locale === 'en' && is_string($en) && $en !== '' ? $en : (string) ($row[$field] ?? '');
     }
 
+    /**
+     * Kurzbeschreibung aus gereinigtem HTML oder Text für `<meta name="description">`: ohne Markup und Zeilenumbrüche, höchstens
+     * `$max` Zeichen, an einer Wortgrenze gekürzt. Leer, wenn nichts übrig bleibt.
+     */
+    private static function excerpt(string $text, int $max = 155): string
+    {
+        $text = trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        if (mb_strlen($text, 'UTF-8') <= $max) {
+            return $text;
+        }
+        $cut = mb_substr($text, 0, $max - 1, 'UTF-8');
+        $space = mb_strrpos($cut, ' ', 0, 'UTF-8');
+        if ($space !== false && $space > (int) ($max * 0.6)) {
+            $cut = mb_substr($cut, 0, $space, 'UTF-8');
+        }
+
+        return rtrim($cut, " \t.,;:–-") . '…';
+    }
+
     private function siteTitle(string $locale): string
     {
         return $locale === 'en' ? 'Community' : 'Community';
@@ -457,6 +527,11 @@ final class PublicController
         // Hinweis aus einem Schreibvorgang (z. B. „wartet auf Freigabe“) einmal anzeigen.
         $vars['flash'] = $_SESSION['community_flash'] ?? null;
         unset($_SESSION['community_flash']);
+        if (self::$sink !== null) {
+            (self::$sink)($view, $vars, $meta, $status);
+
+            return;
+        }
         Hooks::addAction('head', static function () use ($meta): void {
             echo self::headTags($meta);
         }, 5);
@@ -489,6 +564,9 @@ final class PublicController
         if (!empty($meta['captcha'])) {
             $out .= '<link rel="stylesheet" href="' . $e(cms_asset_url(CaptchaService::assetPaths()['css'])) . '">' . "\n";
             $out .= '<script type="module" src="' . $e(cms_asset_url(CaptchaService::assetPaths()['js'])) . '"></script>' . "\n";
+        }
+        if (!empty($meta['description']) && empty($meta['noindex'])) {
+            $out .= '<meta name="description" content="' . $e((string) $meta['description']) . '">' . "\n";
         }
         if (!empty($meta['noindex'])) {
             $out .= '<meta name="robots" content="noindex, follow">' . "\n";

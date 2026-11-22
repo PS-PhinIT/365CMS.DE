@@ -18,6 +18,8 @@ declare(strict_types=1);
 
 namespace CMS\Services\Community\Repository;
 
+use CMS\Services\Community\Support\ReadScope;
+
 use CMS\Services\Community\Support\Cursor;
 use CMS\Services\Community\Support\Page;
 
@@ -83,7 +85,33 @@ final class TopicRepository extends AbstractRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        return $this->fetchOne('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1', [$id]);
+        // Im Lesebereich einer Seitenanfrage (`ReadScope`) wird jede Zeile nur einmal gelesen.
+        return ReadScope::remember(
+            ReadScope::key($this->db, 'topic', $id),
+            fn (): ?array => $this->fetchOne('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1', [$id])
+        );
+    }
+
+    /**
+     * Themen nach ID ohne Sperre (eine Abfrage je CHUNK IDs über PRIMARY), Schlüssel = ID. Fehlende IDs fehlen im Ergebnis. Für Listen, die zu
+     * jeder Zeile den Titel des Themas brauchen (Mitgliederbereich): eine Abfrage statt einer je Zeile. Die Zeilen liegen im Lesebereich vor.
+     *
+     * @param array<array-key, mixed> $ids
+     * @return array<int, array<string, mixed>>
+     */
+    public function findMany(array $ids): array
+    {
+        $ids = self::ids($ids);
+        sort($ids);
+        $rows = [];
+        foreach (array_chunk($ids, self::CHUNK) as $chunk) {
+            foreach ($this->fetchAll('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id IN (' . self::placeholders(count($chunk)) . ') ORDER BY id ASC', $chunk) as $row) {
+                $rows[(int) $row['id']] = $row;
+                ReadScope::put(ReadScope::key($this->db, 'topic', (int) $row['id']), $row);
+            }
+        }
+
+        return $rows;
     }
 
     /**
