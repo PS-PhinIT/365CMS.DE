@@ -39,9 +39,17 @@ function cms_admin_redirect_manager_can_access(): bool
         && (!class_exists(CoreModuleService::class) || CoreModuleService::getInstance()->isAdminPageEnabled('redirect-manager'));
 }
 
-function cms_admin_redirect_manager_target_url(): string
+function cms_admin_redirect_manager_target_url(int $page = 1): string
 {
-    return '/admin/redirect-manager';
+    return '/admin/redirect-manager' . ($page > 1 ? '?seite=' . $page : '');
+}
+
+/** Seitennummer aus `?seite=` bzw. dem Feld `return_page` (Ganzzahl ab 1, sonst 1); zu große Werte begrenzt der Dienst. */
+function cms_admin_redirect_manager_normalize_page(mixed $page): int
+{
+    $normalizedPage = filter_var($page, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
+
+    return $normalizedPage === false ? 1 : (int) $normalizedPage;
 }
 
 function cms_admin_redirect_manager_redirect(string $redirectUrl): never
@@ -173,7 +181,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = cms_admin_redirect_manager_handle_action($module, $action, $_POST);
 
     cms_admin_redirect_manager_flash_result($result);
-    cms_admin_redirect_manager_redirect(cms_admin_redirect_manager_target_url());
+    // Löschen und Umschalten kehren auf die Seite der Liste zurück, von der sie kamen.
+    cms_admin_redirect_manager_redirect(cms_admin_redirect_manager_target_url(
+        in_array($action, ['delete_redirect', 'toggle_redirect'], true) ? cms_admin_redirect_manager_normalize_page($_POST['return_page'] ?? 1) : 1
+    ));
 }
 
 $alert = cms_admin_redirect_manager_pull_alert();
@@ -187,7 +198,7 @@ $pageAssets = [
         cms_asset_url('js/admin-seo-redirects.js'),
     ],
 ];
-$data = $module->getRedirectManagerData();
+$data = $module->getRedirectManagerData(cms_admin_redirect_manager_normalize_page($_GET['seite'] ?? 1));
 
 require_once __DIR__ . '/partials/header.php';
 require_once __DIR__ . '/partials/sidebar.php';

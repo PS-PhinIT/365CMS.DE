@@ -51,6 +51,7 @@ Verified top-level entries of this repository:
 | `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8) |
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
+| `TESTS/admin-redirects/` | directory | admin redirects page test (250 rules per page, no background refresh): `php TESTS/admin-redirects/run.php [-v]` |
 | `TESTS/ai-admin-contract/` | directory | static contract of the AI admin integration (routes, CSRF, quota, SSRF guard, sanitizing): `php TESTS/ai-admin-contract/run.php` |
 | `TESTS/ai-content-creator/` | directory | AI content draft pipeline with mock provider: `php TESTS/ai-content-creator/run.php` |
 | `TESTS/ai-editorjs-translation/` | directory | Editor.js translation pipeline: batches, segment order, size limits: `php TESTS/ai-editorjs-translation/run.php` |
@@ -134,6 +135,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
+| `TESTS/admin-redirects/` | Verzeichnis | Test der Admin-Seite Weiterleitungen (250 Regeln je Seite, keine Aktualisierung im Hintergrund): `php TESTS/admin-redirects/run.php [-v]` |
 | `TESTS/ai-admin-contract/` | Verzeichnis | statischer Vertrag der AI-Admin-Integration (Routen, CSRF, Quota, SSRF-Schutz, Bereinigung): `php TESTS/ai-admin-contract/run.php` |
 | `TESTS/ai-content-creator/` | Verzeichnis | AI-Entwurfs-Pipeline mit Mock-Provider: `php TESTS/ai-content-creator/run.php` |
 | `TESTS/ai-editorjs-translation/` | Verzeichnis | Editor.js-Übersetzungs-Pipeline: Batches, Segmentreihenfolge, Größenlimits: `php TESTS/ai-editorjs-translation/run.php` |

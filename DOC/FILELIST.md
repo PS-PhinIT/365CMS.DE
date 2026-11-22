@@ -73,6 +73,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/run-all.php` | runs every suite `TESTS/*/run.php` / führt alle Suiten aus (CI) |
 | `TESTS/lib/TestRunner.php` | shared minimal test runner / gemeinsamer Test-Runner (`T::run()`, `T::check()`, `T::same()`) |
 | `TESTS/admin-menu/` | admin menu test / Admin-Menü-Test (`php TESTS/admin-menu/run.php [-v]`, helper `installer-preview.php`) |
+| `TESTS/admin-redirects/` | admin redirects page test: 250 rules per page, no background refresh, stable order / Test der Admin-Seite Weiterleitungen: 250 Regeln je Seite, keine Aktualisierung im Hintergrund, stabile Reihenfolge (`php TESTS/admin-redirects/run.php [-v]`) |
 | `TESTS/ai-admin-contract/` | static contract of the AI admin integration (routes, CSRF, quota, SSRF guard, sanitizing) / statischer Vertrag der AI-Admin-Integration (Routen, CSRF, Quota, SSRF-Schutz, Bereinigung) (`php TESTS/ai-admin-contract/run.php`) |
 | `TESTS/ai-content-creator/` | AI content draft pipeline with mock provider / AI-Entwurfs-Pipeline mit Mock-Provider (`php TESTS/ai-content-creator/run.php`) |
 | `TESTS/ai-editorjs-translation/` | Editor.js translation pipeline: batches, segment order, size limits / Editor.js-Übersetzungs-Pipeline: Batches, Segmentreihenfolge, Größenlimits (`php TESTS/ai-editorjs-translation/run.php`) |
