@@ -8,6 +8,12 @@
 declare(strict_types=1);
 
 define('ABSPATH', dirname(__DIR__, 2) . '/CMS/');
+// Die Vorlage liest ihre Texte über `Support\I18n` (Sprachkatalog der Community); Klassen des Cores werden bei Bedarf geladen.
+spl_autoload_register(static function (string $class): void {
+    if (str_starts_with($class, 'CMS\\') && is_file($file = ABSPATH . 'core/' . str_replace('\\', '/', substr($class, 4)) . '.php')) {
+        require_once $file;
+    }
+});
 $target = rtrim((string) ($argv[1] ?? ''), '/');
 if ($target === '' || !is_dir($target)) {
     fwrite(STDERR, "Zielverzeichnis fehlt\n");

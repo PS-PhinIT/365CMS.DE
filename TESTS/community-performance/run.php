@@ -64,8 +64,8 @@ function budgets(): array
         ['Thema Seite 1 (Moderation)', '/forum/thema/{long}-langer-austausch', 'admin', [], 'topic', 20, 2],
         ['Liste „neu“ (Gast)', '/forum/neu', null, [], 'listing', 4, 0],
         ['Suche (Gast)', '/forum/suche', null, ['q' => 'Einrichtung'], 'search', 6, 0],
-        ['Neues Thema (Mitglied)', '/forum/technik/neues-thema', 'member', [], 'compose', 12, 0],
-        ['Antworten (Mitglied)', '/forum/thema/{long}/antworten', 'member', [], 'compose', 14, 0],
+        ['Neues Thema (Mitglied)', '/forum/technik/neues-thema', 'member', [], 'compose', 13, 0], // +1: noch nicht zugeordnete Anhänge der Formular-Kennung (Upload)
+        ['Antworten (Mitglied)', '/forum/thema/{long}/antworten', 'member', [], 'compose', 15, 0], // +1: Anhänge der Formular-Kennung
     ];
 }
 
