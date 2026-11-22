@@ -16,7 +16,7 @@ use CMS\Services\Community\Support\Urls;
 $active = $kind;
 $name = static fn (?array $account): string => $account === null ? 'Gelöschtes Mitglied' : (string) ($account['display_name'] ?: $account['username']);
 ?>
-<main id="main" class="cms-community">
+<div id="main" class="cms-community">
     <?php if (!empty($flash)): ?><p class="cms-community-flash" role="status"><?= $e($flash) ?></p><?php endif; ?>
     <?php include __DIR__ . '/partials/nav.php'; ?>
     <h1><?= $e($heading) ?></h1>
@@ -45,4 +45,4 @@ $name = static fn (?array $account): string => $account === null ? 'Gelöschtes 
             <p><a class="cms-community-button" rel="next" href="<?= $e($canonical . '?nach=' . rawurlencode((string) $next)) ?>">Weitere Themen</a></p>
         <?php endif; ?>
     <?php endif; ?>
-</main>
+</div>

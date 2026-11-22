@@ -301,8 +301,9 @@ final class CommunityMemberSection
             return;
         }
         echo '<ul class="list-group mb-3">';
+        $titles = $topics->findMany(array_column($rows, 'topic_id'));
         foreach ($rows as $row) {
-            $topic = $topics->find((int) $row['topic_id']);
+            $topic = $titles[(int) $row['topic_id']] ?? null;
             $excerpt = trim((string) preg_replace('/\s+/u', ' ', (string) ($row['body'] ?? '')));
             $excerpt = mb_strlen($excerpt, 'UTF-8') > self::EXCERPT ? mb_substr($excerpt, 0, self::EXCERPT, 'UTF-8') . '…' : $excerpt;
             echo '<li class="list-group-item"><a href="' . $e(Urls::post((int) $row['id'], $locale)) . '">' . $e($topic['title'] ?? 'Thema') . '</a>'
@@ -326,10 +327,17 @@ final class CommunityMemberSection
         $forums = (new ForumRepository())->tree();
         $field = PluginDashboardRegistry::instance()->csrfField(self::SLUG);
         echo '<div class="table-responsive"><table class="table table-vcenter"><thead><tr><th scope="col">Ziel</th><th scope="col">Art</th><th scope="col"><span class="visually-hidden">Aktion</span></th></tr></thead><tbody>';
+        // Eine Abfrage für alle Themen der Seite und eine für die Leserechte aller Foren (nicht je Abo).
+        $topicRows = $topics->findMany(array_column(array_filter($items, static fn (array $item): bool => $item['target_type'] === 'topic'), 'target_id'));
+        $forumIds = [];
+        foreach ($items as $item) {
+            $forumIds[] = $item['target_type'] === 'topic' ? (int) ($topicRows[(int) $item['target_id']]['forum_id'] ?? 0) : (int) $item['target_id'];
+        }
+        $readable = array_flip(CommunityAccess::instance()->filterReadable($userId, $forumIds));
         foreach ($items as $item) {
             $isTopic = $item['target_type'] === 'topic';
-            $row = $isTopic ? $topics->find((int) $item['target_id']) : ($forums[(int) $item['target_id']] ?? null);
-            $allowed = $row !== null && CommunityAccess::instance()->filterReadable($userId, [$isTopic ? (int) $row['forum_id'] : (int) $item['target_id']]) !== [];
+            $row = $isTopic ? ($topicRows[(int) $item['target_id']] ?? null) : ($forums[(int) $item['target_id']] ?? null);
+            $allowed = $row !== null && isset($readable[$isTopic ? (int) $row['forum_id'] : (int) $item['target_id']]);
             $title = $allowed ? (string) $row['title'] : 'Nicht mehr verfügbar';
             $url = !$allowed ? null : ($isTopic ? Urls::topic((int) $row['id'], (string) ($row['slug'] ?? ''), $locale) : Urls::forum((string) $row['slug'], $locale));
             echo '<tr><td>' . ($url !== null ? '<a href="' . $e($url) . '">' . $e($title) . '</a>' : $e($title)) . '</td><td>' . ($isTopic ? 'Thema' : 'Forum') . '</td><td class="text-end">'

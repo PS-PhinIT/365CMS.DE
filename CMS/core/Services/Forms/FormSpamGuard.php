@@ -22,6 +22,7 @@ namespace CMS\Services\Forms;
 use CMS\Database;
 use CMS\Security;
 use CMS\Services\AntispamService;
+use CMS\Services\Security\CaptchaService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -31,7 +32,6 @@ final class FormSpamGuard
 {
     public const HONEYPOT_FIELD = 'website_url';
     public const TIME_FIELD = '_ts';
-    public const CAPTCHA_FIELD = 'cms_captcha';
     public const MIN_SECONDS = 3;
     public const RATE_WINDOW = 3600;
     /** Höchstalter der signierten Startzeit (wie die Rechenaufgabe). */
@@ -43,7 +43,8 @@ final class FormSpamGuard
 
     private const CONFIRMATION_ACTION = 'form_confirm';
 
-    private const CAPTCHA_SESSION = 'cms_forms_captcha';
+    /** Filter für das Captcha-Verfahren der Formulare (Standard `pow`, mit Rechenaufgabe als Alternative). */
+    public const CAPTCHA_PROVIDER_FILTER = 'cms_forms_captcha_provider';
 
     /** Signierte Startzeit (verhindert gefälschte Zeitstempel), gebunden an den Formularschlüssel. */
     public static function timestampToken(string $formKey, ?int $time = null): string
@@ -71,34 +72,37 @@ final class FormSpamGuard
         return $time <= $now + 60 && $time >= $now - self::MAX_AGE ? $time : null;
     }
 
-    /**
-     * Neue Rechenaufgabe für ein Formular (Antwort bleibt in der Sitzung).
-     *
-     * @return array{a: int, b: int}
-     */
-    public static function captchaQuestion(string $formKey): array
+    /** Kontext der Captcha-Aufgabe eines Formulars (die Aufgabe gilt nur für dieses Formular). */
+    public static function captchaContext(string $formKey): string
     {
-        $a = random_int(1, 9);
-        $b = random_int(1, 9);
-        // FUN-410-48: Bei verzögertem Sitzungsstart (Lazy Sessions) ist die Sitzung beim Rendern noch nicht aktiv.
-        // Wie Security::generateToken() direkt schreiben – der verzögerte Start übernimmt die Werte.
-        if (session_status() === PHP_SESSION_ACTIVE || \CMS\Security::isSessionDeferred()) {
-            $_SESSION[self::CAPTCHA_SESSION][$formKey] = ['answer' => $a + $b, 'time' => time()];
-        }
-
-        return ['a' => $a, 'b' => $b];
+        return 'forms.' . $formKey;
     }
 
-    public static function verifyCaptcha(string $formKey, mixed $answer): bool
+    /**
+     * Captcha-Aufgabe für ein Formular (Antispam-Stufe „hoch“): HTML-Fragment des Core-Dienstes `CaptchaService`, Verfahren aus dem
+     * Filter `cms_forms_captcha_provider` (Standard `pow`; die Rechenaufgabe steht immer als Alternative daneben, auch ohne JavaScript).
+     */
+    public static function captchaHtml(string $formKey): string
     {
-        $stored = $_SESSION[self::CAPTCHA_SESSION][$formKey] ?? null;
-        unset($_SESSION[self::CAPTCHA_SESSION][$formKey]);
-        if (!is_array($stored) || !is_scalar($answer) || trim((string) $answer) === '') {
-            return false;
+        $provider = 'pow';
+        try {
+            $filtered = \CMS\Hooks::applyFilters(self::CAPTCHA_PROVIDER_FILTER, $provider, $formKey);
+            $provider = is_string($filtered) && $filtered !== '' ? $filtered : $provider;
+        } catch (\Throwable) {
+            // Ein fehlerhafter Filter lässt das Standardverfahren gelten.
         }
 
-        return (int) trim((string) $answer) === (int) ($stored['answer'] ?? -1)
-            && (int) ($stored['time'] ?? 0) >= time() - 86400;
+        return CaptchaService::instance()->render(self::captchaContext($formKey), $provider);
+    }
+
+    /**
+     * Prüft die Captcha-Antwort der Absendung (verbraucht die Aufgabe).
+     *
+     * @param array<string, mixed> $post Roh-POST
+     */
+    public static function verifyCaptcha(string $formKey, array $post): bool
+    {
+        return CaptchaService::instance()->verify($post, self::captchaContext($formKey))->ok;
     }
 
     /**
@@ -148,7 +152,7 @@ final class FormSpamGuard
             return self::error('rate_limited', FormI18n::t('forms.error.rate_limit', $locale));
         }
 
-        if ($level === 'high' && !self::verifyCaptcha((string) $form['form_key'], $post[self::CAPTCHA_FIELD] ?? '')) {
+        if ($level === 'high' && !self::verifyCaptcha((string) $form['form_key'], $post)) {
             self::logRejection('captcha', $form);
 
             return self::error('captcha', FormI18n::t('forms.error.captcha', $locale));

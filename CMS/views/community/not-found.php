@@ -10,8 +10,8 @@ if (!defined('ABSPATH')) {
  * Variablen: $e (Maskierung).
  */
 ?>
-<main id="main" class="cms-community cms-community--empty">
+<div id="main" class="cms-community cms-community--empty">
     <h1>Nicht gefunden</h1>
     <p>Diese Seite gibt es nicht oder sie ist für dich nicht sichtbar.</p>
     <p><a href="<?= $e(\CMS\Services\Community\Support\Urls::index()) ?>">Zur Community-Startseite</a></p>
-</main>
+</div>

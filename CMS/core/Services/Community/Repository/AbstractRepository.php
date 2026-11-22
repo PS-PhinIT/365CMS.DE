@@ -25,6 +25,7 @@ declare(strict_types=1);
 namespace CMS\Services\Community\Repository;
 
 use CMS\Database;
+use CMS\Services\Community\Support\ReadScope;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -97,6 +98,8 @@ abstract class AbstractRepository
      */
     final protected function run(string $sql, array $params = []): int
     {
+        ReadScope::forget($sql); // jede Schreibanweisung verwirft die gemerkten Zeilen ihrer Tabelle im Lesebereich
+
         return $this->db->execute($sql, $params)->rowCount();
     }
 

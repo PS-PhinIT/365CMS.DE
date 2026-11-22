@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 $previewKey = $mode === 'reply' ? 'topic_id' : ($mode === 'edit' ? 'post_id' : 'forum_id');
 $previewId = $mode === 'reply' ? (int) ($topic['id'] ?? 0) : ($mode === 'edit' ? (int) ($post['id'] ?? 0) : (int) ($forum['id'] ?? 0));
 ?>
-<main id="main" class="cms-community cms-community--compose"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="{}" data-cc-reason-required="0"<?php endif; ?><?php if (!empty($editor)): ?> data-cc-editor="<?= $e($editor['mode']) ?>" data-css-url="<?= $e($editor['css']) ?>" data-js-url="<?= $e($editor['js']) ?>" data-lang-url="<?= $e($editor['lang']) ?>" data-target-key="<?= $e($previewKey) ?>" data-target-id="<?= (int) $previewId ?>"<?php endif; ?>>
+<div id="main" class="cms-community cms-community--compose"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="{}" data-cc-reason-required="0"<?php endif; ?><?php if (!empty($editor)): ?> data-cc-editor="<?= $e($editor['mode']) ?>" data-css-url="<?= $e($editor['css']) ?>" data-js-url="<?= $e($editor['js']) ?>" data-lang-url="<?= $e($editor['lang']) ?>" data-target-key="<?= $e($previewKey) ?>" data-target-id="<?= (int) $previewId ?>"<?php endif; ?>>
     <p id="cc-status" class="cms-community-flash" hidden></p>
     <h1><?= $e($heading) ?></h1>
     <?php if (!empty($error)): ?>
@@ -60,4 +60,4 @@ $previewId = $mode === 'reply' ? (int) ($topic['id'] ?? 0) : ($mode === 'edit' ?
     </form>
     <div id="cc-preview" class="cms-community-preview cms-community-post__body" hidden aria-live="polite"></div>
     <?php endif; ?>
-</main>
+</div>

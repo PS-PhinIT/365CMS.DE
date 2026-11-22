@@ -34,6 +34,15 @@ if (class_exists('\CMS\Security')) {
 $registerAction = function_exists('meridian_auth_url') ? meridian_auth_url('register') : rtrim((string) SITE_URL, '/') . '/register';
 $loginUrl = function_exists('meridian_auth_url') ? meridian_auth_url('login') : rtrim((string) SITE_URL, '/') . '/login';
 $homeUrl = rtrim((string) SITE_URL, '/') . '/';
+// Captcha laut Einstellung „register_captcha“ (Anmeldeseite → Registrierung); der Router prüft die Antwort mit dem Kontext `register`.
+$registerCaptcha = false;
+if (function_exists('cms_captcha_field') && class_exists('\CMS\Services\CmsAuthPageService')) {
+    try {
+        $registerCaptcha = (\CMS\Services\CmsAuthPageService::getInstance()->getSettings()['register_captcha'] ?? '0') === '1';
+    } catch (\Throwable) {
+        $registerCaptcha = false;
+    }
+}
 $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl und Sonderzeichen.';
 ?>
 
@@ -108,6 +117,11 @@ $passwordPolicyHint = 'Mindestens 12 Zeichen sowie Groß-/Kleinbuchstabe, Zahl u
                            autocomplete="new-password" required minlength="12"
                            placeholder="Passwort wiederholen">
                 </div>
+
+                <?php if ($registerCaptcha): ?>
+                    <?php echo cms_captcha_asset_tags(); ?>
+                    <div class="form-group"><?php echo cms_captcha_field('register', 'pow'); ?></div>
+                <?php endif; ?>
 
                 <div class="form-group form-group--checkbox">
                     <label class="checkbox-label">

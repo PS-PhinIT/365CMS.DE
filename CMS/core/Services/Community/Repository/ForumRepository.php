@@ -30,6 +30,8 @@ declare(strict_types=1);
 
 namespace CMS\Services\Community\Repository;
 
+use CMS\Services\Community\Support\ReadScope;
+
 use CMS\Services\Community\Support\Slugger;
 use CMS\Services\Community\Support\Transaction;
 
@@ -105,7 +107,11 @@ final class ForumRepository extends AbstractRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        return $this->fetchOne('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1', [$id]);
+        // Im Lesebereich einer Seitenanfrage (`ReadScope`) wird jede Zeile nur einmal gelesen.
+        return ReadScope::remember(
+            ReadScope::key($this->db, 'forum', $id),
+            fn (): ?array => $this->fetchOne('SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1', [$id])
+        );
     }
 
     /**
@@ -115,6 +121,20 @@ final class ForumRepository extends AbstractRepository
      * @return array<string, mixed>|null
      */
     public function findBySlug(string $slug, ?string $locale = null): ?array
+    {
+        $row = ReadScope::remember(
+            ReadScope::key($this->db, 'forum-slug', ($locale ?? '*') . ':' . $slug),
+            fn (): ?array => $this->findBySlugUncached($slug, $locale)
+        );
+        if ($row !== null) {
+            ReadScope::put(ReadScope::key($this->db, 'forum', (int) $row['id']), $row); // find() braucht die Zeile dann nicht noch einmal
+        }
+
+        return $row;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function findBySlugUncached(string $slug, ?string $locale): ?array
     {
         $table = $this->table(self::TABLE);
         if ($locale === 'de') {
@@ -143,15 +163,20 @@ final class ForumRepository extends AbstractRepository
     public function tree(): array
     {
         if ($this->tree === null) {
-            $tree = [];
-            $sql = 'SELECT f.*, CASE WHEN f.category_id = 0 THEN 1 WHEN c.id IS NULL THEN 0 ELSE c.is_visible END AS category_visible FROM '
-                . $this->table(self::TABLE) . ' f LEFT JOIN ' . $this->table(self::CATEGORIES) . ' c ON c.id = f.category_id'
-                . ' ORDER BY f.category_id ASC, f.depth ASC, f.sort_order ASC, f.id ASC';
-            foreach ($this->fetchAll($sql) as $row) {
-                $row['category_visible'] = (int) $row['category_visible'];
-                $tree[(int) $row['id']] = $row;
-            }
-            $this->tree = $tree;
+            // Im Lesebereich einer Seitenanfrage (`ReadScope`) teilen sich alle Instanzen einen Forenbaum (der Zugriff und der Controller
+            // lasen ihn sonst je einmal).
+            $this->tree = ReadScope::remember(ReadScope::key($this->db, 'forum-tree', 0), function (): array {
+                $tree = [];
+                $sql = 'SELECT f.*, CASE WHEN f.category_id = 0 THEN 1 WHEN c.id IS NULL THEN 0 ELSE c.is_visible END AS category_visible FROM '
+                    . $this->table(self::TABLE) . ' f LEFT JOIN ' . $this->table(self::CATEGORIES) . ' c ON c.id = f.category_id'
+                    . ' ORDER BY f.category_id ASC, f.depth ASC, f.sort_order ASC, f.id ASC';
+                foreach ($this->fetchAll($sql) as $row) {
+                    $row['category_visible'] = (int) $row['category_visible'];
+                    $tree[(int) $row['id']] = $row;
+                }
+
+                return $tree;
+            });
         }
 
         return $this->tree;

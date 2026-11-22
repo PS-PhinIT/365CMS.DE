@@ -53,6 +53,7 @@ $registerButtonText = (string) ($settings['register_button_text'] ?? 'Konto erst
 $registerEmailPlaceholder = (string) ($settings['register_email_placeholder'] ?? 'deine@email.de');
 $registerUsernamePlaceholder = (string) ($settings['register_username_placeholder'] ?? 'mein_name');
 $registerRequireTerms = ($settings['register_require_terms'] ?? '1') === '1';
+$registerCaptcha = $pageType === 'register' && ($settings['register_captcha'] ?? '0') === '1' && function_exists('cms_captcha_field');
 $registerTermsLabel = (string) ($settings['register_terms_label'] ?? 'Ich akzeptiere die Nutzungsbedingungen und die Datenschutzerklärung.');
 $registerDisabledMessage = (string) ($settings['register_disabled_message'] ?? 'Die Registrierung ist aktuell deaktiviert.');
 $forgotLabelEmail = (string) ($settings['forgot_label_email'] ?? 'E-Mail-Adresse');
@@ -495,6 +496,7 @@ $showcase = is_array($showcase ?? null) ? $showcase : null;
             }
         }
     </style>
+    <?php if ($registerCaptcha) { echo cms_captcha_asset_tags(); } ?>
 </head>
 <body>
     <main class="cms-auth-shell cms-auth-shell--<?php echo htmlspecialchars($layoutVariant, ENT_QUOTES, 'UTF-8'); ?>" aria-labelledby="cms-auth-title">
@@ -734,6 +736,10 @@ $showcase = is_array($showcase ?? null) ? $showcase : null;
                                 <input class="cms-auth-input" type="password" id="cms-register-password2" name="password2" autocomplete="new-password" required minlength="12">
                             </div>
                         </div>
+
+                        <?php if ($registerCaptcha): ?>
+                            <div class="cms-auth-captcha"><?= cms_captcha_field('register', 'pow') /* HTML des Captcha-Dienstes: alle Werte dort maskiert */ ?></div>
+                        <?php endif; ?>
 
                         <?php if ($registerRequireTerms): ?>
                             <label class="cms-auth-checkbox">

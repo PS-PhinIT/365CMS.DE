@@ -916,6 +916,8 @@ final class CmsAuthPageService
             'register_email_placeholder' => 'deine@email.de',
             'register_username_placeholder' => 'mein_name',
             'register_require_terms' => '1',
+            // Captcha beim Registrieren (Core-Dienst `CaptchaService`, Kontext `register`): aus, bis die Vorlage es ausgibt (Standard-Vorlagen tun es).
+            'register_captcha' => '0',
             'register_terms_label' => 'Ich akzeptiere die Nutzungsbedingungen und die Datenschutzerklärung.',
             'register_disabled_message' => 'Die Registrierung ist aktuell deaktiviert. Bitte kontaktiere uns bei Fragen direkt.',
             'forgot_label_email' => 'E-Mail-Adresse',
@@ -996,6 +998,7 @@ final class CmsAuthPageService
             'register_email_placeholder' => $this->sanitizeText($input['register_email_placeholder'] ?? '', 120),
             'register_username_placeholder' => $this->sanitizeText($input['register_username_placeholder'] ?? '', 120),
             'register_require_terms' => !empty($input['register_require_terms']) ? '1' : '0',
+            'register_captcha' => !empty($input['register_captcha']) ? '1' : '0',
             'register_terms_label' => $this->sanitizeTextarea($input['register_terms_label'] ?? '', 220),
             'register_disabled_message' => $this->sanitizeTextarea($input['register_disabled_message'] ?? '', 220),
             'forgot_label_email' => $this->sanitizeText($input['forgot_label_email'] ?? '', 120),

@@ -28,6 +28,7 @@ use CMS\Services\Community\Support\Cursor;
 use CMS\Services\Community\Service\CommunityAccess;
 use CMS\Services\Community\Support\I18n;
 use CMS\Services\Community\Support\Slugger;
+use CMS\Services\Community\CommunityPrivacy;
 use CMS\Services\Community\Support\Settings;
 
 final class CommunityAdminModule
@@ -52,7 +53,7 @@ final class CommunityAdminModule
     public const MAX_FORUM_DEPTH = 3;
 
     /** Aktionen, die `community.manage` verlangen (die Einstiegslogik prüft das je POST). */
-    public const MANAGE_ACTIONS = ['save_settings', 'save_rank', 'delete_rank', 'save_category', 'save_forum', 'move', 'save_permissions'];
+    public const MANAGE_ACTIONS = ['save_settings', 'save_rank', 'delete_rank', 'save_category', 'save_forum', 'move', 'save_permissions', 'export_download', 'export_delete'];
 
     /** Zeitangaben der Sperre: Auswahl in Tagen (0 = dauerhaft, nur mit `community.ban`, der Dienst prüft das). */
     public const BAN_DAYS = [1, 3, 7, 14, 30, 90, 365, 0];
@@ -223,7 +224,13 @@ final class CommunityAdminModule
     /** @return array<string, mixed> */
     private function settingsData(): array
     {
-        return ['values' => Settings::getInstance()->all(), 'definitions' => Settings::DEFINITIONS];
+        return [
+            'values' => Settings::getInstance()->all(),
+            'definitions' => Settings::DEFINITIONS,
+            // Exportdateien der DSGVO-Auskunft (private Ablage), die der tägliche Cron nach EXPORT_KEEP_DAYS Tagen löscht.
+            'exports' => CommunityPrivacy::listExports(),
+            'export_keep_days' => CommunityPrivacy::EXPORT_KEEP_DAYS,
+        ];
     }
 
     /** @return array<int, string> */
@@ -262,6 +269,10 @@ final class CommunityAdminModule
             'save_forum' => $this->saveForum($post),
             'move' => $this->move($post),
             'save_permissions' => $this->savePermissions($post),
+            'export_download' => $this->exportDownload($post, $userId),
+            'export_delete' => CommunityPrivacy::deleteExport(is_string($post['file'] ?? null) ? (string) $post['file'] : '', $userId)
+                ? ['success' => true, 'message' => 'Exportdatei gelöscht.']
+                : ['success' => false, 'error' => 'Die Exportdatei wurde nicht gefunden.'],
             default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
         };
     }
@@ -277,6 +288,30 @@ final class CommunityAdminModule
         }
 
         return ['success' => false, 'error' => self::errorText($result['error'] ?? null)];
+    }
+
+    /**
+     * Exportdatei herunterladen (`export_download`, nur `community.manage`): sendet die JSON-Datei als Anhang und beendet die Anfrage; bei
+     * ungültigem Namen oder fehlender Datei der Fehler für die Seite. Der Abruf kommt ins Audit-Protokoll (Dateiname, Administrator).
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private function exportDownload(array $post, int $userId): array
+    {
+        $name = is_string($post['file'] ?? null) ? (string) $post['file'] : '';
+        $path = CommunityPrivacy::exportPath($name);
+        if ($path === null || headers_sent()) {
+            return ['success' => false, 'error' => 'Die Exportdatei wurde nicht gefunden.'];
+        }
+        \CMS\AuditLogger::instance()->log(\CMS\AuditLogger::CAT_SETTING, 'community.privacy.export_download', 'DSGVO-Auskunft: Exportdatei der Community heruntergeladen', 'community_export', null, ['file' => $name, 'user_id' => $userId], 'info');
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $name . '"');
+        header('Content-Length: ' . (string) filesize($path));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+        readfile($path);
+        exit;
     }
 
     /** @return array<string, mixed> */

@@ -15,7 +15,7 @@ use CMS\Services\Community\Support\Urls;
 $title = static fn (array $row): string => $locale === 'en' && !empty($row['title_en']) ? (string) $row['title_en'] : (string) $row['title'];
 $desc = static fn (array $row): string => $locale === 'en' && !empty($row['description_en']) ? (string) $row['description_en'] : (string) ($row['description'] ?? '');
 ?>
-<main id="main" class="cms-community">
+<div id="main" class="cms-community">
     <?php $active = 'index'; include __DIR__ . '/partials/nav.php'; ?>
     <h1>Community</h1>
     <?php if ($groups === []): ?>
@@ -43,4 +43,4 @@ $desc = static fn (array $row): string => $locale === 'en' && !empty($row['descr
             </ul>
         </section>
     <?php endforeach; ?>
-</main>
+</div>

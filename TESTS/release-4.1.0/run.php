@@ -129,7 +129,8 @@ T::run('PR #4: SEO-Schalter mit Wirkung (FUN-410-46/47/49/51/52/53)', static fun
 });
 
 T::run('PR #4: verwaiste Einstellungen und Verweise (FUN-410-48/50/54–60)', static function () use ($src): void {
-    T::check(str_contains($src('core/Services/Forms/FormSpamGuard.php'), 'isSessionDeferred()'), 'Captcha bei verzögertem Sitzungsstart');
+    // Seit PR #190 speichert der Captcha-Dienst die Aufgaben (CaptchaStore); der verzögerte Sitzungsstart gilt dort, und FormSpamGuard nutzt den Dienst.
+    T::check(str_contains($src('core/Services/Security/Captcha/CaptchaStore.php'), 'isSessionDeferred()') && str_contains($src('core/Services/Forms/FormSpamGuard.php'), 'CaptchaService::instance()'), 'Captcha bei verzögertem Sitzungsstart');
     $router = $src('core/Routing/ThemeRouter.php');
     T::check(substr_count($router, '$perPage = $this->configuredPostsPerPage(') === 4, '„Beiträge pro Seite“ in Blog, Kategorie, Tag, Autor');
     T::check(str_contains($src('core/Services/OpcacheWarmupService.php'), '$this->toRelativePath($normalizedPath)'), 'OPcache-Ausschlüsse relativ zu ABSPATH');

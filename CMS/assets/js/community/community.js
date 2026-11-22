@@ -87,8 +87,18 @@ if (root) {
             label.appendChild(input);
             holder.appendChild(label);
         });
+        // Fokus zurück zum auslösenden Element (WCAG 2.4.3), auch wenn der Browser ihn beim Schließen nicht selbst zurückgibt
+        const opener = document.activeElement;
         const onClose = () => {
             dialog.removeEventListener('close', onClose);
+            if (opener && opener !== document.body && typeof opener.focus === 'function') {
+                // Nach dem Schließen (der Browser setzt den Fokus beim Schließen selbst noch um)
+                window.setTimeout(() => {
+                    if (opener.isConnected) {
+                        opener.focus();
+                    }
+                }, 0);
+            }
             if (dialog.returnValue !== 'ok') {
                 resolve(null);
                 return;
