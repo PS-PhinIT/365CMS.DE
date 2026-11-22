@@ -1112,7 +1112,7 @@ final class ModerationService
             return self::failure('invalid_state');
         }
         $this->posts->update($firstId, ['status' => 'rejected', 'status_reason' => $reason, 'updated_at' => $now]);
-        $this->topics->update($topicId, ['status' => 'deleted', 'previous_status' => 'pending', 'updated_at' => $now]);
+        $this->topics->update($topicId, ['status' => 'deleted', 'previous_status' => 'pending', 'trashed_at' => $now, 'trashed_by' => $actorId, 'updated_at' => $now]);
         $logId = $this->writeLog(self::entry($actorId, 'topic.reject', 'topic', $topicId, $forumId, $reason, ['first_post' => $firstId], $now));
 
         return self::done(['status' => 'deleted'] + $result, $logId, [[Events::TOPIC_REJECTED, $topicId, $forumId, $actor, $logId]]);

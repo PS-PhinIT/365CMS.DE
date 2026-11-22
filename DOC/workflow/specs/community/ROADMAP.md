@@ -86,14 +86,14 @@ flowchart LR
 | WP-C1 Modul-Gerüst & Schema v27 | 🟡 | PR #1 (17.11.2026): Schema v27 mit allen 27 Tabellen (`TESTS/schema-v27`, `TESTS/schema-upgrade`: Neuinstallation = Update von v25/v26 gegen MariaDB 10.11), Capabilities `community.*`, Rolle `moderator`, Update-Schritt `capabilities_v27` ([HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md)); Nachlauf: zwei Indizes für `community_topics`, `community_badges.description_en` (HANDOFF §2 Nr. 9). PR #2a (#178, 18.11.2026): `CoreModuleService`-Eintrag (standardmäßig aus), `CommunityHooks`, `Support/Settings`, Sprachschlüssel `community.access.*`/`community.error.*`, Core-Hook `user_role_changed` auch außerhalb des SSO-Pfads (`TESTS/community-settings`, `TESTS/user-role-hook`). Offen: Admin-Katalog (PR #3) |
 | WP-C2 Struktur & Rechte | 🟡 | PR #2a (#178): `CommunityAccess` (Rechte je Forum mit Vererbung, Forum-Moderatoren, Sperren, Vertrauensstufen P1), Repositories für Kategorien und Foren (`TESTS/community-access`, `TESTS/community-repositories`, Gegenprobe `TESTS/community-mutants`). Offen: Admin „Struktur“ (Drag & Drop, Tastatur), Verwaltung von Forentypen, -status, Rechten und Forum-Moderatoren (PR #3) |
 | WP-C3 Themen, Beiträge, Gelesen-Status | 🟡 | PR #2a (#178): `TopicService`, `PostService` (anlegen, antworten, bearbeiten mit Verlauf, weich löschen, atomare Zähler, Position und Seite), `QuoteService`, `ReadStateService`, Keyset-Listen ohne `OFFSET` (`TESTS/community-content`, `TESTS/community-db` gegen MariaDB). Offen: Startseite, Forum- und Themenseiten, Listen „Neu/Aktiv/Unbeantwortet“, Permalinks als Routen (PR #4) |
-| WP-C4 Editor & Rendering | ⬜ | |
-| WP-C5 Sicherheit, Spam, Captcha, Warteschlange | ⬜ | |
-| WP-C6 Moderation & Meldungen | ⬜ | |
-| WP-C7 Interaktion & Mitgliederbereich | ⬜ | |
-| WP-C8 Anhänge | ⬜ | |
-| WP-C9 Suche & SEO | ⬜ | |
-| WP-C10 Frontend & Theme-PR | ⬜ | |
-| WP-C11 DSGVO & Löschfristen | ⬜ | |
+| WP-C4 Editor & Rendering | 🟡 | PR #2b (Renderer, `PurifierService`-Profil `community`, Vorschau), PR #4 (visueller Editor: SunEditor mit Markdown-Brücke). Offen: lokale Entwürfe, Upload im Editor |
+| WP-C5 Sicherheit, Spam, Captcha, Warteschlange | 🟡 | PR #2b (`ContentGuard`: Antispam-Schichten, Wortfilter, Raten, Freigabe-Warteschlange; `TESTS/community-spam`). Offen: `CaptchaService` (E7) |
+| WP-C6 Moderation & Meldungen | ✅ | PR #2b und #3 (`ModerationService`, `ReportService`, `BanService`, Admin-Seiten; `TESTS/community-moderation`, `community-sanctions`, `community-admin`) |
+| WP-C7 Interaktion & Mitgliederbereich | 🟡 | PR #2b und #4 (Abos, Benachrichtigungen, Reaktionen, Lösung, Ränge, Mitgliederbereich `/member/plugin/community`). Offen: Profil-Abschnitt `/forum/mitglieder/{id}` |
+| WP-C8 Anhänge | ✅ | PR #2b und #4 (`AttachmentService`, `Http\AttachmentController`; `TESTS/community-uploads`) |
+| WP-C9 Suche & SEO | ✅ | PR #2b (`CommunitySearch`, Sitemap, `noindex`-Regeln; `TESTS/community-search-seo`) |
+| WP-C10 Frontend & Theme-PR | 🟡 | PR #4 (Routen, Vorlagen, `community.css`, JS-Module; `TESTS/community-frontend`, `community-api`, `community-member`, `community-editor`). Offen: Barrierefreiheits- und Lighthouse-Prüfung (PR #5), Theme-PR `cms-phinit` |
+| WP-C11 DSGVO & Löschfristen | 🟡 | PR #5: Löschfristen und DSGVO (`TESTS/community-privacy`), Papierkorb-Provider (`TESTS/community-trash`). Offen: Legal-Textbausteine, Admin-Liste der Exportdateien, Löschmodus „Beiträge löschen“ |
 | WP-C12 Übernahme cms-forum | ➖ | entfällt (E6) |
 | WP-C13 Leistung, Abnahme, Release P1 | ⬜ | |
 | WP-C14 P2 Moderation | ⬜ | |

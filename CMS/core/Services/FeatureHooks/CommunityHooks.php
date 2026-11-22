@@ -19,6 +19,7 @@ use CMS\Hooks;
 use CMS\Logger;
 use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
+use CMS\Services\Community\CommunityContentProvider;
 use CMS\Services\Community\CommunityMemberSection;
 use CMS\Services\Community\CommunityPrivacy;
 use CMS\Services\Community\CommunityRetention;
@@ -32,6 +33,7 @@ use CMS\Services\Community\Service\CommunityAccess;
 use CMS\Services\Community\Service\ModerationService;
 use CMS\Services\Community\Service\ReportService;
 use CMS\Services\Community\Support\CommunityModule;
+use CMS\Services\ContentTypes\ContentTypeRegistry;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -73,6 +75,13 @@ final class CommunityHooks
         Hooks::addAction('cms_cron_daily', static function (): void {
             self::guard(static fn () => CommunityPrivacy::pruneExports());
         }, 47);
+
+        // Papierkorb (PR #5): gelöschte Themen im zentralen Papierkorb des Core, auch bei abgeschaltetem Modul.
+        Hooks::addAction(ContentTypeRegistry::REGISTER_ACTION, static function (mixed $registry = null): void {
+            if ($registry instanceof ContentTypeRegistry) {
+                self::guard(static fn () => $registry->register(new CommunityContentProvider()));
+            }
+        }, 20);
 
         if (!CommunityModule::isEnabled()) {
             return;
