@@ -73,7 +73,7 @@ final class ContentGuard
     public const SEARCH_GUESTS_TOTAL = 120;
 
     /** Endgültige Inhaltsablehnungen, die ins Sicherheitsprotokoll gehen (`spam_rejected` protokolliert AntispamService selbst). */
-    public const LOGGED_CODES = ['word_blocked', 'too_many_links', 'too_many_images', 'too_many_attachments', 'content_review'];
+    public const LOGGED_CODES = ['word_blocked', 'too_many_links', 'too_many_images', 'too_many_attachments', 'content_review', 'captcha_failed'];
 
     /** Aktionen von `screen()`. */
     private const SCREEN_ACTIONS = ['create_topic', 'reply', 'edit'];

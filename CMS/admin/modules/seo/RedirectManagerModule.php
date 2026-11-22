@@ -25,9 +25,9 @@ class RedirectManagerModule
         return $this->service->getAdminData();
     }
 
-    public function getRedirectManagerData(): array
+    public function getRedirectManagerData(int $page = 1): array
     {
-        return $this->service->getRedirectManagerData();
+        return $this->service->getRedirectManagerData($page);
     }
 
     public function getNotFoundMonitorData(): array

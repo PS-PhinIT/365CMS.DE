@@ -28,6 +28,8 @@ final class RedirectService
     public const NOT_FOUND_LOG_RETENTION_DAYS = 90;
     public const CSV_NOT_FOUND_EXPORT_COLUMNS = [...self::CSV_IMPORT_COLUMNS, 'request_host', 'hit_count', 'first_seen_at', 'last_seen_at', 'referrer_url'];
     public const CSV_IMPORT_MAX_ROWS = 5000;
+    /** Regeln je Seite in „SEO → Weiterleitungen“ (die Seite lädt nie alle Regeln, auch wenn es Zehntausende gibt). */
+    public const REDIRECTS_PER_PAGE = 250;
     public const CSV_EXPORT_MAX_ROWS = 20000;
 
     private const CSV_HEADER_ALIASES = [
@@ -135,7 +137,7 @@ final class RedirectService
         }
 
         $this->db->execute(
-            "UPDATE {$this->prefix}redirect_rules SET hits = hits + 1, last_hit_at = NOW() WHERE id = ?",
+            "UPDATE {$this->prefix}redirect_rules SET hits = hits + 1, last_hit_at = NOW(), updated_at = updated_at WHERE id = ?",
             [(int)$bestMatch->id]
         );
 
@@ -252,16 +254,47 @@ final class RedirectService
         ];
     }
 
-    public function getRedirectManagerData(): array
+    /**
+     * Daten der Seite „Weiterleitungen“: eine Seite Regeln (`REDIRECTS_PER_PAGE`), Zähler per COUNT und die Seitenangaben.
+     * Die 404-Protokollzeilen werden hier nicht geladen (die Zähler dafür kommen aus COUNT-Abfragen). Die Seite aktualisiert sich nicht
+     * von selbst: ein Aufruf liest den Stand einmal, Blättern ist gewöhnliche Navigation.
+     */
+    public function getRedirectManagerData(int $page = 1): array
     {
-        $redirectRows = $this->getRedirectRuleRows();
-        $logRows = $this->getNotFoundLogRows($redirectRows);
+        $stats = $this->buildAdminStats([], []);
+        $pagination = self::paginate($stats['redirects_total'], $page);
+        $redirectRows = $this->getRedirectRuleRowsPage($pagination['per_page'], $pagination['offset']);
 
         return [
             'redirects' => $redirectRows,
-            'stats' => $this->buildAdminStats($redirectRows, $logRows),
+            'stats' => $stats,
+            'pagination' => $pagination,
             'targets' => $this->getAdminTargets(),
             'sites' => $this->getAvailableSiteScopes(),
+        ];
+    }
+
+    /**
+     * Seitenangaben für eine Liste mit `$total` Einträgen; eine zu große oder ungültige Seite wird auf die letzte bzw. erste begrenzt.
+     *
+     * @return array{page: int, pages: int, per_page: int, total: int, offset: int, from: int, to: int}
+     */
+    public static function paginate(int $total, int $page, int $perPage = self::REDIRECTS_PER_PAGE): array
+    {
+        $perPage = max(1, $perPage);
+        $total = max(0, $total);
+        $pages = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min($pages, $page));
+        $offset = ($page - 1) * $perPage;
+
+        return [
+            'page' => $page,
+            'pages' => $pages,
+            'per_page' => $perPage,
+            'total' => $total,
+            'offset' => $offset,
+            'from' => $total === 0 ? 0 : $offset + 1,
+            'to' => min($total, $offset + $perPage),
         ];
     }
 
@@ -1077,6 +1110,28 @@ final class RedirectService
     {
         $redirects = $this->db->get_results(
             "SELECT * FROM {$this->prefix}redirect_rules ORDER BY is_active DESC, updated_at DESC, source_path ASC"
+        ) ?: [];
+
+        return array_map(function ($row): array {
+            $mappedRow = (array) $row;
+            $mappedRow['site_scope'] = (string) ($mappedRow['site_scope'] ?? '');
+            $mappedRow['site_scope_label'] = $this->describeSiteScope((string) ($mappedRow['site_scope'] ?? ''));
+
+            return $mappedRow;
+        }, $redirects);
+    }
+
+    /**
+     * Eine Seite der Regeln in fester Reihenfolge (aktiv zuerst, zuletzt bearbeitet zuerst, Quellpfad, ID als letzter Schlüssel,
+     * damit zwei Seiten nie dieselbe Zeile zeigen).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getRedirectRuleRowsPage(int $limit, int $offset): array
+    {
+        $redirects = $this->db->get_results(
+            "SELECT * FROM {$this->prefix}redirect_rules ORDER BY is_active DESC, updated_at DESC, source_path ASC, id ASC LIMIT ? OFFSET ?",
+            [max(1, $limit), max(0, $offset)]
         ) ?: [];
 
         return array_map(function ($row): array {

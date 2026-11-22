@@ -13,6 +13,12 @@ $redirects = $data['redirects'] ?? [];
 $stats     = $data['stats'] ?? [];
 $targets   = $data['targets'] ?? ['pages' => [], 'posts' => [], 'hubs' => []];
 $sites     = $data['sites'] ?? [];
+$pagination = is_array($data['pagination'] ?? null)
+    ? $data['pagination']
+    : ['page' => 1, 'pages' => 1, 'per_page' => count($redirects), 'total' => count($redirects), 'from' => count($redirects) > 0 ? 1 : 0, 'to' => count($redirects)];
+$currentPage = (int) ($pagination['page'] ?? 1);
+$pageCount = (int) ($pagination['pages'] ?? 1);
+$pageUrl = static fn (int $page): string => '/admin/redirect-manager' . ($page > 1 ? '?seite=' . $page : '');
 $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
 ?>
 
@@ -215,6 +221,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                                                 <form method="post" class="d-inline">
                                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
                                                     <input type="hidden" name="action" value="toggle_redirect">
+                                                    <input type="hidden" name="return_page" value="<?= $currentPage ?>">
                                                     <input type="hidden" name="id" value="<?= (int)$redirect['id'] ?>">
                                                     <button type="submit" class="dropdown-item"><?= (int)$redirect['is_active'] === 1 ? 'Deaktivieren' : 'Aktivieren' ?></button>
                                                 </form>
@@ -229,6 +236,7 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                                                 >
                                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
                                                     <input type="hidden" name="action" value="delete_redirect">
+                                                    <input type="hidden" name="return_page" value="<?= $currentPage ?>">
                                                     <input type="hidden" name="id" value="<?= (int)$redirect['id'] ?>">
                                                     <button type="submit" class="dropdown-item text-danger">Löschen</button>
                                                 </form>
@@ -241,6 +249,27 @@ $alertDetails = is_array($alert['details'] ?? null) ? $alert['details'] : [];
                     </tbody>
                 </table>
             </div>
+            <?php if ($pageCount > 1 || (int) ($pagination['total'] ?? 0) > 0): ?>
+                <div class="card-footer d-flex align-items-center flex-wrap gap-2">
+                    <p class="m-0 text-secondary" data-redirect-range>
+                        Einträge <?= (int) ($pagination['from'] ?? 0) ?>–<?= (int) ($pagination['to'] ?? 0) ?> von <?= (int) ($pagination['total'] ?? 0) ?>
+                        (Seite <?= $currentPage ?> von <?= $pageCount ?>, höchstens <?= (int) ($pagination['per_page'] ?? 250) ?> je Seite)
+                    </p>
+                    <?php if ($pageCount > 1): ?>
+                        <nav class="ms-auto" aria-label="Seiten der Weiterleitungen">
+                            <ul class="pagination m-0">
+                                <li class="page-item<?= $currentPage <= 1 ? ' disabled' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($pageUrl(max(1, $currentPage - 1))) ?>"<?= $currentPage <= 1 ? ' tabindex="-1" aria-disabled="true"' : '' ?> rel="prev">Zurück</a>
+                                </li>
+                                <li class="page-item active" aria-current="page"><span class="page-link"><?= $currentPage ?></span></li>
+                                <li class="page-item<?= $currentPage >= $pageCount ? ' disabled' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($pageUrl(min($pageCount, $currentPage + 1))) ?>"<?= $currentPage >= $pageCount ? ' tabindex="-1" aria-disabled="true"' : '' ?> rel="next">Weiter</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
