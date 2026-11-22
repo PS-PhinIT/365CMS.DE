@@ -93,6 +93,7 @@ final class TopicService
     private UserStatsRepository $stats;
     private CounterBook $book;
     private WriteGate $gate;
+    private ?AttachmentService $attachmentService = null;
 
     /**
      * @param \Closure(): int|null $clock Unix-Zeit (Standard `time()`)
@@ -157,8 +158,10 @@ final class TopicService
     // ── Anlegen ─────────────────────────────────────────────────────────────────────────────────────────────────
 
     /**
-     * Thema mit erstem Beitrag anlegen. `$options` ist für spätere Erweiterungen reserviert (PR #2b: Präfix, Umfrage,
-     * Entwurf) und in PR #2a ohne Schlüssel.
+     * Thema mit erstem Beitrag anlegen. `$options`: `attachments` (Liste der IDs hochgeladener, noch nicht zugeordneter eigener
+     * Anhänge aus dem Formular; im Text eingebettete `attachment:ID` werden zusätzlich zugeordnet). Die Zuordnung plant
+     * `AttachmentService::prepareClaim()` vor der Transaktion; darin sperrt der Dienst die Anhänge nach der Statistikzeile, prüft sie
+     * nach `can(fresh)` erneut und ordnet sie nach dem Schreiben des Beitrags zu (Fehler `attachment_not_found`, `attachment_limit`).
      *
      * Ergebnis bei Erfolg: `topic_id`, `post_id` (erster Beitrag), `forum_id`, `status` (`published`/`pending`), `slug`;
      * bei doppeltem Absenden zusätzlich `duplicate = true` (nichts geschrieben, kein Hook). Fehler: `title_too_short`,
@@ -192,6 +195,12 @@ final class TopicService
                 return self::failure($error);
             }
         }
+        $listed = AttachmentService::claimIds($options['attachments'] ?? []);
+        if ($listed === null) {
+            return self::failure('invalid_input');
+        }
+        $referenced = $check['attachment_ids'] ?? [];
+        $check = WriteGate::withAttachmentCount($check, count(array_unique([...$listed, ...$referenced])));
 
         $nowTs = ($this->clock)();
         $now = gmdate('Y-m-d H:i:s', $nowTs);
@@ -229,9 +238,17 @@ final class TopicService
             if ($this->forums->find($forumId) === null) {
                 return self::failure('forum_not_found');
             }
+            $plan = AttachmentService::emptyPlan();
+            if ($listed !== [] || $referenced !== []) {
+                $prepared = $this->attachments()->prepareClaim($userId, $listed, $referenced);
+                if (!$prepared['ok']) {
+                    return self::failure($prepared['error']);
+                }
+                $plan = $prepared['plan'];
+            }
             // Statistikzeile vor der Transaktion (Autocommit): die Mitgliedersperre trifft dann eine vorhandene Zeile.
             $this->stats->ensure($userId, $now);
-            $result = Transaction::run($this->db, fn (): array => $this->createLocked($userId, $forumId, $title, $body, $nowTs, $now, $since, $check, $screen));
+            $result = Transaction::run($this->db, fn (): array => $this->createLocked($userId, $forumId, $title, $body, $nowTs, $now, $since, $check, $screen, $plan));
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('topic.create', $e, ['forum_id' => $forumId]);
         }
@@ -248,10 +265,12 @@ final class TopicService
     /**
      * @param array<string, mixed>|null $check Ergebnis von `WriteGate::inspect()`
      * @param array<string, mixed>|null $screen Ergebnis von `WriteGate::screen()` (`ok = true`)
+     * @param array<string, mixed>|null $plan Zuordnungsplan aus `AttachmentService::prepareClaim()`
      * @return array<string, mixed>
      */
-    private function createLocked(int $userId, int $forumId, string $title, string $body, int $nowTs, string $now, string $since, ?array $check = null, ?array $screen = null): array
+    private function createLocked(int $userId, int $forumId, string $title, string $body, int $nowTs, string $now, string $since, ?array $check = null, ?array $screen = null, ?array $plan = null): array
     {
+        $plan ??= AttachmentService::emptyPlan();
         // Sperrreihenfolge: Forum → (Thema, Beitrag: neu) → Mitglied. Mitgliedersperre vor der ersten nicht sperrenden
         // Leseanweisung der Transaktion (Dublettenprüfung, `can(fresh)`): der Schnappschuss von REPEATABLE READ entsteht erst
         // danach und sieht jede Antwort, die ein gleichzeitiger Aufruf desselben Mitglieds in einem anderen Forum committet hat.
@@ -265,10 +284,16 @@ final class TopicService
         if ($duplicate !== null) {
             return self::duplicateResult($duplicate, $forumId);
         }
+        // Anhänge: Sperrebene 5 nach der Statistik.
+        $lockedAttachments = $plan['lock'] === [] ? [] : $this->attachments()->lock($plan);
 
         $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs, 'fresh' => true] + $this->gate->context($check, $screen));
         if (!$decision->allowed) {
             return self::denied($decision);
+        }
+        $attachmentError = $plan['lock'] === [] ? null : AttachmentService::verify($plan, $lockedAttachments, $userId, null);
+        if ($attachmentError !== null) {
+            return self::failure($attachmentError);
         }
         $status = match ($decision->initialStatus) {
             null, 'published' => 'published',
@@ -304,6 +329,10 @@ final class TopicService
         $this->topics->update($topicId, $published
             ? ['first_post_id' => $postId, 'last_post_id' => $postId, 'last_poster_id' => $userId]
             : ['first_post_id' => $postId]);
+        if ($plan['ids'] !== []) {
+            $this->attachments()->apply($plan, $postId, $userId);
+            $this->attachments()->syncTopicFlag(['id' => $topicId, 'has_attachments' => 0], $published, $plan, $now);
+        }
         if ($published) {
             // Nur veröffentlichte Themen zählen; die Freigabe (PR #2b) bucht später nach.
             $this->forums->bumpCounters($forumId, 1, 1, $now, $postId, $topicId, $userId, $now);
@@ -313,6 +342,12 @@ final class TopicService
         $this->readStates->advance($userId, $topicId, $postId, $now);
 
         return ['success' => true, 'topic_id' => $topicId, 'post_id' => $postId, 'forum_id' => $forumId, 'status' => $status, 'slug' => $slug];
+    }
+
+    /** Anhangsdienst auf derselben Verbindung, erst bei Bedarf (Themen ohne Anhänge berühren ihn nie). */
+    private function attachments(): AttachmentService
+    {
+        return $this->attachmentService ??= new AttachmentService($this->db, $this->settings);
     }
 
     /** Fehlercode zu den Längen von Titel und Text (`title_min`/`title_max`, `post_min`/`post_max`), sonst null. */

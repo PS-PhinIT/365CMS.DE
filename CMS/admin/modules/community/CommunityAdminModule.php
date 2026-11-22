@@ -53,7 +53,7 @@ final class CommunityAdminModule
     public const MAX_FORUM_DEPTH = 3;
 
     /** Aktionen, die `community.manage` verlangen (die Einstiegslogik prüft das je POST). */
-    public const MANAGE_ACTIONS = ['save_settings', 'save_rank', 'delete_rank', 'save_category', 'save_forum', 'move', 'save_permissions', 'export_download', 'export_delete'];
+    public const MANAGE_ACTIONS = ['save_settings', 'save_rank', 'delete_rank', 'save_category', 'save_forum', 'move', 'reorder', 'delete_category', 'delete_forum', 'save_permissions', 'export_download', 'export_delete'];
 
     /** Zeitangaben der Sperre: Auswahl in Tagen (0 = dauerhaft, nur mit `community.ban`, der Dienst prüft das). */
     public const BAN_DAYS = [1, 3, 7, 14, 30, 90, 365, 0];
@@ -78,7 +78,20 @@ final class CommunityAdminModule
         $key = Codes::errorKey($code);
         $text = I18n::t($key);
 
-        return $text !== '' && $text !== $key ? $text : 'Aktion nicht möglich (' . $code . ').';
+        return $text !== '' && $text !== $key ? $text : I18n::t('community.admin.msg.action_failed', ['code' => $code]);
+    }
+
+    /** Übersetzter Titel eines Bereichs (Übersicht: „Community“ in allen Sprachen). */
+    public static function sectionTitle(string $section): string
+    {
+        $title = (string) (self::SECTIONS[$section][1] ?? '');
+        if ($section === 'overview' || $title === '') {
+            return $title;
+        }
+        $key = 'community.admin.section.' . $section;
+        $text = I18n::t($key);
+
+        return $text !== '' && $text !== $key ? $text : $title;
     }
 
     public static function date(mixed $utc): string
@@ -131,10 +144,10 @@ final class CommunityAdminModule
                 'bans' => $count('community_bans', 'lifted_at IS NULL AND (ends_at IS NULL OR ends_at > UTC_TIMESTAMP())'),
             ],
             'checklist' => [
-                ['ok' => $categoryCount > 0, 'text' => 'Mindestens eine Kategorie angelegt', 'link' => '/admin/community-structure'],
-                ['ok' => $forumCount > 0, 'text' => 'Mindestens ein Forum angelegt', 'link' => '/admin/community-structure'],
-                ['ok' => $settings->bool('guests_can_read'), 'text' => 'Gäste dürfen lesen (optional, für öffentliche Foren)', 'link' => '/admin/community-settings'],
-                ['ok' => $settings->bool('require_verified_email'), 'text' => 'Schreiben nur mit bestätigter E-Mail-Adresse', 'link' => '/admin/community-settings'],
+                ['ok' => $categoryCount > 0, 'text' => I18n::t('community.admin.checklist.category'), 'link' => '/admin/community-structure'],
+                ['ok' => $forumCount > 0, 'text' => I18n::t('community.admin.checklist.forum'), 'link' => '/admin/community-structure'],
+                ['ok' => $settings->bool('guests_can_read'), 'text' => I18n::t('community.admin.checklist.guests'), 'link' => '/admin/community-settings'],
+                ['ok' => $settings->bool('require_verified_email'), 'text' => I18n::t('community.admin.checklist.verified'), 'link' => '/admin/community-settings'],
             ],
             'base_path' => '/' . $settings->string('base_path'),
         ];
@@ -256,24 +269,27 @@ final class CommunityAdminModule
         $reason = trim((string) ($post['reason'] ?? ''));
 
         return match ($action) {
-            'approve_post' => $this->outcome(ModerationService::instance()->approvePost($userId, (int) ($post['id'] ?? 0), $reason), 'Beitrag freigegeben.'),
-            'reject_post' => $this->outcome(ModerationService::instance()->rejectPost($userId, (int) ($post['id'] ?? 0), $reason), 'Beitrag abgelehnt.'),
+            'approve_post' => $this->outcome(ModerationService::instance()->approvePost($userId, (int) ($post['id'] ?? 0), $reason), I18n::t('community.admin.msg.post_approved')),
+            'reject_post' => $this->outcome(ModerationService::instance()->rejectPost($userId, (int) ($post['id'] ?? 0), $reason), I18n::t('community.admin.msg.post_rejected')),
             'resolve_report' => $this->resolveReport($post, $userId, $reason),
             'ban' => $this->ban($post, $userId, $reason),
-            'lift_ban' => $this->outcome(BanService::instance()->lift($userId, (int) ($post['id'] ?? 0), $reason), 'Sperre aufgehoben.'),
+            'lift_ban' => $this->outcome(BanService::instance()->lift($userId, (int) ($post['id'] ?? 0), $reason), I18n::t('community.admin.msg.ban_lifted')),
             'bulk' => $this->bulk($post, $userId, $reason),
             'save_rank' => $this->saveRank($post, $userId),
-            'delete_rank' => $this->outcome(RankService::instance()->delete($userId, (int) ($post['id'] ?? 0)), 'Rang gelöscht.'),
+            'delete_rank' => $this->outcome(RankService::instance()->delete($userId, (int) ($post['id'] ?? 0)), I18n::t('community.admin.msg.rank_deleted')),
             'save_settings' => $this->saveSettings($post),
             'save_category' => $this->saveCategory($post),
             'save_forum' => $this->saveForum($post),
             'move' => $this->move($post),
+            'reorder' => $this->reorder($post),
+            'delete_category' => $this->deleteCategory($post),
+            'delete_forum' => $this->deleteForum($post),
             'save_permissions' => $this->savePermissions($post),
             'export_download' => $this->exportDownload($post, $userId),
             'export_delete' => CommunityPrivacy::deleteExport(is_string($post['file'] ?? null) ? (string) $post['file'] : '', $userId)
-                ? ['success' => true, 'message' => 'Exportdatei gelöscht.']
-                : ['success' => false, 'error' => 'Die Exportdatei wurde nicht gefunden.'],
-            default => ['success' => false, 'error' => 'Unbekannte Aktion.'],
+                ? ['success' => true, 'message' => I18n::t('community.admin.msg.export_deleted')]
+                : ['success' => false, 'error' => I18n::t('community.admin.msg.export_not_found')],
+            default => ['success' => false, 'error' => I18n::t('community.admin.msg.unknown_action')],
         };
     }
 
@@ -302,7 +318,7 @@ final class CommunityAdminModule
         $name = is_string($post['file'] ?? null) ? (string) $post['file'] : '';
         $path = CommunityPrivacy::exportPath($name);
         if ($path === null || headers_sent()) {
-            return ['success' => false, 'error' => 'Die Exportdatei wurde nicht gefunden.'];
+            return ['success' => false, 'error' => I18n::t('community.admin.msg.export_not_found')];
         }
         \CMS\AuditLogger::instance()->log(\CMS\AuditLogger::CAT_SETTING, 'community.privacy.export_download', 'DSGVO-Auskunft: Exportdatei der Community heruntergeladen', 'community_export', null, ['file' => $name, 'user_id' => $userId], 'info');
         header('Content-Type: application/json; charset=utf-8');
@@ -320,10 +336,10 @@ final class CommunityAdminModule
         $status = (string) ($post['status'] ?? '');
         $result = ReportService::instance()->resolve($userId, (int) ($post['id'] ?? 0), $status, $note, isset($post['up_to']) ? (int) $post['up_to'] : null);
         if (!empty($result['success']) && !empty($result['remaining'])) {
-            return ['success' => true, 'message' => 'Teilweise erledigt: weitere offene Meldungen zum Ziel bleiben, bitte erneut absenden.'];
+            return ['success' => true, 'message' => I18n::t('community.admin.msg.report_partial')];
         }
 
-        return $this->outcome($result, 'Meldung erledigt.');
+        return $this->outcome($result, I18n::t('community.admin.msg.report_resolved'));
     }
 
     /** @return array<string, mixed> */
@@ -336,7 +352,7 @@ final class CommunityAdminModule
         $scope = (string) ($post['scope'] ?? 'write');
         $result = BanService::instance()->ban($userId, (int) ($post['user_id'] ?? 0), $scope, $days === 0 ? null : $days * 86400, $reason, trim((string) ($post['note'] ?? '')));
 
-        return $this->outcome($result, 'Mitglied gesperrt.');
+        return $this->outcome($result, I18n::t('community.admin.msg.member_banned'));
     }
 
     /** @return array<string, mixed> */
@@ -345,7 +361,7 @@ final class CommunityAdminModule
         $operation = (string) ($post['operation'] ?? '');
         $ids = array_values(array_filter(array_map('intval', is_array($post['ids'] ?? null) ? $post['ids'] : []), static fn (int $id): bool => $id > 0));
         if ($ids === []) {
-            return ['success' => false, 'error' => 'Bitte mindestens ein Thema auswählen.'];
+            return ['success' => false, 'error' => I18n::t('community.admin.msg.bulk_none')];
         }
         $params = ['reason' => $reason];
         if ($operation === 'topic.move') {
@@ -356,11 +372,12 @@ final class CommunityAdminModule
             return ['success' => false, 'error' => self::errorText($result['error'] ?? null)];
         }
         $failed = (int) ($result['failed'] ?? 0);
+        $summary = I18n::t('community.admin.msg.bulk_result', ['done' => (int) ($result['done'] ?? 0), 'failed' => $failed]);
 
         return [
             'success' => $failed === 0,
-            'message' => sprintf('%d erledigt, %d fehlgeschlagen.', (int) ($result['done'] ?? 0), $failed),
-            'error' => sprintf('%d erledigt, %d fehlgeschlagen.', (int) ($result['done'] ?? 0), $failed),
+            'message' => $summary,
+            'error' => $summary,
         ];
     }
 
@@ -412,7 +429,7 @@ final class CommunityAdminModule
         }
         $this->flush();
 
-        return $this->outcome($result, 'Kategorie gespeichert.');
+        return $this->outcome($result, I18n::t('community.admin.msg.category_saved'));
     }
 
     /** @return array<string, mixed> */
@@ -453,7 +470,7 @@ final class CommunityAdminModule
         }
         $this->flush();
 
-        return $this->outcome($result, 'Forum gespeichert.');
+        return $this->outcome($result, I18n::t('community.admin.msg.forum_saved'));
     }
 
     /** Neue Position am Ende (alle Zeilen der Tabelle; die Reihenfolge gilt je Ebene). */
@@ -475,39 +492,111 @@ final class CommunityAdminModule
         $kind = (string) ($post['kind'] ?? '');
         $id = (int) ($post['id'] ?? 0);
         $delta = (string) ($post['dir'] ?? '') === 'up' ? -1 : 1;
-        $now = gmdate('Y-m-d H:i:s');
-        if ($kind === 'category') {
-            $repo = new CategoryRepository();
-            $siblings = array_map(static fn (array $row): int => (int) $row['id'], array_values(array_map(static fn ($r): array => (array) $r, Database::instance()->get_results('SELECT id FROM ' . Database::instance()->getPrefix() . 'community_categories ORDER BY sort_order ASC, id ASC') ?: [])));
-            $apply = static fn (int $rowId, int $order) => $repo->update($rowId, ['sort_order' => $order], $now);
-        } elseif ($kind === 'forum') {
-            $repo = new ForumRepository();
-            $forum = $repo->find($id);
-            if ($forum === null) {
-                return ['success' => false, 'error' => self::errorText('forum_not_found')];
-            }
-            $siblings = [];
-            foreach ($repo->tree() as $row) {
-                if ((int) $row['category_id'] === (int) $forum['category_id'] && (int) ($row['parent_id'] ?? 0) === (int) ($forum['parent_id'] ?? 0)) {
-                    $siblings[] = (int) $row['id'];
-                }
-            }
-            $apply = static fn (int $rowId, int $order) => $repo->update($rowId, ['sort_order' => $order], $now);
-        } else {
-            return ['success' => false, 'error' => self::errorText('invalid_input')];
+        $siblings = $this->siblings($kind, $id);
+        if (is_string($siblings)) {
+            return ['success' => false, 'error' => self::errorText($siblings)];
         }
         $index = array_search($id, $siblings, true);
         $target = $index === false ? false : $index + $delta;
         if ($index === false || $target < 0 || $target >= count($siblings)) {
-            return ['success' => true, 'message' => 'Position unverändert.'];
+            return ['success' => true, 'message' => I18n::t('community.admin.msg.position_unchanged')];
         }
         [$siblings[$index], $siblings[$target]] = [$siblings[$target], $siblings[$index]];
-        foreach ($siblings as $position => $rowId) {
-            $apply($rowId, ($position + 1) * 10);
+        $this->applyOrder($kind, $siblings);
+
+        return ['success' => true, 'message' => I18n::t('community.admin.msg.order_changed')];
+    }
+
+    /**
+     * Neue Reihenfolge einer Ebene nach dem Ziehen (`order` = IDs mit Komma, z. B. „4,2,7“). Die Liste muss genau die Geschwister
+     * des ersten Eintrags enthalten (gleiche Kategorie und gleiches Oberforum); sonst bleibt alles unverändert.
+     *
+     * @return array<string, mixed>
+     */
+    private function reorder(array $post): array
+    {
+        $kind = (string) ($post['kind'] ?? '');
+        $order = array_map('intval', array_filter(explode(',', (string) ($post['order'] ?? '')), static fn (string $part): bool => preg_match('/^\d{1,10}$/', $part) === 1));
+        $siblings = $order === [] ? 'invalid_input' : $this->siblings($kind, $order[0]);
+        if (is_string($siblings)) {
+            return ['success' => false, 'error' => self::errorText($siblings)];
+        }
+        $sortedOrder = $order;
+        $sortedSiblings = $siblings;
+        sort($sortedOrder);
+        sort($sortedSiblings);
+        if ($sortedOrder !== $sortedSiblings) {
+            return ['success' => false, 'error' => I18n::t('community.admin.msg.structure_changed')];
+        }
+        $this->applyOrder($kind, array_values($order));
+
+        return ['success' => true, 'message' => I18n::t('community.admin.msg.order_changed')];
+    }
+
+    /**
+     * IDs derselben Ebene in der aktuellen Reihenfolge (Kategorien: alle; Foren: gleiche Kategorie und gleiches Oberforum) oder ein
+     * Fehlercode.
+     *
+     * @return list<int>|string
+     */
+    private function siblings(string $kind, int $id): array|string
+    {
+        if ($kind === 'category') {
+            $db = Database::instance();
+
+            return array_map(static fn ($row): int => (int) ((array) $row)['id'], $db->get_results('SELECT id FROM ' . $db->getPrefix() . 'community_categories ORDER BY sort_order ASC, id ASC') ?: []);
+        }
+        if ($kind !== 'forum') {
+            return 'invalid_input';
+        }
+        $repo = new ForumRepository();
+        $forum = $repo->find($id);
+        if ($forum === null) {
+            return 'forum_not_found';
+        }
+        $siblings = [];
+        foreach ($repo->tree() as $row) {
+            if ((int) $row['category_id'] === (int) $forum['category_id'] && (int) ($row['parent_id'] ?? 0) === (int) ($forum['parent_id'] ?? 0)) {
+                $siblings[] = (int) $row['id'];
+            }
+        }
+
+        return $siblings;
+    }
+
+    /** Nummeriert eine Ebene neu (10, 20, …) und verwirft die Zwischenspeicher. @param list<int> $ids */
+    private function applyOrder(string $kind, array $ids): void
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $repo = $kind === 'category' ? new CategoryRepository() : new ForumRepository();
+        foreach ($ids as $position => $rowId) {
+            $repo->update($rowId, ['sort_order' => ($position + 1) * 10], $now);
         }
         $this->flush();
+    }
 
-        return ['success' => true, 'message' => 'Reihenfolge geändert.'];
+    /** @return array<string, mixed> */
+    private function deleteCategory(array $post): array
+    {
+        $result = (new CategoryRepository())->delete((int) ($post['id'] ?? 0));
+        $this->flush();
+        if (($result['error'] ?? '') === 'invalid_state') {
+            return ['success' => false, 'error' => I18n::t('community.admin.msg.category_not_empty')];
+        }
+
+        return $this->outcome($result, I18n::t('community.admin.msg.category_deleted'));
+    }
+
+    /** @return array<string, mixed> */
+    private function deleteForum(array $post): array
+    {
+        $result = (new ForumRepository())->delete((int) ($post['id'] ?? 0));
+        $this->flush();
+        if (($result['error'] ?? '') === 'invalid_state') {
+            return ['success' => false, 'error' => I18n::t('community.admin.msg.forum_not_empty')];
+        }
+
+        return $this->outcome($result, I18n::t('community.admin.msg.forum_deleted'));
     }
 
     // ── Rechte ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -530,7 +619,23 @@ final class CommunityAdminModule
             $moderators = $repo->moderatorRowsOf($forumId);
         }
 
-        return ['forums' => $forums, 'forum_id' => $forumId, 'rows' => $rows, 'moderators' => $moderators, 'roles' => $this->roleSlugs(), 'keys' => Settings::PERMISSION_KEYS];
+        return ['forums' => $forums, 'forum_id' => $forumId, 'rows' => $rows, 'moderators' => $moderators, 'roles' => $this->roleSlugs(), 'groups' => $this->groups(), 'keys' => Settings::PERMISSION_KEYS];
+    }
+
+    /** @return array<int, string> Benutzergruppen des Cores (`user_groups`, ID => Name, inaktive markiert) als Subjekte der Matrix. */
+    private function groups(): array
+    {
+        $db = Database::instance();
+        $groups = [];
+        try {
+            foreach ($db->get_results('SELECT id, name, is_active FROM ' . $db->getPrefix() . 'user_groups ORDER BY name ASC, id ASC') ?: [] as $row) {
+                $row = (array) $row;
+                $groups[(int) $row['id']] = (string) $row['name'] . (empty($row['is_active']) ? ' (' . I18n::t('community.admin.msg.group_inactive') . ')' : '');
+            }
+        } catch (\Throwable) {
+        }
+
+        return $groups;
     }
 
     /** @return list<string> Rollen, die als Subjekt der Matrix wählbar sind (ohne `admin`/`moderator`: sie wirken über ihre Capabilities). */
@@ -590,7 +695,7 @@ final class CommunityAdminModule
             if (preg_match('/^([ug])(\d{1,10})$/i', $token, $m) === 1) {
                 $moderators[] = ['subject_type' => strtolower($m[1]) === 'g' ? 'group' : 'user', 'subject_id' => (int) $m[2], 'include_children' => $includeChildren];
             } elseif ($token !== '') {
-                return ['success' => false, 'error' => 'Moderatoren bitte als u<ID> (Mitglied) oder g<ID> (Gruppe) angeben, z. B. u12 g3.'];
+                return ['success' => false, 'error' => I18n::t('community.admin.msg.moderators_invalid')];
             }
         }
         try {
@@ -599,11 +704,11 @@ final class CommunityAdminModule
             $repo->saveModerators($forumId, $moderators);
             $repo->touch([$forumId], $now);
         } catch (\InvalidArgumentException $e) {
-            return ['success' => false, 'error' => 'Ungültige Eingabe: ' . $e->getMessage()];
+            return ['success' => false, 'error' => I18n::t('community.admin.msg.invalid_input', ['detail' => $e->getMessage()])];
         }
         $this->flush();
 
-        return ['success' => true, 'message' => 'Rechte gespeichert.'];
+        return ['success' => true, 'message' => I18n::t('community.admin.msg.permissions_saved')];
     }
 
     /** Rechte-Cache und Baum verwerfen (Struktur oder Rechte haben sich geändert). */
@@ -628,7 +733,7 @@ final class CommunityAdminModule
             'sort_order' => (int) ($post['sort_order'] ?? 0),
         ];
 
-        return $this->outcome(RankService::instance()->save($userId, $data, $id > 0 ? $id : null), 'Rang gespeichert.');
+        return $this->outcome(RankService::instance()->save($userId, $data, $id > 0 ? $id : null), I18n::t('community.admin.msg.rank_saved'));
     }
 
     /** @return array<string, mixed> */
@@ -681,7 +786,7 @@ final class CommunityAdminModule
         $values['word_filter'] = $filter;
 
         return Settings::getInstance()->save($values)
-            ? ['success' => true, 'message' => 'Einstellungen gespeichert.']
-            : ['success' => false, 'error' => 'Einstellungen konnten nicht gespeichert werden.'];
+            ? ['success' => true, 'message' => I18n::t('community.admin.msg.settings_saved')]
+            : ['success' => false, 'error' => I18n::t('community.admin.msg.settings_failed')];
     }
 }

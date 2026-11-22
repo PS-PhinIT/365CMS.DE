@@ -309,7 +309,7 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 - `assets/css/`. 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
-- `assets/js/`. 59 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (no build step)
+- `assets/js/`. 60 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (no build step)
 - `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono as local WOFF2 files
 - bundled libraries, see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
@@ -320,7 +320,7 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
 - `assets/css/`. 32 Stylesheets
-- `assets/js/`. 59 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
+- `assets/js/`. 60 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
 - `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien
 - gebündelte Bibliotheken, siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 

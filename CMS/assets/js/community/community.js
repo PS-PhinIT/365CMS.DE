@@ -10,6 +10,14 @@ if (root) {
     const token = root.getAttribute('data-cc-token') || '';
     const status = document.getElementById('cc-status');
     const dialog = document.getElementById('cc-dialog');
+    let messages = {};
+    try {
+        messages = JSON.parse(root.getAttribute('data-cc-messages') || '{}');
+    } catch (error) {
+        messages = {};
+    }
+    // Texte kommen vom Server (Sprachschlüssel community.js.*); ohne Text bleibt der Schlüssel sichtbar.
+    const msg = (key) => messages[key] || key;
 
     const say = (text, isError) => {
         if (!status) {
@@ -37,7 +45,7 @@ if (root) {
                 body,
             });
         } catch (error) {
-            return { success: false, message: 'Keine Verbindung. Bitte später erneut versuchen.' };
+            return { success: false, message: msg('offline') };
         }
         let json = null;
         try {
@@ -46,10 +54,10 @@ if (root) {
             json = null;
         }
         if (response.status === 403) {
-            return { success: false, message: 'Die Sitzung ist abgelaufen. Bitte die Seite neu laden.' };
+            return { success: false, message: msg('expired') };
         }
 
-        return json || { success: false, message: 'Unerwartete Antwort.' };
+        return json || { success: false, message: msg('unexpected') };
     };
 
     /** Dialog mit Feldern (DOM-API, kein HTML aus Text); löst mit den Werten oder null (abgebrochen) auf. */
@@ -147,22 +155,22 @@ if (root) {
             }
             button.setAttribute('aria-pressed', active ? 'false' : 'true');
             button.textContent = active ? button.dataset.labelOff : button.dataset.labelOn;
-            say(active ? 'Abo beendet.' : 'Abo eingerichtet.', false);
+            say(active ? msg('unsubscribed') : msg('subscribed'), false);
         },
         async report(button) {
-            const values = await ask('Melden', [
-                { type: 'select', name: 'reason', label: 'Grund', options: reasons, required: true },
-                { type: 'textarea', name: 'message', label: 'Hinweis (optional)' },
+            const values = await ask(msg('report_title'), [
+                { type: 'select', name: 'reason', label: msg('reason'), options: reasons, required: true },
+                { type: 'textarea', name: 'message', label: msg('note') },
             ]);
             if (!values) {
                 return;
             }
             const result = await call('melden', { type: button.dataset.type, id: button.dataset.id, reason: values.reason, message: values.message });
-            say(result.success ? 'Danke, die Meldung ist angekommen.' : result.message, !result.success);
+            say(result.success ? msg('reported') : result.message, !result.success);
         },
         async moderate(button) {
             const values = await ask(button.textContent.trim(), [
-                { type: 'text', name: 'reason', label: needsReason ? 'Grund (Pflicht)' : 'Grund', required: needsReason },
+                { type: 'text', name: 'reason', label: needsReason ? msg('reason_required') : msg('reason'), required: needsReason },
             ]);
             if (!values) {
                 return;
@@ -181,6 +189,10 @@ if (root) {
                 return;
             }
             window.location.reload();
+        },
+        async 'mark-read'(button) {
+            const result = await call('gelesen', { forum_id: button.dataset.forumId || '0' });
+            say(result.success ? button.dataset.done : result.message, !result.success);
         },
         async preview(button) {
             const target = document.getElementById('cc-preview');

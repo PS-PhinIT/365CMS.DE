@@ -46,7 +46,9 @@ final class WriteGate
     /**
      * Wortfilter, Zählung und Hosts für Titel (`null` = nur Text) und Text. `null`, wenn kein Guard gesetzt ist.
      *
-     * @return array{guard: ContentGuard, title: ?string, body: string, verdict: string, replaced: bool, content: array{links: int, images: int, attachments: int, failed: bool}, content_before?: array<string, mixed>, hosts: list<string>}|null
+     * `attachment_ids`: im Text eingebettete Anhänge (`attachment:ID`), die der Dienst zusätzlich zu den aufgeführten zuordnet.
+     *
+     * @return array{guard: ContentGuard, title: ?string, body: string, verdict: string, replaced: bool, content: array{links: int, images: int, attachments: int, failed: bool}, content_before?: array<string, mixed>, hosts: list<string>, attachment_ids: list<int>}|null
      */
     public function inspect(?string $title, string $body): ?array
     {
@@ -55,12 +57,28 @@ final class WriteGate
             return null;
         }
         $filtered = $guard->filterText($title, $body);
-        [$content, $hosts] = self::measure($guard, $filtered['body']);
+        [$content, $hosts, $attachmentIds] = self::measure($guard, $filtered['body']);
 
         return [
             'guard' => $guard, 'title' => $filtered['title'], 'body' => $filtered['body'], 'verdict' => $filtered['verdict'],
-            'replaced' => $filtered['replaced'], 'content' => $content, 'hosts' => $hosts,
+            'replaced' => $filtered['replaced'], 'content' => $content, 'hosts' => $hosts, 'attachment_ids' => $attachmentIds,
         ];
+    }
+
+    /**
+     * Zählt aufgeführte Anhänge (Formularliste) mit: `content.attachments` ist die Zahl aller Anhänge, die der Beitrag nach dem
+     * Speichern trägt (eingebettet ∪ aufgeführt ∪ vorhandene − entfernte), damit `can()` die Grenze der Stufe gegen die Wirklichkeit prüft.
+     *
+     * @param array<string, mixed>|null $check
+     * @return array<string, mixed>|null
+     */
+    public static function withAttachmentCount(?array $check, int $count): ?array
+    {
+        if ($check !== null) {
+            $check['content']['attachments'] = max((int) ($check['content']['attachments'] ?? 0), max(0, $count));
+        }
+
+        return $check;
     }
 
     /**
@@ -130,7 +148,7 @@ final class WriteGate
      * Eine Analyse des Renderers für Zählung und Hosts. Scheitert sie (Bündel fehlt, Grenze, Ausnahme), gilt die Zählung als
      * fehlgeschlagen (`failed`, der Beitrag wird geprüft); `[]` statt `null` verhindert ein zweites Parsen in `content()`.
      *
-     * @return array{0: array{links: int, images: int, attachments: int, failed: bool}, 1: list<string>}
+     * @return array{0: array{links: int, images: int, attachments: int, failed: bool}, 1: list<string>, 2: list<int>}
      */
     private static function measure(ContentGuard $guard, string $markdown): array
     {
@@ -145,6 +163,8 @@ final class WriteGate
         }
         $content = $guard->content($markdown, $stats === null ? 0 : count((array) ($stats['attachments'] ?? [])), $stats ?? []);
 
-        return [$content, $stats === null ? [] : array_values(array_filter((array) ($stats['hosts'] ?? []), 'is_string'))];
+        $ids = $stats === null ? [] : array_values(array_filter((array) ($stats['attachments'] ?? []), static fn (mixed $id): bool => is_int($id) && $id > 0));
+
+        return [$content, $stats === null ? [] : array_values(array_filter((array) ($stats['hosts'] ?? []), 'is_string')), $ids];
     }
 }

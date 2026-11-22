@@ -159,6 +159,7 @@
             ["edit_reason","varchar(255)","YES",null,false],
             ["reaction_count","int unsigned","NO","0",false],
             ["ip_hash","char(64)","YES",null,false],
+            ["deleted_at","datetime","YES",null,false],
             ["created_at","datetime","NO","CURRENT_TIMESTAMP",false],
             ["updated_at","datetime","NO","CURRENT_TIMESTAMP",false]
         ],

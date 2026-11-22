@@ -386,6 +386,39 @@ final class ForumRepository extends AbstractRepository
     }
 
     /**
+     * Löscht ein leeres Forum: keine Unterforen und kein Thema in irgendeinem Zustand (auch nicht im Papierkorb oder als
+     * Verschiebe-Verweis). Mit dem Forum gehen seine Rechte-Zeilen, Moderatoren, Lesemarken, Forum-Abonnements und
+     * Weiterleitungen auf das Forum. Fachfehler: `forum_not_found`, `invalid_state` (nicht leer).
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function delete(int $id): array
+    {
+        try {
+            return Transaction::run($this->db, function () use ($id): array {
+                if ($this->lockForUpdate($id) === null) {
+                    return ['success' => false, 'error' => 'forum_not_found'];
+                }
+                $children = (int) $this->fetchValue('SELECT COUNT(*) FROM ' . $this->table(self::TABLE) . ' WHERE parent_id = ?', [$id]);
+                $topics = (int) $this->fetchValue('SELECT COUNT(*) FROM ' . $this->table('community_topics') . ' WHERE forum_id = ?', [$id]);
+                if ($children > 0 || $topics > 0) {
+                    return ['success' => false, 'error' => 'invalid_state'];
+                }
+                $this->run('DELETE FROM ' . $this->table(self::PERMISSIONS) . ' WHERE forum_id = ?', [$id]);
+                $this->run('DELETE FROM ' . $this->table(self::MODERATORS) . ' WHERE forum_id = ?', [$id]);
+                $this->run('DELETE FROM ' . $this->table('community_forum_read_marks') . ' WHERE forum_id = ?', [$id]);
+                $this->run('DELETE FROM ' . $this->table('community_subscriptions') . " WHERE target_type = 'forum' AND target_id = ?", [$id]);
+                $this->run('DELETE FROM ' . $this->table('community_redirects') . " WHERE target_type = 'forum' AND target_id = ?", [$id]);
+                $this->run('DELETE FROM ' . $this->table(self::TABLE) . ' WHERE id = ?', [$id]);
+
+                return ['success' => true];
+            });
+        } finally {
+            $this->forgetTree();
+        }
+    }
+
+    /**
      * Zeile mit Sperre lesen (nur in einer Transaktion sinnvoll). Serialisiert alle Schreiber desselben Forums.
      *
      * @return array<string, mixed>|null

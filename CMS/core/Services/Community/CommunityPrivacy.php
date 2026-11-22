@@ -9,9 +9,13 @@
  * höchstens MAX_ROWS Zeilen (`truncated` nennt gekürzte Bereiche). Die IP-Kennung (`ip_hash`, HMAC einer gekürzten IP) steht nicht im
  * Export: sie ist ein Pseudonym nur für die Moderation; der Export nennt die Zahl der Beiträge mit gespeicherter Kennung.
  *
- * Löschung (Standard: Anonymisieren, §7 der Übergabe; ein Modus „Beiträge löschen“ gibt es noch nicht):
+ * Löschung (Einstellung `erase_mode`, Standard `anonymize` nach §7 der Übergabe):
  * - Beiträge, Themen, Anhänge, Verlauf: der Bezug zum Konto entfällt (`user_id`/`edited_by` NULL, `ip_hash` NULL), der Inhalt bleibt unter
  *   „Gelöschtes Mitglied“ stehen. Die Dateien bleiben am Beitrag.
+ * - Modus `delete` („Beiträge löschen“, seit 4.2.0) zusätzlich: Text und HTML-Cache der Beiträge werden geleert und `deleted_at` gesetzt
+ *   (die Zeile bleibt als Platzhalter für Zählung, Seitenposition und Antworten), frühere Fassungen gelöscht, die Anhänge vom Beitrag
+ *   gelöst (die Regel `community.orphan_uploads` entfernt Zeilen und Dateien beim nächsten Lauf) und die Beiträge aus dem Suchindex
+ *   genommen. Themen-Titel bleiben (anonym); Zitate in Beiträgen anderer Mitglieder bleiben unverändert.
  * - Reaktionen: gelöscht, die Zähler (Beitrag, Thema, Statistik des Autors) werden zurückgebucht.
  * - Abos, Lesestatus, Lesemarken, Entwürfe, Stimmen, Ignorierliste (auch wer ihn ignoriert), Abzeichen, Statistik samt Signatur: gelöscht.
  * - Verwarnungen und Sperren des Mitglieds: gelöscht (die Spalten sind NOT NULL und lassen sich nicht anonymisieren); wo das Mitglied
@@ -31,6 +35,8 @@ use CMS\AuditLogger;
 use CMS\Database;
 use CMS\Logger;
 use CMS\Services\Community\Service\CommunityAccess;
+use CMS\Services\Community\Service\CommunitySearch;
+use CMS\Services\Community\Support\Settings;
 use CMS\Services\PrivateStorageService;
 
 if (!defined('ABSPATH')) {
@@ -47,9 +53,19 @@ final class CommunityPrivacy
 
     private string $prefix;
 
-    public function __construct(private readonly ?Database $injected = null)
+    /** @var \Closure(list<int>): void */
+    private \Closure $unindex;
+
+    /**
+     * @param Settings|null $settings Standard: `Settings::getInstance()` (liest `erase_mode`)
+     * @param \Closure(list<int>): void|null $unindex Standard: `CommunitySearch::removePosts()`
+     */
+    public function __construct(private readonly ?Database $injected = null, private ?Settings $settings = null, ?\Closure $unindex = null)
     {
         $this->prefix = $this->db()->getPrefix();
+        $this->unindex = $unindex ?? static function (array $postIds): void {
+            CommunitySearch::instance()->removePosts($postIds);
+        };
     }
 
     private function db(): Database
@@ -312,6 +328,25 @@ final class CommunityPrivacy
             $counts[$name] = $db->execute($sql, $params)->rowCount();
         }
 
+        // 2b. Modus „Beiträge löschen“: Inhalt entfernen, solange der Bezug zum Konto noch besteht (Schritt 3 löst ihn).
+        if ($this->eraseMode() === 'delete') {
+            $postIds = array_map('intval', $db->execute("SELECT id FROM {$p}community_posts WHERE user_id = ? ORDER BY id ASC", [$userId])->fetchAll(\PDO::FETCH_COLUMN) ?: []);
+            $own = "SELECT id FROM {$p}community_posts WHERE user_id = ?";
+            $counts['revisions_deleted'] = $db->execute("DELETE FROM {$p}community_post_revisions WHERE post_id IN ({$own})", [$userId])->rowCount();
+            $counts['attachments_released'] = $db->execute("UPDATE {$p}community_attachments SET post_id = NULL WHERE post_id IN ({$own})", [$userId])->rowCount();
+            $counts['posts_deleted'] = $db->execute(
+                "UPDATE {$p}community_posts SET body = '', body_html = '', deleted_at = ?, updated_at = ? WHERE user_id = ? AND deleted_at IS NULL",
+                [$now, $now, $userId]
+            )->rowCount();
+            if ($postIds !== []) {
+                try {
+                    ($this->unindex)($postIds);
+                } catch (\Throwable $e) {
+                    Logger::instance()->withChannel('community')->warning('DSGVO-Löschung: Suchindex nicht bereinigt: {exception}', ['exception' => $e]);
+                }
+            }
+        }
+
         // 3. Anonymisieren (Inhalt und Eintrag bleiben, der Bezug zum Konto entfällt).
         $nulls = [
             'topics' => ["UPDATE {$p}community_topics SET user_id = NULL WHERE user_id = ?", [$userId]],
@@ -342,5 +377,15 @@ final class CommunityPrivacy
         }
 
         return $counts;
+    }
+
+    /** Einstellung `erase_mode`; ohne lesbare Einstellungen der Standard (anonymisieren, die schonendere Wahl). */
+    private function eraseMode(): string
+    {
+        try {
+            return ($this->settings ?? Settings::getInstance())->string('erase_mode');
+        } catch (\Throwable) {
+            return 'anonymize';
+        }
     }
 }

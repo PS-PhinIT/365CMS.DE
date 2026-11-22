@@ -34,6 +34,7 @@ $sectionPageConfig = [
     'page_title' => $communityTitle,
     'active_page' => $communityPath === '/admin/community' ? 'community' : substr($communityPath, strlen('/admin/')),
     'csrf_action' => 'admin_community',
+    'page_assets' => ['js' => $communitySection === 'structure' ? [cms_asset_url('js/admin-community-structure.js')] : []],
     'module_factory' => static fn (): CommunityAdminModule => new CommunityAdminModule($communitySection),
     'access_checker' => static fn (): bool => cms_admin_community_can_access(),
     'access_denied_route' => '/admin',

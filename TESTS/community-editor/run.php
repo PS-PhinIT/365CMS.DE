@@ -41,6 +41,11 @@ T::run('Vorlage, Controller und Module (Quelltext)', static function () use ($re
     T::check(filesize(ABSPATH . 'assets/js/community/editor.js') + filesize(ABSPATH . 'assets/js/community/md-bridge.js') < 30 * 1024, 'eigener Editor-Code unter 30 KB (SunEditor lädt erst auf Formularseiten)');
     T::check(!str_contains($read('assets/js/community/community.js'), 'suneditor'), 'community.js bleibt unabhängig vom Editor');
     T::check(strpos($editor, 'if (root && textarea && form)') > strpos($editor, 'let editor = null;'), 'editor.js: Start erst nach den Deklarationen (kein TDZ-Fehler)');
+
+    $composeJs = $read('assets/js/community/compose.js');
+    T::check(str_contains($compose, "data-cc-local-draft=\"<?= \$e('cc-draft:'"), 'compose: lokaler Entwurfsschlüssel mit Präfix cc-draft:');
+    T::check(str_contains($composeJs, 'LOCAL_DRAFT_TTL = 30 * 24 * 60 * 60 * 1000') && str_contains($composeJs, "key.startsWith('cc-draft:') && expired(") && str_contains($composeJs, 'at: Date.now()'), 'compose.js: lokale Entwürfe tragen einen Zeitstempel und verfallen nach 30 Tagen (COM-UX-05)');
+    T::check(strpos($composeJs, 'stale.forEach') < strpos($composeJs, 'const local = (() =>'), 'compose.js: Aufräumen vor dem Angebot des lokalen Entwurfs');
 });
 
 T::run('Browser (Chromium, Playwright)', static function (): void {

@@ -9,6 +9,8 @@
  * Textfeld bedienbar. Kein Inline-Skript, keine externen Ressourcen; Skripte und Stile kommen vom eigenen Server.
  */
 import { htmlToMarkdown, isVisualSafe, splitQuotePrefix } from './md-bridge.js';
+// Anhänge, Live-Vorschau und Entwürfe des Formulars (eigenständig, auch ohne visuellen Editor wirksam).
+import './compose.js';
 
 const root = document.querySelector('[data-cc-editor]');
 const textarea = document.getElementById('cc-body');
@@ -178,6 +180,8 @@ function sync() {
     }
     const markdown = htmlToMarkdown(html());
     textarea.value = prefix !== '' ? (markdown !== '' ? `${prefix}\n\n${markdown}` : `${prefix}\n\n`) : markdown;
+    // Live-Vorschau und Entwürfe (compose.js) hören auf das Textfeld.
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function setTabs() {

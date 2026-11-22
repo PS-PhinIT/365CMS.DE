@@ -59,10 +59,20 @@ T::run('Aktionen: Eingabeprüfung vor dem Dienst', static function () use ($api)
         'moderation ohne Ziel' => ['moderation', ['op' => 'topic.lock']],
         'loesung ohne Thema' => ['loesung', ['post_id' => '4']],
         'moderation mit Array als ID' => ['moderation', ['op' => 'topic.lock', 'id' => ['1', '2']]],
+        'anhang ohne Datei' => ['anhang', ['topic_id' => '3', 'token' => str_repeat('a', 32)]],
+        'anhang-entfernen ohne ID' => ['anhang-entfernen', []],
+        'entwurf ohne Ziel' => ['entwurf', ['op' => 'save', 'body' => 'x']],
+        'entwurf mit falscher Operation' => ['entwurf', ['op' => 'drop', 'topic_id' => '3']],
+        'gelesen mit Text als Forum' => ['gelesen', ['forum_id' => 'alle']],
     ];
     foreach ($invalid as $label => [$action, $post]) {
         [$status, $body] = $api->dispatch($action, $post, 5);
         T::same([422, 'invalid_input'], [$status, $body['error'] ?? null], $label . ': invalid_input, 422');
+    }
+    $file = ['name' => 'a.png', 'type' => 'image/png', 'tmp_name' => '/tmp/x', 'error' => 0, 'size' => 3];
+    foreach (['ohne Ziel' => ['token' => str_repeat('a', 32)], 'mit falscher Kennung' => ['topic_id' => '3', 'token' => 'XYZ']] as $label => $post) {
+        [$status, $body] = $api->dispatch('anhang', $post, 5, ['file' => $file]);
+        T::same([422, 'invalid_input'], [$status, $body['error'] ?? null], 'anhang ' . $label . ': invalid_input vor dem Dienst');
     }
     T::check(array_diff(ApiController::MODERATION_OPS, ModerationService::BULK_OPERATIONS) === [], 'Moderationsaktionen der API sind Teilmenge der Sammelaktionen des Dienstes');
     T::check(array_filter(ApiController::MODERATION_OPS, static fn (string $op): bool => str_ends_with($op, '.delete')) === [], 'die API löscht nichts (Löschen gehört in die Verwaltung)');
@@ -134,6 +144,10 @@ T::run('Einbindung (Quelltext)', static function (): void {
     T::check(!str_contains($js, 'eval(') && !str_contains($js, 'document.write') && substr_count($js, 'innerHTML') === 1, 'JS: kein eval/document.write, innerHTML nur für die Vorschau (serverseitig gereinigt)');
     T::check(str_contains($js, "'X-CSRF-Token': token") && str_contains($js, "credentials: 'same-origin'"), 'JS: Token im Kopf, Cookies nur gleicher Herkunft');
     T::check(filesize(ABSPATH . 'assets/js/community/community.js') < 30 * 1024, 'JS unter 30 KB');
+    foreach (\CMS\Services\Community\Http\PublicController::JS_MESSAGES as $key) {
+        T::check(str_contains($js, "msg('" . $key . "')"), 'JS nutzt den Text ' . $key . ' aus data-cc-messages');
+    }
+    T::check(preg_match("/'[A-ZÄÖÜ][a-zäöüß]+ [a-zäöüß]/u", $js) !== 1, 'JS ohne feste deutsche Sätze (Sprachschlüssel community.js.*)');
     $topic = (string) file_get_contents(ABSPATH . 'views/community/topic.php');
     $compose = (string) file_get_contents(ABSPATH . 'views/community/compose.php');
     foreach ([$topic, $compose] as $view) {

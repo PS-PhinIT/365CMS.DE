@@ -85,6 +85,7 @@ final class PostService
     private UserStatsRepository $stats;
     private QuoteService $quotes;
     private WriteGate $gate;
+    private ?AttachmentService $attachmentService = null;
 
     /**
      * @param \Closure(): int|null $clock Unix-Zeit (Standard `time()`)
@@ -196,7 +197,8 @@ final class PostService
      * `quote_unavailable`), `seen_last_post_id` (letzter Beitrag, den das Mitglied beim Öffnen des Formulars kannte) und `force`
      * (trotz neuer Beiträge senden). Ist `topic.last_post_id > seen_last_post_id` und `force` nicht gesetzt, wird nichts
      * gespeichert: `error = new_posts` mit `new_posts` (Zahl der neuen Beiträge). Mit `force` bleibt der Lesestatus des Autors
-     * bei `seen_last_post_id`, damit die ungelesenen Fremdbeiträge ungelesen bleiben.
+     * bei `seen_last_post_id`, damit die ungelesenen Fremdbeiträge ungelesen bleiben. `attachments`: IDs eigener, noch nicht
+     * zugeordneter Anhänge (wie `TopicService::create()`).
      *
      * Ergebnis bei Erfolg: `post_id`, `topic_id`, `forum_id`, `status` (`published`/`pending`), `position` und `page`
      * (Stelle in der Liste der veröffentlichten Beiträge und Seite nach `posts_per_page`; bei `pending` `null`), bei
@@ -231,6 +233,12 @@ final class PostService
                 return self::failure($error);
             }
         }
+        $listed = AttachmentService::claimIds($options['attachments'] ?? []);
+        if ($listed === null) {
+            return self::failure('invalid_input');
+        }
+        $referenced = $check['attachment_ids'] ?? [];
+        $check = WriteGate::withAttachmentCount($check, count(array_unique([...$listed, ...$referenced])));
 
         $nowTs = ($this->clock)();
         $now = gmdate('Y-m-d H:i:s', $nowTs);
@@ -269,10 +277,18 @@ final class PostService
                     return self::failure($screen['error']);
                 }
             }
+            $plan = AttachmentService::emptyPlan();
+            if ($listed !== [] || $referenced !== []) {
+                $prepared = $this->attachments()->prepareClaim($userId, $listed, $referenced);
+                if (!$prepared['ok']) {
+                    return self::failure($prepared['error']);
+                }
+                $plan = $prepared['plan'];
+            }
             // Statistikzeile vor der Transaktion (Autocommit): die Mitgliedersperre trifft dann eine vorhandene Zeile.
             $this->stats->ensure($userId, $now);
-            $result = $this->retrying($topicId, function (array $topic) use ($userId, $topicId, $body, $quoteOf, $seen, $force, $nowTs, $now, $since, $check, $screen): ?array {
-                return $this->replyLocked($userId, $topicId, (int) $topic['forum_id'], $body, $quoteOf, $seen, $force, $nowTs, $now, $since, $check, $screen);
+            $result = $this->retrying($topicId, function (array $topic) use ($userId, $topicId, $body, $quoteOf, $seen, $force, $nowTs, $now, $since, $check, $screen, $plan): ?array {
+                return $this->replyLocked($userId, $topicId, (int) $topic['forum_id'], $body, $quoteOf, $seen, $force, $nowTs, $now, $since, $check, $screen, $plan);
             });
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('post.reply', $e, ['topic_id' => $topicId]);
@@ -290,10 +306,12 @@ final class PostService
     /**
      * @param array<string, mixed>|null $check Ergebnis von `WriteGate::inspect()`
      * @param array<string, mixed>|null $screen Ergebnis von `WriteGate::screen()` (`ok = true`)
+     * @param array<string, mixed>|null $plan Zuordnungsplan aus `AttachmentService::prepareClaim()`
      * @return array<string, mixed>|null null: das Thema hat das Forum gewechselt, der Aufrufer beginnt von vorn
      */
-    private function replyLocked(int $userId, int $topicId, int $forumId, string $body, int $quoteOf, int $seen, bool $force, int $nowTs, string $now, string $since, ?array $check = null, ?array $screen = null): ?array
+    private function replyLocked(int $userId, int $topicId, int $forumId, string $body, int $quoteOf, int $seen, bool $force, int $nowTs, string $now, string $since, ?array $check = null, ?array $screen = null, ?array $plan = null): ?array
     {
+        $plan ??= AttachmentService::emptyPlan();
         // Sperrreihenfolge: Forum → Thema → Beitrag → Mitglied. Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung der
         // Transaktion (Dublettenprüfung, `can(fresh)`): der Schnappschuss von REPEATABLE READ entsteht erst danach und sieht jede
         // Antwort, die ein gleichzeitiger Aufruf desselben Mitglieds in einem anderen Forum committet hat.
@@ -319,10 +337,16 @@ final class PostService
         if ($duplicate !== null) {
             return $this->duplicateResult($duplicate, $forumId);
         }
+        // Anhänge: Sperrebene 5 nach der Statistik.
+        $lockedAttachments = $plan['lock'] === [] ? [] : $this->attachments()->lock($plan);
 
         $decision = $this->decide($userId, 'reply', ['topic_id' => $topicId, 'now' => $nowTs, 'fresh' => true] + $this->gate->context($check, $screen));
         if (!$decision->allowed) {
             return self::denied($decision);
+        }
+        $attachmentError = $plan['lock'] === [] ? null : AttachmentService::verify($plan, $lockedAttachments, $userId, null);
+        if ($attachmentError !== null) {
+            return self::failure($attachmentError);
         }
         $status = self::initialStatus($decision);
 
@@ -352,6 +376,10 @@ final class PostService
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+        if ($plan['ids'] !== []) {
+            $this->attachments()->apply($plan, $postId, $userId);
+            $this->attachments()->syncTopicFlag($topic, $status === 'published', $plan, $now);
+        }
         if ($status === 'published') {
             $this->topics->bumpCounters($topicId, 1, $now, $postId, $userId, $now);
             if ($topic['status'] === 'published') {
@@ -386,13 +414,22 @@ final class PostService
      * alten Titel), `edit_count` steigt atomar. `$title` gilt nur für den ersten Beitrag (neuer Titel und neuer Slug des
      * Themas; sonst `invalid_input`). Ändert sich weder Text noch Titel, bleibt alles unverändert (`changed = false`, keine
      * Revision, kein Hook). `$expectedEditCount`: der Stand, den der Bearbeiter beim Öffnen sah; weicht er ab, ist
-     * `error = edit_conflict` (mit dem aktuellen `edit_count`).
+     * `error = edit_conflict` (mit dem aktuellen `edit_count`). `$attachments`: neu hinzugefügte eigene Anhänge, `$removeAttachments`:
+     * Anhänge dieses Beitrags, die entfallen (Dateien erst nach dem Commit gelöscht). Eine reine Anhangsänderung schreibt keine Revision
+     * (`changed = false`, `attachments_changed = true`).
      *
+     * @param list<mixed> $attachments
+     * @param list<mixed> $removeAttachments
      * @return array<string, mixed> bei Erfolg `post_id`, `topic_id`, `forum_id`, `changed`, `revision_id`, `edit_count`, `title_changed`, `slug`
      */
-    public function edit(int $userId, int $postId, string $body, ?string $title = null, string $reason = '', ?int $expectedEditCount = null): array
+    public function edit(int $userId, int $postId, string $body, ?string $title = null, string $reason = '', ?int $expectedEditCount = null, array $attachments = [], array $removeAttachments = []): array
     {
         if ($postId < 1) {
+            return self::failure('invalid_input');
+        }
+        $listed = AttachmentService::claimIds($attachments);
+        $remove = AttachmentService::claimIds($removeAttachments);
+        if ($listed === null || $remove === null) {
             return self::failure('invalid_input');
         }
         $body = self::normalizeBody($body);
@@ -461,6 +498,17 @@ final class PostService
                     return self::failure($screen['error']);
                 }
             }
+            $plan = AttachmentService::emptyPlan();
+            $referenced = $check['attachment_ids'] ?? [];
+            if ($listed !== [] || $remove !== [] || $referenced !== []) {
+                $prepared = $this->attachments()->prepareClaim($userId, $listed, $referenced, $postId, $remove);
+                if (!$prepared['ok']) {
+                    return self::failure($prepared['error']);
+                }
+                $plan = $prepared['plan'];
+                // `can(fresh)` unter der Sperre prüft die Grenze der Stufe gegen die Zahl nach dem Speichern.
+                $check = WriteGate::withAttachmentCount($check, (int) $plan['after']);
+            }
             $result = null;
             for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS && $result === null; $attempt++) {
                 $post = $this->posts->find($postId);
@@ -471,7 +519,7 @@ final class PostService
                     return self::failure('invalid_input');
                 }
                 $result = Transaction::run($this->db, fn (): ?array => $this->editLocked(
-                    $userId, $postId, (int) $post['topic_id'], (int) $post['forum_id'], $body, $title, $reasonText, $expectedEditCount, $nowTs, $now, $check, $screen
+                    $userId, $postId, (int) $post['topic_id'], (int) $post['forum_id'], $body, $title, $reasonText, $expectedEditCount, $nowTs, $now, $check, $screen, $plan
                 ));
             }
         } catch (\PDOException | \RuntimeException $e) {
@@ -482,6 +530,8 @@ final class PostService
         }
         if (empty($result['success'])) {
             $this->gate->reject($check, (string) ($result['error'] ?? ''), $userId); // nach dem Ende der Transaktion
+        } elseif (!empty($result['attachments_changed'])) {
+            $this->attachments()->afterCommit($plan);
         }
         if (!empty($result['success']) && !empty($result['changed'])) {
             $this->fire(Events::POST_UPDATED, $postId, (int) $result['topic_id'], $userId, (int) $result['revision_id']);
@@ -497,11 +547,13 @@ final class PostService
     /**
      * @param array<string, mixed>|null $check Ergebnis von `WriteGate::inspect()` (mit `content_before`)
      * @param array<string, mixed>|null $screen Ergebnis von `WriteGate::screen()` (`ok = true`)
+     * @param array<string, mixed>|null $plan Plan aus `AttachmentService::prepareClaim()` (mit `$postId`)
      * @return array<string, mixed>|null null: Beitrag oder Thema wechselte Thema/Forum, der Aufrufer beginnt von vorn
      */
-    private function editLocked(int $userId, int $postId, int $topicId, int $forumId, string $body, ?string $title, ?string $reason, ?int $expectedEditCount, int $nowTs, string $now, ?array $check = null, ?array $screen = null): ?array
+    private function editLocked(int $userId, int $postId, int $topicId, int $forumId, string $body, ?string $title, ?string $reason, ?int $expectedEditCount, int $nowTs, string $now, ?array $check = null, ?array $screen = null, ?array $plan = null): ?array
     {
-        // Sperrreihenfolge: Forum (nur wenn der Titel geändert werden kann, die Forum-Version steigt) → Thema → Beitrag.
+        $plan ??= AttachmentService::emptyPlan();
+        // Sperrreihenfolge: Forum (nur wenn der Titel geändert werden kann, die Forum-Version steigt) → Thema → Beitrag → Anhänge.
         if ($title !== null && $this->forums->lockForUpdate($forumId) === null) {
             return self::failure('forum_not_found');
         }
@@ -516,6 +568,7 @@ final class PostService
         if ((int) $post['topic_id'] !== $topicId || (int) $topic['forum_id'] !== $forumId) {
             return null;
         }
+        $lockedAttachments = $plan['lock'] === [] ? [] : $this->attachments()->lock($plan);
 
         $decision = $this->decide($userId, 'edit', ['post_id' => $postId, 'now' => $nowTs, 'fresh' => true] + $this->gate->context($check, $screen));
         if (!$decision->allowed) {
@@ -528,6 +581,15 @@ final class PostService
         if ($expectedEditCount !== null && $expectedEditCount !== $editCount) {
             return ['success' => false, 'error' => 'edit_conflict', 'edit_count' => $editCount];
         }
+        $attachmentError = $plan['lock'] === [] ? null : AttachmentService::verify($plan, $lockedAttachments, $userId, $postId);
+        if ($attachmentError !== null) {
+            return self::failure($attachmentError);
+        }
+        $attachmentsChanged = $plan['ids'] !== [] || $plan['remove'] !== [];
+        if ($attachmentsChanged) {
+            $this->attachments()->apply($plan, $postId, $userId);
+            $this->attachments()->syncTopicFlag($topic, (string) $post['status'] === 'published', $plan, $now);
+        }
 
         $first = (int) $post['is_first_post'] === 1;
         $titleChanged = $title !== null && $title !== (string) $topic['title'];
@@ -535,6 +597,7 @@ final class PostService
             return [
                 'success' => true,
                 'changed' => false,
+                'attachments_changed' => $attachmentsChanged,
                 'post_id' => $postId,
                 'topic_id' => $topicId,
                 'forum_id' => $forumId,
@@ -569,6 +632,7 @@ final class PostService
         return [
             'success' => true,
             'changed' => true,
+            'attachments_changed' => $attachmentsChanged,
             'post_id' => $postId,
             'topic_id' => $topicId,
             'forum_id' => $forumId,
@@ -960,6 +1024,12 @@ final class PostService
     private static function failure(string $error): array
     {
         return ['success' => false, 'error' => $error];
+    }
+
+    /** Anhangsdienst auf derselben Verbindung, erst bei Bedarf (Beiträge ohne Anhänge berühren ihn nie). */
+    private function attachments(): AttachmentService
+    {
+        return $this->attachmentService ??= new AttachmentService($this->db, $this->settings);
     }
 
     /**

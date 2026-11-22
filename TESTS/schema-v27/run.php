@@ -367,7 +367,7 @@ T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku
 T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void {
     $expected = [
         'community_topics' => ['id', 'forum_id', 'user_id', 'title', 'slug', 'status', 'moved_to_topic_id', 'moved_expires_at', 'is_pinned', 'pinned_until', 'is_announcement', 'is_locked', 'locked_until', 'slow_mode_seconds', 'prefix', 'first_post_id', 'solution_post_id', 'solved_at', 'solved_by', 'has_poll', 'has_attachments', 'reply_count', 'view_count', 'reaction_count', 'last_post_id', 'last_post_at', 'last_poster_id', 'version', 'trashed_at', 'trashed_by', 'previous_status', 'created_at', 'updated_at'],
-        'community_posts' => ['id', 'topic_id', 'forum_id', 'user_id', 'is_first_post', 'status', 'status_reason', 'format', 'body', 'body_html', 'rendered_version', 'quote_of_post_id', 'edit_count', 'edited_at', 'edited_by', 'edit_reason', 'reaction_count', 'ip_hash', 'created_at', 'updated_at'],
+        'community_posts' => ['id', 'topic_id', 'forum_id', 'user_id', 'is_first_post', 'status', 'status_reason', 'format', 'body', 'body_html', 'rendered_version', 'quote_of_post_id', 'edit_count', 'edited_at', 'edited_by', 'edit_reason', 'reaction_count', 'ip_hash', 'deleted_at', 'created_at', 'updated_at'],
         'community_bans' => ['id', 'user_id', 'scope', 'reason', 'internal_note', 'issued_by', 'starts_at', 'ends_at', 'lifted_at', 'lifted_by', 'created_at'],
         'community_redirects' => ['source_type', 'source_key', 'target_type', 'target_id', 'created_at'],
         'community_stats_daily' => ['day', 'forum_id', 'topics', 'posts', 'active_members', 'new_members', 'solved', 'median_first_reply_minutes'],
@@ -381,7 +381,7 @@ T::run('Spaltenumfang (DATA-MODEL.md)', static function () use ($queries): void 
     }
     T::same(['id', 'slug', 'title', 'title_en', 'description', 'description_en', 'icon', 'tier', 'rule_json', 'is_active'], array_keys(v27Columns((string) $queries['community_badges'])), 'community_badges: Spalten und Reihenfolge (description_en nach description, wie title_en nach title)');
     T::same(['id', 'kind', 'topic_id', 'post_id', 'actor_id', 'detail', 'phase', 'cursor_user_id', 'attempts', 'steps', 'lease_token', 'locked_until', 'created_at', 'updated_at'], array_keys(v27Columns((string) $queries['community_notify_queue'])), 'community_notify_queue: Spalten und Reihenfolge (PR #2b, DDL interaktion §5)');
-    T::same(283, $total, 'insgesamt 283 Spalten in den 28 Tabellen (268 aus PR #1, dazu community_badges.description_en und die 14 Spalten von community_notify_queue)');
+    T::same(284, $total, 'insgesamt 284 Spalten in den 28 Tabellen (268 aus PR #1, dazu community_badges.description_en, die 14 Spalten von community_notify_queue und community_posts.deleted_at)');
 });
 
 T::run('Core-Tabelle notifications: Gruppenschlüssel und Zähler (Bündelung)', static function () use ($queries, $migrationSource, $schemaSource): void {
@@ -444,6 +444,10 @@ T::run('Nachträge nach PR #1: Indizes an community_topics, community_badges.des
     T::same($badge['description'] ?? null, $badge['description_en'] ?? null, 'description_en hat dieselbe Definition wie description');
     T::check(str_contains($schemaSource, "'description_en',\n            \"ALTER TABLE {\$this->prefix}community_badges ADD COLUMN description_en " . ($badge['description_en'] ?? '?') . ' AFTER description"'), 'ensureFeatureSchema(): ensureColumnExists() mit der Definition aus dem CREATE, nach description');
     T::same(['description_en'], SchemaManager::REQUIRED_COLUMNS['community_badges'] ?? null, 'Datenbank-Update prüft community_badges.description_en (REQUIRED_COLUMNS)');
+    $posts = v27Columns((string) $queries['community_posts']);
+    T::same('DATETIME NULL', $posts['deleted_at'] ?? null, 'community_posts.deleted_at (Löschmodus „Beiträge löschen“): DATETIME, NULL-fähig');
+    T::check(str_contains($schemaSource, "\"ALTER TABLE {\$this->prefix}community_posts ADD COLUMN deleted_at DATETIME NULL AFTER ip_hash\""), 'ensureFeatureSchema(): deleted_at mit der Definition aus dem CREATE, nach ip_hash');
+    T::same(['deleted_at'], SchemaManager::REQUIRED_COLUMNS['community_posts'] ?? null, 'Datenbank-Update prüft community_posts.deleted_at (REQUIRED_COLUMNS)');
     T::check(!str_contains($migrationSource, 'description_en'), 'MigrationManager: description_en kommt beim Update von v26 über das CREATE');
 });
 

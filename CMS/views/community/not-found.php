@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
  */
 ?>
 <div id="main" class="cms-community cms-community--empty">
-    <h1>Nicht gefunden</h1>
-    <p>Diese Seite gibt es nicht oder sie ist für dich nicht sichtbar.</p>
-    <p><a href="<?= $e(\CMS\Services\Community\Support\Urls::index()) ?>">Zur Community-Startseite</a></p>
+    <h1><?= $e(\CMS\Services\Community\Support\I18n::t('community.view.not_found.heading')) ?></h1>
+    <p><?= $e(\CMS\Services\Community\Support\I18n::t('community.view.not_found.text')) ?></p>
+    <p><a href="<?= $e(\CMS\Services\Community\Support\Urls::index()) ?>"><?= $e(\CMS\Services\Community\Support\I18n::t('community.view.not_found.back')) ?></a></p>
 </div>

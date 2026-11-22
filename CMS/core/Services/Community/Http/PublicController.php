@@ -36,7 +36,7 @@ if (!defined('ABSPATH')) {
 
 final class PublicController
 {
-    private const VIEWS = ['index', 'forum', 'topic', 'not-found', 'compose', 'listing', 'search'];
+    private const VIEWS = ['index', 'forum', 'topic', 'not-found', 'compose', 'listing', 'search', 'member'];
 
     private static ?self $instance = null;
 
@@ -75,6 +75,7 @@ final class PublicController
             foreach (Urls::LISTINGS as $kind) {
                 $router->addRoute('GET', $p['list_' . $kind], fn () => $this->listing($kind));
             }
+            $router->addRoute('GET', $p['member'], fn (string $id) => $this->member($id));
             $router->addRoute('GET', $p['topic'], fn (string $ref) => $this->topic($ref, null));
             $router->addRoute('GET', $p['topic_page'], fn (string $ref, string $page) => $this->topic($ref, $page));
             $router->addRoute('GET', $p['post'], fn (string $id) => $this->post($id));
@@ -233,6 +234,7 @@ final class PublicController
         $items = RenderService::instance()->present($viewer, (array) $list['items'], $locale);
         $authorIds = array_map(static fn (array $p): int => (int) ($p['user_id'] ?? 0), $items);
         $accounts = $this->accounts($authorIds);
+        $signatures = \CMS\Services\Community\Service\ProfileService::instance()->signatures($authorIds);
 
         if ($viewer !== null && $items !== []) {
             try {
@@ -281,7 +283,7 @@ final class PublicController
             'reactions' => ['available' => $reactionService->available(), 'emoji' => \CMS\Services\Community\Service\ReactionService::EMOJI, 'summaries' => $reactionService->summaries($viewer, $items)],
             'subscribed' => $subscribed, 'can_moderate' => $canModerate, 'can_solve' => $canSolve,
             'can_reply' => $canReply, 'editable' => $editable,
-            'topic' => $topic, 'forum' => $forum, 'posts' => $items, 'accounts' => $accounts, 'page' => $page, 'pages' => $pages,
+            'topic' => $topic, 'forum' => $forum, 'posts' => $items, 'accounts' => $accounts, 'signatures' => $signatures, 'page' => $page, 'pages' => $pages,
             'locale' => $locale, 'viewer' => $viewer, 'canonical' => $canonical,
         ]);
     }
@@ -349,6 +351,32 @@ final class PublicController
         $this->render('search', ['query' => $query, 'forum_id' => $forumId, 'forums' => $forums, 'result' => $result, 'page' => $page, 'locale' => $locale, 'viewer' => $viewer]);
     }
 
+    /** Öffentliches Profil `/forum/mitglieder/{id}` (`Service\ProfileService`): nur aktive Konten mit Beiträgen, Themen nur aus lesbaren Foren. */
+    public function member(string $id): void
+    {
+        ReadScope::run(fn () => $this->memberPage($id));
+    }
+
+    private function memberPage(string $id): void
+    {
+        $locale = I18n::requestLocale();
+        $viewer = $this->viewerId();
+        $userId = preg_match('/^[1-9]\d{0,9}$/D', $id) === 1 ? (int) $id : 0;
+        try {
+            $profile = $userId > 0 && $userId <= 4294967295 ? \CMS\Services\Community\Service\ProfileService::instance()->profile($viewer, $userId, $locale) : null;
+        } catch (\Throwable) {
+            $profile = null;
+        }
+        if ($profile === null) {
+            $this->notFound();
+
+            return;
+        }
+        // Profile gehören nicht in einen Suchindex (Mitgliedsdaten, Gleichheit mit den Listen).
+        $this->meta = ['title' => $profile['name'] . ' – ' . $this->siteTitle($locale), 'canonical' => Urls::member($userId, $locale), 'noindex' => true];
+        $this->render('member', ['profile' => $profile, 'locale' => $locale, 'viewer' => $viewer]);
+    }
+
     /** `/forum/thema/{id}/ungelesen`: zum ersten ungelesenen Beitrag, sonst zum Thema. Gäste und nicht lesbare Themen: wie das Thema. */
     public function unread(int $id): void
     {
@@ -408,19 +436,30 @@ final class PublicController
         return $this->viewerId();
     }
 
-    /** @return array{url: string, token: string, reasons: string, reason_required: bool}|null */
+    /** Texte von `community.js` (`data-cc-messages`), Schlüssel ohne das Präfix `community.js.`. */
+    public const JS_MESSAGES = ['offline', 'expired', 'unexpected', 'subscribed', 'unsubscribed', 'report_title', 'reason', 'reason_required', 'note', 'reported'];
+
+    /** @return array{url: string, token: string, reasons: string, reason_required: bool, messages: string}|null */
     private function apiInfo(): ?array
     {
         if ($this->viewerId() === null) {
             return null;
         }
-        $reasons = ['spam' => 'Spam', 'abuse' => 'Beleidigung oder Missbrauch', 'offtopic' => 'Themenfremd', 'illegal' => 'Rechtswidrig', 'other' => 'Sonstiges'];
+        $reasons = [];
+        foreach (\CMS\Services\Community\Service\ReportService::REASONS as $reason) {
+            $reasons[$reason] = I18n::t('community.report.reason.' . $reason);
+        }
+        $messages = [];
+        foreach (self::JS_MESSAGES as $key) {
+            $messages[$key] = I18n::t('community.js.' . $key);
+        }
 
         return [
             'url' => Urls::apiBase(I18n::requestLocale()),
             'token' => \CMS\Security::instance()->generateToken(ApiController::TOKEN_ACTION),
             'reasons' => (string) json_encode($reasons, JSON_UNESCAPED_UNICODE),
             'reason_required' => Settings::getInstance()->bool('moderation_reason_required'),
+            'messages' => (string) json_encode($messages, JSON_UNESCAPED_UNICODE),
         ];
     }
 

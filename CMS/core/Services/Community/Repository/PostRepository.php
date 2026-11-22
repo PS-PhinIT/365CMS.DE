@@ -52,7 +52,7 @@ final class PostRepository extends AbstractRepository
     private const COLUMNS = [
         'id', 'topic_id', 'forum_id', 'user_id', 'is_first_post', 'status', 'status_reason', 'format', 'body', 'body_html',
         'rendered_version', 'quote_of_post_id', 'edit_count', 'edited_at', 'edited_by', 'edit_reason', 'reaction_count',
-        'ip_hash', 'created_at', 'updated_at',
+        'ip_hash', 'deleted_at', 'created_at', 'updated_at',
     ];
     /** Text und Cache: Mengenlesen und Platzhalter kommen ohne sie aus. */
     private const TEXT_COLUMNS = ['body', 'body_html'];

@@ -3,7 +3,7 @@
  * Rechtstext-Baustein der Community (PR #5; SECURITY-PRIVACY §6, Legal-Modul): der Abschnitt „Forum (Community)“ der Datenschutzerklärung.
  *
  * - `facts()` liest die wirksamen Einstellungen und Fristen (`Settings`, `CommunityRetention::days()`): Sichtbarkeit für Gäste, IP-Kennung, Captcha,
- *   Benachrichtigungen per E-Mail und die Löschfristen. Alle Werte sind Zahlen oder Auswahlwerte aus festen Listen, nie freier Text.
+ *   Benachrichtigungen per E-Mail, den Löschmodus (`erase_mode`) und die Löschfristen. Alle Werte sind Zahlen oder Auswahlwerte aus festen Listen, nie freier Text.
  * - `privacySection()` ist rein (ohne Datenbank): aus den Fakten wird ein HTML-Abschnitt `<h3>8a. Forum (Community)</h3>` mit Absätzen und Listen.
  *   Er steht nur im Text, wenn das Community-Modul aktiv ist (`LegalSitesModule::buildPrivacyTemplate()`), und folgt den Einstellungen: ein Captcha
  *   wird nur genannt, wenn es verlangt wird, die IP-Kennung nur, wenn sie gespeichert wird, die Benachrichtigungsmails nur, wenn sie an sind. Die
@@ -32,7 +32,7 @@ final class CommunityLegal
      * Fakten für den Abschnitt aus den wirksamen Einstellungen.
      *
      * @param array<string, int>|null $days Fristen je Regel (Standard: `CommunityRetention::days()`)
-     * @return array{guests_can_read: bool, notify_mail: bool, captcha_mode: string, days: array<string, int>}
+     * @return array{guests_can_read: bool, notify_mail: bool, captcha_mode: string, erase_mode: string, days: array<string, int>}
      */
     public static function facts(?Settings $settings = null, ?array $days = null): array
     {
@@ -42,6 +42,7 @@ final class CommunityLegal
             'guests_can_read' => $settings->bool('guests_can_read'),
             'notify_mail' => $settings->bool('notify_mail'),
             'captcha_mode' => $settings->string('captcha_mode'),
+            'erase_mode' => $settings->string('erase_mode'),
             'days' => $days ?? (new CommunityRetention(null, null, $settings))->days(),
         ];
     }
@@ -49,7 +50,7 @@ final class CommunityLegal
     /**
      * Abschnitt der Datenschutzerklärung als HTML.
      *
-     * @param array{guests_can_read?: bool, notify_mail?: bool, captcha_mode?: string, days?: array<string, int>} $facts
+     * @param array{guests_can_read?: bool, notify_mail?: bool, captcha_mode?: string, erase_mode?: string, days?: array<string, int>} $facts
      */
     public static function privacySection(array $facts): string
     {
@@ -107,7 +108,10 @@ final class CommunityLegal
             . '<li>Sperren: ' . self::after($days['bans'], 'der Aufhebung oder dem Ablauf') . ' (unbefristete Sperren bleiben bis zur Aufhebung);</li>'
             . '<li>frühere Fassungen bearbeiteter Beiträge: ' . self::after($days['revisions'], 'der Bearbeitung') . ' (die jüngste Fassung bleibt).</li></ul>';
 
-        $html .= '<p>Löschung und Auskunft: Wird Ihr Konto gelöscht, werden Ihre Beiträge anonymisiert (Anzeige „Gelöschtes Mitglied“, ohne Bezug zu Ihrem Konto); '
+        $html .= '<p>Löschung und Auskunft: Wird Ihr Konto gelöscht, '
+            . (($facts['erase_mode'] ?? 'anonymize') === 'delete'
+                ? 'wird der Inhalt Ihrer Beiträge samt früherer Fassungen und Anhänge gelöscht (an ihrer Stelle steht ein Hinweis auf die Löschung); die Titel Ihrer Themen bleiben ohne Bezug zu Ihrem Konto stehen, Zitate in Beiträgen anderer Mitglieder bleiben unverändert; '
+                : 'werden Ihre Beiträge anonymisiert (Anzeige „Gelöschtes Mitglied“, ohne Bezug zu Ihrem Konto); ')
             . 'Reaktionen, Abonnements, Lesestatus, Entwürfe, Abstimmungen, Verwarnungen und Sperren werden gelöscht. '
             . 'Auskunft über die zu Ihrem Konto gespeicherten Forumsdaten erhalten Sie als Datenexport im Rahmen Ihrer Datenschutz-Anfrage.</p>';
 

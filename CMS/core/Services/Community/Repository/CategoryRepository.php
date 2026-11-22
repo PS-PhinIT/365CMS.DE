@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace CMS\Services\Community\Repository;
 
+use CMS\Services\Community\Support\Transaction;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -143,6 +145,27 @@ final class CategoryRepository extends AbstractRepository
         }
 
         return ['success' => true];
+    }
+
+    /**
+     * Löscht eine Kategorie ohne Foren (Foren vorher löschen oder in eine andere Kategorie verschieben). Fachfehler:
+     * `invalid_input` (unbekannte ID), `invalid_state` (enthält Foren).
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function delete(int $id): array
+    {
+        return Transaction::run($this->db, function () use ($id): array {
+            if ($this->fetchOne('SELECT id FROM ' . $this->table(self::TABLE) . ' WHERE id = ? LIMIT 1' . self::forUpdate(), [$id]) === null) {
+                return ['success' => false, 'error' => 'invalid_input'];
+            }
+            if ((int) $this->fetchValue('SELECT COUNT(*) FROM ' . $this->table('community_forums') . ' WHERE category_id = ?', [$id]) > 0) {
+                return ['success' => false, 'error' => 'invalid_state'];
+            }
+            $this->run('DELETE FROM ' . $this->table(self::TABLE) . ' WHERE id = ?', [$id]);
+
+            return ['success' => true];
+        });
     }
 
     private function slugTaken(string $slug, ?int $exceptId): bool

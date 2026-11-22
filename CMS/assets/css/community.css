@@ -62,3 +62,5 @@ button.cms-community-button { background: transparent; color: inherit; font: inh
 .cms-community-editor__visual .sun-editor { max-width: 100%; }
 /* SunEditor legt ein Hilfsfeld für den Fokus an und versteckt es per style-Attribut; unter dem CSP des CMS (style-src mit Nonce) wird dieses Attribut blockiert. */
 .__se__focus__temp__ { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+.cms-community-post__signature { margin-top: .75rem; padding-top: .5rem; border-top: 1px solid var(--cc-border); color: var(--cc-muted); font-size: .85rem; overflow-wrap: anywhere; }
+.cms-community-post__signature a { text-decoration: underline; }

@@ -40,6 +40,7 @@ final class Urls
         'new' => ['de' => 'neu', 'en' => 'new'],
         'active' => ['de' => 'aktiv', 'en' => 'active'],
         'unanswered' => ['de' => 'unbeantwortet', 'en' => 'unanswered'],
+        'member' => ['de' => 'mitglieder', 'en' => 'members'],
     ];
 
     /** Globale Listen (Pfadsegment = Schlüssel in SEGMENTS). */
@@ -67,6 +68,7 @@ final class Urls
             'list_new' => $path('/' . self::segment('new', $locale)),
             'list_active' => $path('/' . self::segment('active', $locale)),
             'list_unanswered' => $path('/' . self::segment('unanswered', $locale)),
+            'member' => $path('/' . self::segment('member', $locale) . '/:id'),
             'reply' => $path('/' . $topic . '/:id/' . self::segment('reply', $locale)),
             'new_topic' => $path('/:slug/' . self::segment('new_topic', $locale)),
             'edit' => $path('/' . $post . '/:id/' . self::segment('edit', $locale)),
@@ -176,6 +178,12 @@ final class Urls
     public static function post(int $id, string $locale = 'de'): string
     {
         return FeedI18n::path(self::basePath() . '/' . self::segment('post', $locale) . '/' . $id, $locale);
+    }
+
+    /** Öffentliches Profil eines Mitglieds: `/forum/mitglieder/12` (`/en/forum/members/12`). */
+    public static function member(int $id, string $locale = 'de'): string
+    {
+        return FeedI18n::path(self::basePath() . '/' . self::segment('member', $locale) . '/' . $id, $locale);
     }
 
     /** Erster ungelesener Beitrag eines Themas: `/forum/thema/12/ungelesen`. */

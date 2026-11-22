@@ -23,6 +23,7 @@ use CMS\Services\Community\Repository\UserStatsRepository;
 use CMS\Services\Community\Service\CommunityAccess;
 use CMS\Services\Community\Service\ModerationService;
 use CMS\Services\Community\Service\NotificationDispatcher;
+use CMS\Services\Community\Service\ProfileService;
 use CMS\Services\Community\Service\ReportService;
 use CMS\Services\Community\Service\SubscriptionService;
 use CMS\Services\Community\Support\Codes;
@@ -144,6 +145,11 @@ final class CommunityMemberSection
                 $tab = 'einstellungen';
                 $result = SubscriptionService::instance()->savePreferences($userId, self::preferenceChanges());
                 $ok = 'Einstellungen gespeichert.';
+                break;
+            case 'save_signature':
+                $tab = 'einstellungen';
+                $result = ProfileService::instance()->saveSignature($userId, is_string($_POST['signature'] ?? null) ? (string) $_POST['signature'] : '');
+                $ok = I18n::t('community.member.signature_saved');
                 break;
             case 'approve_post':
             case 'reject_post':
@@ -374,6 +380,13 @@ final class CommunityMemberSection
             echo '<option value="' . $e($value) . '"' . ($prefs['locale'] === $value ? ' selected' : '') . '>' . $e($label) . '</option>';
         }
         echo '</select></div><div><button type="submit" class="btn btn-primary">Speichern</button></div></form>';
+        $signature = ProfileService::instance()->signature($userId);
+        echo '<form method="post" action="/member/plugin/' . self::SLUG . '" class="vstack gap-3 mt-4">' . $field . '<input type="hidden" name="community_action" value="save_signature">'
+            . '<div><label class="form-label" for="cc-signature">' . $e(I18n::t('community.member.signature')) . '</label>'
+            . '<textarea class="form-control" id="cc-signature" name="signature" rows="3" maxlength="' . ProfileService::SIGNATURE_MAX . '" aria-describedby="cc-signature-help">' . $e($signature) . '</textarea>'
+            . '<div class="form-text" id="cc-signature-help">' . $e(I18n::t('community.member.signature_help', ['max' => ProfileService::SIGNATURE_MAX, 'lines' => ProfileService::SIGNATURE_LINES])) . '</div></div>'
+            . '<div><button type="submit" class="btn">' . $e(I18n::t('community.member.signature_save')) . '</button>'
+            . ' <a class="btn btn-link" href="' . $e(Urls::member($userId, I18n::requestLocale())) . '">' . $e(I18n::t('community.member.view_profile')) . '</a></div></form>';
     }
 
     private static function renderModeration(int $userId, \Closure $e): void

@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Übernahme aus cms-forum
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md) · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md)
+> **Stand:** 2026-11-20 | **Ziel-Version:** 4.2.0 | **Status:** Funktions-Referenz, Abgleich §2 erledigt | **Übersicht:** [README.md](README.md) · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md)
 
 > **Entscheidung E6 (14.11.2026):** `cms-forum` war auf keiner Installation aktiv, es gibt **keine Datenübernahme**, keinen Migrator und keine Plugin-Weiterleitungen. Dieses Dokument bleibt als **Funktions-Referenz** (§1, §2, §4) erhalten: Es zeigt, welche Funktionen das Community-Modul mindestens abdecken muss und welche Einstellungen im Plugin wirkungslos waren. §3, §5 und §6 entfallen.
 
@@ -33,36 +33,36 @@ setting effective and tell administrators which behaviour changes.
 ### 2. Paritäts-Checkliste
 
 Legende wie in [PLUGIN-PARITY.md](../PLUGIN-PARITY.md): ✅ gleichwertig oder erweitert · ➖ bewusst weggelassen ·
-🔧 beim Abgleich ergänzt · ⬜ offen (Planungsstand: alles ⬜, Abhaken bei der Umsetzung).
+🔧 beim Abgleich ergänzt · 🟡 teilweise · ⬜ offen. **Abgleich mit dem Code: 20.11.2026** (Stand 4.2.0 in Entwicklung); „alt → 301“ entfällt mit E6.
 
 | Bereich | Plugin | Core (Ziel) | Status |
 |---|---|---|---|
-| Startseite | `/forum` | `/forum` (Basis einstellbar) | ⬜ |
-| Forum | `/forum/{slug}` | gleich; Unterforen, Filter | ⬜ |
-| Thema | `/forum/thread/{id}` | `/forum/thema/{id}-{slug}`, alt → 301 | ⬜ |
-| Neues Thema | `/forum/{slug}/new-thread` | `/forum/{slug}/neues-thema`, alt → 301 | ⬜ |
-| Bearbeiten | `/forum/post/{id}/edit` | `/forum/beitrag/{id}/bearbeiten`, alt → 301 | ⬜ |
-| Suche | `/forum/search` | `/forum/suche` (Index + Rechtefilter), alt → 301 | ⬜ |
-| Profil | `/forum/user/{id}` | `/forum/mitglieder/{id}` + Core-Profil, alt → 301 | ⬜ |
-| API | `POST /forum/api/{like,subscribe,report,poll-vote}`, `GET similar-threads` | neue Endpunkte; alte Namen ein Release als Alias, dann 410 | ⬜ |
-| BBCode | `BBCodeParser` | Markdown; Altbeiträge mit `format = bbcode` über übernommenen Parser (E6) | ⬜ |
-| Rechte | 3 Gruppentypen × 8 Rechte | Rollen, Gruppen, Gäste, Stufen × 12 Rechte, Vererbung | ⬜ |
-| Moderation | schließen, anpinnen, verschieben, löschen, wiederherstellen, freigeben, Meldung erledigen | + zusammenführen, teilen, ausblenden mit Grund, Warteschlange, Verwarnungen | ⬜ |
-| Sperren | `cmsforum_user_meta.is_banned/ban_reason/ban_expires` | `community_bans` (Umfang lesen/kein Zugriff) | ⬜ |
-| Ränge | `cmsforum_ranks` | `community_ranks` | ⬜ |
-| Umfragen | ja | ja, erweitert (Sichtbarkeit Ergebnisse) | ⬜ |
-| Anhänge | `cmsforum_attachments` + Dateien | privater Speicher, Neukodierung von Bildern | ⬜ |
-| Likes | `cmsforum_likes` | Reaktionen (`like` + Auswahl) | ⬜ |
-| Abos | Thema/Forum, `notify_email` | Modi sofort/täglich/wöchentlich/nur In-App | ⬜ |
-| Benachrichtigungen | eigener `NotificationService` | Core `notifications` + Mail-Warteschlange | ⬜ |
-| Gelesen-Status | `cmsforum_read_tracking` (Zeitstempel) | `community_read_states` (letzter Beitrag) + Forum-Marken | ⬜ |
-| Lösung markieren | `accepted_post_id` | `solution_post_id` + `QAPage` | ⬜ |
-| Ähnliche Themen | `/forum/api/similar-threads` | gleiches Verhalten, Suchindex | ⬜ |
-| Moderationsprotokoll | `cmsforum_mod_log` (mit IP) | `community_moderation_log` (ohne IP) | ⬜ |
-| Mitgliederbereich | `/member/plugin/forum` | `/member/plugin/community`; alt → 301 | ⬜ |
-| DSGVO | Export-/Lösch-Hooks | gleiche Hooks, erweitert (W13) | ⬜ |
-| Admin | 9 Plugin-Seiten | `/admin/community-*`; `/admin/plugins/cms-forum/…` → 301 | ⬜ |
-| Sprachen | `lang/de_DE.php`, `en_US.php` | `lang/de.yaml`, `en.yaml` (`community.*`) | ⬜ |
+| Startseite | `/forum` | `/forum` (Basis einstellbar) | ✅ `PublicController::index()`, Einstellung `base_path` |
+| Forum | `/forum/{slug}` | gleich; Unterforen, Filter | ✅ Unterforen, Keyset-Liste `?nach=`; globale Listen Neu/Aktiv/Unbeantwortet (`/forum/neu`, `/forum/aktiv`, `/forum/unbeantwortet`) |
+| Thema | `/forum/thread/{id}` | `/forum/thema/{id}-{slug}`, alt → 301 | ✅ neue Adresse, falscher Slug → 301; alte Adresse ➖ (E6) |
+| Neues Thema | `/forum/{slug}/new-thread` | `/forum/{slug}/neues-thema`, alt → 301 | ✅ `ComposeController`; alte Adresse ➖ (E6) |
+| Bearbeiten | `/forum/post/{id}/edit` | `/forum/beitrag/{id}/bearbeiten`, alt → 301 | ✅ mit Verlauf (`community_post_revisions`); alte Adresse ➖ (E6) |
+| Suche | `/forum/search` | `/forum/suche` (Index + Rechtefilter), alt → 301 | ✅ `CommunitySearch` (TNT-Index, Rechtefilter, Forenfilter); alte Adresse ➖ (E6) |
+| Profil | `/forum/user/{id}` | `/forum/mitglieder/{id}` + Core-Profil, alt → 301 | ✅ `ProfileService` (seit 4.2.0); alte Adresse ➖ (E6) |
+| API | `POST /forum/api/{like,subscribe,report,poll-vote}`, `GET similar-threads` | neue Endpunkte; alte Namen ein Release als Alias, dann 410 | 🟡 `reaktion`, `abo`, `melden`, `vorschau`, `moderation`, `loesung`, `entwurf`, `gelesen`, Upload; offen: `umfrage`, `aehnliche-themen` (P2); Aliase ➖ (E6) |
+| BBCode | `BBCodeParser` | Markdown; Altbeiträge mit `format = bbcode` über übernommenen Parser (E6) | ➖ keine Altbeiträge (E6); Markdown über `ContentRenderer` |
+| Rechte | 3 Gruppentypen × 8 Rechte | Rollen, Gruppen, Gäste, Stufen × 12 Rechte, Vererbung | ✅ `CommunityAccess`: Lesen, Suchen und 9 Schreibrechte (`PERMISSION_KEYS`) je Forum mit Vererbung für Gäste, Rollen, Benutzergruppen (Matrix seit 4.2.0) und Vertrauensstufen |
+| Moderation | schließen, anpinnen, verschieben, löschen, wiederherstellen, freigeben, Meldung erledigen | + zusammenführen, teilen, ausblenden mit Grund, Warteschlange, Verwarnungen | 🟡 alles aus dem Plugin plus Ausblenden mit Grund, Warteschlange, Ankündigen, Umbenennen, Beiträge verschieben (`movePosts()`); offen: eigene Vorgänge „zusammenführen“/„teilen“ (nur als Rechte- und Protokollnamen vorhanden), Verwarnungen (WP-C14) |
+| Sperren | `cmsforum_user_meta.is_banned/ban_reason/ban_expires` | `community_bans` (Umfang lesen/kein Zugriff) | ✅ `BanService` (Umfang `write`/`full`, Ablauf, Verlauf, Rangprüfung) |
+| Ränge | `cmsforum_ranks` | `community_ranks` | ✅ `RankService`, `/admin/community-ranks` |
+| Umfragen | ja | ja, erweitert (Sichtbarkeit Ergebnisse) | ⬜ Tabellen und Recht `poll`/`vote` vorhanden, Dienst und Oberfläche fehlen (WP-C15) |
+| Anhänge | `cmsforum_attachments` + Dateien | privater Speicher, Neukodierung von Bildern | ✅ `AttachmentService`, Upload per Auswahl, Ziehen und Einfügen (seit 4.2.0) |
+| Likes | `cmsforum_likes` | Reaktionen (`like` + Auswahl) | ✅ `ReactionService` |
+| Abos | Thema/Forum, `notify_email` | Modi sofort/täglich/wöchentlich/nur In-App | 🟡 sofort und aus (`SubscriptionService::P1_MODES`); täglich/wöchentlich warten auf die Zusammenfassungs-Mails (WP-C15) |
+| Benachrichtigungen | eigener `NotificationService` | Core `notifications` + Mail-Warteschlange | ✅ `NotificationDispatcher` (`community_notify_queue`, Core-Mail-Tor) |
+| Gelesen-Status | `cmsforum_read_tracking` (Zeitstempel) | `community_read_states` (letzter Beitrag) + Forum-Marken | ✅ `ReadStateService`, „Alles gelesen“ je Forum und global (seit 4.2.0) |
+| Lösung markieren | `accepted_post_id` | `solution_post_id` + `QAPage` | 🟡 `solution_post_id` und Kennzeichnung; strukturierte Daten `QAPage` fehlen |
+| Ähnliche Themen | `/forum/api/similar-threads` | gleiches Verhalten, Suchindex | ⬜ WP-C15 |
+| Moderationsprotokoll | `cmsforum_mod_log` (mit IP) | `community_moderation_log` (ohne IP) | ✅ `ModerationLogRepository`, `/admin/community-log` |
+| Mitgliederbereich | `/member/plugin/forum` | `/member/plugin/community`; alt → 301 | ✅ `CommunityMemberSection` mit Signatur (seit 4.2.0); alte Adresse ➖ (E6) |
+| DSGVO | Export-/Lösch-Hooks | gleiche Hooks, erweitert (W13) | ✅ `CommunityPrivacy` (Auskunft, Löschung mit Modus `anonymize`/`delete`), `CommunityRetention`, `CommunityLegal` |
+| Admin | 9 Plugin-Seiten | `/admin/community-*`; `/admin/plugins/cms-forum/…` → 301 | ✅ 10 Seiten `/admin/community*`; Weiterleitungen ➖ (E6) |
+| Sprachen | `lang/de_DE.php`, `en_US.php` | `lang/de.yaml`, `en.yaml` (`community.*`) | ✅ Leseseiten, Schreibformular, Mitgliederbereich, Skripte und Verwaltung über `community.*` (4.2.0) |
 | Farben/Design | `primary_color`, `card_bg`, `border_radius` (ohne Wirkung) | Design-Tokens des Themes | ➖ (Theme-Aufgabe) |
 | `enable_dark_mode` (Admin-Feld) | ohne Wirkung | Dark Mode folgt dem Theme | ➖ |
 | `video_tag_enabled`, `img_tag_enabled` | ohne Wirkung | Video-Einbettung nur über Core-Embed mit Einwilligung (P3); Bilder aus Anhängen | ➖ / ⬜ |

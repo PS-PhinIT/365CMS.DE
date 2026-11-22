@@ -102,6 +102,9 @@ T::run('Routenmuster', static function () use ($route): void {
         T::same('/forum/allgemein/neues-thema', Urls::newTopic('allgemein'), 'Urls::newTopic');
         T::same('/forum/thema/12/antworten?zitat=5', Urls::reply(12, 'de', 5), 'Urls::reply mit Zitat');
         T::same('/en/forum/post/7/edit', Urls::edit(7, 'en'), 'Urls::edit (en)');
+        T::same(['member', ['3']], $route('/forum/mitglieder/3'), 'Profil geht vor forum_page (sonst wäre „mitglieder“ ein Forum)');
+        T::same(['member', ['3']], $route('/en/forum/members/3', 'en'), 'englisches Profil');
+        T::same('/en/forum/members/3', Urls::member(3, 'en'), 'Urls::member (en)');
 
         $order = array_keys(Urls::routePatterns('de'));
         T::check(array_search('topic', $order, true) < array_search('forum_page', $order, true) && array_search('post', $order, true) < array_search('forum', $order, true), 'feste Segmente werden vor dem Forum-Slug eingetragen');
@@ -248,7 +251,7 @@ T::run('Schreibseiten', static function (): void {
 });
 
 T::run('Ansichten und Controller (Quelltext)', static function (): void {
-    foreach (['index', 'forum', 'topic', 'not-found', 'compose', 'listing', 'search', 'partials/nav'] as $view) {
+    foreach (['index', 'forum', 'topic', 'not-found', 'compose', 'listing', 'search', 'member', 'partials/nav'] as $view) {
         $source = (string) file_get_contents(ABSPATH . 'views/community/' . $view . '.php');
         T::check(stripos($source, '<script') === false && stripos($source, '<style') === false && preg_match('/\sstyle\s*=/i', $source) !== 1, $view . ': kein Inline-Skript oder -Style');
         T::check(preg_match('/\son[a-z]+\s*=/i', $source) !== 1, $view . ': keine Ereignisattribute');
@@ -271,6 +274,12 @@ T::run('Ansichten und Controller (Quelltext)', static function (): void {
     $gate = strpos($hooks, 'if (!CommunityModule::isEnabled())');
     T::check($gate !== false && strpos($hooks, "'register_routes'") > $gate, 'Routen werden nur bei aktivem Modul angemeldet');
     T::check(is_file(ABSPATH . 'assets/css/community.css') && filesize(ABSPATH . 'assets/css/community.css') < 25 * 1024, 'community.css vorhanden und unter 25 KB');
+});
+
+T::run('Signaturen: HTML maskiert, nur http(s)-Links, Zeilenumbrüche', static function (): void {
+    $html = \CMS\Services\Community\Service\ProfileService::signatureHtml("Gruß <b>Anna</b>\nhttps://example.org/a?b=1&c=2.");
+    T::same('Gruß &lt;b&gt;Anna&lt;/b&gt;<br>' . "\n" . '<a href="https://example.org/a?b=1&amp;c=2" rel="nofollow ugc noopener">https://example.org/a?b=1&amp;c=2</a>.', $html, 'maskiert, Link ohne Satzzeichen am Ende');
+    T::check(!str_contains(\CMS\Services\Community\Service\ProfileService::signatureHtml('javascript:alert(1) "x" onclick=y'), '<a'), 'keine anderen Schemata als Link');
 });
 
 T::finish();

@@ -1,6 +1,7 @@
 <?php
 /**
- * Community – JSON-API unter `/forum/api/<aktion>` (PR #4, Teil 3): Reaktion, Abo, Melden, Vorschau, Moderation, Lösung.
+ * Community – JSON-API unter `/forum/api/<aktion>` (PR #4, Teil 3): Reaktion, Abo, Melden, Vorschau, Moderation, Lösung; dazu Anhang
+ * hochladen und verwerfen, Server-Entwurf (`entwurf`) und „Alles gelesen“ (`gelesen`).
  *
  * Nur POST. Die Dienste entscheiden über Rechte, Pflichtgründe, Grenzen und Protokoll; dieser Controller prüft Form und Zielart,
  * ruft den Dienst und bildet das Ergebnis auf JSON und einen HTTP-Status ab. CSRF: der Router prüft vor der Route ein dauerhaftes Token
@@ -15,8 +16,11 @@ declare(strict_types=1);
 namespace CMS\Services\Community\Http;
 
 use CMS\Auth;
+use CMS\Services\Community\Service\AttachmentService;
+use CMS\Services\Community\Service\DraftService;
 use CMS\Services\Community\Service\ModerationService;
 use CMS\Services\Community\Service\ReactionService;
+use CMS\Services\Community\Service\ReadStateService;
 use CMS\Services\Community\Service\RenderService;
 use CMS\Services\Community\Service\ReportService;
 use CMS\Services\Community\Service\SubscriptionService;
@@ -34,7 +38,10 @@ final class ApiController
     public const TOKEN_ACTION = 'community_api';
 
     /** Aktionen (Pfadsegment) in der Reihenfolge der Anmeldung. */
-    public const ACTIONS = ['reaktion', 'abo', 'melden', 'vorschau', 'moderation', 'loesung'];
+    public const ACTIONS = ['reaktion', 'abo', 'melden', 'vorschau', 'moderation', 'loesung', 'anhang', 'anhang-entfernen', 'entwurf', 'gelesen'];
+
+    /** Ziele eines Uploads (genau eines je Aufruf, wie `AttachmentService::upload()`). */
+    private const UPLOAD_TARGETS = ['forum_id', 'topic_id', 'post_id'];
 
     /** Aktionen der Moderation (Teilmenge von `ModerationService::BULK_OPERATIONS`; Umbenennen und Ankündigen gehören in die Verwaltung). */
     public const MODERATION_OPS = [
@@ -83,15 +90,16 @@ final class ApiController
             $uid = (int) (Auth::instance()->currentUser()->id ?? 0);
         } catch (\Throwable) {
         }
-        [$status, $body] = $this->dispatch($action, $_POST, $uid);
+        [$status, $body] = $this->dispatch($action, $_POST, $uid, $_FILES);
         $this->send($status, $body);
     }
 
     /**
      * @param array<string, mixed> $post
+     * @param array<string, mixed> $files `$_FILES` (nur `anhang`: Feld `file`)
      * @return array{0: int, 1: array<string, mixed>} HTTP-Status und JSON-Körper
      */
-    public function dispatch(string $action, array $post, int $userId): array
+    public function dispatch(string $action, array $post, int $userId, array $files = []): array
     {
         if (!in_array($action, self::ACTIONS, true)) {
             return [404, ['success' => false, 'error' => 'unknown_action']];
@@ -107,6 +115,12 @@ final class ApiController
                 'vorschau' => $this->preview($userId, $post),
                 'moderation' => $this->moderation($userId, $post),
                 'loesung' => $this->solution($userId, $post),
+                'anhang' => $this->upload($userId, $post, $files),
+                'anhang-entfernen' => self::int($post['id'] ?? null) < 1
+                    ? ['success' => false, 'error' => 'invalid_input']
+                    : AttachmentService::instance()->discard($userId, self::int($post['id'])),
+                'entwurf' => $this->draft($userId, $post),
+                'gelesen' => $this->markRead($userId, $post),
             };
         } catch (\Throwable $e) {
             \CMS\Logger::instance()->withChannel('community')->warning('Community-API fehlgeschlagen ({action}): {exception}', ['action' => $action, 'exception' => $e]);
@@ -206,6 +220,79 @@ final class ApiController
         $service = ModerationService::instance();
 
         return $postId > 0 ? $service->markSolution($userId, $topicId, $postId) : $service->unmarkSolution($userId, $topicId);
+    }
+
+    /**
+     * Upload einer Datei (Feld `file`), Ziel `forum_id` (neues Thema), `topic_id` (Antwort) oder `post_id` (Bearbeiten), Formular-
+     * Kennung `token`. Antwort mit `attachment` (Info) und `markdown` (Einbettung `![name](attachment:ID)` bzw. `[name](attachment:ID)`).
+     *
+     * @param array<string, mixed> $post
+     * @param array<string, mixed> $files
+     * @return array<string, mixed>
+     */
+    private function upload(int $userId, array $post, array $files): array
+    {
+        $file = is_array($files['file'] ?? null) ? $files['file'] : null;
+        $target = [];
+        foreach (self::UPLOAD_TARGETS as $key) {
+            if (self::int($post[$key] ?? null) > 0) {
+                $target = [$key => self::int($post[$key])];
+                break;
+            }
+        }
+        $token = is_string($post['token'] ?? null) ? (string) $post['token'] : '';
+        if ($file === null || $target === [] || is_array($file['name'] ?? null) || preg_match('/^[a-f0-9]{32}$/D', $token) !== 1) {
+            return ['success' => false, 'error' => 'invalid_input'];
+        }
+        $result = AttachmentService::instance()->upload($userId, $file, $target, $token);
+        if (!empty($result['success']) && is_array($result['attachment'] ?? null)) {
+            $info = $result['attachment'];
+            $label = str_replace(['[', ']', "\n", "\r"], ['(', ')', ' ', ' '], (string) ($info['name'] ?? ''));
+            $result['markdown'] = (!empty($info['is_image']) ? '!' : '') . '[' . $label . '](attachment:' . (int) $info['id'] . ')';
+        }
+
+        return $result;
+    }
+
+    /**
+     * Server-Entwurf: `op` = `load` | `save` | `delete`, Ziel `forum_id` (neues Thema) oder `topic_id` (Antwort).
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private function draft(int $userId, array $post): array
+    {
+        $op = (string) ($post['op'] ?? 'save');
+        $forumId = self::int($post['forum_id'] ?? null);
+        [$type, $id] = $forumId > 0 ? ['forum', $forumId] : ['topic', self::int($post['topic_id'] ?? null)];
+        if ($id < 1 || !in_array($op, ['load', 'save', 'delete'], true)) {
+            return ['success' => false, 'error' => 'invalid_input'];
+        }
+        $service = DraftService::instance();
+
+        return match ($op) {
+            'load' => $service->load($userId, $type, $id),
+            'save' => $service->save($userId, $type, $id, is_string($post['title'] ?? null) ? (string) $post['title'] : null, is_string($post['body'] ?? null) ? (string) $post['body'] : ''),
+            'delete' => ['success' => true, 'deleted' => $service->discard($userId, $type, $id)],
+        };
+    }
+
+    /**
+     * „Alles gelesen“: `forum_id` > 0 für ein Forum (mit Unterforen), ohne für die gesamte Community.
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private function markRead(int $userId, array $post): array
+    {
+        $raw = $post['forum_id'] ?? '';
+        $forumId = self::int($raw);
+        if ($forumId === 0 && $raw !== '' && $raw !== '0') {
+            return ['success' => false, 'error' => 'invalid_input'];
+        }
+        $marked = ReadStateService::instance()->markForumRead($userId, $forumId);
+
+        return ['success' => true, 'forum_id' => $forumId, 'marked' => $marked];
     }
 
     // ── Ausgabe ─────────────────────────────────────────────────────────────────────────────────────────────────

@@ -245,9 +245,12 @@ T::run('Definitionen: Typen, Standards und Grenzen laut Vertrag', static functio
         // PR #5 (Captcha, E7)
         'captcha_mode' => ['enum', 'first_post'],
         'captcha_provider' => ['enum', 'pow'],
+        // 4.2.0 (Löschmodus der DSGVO-Löschung)
+        'erase_mode' => ['enum', 'anonymize'],
     ];
     T::same(array_keys($expected), array_keys(Settings::DEFINITIONS), 'Schlüsselliste und Reihenfolge stimmen mit Vertrag §3 überein (#2a, #2b, dann PR #5)');
-    T::same(35, count(Settings::DEFINITIONS), 'insgesamt 35 Schlüssel (33 bis PR #4, dazu captcha_mode und captcha_provider)');
+    T::same(36, count(Settings::DEFINITIONS), 'insgesamt 36 Schlüssel (33 bis PR #4, dazu captcha_mode und captcha_provider, seit 4.2.0 erase_mode)');
+    T::same(['anonymize', 'delete'], Settings::DEFINITIONS['erase_mode']['values'], 'enum: Löschmodus anonymisieren oder Inhalt löschen');
     T::same(
         ['captcha_mode' => ['off', 'first_post', 'trust0', 'always'], 'captcha_provider' => ['pow', 'image', 'math']],
         ['captcha_mode' => Settings::DEFINITIONS['captcha_mode']['values'], 'captcha_provider' => Settings::DEFINITIONS['captcha_provider']['values']],
@@ -383,6 +386,8 @@ T::run('normalize(): Eingabe → Erwartung', static function (): void {
         ['captcha_provider', 'image', 'image', 'captcha_provider: image'],
         ['captcha_provider', 'turnstile', 'pow', 'captcha_provider: Drittanbieter gibt es nicht → Standard (pow)'],
         ['captcha_provider', ['math'], 'pow', 'captcha_provider: Liste → Standard'],
+        ['erase_mode', 'delete', 'delete', 'erase_mode: delete'],
+        ['erase_mode', 'loeschen', 'anonymize', 'erase_mode: unbekannter Wert → Standard (anonymisieren)'],
         ['use_core_antispam', 'on', true, 'use_core_antispam: an'],
         ['use_core_antispam', 'maybe', false, 'use_core_antispam: unbekannter Text → Standard (aus)'],
         ['moderation_reason_required', 'off', false, 'moderation_reason_required: aus'],
@@ -1332,14 +1337,134 @@ define('CS_EXTRA_KEYS', [
     'community.trash.label', 'community.trash.restored', 'community.trash.deleted', 'community.trash.purged', 'community.trash.confirm',
     'community.trash.warning.reports', 'community.trash.warning.unknown',
     'community.trash.error.not_found', 'community.trash.error.forum_missing', 'community.trash.error.rejected', 'community.trash.error.state', 'community.trash.error.failed',
+    // 4.2.0: Oberfläche (Schreibformular, Gelesen, Mitgliederbereich, Leseseiten)
+    'community.compose.new_heading', 'community.compose.new_submit', 'community.compose.reply_heading', 'community.compose.reply_submit', 'community.compose.edit_heading',
+    'community.compose.edit_submit', 'community.compose.topic_pending', 'community.compose.reply_pending', 'community.compose.failed', 'community.compose.retry_after',
+    'community.compose.login', 'community.compose.back', 'community.compose.title', 'community.compose.body', 'community.compose.reason', 'community.compose.force',
+    'community.compose.preview', 'community.compose.live_preview', 'community.compose.cancel', 'community.compose.attachments', 'community.compose.remove_attachment',
+    'community.compose.insert', 'community.compose.discard', 'community.compose.upload_label', 'community.compose.upload_hint', 'community.compose.uploading',
+    'community.compose.uploaded', 'community.compose.upload_failed', 'community.compose.visual_hint', 'community.compose.draft_local', 'community.compose.draft_server',
+    'community.compose.draft_restore', 'community.compose.draft_dismiss', 'community.compose.draft_saved', 'community.compose.draft_failed', 'community.read.mark_all',
+    'community.read.marked_all', 'community.read.mark_forum', 'community.read.marked_forum', 'community.member.last_post', 'community.member.recent_topics',
+    'community.member.signature_help', 'community.member.signature_saved', 'community.member.signature_save', 'community.member.trust_level', 'community.member.no_topics',
+    'community.member.view_profile', 'community.member.reactions', 'community.member.topics', 'community.member.solutions', 'community.member.replies', 'community.member.signature',
+    'community.member.posts', 'community.view.crumbs', 'community.view.locked', 'community.view.solved', 'community.view.pinned', 'community.view.pages', 'community.view.prev',
+    'community.view.next', 'community.view.page_of', 'community.view.stat_replies', 'community.view.activity', 'community.view.more_topics', 'community.view.by',
+    'community.view.reaction.like', 'community.view.reaction.love', 'community.view.reaction.laugh', 'community.view.reaction.idea', 'community.view.reaction.thanks',
+    'community.view.reaction.wow', 'community.view.reaction.sad', 'community.view.reaction.celebrate', 'community.view.subscribe', 'community.view.unsubscribe',
+    'community.view.mod.unlock', 'community.view.mod.lock', 'community.view.mod.unpin', 'community.view.mod.pin', 'community.view.mod.hide', 'community.view.mod.show',
+    'community.view.reply_count', 'community.view.topic', 'community.view.unsolve', 'community.view.post_deleted', 'community.view.post_hidden', 'community.view.edited',
+    'community.view.pending', 'community.view.solution', 'community.view.erased', 'community.view.reactions', 'community.view.quote', 'community.view.edit',
+    'community.view.report', 'community.view.mark_solution', 'community.view.reply', 'community.view.cancel', 'community.view.send', 'community.view.nav.home',
+    'community.view.nav.new', 'community.view.nav.active', 'community.view.nav.unanswered', 'community.view.nav.search_label', 'community.view.nav.search_submit',
+    'community.view.all_answered', 'community.view.no_topics', 'community.view.created', 'community.view.subforums', 'community.view.forum_empty', 'community.view.no_forums',
+    'community.view.topics', 'community.view.posts', 'community.view.last_post', 'community.view.search.heading', 'community.view.search.only_forum', 'community.view.search.all_forums',
+    'community.view.search.apply', 'community.view.search.hint', 'community.view.search.too_short', 'community.view.search.rate_limited', 'community.view.search.login',
+    'community.view.search.unavailable', 'community.view.search.guest_unavailable', 'community.view.search.no_hits', 'community.view.search.found', 'community.view.search.found_truncated',
+    'community.view.not_found.heading', 'community.view.not_found.text', 'community.view.not_found.back',
+    'community.js.offline', 'community.js.expired', 'community.js.unexpected', 'community.js.subscribed', 'community.js.unsubscribed', 'community.js.report_title',
+    'community.js.reason', 'community.js.reason_required', 'community.js.note', 'community.js.reported',
+    // 4.2.0: Verwaltung (Community-Admin)
+    'community.admin.section.queue', 'community.admin.section.reports', 'community.admin.section.topics', 'community.admin.section.sanctions',
+    'community.admin.section.log', 'community.admin.section.structure', 'community.admin.section.permissions', 'community.admin.section.ranks',
+    'community.admin.section.settings', 'community.admin.msg.action_failed', 'community.admin.msg.unknown_action',
+    'community.admin.msg.post_approved', 'community.admin.msg.post_rejected', 'community.admin.msg.ban_lifted', 'community.admin.msg.rank_deleted',
+    'community.admin.msg.export_deleted', 'community.admin.msg.export_not_found', 'community.admin.msg.report_partial',
+    'community.admin.msg.report_resolved', 'community.admin.msg.member_banned', 'community.admin.msg.bulk_none', 'community.admin.msg.bulk_result',
+    'community.admin.msg.category_saved', 'community.admin.msg.forum_saved', 'community.admin.msg.position_unchanged',
+    'community.admin.msg.order_changed', 'community.admin.msg.structure_changed', 'community.admin.msg.category_not_empty',
+    'community.admin.msg.category_deleted', 'community.admin.msg.forum_not_empty', 'community.admin.msg.forum_deleted',
+    'community.admin.msg.group_inactive', 'community.admin.msg.moderators_invalid', 'community.admin.msg.invalid_input',
+    'community.admin.msg.permissions_saved', 'community.admin.msg.rank_saved', 'community.admin.msg.settings_saved',
+    'community.admin.msg.settings_failed', 'community.admin.checklist.category', 'community.admin.checklist.forum',
+    'community.admin.checklist.guests', 'community.admin.checklist.verified', 'community.admin.common.more', 'community.admin.common.open_forum',
+    'community.admin.common.sections_label', 'community.admin.common.member_id', 'community.admin.common.approve', 'community.admin.common.reject',
+    'community.admin.common.all', 'community.admin.common.posts', 'community.admin.common.topics', 'community.admin.common.members',
+    'community.admin.common.forums', 'community.admin.common.post', 'community.admin.common.topic', 'community.admin.common.member',
+    'community.admin.common.target', 'community.admin.common.since', 'community.admin.common.action', 'community.admin.common.choose',
+    'community.admin.common.show', 'community.admin.common.reason', 'community.admin.common.delete', 'community.admin.common.title',
+    'community.admin.common.save', 'community.admin.common.create', 'community.admin.common.yes', 'community.admin.common.no',
+    'community.admin.overview.pending_posts', 'community.admin.overview.open_reports', 'community.admin.overview.active_bans',
+    'community.admin.overview.oldest', 'community.admin.overview.setup', 'community.admin.overview.done', 'community.admin.overview.open',
+    'community.admin.queue.empty', 'community.admin.queue.new_topic', 'community.admin.queue.reject_label', 'community.admin.queue.reason_required',
+    'community.admin.reports.target_type', 'community.admin.reports.detail_heading', 'community.admin.reports.result',
+    'community.admin.reports.status_valid', 'community.admin.reports.status_invalid', 'community.admin.reports.note',
+    'community.admin.reports.note_optional', 'community.admin.reports.resolve_all', 'community.admin.reports.empty', 'community.admin.reports.count',
+    'community.admin.reports.reasons', 'community.admin.reports.reporters', 'community.admin.reports.review',
+    'community.admin.topics.status_published', 'community.admin.topics.status_pending', 'community.admin.topics.status_hidden',
+    'community.admin.topics.choose_forum', 'community.admin.topics.empty', 'community.admin.topics.selection', 'community.admin.topics.replies',
+    'community.admin.topics.last_post', 'community.admin.topics.state', 'community.admin.topics.select_topic', 'community.admin.topics.pinned',
+    'community.admin.topics.locked', 'community.admin.topics.op_lock', 'community.admin.topics.op_unlock', 'community.admin.topics.op_pin',
+    'community.admin.topics.op_unpin', 'community.admin.topics.op_hide', 'community.admin.topics.op_restore', 'community.admin.topics.op_move',
+    'community.admin.topics.target_forum_label', 'community.admin.topics.target_forum', 'community.admin.topics.apply',
+    'community.admin.sanctions.heading', 'community.admin.sanctions.user_id', 'community.admin.sanctions.scope',
+    'community.admin.sanctions.scope_write', 'community.admin.sanctions.scope_full', 'community.admin.sanctions.duration',
+    'community.admin.sanctions.permanent', 'community.admin.sanctions.days', 'community.admin.sanctions.reason_label',
+    'community.admin.sanctions.note', 'community.admin.sanctions.submit', 'community.admin.sanctions.empty', 'community.admin.sanctions.until',
+    'community.admin.sanctions.forever', 'community.admin.sanctions.lift', 'community.admin.log.filter', 'community.admin.log.empty',
+    'community.admin.log.time', 'community.admin.structure.type_discussion', 'community.admin.structure.type_qa',
+    'community.admin.structure.type_announcements', 'community.admin.structure.status_open', 'community.admin.structure.status_readonly',
+    'community.admin.structure.status_archived', 'community.admin.structure.status_hidden', 'community.admin.structure.move_up',
+    'community.admin.structure.move_down', 'community.admin.structure.delete_category', 'community.admin.structure.delete_forum',
+    'community.admin.structure.slug_auto', 'community.admin.structure.category', 'community.admin.structure.type',
+    'community.admin.structure.slow_mode', 'community.admin.structure.description', 'community.admin.structure.require_approval',
+    'community.admin.structure.inherit', 'community.admin.structure.hint', 'community.admin.structure.categories', 'community.admin.structure.drag',
+    'community.admin.structure.slug', 'community.admin.structure.visible', 'community.admin.structure.new_category',
+    'community.admin.structure.topic_count', 'community.admin.structure.new_forum', 'community.admin.structure.parent',
+    'community.admin.structure.top_level', 'community.admin.structure.create_forum', 'community.admin.permissions.short.read',
+    'community.admin.permissions.short.create_topic', 'community.admin.permissions.short.reply', 'community.admin.permissions.short.edit_own',
+    'community.admin.permissions.short.delete_own', 'community.admin.permissions.short.poll', 'community.admin.permissions.short.vote',
+    'community.admin.permissions.short.react', 'community.admin.permissions.short.mark_solution', 'community.admin.permissions.short.bypass_approval',
+    'community.admin.permissions.short.bypass_slow_mode', 'community.admin.permissions.guests', 'community.admin.permissions.role',
+    'community.admin.permissions.group', 'community.admin.permissions.group_deleted', 'community.admin.permissions.trust',
+    'community.admin.permissions.choose_forum', 'community.admin.permissions.inherits', 'community.admin.permissions.defaults',
+    'community.admin.permissions.hint', 'community.admin.permissions.who', 'community.admin.permissions.moderators',
+    'community.admin.permissions.moderators_label', 'community.admin.permissions.children', 'community.admin.permissions.save',
+    'community.admin.ranks.english', 'community.admin.ranks.min_posts', 'community.admin.ranks.color', 'community.admin.ranks.icon',
+    'community.admin.ranks.order', 'community.admin.ranks.title_en_aria', 'community.admin.ranks.new', 'community.admin.ranks.title_en',
+    'community.admin.settings.label.base_path', 'community.admin.settings.label.guests_can_read',
+    'community.admin.settings.label.require_verified_email', 'community.admin.settings.label.topics_per_page',
+    'community.admin.settings.label.posts_per_page', 'community.admin.settings.label.title_min', 'community.admin.settings.label.title_max',
+    'community.admin.settings.label.post_min', 'community.admin.settings.label.post_max', 'community.admin.settings.label.edit_window_minutes',
+    'community.admin.settings.label.edit_window_minutes_trusted', 'community.admin.settings.label.rate_post_seconds',
+    'community.admin.settings.label.rate_topic_seconds', 'community.admin.settings.label.new_member_approval_posts',
+    'community.admin.settings.label.max_pending_per_user', 'community.admin.settings.label.duplicate_window_seconds',
+    'community.admin.settings.label.trust_level1_posts', 'community.admin.settings.label.trust_level2_posts',
+    'community.admin.settings.label.unread_horizon_days', 'community.admin.settings.label.use_core_antispam',
+    'community.admin.settings.label.spam_duplicate_hours', 'community.admin.settings.label.ip_hash_days',
+    'community.admin.settings.label.moved_stub_days', 'community.admin.settings.label.moderation_reason_required',
+    'community.admin.settings.label.report_hide_threshold', 'community.admin.settings.label.moderator_ban_max_days',
+    'community.admin.settings.label.notify_mail', 'community.admin.settings.label.attachment_max_kb', 'community.admin.settings.label.captcha_mode',
+    'community.admin.settings.label.captcha_provider', 'community.admin.settings.label.erase_mode', 'community.admin.settings.enum.captcha_mode.off',
+    'community.admin.settings.enum.captcha_mode.first_post', 'community.admin.settings.enum.captcha_mode.trust0',
+    'community.admin.settings.enum.captcha_mode.always', 'community.admin.settings.enum.captcha_provider.pow',
+    'community.admin.settings.enum.captcha_provider.image', 'community.admin.settings.enum.captcha_provider.math',
+    'community.admin.settings.enum.erase_mode.anonymize', 'community.admin.settings.enum.erase_mode.delete', 'community.admin.settings.group.general',
+    'community.admin.settings.group.content', 'community.admin.settings.group.spam', 'community.admin.settings.group.moderation',
+    'community.admin.settings.group.privacy', 'community.admin.settings.limit.posts_per_day', 'community.admin.settings.limit.topics_per_hour',
+    'community.admin.settings.limit.links_per_post', 'community.admin.settings.limit.images_per_post',
+    'community.admin.settings.limit.attachments_per_post', 'community.admin.settings.limit.attachments_per_day', 'community.admin.settings.perm.read',
+    'community.admin.settings.perm.create_topic', 'community.admin.settings.perm.reply', 'community.admin.settings.perm.edit_own',
+    'community.admin.settings.perm.delete_own', 'community.admin.settings.perm.upload', 'community.admin.settings.perm.poll',
+    'community.admin.settings.perm.vote', 'community.admin.settings.perm.react', 'community.admin.settings.perm.mark_solution',
+    'community.admin.settings.perm.bypass_approval', 'community.admin.settings.perm.bypass_slow_mode', 'community.admin.settings.limits',
+    'community.admin.settings.limits_hint', 'community.admin.settings.level', 'community.admin.settings.limit_aria',
+    'community.admin.settings.default_perms', 'community.admin.settings.permission', 'community.admin.settings.guest',
+    'community.admin.settings.reactions_attachments', 'community.admin.settings.allowed_reactions', 'community.admin.settings.allowed_types',
+    'community.admin.settings.word_filter', 'community.admin.settings.wf.block', 'community.admin.settings.wf.review',
+    'community.admin.settings.wf.replace', 'community.admin.settings.wf.label', 'community.admin.settings.replacement',
+    'community.admin.settings.save', 'community.admin.settings.exports_heading', 'community.admin.settings.exports_hint',
+    'community.admin.settings.file', 'community.admin.settings.size', 'community.admin.settings.created', 'community.admin.settings.expires',
+    'community.admin.settings.actions', 'community.admin.settings.download',
 ]);
 
 T::run('Zusatzschlüssel CS_EXTRA_KEYS: Zahlen und Ableitung aus den Diensten', static function (): void {
     $group = static fn (string $prefix): array => array_values(array_filter(CS_EXTRA_KEYS, static fn (string $key): bool => str_starts_with($key, $prefix)));
-    T::same(75, count(CS_EXTRA_KEYS), '75 Zusatzschlüssel (63 aus PR #2b, 12 für den Papierkorb aus PR #5)');
+    T::same(496, count(CS_EXTRA_KEYS), '496 Zusatzschlüssel (63 aus PR #2b, 12 für den Papierkorb aus PR #5, 139 für die Oberfläche und 282 für die Verwaltung in 4.2.0)');
+    T::same([35, 4, 14, 76, 10, 282], [count($group('community.compose.')), count($group('community.read.')), count($group('community.member.')), count($group('community.view.')), count($group('community.js.')), count($group('community.admin.'))], '4.2.0: Schreibformular 35, Gelesen 4, Mitgliederbereich 14, Leseseiten 76, Skript 10, Verwaltung 282');
     T::same(count(CS_EXTRA_KEYS), count(array_unique(CS_EXTRA_KEYS)), 'Zusatzschlüssel eindeutig');
     T::same([3, 5, 4, 2, 35, 14, 12], [count($group('community.quote.')), count($group('community.report.reason.')), count($group('community.report.status.')), count($group('community.ban.scope.')), count($group('community.notify.')), count($group('community.mail.')), count($group('community.trash.'))], 'Gruppen: Zitat 3, Gründe 5, Status 4, Umfang 2, Hinweise 35, Mails 14, Papierkorb 12');
-    T::same(95, count(Codes::ACCESS_REASONS) - 23 + count(Codes::ERRORS) - 16 + count(CS_EXTRA_KEYS) - count($group('community.trash.')), '95 neue Schlüssel je Sprache in PR #2b (5 Gründe, 27 Codes, 63 Zusatzschlüssel)');
+    T::same(95, count(Codes::ACCESS_REASONS) - 23 + count(Codes::ERRORS) - 16 + count(CS_EXTRA_KEYS) - count($group('community.trash.')) - (139 + 282), '95 neue Schlüssel je Sprache in PR #2b (5 Gründe, 27 Codes, 63 Zusatzschlüssel)');
     // Abgeleitete Gruppen: Werte und Reihenfolge der Dienste (= Repository-Konstanten), Sprachschlüssel in derselben Folge.
     $derived = [
         'community.report.reason.' => [\CMS\Services\Community\Service\ReportService::REASONS, \CMS\Services\Community\Repository\ReportRepository::REASONS, 'ReportService::REASONS'],
@@ -1570,6 +1695,7 @@ T::run('Leser vorhanden: jeder Schlüssel in Settings::DEFINITIONS wird außerha
         'attachment_max_kb' => [['Service/AttachmentService.php'], null],
         'captcha_mode' => [['Service/CaptchaGate.php'], null],
         'captcha_provider' => [['Service/CaptchaGate.php'], null],
+        'erase_mode' => [['CommunityPrivacy.php', 'CommunityLegal.php'], null],
     ];
     T::same(array_keys(Settings::DEFINITIONS), array_keys($readers), 'die Lesertabelle deckt genau die Schlüssel aus DEFINITIONS ab');
 
@@ -1609,6 +1735,8 @@ T::run('Wirkungstest vorhanden: Abschnitt „Wirkung: <schlüssel>“ je Einstel
         'attachment_types' => 'community-uploads', 'attachment_max_kb' => 'community-uploads',
         // PR #5 (Captcha)
         'captcha_mode' => 'community-captcha', 'captcha_provider' => 'community-captcha',
+        // 4.2.0
+        'erase_mode' => 'community-privacy',
     ];
     $tableKeys = array_keys($suites);
     $definedKeys = array_keys(Settings::DEFINITIONS);

@@ -314,6 +314,45 @@ final class UserStatsRepository extends AbstractRepository
         ) > 0;
     }
 
+    /** Signatur eines Mitglieds als eingegebener Text (`''` ohne Zeile oder ohne Signatur). */
+    public function signature(int $userId): string
+    {
+        $row = $this->fetchOne('SELECT signature FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? LIMIT 1', [$userId]);
+
+        return (string) ($row['signature'] ?? '');
+    }
+
+    /**
+     * Gespeichertes HTML der Signaturen mehrerer Mitglieder (eine Abfrage je CHUNK IDs). Mitglieder ohne Zeile oder ohne Signatur fehlen;
+     * aufsteigend.
+     *
+     * @param array<array-key, mixed> $userIds
+     * @return array<int, string>
+     */
+    public function signaturesMany(array $userIds): array
+    {
+        $map = [];
+        foreach (self::batches($userIds) as $batch) {
+            $rows = $this->fetchAll(
+                'SELECT user_id, signature_html FROM ' . $this->table(self::TABLE) . ' WHERE user_id IN (' . self::placeholders(count($batch)) . ')'
+                . " AND signature_html IS NOT NULL AND signature_html <> '' ORDER BY user_id ASC",
+                $batch
+            );
+            foreach ($rows as $row) {
+                $map[(int) $row['user_id']] = (string) $row['signature_html'];
+            }
+        }
+        ksort($map);
+
+        return $map;
+    }
+
+    /** Schreibt Text und HTML der Signatur (`null` = keine). Die Zeile legt der Dienst vorher mit `ensure()` an. */
+    public function saveSignature(int $userId, ?string $text, ?string $html, string $nowUtc): void
+    {
+        $this->run('UPDATE ' . $this->table(self::TABLE) . ' SET signature = ?, signature_html = ?, updated_at = ? WHERE user_id = ?', [$text, $html, $nowUtc, $userId]);
+    }
+
     /**
      * Alle Ränge, `sort_order` aufsteigend, bei Gleichstand nach ID; höchstens MAX_RANKS.
      *

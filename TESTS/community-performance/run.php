@@ -48,6 +48,7 @@ const SPEC_BUDGET = 6;
 
 /**
  * Seiten und ihr Budget: [Bezeichnung, Adresse (mit {long} für das lange Thema), Konto, Abfrageparameter, erwartete Ansicht, Abfragen, Schreibanweisungen].
+ * Themenseiten lesen seit 4.2.0 die Signaturen aller Autoren der Seite in einer Sammelabfrage (`ProfileService::signatures()`): je eine Abfrage mehr.
  *
  * @return list<array{0: string, 1: string, 2: ?string, 3: array<string, string>, 4: string, 5: int, 6: int}>
  */
@@ -57,10 +58,10 @@ function budgets(): array
         ['Startseite (Gast)', '/forum', null, [], 'index', 3, 0],
         ['Forum (Gast)', '/forum/technik', null, [], 'forum', 10, 0],
         ['Forum (Mitglied)', '/forum/technik', 'member', [], 'forum', 21, 0],
-        ['Thema Seite 1 (Gast)', '/forum/thema/{long}-langer-austausch', null, [], 'topic', 9, 0],
-        ['Thema Seite 3 (Gast)', '/forum/thema/{long}-langer-austausch/seite-3', null, [], 'topic', 10, 0],
-        ['Thema Seite 1 (Mitglied)', '/forum/thema/{long}-langer-austausch', 'member', [], 'topic', 22, 2],
-        ['Thema Seite 1 (Moderation)', '/forum/thema/{long}-langer-austausch', 'admin', [], 'topic', 19, 2],
+        ['Thema Seite 1 (Gast)', '/forum/thema/{long}-langer-austausch', null, [], 'topic', 10, 0],
+        ['Thema Seite 3 (Gast)', '/forum/thema/{long}-langer-austausch/seite-3', null, [], 'topic', 11, 0],
+        ['Thema Seite 1 (Mitglied)', '/forum/thema/{long}-langer-austausch', 'member', [], 'topic', 23, 2],
+        ['Thema Seite 1 (Moderation)', '/forum/thema/{long}-langer-austausch', 'admin', [], 'topic', 20, 2],
         ['Liste „neu“ (Gast)', '/forum/neu', null, [], 'listing', 4, 0],
         ['Suche (Gast)', '/forum/suche', null, ['q' => 'Einrichtung'], 'search', 6, 0],
         ['Neues Thema (Mitglied)', '/forum/technik/neues-thema', 'member', [], 'compose', 12, 0],
@@ -81,7 +82,7 @@ function memberBudgets(): array
         ['Meine Antworten (Mitglied)', 'beitraege', 'member', 9],
         ['Meine Antworten (Moderation)', 'beitraege', 'admin', 5],
         ['Abos', 'abos', 'member', 10],
-        ['Einstellungen', 'einstellungen', 'member', 5],
+        ['Einstellungen', 'einstellungen', 'member', 6],
         ['Moderation', 'moderation', 'admin', 5],
     ];
 }

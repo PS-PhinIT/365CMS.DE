@@ -265,8 +265,9 @@ T::run('Löschung', static function (): void {
     $db->queueJob(['actor' => $a, 'topic' => $tb, 'post' => $pa2]);
     $db->queueJob(['actor' => $b, 'topic' => $ta, 'post' => $pa]);
 
-    $privacy = new CommunityPrivacy($db);
+    $privacy = new CommunityPrivacy($db, Settings::fromArray([]));
     $counts = $privacy->erase($a);
+    T::check(!isset($counts['posts_deleted']), 'Standard (erase_mode = anonymize): kein Löschschritt für Beiträge');
     T::same(1, $counts['reactions'], 'eine Reaktion gelöscht');
     T::same([0, 0], [(int) $db->row('community_posts', ['id' => $pb])['reaction_count'], (int) $db->row('community_topics', ['id' => $tb])['reaction_count']], 'Reaktionszähler von Beitrag und Thema zurückgebucht');
     T::same(0, (int) $db->row('community_user_stats', ['user_id' => $b])['reactions_received'], 'Zähler „erhaltene Reaktionen“ des Autors zurückgebucht');
@@ -304,6 +305,49 @@ T::run('Löschung', static function (): void {
     T::same(1, $db->count('community_user_stats', ['user_id' => $b]), 'Statistik des anderen Mitglieds bleibt');
     T::same([], $privacy->collect($a), 'nach der Löschung gibt es keine Auskunft mehr');
     T::same(0, array_sum((new CommunityPrivacy($db))->erase(0)), 'Konto 0: nichts');
+});
+
+T::run('Wirkung: erase_mode (delete = Inhalt der Beiträge löschen, Platzhalter bleibt)', static function (): void {
+    $db = CommunityTestDatabase::create();
+    $a = $db->user();
+    $b = $db->user();
+    $forum = $db->forum();
+    $ta = $db->topic(['forum' => $forum, 'user' => $a, 'title' => 'Thema von A']);
+    $tb = $db->topic(['forum' => $forum, 'user' => $b, 'title' => 'Thema von B']);
+    $pa = $db->post(['topic' => $ta, 'user' => $a, 'first' => true, 'body' => 'Text von A']);
+    $pa2 = $db->post(['topic' => $tb, 'user' => $a, 'body' => 'Antwort von A']);
+    $pb = $db->post(['topic' => $tb, 'user' => $b, 'first' => true, 'body' => 'Text von B']);
+    $db->execute("UPDATE cms_community_posts SET body_html = '<p>Cache</p>', ip_hash = ? WHERE id IN (?, ?, ?)", [str_repeat('e', 64), $pa, $pa2, $pb]);
+    ins($db, 'community_post_revisions', ['post_id' => $pa, 'title' => null, 'body' => 'alte Fassung von A', 'format' => 'markdown', 'edited_by' => $a, 'edit_reason' => '', 'created_at' => ago(1)]);
+    ins($db, 'community_post_revisions', ['post_id' => $pb, 'title' => null, 'body' => 'alte Fassung von B', 'format' => 'markdown', 'edited_by' => $b, 'edit_reason' => '', 'created_at' => ago(1)]);
+    $db->attachment(['post' => $pa, 'user' => $a]);
+    $db->attachment(['post' => $pb, 'user' => $b]);
+    $unindexed = [];
+    $privacy = new CommunityPrivacy($db, Settings::fromArray(['erase_mode' => 'delete']), static function (array $ids) use (&$unindexed): void {
+        $unindexed[] = $ids;
+    });
+
+    $counts = $privacy->erase($a);
+    T::same([2, 1, 1], [$counts['posts_deleted'], $counts['revisions_deleted'], $counts['attachments_released']], 'zwei Beiträge geleert, eine Fassung gelöscht, ein Anhang gelöst');
+    foreach ([$pa, $pa2] as $id) {
+        $row = $db->row('community_posts', ['id' => $id]);
+        T::same(['', '', null, null, 'published'], [$row['body'], $row['body_html'], $row['user_id'], $row['ip_hash'], $row['status']], 'Beitrag ' . $id . ': Text und Cache leer, anonym, Zeile bleibt veröffentlicht (Zählung und Seitenposition)');
+        T::check(is_string($row['deleted_at']) && $row['deleted_at'] !== '', 'Beitrag ' . $id . ': deleted_at gesetzt');
+    }
+    $foreign = $db->row('community_posts', ['id' => $pb]);
+    T::same(['Text von B', '<p>Cache</p>', null], [$foreign['body'], $foreign['body_html'], $foreign['deleted_at']], 'fremder Beitrag unberührt');
+    T::same([0, 1], [$db->count('community_post_revisions', ['post_id' => $pa]), $db->count('community_post_revisions', ['post_id' => $pb])], 'Verlauf: nur die Fassungen des Mitglieds gelöscht');
+    T::same([1, $pb], [$db->count('community_attachments', ['user_id' => null, 'post_id' => null]), (int) $db->row('community_attachments', ['user_id' => $b])['post_id']], 'Anhang des Mitglieds vom Beitrag gelöst (Aufräumregel community.orphan_uploads), fremder bleibt');
+    T::same([[$pa, $pa2]], $unindexed, 'Suchindex: genau die Beiträge des Mitglieds entfernt');
+    T::same('Thema von A', $db->row('community_topics', ['id' => $ta])['title'], 'Themen-Titel bleibt (anonym)');
+
+    $again = $privacy->erase($a);
+    T::same(0, array_sum($again), 'idempotent: der zweite Lauf ändert nichts');
+    T::same([[$pa, $pa2]], $unindexed, 'zweiter Lauf: kein weiterer Aufruf des Suchindex');
+
+    $html = CommunityLegal::privacySection(['erase_mode' => 'delete', 'days' => ['ip_hash' => 30] + CommunityRetention::DEFAULTS]);
+    T::check(str_contains($html, 'wird der Inhalt Ihrer Beiträge samt früherer Fassungen und Anhänge gelöscht') && !str_contains($html, 'werden Ihre Beiträge anonymisiert'), 'Datenschutztext nennt den Löschmodus');
+    T::check(str_contains(CommunityLegal::privacySection(['days' => CommunityRetention::DEFAULTS]), 'werden Ihre Beiträge anonymisiert'), 'Datenschutztext: Standard anonymisieren');
 });
 
 T::run('Legal-Baustein: Abschnitt „Forum (Community)“ der Datenschutzerklärung folgt den Einstellungen und Fristen', static function (): void {
@@ -356,10 +400,10 @@ T::run('Legal-Baustein: Abschnitt „Forum (Community)“ der Datenschutzerklär
     T::check(str_contains($html, 'Art. 6 Abs. 1 lit. b DSGVO') && str_contains($html, 'Art. 6 Abs. 1 lit. f DSGVO') && str_contains($html, 'Gelöschtes Mitglied'), 'Rechtsgrundlagen und Anonymisierung genannt');
 
     // Fakten aus den Einstellungen
-    $fromSettings = CommunityLegal::facts(Settings::fromArray(['guests_can_read' => true, 'notify_mail' => false, 'captcha_mode' => 'always']), $days);
-    T::same(['guests_can_read' => true, 'notify_mail' => false, 'captcha_mode' => 'always', 'days' => $days], $fromSettings, 'facts(): Einstellungen und Fristen');
+    $fromSettings = CommunityLegal::facts(Settings::fromArray(['guests_can_read' => true, 'notify_mail' => false, 'captcha_mode' => 'always', 'erase_mode' => 'delete']), $days);
+    T::same(['guests_can_read' => true, 'notify_mail' => false, 'captcha_mode' => 'always', 'erase_mode' => 'delete', 'days' => $days], $fromSettings, 'facts(): Einstellungen und Fristen');
     $defaults = CommunityLegal::facts(Settings::fromArray([]), $days);
-    T::same([false, true, 'first_post'], [$defaults['guests_can_read'], $defaults['notify_mail'], $defaults['captcha_mode']], 'facts(): Standardeinstellungen');
+    T::same([false, true, 'first_post', 'anonymize'], [$defaults['guests_can_read'], $defaults['notify_mail'], $defaults['captcha_mode'], $defaults['erase_mode']], 'facts(): Standardeinstellungen');
     // Der Abschnitt nennt jede Frist der Aufbewahrungsregeln (kein Eintrag fehlt)
     $missing = [];
     foreach (array_keys($days) as $key) {

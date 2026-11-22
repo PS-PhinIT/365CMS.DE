@@ -85,6 +85,30 @@ T::run('Aktionen', static function (): void {
     T::same('/admin/community-queue?cursor=abc', CommunityAdminModule::url('queue', ['cursor' => 'abc', 'type' => '']), 'url(): leere Parameter entfallen');
 });
 
+T::run('Struktur: Ziehen, Löschen und Gruppen in der Rechte-Matrix', static function () use ($read): void {
+    foreach (['reorder', 'delete_category', 'delete_forum'] as $action) {
+        T::check(in_array($action, CommunityAdminModule::MANAGE_ACTIONS, true), $action . ' verlangt community.manage');
+    }
+    $module = new CommunityAdminModule('structure');
+    T::same(false, $module->handlePost(['action' => 'reorder', 'kind' => 'forum', 'order' => ''], 1)['success'] ?? null, 'reorder ohne IDs wird abgelehnt');
+    T::same(false, $module->handlePost(['action' => 'reorder', 'kind' => 'thema', 'order' => '3,1'], 1)['success'] ?? null, 'reorder mit unbekannter Art wird abgelehnt');
+
+    $view = $read('admin/views/community/index.php');
+    T::check(str_contains($view, "\$formOpen('delete_' . \$kind") && str_contains($view, 'data-confirm-message='), 'Löschen über Aktionsformular mit Rückfrage');
+    T::check(str_contains($view, "\$formOpen('reorder'") && str_contains($view, 'data-cc-sort="forum:') && str_contains($view, 'data-cc-grip'), 'Ziehen: versteckte Formulare je Ebene und Griff je Eintrag');
+    T::check(str_contains($view, "\$subjects['group:' . (int) \$groupId]"), 'Rechte-Matrix: Benutzergruppen als Subjekt');
+    $entry = $read('admin/modules/community/entry.php');
+    T::check(str_contains($entry, "js/admin-community-structure.js"), 'Skript nur über page_assets (kein Inline-Skript)');
+    $js = $read('assets/js/admin-community-structure.js');
+    T::check(str_contains($js, 'form[data-cc-reorder]') && str_contains($js, 'sameGroup('), 'Skript: Ablegen nur auf derselben Ebene, Absenden über das Formular');
+
+    $forumRepo = $read('core/Services/Community/Repository/ForumRepository.php');
+    $delete = substr($forumRepo, (int) strpos($forumRepo, 'public function delete(int $id)'), 2200);
+    T::check(strpos($delete, 'lockForUpdate($id)') < strpos($delete, 'WHERE parent_id = ?') && str_contains($delete, "'invalid_state'"), 'Forum löschen: Sperre, dann Prüfung auf Unterforen und Themen');
+    $categoryRepo = $read('core/Services/Community/Repository/CategoryRepository.php');
+    T::check(str_contains($categoryRepo, "community_forums') . ' WHERE category_id = ?'"), 'Kategorie löschen: nur ohne Foren');
+});
+
 T::run('Exportdateien der DSGVO-Auskunft: Liste, Herunterladen und Löschen nur für community.manage, nur gültige Namen', static function () use ($read): void {
     T::check(in_array('export_download', CommunityAdminModule::MANAGE_ACTIONS, true) && in_array('export_delete', CommunityAdminModule::MANAGE_ACTIONS, true), 'beide Aktionen verlangen community.manage (nicht die Moderation)');
     $module = new CommunityAdminModule('settings');

@@ -128,6 +128,9 @@ final class Settings
     /** Verfahren des `CaptchaService`. */
     public const CAPTCHA_PROVIDERS = ['pow', 'image', 'math'];
 
+    /** Umgang mit den Beiträgen bei der DSGVO-Löschung eines Kontos (`CommunityPrivacy::erase()`): anonymisieren oder den Inhalt löschen. */
+    public const ERASE_MODES = ['anonymize', 'delete'];
+
     public const DEFINITIONS = [
         'base_path' => ['type' => 'slug', 'default' => 'forum'],
         'guests_can_read' => ['type' => 'bool', 'default' => false],
@@ -166,6 +169,8 @@ final class Settings
         // PR #5 (Captcha, E7): wann ein Captcha verlangt wird und welches Verfahren (`CaptchaService`)
         'captcha_mode' => ['type' => 'enum', 'values' => self::CAPTCHA_MODES, 'default' => 'first_post'],
         'captcha_provider' => ['type' => 'enum', 'values' => self::CAPTCHA_PROVIDERS, 'default' => 'pow'],
+        // 4.2.0: Löschmodus der DSGVO-Löschung (CommunityPrivacy, Datenschutztext in CommunityLegal)
+        'erase_mode' => ['type' => 'enum', 'values' => self::ERASE_MODES, 'default' => 'anonymize'],
     ];
 
     /** Paare (Mindest- vor Höchstwert): ein Mindestwert über dem Höchstwert wird auf den Höchstwert gesenkt. */

@@ -118,6 +118,7 @@ class SchemaManager
         'login_attempts' => ['action'],
         'notifications' => ['group_key', 'event_count'],
         'community_badges' => ['description_en'],
+        'community_posts' => ['deleted_at'],
         'mail_queue' => ['content_type', 'source', 'max_attempts', 'locked_at', 'last_attempt_at', 'error_category'],
         'post_revisions' => ['revision_type', 'created_by', 'fingerprint'],
         'page_revisions' => ['created_by'],
@@ -1902,6 +1903,7 @@ class SchemaManager
                 edit_reason VARCHAR(255) NULL,
                 reaction_count INT UNSIGNED NOT NULL DEFAULT 0,
                 ip_hash CHAR(64) NULL,
+                deleted_at DATETIME NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 KEY idx_community_posts_topic (topic_id, status, id),
@@ -3076,6 +3078,13 @@ class SchemaManager
             $this->prefix . 'community_badges',
             'description_en',
             "ALTER TABLE {$this->prefix}community_badges ADD COLUMN description_en VARCHAR(255) NULL AFTER description"
+        );
+
+        // 4.2.0: Löschmodus „Beiträge löschen“ der DSGVO-Löschung (CommunityPrivacy::erase()); Neuinstallation über das CREATE.
+        $this->ensureColumnExists(
+            $this->prefix . 'community_posts',
+            'deleted_at',
+            "ALTER TABLE {$this->prefix}community_posts ADD COLUMN deleted_at DATETIME NULL AFTER ip_hash"
         );
 
         // v27 (capabilities_v27): Rechte `community.*` und die Standardrolle „moderator“, einmalig (Marker in settings).

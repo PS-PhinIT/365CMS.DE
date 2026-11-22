@@ -16,8 +16,10 @@ namespace CMS\Services\Community\Http;
 use CMS\Security;
 use CMS\Services\Community\Repository\ForumRepository;
 use CMS\Services\Community\Repository\PostRepository;
+use CMS\Services\Community\Service\AttachmentService;
 use CMS\Services\Community\Service\CaptchaGate;
 use CMS\Services\Community\Service\CommunityAccess;
+use CMS\Services\Community\Service\DraftService;
 use CMS\Services\Community\Service\PostService;
 use CMS\Services\Community\Service\QuoteService;
 use CMS\Services\Community\Service\TopicService;
@@ -69,7 +71,8 @@ final class ComposeController
         $own = Urls::forumSlugFor((string) $forum['slug'], $forum['slug_en'] ?? null, $locale);
         $cancel = Urls::forum($own, $locale);
         $form = [
-            'mode' => 'new', 'heading' => 'Neues Thema', 'submit_label' => 'Thema erstellen', 'cancel_url' => $cancel, 'show_title' => true,
+            'mode' => 'new', 'heading' => I18n::t('community.compose.new_heading'), 'submit_label' => I18n::t('community.compose.new_submit'),
+            'cancel_url' => $cancel, 'show_title' => true,
             'title' => '', 'body' => '', 'reason' => '', 'seen' => 0, 'edit_count' => 0, 'forum' => $forum, 'error' => null, 'new_posts' => false,
         ];
         if ($viewer === null) {
@@ -91,15 +94,16 @@ final class ComposeController
 
             return;
         }
-        $result = TopicService::instance()->create($viewer, (int) $forum['id'], $form['title'], $form['body']);
+        $result = TopicService::instance()->create($viewer, (int) $forum['id'], $form['title'], $form['body'], ['attachments' => $this->postedAttachments($viewer)]);
         if (empty($result['success'])) {
             $form['error'] = self::errorText($result);
             $this->show($form, $locale, self::statusOf($result));
 
             return;
         }
+        DraftService::instance()->discard($viewer, 'forum', (int) $forum['id']);
         if (($result['status'] ?? '') === 'pending') {
-            $_SESSION['community_flash'] = 'Dein Thema wurde gespeichert und wartet auf Freigabe durch die Moderation.';
+            $_SESSION['community_flash'] = I18n::t('community.compose.topic_pending');
             $this->redirect($cancel);
         }
         $this->redirect(Urls::topic((int) $result['topic_id'], (string) ($result['slug'] ?? ''), $locale));
@@ -120,7 +124,8 @@ final class ComposeController
         }
         $cancel = Urls::topic($topicId, (string) ($topic['slug'] ?? ''), $locale);
         $form = [
-            'mode' => 'reply', 'heading' => 'Antworten: ' . (string) $topic['title'], 'submit_label' => 'Antwort senden', 'cancel_url' => $cancel,
+            'mode' => 'reply', 'heading' => I18n::t('community.compose.reply_heading', ['title' => (string) $topic['title']]),
+            'submit_label' => I18n::t('community.compose.reply_submit'), 'cancel_url' => $cancel,
             'show_title' => false, 'title' => '', 'body' => '', 'reason' => '', 'seen' => (int) ($topic['last_post_id'] ?? 0), 'edit_count' => 0,
             'topic' => $topic, 'error' => null, 'new_posts' => false, 'quote' => 0,
         ];
@@ -144,7 +149,7 @@ final class ComposeController
         }
         $form['body'] = (string) ($_POST['body'] ?? '');
         $form['quote'] = $quote;
-        $options = ['seen_last_post_id' => (int) ($_POST['seen_last_post_id'] ?? 0)];
+        $options = ['seen_last_post_id' => (int) ($_POST['seen_last_post_id'] ?? 0), 'attachments' => $this->postedAttachments($viewer)];
         if ($quote > 0) {
             $options['quote_of_post_id'] = $quote;
         }
@@ -167,8 +172,9 @@ final class ComposeController
 
             return;
         }
+        DraftService::instance()->discard($viewer, 'topic', $topicId);
         if (($result['status'] ?? '') === 'pending' || empty($result['page'])) {
-            $_SESSION['community_flash'] = 'Deine Antwort wurde gespeichert und wartet auf Freigabe durch die Moderation.';
+            $_SESSION['community_flash'] = I18n::t('community.compose.reply_pending');
             $this->redirect($cancel);
         }
         $this->redirect(Urls::topic($topicId, (string) ($topic['slug'] ?? ''), $locale, (int) $result['page']) . '#post-' . (int) $result['post_id']);
@@ -191,7 +197,8 @@ final class ComposeController
         $cancel = Urls::post($postId, $locale);
         $first = (int) ($post['is_first_post'] ?? 0) === 1;
         $form = [
-            'mode' => 'edit', 'heading' => 'Beitrag bearbeiten', 'submit_label' => 'Änderung speichern', 'cancel_url' => $cancel, 'show_title' => $first,
+            'mode' => 'edit', 'heading' => I18n::t('community.compose.edit_heading'), 'submit_label' => I18n::t('community.compose.edit_submit'),
+            'cancel_url' => $cancel, 'show_title' => $first,
             'title' => (string) $topic['title'], 'body' => (string) ($post['body'] ?? ''), 'reason' => '', 'seen' => 0,
             'edit_count' => (int) ($post['edit_count'] ?? 0), 'topic' => $topic, 'post' => $post, 'error' => null, 'new_posts' => false,
         ];
@@ -223,7 +230,11 @@ final class ComposeController
         $form['body'] = (string) ($_POST['body'] ?? '');
         $form['reason'] = trim((string) ($_POST['reason'] ?? ''));
         $form['edit_count'] = (int) ($_POST['edit_count'] ?? 0);
-        $result = PostService::instance()->edit($viewer, $postId, $form['body'], $first ? $form['title'] : null, $form['reason'], $form['edit_count']);
+        $form['remove_attachments'] = is_array($_POST['remove_attachments'] ?? null) ? array_values(array_filter($_POST['remove_attachments'], 'is_string')) : [];
+        $result = PostService::instance()->edit(
+            $viewer, $postId, $form['body'], $first ? $form['title'] : null, $form['reason'], $form['edit_count'],
+            $this->postedAttachments($viewer), $form['remove_attachments']
+        );
         if (empty($result['success'])) {
             $form['error'] = self::errorText($result);
             if (($result['error'] ?? '') === 'edit_conflict') {
@@ -249,6 +260,7 @@ final class ComposeController
         }
         $form['token'] = Security::instance()->generateToken('form_guard');
         $form['locale'] = $locale;
+        $form += $this->attachmentState($form);
         $form['captcha'] = $this->captchaHtml($form);
         $meta = ['title' => (string) $form['heading'] . ' – Community', 'noindex' => true];
         PublicController::instance()->renderPage('compose', $form, $meta, $status);
@@ -289,6 +301,62 @@ final class ComposeController
         $result = $gate->verify($_POST, $viewer);
 
         return $result->ok ? null : CaptchaGate::errorText($result);
+    }
+
+    /**
+     * Anhänge des Formulars: Formular-Kennung (`upload_token`, aus der Absendung oder neu), schon hochgeladene, noch nicht zugeordnete
+     * Anhänge dieser Kennung und beim Bearbeiten die vorhandenen des Beitrags. Fehler ergeben leere Listen (das Formular bleibt nutzbar).
+     *
+     * @param array<string, mixed> $form
+     * @return array{upload_token: string, pending_attachments: list<array<string, mixed>>, post_attachments: list<array<string, mixed>>}
+     */
+    private function attachmentState(array $form): array
+    {
+        $state = ['upload_token' => '', 'pending_attachments' => [], 'post_attachments' => []];
+        $viewer = PublicController::instance()->currentViewerId();
+        if ($viewer === null || !empty($form['readonly'])) {
+            return $state;
+        }
+        try {
+            $service = AttachmentService::instance();
+            $posted = is_string($_POST['upload_token'] ?? null) ? (string) $_POST['upload_token'] : '';
+            $state['upload_token'] = preg_match('/^[a-f0-9]{32}$/D', $posted) === 1 ? $posted : $service->newToken();
+            $state['pending_attachments'] = $service->pendingForForm($viewer, $state['upload_token']);
+            $postId = (int) ($form['post']['id'] ?? 0);
+            if (($form['mode'] ?? '') === 'edit' && $postId > 0) {
+                $state['post_attachments'] = $service->listFor([['view' => 'full', 'id' => $postId]])[$postId] ?? [];
+            }
+        } catch (\Throwable) {
+        }
+
+        return $state;
+    }
+
+    /**
+     * Zuzuordnende Anhänge einer Absendung: alle noch nicht zugeordneten der Formular-Kennung (auch ohne Einbettung im Text) und die
+     * ausdrücklich aufgeführten (`attachments[]`). Die Dienste prüfen Eigentum, Zustand und Obergrenze.
+     *
+     * @return list<int|string>
+     */
+    private function postedAttachments(int $viewer): array
+    {
+        $ids = [];
+        foreach (is_array($_POST['attachments'] ?? null) ? $_POST['attachments'] : [] as $id) {
+            if (is_string($id) && preg_match('/^[1-9][0-9]{0,9}$/D', $id) === 1) {
+                $ids[$id] = $id;
+            }
+        }
+        $token = is_string($_POST['upload_token'] ?? null) ? (string) $_POST['upload_token'] : '';
+        if (preg_match('/^[a-f0-9]{32}$/D', $token) === 1) {
+            try {
+                foreach (AttachmentService::instance()->pendingForForm($viewer, $token) as $info) {
+                    $ids[(string) $info['id']] = (string) $info['id'];
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return array_values($ids);
     }
 
     /** @param array<string, mixed> $form */
@@ -335,10 +403,10 @@ final class ComposeController
             }
         }
         if ($text === '') {
-            $text = 'Das hat nicht geklappt (' . $code . ').';
+            $text = I18n::t('community.compose.failed', ['code' => $code]);
         }
         if (isset($result['retry_after']) && (int) $result['retry_after'] > 0) {
-            $text .= ' Bitte warte ' . (int) $result['retry_after'] . ' Sekunden.';
+            $text .= ' ' . I18n::t('community.compose.retry_after', ['seconds' => (int) $result['retry_after']]);
         }
 
         return $text;
