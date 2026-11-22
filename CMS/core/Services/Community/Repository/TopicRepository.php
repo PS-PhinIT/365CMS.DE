@@ -259,6 +259,28 @@ final class TopicRepository extends AbstractRepository
     }
 
     /**
+     * Eigene Themen eines Mitglieds mit genau einem Status, jüngste zuerst (Keyset über `created_at`, `id`; Index
+     * `idx_community_topics_user`, unabhängig von der Größe der Foren). Die Rechtefilterung nach Forum übernimmt der Aufrufer.
+     */
+    public function listByUser(int $userId, string $status = 'published', ?Cursor $after = null, int $limit = 20): Page
+    {
+        $limit = max(1, min(self::MAX_LIMIT, $limit));
+        $status = in_array($status, self::STATUSES, true) ? $status : 'published';
+        $sql = 'SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status = ?';
+        $params = [$userId, $status];
+        if ($after !== null) {
+            $sql .= ' AND (created_at < ? OR (created_at = ? AND id < ?))';
+            array_push($params, $after->at, $after->at, $after->id);
+        }
+        $rows = $this->fetchAll($sql . ' ORDER BY created_at DESC, id DESC LIMIT ?', [...$params, $limit + 1]);
+        $more = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
+        $last = $rows === [] ? null : $rows[count($rows) - 1];
+
+        return new Page($rows, $more && $last !== null ? (new Cursor((string) $last['created_at'], (int) $last['id']))->encode() : null);
+    }
+
+    /**
      * Wirksam angepinnte Themen eines Forums (`pinned_until` leer oder in der Zukunft), nach Aktivität sortiert.
      *
      * @return list<array<string, mixed>>

@@ -460,6 +460,28 @@ final class PostRepository extends AbstractRepository
         );
     }
 
+    /**
+     * Eigene Antworten eines Mitglieds (ohne Themenstart) mit genau einem Status, jüngste zuerst (Keyset über `created_at`, `id`; Index
+     * `idx_community_posts_user`). Zeilen mit Text, aber ohne `ip_hash`; die Rechtefilterung nach Forum übernimmt der Aufrufer.
+     */
+    public function listRepliesByUser(int $userId, string $status = 'published', ?Cursor $after = null, int $limit = 20): Page
+    {
+        $limit = max(1, min(self::MAX_LIMIT, $limit));
+        $status = in_array($status, ['published', 'pending'], true) ? $status : 'published';
+        $sql = 'SELECT ' . self::columnList(self::PRIVATE_COLUMNS) . ' FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status = ? AND is_first_post = 0';
+        $params = [$userId, $status];
+        if ($after !== null) {
+            $sql .= ' AND (created_at < ? OR (created_at = ? AND id < ?))';
+            array_push($params, $after->at, $after->at, $after->id);
+        }
+        $rows = $this->fetchAll($sql . ' ORDER BY created_at DESC, id DESC LIMIT ?', [...$params, $limit + 1]);
+        $more = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
+        $last = $rows === [] ? null : $rows[count($rows) - 1];
+
+        return new Page($rows, $more && $last !== null ? (new Cursor((string) $last['created_at'], (int) $last['id']))->encode() : null);
+    }
+
     /** Größte Position, die `idAtPosition()` auflöst (Tiefe der Seitenadresse `seite-N` eines Themas). */
     public const POSITION_MAX = 5000;
 

@@ -19,6 +19,7 @@ use CMS\Hooks;
 use CMS\Logger;
 use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
+use CMS\Services\Community\CommunityMemberSection;
 use CMS\Services\Community\Http\ApiController;
 use CMS\Services\Community\Http\ComposeController;
 use CMS\Services\Community\Http\PublicController;
@@ -69,6 +70,13 @@ final class CommunityHooks
                 self::guard(static fn () => PublicController::instance()->registerRoutes($router));
             }
         }, 20);
+
+        // Mitgliederbereich /member/plugin/community.
+        Hooks::addAction('member_dashboard_init', static function (mixed $registry = null): void {
+            if ($registry instanceof \CMS\Member\PluginDashboardRegistry) {
+                self::guard(static fn () => CommunityMemberSection::register($registry));
+            }
+        });
 
         // Dauerhaftes CSRF-Token für die JSON-API (mehrere Aufrufe je Seite); der Router prüft es vor der Route.
         Hooks::addFilter(\CMS\Router::PUBLIC_FORM_TOKEN_FILTER, [ApiController::class, 'tokenFilter'], 10);

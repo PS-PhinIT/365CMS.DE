@@ -32,4 +32,10 @@ return [
     'api-token-any-path' => [$api, "|| \\CMS\\Services\\Community\\Support\\Urls::isApiPath(\$uri) === false) {", ') {', $apiSuite, false, 'Das dauerhafte Token gilt nur für Adressen der API', false, []],
     'api-status-flat' => [$api, 'Codes::ACCESS_REASONS[$code] ?? (', '422 ?? (', $apiSuite, false, 'Ablehnungsgründe behalten ihren HTTP-Status (401, 429, 404)', false, []],
     'api-int-lax' => [$api, "preg_match('/^[1-9]\\d{0,17}\$/D', \$value) === 1 ? (int) \$value", "is_numeric(\$value) ? (int) \$value", $apiSuite, false, 'IDs sind positive Ziffernfolgen (kein \"1; DROP\")', false, []],
+
+    // ── Mitgliederbereich (community-member)
+    'member-tab-moderation-open' => ['core/Services/Community/CommunityMemberSection.php', 'return $moderator ? self::TABS : array_diff_key(self::TABS, [\'moderation\' => true]);', 'return self::TABS;', 'community-member', false, 'Der Reiter „Moderation“ ist nur mit Moderationsbereich sichtbar', true, []],
+    'member-tab-unlisted' => ['core/Services/Community/CommunityMemberSection.php', 'return is_string($tab) && isset($tabs[$tab]) ? $tab : (string) array_key_first($tabs);', 'return is_string($tab) && isset(self::TABS[$tab]) ? $tab : (string) array_key_first($tabs);', 'community-member', false, '?tab=moderation ohne Bereich führt nicht zur Moderationsansicht', true, []],
+    'member-posts-with-first' => ['core/Services/Community/Repository/PostRepository.php', "' WHERE user_id = ? AND status = ? AND is_first_post = 0'", "' WHERE user_id = ? AND status = ?'", 'community-member', false, '„Meine Beiträge“ enthält keine Themenstarts (die stehen unter „Meine Themen“)', false, []],
+    'member-topics-all-users' => ['core/Services/Community/Repository/TopicRepository.php', "\$sql = 'SELECT * FROM ' . \$this->table(self::TABLE) . ' WHERE user_id = ? AND status = ?';", "\$sql = 'SELECT * FROM ' . \$this->table(self::TABLE) . ' WHERE ? > 0 AND status = ?';", 'community-member', false, '„Meine Themen“ zeigt nur Themen des Mitglieds', true, []],
 ];
