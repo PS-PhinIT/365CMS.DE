@@ -1103,7 +1103,7 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
     CommunityModule::setGate(static fn (): bool => true);
     CommunityHooks::register();
     T::check(Hooks::hasAction('user_role_changed') && Hooks::hasAction('user_email_verified'), 'Modul an: Listener für user_role_changed und user_email_verified');
-    T::check(!Hooks::hasAction('cms_cron_daily') && !Hooks::hasAction('dsgvo_export_data'), 'noch keine Cron- oder DSGVO-Hooks (PR #5)');
+    T::check(Hooks::hasAction('cms_cron_daily') && Hooks::hasAction('dsgvo_export_data') && Hooks::hasAction('dsgvo_delete_data'), 'Löschfristen (Cron) und DSGVO-Hooks sind angemeldet (PR #5)');
     T::check(Hooks::hasAction('register_routes'), 'Modul an: Leseseiten melden ihre Routen an (PR #4)');
 
     $hooksSource = csRead(ABSPATH . 'core/Services/FeatureHooks/CommunityHooks.php');
@@ -1112,7 +1112,7 @@ T::run('Modul community: Modul-Eintrag, Gate, Registry, CommunityHooks', static 
         'Quelltext: Modul-Gate steht vor den Listenern für user_role_changed und user_email_verified (die Rollen-Listener cms_role_* laufen bewusst immer, PR #3)'
     );
     T::check(str_contains($hooksSource, 'class_exists(CommunityAccess::class)') && str_contains($hooksSource, 'CommunityAccess::instance()->forgetUser($userId)'), 'Quelltext: forgetUser() nur bei vorhandener Klasse');
-    T::same(5, substr_count($hooksSource, 'Hooks::addAction('), 'Quelltext: fünf Listener (drei hinter dem Modul-Gate: Routen, user_role_changed, user_email_verified; cms_role_renamed und cms_role_deleted davor)');
+    T::same(13, substr_count($hooksSource, 'Hooks::addAction('), 'Quelltext: dreizehn Listener (vier hinter dem Modul-Gate: Routen, Mitgliederbereich, user_role_changed, user_email_verified; davor immer: cms_role_renamed, cms_role_deleted, dsgvo_export_data, dsgvo_delete_data, cms_user_deleted, cms_init_admin, cms_cron_daily zweimal, Papierkorb-Provider (cms_register_content_type_providers))');
     T::check(!preg_match('/Database|get_var|get_row|get_results|execute\(/', $hooksSource), 'keine Datenbankzugriffe zur Registrierungszeit');
 
     if (!$real) {
@@ -1312,14 +1312,18 @@ define('CS_EXTRA_KEYS', [
     'community.mail.new_topic.subject', 'community.mail.new_topic.body', 'community.mail.new_topic.gate', 'community.mail.link',
     'community.mail.unsubscribe_topic', 'community.mail.unsubscribe_forum', 'community.mail.unsubscribe_all', 'community.mail.settings',
     'community.mail.ban.subject', 'community.mail.ban.contact',
+    // PR #5: Papierkorb (CommunityContentProvider)
+    'community.trash.label', 'community.trash.restored', 'community.trash.deleted', 'community.trash.purged', 'community.trash.confirm',
+    'community.trash.warning.reports', 'community.trash.warning.unknown',
+    'community.trash.error.not_found', 'community.trash.error.forum_missing', 'community.trash.error.rejected', 'community.trash.error.state', 'community.trash.error.failed',
 ]);
 
 T::run('Zusatzschlüssel CS_EXTRA_KEYS: Zahlen und Ableitung aus den Diensten', static function (): void {
     $group = static fn (string $prefix): array => array_values(array_filter(CS_EXTRA_KEYS, static fn (string $key): bool => str_starts_with($key, $prefix)));
-    T::same(63, count(CS_EXTRA_KEYS), '63 Zusatzschlüssel');
+    T::same(75, count(CS_EXTRA_KEYS), '75 Zusatzschlüssel (63 aus PR #2b, 12 für den Papierkorb aus PR #5)');
     T::same(count(CS_EXTRA_KEYS), count(array_unique(CS_EXTRA_KEYS)), 'Zusatzschlüssel eindeutig');
-    T::same([3, 5, 4, 2, 35, 14], [count($group('community.quote.')), count($group('community.report.reason.')), count($group('community.report.status.')), count($group('community.ban.scope.')), count($group('community.notify.')), count($group('community.mail.'))], 'Gruppen: Zitat 3, Gründe 5, Status 4, Umfang 2, Hinweise 35, Mails 14');
-    T::same(95, count(Codes::ACCESS_REASONS) - 23 + count(Codes::ERRORS) - 16 + count(CS_EXTRA_KEYS), '95 neue Schlüssel je Sprache in PR #2b (5 Gründe, 27 Codes, 63 Zusatzschlüssel)');
+    T::same([3, 5, 4, 2, 35, 14, 12], [count($group('community.quote.')), count($group('community.report.reason.')), count($group('community.report.status.')), count($group('community.ban.scope.')), count($group('community.notify.')), count($group('community.mail.')), count($group('community.trash.'))], 'Gruppen: Zitat 3, Gründe 5, Status 4, Umfang 2, Hinweise 35, Mails 14, Papierkorb 12');
+    T::same(95, count(Codes::ACCESS_REASONS) - 23 + count(Codes::ERRORS) - 16 + count(CS_EXTRA_KEYS) - count($group('community.trash.')), '95 neue Schlüssel je Sprache in PR #2b (5 Gründe, 27 Codes, 63 Zusatzschlüssel)');
     // Abgeleitete Gruppen: Werte und Reihenfolge der Dienste (= Repository-Konstanten), Sprachschlüssel in derselben Folge.
     $derived = [
         'community.report.reason.' => [\CMS\Services\Community\Service\ReportService::REASONS, \CMS\Services\Community\Repository\ReportRepository::REASONS, 'ReportService::REASONS'],

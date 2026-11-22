@@ -664,7 +664,7 @@ T::run('Zähler-Matrix: Abgleich mit Neuberechnung nach jedem Schritt (§3.6)', 
     ccAssertCounters($w, '11 antwortloses Thema vom Autor gelöscht');
     T::same([1, 1], [(int) $w->forum($forum)['topic_count'], (int) $w->forum($forum)['post_count']], 'Zwischenstand Forum 1: ein Thema, ein Beitrag');
 
-    // Moderation löscht ein Thema mit Antworten anderer Autoren: Forum und Starter stimmen, die Zähler der anderen Autoren driften (Reparatur-Job in PR #5).
+    // Moderation löscht ein Thema mit Antworten anderer Autoren: Forum, Starter und die Antwortautoren stimmen (Semantik S1, `CounterBook`).
     $w->at(600);
     $w->posts->reply($b, $topic1, 'Antwort B im ersten Thema');
     $w->at(660);
@@ -678,7 +678,7 @@ T::run('Zähler-Matrix: Abgleich mit Neuberechnung nach jedem Schritt (§3.6)', 
     T::same([], ccAudit($w, false), 'Forum und Themen stimmen nach dem Löschen eines Themas mit Antworten (ohne Mitgliederzähler)');
     T::same([0, 0, null], [(int) $w->forum($forum)['topic_count'], (int) $w->forum($forum)['post_count'], $w->forum($forum)['last_post_id']], 'Forum: alle Zähler 0, „letzter Beitrag“ leer');
     T::same([0, 0], [(int) $w->stats($a)['topic_count'], (int) $w->stats($a)['post_count']], 'Themenstarter A: Themen- und Beitragszähler −1');
-    T::check((int) $w->stats($b)['post_count'] >= 1 && (int) $w->stats($c)['post_count'] >= 1, 'bekannte Drift: die Beitragszähler der anderen Autoren werden nicht einzeln abgezogen');
+    T::same([0, 1], [(int) $w->stats($b)['post_count'], (int) $w->stats($c)['post_count']], 'keine Drift: die Antworten von B und C sind abgezogen (C behält den Start seines Themas im anderen Forum)');
     T::check($t3['success'] && $r1['success'], 'Vorbedingung: Hilfsaufrufe gelungen');
 });
 
@@ -2127,7 +2127,7 @@ const CC_CLOCK_MAP = [
     'Service/RenderService.php' => 1, 'Service/ContentGuard.php' => 0, 'Service/CounterBook.php' => 0, 'Service/ModerationService.php' => 1,
     'Service/ReportService.php' => 1, 'Service/BanService.php' => 1, 'Service/NotificationDispatcher.php' => 1, 'Service/SubscriptionService.php' => 1,
     'Service/ReactionService.php' => 1, 'Service/RankService.php' => 1, 'Service/AttachmentService.php' => 1, 'Service/CommunitySearch.php' => 1,
-    'Service/CommunityMediaExtractor.php' => 0,
+    'Service/CommunityMediaExtractor.php' => 0, 'Service/TopicTrashService.php' => 1,
     'Support/ContentRenderer.php' => 0, 'Support/IpHash.php' => 0,
 ];
 
@@ -2307,7 +2307,7 @@ T::run('Zustand unter der Sperre: Änderungen zwischen Lesen und Sperren werden 
             $invoke($w->posts, 'replyLocked', [$a, $topic, $other, 'Antwort ins falsche Forum', 0, 0, false, ccAt(), ccUtc(), ccUtc(-120)]),
             $invoke($w->posts, 'editLocked', [$a, $ids[1], $topic, $other, 'Neuer Text', null, null, null, ccAt(), ccUtc()]),
             $invoke($w->posts, 'deleteLocked', [$a, $ids[1], $topic, $other, ccAt(), ccUtc()]),
-            $invoke($w->topics, 'deleteLocked', [$a, $topic, $other, false, ccAt(), ccUtc()]),
+            $invoke($w->topics, 'deleteLocked', [$a, $topic, $other, false, ccAt(), ccUtc(), []]),
         ],
         'ein Thema in einem anderen Forum als gelesen: reply, edit, delete (Beitrag, Thema) liefern null (neu beginnen)'
     );

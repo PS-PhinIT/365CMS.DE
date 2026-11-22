@@ -15,6 +15,8 @@ $repo = 'core/Services/Community/Repository/PostRepository.php';
 $suite = 'community-frontend';
 $api = 'core/Services/Community/Http/ApiController.php';
 $apiSuite = 'community-api';
+$topics = 'core/Services/Community/Repository/TopicRepository.php';
+$attach = 'core/Services/Community/Http/AttachmentController.php';
 
 return [
     'route-topic-pattern' => [$urls, "'topic' => \$path('/' . \$topic . '/:ref'),", "'topic' => \$path('/' . \$topic . '/:ref/x'),", $suite, false, 'Das Themenmuster trifft /forum/thema/<id>-<slug>', true, []],
@@ -26,10 +28,22 @@ return [
     'route-reply-pattern' => [$urls, "'reply' => \$path('/' . \$topic . '/:id/' . self::segment('reply', \$locale)),", "'reply' => \$path('/' . \$topic . '/:id/' . self::segment('post', \$locale)),", $suite, false, 'Das Antwortmuster trifft /forum/thema/<id>/antworten (Segment der Sprache)', false, []],
     'position-past-end' => [$repo, 'if (count($rows) < $position) {', 'if (false) {', $suite, false, 'Eine Seite hinter dem Ende hat keinen Cursor (404 statt letzter Seite)', false, []],
 
+    // ── Listen, Ungelesen, Anhänge (community-frontend)
+    'route-unread-pattern' => [$urls, "'unread' => \$path('/' . \$topic . '/:id/' . self::segment('unread', \$locale)),", "'unread' => \$path('/' . \$topic . '/:id/x'),", $suite, false, 'Das Muster „Ungelesen“ trifft /forum/thema/<id>/ungelesen', true, []],
+    'listing-unanswered-any' => [$topics, "\$where .= ' AND reply_count = 0';", "\$where .= '';", $suite, false, '„Unbeantwortet“ zeigt nur Themen ohne Antwort', true, []],
+    'listing-status-any' => [$topics, "\"status = 'published' AND forum_id IN (\"", "\"status <> 'trash' AND forum_id IN (\"", $suite, false, 'Globale Listen zeigen nur veröffentlichte Themen (nicht ausgeblendete oder wartende)', true, []],
+    'attachment-name-untrimmed' => [$attach, "\$clean = trim(\$clean, \" ._\");", "\$clean = \$clean;", $suite, false, 'Dateiname im Kopf ohne führende Punkte und Leerraum', false, []],
+
     // ── JSON-API (community-api)
     'api-op-allowlist' => [$api, 'if (!in_array($op, self::MODERATION_OPS, true) || $id < 1) {', 'if ($id < 1) {', $apiSuite, false, 'Moderationsaktionen der API nur aus der Allowlist (kein Löschen über die API)', true, []],
     'api-guest-allowed' => [$api, 'if ($userId < 1) {', 'if (false) {', $apiSuite, false, 'Ohne Anmeldung antwortet jede Aktion mit 401, bevor ein Dienst läuft', true, []],
     'api-token-any-path' => [$api, "|| \\CMS\\Services\\Community\\Support\\Urls::isApiPath(\$uri) === false) {", ') {', $apiSuite, false, 'Das dauerhafte Token gilt nur für Adressen der API', false, []],
     'api-status-flat' => [$api, 'Codes::ACCESS_REASONS[$code] ?? (', '422 ?? (', $apiSuite, false, 'Ablehnungsgründe behalten ihren HTTP-Status (401, 429, 404)', false, []],
     'api-int-lax' => [$api, "preg_match('/^[1-9]\\d{0,17}\$/D', \$value) === 1 ? (int) \$value", "is_numeric(\$value) ? (int) \$value", $apiSuite, false, 'IDs sind positive Ziffernfolgen (kein \"1; DROP\")', false, []],
+
+    // ── Mitgliederbereich (community-member)
+    'member-tab-moderation-open' => ['core/Services/Community/CommunityMemberSection.php', 'return $moderator ? self::TABS : array_diff_key(self::TABS, [\'moderation\' => true]);', 'return self::TABS;', 'community-member', false, 'Der Reiter „Moderation“ ist nur mit Moderationsbereich sichtbar', true, []],
+    'member-tab-unlisted' => ['core/Services/Community/CommunityMemberSection.php', 'return is_string($tab) && isset($tabs[$tab]) ? $tab : (string) array_key_first($tabs);', 'return is_string($tab) && isset(self::TABS[$tab]) ? $tab : (string) array_key_first($tabs);', 'community-member', false, '?tab=moderation ohne Bereich führt nicht zur Moderationsansicht', true, []],
+    'member-posts-with-first' => ['core/Services/Community/Repository/PostRepository.php', "' WHERE user_id = ? AND status = ? AND is_first_post = 0'", "' WHERE user_id = ? AND status = ?'", 'community-member', false, '„Meine Beiträge“ enthält keine Themenstarts (die stehen unter „Meine Themen“)', false, []],
+    'member-topics-all-users' => ['core/Services/Community/Repository/TopicRepository.php', "\$sql = 'SELECT * FROM ' . \$this->table(self::TABLE) . ' WHERE user_id = ? AND status = ?';", "\$sql = 'SELECT * FROM ' . \$this->table(self::TABLE) . ' WHERE ? > 0 AND status = ?';", 'community-member', false, '„Meine Themen“ zeigt nur Themen des Mitglieds', true, []],
 ];

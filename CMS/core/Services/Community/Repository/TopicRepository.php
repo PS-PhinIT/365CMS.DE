@@ -259,6 +259,83 @@ final class TopicRepository extends AbstractRepository
     }
 
     /**
+     * Eigene Themen eines Mitglieds mit genau einem Status, jüngste zuerst (Keyset über `created_at`, `id`; Index
+     * `idx_community_topics_user`, unabhängig von der Größe der Foren). Die Rechtefilterung nach Forum übernimmt der Aufrufer.
+     */
+    public function listByUser(int $userId, string $status = 'published', ?Cursor $after = null, int $limit = 20): Page
+    {
+        $limit = max(1, min(self::MAX_LIMIT, $limit));
+        $status = in_array($status, self::STATUSES, true) ? $status : 'published';
+        $sql = 'SELECT * FROM ' . $this->table(self::TABLE) . ' WHERE user_id = ? AND status = ?';
+        $params = [$userId, $status];
+        if ($after !== null) {
+            $sql .= ' AND (created_at < ? OR (created_at = ? AND id < ?))';
+            array_push($params, $after->at, $after->at, $after->id);
+        }
+        $rows = $this->fetchAll($sql . ' ORDER BY created_at DESC, id DESC LIMIT ?', [...$params, $limit + 1]);
+        $more = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
+        $last = $rows === [] ? null : $rows[count($rows) - 1];
+
+        return new Page($rows, $more && $last !== null ? (new Cursor((string) $last['created_at'], (int) $last['id']))->encode() : null);
+    }
+
+    /** Arten der globalen Listen: neueste Themen, jüngste Aktivität, ohne Antwort. */
+    public const GLOBAL_KINDS = ['new', 'active', 'unanswered'];
+
+    /** Höchstzahl der Foren in `listGlobal()` (größere Mengen kürzt der Aufrufer, die Liste bleibt eine `IN (…)`-Abfrage). */
+    public const GLOBAL_FORUMS_MAX = 2000;
+
+    /**
+     * Veröffentlichte Themen aus den übergebenen Foren, Keyset ohne Zeilenversatz:
+     * - `new`: jüngste zuerst nach ID (Primärschlüssel rückwärts; die ID wächst mit `created_at`),
+     * - `active`: jüngste Aktivität zuerst (`last_post_at`, `id`; Index `idx_community_topics_activity`),
+     * - `unanswered`: ohne Antwort, jüngste zuerst (`created_at`, `id`; Index `idx_community_topics_unanswered_all`).
+     * Cursor: bei `new` nur die ID (`Cursor` mit beliebiger Zeit), sonst Zeit und ID der letzten Zeile. Leere Forenliste: leere Seite ohne
+     * Abfrage. Die Rechtefilterung der Foren übernimmt der Aufrufer (`CommunityAccess::readableForumIds()`).
+     *
+     * @param list<int> $forumIds
+     */
+    public function listGlobal(string $kind, array $forumIds, ?Cursor $after = null, int $limit = 20): Page
+    {
+        $forumIds = array_slice(array_values(array_unique(array_filter(array_map('intval', $forumIds), static fn (int $id): bool => $id > 0))), 0, self::GLOBAL_FORUMS_MAX);
+        if (!in_array($kind, self::GLOBAL_KINDS, true)) {
+            throw new \InvalidArgumentException('Unbekannte Listenart: ' . $kind);
+        }
+        if ($forumIds === []) {
+            return new Page([], null);
+        }
+        $limit = max(1, min(self::MAX_LIMIT, $limit));
+        $table = $this->table(self::TABLE);
+        $where = "status = 'published' AND forum_id IN (" . self::placeholders(count($forumIds)) . ')';
+        $params = $forumIds;
+        if ($kind === 'unanswered') {
+            $where .= ' AND reply_count = 0';
+        }
+        $column = $kind === 'active' ? 'last_post_at' : 'created_at';
+        if ($after !== null) {
+            if ($kind === 'new') {
+                $where .= ' AND id < ?';
+                $params[] = $after->id;
+            } else {
+                $where .= " AND ({$column} < ? OR ({$column} = ? AND id < ?))";
+                array_push($params, $after->at, $after->at, $after->id);
+            }
+        }
+        $order = $kind === 'new' ? 'id DESC' : "{$column} DESC, id DESC";
+        $rows = $this->fetchAll("SELECT * FROM {$table} WHERE {$where} ORDER BY {$order} LIMIT ?", [...$params, $limit + 1]);
+        $more = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
+        $last = $rows === [] ? null : $rows[count($rows) - 1];
+        $next = null;
+        if ($more && $last !== null) {
+            $next = (new Cursor($kind === 'new' ? '1970-01-01 00:00:00' : (string) $last[$column], (int) $last['id']))->encode();
+        }
+
+        return new Page($rows, $next);
+    }
+
+    /**
      * Wirksam angepinnte Themen eines Forums (`pinned_until` leer oder in der Zukunft), nach Aktivität sortiert.
      *
      * @return list<array<string, mixed>>

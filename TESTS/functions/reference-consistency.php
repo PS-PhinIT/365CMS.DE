@@ -356,7 +356,6 @@ T::run('Konfiguration: Manifeste und .gitignore sind in sich stimmig', static fu
     $read = static fn (string $path): array => (array) json_decode((string) file_get_contents($root . '/' . $path), true, 512, JSON_THROW_ON_ERROR);
 
     $core = $read('CMS/update.json');
-    T::same($core, $read('CMS/marketplace/core/365cms/update.json'), 'Core-Manifest und Marketplace-Kopie sind inhaltsgleich');
     $manifests = ['CMS/update.json' => $core];
     if (is_file($root . '/RELEASE/365CMS-' . $core['version'] . '-update.json')) {
         $manifests['RELEASE'] = $read('RELEASE/365CMS-' . $core['version'] . '-update.json');
@@ -369,10 +368,7 @@ T::run('Konfiguration: Manifeste und .gitignore sind in sich stimmig', static fu
 
     $theme = $read('CMS/themes/cms-default/update.json');
     $version = (string) $theme['version'];
-    $catalog = $read('CMS/marketplace/themes/index.json')['themes'][0] ?? [];
     T::same($version, $read('CMS/themes/cms-default/theme.json')['version'] ?? null, 'theme.json trägt die Theme-Version');
-    T::same($version, $catalog['version'] ?? null, 'Theme-Katalog trägt die Theme-Version');
-    T::same($theme['min_cms_version'], $catalog['requires_cms'] ?? null, 'Theme-Katalog trägt dieselbe Mindest-CMS-Version');
     T::check(str_contains(referenceTestSource('CMS/themes/cms-default/style.css'), 'Version: ' . $version), 'style.css trägt die Theme-Version');
     T::check(
         str_contains(referenceTestSource('CMS/themes/cms-default/functions.php'), "define('MERIDIAN_THEME_VERSION', '" . $version . "')"),

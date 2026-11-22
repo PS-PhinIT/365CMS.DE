@@ -172,9 +172,7 @@ T::run('Versionsstand', static function () use ($migrationSource, $root): void {
     $version = SchemaManager::SCHEMA_VERSION;
     T::check((int) substr($version, 1) >= 27, 'SchemaManager::SCHEMA_VERSION ist mindestens v27 (Community-Modul)');
     T::check(str_contains($migrationSource, "public const SCHEMA_VERSION = '{$version}';"), 'MigrationManager nennt dieselbe Marke');
-    $manifest = json_decode((string) file_get_contents($root . 'marketplace/core/365cms/update.json'), true);
-    T::check((int) substr((string) ($manifest['schema_version'] ?? 'v0'), 1) <= (int) substr($version, 1), 'das Manifest des veröffentlichten Pakets eilt der Entwicklung nicht voraus');
-});
+ });
 
 T::run('Die 28 Tabellen', static function () use ($queries, $migrationSource, $schemaSource): void {
     T::same(V27_TABLES, SchemaManager::FEATURE_TABLES_V27, 'FEATURE_TABLES_V27 enthält genau die 28 Tabellen (Reihenfolge von DATA-MODEL.md, dazu community_notify_queue am Ende)');

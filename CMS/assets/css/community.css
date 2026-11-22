@@ -48,3 +48,17 @@ button.cms-community-button { background: transparent; color: inherit; font: inh
 .cms-community-dialog menu { display: flex; gap: .75rem; justify-content: flex-end; padding: 0; margin: 0; }
 .cms-community-preview { margin-top: 1rem; padding: .75rem 1rem; border: 1px dashed var(--cc-border); border-radius: .5rem; }
 .cms-community-link { padding: 0; border: 0; background: none; color: var(--cc-accent); font: inherit; cursor: pointer; text-decoration: underline; }
+
+.cms-community-nav { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.cms-community-nav ul { display: flex; flex-wrap: wrap; gap: .25rem 1rem; list-style: none; margin: 0; padding: 0; }
+.cms-community-nav a[aria-current="page"] { font-weight: 700; text-decoration: none; }
+.cms-community-nav__search { display: flex; gap: .5rem; }
+.cms-community-nav__search .cms-community-input { width: auto; min-width: 12rem; }
+.cms-community-editor { margin-bottom: .75rem; }
+.cms-community-editor__tabs { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.cms-community-editor__tabs button { padding: .125rem .75rem; border: 1px solid var(--cc-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.cms-community-editor__tabs button[aria-pressed="true"] { border-color: var(--cc-accent); background: color-mix(in srgb, var(--cc-accent) 15%, transparent); }
+.cms-community-editor__prefix { margin: 0 0 .5rem; padding: .5rem .75rem; border-left: 3px solid var(--cc-border); color: var(--cc-muted); white-space: pre-wrap; max-height: 10rem; overflow: auto; }
+.cms-community-editor__visual .sun-editor { max-width: 100%; }
+/* SunEditor legt ein Hilfsfeld für den Fokus an und versteckt es per style-Attribut; unter dem CSP des CMS (style-src mit Nonce) wird dieses Attribut blockiert. */
+.__se__focus__temp__ { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }

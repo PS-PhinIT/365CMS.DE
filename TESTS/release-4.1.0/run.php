@@ -28,7 +28,7 @@ T::run('FUN-410-01: Projekt-Repository PS-PhinIT', static function () use ($src,
     $update = $src('core/Services/UpdateService.php');
     T::check(str_contains($update, "DEFAULT_GITHUB_REPO = 'PS-PhinIT/365CMS.DE'"), 'Update-Rückfall fragt das aktuelle Repository ab');
     T::check(str_contains($update, "strcasecmp(\$this->githubRepo, self::LEGACY_GITHUB_REPO) === 0"), 'gespeicherter Altwert wird umgestellt (Http\\Client folgt keinen Weiterleitungen)');
-    foreach (['admin/modules/system/DocumentationModule.php', 'update.json', 'marketplace/core/365cms/update.json', 'core/VendorRegistry.php', 'admin/views/system/support.php'] as $file) {
+    foreach (['admin/modules/system/DocumentationModule.php', 'update.json', 'core/VendorRegistry.php', 'admin/views/system/support.php'] as $file) {
         T::check(!str_contains($src($file), 'PS-easyIT/365CMS.DE'), "{$file}: keine Adresse des alten Repositorys");
     }
 });

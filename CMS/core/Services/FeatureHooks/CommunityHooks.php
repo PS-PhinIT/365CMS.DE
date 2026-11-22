@@ -19,7 +19,12 @@ use CMS\Hooks;
 use CMS\Logger;
 use CMS\Services\AdminMenu\BadgeProvider;
 use CMS\Services\AdminNoticeService;
+use CMS\Services\Community\CommunityContentProvider;
+use CMS\Services\Community\CommunityMemberSection;
+use CMS\Services\Community\CommunityPrivacy;
+use CMS\Services\Community\CommunityRetention;
 use CMS\Services\Community\Http\ApiController;
+use CMS\Services\Community\Http\AttachmentController;
 use CMS\Services\Community\Http\ComposeController;
 use CMS\Services\Community\Http\PublicController;
 use CMS\Services\Community\Repository\ForumRepository;
@@ -28,6 +33,7 @@ use CMS\Services\Community\Service\CommunityAccess;
 use CMS\Services\Community\Service\ModerationService;
 use CMS\Services\Community\Service\ReportService;
 use CMS\Services\Community\Support\CommunityModule;
+use CMS\Services\ContentTypes\ContentTypeRegistry;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -45,6 +51,37 @@ final class CommunityHooks
         Hooks::addAction('cms_role_deleted', static function (mixed $role = ''): void {
             self::guard(static fn () => self::roleDeleted((string) $role));
         });
+
+        // Datenschutz und Aufbewahrung gelten immer, auch bei abgeschaltetem Modul: die Daten bleiben beim Abschalten erhalten.
+        Hooks::addAction('dsgvo_export_data', static function (mixed $userId = null, mixed $email = null): void {
+            self::guard(static fn () => CommunityPrivacy::handleExport($userId, $email));
+        }, 12);
+        Hooks::addAction('dsgvo_delete_data', static function (mixed $userId = null, mixed $email = null): void {
+            self::guard(static fn () => CommunityPrivacy::handleDelete($userId, $email));
+        }, 12);
+        // Konto endgültig gelöscht (auch ohne Löschantrag über den Admin): dieselbe Anonymisierung, idempotent.
+        Hooks::addAction('cms_user_deleted', static function (mixed $userId = null): void {
+            self::guard(static fn () => CommunityPrivacy::handleDelete($userId, null));
+        }, 12);
+        Hooks::addFilter('cms_member_export_data', static function (mixed $export = [], mixed $userId = 0): mixed {
+            return CommunityPrivacy::memberExport($export, $userId);
+        }, 26);
+        Hooks::addAction('cms_init_admin', static function (): void {
+            self::guard(static fn () => CommunityRetention::registerAll());
+        }, 5);
+        Hooks::addAction('cms_cron_daily', static function (): void {
+            self::guard(static fn () => CommunityRetention::registerAll());
+        }, 1);
+        Hooks::addAction('cms_cron_daily', static function (): void {
+            self::guard(static fn () => CommunityPrivacy::pruneExports());
+        }, 47);
+
+        // Papierkorb (PR #5): gelöschte Themen im zentralen Papierkorb des Core, auch bei abgeschaltetem Modul.
+        Hooks::addAction(ContentTypeRegistry::REGISTER_ACTION, static function (mixed $registry = null): void {
+            if ($registry instanceof ContentTypeRegistry) {
+                self::guard(static fn () => $registry->register(new CommunityContentProvider()));
+            }
+        }, 20);
 
         if (!CommunityModule::isEnabled()) {
             return;
@@ -65,10 +102,18 @@ final class CommunityHooks
             if (is_object($router)) {
                 // Schreibseiten zuerst: ihre Muster sind enger als `topic_page`/`forum_page`.
                 self::guard(static fn () => ApiController::instance()->registerRoutes($router));
+                self::guard(static fn () => AttachmentController::instance()->registerRoutes($router));
                 self::guard(static fn () => ComposeController::instance()->registerRoutes($router));
                 self::guard(static fn () => PublicController::instance()->registerRoutes($router));
             }
         }, 20);
+
+        // Mitgliederbereich /member/plugin/community.
+        Hooks::addAction('member_dashboard_init', static function (mixed $registry = null): void {
+            if ($registry instanceof \CMS\Member\PluginDashboardRegistry) {
+                self::guard(static fn () => CommunityMemberSection::register($registry));
+            }
+        });
 
         // Dauerhaftes CSRF-Token für die JSON-API (mehrere Aufrufe je Seite); der Router prüft es vor der Route.
         Hooks::addFilter(\CMS\Router::PUBLIC_FORM_TOKEN_FILTER, [ApiController::class, 'tokenFilter'], 10);

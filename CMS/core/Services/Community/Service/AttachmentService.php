@@ -1355,6 +1355,21 @@ final class AttachmentService
     }
 
     /**
+     * Löscht die Dateien und Vorschauen bereits entfernter Anhänge (Papierkorb: endgültig gelöschte Themen), nach dem Commit der Zeilen.
+     * Fehler einer Datei sind nur Warnungen; die Übrigen werden trotzdem entfernt.
+     *
+     * @param list<array<string, mixed>> $rows je `storage_path`, `has_preview`
+     */
+    public function discardFiles(array $rows): void
+    {
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $this->removeFiles($row);
+            }
+        }
+    }
+
+    /**
      * Löscht Datei und Vorschau eines Anhangs über `locate()`; Fehler nur als Warnung mit Pfad (Abgleich der Dateien ohne Zeile: PR #5).
      *
      * @param array<string, mixed> $row `storage_path`, `has_preview`

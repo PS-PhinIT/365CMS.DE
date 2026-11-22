@@ -32,6 +32,8 @@ spl_autoload_register(static function (string $class): void {
 require_once dirname(__DIR__) . '/lib/TestRunner.php';
 require_once dirname(__DIR__) . '/lib/CommunityTestDatabase.php';
 
+use CMS\Services\Community\Http\AttachmentController;
+use CMS\Services\Community\Repository\TopicRepository;
 use CMS\Services\Community\Service\AccessDecision;
 use CMS\Services\Community\Service\PostService;
 use CMS\Services\Community\Support\Settings;
@@ -79,6 +81,18 @@ T::run('Routenmuster', static function () use ($route): void {
         T::same(['index', []], $route('/en/forum', 'en'), 'englische Startseite');
         T::same(['forum_page', ['thema', '12']], $route('/en/forum/thema/12', 'en'), 'deutsches Segment unter /en ist nur ein Forum-Slug mit Seite: „thema“ ist reserviert, es gibt kein solches Forum (404)');
         T::same(null, $route('/forum/a/b/c'), 'tiefere Pfade gehören nicht zur Community');
+        T::same(['unread', ['12']], $route('/forum/thema/12/ungelesen'), 'Ungelesen geht vor topic_page');
+        T::same(['attachment', ['5']], $route('/forum/anhang/5'), 'Anhang geht vor forum_page (sonst wäre „anhang“ ein Forum)');
+        T::same(['attachment_preview', ['5']], $route('/forum/anhang/5/vorschau'), 'Vorschau eines Anhangs');
+        T::same(['attachment_preview', ['5']], $route('/en/forum/attachment/5/preview', 'en'), 'englische Vorschau');
+        T::same(['unread', ['12']], $route('/en/forum/topic/12/unread', 'en'), 'englisches Ungelesen');
+        foreach (['search' => ['/forum/suche', '/en/forum/search'], 'list_new' => ['/forum/neu', '/en/forum/new'], 'list_active' => ['/forum/aktiv', '/en/forum/active'], 'list_unanswered' => ['/forum/unbeantwortet', '/en/forum/unanswered']] as $name => [$de, $en]) {
+            T::same([$name, []], $route($de), $name . ': feste Adresse (de)');
+            T::same([$name, []], $route($en, 'en'), $name . ': feste Adresse (en)');
+        }
+        T::same('/forum/suche', Urls::search(), 'Urls::search');
+        T::same('/en/forum/unanswered', Urls::listing('unanswered', 'en'), 'Urls::listing (en)');
+        T::same('/forum/neu', Urls::listing('new'), 'Urls::listing (de)');
         T::same(['reply', ['12']], $route('/forum/thema/12/antworten'), 'Antwortformular geht vor topic_page (sonst wäre „antworten“ eine Seite)');
         T::same(['new_topic', ['allgemein']], $route('/forum/allgemein/neues-thema'), 'Neues Thema geht vor forum_page');
         T::same(['edit', ['7']], $route('/forum/beitrag/7/bearbeiten'), 'Bearbeiten-Formular');
@@ -133,6 +147,68 @@ T::run('cursorForPage', static function (): void {
     T::same(3, count(array_filter($page2['items'], static fn (array $i): bool => ($i['status'] ?? '') === 'published')), 'Seite 2 zeigt die übrigen drei veröffentlichten Beiträge');
 });
 
+T::run('Globale Listen', static function (): void {
+    $db = CommunityTestDatabase::create();
+    $f1 = $db->forum();
+    $f2 = $db->forum();
+    $f3 = $db->forum();
+    $u = $db->user();
+    $t1 = $db->topic(['forum' => $f1, 'user' => $u, 'created_at' => '2026-12-01 10:00:00', 'last_post_at' => '2026-12-05 10:00:00', 'reply_count' => 2]);
+    $t2 = $db->topic(['forum' => $f1, 'user' => $u, 'created_at' => '2026-12-02 10:00:00', 'last_post_at' => '2026-12-02 10:00:00']);
+    $t3 = $db->topic(['forum' => $f2, 'user' => $u, 'created_at' => '2026-12-03 10:00:00', 'last_post_at' => '2026-12-04 10:00:00', 'reply_count' => 1]);
+    $t4 = $db->topic(['forum' => $f2, 'user' => $u, 'created_at' => '2026-12-04 10:00:00', 'last_post_at' => '2026-12-04 10:00:00']);
+    $db->topic(['forum' => $f3, 'user' => $u, 'created_at' => '2026-12-09 10:00:00', 'last_post_at' => '2026-12-09 10:00:00']);
+    $db->topic(['forum' => $f1, 'user' => $u, 'status' => 'hidden', 'created_at' => '2026-12-10 10:00:00', 'last_post_at' => '2026-12-10 10:00:00']);
+    $db->topic(['forum' => $f1, 'user' => $u, 'status' => 'pending', 'created_at' => '2026-12-11 10:00:00', 'last_post_at' => '2026-12-11 10:00:00']);
+    $repo = new TopicRepository($db);
+    $ids = static fn (\CMS\Services\Community\Support\Page $page): array => array_map(static fn (array $r): int => (int) $r['id'], $page->items);
+
+    T::same([$t4, $t3, $t2, $t1], $ids($repo->listGlobal('new', [$f1, $f2])), 'new: jüngste zuerst, nur lesbare Foren, nur veröffentlicht');
+    T::same([$t1, $t4, $t3, $t2], $ids($repo->listGlobal('active', [$f1, $f2])), 'active: nach letzter Aktivität, bei gleicher Zeit die höhere ID zuerst');
+    T::same([$t4, $t2], $ids($repo->listGlobal('unanswered', [$f1, $f2])), 'unanswered: nur ohne Antwort');
+    T::same([], $ids($repo->listGlobal('new', [])), 'ohne lesbares Forum: leer');
+    T::same([$t4], $ids($repo->listGlobal('new', [$f2, 999999], null, 1)), 'unbekannte Foren-IDs stören nicht');
+    foreach (['new', 'active', 'unanswered'] as $kind) {
+        $all = $ids($repo->listGlobal($kind, [$f1, $f2], null, 100));
+        $walk = [];
+        $page = $repo->listGlobal($kind, [$f1, $f2], null, 1);
+        while (true) {
+            array_push($walk, ...$ids($page));
+            if ($page->next === null) {
+                break;
+            }
+            $page = $repo->listGlobal($kind, [$f1, $f2], \CMS\Services\Community\Support\Cursor::decode($page->next), 1);
+        }
+        T::same($all, $walk, $kind . ': Blättern mit Cursor liefert dieselbe Reihenfolge ohne Lücke oder Dublette');
+    }
+    try {
+        $repo->listGlobal('x', [$f1]);
+        T::check(false, 'unbekannte Art wirft');
+    } catch (\InvalidArgumentException) {
+        T::check(true, 'unbekannte Art wirft');
+    }
+});
+
+T::run('Anhänge', static function (): void {
+    T::same('attachment; filename="bericht.pdf"; filename*=UTF-8\'\'bericht.pdf', AttachmentController::disposition(false, 'bericht.pdf'), 'Download');
+    T::same('inline; filename="bild.png"; filename*=UTF-8\'\'bild.png', AttachmentController::disposition(true, 'bild.png'), 'Bild inline');
+    $evil = AttachmentController::disposition(false, "..\\..//ev\"il\r\nSet-Cookie: x=1.pdf");
+    T::check(!str_contains($evil, "\r") && !str_contains($evil, "\n") && substr_count($evil, '"') === 2 && !str_contains($evil, '/') && !str_contains($evil, '\\'), 'Kopfzeile ohne Umbruch, Anführungszeichen und Pfadtrenner im Namen: ' . $evil);
+    T::check(str_starts_with(AttachmentController::disposition(false, '...'), 'attachment; filename="anhang"'), 'nur Punkte: Ersatzname');
+    T::check(str_contains(AttachmentController::disposition(false, 'Übersicht Größe.txt'), "filename*=UTF-8''%C3%9Cbersicht%20Gr%C3%B6%C3%9Fe.txt"), 'Umlaute als filename* (RFC 5987)');
+    T::check(str_starts_with(AttachmentController::disposition(false, ' .versteckt'), 'attachment; filename="versteckt"'), 'führender Punkt und Leerraum entfallen');
+
+    $source = (string) file_get_contents(ABSPATH . 'core/Services/Community/Http/AttachmentController.php');
+    foreach (["header('X-Content-Type-Options: nosniff')", "Content-Security-Policy: default-src 'none'; sandbox", "'private, no-store'", "'private, max-age=3600'", "resolve(\$viewer, \$id, \$preview)", 'countDownload'] as $needle) {
+        T::check(str_contains($source, $needle), 'Auslieferung: ' . $needle);
+    }
+    T::check(str_contains($source, "!empty(\$file['public']) && \$match === \$etag"), '304 nur für Anhänge, die Gäste sehen dürfen');
+    T::check(!str_contains($source, "header('Cache-Control: public"), 'nie Cache-Control: public');
+    T::check(str_contains($source, "empty(\$file['inline'])") && str_contains($source, 'AttachmentService::instance()->countDownload'), 'nur Downloads werden gezählt (nicht eingebettete Bilder)');
+    $hooks = (string) file_get_contents(ABSPATH . 'core/Services/FeatureHooks/CommunityHooks.php');
+    T::check(strpos($hooks, 'AttachmentController::instance()->registerRoutes') < strpos($hooks, 'PublicController::instance()->registerRoutes'), 'Anhang-Routen vor den Leseseiten');
+});
+
 T::run('Schreibseiten', static function (): void {
     $controller = (string) file_get_contents(ABSPATH . 'core/Services/Community/Http/ComposeController.php');
     T::check(str_contains($controller, "generateToken('form_guard')"), 'Formulare tragen ein frisches form_guard-Token');
@@ -172,7 +248,7 @@ T::run('Schreibseiten', static function (): void {
 });
 
 T::run('Ansichten und Controller (Quelltext)', static function (): void {
-    foreach (['index', 'forum', 'topic', 'not-found', 'compose'] as $view) {
+    foreach (['index', 'forum', 'topic', 'not-found', 'compose', 'listing', 'search', 'partials/nav'] as $view) {
         $source = (string) file_get_contents(ABSPATH . 'views/community/' . $view . '.php');
         T::check(stripos($source, '<script') === false && stripos($source, '<style') === false && preg_match('/\sstyle\s*=/i', $source) !== 1, $view . ': kein Inline-Skript oder -Style');
         T::check(preg_match('/\son[a-z]+\s*=/i', $source) !== 1, $view . ': keine Ereignisattribute');

@@ -22,9 +22,10 @@
  *   `last_post_at` ist nie NULL (auch bei wartenden Themen), `last_post_id` und `last_poster_id` erst, wenn das Thema
  *   veröffentlicht ist.
  * - Wartende Themen zählen nirgends (Forum, Mitglied); die Freigabe in PR #2b bucht nach, einschließlich „letzter Beitrag“.
- * - `delete()` löscht weich (`status = deleted`, `previous_status`); die Beiträge des Themas bleiben unverändert. Zähler
- *   laut Matrix: Forum `topic_count − 1` und `post_count − (reply_count + 1)`, Themenstarter je −1; die Beitragszähler
- *   anderer Autoren werden nicht einzeln abgezogen (Reparatur-Job in PR #5).
+ * - `delete()` löscht weich (`status = deleted`, `previous_status`, `trashed_at`, `trashed_by`); die Beiträge des Themas bleiben
+ *   unverändert. Zähler bucht `CounterBook::topicUnpublished()` (Semantik S1): Forum `topic_count − 1` und `post_count − Beiträge`,
+ *   jeder Autor veröffentlichter Beiträge `post_count − n`, der Themenstarter zusätzlich `topic_count − 1`. Das Wiederherstellen
+ *   aus dem Papierkorb (`TopicTrashService`) bucht `topicPublished()` als genaue Umkehrung.
  * - Ergebnisse sind Arrays `{success, error?, retry_after?, …}`; `error` ist ein Code aus `Support\Codes`.
  *
  * @package CMSv2\Core\Services\Community
@@ -88,6 +89,7 @@ final class TopicService
     private PostRepository $posts;
     private ReadStateRepository $readStates;
     private UserStatsRepository $stats;
+    private CounterBook $book;
 
     /**
      * @param \Closure(): int|null $clock Unix-Zeit (Standard `time()`)
@@ -117,6 +119,7 @@ final class TopicService
         $this->posts = new PostRepository($this->db);
         $this->readStates = new ReadStateRepository($this->db);
         $this->stats = new UserStatsRepository($this->db);
+        $this->book = new CounterBook($this->db);
     }
 
     public static function instance(): self
@@ -356,11 +359,11 @@ final class TopicService
                 if ((int) $topic['reply_count'] > 0 && !$moderates) {
                     return self::failure('has_replies');
                 }
-                if ($topic['user_id'] !== null) {
-                    // Statistikzeile des Themenstarters vor der Transaktion (Autocommit), die Mitgliedersperre trifft eine vorhandene Zeile.
-                    $this->stats->ensure((int) $topic['user_id'], $now);
-                }
-                $result = Transaction::run($this->db, fn (): ?array => $this->deleteLocked($userId, $topicId, $forumId, $moderates, $nowTs, $now));
+                // Statistikzeilen der Autoren veröffentlichter Beiträge und des Themenstarters vor der Transaktion (Autocommit): die
+                // Mitgliedersperre trifft dann vorhandene Zeilen (keine Lückensperre).
+                $plan = $this->book->plan($topicId, $topic['user_id'] === null ? null : (int) $topic['user_id']);
+                $this->book->prepare($plan, $now);
+                $result = Transaction::run($this->db, fn (): ?array => $this->deleteLocked($userId, $topicId, $forumId, $moderates, $nowTs, $now, $plan));
             }
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('topic.delete', $e, ['topic_id' => $topicId]);
@@ -404,11 +407,12 @@ final class TopicService
     }
 
     /**
-     * @return array<string, mixed>|null null: das Thema hat das Forum gewechselt, der Aufrufer beginnt von vorn
+     * @param list<int> $plan gesperrte Statistikzeilen (`CounterBook::plan()`)
+     * @return array<string, mixed>|null null: das Thema hat das Forum gewechselt oder ein neuer Autor ist hinzugekommen, der Aufrufer beginnt von vorn
      */
-    private function deleteLocked(int $userId, int $topicId, int $forumId, bool $moderates, int $nowTs, string $now): ?array
+    private function deleteLocked(int $userId, int $topicId, int $forumId, bool $moderates, int $nowTs, string $now, array $plan): ?array
     {
-        // Sperrreihenfolge: Forum → Thema → Mitglied (der Themenstarter, dessen Zähler sinkt), alles vor der ersten nicht sperrenden Leseanweisung.
+        // Sperrreihenfolge: Forum → Thema → Statistik der Mitglieder (aufsteigend), alles vor der ersten nicht sperrenden Leseanweisung.
         $forum = $this->forums->lockForUpdate($forumId);
         if ($forum === null) {
             return self::failure('forum_not_found');
@@ -420,9 +424,9 @@ final class TopicService
         if ((int) $topic['forum_id'] !== $forumId) {
             return null;
         }
-        $starterId = $topic['user_id'] === null ? null : (int) $topic['user_id'];
-        if ($starterId !== null) {
-            $this->stats->lockForUpdate($starterId, $now);
+        $this->book->lock($plan, $now);
+        if (!$this->book->covers($topicId, $plan)) {
+            return null;
         }
 
         $decision = $this->decide($userId, 'delete', ['topic_id' => $topicId, 'now' => $nowTs, 'fresh' => true]);
@@ -445,25 +449,9 @@ final class TopicService
             return $done + ['already_deleted' => true];
         }
 
-        $this->topics->update($topicId, ['status' => 'deleted', 'previous_status' => $previous, 'updated_at' => $now]);
-        if ($previous !== 'published') {
-            return $done;
-        }
-
-        // „Letztes Thema/letzter Beitrag“ des Forums neu bestimmen, wenn es dieses Thema war (der Status ist schon geändert).
-        $last = null;
-        if ((int) ($forum['last_topic_id'] ?? 0) === $topicId) {
-            $latest = $this->topics->lastPublished($forumId);
-            $last = [
-                'post_id' => $latest['last_post_id'] ?? null,
-                'post_at' => $latest['last_post_at'] ?? null,
-                'topic_id' => $latest['id'] ?? null,
-                'poster_id' => $latest['last_poster_id'] ?? null,
-            ];
-        }
-        $this->forums->applyCounters($forumId, -1, -($replies + 1), $now, $last);
-        if ($starterId !== null) {
-            $this->stats->bump($starterId, -1, -1, $now);
+        $this->topics->update($topicId, ['status' => 'deleted', 'previous_status' => $previous, 'trashed_at' => $now, 'trashed_by' => $userId, 'updated_at' => $now]);
+        if ($previous === 'published') {
+            $this->book->topicUnpublished($forum, ['status' => 'deleted'] + $topic, $plan, $now);
         }
 
         return $done;
@@ -497,6 +485,35 @@ final class TopicService
             $page = $this->topics->listForum($forumId, gmdate('Y-m-d H:i:s', $nowTs), Cursor::decode($cursor), $limit);
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('topic.list', $e, ['forum_id' => $forumId]);
+        }
+
+        return [
+            'success' => true,
+            'items' => array_map(static fn (array $row): array => self::typed($row), $page->items),
+            'next' => $page->next,
+            'has_more' => $page->next !== null,
+        ];
+    }
+
+    /**
+     * Globale Liste über alle für das Mitglied lesbaren Foren: `new` (neueste Themen), `active` (jüngste Aktivität) oder `unanswered`
+     * (ohne Antwort). Keyset wie `listForum()`; ohne lesbares Forum eine leere Seite. Fehlerfrei bei ungültigem Cursor (erste Seite).
+     *
+     * @return array{success: bool, error?: string, items?: list<array<string, mixed>>, next?: string|null, has_more?: bool}
+     */
+    public function listGlobal(?int $viewerId, string $kind, ?string $cursor = null, ?int $limit = null): array
+    {
+        if (!in_array($kind, TopicRepository::GLOBAL_KINDS, true)) {
+            return self::failure('invalid_input');
+        }
+        $viewer = $viewerId !== null && $viewerId > 0 ? $viewerId : null;
+        $limit = max(1, min(TopicRepository::MAX_LIMIT, $limit ?? $this->settings->int('topics_per_page')));
+
+        try {
+            $forumIds = CommunityAccess::instance()->readableForumIds($viewer);
+            $page = $this->topics->listGlobal($kind, $forumIds, Cursor::decode($cursor), $limit);
+        } catch (\PDOException | \RuntimeException $e) {
+            return $this->databaseError('topic.list_global', $e, ['kind' => $kind]);
         }
 
         return [

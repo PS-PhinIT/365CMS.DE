@@ -9,14 +9,14 @@ if (!defined('ABSPATH')) {
  * Community – Formular für neues Thema, Antwort und Bearbeiten (POST an dieselbe Adresse, 303 zurück).
  * Variablen: $mode (new|reply|edit), $heading, $submit_label, $cancel_url, $show_title, $title, $body, $reason, $seen (letzter bekannter
  * Beitrag, nur Antwort), $edit_count (nur Bearbeiten), $quote (Beitrag, der zitiert wird, oder 0), $error, $new_posts, $readonly (nur Hinweis,
- * kein Formular), $api (JSON-API oder null), $login_url, $token (einmaliges form_guard-Token), $topic, $forum, $locale, $e.
+ * kein Formular), $api (JSON-API oder null), $editor (visueller Editor: mode, css, js, lang; oder null), $login_url, $token (einmaliges form_guard-Token), $topic, $forum, $locale, $e.
  */
 ?>
 <?php
 $previewKey = $mode === 'reply' ? 'topic_id' : ($mode === 'edit' ? 'post_id' : 'forum_id');
 $previewId = $mode === 'reply' ? (int) ($topic['id'] ?? 0) : ($mode === 'edit' ? (int) ($post['id'] ?? 0) : (int) ($forum['id'] ?? 0));
 ?>
-<main id="main" class="cms-community cms-community--compose"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="{}" data-cc-reason-required="0"<?php endif; ?>>
+<main id="main" class="cms-community cms-community--compose"<?php if (!empty($api)): ?> data-cc-api="<?= $e($api['url']) ?>" data-cc-token="<?= $e($api['token']) ?>" data-cc-reasons="{}" data-cc-reason-required="0"<?php endif; ?><?php if (!empty($editor)): ?> data-cc-editor="<?= $e($editor['mode']) ?>" data-css-url="<?= $e($editor['css']) ?>" data-js-url="<?= $e($editor['js']) ?>" data-lang-url="<?= $e($editor['lang']) ?>" data-target-key="<?= $e($previewKey) ?>" data-target-id="<?= (int) $previewId ?>"<?php endif; ?>>
     <p id="cc-status" class="cms-community-flash" hidden></p>
     <h1><?= $e($heading) ?></h1>
     <?php if (!empty($error)): ?>
@@ -40,7 +40,7 @@ $previewId = $mode === 'reply' ? (int) ($topic['id'] ?? 0) : ($mode === 'edit' ?
             <p><label for="cc-title">Titel</label>
             <input class="cms-community-input" id="cc-title" name="title" type="text" required maxlength="200" value="<?= $e($title) ?>"></p>
         <?php endif; ?>
-        <p><label for="cc-body">Text (Markdown)</label>
+        <p><label for="cc-body">Text</label>
         <textarea class="cms-community-input" id="cc-body" name="body" rows="12" required><?= $e($body) ?></textarea></p>
         <?php if ($mode === 'edit'): ?>
             <p><label for="cc-reason">Grund der Änderung (optional)</label>
