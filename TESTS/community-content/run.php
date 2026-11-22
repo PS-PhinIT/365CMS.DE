@@ -2127,7 +2127,7 @@ const CC_CLOCK_MAP = [
     'Service/RenderService.php' => 1, 'Service/ContentGuard.php' => 0, 'Service/CounterBook.php' => 0, 'Service/ModerationService.php' => 1,
     'Service/ReportService.php' => 1, 'Service/BanService.php' => 1, 'Service/NotificationDispatcher.php' => 1, 'Service/SubscriptionService.php' => 1,
     'Service/ReactionService.php' => 1, 'Service/RankService.php' => 1, 'Service/AttachmentService.php' => 1, 'Service/CommunitySearch.php' => 1,
-    'Service/CommunityMediaExtractor.php' => 0, 'Service/TopicTrashService.php' => 1,
+    'Service/CommunityMediaExtractor.php' => 0, 'Service/TopicTrashService.php' => 1, 'Service/WriteGate.php' => 0,
     'Support/ContentRenderer.php' => 0, 'Support/IpHash.php' => 0,
 ];
 
