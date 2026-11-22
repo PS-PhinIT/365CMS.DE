@@ -122,6 +122,12 @@ final class Settings
      *
      * @var array<string, array<string, mixed>>
      */
+    /** Wann Mitglieder beim Schreiben ein Captcha lösen: nie, bis zum ersten veröffentlichten Beitrag, auf Vertrauensstufe 0, immer. */
+    public const CAPTCHA_MODES = ['off', 'first_post', 'trust0', 'always'];
+
+    /** Verfahren des `CaptchaService`. */
+    public const CAPTCHA_PROVIDERS = ['pow', 'image', 'math'];
+
     public const DEFINITIONS = [
         'base_path' => ['type' => 'slug', 'default' => 'forum'],
         'guests_can_read' => ['type' => 'bool', 'default' => false],
@@ -157,6 +163,9 @@ final class Settings
         'reaction_set' => ['type' => 'map', 'schema' => 'reaction_set', 'default' => self::DEFAULT_REACTION_SET],
         'attachment_types' => ['type' => 'map', 'schema' => 'attachment_types', 'default' => self::DEFAULT_ATTACHMENT_TYPES],
         'attachment_max_kb' => ['type' => 'int', 'default' => 5120, 'min' => 64, 'max' => 51200],
+        // PR #5 (Captcha, E7): wann ein Captcha verlangt wird und welches Verfahren (`CaptchaService`)
+        'captcha_mode' => ['type' => 'enum', 'values' => self::CAPTCHA_MODES, 'default' => 'first_post'],
+        'captcha_provider' => ['type' => 'enum', 'values' => self::CAPTCHA_PROVIDERS, 'default' => 'pow'],
     ];
 
     /** Paare (Mindest- vor Höchstwert): ein Mindestwert über dem Höchstwert wird auf den Höchstwert gesenkt. */
@@ -220,6 +229,7 @@ final class Settings
                 'int' => self::parseInt($value, $definition['min'], $definition['max'], $definition['default']),
                 'bool' => self::parseBool($value) ?? $definition['default'],
                 'slug' => self::parseSlug($value, $definition['default']),
+                'enum' => self::parseEnum($value, $definition['values'], $definition['default']),
                 default => match ($definition['schema']) {
                     'trust_limits' => self::parseTrustLimits($value),
                     'word_filter' => self::parseWordFilter($value),
@@ -433,6 +443,21 @@ final class Settings
             '0', 'false', 'no', 'off' => false,
             default => null,
         };
+    }
+
+    /**
+     * Auswahl aus einer festen Liste (Groß-/Kleinschreibung und Leerraum am Rand egal); alles andere ergibt den Standard.
+     *
+     * @param list<string> $values
+     */
+    private static function parseEnum(mixed $value, array $values, string $default): string
+    {
+        if (!is_string($value)) {
+            return $default;
+        }
+        $value = strtolower(trim($value));
+
+        return in_array($value, $values, true) ? $value : $default;
     }
 
     private static function parseSlug(mixed $value, string $default): string

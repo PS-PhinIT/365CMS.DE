@@ -52,6 +52,7 @@ Verified top-level entries of this repository:
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/admin-redirects/` | directory | admin redirects page test (250 rules per page, no background refresh): `php TESTS/admin-redirects/run.php [-v]` |
+| `TESTS/captcha/` | directory | core captcha service (proof-of-work, image, arithmetic): `php TESTS/captcha/run.php [-v]` |
 | `TESTS/ai-admin-contract/` | directory | static contract of the AI admin integration (routes, CSRF, quota, SSRF guard, sanitizing): `php TESTS/ai-admin-contract/run.php` |
 | `TESTS/ai-content-creator/` | directory | AI content draft pipeline with mock provider: `php TESTS/ai-content-creator/run.php` |
 | `TESTS/ai-editorjs-translation/` | directory | Editor.js translation pipeline: batches, segment order, size limits: `php TESTS/ai-editorjs-translation/run.php` |
@@ -93,6 +94,7 @@ Verified top-level entries of this repository:
 | `TESTS/community-spam/` | directory | spam and abuse protection: `IpHash`, word filter, hosts, comparison form `fold()`, spam duplicate, core antispam, filter `cms_community_spam_check`, request limits `ContentGuard::throttle()`, security log: `php TESTS/community-spam/run.php [-v]` |
 | `TESTS/community-moderation/` | directory | moderation and counter booking: `ModerationService` (approve, reject, hide, restore, move with redirect topic, pin, solution, bulk action, queue, log, `systemAction`, `ipHashes`) and `CounterBook`, oracle `communityAudit()` after every step: `php TESTS/community-moderation/run.php [-v]` |
 | `TESTS/community-privacy/` | directory | retention rules and DSGVO export/erasure of the community: `php TESTS/community-privacy/run.php [-v]` |
+| `TESTS/community-captcha/` | directory | captcha in the community (modes, provider, write form): `php TESTS/community-captcha/run.php [-v]` |
 | `TESTS/community-trash/` | directory | trash of the community (topics): `php TESTS/community-trash/run.php [-v]` |
 | `TESTS/community-editor/` | directory | visual editor of the write form: source checks and browser checks (Chromium via Playwright, skipped without it): `php TESTS/community-editor/run.php [-v]` |
 | `TESTS/community-frontend/` | directory | public read pages (PR #4): route patterns and order, page segments, page cursor, views without inline script: `php TESTS/community-frontend/run.php [-v]` |
@@ -136,6 +138,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/admin-redirects/` | Verzeichnis | Test der Admin-Seite Weiterleitungen (250 Regeln je Seite, keine Aktualisierung im Hintergrund): `php TESTS/admin-redirects/run.php [-v]` |
+| `TESTS/captcha/` | Verzeichnis | Captcha-Dienst des Core (Proof-of-Work, Bild, Rechenaufgabe): `php TESTS/captcha/run.php [-v]` |
 | `TESTS/ai-admin-contract/` | Verzeichnis | statischer Vertrag der AI-Admin-Integration (Routen, CSRF, Quota, SSRF-Schutz, Bereinigung): `php TESTS/ai-admin-contract/run.php` |
 | `TESTS/ai-content-creator/` | Verzeichnis | AI-Entwurfs-Pipeline mit Mock-Provider: `php TESTS/ai-content-creator/run.php` |
 | `TESTS/ai-editorjs-translation/` | Verzeichnis | Editor.js-Übersetzungs-Pipeline: Batches, Segmentreihenfolge, Größenlimits: `php TESTS/ai-editorjs-translation/run.php` |
@@ -177,6 +180,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/community-spam/` | Verzeichnis | Spam- und Missbrauchsschutz: `IpHash`, Wortfilter, Hosts, Vergleichsfassung `fold()`, Spam-Dublette, Core-Antispam, Filter `cms_community_spam_check`, Request-Grenzen `ContentGuard::throttle()`, Sicherheitsprotokoll: `php TESTS/community-spam/run.php [-v]` |
 | `TESTS/community-moderation/` | Verzeichnis | Moderation und Zählerbuchung: `ModerationService` (Freigeben, Ablehnen, Ausblenden, Wiederherstellen, Verschieben mit Verweis-Thema, Anheften, Lösung, Sammelaktion, Warteschlange, Protokoll, `systemAction`, `ipHashes`) und `CounterBook`, Orakel `communityAudit()` nach jedem Schritt: `php TESTS/community-moderation/run.php [-v]` |
 | `TESTS/community-privacy/` | Verzeichnis | Löschfristen und DSGVO-Auskunft/-Löschung der Community: `php TESTS/community-privacy/run.php [-v]` |
+| `TESTS/community-captcha/` | Verzeichnis | Captcha in der Community (Modus, Verfahren, Schreibformular): `php TESTS/community-captcha/run.php [-v]` |
 | `TESTS/community-trash/` | Verzeichnis | Papierkorb der Community (Themen): `php TESTS/community-trash/run.php [-v]` |
 | `TESTS/community-editor/` | Verzeichnis | Visueller Editor des Schreibformulars: Quelltextprüfung und Browser-Prüfung (Chromium über Playwright, ohne Playwright übersprungen): `php TESTS/community-editor/run.php [-v]` |
 | `TESTS/community-frontend/` | Verzeichnis | Öffentliche Leseseiten (PR #4): Routenmuster und -reihenfolge, Seitensegmente, Seitencursor, Ansichten ohne Inline-Skript: `php TESTS/community-frontend/run.php [-v]` |

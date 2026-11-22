@@ -55,6 +55,9 @@ const CM_LEGACY_SUITES = ['community-repositories', 'community-access', 'communi
  */
 const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin', 'community-editor'];
 
+/** Weitere Suiten mit Mutanten-Haken (`Mutant::load`) außerhalb des Musters `community-*`. */
+const CM_EXTRA_SUITES = ['captcha'];
+
 /**
  * Zieldateien außerhalb von `core/Services/Community/` (Vertrag DESIGN-2b §6 W0, GK2): die Core-Dateien, auf denen das Modul aufbaut
  * und die PR #2b ändert. Jede andere Datei (z. B. `core/Services/SettingsService.php`) lehnt der Katalogtest ab.
@@ -63,6 +66,9 @@ const CM_ALLOWED_CORE_FILES = [
     'core/Hooks.php', 'core/Slug.php',
     'core/Services/PurifierService.php', 'core/Services/NotificationService.php', 'core/Services/MailQueueService.php',
     'core/Services/FeatureHooks/CommunityHooks.php',
+    // PR #188 (Captcha-Dienst des Core, Suite `captcha`)
+    'core/Services/Security/CaptchaService.php', 'core/Services/Security/Captcha/CaptchaStore.php', 'core/Services/Security/Captcha/ProofOfWorkProvider.php',
+    'core/Services/Security/Captcha/MathChallenge.php', 'core/Services/Security/Captcha/ImageProvider.php',
 ];
 
 /**
@@ -72,7 +78,11 @@ const CM_ALLOWED_CORE_FILES = [
  */
 function cmSuites(): array
 {
+    // Suiten außerhalb des Musters `community-*`, deren Klassen aber zur Community gehören (Captcha-Dienst des Core, PR #188).
     $suites = [];
+    foreach (CM_EXTRA_SUITES as $name) {
+        $suites[$name] = 'TESTS/' . $name . '/run.php';
+    }
     foreach (glob(CM_ROOT . '/TESTS/community-*/run.php') ?: [] as $script) {
         $name = basename(dirname($script));
         if (!in_array($name, CM_EXCLUDED_SUITES, true)) {

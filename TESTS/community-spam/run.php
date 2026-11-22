@@ -936,7 +936,7 @@ T::run('throttle(): Standard-Limiter über Security und login_attempts: Vorprüf
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 T::run('logRejection(): nur LOGGED_CODES, nur Web, gedrosselt über reject_log (31. Ablehnung je Stunde ohne Eintrag)', static function (): void {
-    T::same(['word_blocked', 'too_many_links', 'too_many_images', 'too_many_attachments', 'content_review'], ContentGuard::LOGGED_CODES, 'LOGGED_CODES (spam_rejected protokolliert AntispamService selbst)');
+    T::same(['word_blocked', 'too_many_links', 'too_many_images', 'too_many_attachments', 'content_review', 'captcha_failed'], ContentGuard::LOGGED_CODES, 'LOGGED_CODES (spam_rejected protokolliert AntispamService selbst)');
     $w = new SpWorld();
     foreach (['spam_rejected', 'trust_limit', 'rate_limited', 'gibt_es_nicht'] as $code) {
         $w->guard->logRejection($code, $w->user);

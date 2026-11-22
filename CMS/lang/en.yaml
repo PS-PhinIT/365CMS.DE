@@ -3529,3 +3529,6 @@ default:
   "captcha.image.alt": "Security code as an image. If you cannot read it, solve the arithmetic question instead."
   "captcha.image.label": "Characters from the image"
   "captcha.image.or": "or, without the image:"
+  "captcha.error.failed": "The security check was not passed. Please solve the new task and submit again."
+  "captcha.error.expired": "The security check has expired. Please solve the new task and submit again."
+  "captcha.error.unavailable": "The security check is not available right now. Please reload the page."

@@ -243,6 +243,10 @@ T::run('Proof-of-Work: Aufgabe, Lösung, falsche Zahl, Alternative Rechenaufgabe
 
     $third = $w->service->render('community.compose', 'pow');
     T::same(false, $w->service->verify(['cms_captcha_id' => taskId($third), 'cms_captcha_pow' => (string) (ProofOfWorkProvider::MAX_NUMBER + 5)], 'community.compose')->ok, 'eine Zahl über der Grenze besteht nicht');
+    // Die Grenze gilt für sich: auch eine „richtige“ Zahl über MAX_NUMBER besteht nicht (Aufgabe von Hand gebaut).
+    $big = ProofOfWorkProvider::MAX_NUMBER + 5;
+    $manual = ['salt' => 'abc', 'challenge' => hash('sha256', 'abc' . $big), 'max' => ProofOfWorkProvider::MAX_NUMBER, 'answer' => 999];
+    T::same([false, true], [(new ProofOfWorkProvider())->verify(['cms_captcha_pow' => (string) $big], $manual), (new ProofOfWorkProvider())->verify(['cms_captcha_pow' => (string) $big], ['max' => $big] + $manual)], 'eine Zahl über der Grenze besteht nicht, auch wenn der Hash passt; mit passender Grenze besteht sie');
     foreach (['abc', '-1', '1.5', '', ' 12', '99999999999', ['1']] as $bad) {
         $task = $w->service->render('community.compose', 'pow');
         T::same(false, $w->service->verify(['cms_captcha_id' => taskId($task), 'cms_captcha_pow' => $bad], 'community.compose')->ok, 'ungültige Lösung ' . json_encode($bad) . ' besteht nicht');
@@ -264,9 +268,12 @@ T::run('Rechenaufgabe: Operatoren, Ergebnis nie negativ, strenge Prüfung', stat
         T::check($task['answer'] >= 0 && $task['answer'] <= 81 && $task['public']['a'] >= 1 && $task['public']['b'] >= 1 && $task['public']['a'] <= 9 && $task['public']['b'] <= 9, 'Aufgabe ' . $i . ': Zahlen 1 bis 9, Ergebnis 0 bis 81');
     }
     T::same(['plus', 'minus', 'times'], MathChallenge::OPERATORS, 'drei Operatoren');
-    $minus = MathChallenge::create(static fn (int $min, int $max): int => $min === 0 ? 1 : ($max === 9 ? ($min === 1 ? 2 : 9) : 3));
+    $sequence = [1, 2, 7]; // Operator minus, dann a = 2, b = 7: die Zahlen müssen getauscht werden
+    $minus = MathChallenge::create(static function (int $min, int $max) use (&$sequence): int {
+        return array_shift($sequence) ?? 0;
+    });
     T::same(['minus'], [$minus['public']['op']], 'Vorbedingung: minus');
-    T::check($minus['public']['a'] >= $minus['public']['b'] && $minus['answer'] === $minus['public']['a'] - $minus['public']['b'], 'minus: die größere Zahl steht vorn');
+    T::same([7, 2, 5], [$minus['public']['a'], $minus['public']['b'], $minus['answer']], 'minus: die größere Zahl steht vorn (2 − 7 wird zu 7 − 2 = 5)');
     T::same([true, true, true], [MathChallenge::check('7', 7), MathChallenge::check(' 7 ', 7), MathChallenge::check(7, 7)], 'check: Zahl, Leerraum am Rand, int');
     T::same([false, false, false, false, false, false, false], [MathChallenge::check('7.0', 7), MathChallenge::check('sieben', 7), MathChallenge::check('', 7), MathChallenge::check(null, 7), MathChallenge::check(['7'], 7), MathChallenge::check('77777', 7), MathChallenge::check('8', 7)], 'check: Kommazahl, Wort, leer, null, Array, zu lang, falsch');
     T::same('Was ist 7 plus 4?', MathChallenge::question(['a' => 7, 'b' => 4, 'op' => 'plus']), 'Frage mit ausgeschriebenem Operator (Screenreader)');

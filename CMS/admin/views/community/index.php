@@ -556,11 +556,16 @@ $failure = static function (mixed $result): ?string {
         'use_core_antispam' => 'Core-Antispam zusätzlich nutzen', 'spam_duplicate_hours' => 'Spam: Duplikat-Fenster (Stunden)', 'ip_hash_days' => 'IP-Kennung speichern (Tage, 0 = nie)',
         'moved_stub_days' => 'Verweis nach Verschieben (Tage)', 'moderation_reason_required' => 'Moderation: Grund ist Pflicht', 'report_hide_threshold' => 'Meldungen bis zum vorläufigen Ausblenden (0 = aus)',
         'moderator_ban_max_days' => 'Moderatoren: längste Sperre (Tage)', 'notify_mail' => 'Benachrichtigungen auch per E-Mail', 'attachment_max_kb' => 'Anhang: Höchstgröße (KB)',
+        'captcha_mode' => 'Captcha beim Schreiben', 'captcha_provider' => 'Captcha-Verfahren',
+    ];
+    $enumLabels = [
+        'captcha_mode' => ['off' => 'Nie', 'first_post' => 'Bis zum ersten veröffentlichten Beitrag', 'trust0' => 'Solange die Vertrauensstufe 0 ist', 'always' => 'Bei jedem neuen Thema und jeder Antwort'],
+        'captcha_provider' => ['pow' => 'Automatische Prüfung (Proof-of-Work, mit Rechenaufgabe als Alternative)', 'image' => 'Bild (mit Rechenaufgabe als Alternative)', 'math' => 'Nur Rechenaufgabe'],
     ];
     $groups = [
         'Allgemein' => ['base_path', 'guests_can_read', 'require_verified_email', 'topics_per_page', 'posts_per_page', 'unread_horizon_days', 'moved_stub_days', 'notify_mail'],
         'Inhalte' => ['title_min', 'title_max', 'post_min', 'post_max', 'edit_window_minutes', 'edit_window_minutes_trusted', 'attachment_max_kb'],
-        'Schutz vor Spam' => ['rate_post_seconds', 'rate_topic_seconds', 'duplicate_window_seconds', 'spam_duplicate_hours', 'new_member_approval_posts', 'max_pending_per_user', 'use_core_antispam', 'ip_hash_days'],
+        'Schutz vor Spam' => ['rate_post_seconds', 'rate_topic_seconds', 'duplicate_window_seconds', 'spam_duplicate_hours', 'new_member_approval_posts', 'max_pending_per_user', 'use_core_antispam', 'ip_hash_days', 'captcha_mode', 'captcha_provider'],
         'Moderation und Vertrauen' => ['moderation_reason_required', 'report_hide_threshold', 'moderator_ban_max_days', 'trust_level1_posts', 'trust_level2_posts'],
     ];
     $limitLabels = ['posts_per_day' => 'Beiträge/Tag', 'topics_per_hour' => 'Themen/Std.', 'links_per_post' => 'Links/Beitrag', 'images_per_post' => 'Bilder/Beitrag', 'attachments_per_post' => 'Anhänge/Beitrag', 'attachments_per_day' => 'Anhänge/Tag'];
@@ -575,6 +580,13 @@ $failure = static function (mixed $result): ?string {
                     <div class="col-md-6 col-xl-4">
                         <?php if ($def['type'] === 'bool'): ?>
                             <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="s_<?= $e($key) ?>" value="1"<?= !empty($values[$key]) ? ' checked' : '' ?>><span class="form-check-label"><?= $e($labels[$key] ?? $key) ?></span></label>
+                        <?php elseif ($def['type'] === 'enum'): ?>
+                            <label class="form-label" for="s_<?= $e($key) ?>"><?= $e($labels[$key] ?? $key) ?></label>
+                            <select class="form-select" id="s_<?= $e($key) ?>" name="s_<?= $e($key) ?>">
+                                <?php foreach ($def['values'] as $option): ?>
+                                    <option value="<?= $e($option) ?>"<?= (string) ($values[$key] ?? $def['default']) === $option ? ' selected' : '' ?>><?= $e($enumLabels[$key][$option] ?? $option) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         <?php else: ?>
                             <label class="form-label" for="s_<?= $e($key) ?>"><?= $e($labels[$key] ?? $key) ?></label>
                             <input class="form-control" id="s_<?= $e($key) ?>" name="s_<?= $e($key) ?>" <?= $def['type'] === 'int' ? 'type="number" min="' . (int) $def['min'] . '" max="' . (int) $def['max'] . '"' : 'type="text" pattern="[a-z0-9][a-z0-9\-]{0,39}"' ?> value="<?= $e($values[$key] ?? '') ?>">
