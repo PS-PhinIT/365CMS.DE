@@ -26,6 +26,8 @@
  *   unverändert. Zähler bucht `CounterBook::topicUnpublished()` (Semantik S1): Forum `topic_count − 1` und `post_count − Beiträge`,
  *   jeder Autor veröffentlichter Beiträge `post_count − n`, der Themenstarter zusätzlich `topic_count − 1`. Das Wiederherstellen
  *   aus dem Papierkorb (`TopicTrashService`) bucht `topicPublished()` als genaue Umkehrung.
+ * - Schutzschichten (nur mit Guard, `WriteGate`): Wortfilter und Zählung vor `can()` (`content` im Kontext), `screen()` nach erlaubtem `can()` und vor
+ *   `ensure()` und der Transaktion (`word_blocked`, `spam_rejected`; `review` ⇒ `pending` über `can(fresh)`), `ip_hash` am ersten Beitrag, Sicherheitsprotokoll nach dem Vorgang.
  * - Ergebnisse sind Arrays `{success, error?, retry_after?, …}`; `error` ist ein Code aus `Support\Codes`.
  *
  * @package CMSv2\Core\Services\Community
@@ -90,18 +92,21 @@ final class TopicService
     private ReadStateRepository $readStates;
     private UserStatsRepository $stats;
     private CounterBook $book;
+    private WriteGate $gate;
 
     /**
      * @param \Closure(): int|null $clock Unix-Zeit (Standard `time()`)
      * @param \Closure(?int, string, array<string, mixed>): AccessDecision|null $can Standard: `CommunityAccess::instance()->can()`; ohne diese Klasse wird alles abgelehnt
      * @param \Closure(string, mixed...): void|null $dispatch Standard: `Events::fire()`
+     * @param \Closure(): ?ContentGuard|null $guard Inhaltsprüfung vor dem Schreiben (`WriteGate`); Standard: keine (inaktiv). `instance()` übergibt `ContentGuard::instance()`
      */
     public function __construct(
         ?Database $db = null,
         ?Settings $settings = null,
         ?\Closure $clock = null,
         ?\Closure $can = null,
-        ?\Closure $dispatch = null
+        ?\Closure $dispatch = null,
+        ?\Closure $guard = null
     ) {
         $this->db = $db ?? Database::instance();
         $this->settings = $settings ?? Settings::getInstance();
@@ -120,11 +125,12 @@ final class TopicService
         $this->readStates = new ReadStateRepository($this->db);
         $this->stats = new UserStatsRepository($this->db);
         $this->book = new CounterBook($this->db);
+        $this->gate = new WriteGate($guard);
     }
 
     public static function instance(): self
     {
-        return self::$instance ??= new self();
+        return self::$instance ??= new self(guard: static fn (): ContentGuard => ContentGuard::instance());
     }
 
     // ── Reine Regeln ────────────────────────────────────────────────────────────────────────────────────────────
@@ -172,26 +178,27 @@ final class TopicService
         if ($title === null || $body === null) {
             return self::failure('invalid_input');
         }
-        $length = mb_strlen($title, 'UTF-8');
-        if ($length < $this->settings->int('title_min')) {
-            return self::failure('title_too_short');
+        $error = $this->lengthError($title, $body);
+        if ($error !== null) {
+            return self::failure($error);
         }
-        if ($length > $this->settings->int('title_max')) {
-            return self::failure('title_too_long');
-        }
-        $length = mb_strlen($body, 'UTF-8');
-        if ($length < $this->settings->int('post_min')) {
-            return self::failure('body_too_short');
-        }
-        if ($length > $this->settings->int('post_max')) {
-            return self::failure('body_too_long');
+        // Wortfilter, Zählung und Hosts (nur mit Guard, nur für Mitglieder); ersetzte Wörter ändern die Längen.
+        $check = $userId > 0 ? $this->gate->inspect($title, $body) : null;
+        if ($check !== null && $check['replaced']) {
+            $title = (string) $check['title'];
+            $body = $check['body'];
+            $error = $this->lengthError($title, $body);
+            if ($error !== null) {
+                return self::failure($error);
+            }
         }
 
         $nowTs = ($this->clock)();
         $now = gmdate('Y-m-d H:i:s', $nowTs);
         $since = gmdate('Y-m-d H:i:s', $nowTs - $this->settings->int('duplicate_window_seconds'));
-        $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs]);
+        $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs] + $this->gate->context($check));
         if (!$decision->allowed) {
+            $this->gate->reject($check, $decision->reason, $userId);
             if ($userId < 1 || !in_array($decision->reason, self::LIMIT_REASONS, true)) {
                 return self::denied($decision);
             }
@@ -209,14 +216,27 @@ final class TopicService
         }
 
         try {
+            // Schutzschichten nach erlaubtem can(), vor ensure() und der Transaktion (Vertrag §4.1 Schritt 11).
+            $screen = null;
+            if ($check !== null) {
+                $screen = $this->gate->screen($check, $userId, 'create_topic', ['forum_id' => $forumId], $nowTs);
+                if (!$screen['ok']) {
+                    $this->gate->reject($check, $screen['error'], $userId);
+
+                    return self::failure($screen['error']);
+                }
+            }
             if ($this->forums->find($forumId) === null) {
                 return self::failure('forum_not_found');
             }
             // Statistikzeile vor der Transaktion (Autocommit): die Mitgliedersperre trifft dann eine vorhandene Zeile.
             $this->stats->ensure($userId, $now);
-            $result = Transaction::run($this->db, fn (): array => $this->createLocked($userId, $forumId, $title, $body, $nowTs, $now, $since));
+            $result = Transaction::run($this->db, fn (): array => $this->createLocked($userId, $forumId, $title, $body, $nowTs, $now, $since, $check, $screen));
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('topic.create', $e, ['forum_id' => $forumId]);
+        }
+        if (empty($result['success'])) {
+            $this->gate->reject($check, (string) ($result['error'] ?? ''), $userId); // nach dem Ende der Transaktion
         }
         if (!empty($result['success']) && empty($result['duplicate'])) {
             $this->fire(Events::TOPIC_CREATED, (int) $result['topic_id'], $forumId, $userId, (string) $result['status'], (int) $result['post_id']);
@@ -225,8 +245,12 @@ final class TopicService
         return $result;
     }
 
-    /** @return array<string, mixed> */
-    private function createLocked(int $userId, int $forumId, string $title, string $body, int $nowTs, string $now, string $since): array
+    /**
+     * @param array<string, mixed>|null $check Ergebnis von `WriteGate::inspect()`
+     * @param array<string, mixed>|null $screen Ergebnis von `WriteGate::screen()` (`ok = true`)
+     * @return array<string, mixed>
+     */
+    private function createLocked(int $userId, int $forumId, string $title, string $body, int $nowTs, string $now, string $since, ?array $check = null, ?array $screen = null): array
     {
         // Sperrreihenfolge: Forum → (Thema, Beitrag: neu) → Mitglied. Mitgliedersperre vor der ersten nicht sperrenden
         // Leseanweisung der Transaktion (Dublettenprüfung, `can(fresh)`): der Schnappschuss von REPEATABLE READ entsteht erst
@@ -242,7 +266,7 @@ final class TopicService
             return self::duplicateResult($duplicate, $forumId);
         }
 
-        $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs, 'fresh' => true]);
+        $decision = $this->decide($userId, 'create_topic', ['forum_id' => $forumId, 'now' => $nowTs, 'fresh' => true] + $this->gate->context($check, $screen));
         if (!$decision->allowed) {
             return self::denied($decision);
         }
@@ -273,7 +297,7 @@ final class TopicService
             'body' => $body,
             'body_html' => null,
             'rendered_version' => 0,
-            'ip_hash' => null,
+            'ip_hash' => $screen['ip_hash'] ?? null,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -289,6 +313,24 @@ final class TopicService
         $this->readStates->advance($userId, $topicId, $postId, $now);
 
         return ['success' => true, 'topic_id' => $topicId, 'post_id' => $postId, 'forum_id' => $forumId, 'status' => $status, 'slug' => $slug];
+    }
+
+    /** Fehlercode zu den Längen von Titel und Text (`title_min`/`title_max`, `post_min`/`post_max`), sonst null. */
+    private function lengthError(string $title, string $body): ?string
+    {
+        $length = mb_strlen($title, 'UTF-8');
+        if ($length < $this->settings->int('title_min')) {
+            return 'title_too_short';
+        }
+        if ($length > $this->settings->int('title_max')) {
+            return 'title_too_long';
+        }
+        $length = mb_strlen($body, 'UTF-8');
+        if ($length < $this->settings->int('post_min')) {
+            return 'body_too_short';
+        }
+
+        return $length > $this->settings->int('post_max') ? 'body_too_long' : null;
     }
 
     /**

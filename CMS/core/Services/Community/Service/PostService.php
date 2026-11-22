@@ -26,8 +26,8 @@
  * - Zähler (Matrix §3.6): veröffentlichte Beiträge zählen, wartende nirgends. Forumzähler zählen nur Beiträge in
  *   veröffentlichten Themen (die Freigabe eines wartenden Themas bucht in PR #2b nach).
  * - Hooks laufen nach dem Commit über `Events::fire()`; eine Ausnahme im Hook bricht nichts ab.
- * - Zeit: UTC (`gmdate`), die Uhr wird je Aufruf einmal gelesen. `body_html` bleibt NULL (`rendered_version` 0) und `ip_hash`
- *   NULL; es gibt kein Auto-Abo.
+ * - Zeit: UTC (`gmdate`), die Uhr wird je Aufruf einmal gelesen. `body_html` bleibt NULL (`rendered_version` 0); `ip_hash` bleibt NULL,
+ *   solange kein Guard übergeben ist (`WriteGate`, sonst der Wert aus `ContentGuard::screen()`); es gibt kein Auto-Abo.
  * - Ergebnisse sind Arrays `{success, error?, retry_after?, …}`; `error` ist ein Code aus `Support\Codes`. Datenbankfehler
  *   rollen die Transaktion zurück, werden protokolliert und ergeben `error = db_error`.
  *
@@ -84,18 +84,21 @@ final class PostService
     private ReadStateRepository $readStates;
     private UserStatsRepository $stats;
     private QuoteService $quotes;
+    private WriteGate $gate;
 
     /**
      * @param \Closure(): int|null $clock Unix-Zeit (Standard `time()`)
      * @param \Closure(?int, string, array<string, mixed>): AccessDecision|null $can Standard: `CommunityAccess::instance()->can()`; ohne diese Klasse wird alles abgelehnt
      * @param \Closure(string, mixed...): void|null $dispatch Standard: `Events::fire()`
+     * @param \Closure(): ?ContentGuard|null $guard Inhaltsprüfung vor dem Schreiben (`WriteGate`); Standard: keine (inaktiv). `instance()` übergibt `ContentGuard::instance()`
      */
     public function __construct(
         ?Database $db = null,
         ?Settings $settings = null,
         ?\Closure $clock = null,
         ?\Closure $can = null,
-        ?\Closure $dispatch = null
+        ?\Closure $dispatch = null,
+        ?\Closure $guard = null
     ) {
         $this->db = $db ?? Database::instance();
         $this->settings = $settings ?? Settings::getInstance();
@@ -114,11 +117,12 @@ final class PostService
         $this->readStates = new ReadStateRepository($this->db);
         $this->stats = new UserStatsRepository($this->db);
         $this->quotes = new QuoteService($this->db, $this->settings, $this->clock, $this->can);
+        $this->gate = new WriteGate($guard);
     }
 
     public static function instance(): self
     {
-        return self::$instance ??= new self();
+        return self::$instance ??= new self(guard: static fn (): ContentGuard => ContentGuard::instance());
     }
 
     // ── Reine Regeln ────────────────────────────────────────────────────────────────────────────────────────────
@@ -218,11 +222,22 @@ final class PostService
         $seen = max(0, (int) ($options['seen_last_post_id'] ?? 0));
         $force = !empty($options['force']);
 
+        // Wortfilter, Zählung und Hosts (nur mit Guard, nur für Mitglieder); ersetzte Wörter ändern die Länge.
+        $check = $userId > 0 ? $this->gate->inspect(null, $body) : null;
+        if ($check !== null && $check['replaced']) {
+            $body = $check['body'];
+            $error = $this->bodyError($body);
+            if ($error !== null) {
+                return self::failure($error);
+            }
+        }
+
         $nowTs = ($this->clock)();
         $now = gmdate('Y-m-d H:i:s', $nowTs);
         $since = gmdate('Y-m-d H:i:s', $nowTs - $this->settings->int('duplicate_window_seconds'));
-        $decision = $this->decide($userId, 'reply', ['topic_id' => $topicId, 'now' => $nowTs]);
+        $decision = $this->decide($userId, 'reply', ['topic_id' => $topicId, 'now' => $nowTs] + $this->gate->context($check));
         if (!$decision->allowed) {
+            $this->gate->reject($check, $decision->reason, $userId);
             if ($userId < 1 || !in_array($decision->reason, TopicService::LIMIT_REASONS, true)) {
                 return self::denied($decision);
             }
@@ -244,13 +259,26 @@ final class PostService
         }
 
         try {
+            // Schutzschichten nach erlaubtem can(), vor ensure() und der Transaktion (Vertrag §4.2 Schritt 7).
+            $screen = null;
+            if ($check !== null) {
+                $screen = $this->gate->screen($check, $userId, 'reply', ['topic_id' => $topicId, 'forum_id' => (int) ($this->topics->find($topicId)['forum_id'] ?? 0)], $nowTs);
+                if (!$screen['ok']) {
+                    $this->gate->reject($check, $screen['error'], $userId);
+
+                    return self::failure($screen['error']);
+                }
+            }
             // Statistikzeile vor der Transaktion (Autocommit): die Mitgliedersperre trifft dann eine vorhandene Zeile.
             $this->stats->ensure($userId, $now);
-            $result = $this->retrying($topicId, function (array $topic) use ($userId, $topicId, $body, $quoteOf, $seen, $force, $nowTs, $now, $since): ?array {
-                return $this->replyLocked($userId, $topicId, (int) $topic['forum_id'], $body, $quoteOf, $seen, $force, $nowTs, $now, $since);
+            $result = $this->retrying($topicId, function (array $topic) use ($userId, $topicId, $body, $quoteOf, $seen, $force, $nowTs, $now, $since, $check, $screen): ?array {
+                return $this->replyLocked($userId, $topicId, (int) $topic['forum_id'], $body, $quoteOf, $seen, $force, $nowTs, $now, $since, $check, $screen);
             });
         } catch (\PDOException | \RuntimeException $e) {
             return $this->databaseError('post.reply', $e, ['topic_id' => $topicId]);
+        }
+        if (empty($result['success'])) {
+            $this->gate->reject($check, (string) ($result['error'] ?? ''), $userId); // nach dem Ende der Transaktion
         }
         if (!empty($result['success']) && empty($result['duplicate'])) {
             $this->fire(Events::POST_CREATED, (int) $result['post_id'], $topicId, $userId, (string) $result['status']);
@@ -260,9 +288,11 @@ final class PostService
     }
 
     /**
+     * @param array<string, mixed>|null $check Ergebnis von `WriteGate::inspect()`
+     * @param array<string, mixed>|null $screen Ergebnis von `WriteGate::screen()` (`ok = true`)
      * @return array<string, mixed>|null null: das Thema hat das Forum gewechselt, der Aufrufer beginnt von vorn
      */
-    private function replyLocked(int $userId, int $topicId, int $forumId, string $body, int $quoteOf, int $seen, bool $force, int $nowTs, string $now, string $since): ?array
+    private function replyLocked(int $userId, int $topicId, int $forumId, string $body, int $quoteOf, int $seen, bool $force, int $nowTs, string $now, string $since, ?array $check = null, ?array $screen = null): ?array
     {
         // Sperrreihenfolge: Forum → Thema → Beitrag → Mitglied. Mitgliedersperre vor der ersten nicht sperrenden Leseanweisung der
         // Transaktion (Dublettenprüfung, `can(fresh)`): der Schnappschuss von REPEATABLE READ entsteht erst danach und sieht jede
@@ -290,7 +320,7 @@ final class PostService
             return $this->duplicateResult($duplicate, $forumId);
         }
 
-        $decision = $this->decide($userId, 'reply', ['topic_id' => $topicId, 'now' => $nowTs, 'fresh' => true]);
+        $decision = $this->decide($userId, 'reply', ['topic_id' => $topicId, 'now' => $nowTs, 'fresh' => true] + $this->gate->context($check, $screen));
         if (!$decision->allowed) {
             return self::denied($decision);
         }
@@ -318,7 +348,7 @@ final class PostService
             'body_html' => null,
             'rendered_version' => 0,
             'quote_of_post_id' => $quoteOf > 0 ? $quoteOf : null,
-            'ip_hash' => null,
+            'ip_hash' => $screen['ip_hash'] ?? null,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -388,9 +418,31 @@ final class PostService
         }
         $reasonText = self::normalizeReason($reason);
 
+        // Wortfilter, Zählung und Hosts (nur mit Guard, nur für Mitglieder); ersetzte Wörter ändern die Längen.
+        $check = $userId > 0 ? $this->gate->inspect($title, $body) : null;
+        if ($check !== null && $check['replaced']) {
+            $body = $check['body'];
+            $title = $check['title'];
+            $error = $this->bodyError($body) ?? ($title !== null ? $this->titleError($title) : null);
+            if ($error !== null) {
+                return self::failure($error);
+            }
+        }
+        if ($check !== null) {
+            try {
+                // Vorfassung: Inhalt, der schon da war, zählt gegen die Grenzen der Stufe nicht doppelt.
+                $previous = $this->posts->find($postId);
+                $check = $previous === null ? $check : $this->gate->withBefore($check, (string) ($previous['body'] ?? ''));
+            } catch (\PDOException | \RuntimeException $e) {
+                return $this->databaseError('post.edit', $e, ['post_id' => $postId]);
+            }
+        }
+
         $nowTs = ($this->clock)();
-        $decision = $this->decide($userId, 'edit', ['post_id' => $postId, 'now' => $nowTs]);
+        $decision = $this->decide($userId, 'edit', ['post_id' => $postId, 'now' => $nowTs] + $this->gate->context($check));
         if (!$decision->allowed) {
+            $this->gate->reject($check, $decision->reason, $userId);
+
             return self::denied($decision);
         }
         if ($userId < 1) {
@@ -399,6 +451,16 @@ final class PostService
         $now = gmdate('Y-m-d H:i:s', $nowTs);
 
         try {
+            // Schutzschichten nach erlaubtem can(), vor der Transaktion (Vertrag §4.2 Schritt 7); `ip_hash` gibt es beim Bearbeiten nie.
+            $screen = null;
+            if ($check !== null) {
+                $screen = $this->gate->screen($check, $userId, 'edit', ['post_id' => $postId], $nowTs);
+                if (!$screen['ok']) {
+                    $this->gate->reject($check, $screen['error'], $userId);
+
+                    return self::failure($screen['error']);
+                }
+            }
             $result = null;
             for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS && $result === null; $attempt++) {
                 $post = $this->posts->find($postId);
@@ -409,7 +471,7 @@ final class PostService
                     return self::failure('invalid_input');
                 }
                 $result = Transaction::run($this->db, fn (): ?array => $this->editLocked(
-                    $userId, $postId, (int) $post['topic_id'], (int) $post['forum_id'], $body, $title, $reasonText, $expectedEditCount, $nowTs, $now
+                    $userId, $postId, (int) $post['topic_id'], (int) $post['forum_id'], $body, $title, $reasonText, $expectedEditCount, $nowTs, $now, $check, $screen
                 ));
             }
         } catch (\PDOException | \RuntimeException $e) {
@@ -417,6 +479,9 @@ final class PostService
         }
         if ($result === null) {
             return $this->databaseError('post.edit', new \RuntimeException('Beitrag wechselte wiederholt Thema oder Forum.'), ['post_id' => $postId]);
+        }
+        if (empty($result['success'])) {
+            $this->gate->reject($check, (string) ($result['error'] ?? ''), $userId); // nach dem Ende der Transaktion
         }
         if (!empty($result['success']) && !empty($result['changed'])) {
             $this->fire(Events::POST_UPDATED, $postId, (int) $result['topic_id'], $userId, (int) $result['revision_id']);
@@ -430,9 +495,11 @@ final class PostService
     }
 
     /**
+     * @param array<string, mixed>|null $check Ergebnis von `WriteGate::inspect()` (mit `content_before`)
+     * @param array<string, mixed>|null $screen Ergebnis von `WriteGate::screen()` (`ok = true`)
      * @return array<string, mixed>|null null: Beitrag oder Thema wechselte Thema/Forum, der Aufrufer beginnt von vorn
      */
-    private function editLocked(int $userId, int $postId, int $topicId, int $forumId, string $body, ?string $title, ?string $reason, ?int $expectedEditCount, int $nowTs, string $now): ?array
+    private function editLocked(int $userId, int $postId, int $topicId, int $forumId, string $body, ?string $title, ?string $reason, ?int $expectedEditCount, int $nowTs, string $now, ?array $check = null, ?array $screen = null): ?array
     {
         // Sperrreihenfolge: Forum (nur wenn der Titel geändert werden kann, die Forum-Version steigt) → Thema → Beitrag.
         if ($title !== null && $this->forums->lockForUpdate($forumId) === null) {
@@ -450,7 +517,7 @@ final class PostService
             return null;
         }
 
-        $decision = $this->decide($userId, 'edit', ['post_id' => $postId, 'now' => $nowTs, 'fresh' => true]);
+        $decision = $this->decide($userId, 'edit', ['post_id' => $postId, 'now' => $nowTs, 'fresh' => true] + $this->gate->context($check, $screen));
         if (!$decision->allowed) {
             return self::denied($decision);
         }
@@ -791,6 +858,17 @@ final class PostService
     private function pageFor(int $position): int
     {
         return max(1, (int) ceil($position / $this->settings->int('posts_per_page')));
+    }
+
+    /** Fehlercode zur Länge eines Titels (`title_min`, `title_max`), sonst null. */
+    private function titleError(string $title): ?string
+    {
+        $length = mb_strlen($title, 'UTF-8');
+        if ($length < $this->settings->int('title_min')) {
+            return 'title_too_short';
+        }
+
+        return $length > $this->settings->int('title_max') ? 'title_too_long' : null;
     }
 
     /** Fehlercode zur Länge des Textes (`post_min`, `post_max`); leer zählt als zu kurz. */
