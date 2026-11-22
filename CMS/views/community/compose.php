@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
  * Community – Formular für neues Thema, Antwort und Bearbeiten (POST an dieselbe Adresse, 303 zurück).
  * Variablen: $mode (new|reply|edit), $heading, $submit_label, $cancel_url, $show_title, $title, $body, $reason, $seen (letzter bekannter
  * Beitrag, nur Antwort), $edit_count (nur Bearbeiten), $quote (Beitrag, der zitiert wird, oder 0), $error, $new_posts, $readonly (nur Hinweis,
- * kein Formular), $api (JSON-API oder null), $editor (visueller Editor: mode, css, js, lang; oder null), $login_url, $token (einmaliges form_guard-Token), $topic, $forum, $locale, $e.
+ * kein Formular), $api (JSON-API oder null), $editor (visueller Editor: mode, css, js, lang; oder null), $captcha (HTML der Captcha-Aufgabe oder leer), $login_url, $token (einmaliges form_guard-Token), $topic, $forum, $locale, $e.
  */
 ?>
 <?php
@@ -48,6 +48,9 @@ $previewId = $mode === 'reply' ? (int) ($topic['id'] ?? 0) : ($mode === 'edit' ?
         <?php endif; ?>
         <?php if (!empty($new_posts)): ?>
             <p><label><input type="checkbox" name="force" value="1"> Trotzdem senden</label></p>
+        <?php endif; ?>
+        <?php if (!empty($captcha)): ?>
+            <div class="cms-community-captcha"><?= $captcha /* HTML des Captcha-Dienstes: alle Werte dort maskiert */ ?></div>
         <?php endif; ?>
         <p class="cms-community-form__actions">
             <button class="cms-community-button" type="submit"><?= $e($submit_label) ?></button>

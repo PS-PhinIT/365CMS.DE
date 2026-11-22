@@ -16,6 +16,7 @@ namespace CMS\Services\Community\Http;
 use CMS\Security;
 use CMS\Services\Community\Repository\ForumRepository;
 use CMS\Services\Community\Repository\PostRepository;
+use CMS\Services\Community\Service\CaptchaGate;
 use CMS\Services\Community\Service\CommunityAccess;
 use CMS\Services\Community\Service\PostService;
 use CMS\Services\Community\Service\QuoteService;
@@ -83,6 +84,13 @@ final class ComposeController
         }
         $form['title'] = trim((string) ($_POST['title'] ?? ''));
         $form['body'] = (string) ($_POST['body'] ?? '');
+        $captchaError = $this->captchaFailure($viewer, 'create_topic');
+        if ($captchaError !== null) {
+            $form['error'] = $captchaError;
+            $this->show($form, $locale, 422);
+
+            return;
+        }
         $result = TopicService::instance()->create($viewer, (int) $forum['id'], $form['title'], $form['body']);
         if (empty($result['success'])) {
             $form['error'] = self::errorText($result);
@@ -144,6 +152,13 @@ final class ComposeController
             $options['force'] = true;
         }
         $form['seen'] = $options['seen_last_post_id'];
+        $captchaError = $this->captchaFailure($viewer, 'reply');
+        if ($captchaError !== null) {
+            $form['error'] = $captchaError;
+            $this->show($form, $locale, 422);
+
+            return;
+        }
         $result = PostService::instance()->reply($viewer, $topicId, $form['body'], $options);
         if (empty($result['success'])) {
             $form['error'] = self::errorText($result);
@@ -234,8 +249,46 @@ final class ComposeController
         }
         $form['token'] = Security::instance()->generateToken('form_guard');
         $form['locale'] = $locale;
+        $form['captcha'] = $this->captchaHtml($form);
         $meta = ['title' => (string) $form['heading'] . ' – Community', 'noindex' => true];
         PublicController::instance()->renderPage('compose', $form, $meta, $status);
+    }
+
+    /**
+     * Captcha des Formulars (neue Aufgabe), leer wenn keines verlangt wird: nur neues Thema und Antwort, nur angemeldet, nicht im
+     * Nur-Lesen-Zustand. Fehler der Ermittlung (Datenbank) verlangen ein Captcha (fail-closed im Dienst); sonst bleibt das Formular ohne.
+     *
+     * @param array<string, mixed> $form
+     */
+    private function captchaHtml(array $form): string
+    {
+        $viewer = PublicController::instance()->currentViewerId();
+        $action = ($form['mode'] ?? '') === 'new' ? 'create_topic' : (($form['mode'] ?? '') === 'reply' ? 'reply' : '');
+        if ($viewer === null || $action === '' || !empty($form['readonly'])) {
+            return '';
+        }
+        try {
+            $gate = CaptchaGate::instance();
+
+            return $gate->required($viewer, $action) ? $gate->render() : '';
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * Prüft das Captcha einer Absendung. `null` = in Ordnung oder nicht verlangt, sonst der Text für das Formular. Das Sicherheitsprotokoll (`captcha_failed`) schreibt
+     * `CaptchaGate::verify()`.
+     */
+    private function captchaFailure(int $viewer, string $action): ?string
+    {
+        $gate = CaptchaGate::instance();
+        if (!$gate->required($viewer, $action)) {
+            return null;
+        }
+        $result = $gate->verify($_POST, $viewer);
+
+        return $result->ok ? null : CaptchaGate::errorText($result);
     }
 
     /** @param array<string, mixed> $form */

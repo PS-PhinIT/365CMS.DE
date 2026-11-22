@@ -242,9 +242,17 @@ T::run('Definitionen: Typen, Standards und Grenzen laut Vertrag', static functio
         'reaction_set' => ['map'],
         'attachment_types' => ['map'],
         'attachment_max_kb' => ['int', 5120, 64, 51200],
+        // PR #5 (Captcha, E7)
+        'captcha_mode' => ['enum', 'first_post'],
+        'captcha_provider' => ['enum', 'pow'],
     ];
-    T::same(array_keys($expected), array_keys(Settings::DEFINITIONS), 'Schlüsselliste und Reihenfolge stimmen mit Vertrag §3 überein (#2a, dann #2b)');
-    T::same(33, count(Settings::DEFINITIONS), 'insgesamt 33 Schlüssel');
+    T::same(array_keys($expected), array_keys(Settings::DEFINITIONS), 'Schlüsselliste und Reihenfolge stimmen mit Vertrag §3 überein (#2a, #2b, dann PR #5)');
+    T::same(35, count(Settings::DEFINITIONS), 'insgesamt 35 Schlüssel (33 bis PR #4, dazu captcha_mode und captcha_provider)');
+    T::same(
+        ['captcha_mode' => ['off', 'first_post', 'trust0', 'always'], 'captcha_provider' => ['pow', 'image', 'math']],
+        ['captcha_mode' => Settings::DEFINITIONS['captcha_mode']['values'], 'captcha_provider' => Settings::DEFINITIONS['captcha_provider']['values']],
+        'enum: die Werte der beiden Captcha-Einstellungen'
+    );
     T::same(
         ['trust_limits' => 'trust_limits', 'default_permissions' => 'permissions', 'word_filter' => 'word_filter', 'reaction_set' => 'reaction_set', 'attachment_types' => 'attachment_types'],
         array_map(static fn (array $d): string => (string) $d['schema'], array_filter(Settings::DEFINITIONS, static fn (array $d): bool => $d['type'] === 'map')),
@@ -368,6 +376,13 @@ T::run('normalize(): Eingabe → Erwartung', static function (): void {
         ['moderator_ban_max_days', 400, 365, 'moderator_ban_max_days: höchstens 365'],
         ['attachment_max_kb', 10, 64, 'attachment_max_kb: Minimum 64'],
         ['attachment_max_kb', 99999, 51200, 'attachment_max_kb: höchstens 51200'],
+        ['captcha_mode', 'always', 'always', 'captcha_mode: always'],
+        ['captcha_mode', ' TRUST0 ', 'trust0', 'captcha_mode: Groß-/Kleinschreibung und Leerraum egal'],
+        ['captcha_mode', 'immer', 'first_post', 'captcha_mode: unbekannter Wert → Standard (erster Beitrag)'],
+        ['captcha_mode', 1, 'first_post', 'captcha_mode: Zahl → Standard'],
+        ['captcha_provider', 'image', 'image', 'captcha_provider: image'],
+        ['captcha_provider', 'turnstile', 'pow', 'captcha_provider: Drittanbieter gibt es nicht → Standard (pow)'],
+        ['captcha_provider', ['math'], 'pow', 'captcha_provider: Liste → Standard'],
         ['use_core_antispam', 'on', true, 'use_core_antispam: an'],
         ['use_core_antispam', 'maybe', false, 'use_core_antispam: unbekannter Text → Standard (aus)'],
         ['moderation_reason_required', 'off', false, 'moderation_reason_required: aus'],
@@ -519,6 +534,7 @@ T::run('normalize(): JSON-Strukturen trust_limits und default_permissions', stat
                 'int' => is_int($value) && $value >= $definition['min'] && $value <= $definition['max'],
                 'bool' => is_bool($value),
                 'slug' => is_string($value) && preg_match(Settings::BASE_PATH_PATTERN, $value) === 1,
+                'enum' => is_string($value) && in_array($value, $definition['values'], true),
                 default => is_array($value),
             };
             if (!$valid) {
@@ -1552,6 +1568,8 @@ T::run('Leser vorhanden: jeder Schlüssel in Settings::DEFINITIONS wird außerha
         'reaction_set' => [['Service/ReactionService.php'], null],
         'attachment_types' => [['Service/AttachmentService.php'], null],
         'attachment_max_kb' => [['Service/AttachmentService.php'], null],
+        'captcha_mode' => [['Service/CaptchaGate.php'], null],
+        'captcha_provider' => [['Service/CaptchaGate.php'], null],
     ];
     T::same(array_keys(Settings::DEFINITIONS), array_keys($readers), 'die Lesertabelle deckt genau die Schlüssel aus DEFINITIONS ab');
 
@@ -1589,6 +1607,8 @@ T::run('Wirkungstest vorhanden: Abschnitt „Wirkung: <schlüssel>“ je Einstel
         'report_hide_threshold' => 'community-sanctions', 'moderator_ban_max_days' => 'community-sanctions',
         'notify_mail' => 'community-notify', 'reaction_set' => 'community-notify',
         'attachment_types' => 'community-uploads', 'attachment_max_kb' => 'community-uploads',
+        // PR #5 (Captcha)
+        'captcha_mode' => 'community-captcha', 'captcha_provider' => 'community-captcha',
     ];
     $tableKeys = array_keys($suites);
     $definedKeys = array_keys(Settings::DEFINITIONS);

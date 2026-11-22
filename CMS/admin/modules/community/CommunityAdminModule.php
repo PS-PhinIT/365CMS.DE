@@ -605,7 +605,7 @@ final class CommunityAdminModule
             $field = 's_' . $key;
             if ($type === 'bool') {
                 $values[$key] = isset($post[$field]) && $post[$field] === '1';
-            } elseif ($type === 'int' || $type === 'slug') {
+            } elseif ($type === 'int' || $type === 'slug' || $type === 'enum') {
                 if (isset($post[$field]) && is_scalar($post[$field])) {
                     $values[$key] = $type === 'int' ? (int) $post[$field] : trim((string) $post[$field]);
                 }

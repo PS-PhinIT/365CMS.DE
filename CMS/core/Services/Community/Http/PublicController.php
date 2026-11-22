@@ -26,6 +26,7 @@ use CMS\Services\Community\Service\TopicService;
 use CMS\Services\Community\Support\I18n;
 use CMS\Services\Community\Support\Settings;
 use CMS\Services\Community\Support\Urls;
+use CMS\Services\Security\CaptchaService;
 use CMS\ThemeManager;
 
 if (!defined('ABSPATH')) {
@@ -450,6 +451,8 @@ final class PublicController
             'lang' => cms_asset_url('suneditor/lang/de.js'),
         ] : null;
         $this->meta['editor'] = $vars['editor'] !== null;
+        // Captcha im Schreibformular (Core-Dienst): Skript und Stil nur, wenn das Formular eine Aufgabe enthält.
+        $this->meta['captcha'] = $view === 'compose' && !empty($vars['captcha']);
         $meta = $this->meta;
         // Hinweis aus einem Schreibvorgang (z. B. „wartet auf Freigabe“) einmal anzeigen.
         $vars['flash'] = $_SESSION['community_flash'] ?? null;
@@ -482,6 +485,10 @@ final class PublicController
         }
         if (!empty($meta['editor'])) {
             $out .= '<script type="module" src="' . $e(cms_asset_url('js/community/editor.js')) . '"></script>' . "\n";
+        }
+        if (!empty($meta['captcha'])) {
+            $out .= '<link rel="stylesheet" href="' . $e(cms_asset_url(CaptchaService::assetPaths()['css'])) . '">' . "\n";
+            $out .= '<script type="module" src="' . $e(cms_asset_url(CaptchaService::assetPaths()['js'])) . '"></script>' . "\n";
         }
         if (!empty($meta['noindex'])) {
             $out .= '<meta name="robots" content="noindex, follow">' . "\n";

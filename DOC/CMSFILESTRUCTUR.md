@@ -60,8 +60,8 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
 | `CMS/views/` | 21 |
-| `CMS/assets/css/` | 34 stylesheets |
-| `CMS/assets/js/` | 59 scripts + 25 ES modules (`admin-shell/`, `community/`, `editor-blocks/`, `member/`, `post-editor/`) |
+| `CMS/assets/css/` | 35 stylesheets |
+| `CMS/assets/js/` | 59 scripts + 26 ES modules (`admin-shell/`, `captcha/`, `community/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
 ---
 
@@ -350,6 +350,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 - `admin-site-tables.css`
 - `admin-tabler.css`
 - `admin.css`
+- `captcha.css`
 - `cms-cookie-consent.css`
 - `cms-mfa.css`
 - `community.css`
@@ -430,6 +431,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 ES modules without build step / ES-Module ohne Build-Schritt (since/seit 4.0.0):
 
 - `admin-shell/`: `api.js`, `dom.js`, `drawer.js`, `recent-links.js`, `shell.js`, `sidebar.js`, `site-switcher.js`, `toolbar.js`, `user-menu.js`
+- `captcha/`: `captcha.js` (proof-of-work widget of the core captcha service, solves SHA-256 in the browser and hides the arithmetic alternative while it works / Proof-of-Work-Widget des Captcha-Dienstes, löst SHA-256 im Browser und blendet die Rechenaufgabe aus, solange es arbeitet)
 - `community/`: `community.js` (reactions, subscription, report, moderation, solution, preview of the forum / Reaktionen, Abo, Melden, Moderation, Lösung, Vorschau), `editor.js` (visual editor with SunEditor in the write form / visueller Editor im Schreibformular), `md-bridge.js` (HTML → Markdown bridge / Brücke HTML → Markdown)
 - `editor-blocks/`: `block-preview.js`, `download-block.js`, `form-block.js`, `reusable-block.js` (Block „Vorlagen“)
 - `member/`: `media.js`, `passkey.js`, `uploads.js` (loaded on demand by `member-dashboard.js` / bei Bedarf von `member-dashboard.js` geladen)
