@@ -104,8 +104,11 @@ ErrorDocument 429 /index.php
 
 # Security Headers
 <IfModule mod_headers.c>
+    # Anwendung zuerst: Der Core setzt diese Header je Route (z. B. SAMEORIGIN für die Newsletter-Vorschau im Admin,
+    # `Referrer-Policy: no-referrer` auf Seiten mit Token in der URL). `Header always set` würde diese Werte auf
+    # Apache überschreiben; `setifempty` ergänzt nur Antworten, die der Core nicht erzeugt (statische Dateien, Fehlerseiten).
     # Prevent clickjacking
-    Header always set X-Frame-Options "DENY"
+    Header always setifempty X-Frame-Options "DENY"
 
     # XSS Protection ist in modernen Browsern veraltet; CSP übernimmt den Schutz.
     Header always set X-XSS-Protection "0"
@@ -114,7 +117,7 @@ ErrorDocument 429 /index.php
     Header always set X-Content-Type-Options "nosniff"
 
     # Referrer Policy
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always setifempty Referrer-Policy "strict-origin-when-cross-origin"
 
     # ── Content Security Policy (Fallback) ───────────────────────────────────
     # PHP setzt primär eine nonce-basierte CSP. Dieser Apache-Header dient nur
