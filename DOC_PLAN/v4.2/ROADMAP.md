@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Roadmap & Fortschritt
-> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **P1:** ✅ ausgeliefert | **P2/P3 und externe Abnahme:** offen | **Gesamtstatus:** [../../STATUS.md](../../STATUS.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **P1:** ✅ ausgeliefert | **P2/P3 und externe Abnahme:** offen | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
 
 ## English (summary)
 
@@ -81,7 +81,7 @@ flowchart LR
 
 | WP | Status | Ergebnis / Nachweis |
 |---|---|---|
-| Planung (dieses Dokument-Set) | ✅ | `DOC/workflow/specs/community/` (14.11.2026), Umsetzungsfahrplan [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) (15.11.2026) |
+| Planung (dieses Dokument-Set) | ✅ | `DOC_PLAN/v4.2/` (14.11.2026), Umsetzungsfahrplan [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) (15.11.2026) |
 | WP-C0 Entscheidungen & Bibliotheken | ⬜ | |
 | WP-C1 Modul-Gerüst & Schema v27 | 🟡 | PR #1 (17.11.2026): Schema v27 mit allen 27 Tabellen (`TESTS/schema-v27`, `TESTS/schema-upgrade`: Neuinstallation = Update von v25/v26 gegen MariaDB 10.11), Capabilities `community.*`, Rolle `moderator`, Update-Schritt `capabilities_v27` ([HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md)); Nachlauf: zwei Indizes für `community_topics`, `community_badges.description_en` (HANDOFF §2 Nr. 9). PR #2a (#178, 18.11.2026): `CoreModuleService`-Eintrag (standardmäßig aus), `CommunityHooks`, `Support/Settings`, Sprachschlüssel `community.access.*`/`community.error.*`, Core-Hook `user_role_changed` auch außerhalb des SSO-Pfads (`TESTS/community-settings`, `TESTS/user-role-hook`). Offen: Admin-Katalog (PR #3) |
 | WP-C2 Struktur & Rechte | ✅ | PR #2a (#178): `CommunityAccess` (Rechte je Forum mit Vererbung, Forum-Moderatoren, Sperren, Vertrauensstufen P1), Repositories für Kategorien und Foren (`TESTS/community-access`, `TESTS/community-repositories`, Gegenprobe `TESTS/community-mutants`). PR #3 und 4.2.0: Admin „Struktur“ mit Ziehen und Pfeiltasten, Löschen leerer Kategorien und Foren, Benutzergruppen als Subjekt der Rechte-Matrix (`TESTS/community-admin`) |

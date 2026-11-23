@@ -58,7 +58,7 @@ sie dürfen nicht als aktueller Auslieferungsstatus gelesen werden.
 
 ## Detailquellen
 
-- [v4.1 Übersicht](specs/v4.1/README.md) und [v4.1 Fortschritt](specs/v4.1/PROGRESS.md)
-- [Community-Roadmap](specs/community/ROADMAP.md) und [Community-Übersicht](specs/community/README.md)
-- [Roadmap Inhaltsplattform](specs/ROADMAP-CONTENT-PLATFORM.md)
-- [Admin-Menü-Profile](specs/ADMIN-MENU-PROFILE.md)
+- [v4.1 Übersicht](v4.1/README.md) und [v4.1 Fortschritt](v4.1/PROGRESS.md)
+- [Community-Roadmap](v4.2/ROADMAP.md) und [Community-Übersicht](v4.2/README.md)
+- [Roadmap Inhaltsplattform](ROADMAP-CONTENT-PLATFORM.md)
+- [Admin-Menü-Profile](ADMIN-MENU-PROFILE.md)

@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Bereich 5: Zahlungen, Abos & Rechnungen
-> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ 5a (Zahlungen) und 5b (Rechnungen) umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
-> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
+> **Stand:** 2026-11-23 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ 5a (Zahlungen) und 5b (Rechnungen) umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../STATUS.md](../STATUS.md).
 > **Nachweis:** 6 Sicherheitsgates des ausgelieferten 4.1-Umfangs wurden als erledigt markiert.
 
 ## English (summary)

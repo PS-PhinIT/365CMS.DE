@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Admin-Sidebar-Menü mit Profilen
-> **Stand:** 2026-11-23 | **Basis:** 4.0.0–4.2.0 | **Status:** ✅ umgesetzt | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
+> **Stand:** 2026-11-23 | **Basis:** 4.0.0–4.2.0 | **Status:** ✅ umgesetzt | **Gesamtstatus:** [STATUS.md](STATUS.md)
 > **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)

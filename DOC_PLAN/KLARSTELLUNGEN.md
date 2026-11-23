@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Klarstellungen zu den Specs
-> **Stand:** 2026-11-23 | **Basis:** 4.0.0 | **Status:** Historisch und weiterhin verbindlich | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
+> **Stand:** 2026-11-23 | **Basis:** 4.0.0 | **Status:** Historisch und weiterhin verbindlich | **Gesamtstatus:** [STATUS.md](STATUS.md)
 > **Gilt für:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-PARITY.md](PLUGIN-PARITY.md) · [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md)
 
 ## English (summary)
@@ -72,7 +72,7 @@ Downloads und Formulare können später eigene Provider anmelden, ohne dass der 
 
 ### 6. Arbeitsweise
 
-- Die Specs liegen vollständig unter `DOC_PLAN/specs/`. Der aktuelle Stand wird zentral in [../STATUS.md](../STATUS.md) geführt; das Changelog bleibt der historische Liefernachweis.
+- Die Specs liegen nach Version direkt unter `DOC_PLAN/`. Der aktuelle Stand wird zentral in [STATUS.md](STATUS.md) geführt; das Changelog bleibt der historische Liefernachweis.
 - Reihenfolge der Umsetzung:
   1. Admin-Menü fertigstellen
   2. Plugin-Integration

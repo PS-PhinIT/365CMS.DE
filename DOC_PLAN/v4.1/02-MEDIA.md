@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Bereich 2: Medien & Performance
-> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 2a, 2b | **Übersicht:** [README.md](README.md)
-> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
+> **Stand:** 2026-11-23 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 2a, 2b | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../STATUS.md](../STATUS.md).
 
 ## English (summary)
 

@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Schema v26 & Migrationsplanung
-> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 | **Status:** ✅ umgesetzt (90 Tabellen, `FEATURE_TABLES_V26`); Versionsmarke `v26` gesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
-> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
+> **Stand:** 2026-11-23 | **Ziel-Version:** 4.1.0 | **Status:** ✅ umgesetzt (90 Tabellen, `FEATURE_TABLES_V26`); Versionsmarke `v26` gesetzt ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../STATUS.md](../STATUS.md).
 
 ## English (summary)
 

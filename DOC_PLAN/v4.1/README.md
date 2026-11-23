@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Release 4.1.0
-> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema **v26** | **Status:** ✅ Bereiche 1–5 umgesetzt und mit 4.1.0 veröffentlicht, Bereich 6 → 4.3.0 | **Update:** 2026-11-15
-> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
+> **Stand:** 2026-11-23 | **Ziel-Version:** 4.1.0 · Schema **v26** | **Status:** ✅ Bereiche 1–5 umgesetzt und mit 4.1.0 veröffentlicht, Bereich 6 → 4.3.0 | **Update:** 2026-11-15
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../STATUS.md](../STATUS.md).
 > **Fortschritt:** [PROGRESS.md](PROGRESS.md) · **Schema:** [SCHEMA-v26.md](SCHEMA-v26.md) · **Referenzen:** [REFERENCES.md](REFERENCES.md)
 
 ## English (summary)
@@ -12,7 +12,7 @@ single sign-on via OpenID Connect, configurable password policy with history and
 native Signature-V4 client and signed outbound webhooks; (5) Stripe and Mollie/PayPal payments with signed webhooks
 and sequential PDF invoices; (6) a CLI runner and real-time admin alerting. All schema changes share one bump to v26; the
 Community module follows in 4.2 with schema v27. Every area lists services, files, tables, capabilities, hooks,
-security gates and tests. **Status 15 Nov 2026:** areas 1–5 are implemented and released in 4.1.0; area 6 (CLI, alerting) moved to **4.3.0**; the community module (4.2.0, schema v27) is planned in [../community/README.md](../community/README.md).
+security gates and tests. **Status 15 Nov 2026:** areas 1–5 are implemented and released in 4.1.0; area 6 (CLI, alerting) moved to **4.3.0**; the community module (4.2.0, schema v27) is delivered and documented in [../v4.2/README.md](../v4.2/README.md).
 
 ## Deutsch
 
@@ -36,7 +36,7 @@ Aus dem Auftrag und dem Bestand von 4.0.0:
 
 1. **Kein Build-Schritt:** Vanilla-ES-Module unter `CMS/assets/js/`, Tabler-Tokens (`--tblr-*`, `--cms-*`), keine Inline-Skripte und keine Inline-Handler (CSP mit Nonce und Trusted Types).
 2. **Sicherheit:** nur gebundene SQL-Parameter; CSRF-Token je Aktion (`Security::generateToken`/`verifyToken`); Capability-Prüfung bei jeder Admin-Aktion; lokale Pfade über `Security::safeLocalPath()`; ausgehende HTTP-Anfragen nur über `CMS\Http\Client` (SSRF-Schutz, DNS-Pinning, Größenlimit); Geheimnisse nur verschlüsselt über `SettingsService::set(…, encrypted: true)` → `CryptoService` (XChaCha20-Poly1305, Kontext `settings`, Bindung an den Optionsnamen).
-3. **Schema:** ein gemeinsamer Stand **v26** für alle 4.1.0-Funktionen; das Community-Modul folgt in **4.2** mit **v27** ([../community/README.md](../community/README.md)); Definitionen nur in `SchemaManager::getSchemaQueries()`, Update über `MigrationManager::run()` (idempotent, wie v25).
+3. **Schema:** ein gemeinsamer Stand **v26** für alle 4.1.0-Funktionen; das Community-Modul folgt in **4.2** mit **v27** ([../v4.2/README.md](../v4.2/README.md)); Definitionen nur in `SchemaManager::getSchemaQueries()`, Update über `MigrationManager::run()` (idempotent, wie v25).
 4. **Tests unter `TESTS/`** und Handbuch-Updates unter `DOC/`. Hinweis: `TESTS/` wurde am 14.11.2026 aus `main` entfernt (Commit `6edfacc`); der Auftrag verlangt Tests dort, deshalb entsteht das Verzeichnis für die 4.1.0-Suiten neu (`TESTS/<suite>/run.php`, eigenständig, ohne Datenbank, Exit-Code 1 bei Fehlern).
 5. **Keine schweren Vendor-SDKs** für S3, Zahlungen und OIDC: schlanke eigene Clients über `Http\Client`; vorhandene Bibliotheken (`firebase/php-jwt`, `robthree/twofactorauth`, `lbuchs/WebAuthn`, Dompdf) werden genutzt.
 6. **MultiSite:** keine Site-Dimension für Inhalte ([KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md) §3).

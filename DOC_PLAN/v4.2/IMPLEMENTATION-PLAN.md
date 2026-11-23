@@ -14,7 +14,7 @@ Single entry point for building the **Community module** (forum) in release **4.
 
 | Punkt | Stand |
 |---|---|
-| Core | 365CMS **4.1.0**, Schema **v26** (90 Tabellen, `SchemaManager::FEATURE_TABLES_V26`), PHP ≥ 8.4.1; `Version::CURRENT = '4.1.0'`, `SCHEMA_VERSION = 'v26'` ([../../../core/STATUS.md](../../../DOC/core/STATUS.md)). |
+| Core | 365CMS **4.1.0**, Schema **v26** (90 Tabellen, `SchemaManager::FEATURE_TABLES_V26`), PHP ≥ 8.4.1; `Version::CURRENT = '4.1.0'`, `SCHEMA_VERSION = 'v26'` ([../../../core/STATUS.md](../../DOC/core/STATUS.md)). |
 | Schema v27 | Eigener Stand **v27** für alle Community-Tabellen; Definitionen nur in `SchemaManager::getSchemaQueries()`, Anlage über `MigrationManager::run()` und `ensureFeatureSchema()` (idempotent, wie v25/v26). |
 | Release 4.2.0 | Phase **P1** (WP-C0 … WP-C13, ≈ 89 PT). P2 und P3 folgen in Folgereleases. |
 | Nicht Teil von 4.2.0 | CLI und Echtzeit-Alerting (→ **4.3.0**), Datenübernahme aus `cms-forum` (entfällt, E6), Mandanten/`site_id` (E10). |
@@ -87,11 +87,11 @@ Neue Gruppe „Community“ in `RolesModule::CAPABILITY_GROUPS`; ein einmaliger 
 | `community.manage` | Struktur, Rechte, Ränge/Abzeichen, Einstellungen, Statistik | admin |
 | `community.view_private_data` | gekürzte IP-Kennung, Bearbeitungsverlauf gelöschter Beiträge | admin |
 
-Neue Standardrolle **`moderator`** (Anzeigename „Moderator“). Die Entscheidung trifft ausschließlich `CommunityAccess::can(user, action, context)` in der Reihenfolge Kontostatus → Community-Sperre → globale Capability → Forum-Recht → Vertrauensstufe; der Filter `cms_community_can` darf nur **einschränken**. Hinweis: `/admin` erreichen weiterhin nur Admins ([../../admin/users-groups/RBAC.md](../../../DOC/admin/users-groups/RBAC.md)); Moderation für andere Rollen läuft deshalb im Frontend/Mitgliederbereich.
+Neue Standardrolle **`moderator`** (Anzeigename „Moderator“). Die Entscheidung trifft ausschließlich `CommunityAccess::can(user, action, context)` in der Reihenfolge Kontostatus → Community-Sperre → globale Capability → Forum-Recht → Vertrauensstufe; der Filter `cms_community_can` darf nur **einschränken**. Hinweis: `/admin` erreichen weiterhin nur Admins ([../../admin/users-groups/RBAC.md](../../DOC/admin/users-groups/RBAC.md)); Moderation für andere Rollen läuft deshalb im Frontend/Mitgliederbereich.
 
 ### 6a. Hooks (Auswahl, Namensschema `cms_community_*`)
 
-`cms_community_topic_created|updated|deleted|moved|merged`, `cms_community_post_created|updated|deleted|approved|rejected`, `cms_community_report_created|resolved`, `cms_community_user_warned|banned|unbanned`, `cms_community_solution_marked`; Filter `cms_community_render_post`, `cms_community_can`, `cms_community_spam_check`, `cms_community_notification_types`, vollständig in [ARCHITECTURE.md](ARCHITECTURE.md) §6; bei Umsetzung in [../../core/HOOKS-REFERENCE.md](../../../DOC/core/HOOKS-REFERENCE.md) aufnehmen.
+`cms_community_topic_created|updated|deleted|moved|merged`, `cms_community_post_created|updated|deleted|approved|rejected`, `cms_community_report_created|resolved`, `cms_community_user_warned|banned|unbanned`, `cms_community_solution_marked`; Filter `cms_community_render_post`, `cms_community_can`, `cms_community_spam_check`, `cms_community_notification_types`, vollständig in [ARCHITECTURE.md](ARCHITECTURE.md) §6; bei Umsetzung in [../../core/HOOKS-REFERENCE.md](../../DOC/core/HOOKS-REFERENCE.md) aufnehmen.
 
 ### 7. Datenschutz- und Moderationsregeln
 
@@ -157,4 +157,4 @@ Rechte-Fehler machen interne Foren sichtbar (→ nur `CommunityAccess`, Matrix-T
 
 ### Verwandte Dokumente
 
-[README.md](README.md) · [ROADMAP.md](ROADMAP.md) · [FEATURES.md](FEATURES.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [../v4.1/PROGRESS.md](../v4.1/PROGRESS.md) · [../../DEVLIST.md](../../../DOC/DEVLIST.md) · [../../core/DATABASE-SCHEMA.md](../../../DOC/core/DATABASE-SCHEMA.md)
+[README.md](README.md) · [ROADMAP.md](ROADMAP.md) · [FEATURES.md](FEATURES.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [../v4.1/PROGRESS.md](../v4.1/PROGRESS.md) · [../../DEVLIST.md](../../DOC/DEVLIST.md) · [../../core/DATABASE-SCHEMA.md](../../DOC/core/DATABASE-SCHEMA.md)

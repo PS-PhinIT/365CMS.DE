@@ -1,6 +1,6 @@
 # 365CMS: Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
 
-> **Stand:** 2026-11-23 | **A:** ✅ 4.1.0 | **B:** 🔴 offen | **C:** 🔴 offen | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
+> **Stand:** 2026-11-23 | **A:** ✅ 4.1.0 | **B:** 🔴 offen | **C:** 🔴 offen | **Gesamtstatus:** [STATUS.md](STATUS.md)
 
 ## English (summary)
 
