@@ -1,5 +1,7 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 4a, 4b | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 4a, 4b | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
+> **Nachweis:** 6 Sicherheitsgates des ausgelieferten 4.1-Umfangs wurden als erledigt markiert.
 
 ## English (summary)
 
@@ -83,12 +85,12 @@ Einstellungen in Gruppe `backup_offsite` (`secret_key` verschlüsselt).
 
 ### 5. Sicherheits-Gates
 
-- [ ] Nur verschlüsselte Backups offsite (V6); Klartext-Backup → Fehler „Verschlüsselung aktivieren“.
-- [ ] Secret nur über `CryptoService`; nie in Logs, Fehlermeldungen oder Formularen.
-- [ ] Alle Anfragen über `Http\Client` (SSRF, DNS-Pinning); private Hosts nur mit ausdrücklicher Freigabe für genau diesen Host.
-- [ ] Lokale Pfade nur innerhalb des Backup-Verzeichnisses (`isWithinBackupRoot`, `Security::safeLocalPath`).
-- [ ] XML-Antworten ohne externe Entitäten, Größe begrenzt.
-- [ ] Objektschlüssel nur aus validierten Backup-Namen (`BACKUP_NAME_PATTERN`) und Präfix aus `[A-Za-z0-9._/-]`, ohne `..`.
+- [x] Nur verschlüsselte Backups offsite (V6); Klartext-Backup → Fehler „Verschlüsselung aktivieren“.
+- [x] Secret nur über `CryptoService`; nie in Logs, Fehlermeldungen oder Formularen.
+- [x] Alle Anfragen über `Http\Client` (SSRF, DNS-Pinning); private Hosts nur mit ausdrücklicher Freigabe für genau diesen Host.
+- [x] Lokale Pfade nur innerhalb des Backup-Verzeichnisses (`isWithinBackupRoot`, `Security::safeLocalPath`).
+- [x] XML-Antworten ohne externe Entitäten, Größe begrenzt.
+- [x] Objektschlüssel nur aus validierten Backup-Namen (`BACKUP_NAME_PATTERN`) und Präfix aus `[A-Za-z0-9._/-]`, ohne `..`.
 
 ### 6. Tests (`TESTS/s3-backup/run.php`)
 

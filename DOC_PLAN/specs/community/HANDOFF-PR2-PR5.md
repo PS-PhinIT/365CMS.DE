@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Übergabe PR #1 (#176) und PR #2a → PR #2b bis PR #5
-> **Stand:** 2026-11-19 | **Ziel-Version:** 4.2.0 · Schema **v27** (Entwicklungsstand) | **Status:** PR #1 geliefert (Schema, Capabilities, Rolle) · PR #2a geliefert (Fundament der Dienste, siehe §1a) · PR #2b bis #5 offen | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Status:** Historischer Handoff, PR #2–#5 in 4.2.0 ausgeliefert | **Aktueller Fortschritt:** [ROADMAP.md](ROADMAP.md)
 > **Grundlage:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [TEST-PLAN.md](TEST-PLAN.md)
 
 ## English (summary)
@@ -936,4 +936,4 @@ Alle Routen fragen nur `CommunityAccess`; Weiterleitungsziele nur lokale Pfade. 
 
 ### Verwandte Dokumente
 
-[README.md](README.md) · [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [../../core/DATABASE-SCHEMA.md](../../../core/DATABASE-SCHEMA.md) · [../../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../../../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md)
+[README.md](README.md) · [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [../../core/DATABASE-SCHEMA.md](../../../DOC/core/DATABASE-SCHEMA.md) · [../../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../../../DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md)

@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Roadmap & Fortschritt
-> **Stand:** 2026-11-23 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** WP-C1 bis WP-C3 teilweise geliefert (PR #1, PR #2a) | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **P1:** ✅ ausgeliefert | **P2/P3 und externe Abnahme:** offen | **Gesamtstatus:** [../../STATUS.md](../../STATUS.md)
 
 ## English (summary)
 

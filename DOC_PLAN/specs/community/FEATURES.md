@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Funktionskatalog
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Dokumentklasse:** Anforderungsmatrix und Plugin-Vergleich | **4.2.0-Status:** [ROADMAP.md](ROADMAP.md), nicht die letzte Spalte dieser Tabelle
 
 ## English (summary)
 

@@ -8,14 +8,14 @@ Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`,
 |------|------|
 | Stand | `main` @ `a437675` (Release-Kandidat 4.1.0, Schema v26) |
 | Abschluss | 2026-11-17: 145 Befunde, 136 behoben, 4 verworfen, 3 akzeptiert, 1 dokumentiert, 1 offen (PERF-410-49); siehe „PR #6: Audit-Abschluss und Abschlussbilanz“ |
-| Baseline Tests | `php TESTS/run-all.php`: 32 Suiten, 0 fehlgeschlagen |
+| Baseline Tests | `php TESTS/run-all.php`: Discovery-Lauf am 4.1.0-Prüfpunkt, 0 fehlgeschlagen |
 | PHP (Prüfumgebung) | 8.3.6 CLI |
 | Schweregrade | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
 | ID-Schema | `SEC-410-xx` (Sicherheit), `DB-410-xx` (Schema/Migration), `FUN-410-xx` (Funktion), `PERF-410-xx` (Performance), `DOC-410-xx` (Doku/Release) |
 
 ## Versionen
 
-Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Ausgeliefert wird das kumulative Paket der jeweils letzten gepackten Version (`RELEASE/365CMS-4.1.8-*`).
+Die Korrekturen erschienen als Patch-Releases, je Prüfbereich eine Version. Beim Abschluss dieses historischen Prüflaufs war `RELEASE/365CMS-4.1.8-*` das letzte gepackte 4.1-Paket; der aktuelle 4.2.0-Paketstand ist davon getrennt dokumentiert.
 
 | Version | Prüfbereich | Pull Requests |
 |---------|-------------|---------------|
@@ -27,7 +27,7 @@ Die Korrekturen erscheinen als Patch-Releases, je Prüfbereich eine Version. Aus
 | 4.1.6 | Entscheidungen: FUN-410-17/18/19, SEC-410-26, PERF-410-46 … -49, DOC-410-01 | [#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167) |
 | 4.1.7 | Zahlungen: FUN-410-21, FUN-410-27 | [#168](https://github.com/PS-PhinIT/365CMS.DE/pull/168) |
 | 4.1.8 | FUN-410-34 (verworfen), FUN-410-35 | [#169](https://github.com/PS-PhinIT/365CMS.DE/pull/169) |
-| 4.1.9 | Abschluss (PR #6, in der Planung „PR #0“): FUN-410-07, -10, -28, -33, -37, -38, DOC-410-03 | [#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170) (FUN-410-10), [#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171) (FUN-410-38), [#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172) (FUN-410-37), [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173) (FUN-410-33), [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174) (Rest, Bilanz). Der Quelltext liegt auf `main`; ein Paket 4.1.9 wurde nicht gebaut (`Version::CURRENT` bleibt 4.1.8) |
+| 4.1.9 | Abschluss (PR #6, in der Planung „PR #0“): FUN-410-07, -10, -28, -33, -37, -38, DOC-410-03 | [#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170) (FUN-410-10), [#171](https://github.com/PS-PhinIT/365CMS.DE/pull/171) (FUN-410-38), [#172](https://github.com/PS-PhinIT/365CMS.DE/pull/172) (FUN-410-37), [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173) (FUN-410-33), [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174) (Rest, Bilanz). Am damaligen Prüfpunkt lag der Quelltext auf `main`; ein Paket 4.1.9 wurde nicht gebaut. |
 
 ## Prüfbereiche und Status
 
@@ -90,7 +90,7 @@ Querverweise in andere Prüfbereiche:
 |----|---------|-------------|------------------|--------|
 | DB-410-01 | – | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish`, Neuinstallation angeblich nicht | Verworfen in PR #2 (Laufzeittest: beide Wege identisch, siehe unten) |
 | DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): neue Pakete 4.1.5 mit Manifest und Prüfsummen; die 4.1.0-Pakete bleiben zur Nachvollziehbarkeit liegen |
-| DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog nennt 30 Suiten, `run-all.php` führt 32 (mit PR #2: 33) aus; `DOC/FILESTRUCTUR.md` in PR #2 bereits korrigiert | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)): 4.1.0-Eintrag auf 32 korrigiert, 4.1.5 nennt 35 |
+| DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog und `run-all.php` trugen widersprüchliche Suitenstände; `DOC/FILESTRUCTUR.md` wurde in PR #2 korrigiert | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)); aktuelle Dokumentation verwendet dynamische Discovery statt fester Summen |
 | DOC-410-03 | LOW | `DOC/workflow/specs/v4.1/SCHEMA-v26.md:20`, `01-IDENTITY.md:254`, `02-MEDIA.md:92`, `Changelog.md` (v4.1.0, „Hinweise zum Update“) | Spezifikation und Changelog versprachen, `capabilities_v26` vergebe `security.sso` und `media.tools` an Standardrollen (mit Marker in `settings`). Umgesetzt ist nur die Übernahme von `posts.publish`/`pages.publish` (ohne Marker); `media.tools` gibt es nicht, die übrigen neuen Rechte hat bewusst nur „admin“ | [x] Behoben in 4.1.9 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)): Dokumente an das Verhalten angepasst, Kommentar im `MigrationManager` korrigiert |
 
 ### Details
@@ -195,7 +195,7 @@ Querverweise in andere Prüfbereiche:
 ### Verifikation PR #1
 
 - `php -l`: alle 33 geänderten bzw. neuen PHP-Dateien (27 unter `CMS/`, 6 unter `TESTS/`) ohne Fehler.
-- `php TESTS/run-all.php`: 32 Suiten, 0 fehlgeschlagen.
+- `php TESTS/run-all.php`: damaliger Discovery-Lauf, 0 fehlgeschlagen.
 - Neue bzw. erweiterte Tests: `TESTS/security/audit-410.php` (neu), `TESTS/payments`, `TESTS/sso-entra`, `TESTS/mfa-enforcement`, `TESTS/s3-backup`, `TESTS/content-workflow`.
 - Laufzeit-Stichprobe der gepatchten Passkey-Herkunftsprüfung: `example.com`, `a.example.com` und `EXAMPLE.com` erlaubt; `evilexample.com` und `http://example.com` abgelehnt.
 
@@ -269,9 +269,9 @@ MySQL 8 selbst wurde nicht getestet, nur dessen `sql_mode`. Unter MySQL 8 lautet
 ### Verifikation PR #2
 
 - `php -l` über alle geänderten PHP-Dateien ohne Fehler.
-- `php TESTS/run-all.php`: 33 Suiten, 0 fehlgeschlagen (ohne Datenbank: `schema-upgrade` mit Hinweis übersprungen).
+- `php TESTS/run-all.php`: damaliger Discovery-Lauf, 0 fehlgeschlagen (ohne Datenbank: `schema-upgrade` mit Hinweis übersprungen).
 - `CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-upgrade/run.php`: 30 bestanden, auch mit `CMS_TEST_SQL_MODE` = MySQL-8-Standard.
-- Erweitert: `TESTS/schema-v26` (Rekursion, Pflichtspalten, Integritätsprüfung, Reparatur), `TESTS/release-3.4.0` (Prüfung vor dem Schreiben der Marke).
+- Erweitert: `TESTS/schema-v26` (Rekursion, Pflichtspalten, Integritätsprüfung, Reparatur), `TESTS/release-package` (Prüfung vor dem Schreiben der Marke).
 
 ---
 
@@ -398,7 +398,7 @@ Diese Punkte sind keine Regressionen, sondern unvollständige Funktionen. Sie br
 ### Verifikation PR #3
 
 - `php -l` über alle geänderten PHP-Dateien ohne Fehler.
-- `php TESTS/run-all.php`: 34 Suiten, 0 fehlgeschlagen.
+- `php TESTS/run-all.php`: damaliger Discovery-Lauf, 0 fehlgeschlagen.
 - Neu: `TESTS/release-4.1.0` (Regressionen der Release-Prüfung ohne Datenbank). Erweitert: `reusable-blocks`, `media-avif`, `content-expiry`, `s3-backup`, `webhooks`, `payments`.
 - Laufzeit-Crawl nach den Fixes: 117 Admin- und Mitgliederseiten mit 200, keine PHP-Fehler. Die Vier-Augen-Warnung wurde über das echte Formular gespeichert.
 
@@ -501,7 +501,7 @@ FUN-410-36 aus PR #3 (`PageManager::deletePage()`) ist ebenfalls in PR #4 behobe
 ### Verifikation PR #4
 
 - `php -l` über alle geänderten PHP-Dateien ohne Fehler (mit `error_reporting=-1`).
-- `php TESTS/run-all.php` mit MariaDB: 35 Suiten, 0 fehlgeschlagen (`schema-upgrade` 30/30, `release-4.1.0` 165/165).
+- `php TESTS/run-all.php` mit MariaDB: damaliger Discovery-Lauf, 0 fehlgeschlagen (`schema-upgrade` 30/30, `release-4.1.0` 165/165).
 - Erweitert: `TESTS/release-4.1.0` um fünf Blöcke für alle Befunde aus PR #4.
 - Laufzeit: betroffene Admin-Seiten und Frontend mit 200 ohne PHP-Meldung; 15/15 HTTP-Funktionsprüfungen; `deletePage()` und DSGVO-Löschung im App-Kontext.
 
@@ -644,7 +644,7 @@ Die Umsetzungs-Cluster haben Punkte außerhalb ihrer Dateien gemeldet. Sie sind 
 ### Verifikation Zwischenstand
 
 - `php -l` (mit `error_reporting=-1`) über alle geänderten und neuen PHP-Dateien ohne Fehler.
-- `php TESTS/run-all.php` mit MariaDB: 35 Suiten, 0 fehlgeschlagen. `release-4.1.0` hat jetzt 552 Prüfungen, darunter sechs neue Dateien `perf-*.php` und `final-410.php`.
+- `php TESTS/run-all.php` mit MariaDB: damaliger Discovery-Lauf, 0 fehlgeschlagen. `release-4.1.0` hatte damals 552 Prüfungen, darunter neue Dateien `perf-*.php` und `final-410.php`.
 - Laufzeitmessung vorher/nachher wie oben, Kommentar-Rundlauf als anonymer Besucher.
 
 ---
@@ -753,12 +753,12 @@ Nach Schweregrad: 0 CRITICAL, 13 HIGH (alle behoben: SEC-410-01, DB-410-02, DOC-
   - nicht umgesetzt: `meridian_load_categories()` fragt die Kategorien direkt ab; der Rückfall in `Bootstrap` ruft `cms_csp_runtime_tags()` ohne `true`; `MonitoringTrendService::measureResponseTime()` überspringt den Loopback nicht; `WebhookService::deliverDue()` läuft je Cron-Lauf zweimal (Mail-Queue- und stündlicher Hook); `generate_thumbnails` ist weiter standardmäßig aus (Produktentscheidung offen).
   - nicht einzeln nachgeprüft: Verwerfen der Medienstatistik bei Upload und Löschen, Cursor-Neuaufbau und Restbudget im Cron, Retry-Begrenzung der Offsite-Uploads je Tageslauf (begrenzt ist die Gesamtzahl der Versuche: `MAX_ATTEMPTS` 3), DNS-Vorabauflösung in `FeedService`, Sprachschlüssel der Aufbewahrungsregeln.
   - Bewertung: Optimierungen ohne Fehlverhalten; sie gehen in den Backlog und gelten nicht als offene Befunde.
-- **Release-Paket 4.1.9:** Der Quelltext mit den Korrekturen dieses Abschlusses liegt auf `main`, ein Paket wurde nicht gebaut (`Version::CURRENT`, Manifeste und `RELEASE/` bleiben bei 4.1.8; `TESTS/release-3.4.0` prüft das Paket zur aktuellen Version). Das Paket entsteht mit dem nächsten Release.
+- **Release-Paket 4.1.9 (damaliger Stand):** Der Quelltext mit den Korrekturen dieses Abschlusses lag auf `main`, ein Paket wurde nicht gebaut (`Version::CURRENT`, Manifeste und `RELEASE/` standen beim damaligen Prüfpaket auf 4.1.8; `TESTS/release-package` prüft den jeweils aktuellen Paketstand). Seit 2026-11-23 ist 4.2.0 der freigegebene Stand.
 
 ### Verifikation (PR #6)
 
 - `php -l` über alle geänderten PHP-Dateien (`MigrationManager.php`, `SubscriptionManager.php`, `PaymentService.php`, `EditorJsAssetService.php`, `TESTS/release-4.1.0/closure-410.php`, `TESTS/release-4.1.0/run.php`): ohne Fehler. `node --check` für `editor-init.js`: ohne Fehler.
-- `php TESTS/run-all.php`: 35 Suiten, 0 fehlgeschlagen. `release-4.1.0` hat jetzt 593 Prüfungen (neu: `closure-410.php`).
+- `php TESTS/run-all.php`: damaliger Discovery-Lauf, 0 fehlgeschlagen. `release-4.1.0` hatte damals 593 Prüfungen (neu: `closure-410.php`).
 - Mit MariaDB 10.11.14: `CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-upgrade/run.php` 20 bestanden, auch mit `CMS_TEST_SQL_MODE` = MySQL-8-Standard (Pfad 3.5.x: siehe Grenze oben).
 - Laufzeit: Kulanzzeit, 11 Fälle gegen die echte Abfrage; Editor im Browser, vier Editoren, jeweils mit Gegenprobe (siehe Details).
 - Grenzen: PHP 8.3.6 (nicht 8.4/8.5), keine Läufe gegen Stripe, Mollie, Entra ID oder S3; MySQL 8 selbst nicht getestet.

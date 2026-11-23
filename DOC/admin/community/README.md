@@ -59,7 +59,7 @@ Standardwerte werden nie ungefragt in die Datenbank geschrieben; gespeichert wer
 
 - **Freigaben:** Beiträge neuer Mitglieder (`new_member_approval_posts`), von Wortfilter-Regeln „prüfen“ oder von Spam-Signalen landen in der Warteschlange. Ablehnen verlangt einen Grund, wenn `moderation_reason_required` gilt. Das einheitliche Tor ist `WriteGate`: Wortfilter/Zählung vor `CommunityAccess`, `screen()` danach.
 - **Meldungen:** ab `report_hide_threshold` offenen Meldungen wird ein Beitrag automatisch ausgeblendet. Erledigen schreibt ins Protokoll.
-- **Sperren:** `write` (nur lesen, nicht schreiben) oder `full` (kein Zugang), befristet oder unbefristet; Forum-Moderatoren und die Rolle `moderator` sind auf `moderator_ban_max_days` begrenzt.
+- **Sperren:** `write` (nur lesen, nicht schreiben) oder `full` (kein Zugang), befristet oder unbefristet. Wer nur `community.moderate` besitzt (einschließlich Systemrolle `moderator`), ist auf `moderator_ban_max_days` begrenzt; dauerhaft und länger verlangt `community.ban`.
 - **Protokoll:** jede Moderationsaktion mit Zeit, Konto und Grund; Löschfrist siehe unten.
 - **Systemrolle:** `moderator` arbeitet im Frontend und im Mitgliederbereich, nicht unter `/admin`. Sie ist gegen automatische Registrierung und als SSO-Standardrolle gesperrt, wird bei der automatischen SSO-E-Mail-Verknüpfung wie `admin`/`editor`/`author` ausgeschlossen und bleibt über eine ausdrückliche Entra-Mapping-Regel erreichbar.
 
@@ -80,7 +80,7 @@ Schutzschichten auf dem Schreibweg (`ContentGuard`, `WriteGate`): Wortfilter (`b
 - Lesecontroller öffnen `ReadScope`: dieselbe Forum-/Themenzeile wird in der Anfrage nur einmal geladen, Schreibanweisungen entwerten betroffene Memo-Werte. Große Listen blättern mit dem Cursor `?nach=…` als Keyset; die Community-SQL-Pfade verwenden kein `OFFSET`.
 - Fachliche Zeitwerte sind UTC (`DATETIME Y-m-d H:i:s`); die Anzeige rechnet über `I18n` in die Website-Zeitzone um.
 - Der SunEditor ist nur eine Browserhilfe; gespeichert wird Markdown. `md-bridge.js` erhält die Markdown-Quelle, entfernt nicht unterstütztes Editor-Markup und überlässt eine nicht verlustfreie Quelle der Markdown-Ansicht. `DraftService` hält pro Mitglied und Ziel (`forum` oder `topic`) einen Server-Entwurf.
-- Anhänge liegen im privaten Speicher, werden nur aus erlaubten Typen erzeugt und bei Download/Vorschau erneut über `AttachmentService`/`CommunityAccess` freigegeben. Die Browser-Interaktionen laufen über `POST /forum/api/*` mit dauerndem CSRF-Token und JSON-Antwort.
+- Anhänge liegen im privaten Speicher, werden nur aus erlaubten Typen erzeugt und bei Download/Vorschau erneut über `AttachmentService`/`CommunityAccess` freigegeben. Die Browser-Interaktionen laufen über `POST /forum/api/*` mit dauerhaftem CSRF-Token und JSON-Antwort.
 - Öffentliche, veröffentlichte erste Themenseiten erhalten JSON-LD: `DiscussionForumPosting` bzw. in Q&A-Foren `QAPage`/`Question` und ggf. die akzeptierte `Answer`. Private Foren, Listen, Suche und Profile werden nicht so indiziert.
 
 ### Prüfen und Fehlersuche

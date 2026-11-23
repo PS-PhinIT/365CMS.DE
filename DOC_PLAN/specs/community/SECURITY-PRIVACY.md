@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Sicherheit & Datenschutz
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **Status:** ✅ Sicherheits- und Datenschutzkonzept ausgeliefert | **Nachweise:** [TEST-PLAN.md](TEST-PLAN.md)
 
 ## English (summary)
 

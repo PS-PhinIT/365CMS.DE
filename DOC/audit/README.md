@@ -2,7 +2,7 @@
 
 > **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml`
 
-> **Neuestes Audit:** [AUDIT-4.2.0-2026-11-23.md](AUDIT-4.2.0-2026-11-23.md). Audit 4.2.0, erster Durchgang nach [AUDIT-KATALOG-4.2.0.md](AUDIT-KATALOG-4.2.0.md): 5 Befunde umgesetzt, offene Arbeitspakete benannt
+> **Historischer Snapshot:** Dieses Auditverzeichnis dokumentiert Prüfstände von 3.5.0 bis zur 4.1-Linie. Für den aktuellen 4.2.0-Stand ist [RELEASE/README-4.2.0.md](../../RELEASE/README-4.2.0.md) und der Abschnitt 4.2.0 in [Changelog.md](../../Changelog.md) maßgeblich. Nicht vorhandene 4.2-Auditdateien werden nicht als Quelle verlinkt.
 
 ## English (summary)
 
@@ -30,8 +30,8 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | Dokument | Inhalt |
 |---|---|
 | [PRUEFKATALOG.md](PRUEFKATALOG.md) | Prüfkatalog mit Quellen aus dem Internet, Abdeckung je Prüfpunkt, Methodik |
-| [AUDIT-KATALOG-4.2.0.md](AUDIT-KATALOG-4.2.0.md) | **Arbeitsanweisung für das nächste Audit (4.2.0)**: Methode, Befundformat, 20 Arbeitspakete mit Prüfpunkten (Sicherheit, Fehler, Verweise, Leistung, Best Practice, Community-Modul), Umsetzungsregeln, Auftrag für Claude Opus |
-| [AUDIT-4.2.0-2026-11-23.md](AUDIT-4.2.0-2026-11-23.md) | Audit 4.2.0, erster Durchgang nach dem Katalog: DB-420-01 (Bestellnummer, MEDIUM), SEC-420-01, DB-420-02, FUN-420-01, FUN-420-02 (LOW, alle umgesetzt), Hinweise BP-420-02 bis BP-420-04; Liste der noch nicht geprüften Arbeitspakete mit Vorgehen |
+| [Changelog.md](../../Changelog.md), Abschnitt 4.2.0 | Aktueller Releaseumfang, inklusive Community, Captcha, Schema v27, Medien- und Admin-Änderungen |
+| [RELEASE/README-4.2.0.md](../../RELEASE/README-4.2.0.md) | Paketinhalt und Update-Hinweise des freigegebenen 4.2.0-Standes |
 | [SICHERHEIT.md](SICHERHEIT.md) | Sicherheitsbefunde SEC-16 bis SEC-27 |
 | [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) | Geschwindigkeit (PERF-07 bis PERF-11) und Massenanfragen/Bot-Last (LAST-01 bis LAST-06) inkl. Messwerten |
 | [FUNKTIONEN-VERWEISE.md](FUNKTIONEN-VERWEISE.md) | Fehlende oder unvollständige Funktionen (FUN-21 bis FUN-25) und fehlerhafte Verweise (REF-06 bis REF-11) |

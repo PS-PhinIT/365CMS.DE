@@ -1,5 +1,6 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Release 4.1.0
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema **v26** | **Status:** ✅ Bereiche 1–5 umgesetzt und mit 4.1.0 veröffentlicht, Bereich 6 → 4.3.0 | **Update:** 2026-11-15
+> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema **v26** | **Status:** ✅ Bereiche 1–5 umgesetzt und mit 4.1.0 veröffentlicht, Bereich 6 → 4.3.0 | **Update:** 2026-11-15
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
 > **Fortschritt:** [PROGRESS.md](PROGRESS.md) · **Schema:** [SCHEMA-v26.md](SCHEMA-v26.md) · **Referenzen:** [REFERENCES.md](REFERENCES.md)
 
 ## English (summary)

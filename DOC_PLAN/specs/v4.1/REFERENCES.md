@@ -1,5 +1,6 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Bewertung der Referenzen
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 | **Status:** Bewertung abgeschlossen | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 | **Status:** Bewertung abgeschlossen | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
 
 ## English (summary)
 

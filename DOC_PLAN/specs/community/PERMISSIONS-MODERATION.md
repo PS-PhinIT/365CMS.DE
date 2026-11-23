@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Rechte & Moderation
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **Status:** ✅ Rechte- und Moderationsmodell ausgeliefert | **Offene Erweiterungen:** [ROADMAP.md](ROADMAP.md)
 
 ## English (summary)
 

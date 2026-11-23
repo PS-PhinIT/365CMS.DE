@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Testplan
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **Status:** Automatisierte P1-Tests ausgeliefert; offene externe/Skalierungsabnahmen im [ROADMAP.md](ROADMAP.md)
 
 ## English (summary)
 

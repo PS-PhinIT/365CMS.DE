@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Community-Modul (Forum)
-> **Stand:** 2026-11-19 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** PR #1 geliefert (Schema v27, Rechte `community.*`, Rolle `moderator`), PR #2a geliefert (Fundament der Dienste ohne Oberfläche); Darstellung, Moderation, Admin, Frontend und DSGVO folgen (PR #2b bis #5) · Umsetzungsfahrplan: [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Update:** 2026-11-19
+> **Stand:** 2026-11-23 | **Auslieferung:** 4.2.0 | **Status:** ✅ P1 ausgeliefert | **Fortschritt:** [ROADMAP.md](ROADMAP.md) | **Gesamtstatus:** [../../STATUS.md](../../STATUS.md)
 > **Ersetzt:** den früheren Integrationsfahrplan für das Plugin `cms-forum` · **Muster:** [PLUGIN-PARITY.md](../PLUGIN-PARITY.md), [KLARSTELLUNGEN.md](../KLARSTELLUNGEN.md)
 
 ## English (summary)

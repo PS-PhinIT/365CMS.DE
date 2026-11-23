@@ -1,5 +1,6 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Bereich 3: Redaktions- & Content-Workflows
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 3a, 3b, 3c | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)). 3a, 3b, 3c | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
 
 ## English (summary)
 
@@ -26,7 +27,7 @@ Rechte). Festlegungen für 4.1.0:
 - **Webhook-Ereignis** `content.submitted` (Bereich 4b).
 - Tests: `TESTS/content-workflow/run.php`: Durchsetzung im Speichern (auch über `post-editor-api.php`), Statusübergänge, Rechte-Migration, Benachrichtigungsempfänger, Vorschau-Link (signiert, Ablauf, widerrufbar).
 
-**Umsetzung (15.11.2026)**. Handbuch [REVIEW.md](../../../admin/pages-posts/REVIEW.md), Tests `TESTS/content-workflow`:
+**Umsetzung (15.11.2026)**. Handbuch [REVIEW.md](../../../DOC/admin/pages-posts/REVIEW.md), Tests `TESTS/content-workflow`:
 
 - Befund bei der Umsetzung: `/admin` ist nur für die Rolle `admin` erreichbar, und Admins haben alle Rechte. Die rechtebasierte Sperre allein hätte deshalb nie gegriffen. Entscheidung: zusätzliche Einstellung **„Veröffentlichung braucht eine zweite Person“** (`setting_content_review_second_person`). Autor und einreichende Person können nicht selbst freigeben, auch als Admin. Der Weg über `posts.publish`/`pages.publish` ist trotzdem vollständig umgesetzt und greift, sobald andere Rollen Admin-Zugang erhalten.
 - Statt „Autoren brauchen eine Freigabe“ als eigene Einstellung: Das Recht wird unter *Rollen & Rechte* entzogen. Die Rechte-Migration (in `SchemaManager::ensureFeatureSchema()`, idempotent, nur ohne gespeicherten Eintrag) vergibt `posts.publish`/`pages.publish` an `editor` und `posts.publish` an `author`.
@@ -73,7 +74,7 @@ CREATE TABLE {p}reusable_block_revisions (
 Tests (`TESTS/reusable-blocks/run.php`): Rendern mit aktuellem Inhalt, Sprache, Rekursion (direkt und über zwei Ebenen),
 gelöschter Block, Sanitizing der Block-Daten (nur `id`), Nutzungsindex nach Speichern, Cache-Invalidierung.
 
-**Umsetzung (15.11.2026)**. Handbuch [BLOCK-TEMPLATES.md](../../../admin/pages-posts/BLOCK-TEMPLATES.md), Tests `TESTS/reusable-blocks`:
+**Umsetzung (15.11.2026)**. Handbuch [BLOCK-TEMPLATES.md](../../../DOC/admin/pages-posts/BLOCK-TEMPLATES.md), Tests `TESTS/reusable-blocks`:
 
 - Benennung nach Wunsch des Betreibers: Verwaltung **„EditorJS Block Vorlagen“**, Editor.js-Block **„Vorlagen“** (technisch weiter `reusableBlock`, Route `/admin/reusable-blocks`, Recht `blocks.reusable`).
 - Rekursion: wird schon beim Speichern abgelehnt (Selbsteinbindung, Kreise über beliebig viele Ebenen und beide Sprachen); der Render-Schutz (Wiederholung, Tiefe > 3) bleibt für Altbestand/Importe.

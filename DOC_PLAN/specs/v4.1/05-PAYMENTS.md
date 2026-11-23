@@ -1,5 +1,7 @@
 # 365CMS Projektdokumentation | Spec 4.1.0: Bereich 5: Zahlungen, Abos & Rechnungen
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ 5a (Zahlungen) und 5b (Rechnungen) umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23| **Ziel-Version:** 4.1.0 · Schema v26 | **Status:** ✅ 5a (Zahlungen) und 5b (Rechnungen) umgesetzt in 4.1.0 ([PROGRESS.md](PROGRESS.md)) | **Übersicht:** [README.md](README.md)
+> **Dokumentenklasse:** Historische 4.1.0-Baseline; aktueller Produktstand ist 4.2.0 / Schema v27. Siehe [../../STATUS.md](../../STATUS.md).
+> **Nachweis:** 6 Sicherheitsgates des ausgelieferten 4.1-Umfangs wurden als erledigt markiert.
 
 ## English (summary)
 
@@ -80,12 +82,12 @@ CREATE TABLE {p}invoices (
 
 ### 6. Sicherheits-Gates
 
-- [ ] Webhook-Signatur vor jeder Verarbeitung; konstante Zeitvergleiche; Zeittoleranz; Rohkörper vor JSON-Parsing signiert.
-- [ ] Beträge/Währung aus der eigenen Bestellung, nie aus Client-Parametern; Abgleich mit dem Betrag im Anbieter-Ereignis.
-- [ ] Idempotente Verarbeitung; Zustandsautomat der Bestellung (`pending → paid → refunded`, keine Rücksprünge).
-- [ ] Rechnungs-Download nur für Eigentümer bzw. `invoices.view`; PDFs außerhalb des Webroots.
-- [ ] Geheimnisse verschlüsselt, Testmodus deutlich markiert, getrennte Schlüssel für Test/Live.
-- [ ] Webhook-Route mit Rate-Limit und Größenlimit (64 KB).
+- [x] Webhook-Signatur vor jeder Verarbeitung; konstante Zeitvergleiche; Zeittoleranz; Rohkörper vor JSON-Parsing signiert.
+- [x] Beträge/Währung aus der eigenen Bestellung, nie aus Client-Parametern; Abgleich mit dem Betrag im Anbieter-Ereignis.
+- [x] Idempotente Verarbeitung; Zustandsautomat der Bestellung (`pending → paid → refunded`, keine Rücksprünge).
+- [x] Rechnungs-Download nur für Eigentümer bzw. `invoices.view`; PDFs außerhalb des Webroots.
+- [x] Geheimnisse verschlüsselt, Testmodus deutlich markiert, getrennte Schlüssel für Test/Live.
+- [x] Webhook-Route mit Rate-Limit und Größenlimit (64 KB).
 
 ### 7. Tests (`TESTS/payments/run.php`)
 

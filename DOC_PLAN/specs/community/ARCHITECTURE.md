@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Architektur
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **Status:** ✅ Architektur ausgeliefert; offene Folgepunkte nur im [ROADMAP.md](ROADMAP.md)
 
 ## English (summary)
 

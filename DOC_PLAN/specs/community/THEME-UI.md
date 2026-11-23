@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Theme, Oberfläche & SEO
-> **Stand:** 2026-11-15 | **Ziel-Version:** 4.2.0 | **Status:** Planung | **Übersicht:** [README.md](README.md)
+> **Stand:** 2026-11-23 | **Release:** 4.2.0 | **Status:** ✅ Core-UI ausgeliefert; externes `cms-phinit`-Theme bleibt offen | **Gesamtstatus:** [../../STATUS.md](../../STATUS.md)
 
 ## English (summary)
 
