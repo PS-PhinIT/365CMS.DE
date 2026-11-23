@@ -43,7 +43,7 @@ Gastbestellungen (ohne Konto) werden bezahlt, aber keinem Konto zugewiesen. Auto
 
 ### Grenzen
 
-Erstattungen werden im Dashboard des Anbieters ausgelöst. Seit 4.1.7 verarbeitet das CMS die Rückmeldung: Eine vollständige Erstattung oder Rückbuchung (Stripe `charge.refunded`, `charge.dispute.created`; Mollie `amountRefunded`/`amountChargedBack`) setzt die Bestellung auf `refunded`, erzeugt die Stornorechnung und beendet das zugehörige Abo, auch beim Anbieter. Teilerstattungen ändern den Status nicht. Bei Stripe die beiden Ereignisse im Webhook ergänzen.
+Erstattungen werden im Dashboard des Anbieters ausgelöst. Seit 4.1.7 verarbeitet das CMS die Rückmeldung: Eine vollständige Erstattung oder Rückbuchung (Stripe `charge.refunded`, `charge.dispute.created`; Mollie `amountRefunded`/`amountChargedBack`) setzt die Bestellung auf `refunded`, erzeugt die Stornorechnung und beendet das zugehörige Abo, auch beim Anbieter. Teilerstattungen ändern den Status nicht. Bei Stripe die beiden Ereignisse im Webhook ergänzen. Nach erfolgreicher Verarbeitung kommt `cms_subscription_ended` zuerst, danach `cms_payment_refunded($orderId, $provider, $event)`.
 
 Kündigungen gehen seit 4.1.7 vom CMS an den Anbieter (Stripe: Abo löschen bzw. `cancel_at_period_end`, Mollie: Abo des Kunden löschen):
 - **Tarifwechsel:** Beim Zuweisen eines neuen Pakets wird das wiederkehrende Abo des alten Pakets beim Anbieter beendet (keine Doppelabbuchung).

@@ -24,6 +24,8 @@ Bestellungen entstehen im öffentlichen Checkout `CMS/orders.php` (Aufruf `/orde
 5. prüft das CSRF-Token `checkout_process`,
 6. fügt die Bestellung mit Status `pending` zunächst unter einer eindeutigen vorläufigen `order_number` ein und ersetzt sie anschließend anhand der echten Zeilen-ID durch die endgültige Nummer.
 
+Checkout-Felder werden mit `cms_checkout_post_string(string $key, int $maxLength = 190)` aus `$_POST` gelesen. Der Helfer akzeptiert nur Zeichenketten; Arrays oder andere Typen werden zu `''`, Steuerzeichen entfernt, Außenraum getrimmt und die Ausgabe auf die jeweilige Feldgrenze gekürzt. Dadurch führen manipulierte Arrays wie `first_name[]=x` zu einer Validierungsablehnung statt zu einem `TypeError`.
+
 > Die Router-Route `GET|POST /order` (`PublicRouter::renderOrder()`/`handleOrder()`) bindet eine optionale `CMS/member/order_public.php` ein. Fehlt sie (Standard), leitet `/order` seit 3.4.12 auf `/orders.php` weiter (GET 302, POST 307, Query-String bleibt erhalten). Vorher lieferte die Route 404.
 
 ### Erzeugung der Bestellnummer
