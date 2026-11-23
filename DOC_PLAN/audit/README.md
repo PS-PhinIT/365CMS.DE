@@ -76,6 +76,8 @@ in [STATUS.md](../../STATUS.md).
 
 ### Prüfberichte (chronologisch)
 
+**Laufendes Audit:** [AP-01 – Anmeldung und Sitzung, 23.11.2026](../audit_2026-11-23/FOLGEAUDIT-AP-01-2026-11-23.md). Der Teilbericht trennt statische Befunde von offenen Laufzeitprüfungen; er ist noch keine Release-Abnahme.
+
 | Datum | Dokument | Stand | Inhalt |
 |---|---|---|---|
 | 2026-10-14 | [audit_2026-10-14/GESAMTAUDIT-2026-10-14.md](../audit_2026-10-14/GESAMTAUDIT-2026-10-14.md) | 3.5.0 | Gesamtaudit: 54 Befunde (SEC-16 … SEC-27, PERF-07 … PERF-11, LAST-01 … LAST-06, FUN-21 … FUN-25, REF-06 … REF-11, GUI-01 … GUI-07), Empfehlungen OFFEN-01 … OFFEN-13; behoben in 3.4.25/3.5.0 |
