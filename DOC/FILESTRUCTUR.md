@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | FILESTRUCTUR
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Schema:** v27
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -46,9 +46,8 @@ Verified top-level entries of this repository:
 | Path | Type | Purpose |
 |---|---|---|
 | `CMS/` | directory | **productive runtime** (web root in typical deployments) |
-| `CMS_ASSETS/` | directory | source archives of the bundled third-party libraries |
 | `DOC/` | directory | public project documentation |
-| `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8, 4.2.0) |
+| `RELEASE/` | directory | release packages and checksums; current release documentation is `README-4.2.0.md` |
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/admin-redirects/` | directory | admin redirects page test (250 rules per page, no background refresh): `php TESTS/admin-redirects/run.php [-v]` |
@@ -75,7 +74,7 @@ Verified top-level entries of this repository:
 | `TESTS/mfa-enforcement/` | directory | Role-based MFA enforcement and account gate: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | directory | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | directory | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration: `php TESTS/password-policy/run.php [-v]` |
-| `TESTS/release-package/` | directory | install/update contract (schema version, update swap, packages and SHA-256 of the current release; formerly `release-3.4.0`): `php TESTS/release-package/run.php` |
+| `TESTS/release-package/` | directory | install/update contract (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-package/run.php` |
 | `TESTS/release-4.1.0/` | directory | regressions of the 4.1.0 release audit without a database (FUN-410-xx and later findings): `php TESTS/release-4.1.0/run.php [-v]` |
 | `TESTS/reusable-blocks/` | directory | EditorJS block templates: block data, usage index, rendering, recursion, history: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | directory | offsite backups: SigV4, S3 client, multipart, retention: `php TESTS/s3-backup/run.php [-v]` |
@@ -135,9 +134,8 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | Pfad | Typ | Zweck |
 |---|---|---|
 | `CMS/` | Verzeichnis | **produktive Runtime** (in typischen Deployments das Webroot) |
-| `CMS_ASSETS/` | Verzeichnis | Quellarchive der gebündelten Drittbibliotheken |
 | `DOC/` | Verzeichnis | öffentliche Projektdokumentation |
-| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8, 4.2.0) |
+| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen; aktuelle Release-Dokumentation: `README-4.2.0.md` |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/admin-redirects/` | Verzeichnis | Test der Admin-Seite Weiterleitungen (250 Regeln je Seite, keine Aktualisierung im Hintergrund): `php TESTS/admin-redirects/run.php [-v]` |
@@ -164,7 +162,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/mfa-enforcement/` | Verzeichnis | Rollenbasierter MFA-Zwang und Konto-Weiche: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | Verzeichnis | Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | Verzeichnis | Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung: `php TESTS/password-policy/run.php [-v]` |
-| `TESTS/release-package/` | Verzeichnis | Install-/Update-Vertrag (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases; früher `release-3.4.0`): `php TESTS/release-package/run.php` |
+| `TESTS/release-package/` | Verzeichnis | Install-/Update-Vertrag (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-package/run.php` |
 | `TESTS/release-4.1.0/` | Verzeichnis | Regressionen der Release-Prüfung 4.1.0 ohne Datenbank (FUN-410-xx und folgende Befunde): `php TESTS/release-4.1.0/run.php [-v]` |
 | `TESTS/reusable-blocks/` | Verzeichnis | EditorJS Block Vorlagen: Blockdaten, Nutzungsindex, Rendern, Rekursion, Verlauf: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | Verzeichnis | Offsite-Backups: SigV4, S3-Client, Multipart, Aufbewahrung: `php TESTS/s3-backup/run.php [-v]` |
@@ -213,7 +211,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CODE_OF_CONDUCT.md` | Datei | Verhaltenskodex |
 | `.gitignore` | Datei | Git-Ignore-Regeln |
 
-`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-13); sie existieren nur in lokalen Maintainer-Arbeitsständen. `TESTS/` ist vollständig versioniert: `run-all.php`, `lib/TestRunner.php` und jede Suite `TESTS/<suite>/run.php` (je Suite eine Zeile in der Tabelle oben), alle führt `php TESTS/run-all.php` in der CI aus.
+`ASSETS/` (Asset-Staging), `AUDIT/` und `tools/` werden in älteren Notizen und in `VendorRegistry` (Staging-Pfade) erwähnt, sind aber **nicht** Teil dieses Repositories (Stand 2026-11-23). `TESTS/run-all.php` verwendet `glob(TESTS/*/run.php)` und entdeckt damit die aktuell vorhandenen Suiten zur Laufzeit. Eine feste Suitenanzahl ist deshalb absichtlich nicht dokumentiert; einzelne Suiten starten direkt über ihr `run.php`.
 
 Es gibt **kein** Verzeichnis `var/` in diesem Repository. Anwendungslogs sind als `CMS/logs/` konfiguriert (`LOG_PATH` in `config/app.php`).
 
@@ -241,7 +239,7 @@ Subfolders (all present):
 |---|---|
 | `DOC/admin/` | admin documentation |
 | `DOC/ai/` | AI concept docs |
-| `DOC/assets/` | asset / vendor docs (`ASSET.md`, `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` live **here**) |
+| `DOC/assets/` | asset / vendor docs (`ASSET.md` and area READMEs live **here**) |
 | `DOC/audit/` | follow-up audits |
 | `DOC/core/` | core documentation |
 | `DOC/member/` | member documentation |
@@ -252,8 +250,6 @@ Subfolders (all present):
 Broken historical links (do **not** use):
 
 - `DOC/ASSET.md`, actual path is `DOC/assets/ASSET.md`
-- `DOC/ASSETS_NEW.md`, actual path is `DOC/assets/ASSETS_NEW.md`
-- `DOC/ASSETS_OwnAssets.md`, actual path is `DOC/assets/ASSETS_OwnAssets.md`
 - `AUDIT/`, not present in this repository
 - `DOC/_cms_inventory_current.txt`, file does not exist
 
@@ -277,7 +273,7 @@ Unterordner (alle vorhanden):
 |---|---|
 | `DOC/admin/` | Admin-Dokumentation |
 | `DOC/ai/` | AI-Konzeptdokumente |
-| `DOC/assets/` | Asset-/Vendor-Dokumente (`ASSET.md`, `ASSETS_NEW.md`, `ASSETS_OwnAssets.md` liegen **hier**) |
+| `DOC/assets/` | Asset-/Vendor-Dokumente (`ASSET.md` und Bereichs-READMEs liegen **hier**) |
 | `DOC/audit/` | Folgeaudits |
 | `DOC/core/` | Core-Dokumentation |
 | `DOC/member/` | Member-Dokumentation |
@@ -288,8 +284,6 @@ Unterordner (alle vorhanden):
 Historisch kaputte Links (nicht verwenden):
 
 - `DOC/ASSET.md`, tatsächlicher Pfad: `DOC/assets/ASSET.md`
-- `DOC/ASSETS_NEW.md`, tatsächlicher Pfad: `DOC/assets/ASSETS_NEW.md`
-- `DOC/ASSETS_OwnAssets.md`, tatsächlicher Pfad: `DOC/assets/ASSETS_OwnAssets.md`
 - `AUDIT/`, in diesem Repository nicht vorhanden
 - `DOC/_cms_inventory_current.txt`. Datei existiert nicht
 

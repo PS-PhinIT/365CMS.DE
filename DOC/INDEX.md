@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | INDEX
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Schema:** v27
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -9,7 +9,7 @@
 - [Member](#member--mitgliederbereich)
 - [Themes and plugins](#themes-and-plugins--themes-und-plugins)
 - [Assets, workflows and audits](#assets-workflows-and-audits--assets-workflows-und-audits)
-- [Roadmap 4.2.0 / 4.3.0](#roadmap-420--430--planung-und-spezifikationen)
+- [Release 4.2.0](#release-420--stand-und-spezifikationen)
 - [Further documents](#further-documents--weitere-dokumente)
 - [Task shortcuts](#task-shortcuts--direktlinks-für-häufige-aufgaben)
 
@@ -19,11 +19,11 @@
 
 **English**
 
-Use this index to reach the canonical documents. Product version in code is `4.1.0` (schema `v26`). Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Open items are listed in [core/STATUS.md](core/STATUS.md).
+Use this index to reach the canonical documents. Product version in code is `4.2.0` (schema `v27`). Runtime lives in [`CMS/`](../CMS/). Documentation lives in [`DOC/`](./). Open items are listed in [core/STATUS.md](core/STATUS.md).
 
 **Deutsch**
 
-Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `4.1.0` (Schema `v26`). Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Offene Punkte stehen in [core/STATUS.md](core/STATUS.md).
+Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code ist `4.2.0` (Schema `v27`). Die Runtime liegt in [`CMS/`](../CMS/). Die Dokumentation liegt in [`DOC/`](./). Offene Punkte stehen in [core/STATUS.md](core/STATUS.md).
 
 | Goal / Ziel | Document / Dokument |
 |---|---|
@@ -54,7 +54,7 @@ Die Core-Dokumente beschreiben Bootstrap, Routing, Schema, Services, Hooks, APIs
 | [core/README.md](core/README.md) | Core documentation entry |
 | [core/ARCHITECTURE.md](core/ARCHITECTURE.md) | Bootstrap, routing, services, modules |
 | [core/CORE-CLASSES.md](core/CORE-CLASSES.md) | Central core classes |
-| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables (schema `v26`, 90 tables in the published 4.1.x releases; development state `v27`, 117 tables) |
+| [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) | Base schema and module tables for the released schema `v27`; schema definitions in `SchemaManager.php` are authoritative |
 | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) | Actions, filters, integration points |
 | [core/API-REFERENCE.md](core/API-REFERENCE.md) | Technical interfaces |
 | [core/SERVICES.md](core/SERVICES.md) | Service layer |
@@ -207,7 +207,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 
 | Area / Bereich | Documents / Dokumente |
 |---|---|
-| Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md), [assets/ASSETS_NEW.md](assets/ASSETS_NEW.md), [assets/ASSETS_OwnAssets.md](assets/ASSETS_OwnAssets.md) |
+| Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md) |
 | Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions, backups, status displays): [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md); release audit 4.1.0: [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
 | Workflows | [workflow/](workflow/) |
 
@@ -220,29 +220,25 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | [UPDATE-DEPLOYMENT-WORKFLOW.md](workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) | CMS update, SHA-256 verification, deployment |
 | [MARKETPLACE-WORKFLOW.md](workflow/MARKETPLACE-WORKFLOW.md) | Install plugin / theme from marketplace |
 | [API-INTEGRATION-WORKFLOW.md](workflow/API-INTEGRATION-WORKFLOW.md) | JSON endpoints, custom routes via `register_routes`, JWT note |
-| [specs/community/](workflow/specs/community/README.md) | Community module (forum): plan: features, architecture, data model, permissions & moderation, workflows, security & privacy, theme/UI, migration from cms-forum, roadmap, test plan / Community-Modul (Forum), Planung |
+| [specs/community/](workflow/specs/community/README.md) | Released Community module (forum): implemented features, architecture, data model, permissions & moderation, workflows, security, privacy, UI and verification |
 
 ---
 
-## Roadmap 4.2.0 / 4.3.0 | Planung und Spezifikationen
+## Release 4.2.0 | Stand und Spezifikationen
 
 **English**
 
-4.1.0 is released with areas 1–5, including invoices ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)). Area 6 (central CLI `CMS/cli.php`, real-time alerting, webhook event `alert.raised`) moved to **4.3.0**. **4.2.0** (schema `v27`) is the Community module; its implementation plan is in [workflow/specs/community/](workflow/specs/community/README.md).
+**4.2.0** (schema `v27`) is released. The Community module and its admin, member, public, privacy, moderation, upload, search and notification paths are present in `CMS/`. The specification set now records implemented state and only explicitly evidenced gaps.
 
 **Deutsch**
 
-4.1.0 ist mit den Bereichen 1–5 einschließlich Rechnungen veröffentlicht ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)). Bereich 6 (zentrale CLI `CMS/cli.php`, Echtzeit-Alerting, Webhook-Ereignis `alert.raised`) ist auf **4.3.0** verschoben. **4.2.0** (Schema `v27`) ist das Community-Modul; der Umsetzungsfahrplan steht in [workflow/specs/community/](workflow/specs/community/README.md).
+**4.2.0** (Schema `v27`) ist veröffentlicht. Das Community-Modul und die Pfade für Admin, Mitglieder, Öffentlichkeit, Datenschutz, Moderation, Upload, Suche und Benachrichtigungen sind in `CMS/` vorhanden. Die Spezifikationen halten den umgesetzten Stand und nur belegbare Lücken fest.
 
 | Document / Dokument | Purpose / Zweck |
 |---|---|
-| [workflow/specs/v4.1/README.md](workflow/specs/v4.1/README.md) | 4.1.0 specification overview and status |
-| [workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md) | 4.1.0 progress (areas 1–5 done, area 6 → 4.3.0) |
-| [workflow/specs/v4.1/SCHEMA-v26.md](workflow/specs/v4.1/SCHEMA-v26.md) | Schema `v26` specification |
-| [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md) | CLI and real-time alerting (planned for 4.3.0) |
-| [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) | **Community module 4.2.0 (schema `v27`): executable implementation plan**: work packages, tables, capabilities, privacy/moderation rules, CSP/security, tests |
+| [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) | Implemented Community delivery plan for 4.2.0 (schema `v27`) |
 | [workflow/specs/community/README.md](workflow/specs/community/README.md) | Community module 4.2.0 (schema `v27`): planning set entry point, decisions E1–E12 |
-| [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md) | 4.2.0 implementation roadmap |
+| [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md) | Delivery checklist with code-verified completion |
 | [DEVLIST.md](DEVLIST.md) | Architecture contracts and development list (incl. 4.2.0 plan) |
 
 ---
@@ -374,12 +370,7 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 - [audit/SICHERHEIT.md](audit/SICHERHEIT.md): 365CMS, Gesamtaudit 2026-10-14 | Sicherheit
 
 
-**`workflow/specs/`**
-
-- [workflow/specs/ADMIN-MENU-PROFILE.md](workflow/specs/ADMIN-MENU-PROFILE.md): Workflow, Spec: Admin-Sidebar-Menü mit Profilen
-- [workflow/specs/KLARSTELLUNGEN.md](workflow/specs/KLARSTELLUNGEN.md): Workflow, Klarstellungen zu den Specs
-- [workflow/specs/PLUGIN-PARITY.md](workflow/specs/PLUGIN-PARITY.md): 365CMS, Paritäts-Checkliste der in den Core integrierten Plugins
-- [workflow/specs/ROADMAP-CONTENT-PLATFORM.md](workflow/specs/ROADMAP-CONTENT-PLATFORM.md): 365CMS, Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
+**`workflow/specs/community/`**
 - [workflow/specs/community/ARCHITECTURE.md](workflow/specs/community/ARCHITECTURE.md): Community, Architektur
 - [workflow/specs/community/DATA-MODEL.md](workflow/specs/community/DATA-MODEL.md): Community, Datenmodell
 - [workflow/specs/community/FEATURES.md](workflow/specs/community/FEATURES.md): Community, Funktionskatalog
@@ -389,12 +380,6 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 - [workflow/specs/community/TEST-PLAN.md](workflow/specs/community/TEST-PLAN.md): Community, Testplan
 - [workflow/specs/community/THEME-UI.md](workflow/specs/community/THEME-UI.md): Community, Theme, Oberfläche & SEO
 - [workflow/specs/community/WORKFLOWS.md](workflow/specs/community/WORKFLOWS.md): Community, Abläufe
-- [workflow/specs/v4.1/01-IDENTITY.md](workflow/specs/v4.1/01-IDENTITY.md): Spec 4.1.0, Bereich 1: Identität, Anmeldung & Konto-Sicherheit
-- [workflow/specs/v4.1/02-MEDIA.md](workflow/specs/v4.1/02-MEDIA.md): Spec 4.1.0, Bereich 2: Medien & Performance
-- [workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md](workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md): Spec 4.1.0, Bereich 3: Redaktions- & Content-Workflows
-- [workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md](workflow/specs/v4.1/04-BACKUP-WEBHOOKS.md): Spec 4.1.0, Bereich 4: Offsite-Backups (S3) & ausgehende Webhooks
-- [workflow/specs/v4.1/05-PAYMENTS.md](workflow/specs/v4.1/05-PAYMENTS.md): Spec 4.1.0, Bereich 5: Zahlungen, Abos & Rechnungen
-- [workflow/specs/v4.1/REFERENCES.md](workflow/specs/v4.1/REFERENCES.md): Spec 4.1.0, Bewertung der Referenzen
 
 ---
 
@@ -421,9 +406,7 @@ Häufige Aufgaben und das Dokument, das zuerst geöffnet werden sollte.
 | Hooks | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) |
 | Security (CSRF / XSS) | [core/SECURITY.md](core/SECURITY.md) |
 | Asset status | [assets/README.md](assets/README.md) |
-| New asset candidates | [assets/ASSETS_NEW.md](assets/ASSETS_NEW.md) |
 | AI services concept | [ai/AI-SERVICES.md](ai/AI-SERVICES.md) |
-| Replace vendor assets | [assets/ASSETS_OwnAssets.md](assets/ASSETS_OwnAssets.md) |
 | Status / known gaps | [core/STATUS.md](core/STATUS.md) |
 | System status | [core/STATUS.md](core/STATUS.md) |
 | Mail / SMTP / Graph | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |

@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | FILELIST
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Schema:** v27
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -27,13 +27,13 @@
 
 This file is the **readable structure map**. It answers: where does something live, what does the running CMS load, and which paths matter when you change code.
 
-Product version in code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
+Product version in code: `4.2.0`. PHP: 8.4.1+. Schema: `v27`.
 
 **Deutsch**
 
 Diese Datei ist die **lesbare Strukturkarte**. Sie beantwortet: wo liegt etwas, was lädt das laufende CMS, und welche Pfade zählen bei Änderungen.
 
-Produktversion im Code: `4.1.0`. PHP: 8.4.1+. Schema: `v26`.
+Produktversion im Code: `4.2.0`. PHP: 8.4.1+. Schema: `v27`.
 
 ### 1.1 Workspace context | Workspace-Kontext
 
@@ -95,7 +95,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `TESTS/media-usage/` | media usage index: extraction (URLs, srcset, derivatives, foreign domains), contexts, reindex, unused, rebuild / Verwendungsnachweis für Medien: Extraktion (URLs, srcset, Derivate, fremde Domains), Kontexte, Neuindizieren, ungenutzt, Neuaufbau (`php TESTS/media-usage/run.php [-v]`) |
 | `TESTS/member-area/` | member area: CSRF per request, PRG, favorites, notifications, sanitizer, dashboard layout, menu tree, i18n, accessibility markup / Mitgliederbereich: CSRF je Anfrage, PRG, Favoriten, Benachrichtigungen, Sanitizer, Dashboard-Layout, Menübaum, Sprache, Barrierefreiheit (`php TESTS/member-area/run.php [-v]`) |
 | `TESTS/newsletter-member/` | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping / Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping (`php TESTS/newsletter-member/run.php [-v]`) |
-| `TESTS/release-package/` | install/update contract (schema version, update swap, packages and SHA-256 of the current release; formerly `release-3.4.0`) / Install-/Update-Vertrag (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases) (`php TESTS/release-3.4.0/run.php`) |
+| `TESTS/release-package/` | install/update contract (schema version, update swap, packages and SHA-256 of the current release) / Install-/Update-Vertrag (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases) (`php TESTS/release-package/run.php`) |
 | `TESTS/release-4.1.0/` | regressions of the 4.1.0 release audit without a database (FUN-410-xx and later findings) / Regressionen der Release-Prüfung 4.1.0 ohne Datenbank (FUN-410-xx und folgende Befunde) (`php TESTS/release-4.1.0/run.php [-v]`) |
 | `TESTS/reusable-blocks/` | EditorJS block templates: block data, usage index, rendering and language, recursion, history, delete warning, search text / EditorJS Block Vorlagen: Blockdaten, Nutzungsindex, Rendern und Sprache, Rekursion, Verlauf, Löschwarnung, Suchtext (`php TESTS/reusable-blocks/run.php [-v]`) |
 | `TESTS/s3-backup/` | offsite backups: SigV4 vectors, S3 client with fake storage, multipart, retention, encryption gate / Offsite-Backups: SigV4-Testvektoren, S3-Client mit Fake-Speicher, Multipart, Aufbewahrung, Verschlüsselungspflicht (`php TESTS/s3-backup/run.php [-v]`) |
@@ -139,7 +139,7 @@ Das CMS lädt Themes und Plugins nur aus `CMS/themes/` und `CMS/plugins/`.
 | `README.md` | public README |
 | `Changelog.md` | changelog |
 
-`ASSETS/` and `tools/` are not part of this repository; under `TESTS/` every suite `TESTS/<suite>/run.php` is versioned (one row per suite in the table above), all run by `php TESTS/run-all.php` in CI (see [FILESTRUCTUR.md](FILESTRUCTUR.md)). / `ASSETS/` und `tools/` sind nicht Teil dieses Repositories; unter `TESTS/` ist jede Suite `TESTS/<suite>/run.php` versioniert (je Suite eine Zeile in der Tabelle oben), alle führt `php TESTS/run-all.php` in der CI aus.
+`ASSETS/` and `tools/` are not part of this repository. `php TESTS/run-all.php` discovers every current `TESTS/<suite>/run.php` at runtime, so the suite total must not be hard-coded in documentation. `php TESTS/<suite>/run.php [-v]` runs one suite. / `ASSETS/` und `tools/` gehören nicht zu diesem Repository. `php TESTS/run-all.php` entdeckt zur Laufzeit alle aktuellen `TESTS/<suite>/run.php`; deshalb darf die Suitenanzahl nicht fest in die Dokumentation geschrieben werden. Eine Suite wird mit `php TESTS/<suite>/run.php [-v]` ausgeführt.
 
 Rule: **always know whether you are editing runtime, documentation, or source context.**
 
@@ -175,10 +175,9 @@ Regel: **immer klären, ob gerade Runtime, Doku oder Quellkontext bearbeitet wir
 | `assets/` | CSS, JS, bundled libraries |
 | `includes/` | helpers |
 | `lang/` | `de.yaml`, `en.yaml` |
-| `marketplace/` | marketplace manifests |
 | `vendor/` | extra vendor (`dompdf`) |
 | `views/` | extra views |
-| `uploads/`, `cache/`, `logs/`, `backups/` | storage / ops |
+| `uploads/`, `logs/`, `backups/` | storage / ops; `cache/` is created at runtime when needed |
 
 Hotspots: `core/Bootstrap.php`, `core/Security.php`, `core/ThemeManager.php`, `core/PluginManager.php`, `admin/`, `assets/js/`, `member/includes/class-member-controller.php`.
 
@@ -212,7 +211,6 @@ Zählungen und Dateilisten stehen in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md).
 | `config/.htaccess` | deny direct access |
 | `config/app.php` | DB, keys, paths, SMTP, LDAP, JWT, HSTS, theme, encryption key ring, backup path |
 | `config/media-meta.json` | media metadata |
-| `config/media-settings.json` | media settings |
 
 `config/app.php` defines `ABSPATH`, `CMS_DEBUG`, `DB_*`, `AUTH_KEY`, `SECURE_AUTH_KEY`, `NONCE_KEY`, `SITE_NAME`, `SITE_URL` (no trailing slash, no subdirectory), `ADMIN_EMAIL`, `CMS_VERSION` from `Version::CURRENT`, path constants, `DEFAULT_THEME = cms-default`, login limits, optional LDAP/JWT/SMTP and, since 4.0.0, `CMS_ENCRYPTION_KEY` / `CMS_ENCRYPTION_KEYS_PREVIOUS` (key ring for encrypted secrets and backups) and `CMS_BACKUP_PATH` (backup directory).
 
@@ -276,7 +274,7 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 
 **English**
 
-408 files. Layout:
+The current admin tree contains HTTP entries, modules, views, shared partials, log UI and settings tabs:
 
 - `CMS/admin/*.php`. HTTP entry points
 - `CMS/admin/modules/<domain>/`, domain modules (`comments`, `community`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `legal`, `media`, `member`, `menus`, `newsletter`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`)
@@ -289,7 +287,7 @@ Notable routes present as files: `/admin/cms-loginpage` (`cms-loginpage.php`), `
 
 **Deutsch**
 
-408 Dateien. Aufbau:
+Der aktuelle Admin-Baum enthält HTTP-Einstiege, Module, Views, gemeinsame Partials, Log-UI und Einstellungs-Tabs:
 
 - `CMS/admin/*.php`. HTTP-Einstiege
 - `CMS/admin/modules/<domain>/`. Fachmodule
@@ -308,8 +306,8 @@ Besondere Dateien: `cms-loginpage.php`, `cms-logs.php`, AI-Admin-Skripte (`ai-se
 
 Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
-- `assets/css/`. 32 stylesheets (admin incl. shell/tokens, post editor, plugin assignment, MultiSites, tile pages, sidebar editor, forms, downloads, feeds, knowledge base, newsletter, editorial calendar, hub, consent, EditorJS content, member, public)
-- `assets/js/`. 60 scripts (admin modules incl. sidebar editor and batch runner, EditorJS boot, cookie consent init, member dashboard, PhotoSwipe, web vitals) plus 22 ES modules in `admin-shell/`, `editor-blocks/` and `post-editor/` (no build step)
+- `assets/css/`. Admin, content, media, member, public and Community stylesheets; use the directory inventory in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) rather than a copied total.
+- `assets/js/`. Top-level scripts plus local ES modules in `admin-shell/`, `captcha/`, `community/`, `editor-blocks/`, `member/` and `post-editor/` (no build step)
 - `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono as local WOFF2 files
 - bundled libraries, see [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
@@ -319,8 +317,8 @@ Runtime assets are under `CMS/assets/`, not the repository `ASSETS/` folder.
 
 Runtime-Assets liegen unter `CMS/assets/`, nicht im Repository-Ordner `ASSETS/`.
 
-- `assets/css/`. 32 Stylesheets
-- `assets/js/`. 60 Skripte plus 22 ES-Module in `admin-shell/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
+- `assets/css/`. Stylesheets für Admin, Inhalte, Medien, Mitglieder, Öffentlichkeit und Community; statt kopierter Zahlen gilt das Inventar in [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md).
+- `assets/js/`. Skripte auf oberster Ebene plus lokale ES-Module in `admin-shell/`, `captcha/`, `community/`, `editor-blocks/`, `member/` und `post-editor/` (ohne Build-Schritt)
 - `assets/fonts/`. Inter, Source Serif 4, JetBrains Mono als lokale WOFF2-Dateien
 - gebündelte Bibliotheken, siehe [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md)
 
@@ -332,11 +330,11 @@ Die Ordner `cookieconsent`, `elfinder`, `filepond` und `msgraph` liegen in diese
 
 **English**
 
-17 files. Pages: dashboard, favorites, media, messages, notifications, plugin-section, privacy, profile, security, subscription. Controller: `member/includes/class-member-controller.php`. Router: `core/Routing/MemberRouter.php`. Service: `core/Services/MemberService.php`.
+Current pages include dashboard, favorites, media, messages, notifications, plugin-section, privacy, profile, security and subscription. The Community is loaded through the plugin-section registry, controller `member/includes/class-member-controller.php`, router `core/Routing/MemberRouter.php`, and Community services.
 
 **Deutsch**
 
-17 Dateien. Seiten: Dashboard, Favoriten, Medien, Nachrichten, Benachrichtigungen, Plugin-Bereich, Datenschutz, Profil, Sicherheit, Abo. Controller: `member/includes/class-member-controller.php`. Router: `core/Routing/MemberRouter.php`. Service: `core/Services/MemberService.php`.
+Aktuelle Seiten sind Dashboard, Favoriten, Medien, Nachrichten, Benachrichtigungen, Plugin-Bereich, Datenschutz, Profil, Sicherheit und Abo. Die Community wird über die Plugin-Section-Registry, `member/includes/class-member-controller.php`, `core/Routing/MemberRouter.php` und die Community-Dienste geladen.
 
 ---
 
@@ -374,11 +372,10 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 | `CMS/lang/` | `de.yaml`, `en.yaml` |
 | `CMS/logs/` | `LOG_PATH`: not `var/logs/` (that directory does not exist here) |
 | `CMS/uploads/` | public uploads; `.gitkeep` and `.htaccess` in git |
-| `CMS/cache/` | cache, including optimizer output |
+| `CMS/cache/` | runtime-created cache, when enabled |
 | `CMS/install/` | 10 installer files (six steps, including "Admin layout") |
 | `CMS/vendor/` | `dompdf` only in this tree: **no TCPDF** |
 | `CMS/views/` | extra views: `auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/` |
-| `CMS/marketplace/` | core/plugin/theme index JSON |
 | `CMS/backups/` | local backups, protected |
 
 ---

@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Weiterleitungen & 404-Monitor
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/redirect-manager`, `/admin/not-found-monitor` | **Capability:** `manage_settings` | **Core-Modul:** `seo`
 
 ## English (summary)
@@ -28,6 +28,10 @@ Redirect rules are managed at `/admin/redirect-manager` (`CMS/admin/redirect-man
 Pro Kombination aus Quelle und Site-Scope ist nur **eine** Regel erlaubt. Jede Regel zählt Treffer (`hits`) und den letzten Aufruf (`last_hit_at`).
 
 `delete_redirects_by_slug` entfernt alle Regeln, die auf einen bestimmten Slug zeigen (z. B. nach dem Löschen eines Beitrags).
+
+Die Liste wird serverseitig mit höchstens **250 Regeln je Seite** über `seite` geblättert; die Seitennummer ist beim Lesen und nach Zeilenaktionen begrenzt. Sie wird weder durch einen Zeitgeber noch per Fetch, WebSocket, `EventSource`, Meta-Refresh oder Hintergrund-Neuladen aktualisiert. Änderungen erscheinen erst nach einer normalen Navigation oder Formularantwort.
+
+Die stabile Sortierung ist: aktive vor inaktiven Regeln, danach `updated_at` absteigend, `source_path` aufsteigend und zuletzt `id` aufsteigend. Ein erfolgreicher Treffer erhöht ausschließlich `hits` und `last_hit_at`; `updated_at` wird dabei bewusst unverändert geschrieben, damit bloßer Verkehr die Reihenfolge nicht verändert. `updated_at` bezeichnet deshalb eine Regelbearbeitung, nicht den letzten Zugriff.
 
 ### CSV-Export und -Import
 

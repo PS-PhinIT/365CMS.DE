@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Zahlungen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/payments` | **Capability:** `payments.manage` | **CSRF-Aktion:** `admin_payments`
 
 ## English (summary)
@@ -56,6 +56,12 @@ Verlängerungen und Anbieter-Abos (seit 4.1.9):
 - **Mollie-Abo:** Es entsteht erst nach dem Abschluss der Datenbank-Transaktion der Erstzahlung. Bricht die Verarbeitung ab und der Anbieter wiederholt das Ereignis, entsteht dadurch kein zweites Abo.
 - **Fehlgeschlagene Verlängerung:** `cms_payment_failed` nennt die letzte Bestellung des Abos (`order_id` im Webhook-Ereignis `order.failed`) statt 0.
 - **Folgebestellung:** Vorlage ist die letzte bezahlte Bestellung beim selben Anbieter, sonst die letzte bezahlte oder erstattete Bestellung des Pakets. Gibt es keine, bleibt die Verlängerung verbucht, es entsteht aber keine Folgebestellung und keine Rechnung; das steht im Log (Kanal `payments`), und der Hook `cms_subscription_renewal_unbilled` wird ausgelöst.
+
+### Zeitzonen
+
+Die Unix-Zeitstempel von Stripe/Mollie beschreiben instanztlose Zeitpunkte. `user_subscriptions.current_period_end` speichert das vom Anbieter bzw. aus dessen Ereignis ermittelte Periodenende unverändert als **UTC** (`gmdate()`). Dagegen liegen die vom übrigen Core mit `NOW()` verglichenen Spalten `orders.created_at`, `orders.paid_at`, `user_subscriptions.end_date`, `user_subscriptions.next_billing_date` und `user_subscriptions.cancelled_at` in der **PHP-/Datenbank-Ortszeit** (`date()`; die Datenbank-Sitzungszone wird an PHP angeglichen).
+
+Dasselbe Ablaufdatum kann deshalb in `current_period_end` und in `end_date`/`next_billing_date` bei einer von UTC abweichenden Zone eine andere Uhrzeit zeigen; es bleibt derselbe Zeitpunkt. `payment_events` wird getrennt davon in UTC protokolliert. Provider-Ende wird nie vor dem Speichern in Ortszeit umgerechnet, und die Ortszeitspalten werden nicht mit UTC-Zeichenketten befüllt.
 
 PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
 

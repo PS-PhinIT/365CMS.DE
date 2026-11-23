@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | CMSFILESTRUCTUR
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Schema:** v27
 
 ## Table of contents | Inhaltsverzeichnis
 
@@ -41,25 +41,25 @@ Nicht vollständig ausgerollt: tiefe Vendor-Bäume (`CMS/vendor/dompdf/`, große
 
 **English**
 
-Versioned files per area (`git ls-files CMS/<area> | wc -l`; runtime files such as `config/media-settings.json`, uploads or logs are not counted):
+Versioned files per area (`git ls-files CMS/<area>`; generated uploads and logs are not counted):
 
 **Deutsch**
 
-Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitdateien wie `config/media-settings.json`, Uploads oder Logs zählen nicht):
+Versionierte Dateien je Bereich (`git ls-files CMS/<bereich>`; erzeugte Uploads und Logs zählen nicht):
 
 | Area / Bereich | Files / Dateien |
 |---|---:|
-| `CMS/admin/` | 408 |
-| `CMS/assets/` | 3113 (mostly bundled libraries) |
-| `CMS/core/` | 382 |
+| `CMS/admin/` | 423 |
+| `CMS/assets/` | 3123 (mostly bundled libraries) |
+| `CMS/core/` | 468 |
 | `CMS/themes/` | 41 |
-| `CMS/member/` | 17 |
+| `CMS/member/` | 18 |
 | `CMS/plugins/` | 15 |
 | `CMS/includes/` | 12 |
 | `CMS/install/` | 10 |
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
-| `CMS/views/` | 21 |
+| `CMS/views/` | 30 |
 | `CMS/assets/css/` | 35 stylesheets |
 | `CMS/assets/js/` | 60 scripts + 27 ES modules (`admin-shell/`, `captcha/`, `community/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
@@ -82,13 +82,12 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich> | wc -l`; Laufzeitd
 | `CMS/member/` | member dashboard and related pages | Mitgliederbereich |
 | `CMS/plugins/` | installed plugins | installierte Plugins |
 | `CMS/themes/` | installed themes | installierte Themes |
-| `CMS/marketplace/` | marketplace manifests | Marktplatz-Manifeste |
 | `CMS/vendor/` | extra vendor code (`dompdf`) | zusätzlicher Vendor-Code (`dompdf`) |
 | `CMS/logs/` | log directory (`LOG_PATH`) | Log-Verzeichnis (`LOG_PATH`) |
-| `CMS/cache/` | runtime cache | Laufzeit-Cache |
+| `CMS/cache/` | runtime-created cache directory | zur Laufzeit angelegtes Cache-Verzeichnis |
 | `CMS/backups/` | local backups | lokale Backups |
 | `CMS/uploads/` | upload target | Upload-Ziel |
-| `CMS/views/` | extra views (`auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/`) | zusätzliche Views (`auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/`) |
+| `CMS/views/` | extra views (`auth/`, `community/`, `downloads/`, `feeds/`, `knowledgebase/`, `member/`, `newsletter/`, `partials/`) | zusätzliche Views (`auth/`, `community/`, `downloads/`, `feeds/`, `knowledgebase/`, `member/`, `newsletter/`, `partials/`) |
 
 ---
 
@@ -110,7 +109,7 @@ Verified files in `CMS/`:
 
 Not versioned / nicht versioniert: `robots.txt`, written at runtime when saved under SEO → Sitemap & robots.txt / wird zur Laufzeit erzeugt, wenn sie unter SEO → Sitemap & robots.txt gespeichert wird.
 
-Directories at this level: `admin`, `assets`, `backups`, `cache`, `config`, `core`, `includes`, `install`, `lang`, `logs`, `marketplace`, `member`, `plugins`, `themes`, `uploads`, `vendor`, `views`.
+Versioned directories at this level: `admin`, `assets`, `backups`, `config`, `core`, `includes`, `install`, `lang`, `logs`, `member`, `plugins`, `themes`, `uploads`, `vendor`, `views`. `cache/` can be created at runtime.
 
 ---
 
@@ -123,7 +122,6 @@ Directories at this level: `admin`, `assets`, `backups`, `cache`, `config`, `cor
 | `config/.htaccess` | block direct web access / direkter Webzugriff gesperrt |
 | `config/app.php` | application configuration template / App-Konfigurations-Template |
 | `config/media-meta.json` | media metadata / Medien-Metadaten |
-| `config/media-settings.json` | media settings / Medien-Einstellungen |
 
 ---
 
@@ -154,7 +152,7 @@ Root-Klassen in `CMS/core/`:
 - `PageManager.php`
 - `PluginManager.php`
 - `Router.php`
-- `SchemaManager.php` (`SCHEMA_VERSION = 'v27'` im Entwicklungsstand, 4.1.x: `v26`; `FEATURE_TABLES_V26`, `FEATURE_TABLES_V27`)
+- `SchemaManager.php` (`SCHEMA_VERSION = 'v27'`; `FEATURE_TABLES_V26`, `FEATURE_TABLES_V27`)
 - `Security.php`
 - `Slug.php`
 - `SubscriptionManager.php`
@@ -182,7 +180,7 @@ Service subfolders: `AdminMenu/`, `AI/`, `Backup/`, `Community/`, `Content/`, `C
 
 Identität, Medien, Redaktion, Betrieb / Identity, media, editorial, operations:
 
-- `Services/Community/` (community module / Community-Modul, 4.2.0): `Support/` (`Settings`, `Slugger`, `Urls`, `I18n`, `Events`, `CommunityModule`, `Codes`, `Cursor`, `Page`, `Transaction`, `ReadScope` = request read scope: each row read once per page request, invalidated per table on writes / Lesebereich einer Seitenanfrage: jede Zeile einmal gelesen, bei Schreiben je Tabelle verworfen, `CommunityCapabilities` = capabilities `community.*`, defaults and the one-time step `capabilities_v27` / Community-Rechte, Standards und einmaliger Schritt `capabilities_v27`, `ContentRenderer` = Markdown → HTML over the bundle `CMS/assets/commonmark/` and the purifier profile `community`, counting, plain text, resource limits / Markdown → HTML über das Bündel `CMS/assets/commonmark/` und das Purifier-Profil `community`, Zählung, Klartext, Ressourcengrenzen, `IpHash` = HMAC of the shortened IP and rate key / HMAC der gekürzten IP und Rate-Kennung), `Repository/` (`AbstractRepository`, `CategoryRepository`, `ForumRepository`, `TopicRepository`, `PostRepository`, `ReadStateRepository`, `MemberRepository`, `BanRepository`, `UserStatsRepository`, `ModerationLogRepository` = moderation log / Moderationsprotokoll, `ReportRepository` = reports / Meldungen `community_reports`, `SubscriptionRepository` = subscriptions and delivery queue / Abos und Zustell-Warteschlange `community_notify_queue`, `ReactionRepository` = reactions / Reaktionen, `AttachmentRepository` = attachments / Anhänge, `DraftRepository` = server drafts / Server-Entwürfe `community_drafts`, `SearchRepository` = read SQL for search, index, sitemap and media references / Lese-SQL für Suche, Index, Sitemap und Medienreferenzen), `Service/` (`CommunityAccess`, `AccessDecision`, `TrustLevelPolicy`, `BasicTrustPolicy`, `TopicService`, `PostService`, `QuoteService`, `ReadStateService`, `RenderService` = output per viewer, preview, render job / Ausgabe je Betrachter, Vorschau, Render-Job, `ContentGuard` = word filter, spam checks, request limits / Wortfilter, Spamprüfung, Request-Grenzen, `WriteGate` = gate from topic/reply/edit to `ContentGuard` / Tor der Schreibdienste zum `ContentGuard`, `CounterBook` = counter booking on status and location changes / Zählerbuchung bei Status- und Ortswechsel, `ModerationService` = moderation / Moderation, `ReportService` = reports / Meldungen, `BanService` = bans / Sperren, `NotificationDispatcher` = notification queue and delivery / Benachrichtigungs-Warteschlange und Zustellung, `SubscriptionService` = subscriptions, preferences, unsubscribe link / Abos, Präferenzen, Abmeldelink, `ReactionService` = reactions / Reaktionen, `RankService` = ranks / Ränge, `AttachmentService` = attachments / Anhänge, `DraftService` = server drafts of the write form / Server-Entwürfe des Schreibformulars, `ProfileService` = public member profile and signatures / öffentliches Mitgliedsprofil und Signaturen, `CommunitySearch` = search, index and sitemap / Suche, Index und Sitemap, `CommunityMediaExtractor` = media references in posts / Medienreferenzen in Beiträgen); `Http/` und `Admin/` folgen mit PR #3 bis PR #5, siehe `DOC/workflow/specs/community/HANDOFF-PR2-PR5.md`
+- `Services/Community/` (community module / Community-Modul, 4.2.0): `Support/` (settings, capabilities, URLs, rendering, cursor, transaction and read-scope helpers), `Repository/` (categories, forums, topics, posts, read states, members, bans, reports, subscriptions, reactions, attachments, drafts, trash and search), `Service/` (access, writing, moderation, sanctions, notifications, reactions, ranks, uploads, drafts, profiles, search and media extraction), and `Http/` (`PublicController`, `ComposeController`, `AttachmentController`, `ApiController`). Root integration files include `CommunityContentProvider`, `CommunityLegal`, `CommunityMemberSection`, `CommunityPrivacy` and `CommunityRetention`. Detailed implemented status: [workflow/specs/community/HANDOFF-PR2-PR5.md](workflow/specs/community/HANDOFF-PR2-PR5.md).
 - `Services/Security/`, `PasswordPolicyService.php` (password policy, history, maximum age / Passwort-Richtlinie, Historie, Höchstalter), `MfaEnforcementService.php` (role-based MFA enforcement / rollenbasierter MFA-Zwang; gate: `Router::enforceAccountGates()`)
 - `Services/Media/` additions, `AvifDerivativeService.php`, `AvifRegenerationService.php` (AVIF), `ImageOrientation.php` (EXIF orientation for GD output / EXIF-Ausrichtung für GD-Ausgaben), `ImageMetadataStripper.php` (`strip_exif` without re-encoding / ohne Neukodierung), `MediaUsageIndex.php`, `MediaUsageRebuildService.php`, `MediaUsageStoreInterface.php`, `DatabaseMediaUsageStore.php`, `MediaPathNormalizer.php`, `MediaReferenceExtractor.php` (interface) and `Usage/` (`ContentTableReferenceExtractor`, `DownloadReferenceExtractor`, `FormReferenceExtractor`, `HubSiteReferenceExtractor`, `ThemeReferenceExtractor`)
 - `Services/Content/`, `ContentStatus.php` (status values incl. `pending`), `ContentWorkflow.php` (four-eyes review, preview links / Vier-Augen-Prinzip, Vorschau-Links), `ContentExpiryService.php` (expiry and review reminders / Ablauf und Wiedervorlage)
@@ -452,7 +450,7 @@ These folders were **not** found under `CMS/assets/` (older docs mentioned them)
 
 **English**
 
-`CMS/admin/` contains 408 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
+`CMS/admin/` contains 423 files: PHP entry points, `modules/`, `views/`, `partials/`, `logs/` and `settings-tabs/`.
 
 Module directories: `comments`, `community`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `newsletter`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
@@ -460,7 +458,7 @@ Entry examples that match public admin routes include `index.php`, `pages.php`, 
 
 **Deutsch**
 
-`CMS/admin/` enthält 408 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
+`CMS/admin/` enthält 423 Dateien: PHP-Einstiege, `modules/`, `views/`, `partials/`, `logs/` und `settings-tabs/`.
 
 Modulverzeichnisse: `comments`, `community`, `content`, `dashboard`, `downloads`, `feeds`, `forms`, `hub`, `knowledgebase`, `landing`, `newsletter`, `legal`, `media`, `member`, `menus`, `pages`, `plugins`, `posts`, `reusable-blocks`, `security`, `seo`, `settings`, `subscriptions`, `system`, `tables`, `themes`, `toc`, `trash`, `users`.
 
@@ -479,22 +477,18 @@ Admin-Seiten der Core-Funktionen / Admin pages of the core features: `forms.php`
 
 | Path | Notes |
 |---|---|
-| `CMS/marketplace/` | `core/365cms/update.json`, `plugins/index.json`, `themes/index.json` |
 | `CMS/vendor/` | `vendor/dompdf/` (no TCPDF tree in this repository) |
 | `CMS/logs/` | `.htaccess`, `.gitignore`, rotating log files |
-| `CMS/cache/` | runtime cache, including HTMLPurifier serializer cache |
 | `CMS/backups/` | `.htaccess`, `index.html` |
 | `CMS/uploads/` | `.gitkeep`, `.htaccess` (content is installation-specific) |
-| `CMS/views/` | additional views: `auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/` |
+| `CMS/views/` | additional views: `auth/`, `community/`, `downloads/`, `feeds/`, `knowledgebase/`, `member/`, `newsletter/`, `partials/` |
 
 **Deutsch**
 
 | Pfad | Hinweise |
 |---|---|
-| `CMS/marketplace/` | `core/365cms/update.json`, `plugins/index.json`, `themes/index.json` |
 | `CMS/vendor/` | `vendor/dompdf/` (kein TCPDF-Baum in diesem Repository) |
 | `CMS/logs/` | `.htaccess`, `.gitignore`, rotierende Logdateien |
-| `CMS/cache/` | Laufzeit-Cache, einschließlich HTMLPurifier-Serializer-Cache |
 | `CMS/backups/` | `.htaccess`, `index.html` |
 | `CMS/uploads/` | `.gitkeep`, `.htaccess` (Inhalt ist installationsspezifisch) |
-| `CMS/views/` | zusätzliche Views: `auth/`, `downloads/`, `feeds/`, `knowledgebase/`, `newsletter/`, `partials/` |
+| `CMS/views/` | zusätzliche Views: `auth/`, `community/`, `downloads/`, `feeds/`, `knowledgebase/`, `member/`, `newsletter/`, `partials/` |

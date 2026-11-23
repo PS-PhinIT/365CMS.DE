@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Abo-System & Einstellungen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/subscription-settings` (Alt-Route `/admin/subscriptions` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_sub_settings`
 
 ## English (summary)
@@ -54,7 +54,7 @@ Diese Schalter sind die *Legacy-Settings* der gleichnamigen Core-Module. Der Mod
 
 | Methode | Zweck |
 |---|---|
-| `getUserSubscription(int $userId)` | Aktives Paket ermitteln: direktes Abo (`active`, `end_date` leer oder in der Zukunft) → Paket einer aktiven Gruppe (teuerstes zuerst) → erster Paket-Datensatz als Fallback |
+| `getUserSubscription(int $userId)` | Aktives Paket ermitteln: direktes Abo (`active`, `end_date` leer oder in der Zukunft; Vergleich in der PHP-/Datenbank-Ortszeit) → Paket einer aktiven Gruppe (teuerstes zuerst) → erster Paket-Datensatz als Fallback |
 | `isLimitEnforcementEnabled()` | Modul `subscription_limits` aktiv? |
 | `canAccessPlugin($userId, $slug)` | Prüft `plugin_<slug>` des Pakets (z. B. `plugin_events`); ohne Limitdurchsetzung immer `true` |
 | `checkLimit($userId, $resource)` | Liest `limit_<resource>` des Pakets (`experts`, `companies`, `events`, `speakers`, `storage_mb`) und vergleicht mit der aktuellen Nutzung: `-1` = unbegrenzt, `0` = gesperrt, sonst `Nutzung < Limit` |
@@ -77,7 +77,8 @@ if (!$subs->canAccessPlugin($userId, 'events') || !$subs->checkLimit($userId, 'e
 
 - Ist die Limitdurchsetzung aus, gelten keine Paketgrenzen: auch nicht für Free-Benutzer.
 - Der Fallback „erster Paket-Datensatz“ setzt voraus, dass das kostenlose Paket zuerst angelegt wurde (bei `seed_defaults` der Fall).
-- Zahlungseingänge werden nicht automatisch verbucht; siehe [ORDERS.md](ORDERS.md).
+- Zahlungen werden nicht aus dem Rücksprung, sondern erst nach einem verifizierten Anbieter-Webhook als bezahlt gebucht; siehe [PAYMENTS.md](PAYMENTS.md).
+- Zeitspalten von Abo, Bestellung und Zahlung folgen bewusst zwei Darstellungen: `current_period_end` und das Ereignisprotokoll stehen in UTC; `start_date`, `end_date`, `next_billing_date`, `cancelled_at`, `created_at` und `paid_at` in PHP-/Datenbank-Ortszeit. `NOW()`-Vergleiche greifen daher auf die Ortszeitspalten zu. Details und die Abgrenzung der Provider-Zeit stehen in [PAYMENTS.md](PAYMENTS.md).
 
 ### Verwandte Dokumente
 

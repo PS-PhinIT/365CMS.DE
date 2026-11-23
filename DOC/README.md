@@ -1,9 +1,9 @@
 # 365CMS Projektdokumentation | README
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Schema:** v27
 
 ## English (summary)
 
-This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.1.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-15, `stable`), PHP 8.4.1+, schema `v26`. Most documents contain a short English summary followed by a detailed German section.
+This folder is the public documentation tree for 365CMS; runtime code lives in [`CMS/`](../CMS/). Core version `4.2.0` ([`CMS/core/Version.php`](../CMS/core/Version.php), released 2026-11-23, `stable`), PHP 8.4.1+, schema `v27`. Most documents contain a short English summary followed by a detailed German section.
 
 ## Deutsch
 
@@ -28,10 +28,10 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | Dateien/Struktur sucht | [FILELIST.md](FILELIST.md) · [FILESTRUCTUR.md](FILESTRUCTUR.md) · [CMSFILESTRUCTUR.md](CMSFILESTRUCTUR.md) · [DEVLIST.md](DEVLIST.md) |
 | alle Dokumente sehen wollt | [INDEX.md](INDEX.md) |
 
-### Eckdaten 4.1.0
+### Eckdaten 4.2.0
 
-- Dokumentierter Stand: Version `4.1.0` (Release `2026-11-15`), Schema `v26` (90 Tabellen), PHP `8.4.1+`, Tabellenpräfix `cms_`
-- `CMS/core/Version.php`: `CURRENT = '4.2.0'`, `RELEASE_DATE = '2026-11-23'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v27'`
+- Version `4.2.0` (Release `2026-11-23`), Schema `v27`, PHP `8.4.1+`, Tabellenpräfix `cms_`
+- Das vollständige Community-Modul ist im Core enthalten, standardmäßig deaktiviert; Konfiguration und Betrieb sind unter [admin/community/README.md](admin/community/README.md) und [member/COMMUNITY.md](member/COMMUNITY.md) beschrieben.
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
 - Adminbereich nur für Rolle `admin`; Capabilities steuern die einzelnen Seiten
@@ -50,12 +50,12 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | [`ai/`](ai/) | AI Services, Provider, Assets |
 | [`assets/`](assets/) | Gebündelte Bibliotheken unter `CMS/assets/` und `CMS/vendor/dompdf/` |
 
-### Roadmap 4.2.0 / 4.3.0
+### Release- und Prüfstatus
 
-- **4.1.0** (Schema `v26`): Bereiche 1–5 vollständig umgesetzt, einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)); veröffentlicht am 2026-11-15.
-- **4.2.0** (Schema `v27`): Community-Modul (Forum). Umsetzungsfahrplan: [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Planungsset: [workflow/specs/community/README.md](workflow/specs/community/README.md); Fortschritt: [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md).
-- **4.3.0**: zentrale CLI `CMS/cli.php`, Echtzeit-Alerting und Webhook-Ereignis `alert.raised` (verschoben aus 4.1.0, Spezifikation [workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
-- Entwicklerübersicht und Planungsabschnitt: [DEVLIST.md](DEVLIST.md) (Abschnitt 31).
+- **4.2.0 / v27** ist veröffentlicht. Der Umsetzungsstand des Community-Moduls ist in [workflow/specs/community/README.md](workflow/specs/community/README.md) zusammengefasst; [IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) und [ROADMAP.md](workflow/specs/community/ROADMAP.md) dokumentieren die erledigten Lieferpakete.
+- Frühere Versionen und ihre Korrekturen sind historische Einträge in [../Changelog.md](../Changelog.md) und den datierten Dokumenten unter [audit/](audit/), nicht der aktuelle Produktstand.
+- Nicht angekündigte Folgefunktionen werden nicht als zugesagter Roadmap-Stand geführt.
+- Tests werden nicht anhand einer festen Summe dokumentiert: `php TESTS/run-all.php` entdeckt laufend alle `TESTS/<suite>/run.php`. Eine einzelne Suite läuft mit `php TESTS/<suite>/run.php [-v]`; der gemeinsame Runner gibt Einleitung und Entdeckungslogik aus.
 
 ### Wichtige Hinweise
 
@@ -63,7 +63,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 - **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar.
 - **Offene Punkte:** [core/STATUS.md](core/STATUS.md) (Abschnitt „Offene Punkte“).
 - **Audits:** Prüfberichte unter [audit/README.md](audit/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
-- **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei.
+- **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei; der Codezustand in `CMS/` und das Schema in `SchemaManager` haben Vorrang gegenüber älteren Planungsnotizen.
 
 ### Verwandte Einstiege
 

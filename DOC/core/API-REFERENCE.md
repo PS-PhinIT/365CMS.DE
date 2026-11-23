@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Core: API-Referenz
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -12,7 +12,7 @@ The JSON API is registered by `CMS\Routing\ApiRouter` (`CMS/core/Routing/ApiRout
 
 | Methode | Route | Zugriff | Antwort |
 |---|---|---|---|
-| GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"3.5.0"}` |
+| GET | `/api/v1/status` | öffentlich | `{"status":"ok","version":"4.2.0"}` |
 | GET | `/api/v1/pages?q=<suche>` | angemeldet | `{"data":[…]}`: Seitensuche (`PageManager::search()`, leere Suche → leere Liste) |
 | GET | `/api/v1/pages/:slug` | angemeldet | `{"data":{…}}` oder `404 {"error":"Page not found"}` |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft | `204` |
