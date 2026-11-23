@@ -10,6 +10,7 @@ Documentation for building 365CMS themes. Themes live in `CMS/themes/<slug>/` an
 
 | Dokument | Inhalt |
 |---|---|
+| [LEITFADEN.md](LEITFADEN.md) | **Einstieg:** Schritt-für-Schritt-Leitfaden – was wo liegt, wann der Core was lädt und ausgibt, Minimal-Theme zum Kopieren, Rezepte, häufige Fehler |
 | [THEME-DEVELOPMENT.md](THEME-DEVELOPMENT.md) | Theme-Vertrag: Aufbau, `theme.json`, Templates und Daten, Hooks, CSP, Datenschutz, Customizer, Versionierung |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Praktischer Ablauf: Kopie von `cms-default`, lokale Entwicklung, Release-Prüfliste, Auslieferung |
 | [COMPONENTS.md](COMPONENTS.md) | Templates, Partials und Helfer von `cms-default`, wiederverwendbare Core-Komponenten |

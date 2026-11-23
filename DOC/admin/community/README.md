@@ -90,6 +90,6 @@ Schutzschichten auf dem Schreibweg (`ContentGuard`, `WriteGate`): Wortfilter (`b
 | `/forum` zeigt „nicht gefunden“ | Modul aus, oder kein Forum für Gäste lesbar (Rechte-Matrix, `guests_can_read`) |
 | Mitglied sieht Forum nicht | fehlendes `community.view`; bei eigenen Rollen nach dem Update ergänzen |
 | Beiträge erscheinen nicht | in der Warteschlange (`/admin/community-queue`) |
-| Seite langsam | Abfragebudget je Seite wird in der Suite `community-performance` geprüft; Indizes aus Schema v27 vorhanden? (`DatabaseUpdateRunner`) |
+| Seite langsam | Das Abfragebudget je Seite wird automatisch geprüft; Indizes aus Schema v27 vorhanden? (`DatabaseUpdateRunner`) |
 
-Tests: `php TESTS/run-all.php` (Suiten `community-*`); Hooks siehe [HOOKS-REFERENCE](../../core/HOOKS-REFERENCE.md), Dienste siehe [SERVICES](../../core/SERVICES.md).
+Hooks siehe [HOOKS-REFERENCE](../../core/HOOKS-REFERENCE.md), Dienste siehe [SERVICES](../../core/SERVICES.md).

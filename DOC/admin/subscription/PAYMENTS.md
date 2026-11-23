@@ -75,4 +75,3 @@ PayPal direkt (ohne Mollie) ist nicht angebunden. Rechnungen: Bereich 5b.
 | Routen | `CMS/core/Routing/PaymentRouter.php` |
 | Admin | `CMS/admin/payments.php`, `CMS/admin/views/subscriptions/payments.php` |
 | Tabelle | `cms_payment_events`; Spalten `orders.provider`, `provider_checkout_id`, `paid_at`; `user_subscriptions.provider`, `provider_subscription_id`, `current_period_end` |
-| Tests | `php TESTS/payments/run.php` |

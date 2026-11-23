@@ -80,4 +80,3 @@ Hooks: `cms_sso_login` (`$userId, 'entra', $claims` ohne Token), `cms_sso_user_p
 | AADSTS50011 bei Microsoft | Umleitungs-URI in der App-Registrierung stimmt nicht exakt |
 | Rollen werden nicht übernommen | App-Rolle nicht zugewiesen, Gruppen-Overage, oder Konto nicht über SSO angelegt (keine Synchronisation) |
 
-Tests: `php TESTS/sso-entra/run.php` (ohne Netzwerk und Datenbank, lokal erzeugter RSA-Schlüssel).

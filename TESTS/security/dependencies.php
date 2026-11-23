@@ -254,7 +254,13 @@ T::run('Abhängigkeiten: SunEditor ist der korrigierte Stand und lässt keine if
     // Merkmale der korrigierten Fassung: Option allowedURLProtocols (ab 3.4.0) und srcdoc-Filter.
     T::check(str_contains($bundle, 'allowedURLProtocols'), 'Bundle kennt allowedURLProtocols (ab 3.4.0)');
     T::check(str_contains($bundle, 'srcdoc'), 'Bundle filtert srcdoc');
-    T::check(is_file($depsRoot . '/CMS_ASSETS/suneditor-' . $version . '.zip'), 'Quellarchiv CMS_ASSETS/suneditor-' . $version . '.zip liegt vor');
+    // Das Quellarchiv liegt seit dem Umzug von CMS_ASSETS in einem privaten Repository und ist hier nicht mehr prüfbar. Die Herkunft
+    // belegen die dokumentierten SHA-256-Werte der Runtime-Dateien (unverändert aus dem npm-Paket übernommen).
+    $suneditorDoc = $depsRead('DOC/assets/suneditor/README.md');
+    foreach (['suneditor.min.js' => 'CMS/assets/suneditor/suneditor.min.js', 'css/suneditor.min.css' => 'CMS/assets/suneditor/css/suneditor.min.css', 'lang/de.js' => 'CMS/assets/suneditor/lang/de.js'] as $label => $path) {
+        $documented = preg_match('/`' . preg_quote($label, '/') . '` `([0-9a-f]{64})`/', $suneditorDoc, $hashMatch) === 1 ? $hashMatch[1] : '';
+        T::same($documented, hash('sha256', $depsRead($path)), 'SHA-256 von ' . $label . ' = DOC/assets/suneditor/README.md');
+    }
 
     $service = $depsRead('CMS/core/Services/EditorService.php');
     T::check(str_contains($service, "elementBlacklist: 'iframe'"), 'EditorService sperrt iframe-Elemente');

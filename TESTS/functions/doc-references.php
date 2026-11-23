@@ -140,13 +140,20 @@ T::run('Doku: Datei-Inventare nennen die vorhandenen Module, Services, Styleshee
     }
     T::check(!str_contains($inventory, 'CMS/db/') && !str_contains($fileList, 'CMS/db/'), 'Inventare nennen kein Verzeichnis CMS/db/');
 
-    foreach (docRefEntries('TESTS', true) as $suite) {
-        if (!is_file(dirname(__DIR__) . '/' . $suite . '/run.php')) {
-            continue;
+    // Vorgabe des Projektinhabers (2026-11-23): Die Dokumentation nennt keine Test-Suiten. Kein Markdown-Dokument unter DOC/
+    // und nicht die README.md enthält einen Pfad des Testverzeichnisses („TESTS/…“).
+    $root = dirname(__DIR__, 2);
+    $documents = ['README.md'];
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/DOC', FilesystemIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+        if ($file->isFile() && str_ends_with($file->getFilename(), '.md')) {
+            $documents[] = substr($file->getPathname(), strlen($root) + 1);
         }
-        T::check(str_contains($fileList, '`TESTS/' . $suite . '/`'), 'FILELIST.md nennt die Test-Suite ' . $suite);
-        T::check(str_contains(docRefRead('DOC/FILESTRUCTUR.md'), '`TESTS/' . $suite . '/`'), 'FILESTRUCTUR.md nennt die Test-Suite ' . $suite);
     }
+    sort($documents);
+    $naming = array_values(array_filter($documents, static fn (string $doc): bool => str_contains(docRefRead($doc), 'TESTS/')));
+    T::check(count($documents) > 100, 'Dokumente unter DOC/ gefunden', (string) count($documents));
+    T::same([], $naming, 'kein Dokument nennt Pfade des Testverzeichnisses (TESTS/…)');
 });
 
 T::run('Doku: relative Markdown-Links der Übersichtsdokumente', static function (): void {

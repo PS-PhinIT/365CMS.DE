@@ -141,13 +141,6 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 
 Sicherheits-Audit unter `/admin/security-audit` ([../admin/security/SECURITY-AUDIT.md](../admin/security/SECURITY-AUDIT.md)), Checkliste [../admin/PRUEF-CHECKLISTE.md](../admin/PRUEF-CHECKLISTE.md).
 
-Gezielte Tests (im CMS-Verzeichnis):
-
-```bash
-php TESTS/captcha/run.php
-php TESTS/community-captcha/run.php
-php TESTS/media-images/run.php
-```
 
 ### Verwandte Dokumente
 

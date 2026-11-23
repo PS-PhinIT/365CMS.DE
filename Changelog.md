@@ -14,13 +14,13 @@
 
 ---
 
-### v4.2.5 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-05)
+### v4.2.4 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-04)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
-| **4.2.5** | 🛡️ security | AP-05 CSRF, Header, Cookies, Browser-Schutz / Apache-Konfiguration | **Header-Fallback überschrieb den Core** (`.htaccess`): `X-Frame-Options` und `Referrer-Policy` standen als `Header always set` und ersetzten auf Apache die Werte, die der Core je Route bewusst abweichend sendet (`SAMEORIGIN` für die Newsletter-Vorschau im Admin und die Einbettungsseite des Aggregators, `no-referrer` auf Seiten mit Token in der URL). Beide Direktiven sind jetzt `setifempty` (wie CSP und HSTS): Der Core bestimmt den Wert, der Fallback ergänzt nur Antworten ohne Header. Außerdem nennt die `Permissions-Policy` des Core dieselben vier Verbote wie der Fallback (`payment=()` ergänzt). Bericht: [FOLGEAUDIT-AP-05](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-05-2026-11-23.md). |
+| **4.2.3** | 🛡️ security | AP-03 Eingaben: Injection, Traversal, SSRF / HTTP-Client | **Zieladressen-Prüfung** (`Http\Client::isNonPublicIp()`, genutzt von Client, Feeds, Update und Webhooks): In IPv6 eingebettete IPv4-Adressen in Hex-Schreibweise (IPv4-kompatibel `::7f00:1`, IPv4-übersetzt `::ffff:0:7f00:1`, 6to4 `2002:7f00:1::`) und Multicast (`224.0.0.0/4`, `ff00::/8`) passierten den Filter, obwohl sie eine interne IPv4-Adresse enthalten bzw. nicht unicastfähig sind. Die Prüfung entpackt die eingebettete Adresse jetzt unabhängig von der Schreibweise und prüft sie erneut; öffentliche eingebettete Adressen bleiben erlaubt. Keine Ausnutzung belegt (setzt einen Übersetzer auf dem Server voraus). Alle übrigen Prüfpunkte (SQL, Pfade, Prozesse, Einbindung, Weiterleitung, Header, XML/CSV, Regex, Host-Header) ohne Befund. Bericht: [FOLGEAUDIT-AP-03](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-03-2026-11-23.md). |
 
 ---
 
@@ -67,7 +67,7 @@ Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbei
 | **4.2.0** | 🔴 fix | Community / Barrierefreiheit (WCAG) | Behobene Axe-Core-Befunde: vollständige `aria-label`-Texte für Reaktionen, Entfernung doppelter `<main>`-Landmarks, lesbare Hell-/Dunkelmodus-Kontraste, unterstrichene Links im Beitragstext, responsives Suchfeld (320 px), Fokus-Rückgabe nach Dialogen und min. 28 px Klickflächen. |
 | **4.2.0** | 🟠 perf | Community / Abfrageoptimierung | Anfragebezogener Cache (`ReadScope`), Vorladen von Beitragsseiten, Sammelabfragen im Mitgliederbereich (Reduktion von bis zu 54 auf 5–23 Abfragen) sowie zweistufiges Keyset-Paging in großen Foren (Reduktion von > 6.000 auf ~53 Lesezugriffe). |
 | **4.2.0** | 🔵 docs | Dokumentation & Update-Hinweise | Audit-Katalog & Bericht (`AUDIT-4.2.0-2026-11-23.md`), `HANDOFF-PR2-PR5.md`, Aktualisierung von `DATABASE-SCHEMA.md`, `RBAC.md`, `SSO-ENTRA.md`, `HOOKS-REFERENCE.md` und `MEDIA.md` sowie Migrationshinweise für bestehende `moderator`-Rollen und Rechtetemplates. |
-| **4.2.0** | ⬜ chore | Tests, Marketplace & Release | Erweiterung auf 66 Test-Suiten (u. a. `schema-v27`, `captcha`, `community-*`, `media-images`, `slugs`, Umbenennung zu `release-package`) inkl. Mutanten-Tests. Entfernung statischer Feeds aus `CMS/marketplace/` und Paketierung von **v4.2.0** (`365CMS-4.2.0-update.zip` & `-full.zip`). |
+| **4.2.0** | ⬜ chore | Tests, Marketplace & Release | Erweiterung auf 66 Test-Suiten (u. a. `schema-v27`, `captcha`, `community-*`, `media-images`, `slugs`, Umbenennung zu `release-package`) inkl. Mutanten-Tests; `php TESTS/run-all.php` führt 66 Suiten aus. Entfernung statischer Feeds aus `CMS/marketplace/` und Paketierung von **v4.2.0** (`365CMS-4.2.0-update.zip` & `-full.zip`). |
 
 ### v4.1.9 — 17.11.2026 - Patch Release
 

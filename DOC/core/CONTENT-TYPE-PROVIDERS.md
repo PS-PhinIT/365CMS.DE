@@ -96,7 +96,7 @@ Die Export/Import-Provider des Cores liegen unter `CMS/core/Services/Exchange/` 
 
 ### Tests
 
-`php TESTS/content-types/run.php` prüft die Registry (Anmeldung je Fähigkeit, Doppelanmeldung, ungültige Typen, Sortierung, einmaliges Auslösen der Action) und die Wertobjekte, darunter die `realpath`-Prüfung von `ImportContext::stagedFile()`. `php TESTS/run-all.php` führt alle Suiten aus.
+Automatisch geprüft sind die Registry (Anmeldung je Fähigkeit, Doppelanmeldung, ungültige Typen, Sortierung, einmaliges Auslösen der Action) und die Wertobjekte, darunter die `realpath`-Prüfung von `ImportContext::stagedFile()`.
 
 ### Verwandte Dokumente
 
