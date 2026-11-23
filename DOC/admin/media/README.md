@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Medien
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -19,7 +19,10 @@ This folder documents the admin area **Media** (*Medienverwaltung*). All entries
 Weitere medienbezogene Seiten:
 
 - `/admin/performance-media`: Bildoptimierung und Speicherstatistik ([../performance/PERFORMANCE.md](../performance/PERFORMANCE.md))
+- `/admin/media-tools`: Vorschaubilder, AVIF, Verwendungsindex und Urheberangaben ([MEDIA-TOOLS.md](MEDIA-TOOLS.md))
 - `/admin/monitor-disk-usage`: Speichernutzung ([../diagnose/DIAGNOSE.md](../diagnose/DIAGNOSE.md))
 - Mitglieder-Medien unter `/member/media` ([../../member/MEMBER-ROUTES.md](../../member/MEMBER-ROUTES.md))
 
 Downloads (eigene Route `/admin/downloads`): [DOWNLOADS.md](DOWNLOADS.md). Ausführliche Beschreibung: [MEDIA.md](MEDIA.md). Ablauf eines Uploads: [../../workflow/MEDIA-UPLOAD-WORKFLOW.md](../../workflow/MEDIA-UPLOAD-WORKFLOW.md).
+
+Der 4.2.0-Vertrag ist: erhaltene Originale verlieren Metadaten ohne Bild-Neukodierung (`ImageMetadataStripper`), neu kodierte JPEG-Fassungen wenden alle acht EXIF-Ausrichtungen an (`ImageOrientation`) und GD-Speicherpfade erhalten Alpha über `imagesavealpha(true)`. Prüfung: `php TESTS/media-images/run.php`.

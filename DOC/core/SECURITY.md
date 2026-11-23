@@ -1,10 +1,10 @@
 # 365CMS Projektdokumentation | Core: Sicherheitsmodell
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 
 ## English (summary)
 
-Security is layered: transport (HTTPS redirect strategy, HSTS), response headers and a nonce-based CSP with Trusted Types (`CMS\Security`), hardened sessions (HttpOnly, Secure, SameSite=Strict, strict mode, ID regeneration, role-based lifetimes, device binding), authentication with per-IP rate limiting and, since 4.0.0, a growing per-account delay, sign-out everywhere (`Auth::revokeAllSessions()`), confirmed email changes (`EmailChangeService`), MFA (TOTP, backup codes), passkeys and LDAP (`CMS\Auth`, `CMS\Auth\AuthManager`), per-action one-time CSRF tokens (1 h TTL, 20 per action), a global CSRF guard for public POST requests, proxy/CDN-aware client IP detection (`TrustedProxyService`, default `cloudflare`; unknown CDN networks such as Hostinger's are detected and can be approved with one click, highlighted when the admin's own request came through them), an application firewall (`SecurityRuntimeService`), anti-spam, prepared statements, HTML sanitising (HTMLPurifier, Editor.js sanitizer), upload validation, encrypted secrets (since 4.0.0 `CryptoService`: XChaCha20-Poly1305 or AES-256-GCM with a key ring kept in `config/app.php`, for settings secrets, TOTP secrets and optional backup encryption) and audit logging. Release 4.1.0 adds a configurable password policy (`PasswordPolicyService`: length, Unicode character classes, history, maximum age), role-based MFA enforcement (`MfaEnforcementService`, gate `Router::enforceAccountGates()`), Microsoft Entra ID single sign-on (OIDC with PKCE; accounts are matched by tenant ID and object ID only, e-mail claims count only with `xms_edov = true`), signed outbound webhooks, S3 offsite backups (only `CMSENC2`-encrypted archives) and payment webhooks verified by signature or provider lookup with idempotent event storage.
+Security is layered: transport (HTTPS redirect strategy, HSTS), response headers and a nonce-based CSP with Trusted Types (`CMS\Security`), hardened sessions (HttpOnly, Secure, SameSite=Strict, strict mode, ID regeneration, role-based lifetimes, device binding), authentication with per-IP rate limiting and a growing per-account delay, sign-out everywhere (`Auth::revokeAllSessions()`), confirmed email changes (`EmailChangeService`), MFA (TOTP, backup codes), passkeys and LDAP (`CMS\Auth`, `CMS\Auth\AuthManager`), per-action one-time CSRF tokens (1 h TTL, 20 per action), a global CSRF guard for public POST requests, proxy/CDN-aware client IP detection (`TrustedProxyService`), an application firewall (`SecurityRuntimeService`), anti-spam, prepared statements, HTML sanitising (HTMLPurifier, Editor.js sanitizer), upload validation, encrypted secrets and audit logging. Release 4.2.0 adds the local `CaptchaService`: self-hosted proof-of-work, GD image and math providers with a session-bound two-hour, single-use task; integrations cover high-protection forms (`FormSpamGuard`), registration and community compose (`CaptchaGate`). Images now strip metadata without reencoding where the original is preserved, while GD reencoding applies all EXIF orientations and retains alpha.
 
 ## Deutsch
 
@@ -96,8 +96,19 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - **Statistik „Fehlgeschlagene Logins“:** `cms_login_attempts` speichert auch die übrigen Rate-Limit-Aktionen (jeder API-Aufruf, Suche, Registrierung, Kontaktformular …). Dashboard (Kachel, Prioritätshinweis, Sicherheits-Score), *Diagnose → Übersicht* und *Performance → Datenbank* zählen seit 4.0.0 nur die Aktionen aus `Security::FAILED_LOGIN_ACTIONS` (`login`, `mfa_verify`); vorher erschien jeder API-Aufruf als fehlgeschlagener Login.
 - **API-Token**: `POST /api/v1/auth/token` 10/h, `POST /api/v1/auth/refresh` 30/h je IP.
 - **Anti-Spam** für Formulare ([../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md)).
+- **Captcha** als zusätzliche, lokale Schicht: `pow`, `image` (GD) oder `math`; die Aufgaben liegen nur in der Sitzung, sind einmalig, kontextgebunden und laufen nach 7200 Sekunden ab. Details und Theme-Helfer: Abschnitt 7b.
 - **Sichere Weiterleitungen**: `Router::redirect()` und Login-Redirects lassen nur interne/erlaubte Ziele zu.
 - **Ausgehende Requests** (`Http\Client`): Host-Allowlists für Updates/Marketplace/KI, HTTPS-Pflicht für Cloud-Ziele, keine privaten Netze außer explizit freigegebenen (Ollama).
+
+### 7b. Lokales Captcha (`CaptchaService`, 4.2.0)
+
+- **Keine Drittanbieter:** Standardverfahren sind `pow` (ALTCHA-Prinzip, SHA-256/Web Crypto), `image` (lokales GD-PNG) und `math` (keine Abhängigkeit). `pow` und `image` enthalten die Rechenaufgabe als barrierefreie Alternative. Unbekannte oder nicht verfügbare Anbieter fallen auf `math`; Schutz wird nie still abgeschaltet.
+- **Lebenszyklus:** `CaptchaStore` hält bis zu acht offene Aufgaben unter `$_SESSION['cms_captcha']`. Die 32-stellige ID ist zufällig, private Daten bleiben in der Sitzung, das Ablaufdatum ist höchstens 7200 Sekunden entfernt. `verify()` verbraucht die Aufgabe und prüft danach Ablauf, gespeicherten Kontext und Anbieter. Ergebnis: `ok`, `missing`, `expired`, `context`, `invalid` oder `unavailable`.
+- **Sitzungen:** aktiv oder durch die Lazy-Session-Infrastruktur verzögert ist ausreichend. Ohne eine speicherbare Sitzung wird kein vertrauenswürdiger Schutz erzeugt; das Fragment zeigt einen Hinweis und die Prüfung scheitert.
+- **Formulare:** `FormSpamGuard::captchaHtml()`/`verifyCaptcha()` gelten bei Antispam-Stufe `high` mit Kontext `forms.<formKey>`. Das Verfahren kann über `cms_forms_captcha_provider` je Formular gewählt werden; Standard ist `pow`. `FormRenderer` lädt `captcha.css` und das ES-Modul nur bei Bedarf.
+- **Registrierung:** `register_captcha` ist standardmäßig aus. Ist es an, rendert die Core- und Standardvorlage `pow` mit Kontext `register`; `PublicRouter` prüft vor dem Konto-Anlegen. `cms_captcha_field()` und `cms_captcha_asset_tags()` sind der verbindliche Theme-Helfer. Ein eigenes Theme darf bei aktivierter Option das Fragment nicht weglassen.
+- **Community:** `CaptchaGate` schützt nur `create_topic`/`reply` mit Kontext `community.compose`, nach `captcha_mode` (`off`, `first_post`, `trust0`, `always`) und `captcha_provider` (`pow`, `image`, `math`). Gäste schreiben nicht, Bearbeiten ist frei und globale Moderation ausgenommen; `cms_community_captcha_required` kann nur verschärfen.
+- **Erweiterung:** `cms_captcha_providers` akzeptiert nur gültige `CaptchaProvider`-Instanzen. Die Rechenaufgabe bleibt stets registriert; Anbieter mit Einwilligung werden nie automatisch gewählt. Vollständige Entwicklerdokumentation: [../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md).
 
 ### 7a. Client-IP hinter Proxy oder CDN (`TrustedProxyService`, seit 3.5.0)
 
@@ -114,7 +125,7 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - Datenbank nur über PDO mit nativen Prepared Statements (`ATTR_EMULATE_PREPARES = false`).
 - Rich-Text über `PurifierService` (HTMLPurifier), Editor.js über `EditorJsSanitizer`/`EditorJsHtmlSanitizer`, Frontend zusätzlich DOMPurify.
 - Ausgabe-Escaping über `htmlspecialchars` bzw. Helfer in `includes/functions/escaping.php`.
-- Uploads: Endungs-Allowlist, gefährliche Endungen gesperrt (seit 3.4.12 auch als innere Doppelendung, z. B. `datei.php.jpg`), MIME- und Bildinhaltsprüfung, Dateinamen-Bereinigung, `.htaccess` im Upload-Ordner ([../admin/media/MEDIA.md](../admin/media/MEDIA.md)).
+- Uploads: Endungs-Allowlist, gefährliche Endungen gesperrt (seit 3.4.12 auch als innere Doppelendung, z. B. `datei.php.jpg`), MIME- und Bildinhaltsprüfung, Dateinamen-Bereinigung, `.htaccess` im Upload-Ordner ([../admin/media/MEDIA.md](../admin/media/MEDIA.md)). Bei `strip_exif` entfernt `ImageMetadataStripper` EXIF/GPS, XMP, IPTC, Kommentare und Anhänge aus JPEG/PNG/WebP. Erhaltene Originale werden dabei **ohne Neukodierung** umgeschrieben; komprimierte Pixel, ICC-Profil und (als einziges notwendiges EXIF-Tag) Ausrichtung bleiben. Neu kodierte GD-Bilder korrigieren alle acht JPEG-EXIF-Orientierungen vor dem Speichern und setzen `imagesavealpha(true)`. `ImageOrientation::read()` liest per `exif_read_data` bewusst nur JPEG; fehlendes `ext-exif` gilt als Orientierung 1.
 - Geheimnisse in der Datenbank (`CryptoService`): Einstellungs-Secrets (SMTP, Azure, Graph, KI-Provider, Cron-Token) über `SettingsService` und die TOTP-Secrets (`mfa_secret`, `mfa_pending_secret`) werden authentifiziert verschlüsselt. XChaCha20-Poly1305 (libsodium), ohne sodium AES-256-GCM. Format `enc:v2:<alg>:<Schlüssel-ID>:<Daten>`; der Kontext (Einstellung bzw. Benutzer und Feld) ist mitauthentifiziert, ein Wert lässt sich also nicht in ein anderes Feld kopieren.
   - **Schlüssel** nur in `config/app.php`, nie in der Datenbank: `CMS_ENCRYPTION_KEY` (der Installer erzeugt ihn seit 4.0.0). Ohne diese Konstante wird der Schlüssel wie bisher aus `AUTH_KEY` und `SECURE_AUTH_KEY` abgeleitet; ist sie gesetzt, bleibt der abgeleitete Schlüssel zum Lesen im Schlüsselring.
   - **Rotation:** neuen Schlüssel in `CMS_ENCRYPTION_KEY`, den bisherigen in `CMS_ENCRYPTION_KEYS_PREVIOUS` (Komma-Liste). Werte mit älterer Schlüssel-ID werden beim Lesen und einmal je Schlüsselstand beim Start (`Bootstrap::migrateStoredSecrets()`) neu verschlüsselt. Wird ein Schlüssel entfernt, der noch gebraucht wird, sind die betroffenen Secrets nicht mehr lesbar und müssen neu eingegeben bzw. MFA neu eingerichtet werden.
@@ -129,6 +140,14 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 ### 10. Prüfen
 
 Sicherheits-Audit unter `/admin/security-audit` ([../admin/security/SECURITY-AUDIT.md](../admin/security/SECURITY-AUDIT.md)), Checkliste [../admin/PRUEF-CHECKLISTE.md](../admin/PRUEF-CHECKLISTE.md).
+
+Gezielte Tests (im CMS-Verzeichnis):
+
+```bash
+php TESTS/captcha/run.php
+php TESTS/community-captcha/run.php
+php TESTS/media-images/run.php
+```
 
 ### Verwandte Dokumente
 

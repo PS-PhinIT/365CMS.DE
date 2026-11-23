@@ -4,7 +4,7 @@
 
 ## English (summary)
 
-Snapshot of the runtime state verified against the source code on 2026-10-02 and rechecked for 4.0.0 on 2026-11-09: version and schema constants, feature areas and their maturity, the changes recorded since the 3.4.00 release (bundled in release 3.5.0), and a list of known gaps and inconsistencies found while updating the documentation. Release 4.1.0 (version `4.1.0`, schema `v26`) closes the gaps listed in "In 4.1.0 geschlossene Lücken"; CLI and alerting move to 4.3.0, the community module is planned for 4.2.0 (schema `v27`).
+Runtime snapshot verified against 4.2.0 on 2026-11-23. The Community module is implemented as a core module with public and member routes, admin management, Community-specific access/moderation services, retention/privacy integration and schema `v27`. Lists use keyset pagination without `OFFSET`; Community values are stored in UTC and access decisions fail closed.
 
 ## Deutsch
 
@@ -43,7 +43,7 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 | Backups, Updates, Monitoring, Cron | produktiv, mit S3-Offsite-Kopien | [../admin/system-settings/](../admin/system-settings/README.md) |
 | Ausgehende Webhooks | produktiv | [../admin/system-settings/WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md) |
 | Zentrale CLI (`CMS/cli.php`), Echtzeit-Alerting (`alert.raised`) | **geplant für 4.3.0** (Bereich 6, nicht Teil von 4.1.0) | [../workflow/specs/v4.1/06-CLI-ALERTING.md](../workflow/specs/v4.1/06-CLI-ALERTING.md) |
-| Community-Modul (Forum, Gruppen, Moderation) | **geplant für 4.2.0**, Schema `v27`, noch kein Code | [../workflow/specs/community/README.md](../workflow/specs/community/README.md) |
+| Community-Modul (Forum, Moderation, Anhänge, Benachrichtigungen) | produktiv; Kernmodul `community`, Schema `v27`, standardmäßig deaktiviert | [../member/COMMUNITY.md](../member/COMMUNITY.md), [../admin/community/README.md](../admin/community/README.md) |
 | JSON-API | lesend + Admin-Listen, Session oder optional Bearer-Token (`JWT_SECRET`) | [API-REFERENCE.md](API-REFERENCE.md) |
 
 ### Offene Punkte
@@ -52,10 +52,19 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 |---|---|---|
 | Signierte Update-Pakete (OFFEN-27) | offen; Prüfsumme (SHA-256) wird bereits erzwungen | [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md) |
 | Zentrale CLI und Echtzeit-Alerting | Release 4.3.0 | [../workflow/specs/v4.1/06-CLI-ALERTING.md](../workflow/specs/v4.1/06-CLI-ALERTING.md) |
-| Community-Modul (Forum) | Release 4.2.0, Schema `v27` | [../workflow/specs/community/IMPLEMENTATION-PLAN.md](../workflow/specs/community/IMPLEMENTATION-PLAN.md) |
 | E-Rechnung (ZUGFeRD/XRechnung) | nicht enthalten | [../admin/subscription/INVOICES.md](../admin/subscription/INVOICES.md) |
 
 Behobene Befunde früherer Prüfungen stehen im [Changelog](../../Changelog.md) und in den Berichten unter [../audit/](../audit/README.md); das Prüfprotokoll des aktuellen Releases ist [../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
+
+### Community 4.2.0 – umgesetzte Architektur
+
+- `CoreModuleService` verwaltet den standardmäßig ausgeschalteten Schalter `community`; `CommunityModule::isEnabled()` legt darüber eine fail-closed-Abfrage. Bei einer nicht lesbaren Modulkonfiguration ist Community aus.
+- `CommunityAccess` ist die einzige Entscheidungsstelle für Lesen, Schreiben und Moderation. Es vereinigt Modulstatus, Konto/SSO-Reife, Sperren, sechs globale Capabilities, Forenrechte, Vertrauensstufe, Zustände, Gründe, Rate-Limits und den Filter `cms_community_can`.
+- Die Lesecontroller verwenden `ReadScope` zur Request-Lokalisierung wiederholter Foren-/Themen-Lesen; große Listen verwenden `Cursor`/Keyset statt SQL-`OFFSET`.
+- Schreibvorgänge laufen über `WriteGate` und `ContentGuard`; `CaptchaGate` nutzt ausschließlich lokale Verfahren (`pow`, `image`, `math`) des Core.
+- Öffentliche Adressen (`/forum`, englisch `/en/forum`) liefern Berechtigungsfehler als 404. Interaktionen liegen unter `/forum/api/*`; Dateien liegen privat und werden nur nach erneuter Rechteprüfung ausgeliefert. Öffentliche Themenseiten erhalten JSON-LD.
+- `TopicTrashService`/`CommunityContentProvider` verbinden Themen mit dem zentralen Papierkorb. Zähler folgen der einheitlichen Semantik S1 in `CounterBook`.
+- `CommunityRetention`, `CommunityPrivacy` und `CommunityLegal` registrieren Aufbewahrung, Export/Löschung (`anonymize` oder `delete`) und den Abschnitt „8a. Forum (Community)“ unabhängig vom aktuellen Modulschalter.
 
 ### Grundsatz dieser Dokumentation
 

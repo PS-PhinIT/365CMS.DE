@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Performance
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/performance`, `-cache`, `-media`, `-database`, `-settings`, `-sessions` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_performance` | **Core-Modul:** `performance`
 
 ## English (summary)
@@ -33,7 +33,7 @@ All performance screens are rendered by `CMS/admin/performance-page.php` with th
 | `perf_lazy_loading_eager_images` | 1 | Anzahl (0–5) der ersten Bilder am Seitenanfang, die sofort geladen werden (Schutz für Hero-/LCP-Bilder) |
 | `perf_minify_css` / `perf_minify_js` | aus | Minifizierte Auslieferung über `AssetOptimizerService` |
 | `perf_webp_uploads` | an | WebP-Variante beim Upload |
-| `perf_strip_exif` | an | Metadaten (EXIF, GPS, XMP, IPTC) beim Upload entfernen; entspricht `strip_exif` der Medien-Einstellungen (Verhalten je Upload-Weg: `admin/media/MEDIA.md`, Abschnitt „Metadaten, Ausrichtung und Transparenz“) |
+| `perf_strip_exif` | an | Metadaten (EXIF, GPS, XMP, IPTC) beim Upload entfernen; entspricht `strip_exif` der Medien-Einstellungen. Erhaltene Originale werden ohne Bild-Neukodierung bereinigt; ICC und Ausrichtung bleiben. GD-EXIF-Lesen gilt nur für JPEG. Details: [../media/MEDIA.md](../media/MEDIA.md#metadaten-ausrichtung-und-transparenz) |
 | `perf_session_timeout_admin` | 28800 s (8 h) | Session-Lebensdauer für Administratoren |
 | `perf_session_timeout_member` | 2592000 s (30 Tage) | Session-Lebensdauer für Mitglieder |
 
@@ -49,7 +49,7 @@ All performance screens are rendered by `CMS/admin/performance-page.php` with th
 
 ### Medien-Optimierung
 
-`convert_media_to_webp` wandelt bestehende JPEG/PNG-Bilder stapelweise in WebP um (Standard 25, max. 200 je Lauf; Theme-, Plugin- und Systemordner ausgenommen). `rollback_webp_conversion` entfernt die zuletzt erzeugten WebP-Dateien wieder. Für Thumbnails und WebP mit Fortschrittsanzeige siehe auch den Verarbeitungsjob unter [../media/MEDIA.md](../media/MEDIA.md).
+`convert_media_to_webp` wandelt bestehende JPEG/PNG-Bilder stapelweise in WebP um (Standard 25, max. 200 je Lauf; Theme-, Plugin- und Systemordner ausgenommen). `rollback_webp_conversion` entfernt die zuletzt erzeugten WebP-Dateien wieder. Vor dem Kodieren wendet `ImageOrientation` alle acht EXIF-Werte auf JPEG-Pixel an; Drehungen und Spiegelungen werden damit auch in WebP/AVIF/Thumbnails korrekt. GD-Ausgaben setzen `imagesavealpha(true)`, sodass PNG-/WebP-/AVIF-Pfade transparente und halbtransparente Pixel behalten. `ext-exif` liest dabei ausschließlich JPEG-EXIF, nicht PNG-`eXIf` oder WebP-EXIF. Für Thumbnails und WebP mit Fortschrittsanzeige siehe auch den Verarbeitungsjob unter [../media/MEDIA.md](../media/MEDIA.md).
 
 ### Datenbank-Wartung
 
@@ -68,3 +68,9 @@ Die Übersicht warnt bei weniger als 1 GB freiem Speicher (kritisch < 512 MB) un
 ### Verwandte Dokumente
 
 [README.md](README.md) · [../media/MEDIA.md](../media/MEDIA.md) · [../diagnose/DIAGNOSE.md](../diagnose/DIAGNOSE.md) · [../../core/SERVICES.md](../../core/SERVICES.md)
+
+### Regressionstest der Bildpfade
+
+```bash
+php TESTS/media-images/run.php
+```

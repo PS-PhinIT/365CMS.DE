@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Theme: Entwicklungsablauf
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -11,7 +11,7 @@ Practical workflow for building or changing a theme: start from `cms-default` (c
 ### 1. Startpunkt
 
 1. `CMS/themes/cms-default/` nach `CMS/themes/mein-theme/` kopieren.
-2. In `style.css` (`Theme Name`, `Version`, `Author`), `theme.json` (`name`, `slug`, `version`), `update.json` (`slug`, `name`, `version`, `min_cms_version: "3.4.00"`) und `functions.php` (Klassen- und Konstantennamen, z. B. `MERIDIAN_*` → eigenes Präfix) anpassen.
+2. In `style.css` (`Theme Name`, `Version`, `Author`), `theme.json` (`name`, `slug`, `version`), `update.json` (`slug`, `name`, `version`, `min_cms_version` passend zur unterstützten CMS-Version, aktuell im Referenz-Theme `4.0.0`) und `functions.php` (Klassen- und Konstantennamen, z. B. `MERIDIAN_*` → eigenes Präfix) anpassen.
 3. Unter `/admin/themes` aktivieren: der Health-Check prüft Pflichtdateien und PHP-Syntax.
 
 ### 2. Lokale Entwicklung
@@ -27,11 +27,14 @@ Practical workflow for building or changing a theme: start from `cms-default` (c
 - [ ] `head` im `<head>`, `body_end` vor `</body>`, `cms_csp_runtime_tags()` als erstes Skript.
 - [ ] Keine Inline-Skripte ohne Nonce, keine `on*`-Attribute, keine externen Skripte ohne Freigabe und Consent.
 - [ ] Ausgaben escaped; Formulare mit CSRF-Token (`form_guard`, `logout`, `comment_<id>`).
+- [ ] Ist `register_captcha` aktiv, gibt die Registrierungsseite `cms_captcha_field('register', 'pow')` und `cms_captcha_asset_tags()` aus; Serverprüfung bleibt Kontext `register`.
+- [ ] Eigene Bilderzeugung nutzt für JPEG alle acht EXIF-Orientierungen, speichert mit `imagesavealpha(true)` und behandelt PNG-/WebP-EXIF nicht so, als wäre es vom GD-EXIF-Leser unterstützt.
 - [ ] Lokale Schriften und externer Consent werden respektiert.
 - [ ] Startseite in beiden Modi (`posts`, `landing`), Suche, Archive (`/kategorie`, `/tag`), 404, EN-Pfade (`/en/…`) geprüft.
 - [ ] Mobile Navigation (≤ 720 px) und Tastaturbedienung geprüft.
 - [ ] Versionsnummer in `style.css`, `theme.json`, `update.json`, `functions.php` identisch; Changelog in `update.json` ergänzt.
 - [ ] Sicherheits-Audit ohne neue Befunde zu Fremd-Assets.
+- [ ] `php TESTS/theme-contract/run.php` ist erfolgreich; bei Captcha-/Medienänderungen zusätzlich `php TESTS/captcha/run.php` bzw. `php TESTS/media-images/run.php`.
 
 ### 4. Auslieferung
 

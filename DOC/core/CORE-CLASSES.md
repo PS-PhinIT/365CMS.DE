@@ -1,10 +1,10 @@
 # 365CMS Projektdokumentation | Core: Klassenübersicht
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Schema:** v27 | **Status:** Stable
 
 ## English (summary)
 
-Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its sub-namespaces `CMS\Auth`, `CMS\Contracts`, `CMS\Http`, `CMS\Member` and `CMS\Routing`. Domain services in `CMS\Services\…` are listed in [SERVICES.md](SERVICES.md). Most core classes are singletons accessed via `::instance()`; services use `::getInstance()` and are additionally registered in the DI container. The inventory also covers `CMS\Auth\SSO` (Entra ID), `CMS\Routing\SsoRouter` and `PaymentRouter`, the account gate `Router::enforceAccountGates()` and the security services `PasswordPolicyService` and `MfaEnforcementService`.
+Inventory of the classes directly under `CMS/core/` and the implemented Community runtime (`CMS\Services\Community`). Domain services are listed in [SERVICES.md](SERVICES.md). The Community routes use `PublicController`, `ComposeController`, `ApiController`, and `AttachmentController`; access and write decisions are centralized in `CommunityAccess` and `WriteGate`.
 
 ## Deutsch
 
@@ -17,7 +17,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `Router` | `core/Router.php` | URI-Auflösung, Routenregister, Dispatch, Redirect, 404, Inhaltsaufbereitung | `addRoute()`, `dispatch()`, `redirect()`, `render404()`, `renderError()`, `getRequestLocale()`, `prepareRenderableContent()`, `streamContentAsPdf()`, ruft `dispatch()` die private Konto-Weiche `enforceAccountGates()` (abgelaufenes Passwort, MFA-Zwang) vor dem CSRF-Block auf und nimmt `/payments/webhook/` vom CSRF-Schutz aus |
 | `Hooks` | `core/Hooks.php` | Actions/Filter | siehe [HOOKS-REFERENCE.md](HOOKS-REFERENCE.md) |
 | `Database` | `core/Database.php` | PDO-Wrapper | siehe [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
-| `SchemaManager` | `core/SchemaManager.php` | Basisschema, Schema `v27` im Entwicklungsstand (117 Tabellen, `SCHEMA_VERSION = 'v27'`; die veröffentlichten Releases 4.1.x nutzen `v26`, 90 Tabellen), `FEATURE_TABLES_V26`, `FEATURE_TABLES_V27`, `ensureFeatureSchema()` | `createTables()`, `getFlagFile()`, `clearFlag()` |
+| `SchemaManager` | `core/SchemaManager.php` | Basisschema `v27` (118 Tabellendefinitionen; 28 Community-Tabellen mit 284 Spalten und 65 Nicht-Primär-Indizes), `FEATURE_TABLES_V26`, `FEATURE_TABLES_V27`, Integritätskonstanten und `ensureFeatureSchema()` | `getSchemaQueries()`, `createTables()`, `getFlagFile()`, `clearFlag()` |
 | `MigrationManager` | `core/MigrationManager.php` | Migrationen je Schemaversion | `run()`, `repairTables()` |
 | `DatabaseUpdateRunner` | `core/DatabaseUpdateRunner.php` | manuelles DB-Update | `getStatus()`, `run()` |
 | `CacheManager` | `core/CacheManager.php` | Datei-/APCu-Cache (PSR-16-ähnlich), HTTP-Cache-Header | `get()`, `set()`, `delete()`, `clear()`, `clearAll()`, `getStatus()`, `sendResponseHeaders()`, `sendConditionalHeaders()` |
@@ -60,6 +60,20 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `PluginManager` | `core/PluginManager.php` | Plugins laden, aktivieren, deaktivieren, löschen, per ZIP installieren; Abhängigkeitsprüfung |
 | `SubscriptionManager` | `core/SubscriptionManager.php` | Pakete, Abos, Limits, Plugin-Freigaben, Verlängerungshinweise |
 | `Member\PluginDashboardRegistry` | `core/Member/` | Registrierung von Plugin-Widgets und -Bereichen im Mitglieder-Dashboard |
+
+### Community (`CMS\Services\Community`)
+
+| Klasse/Gruppe | Aufgabe |
+|---|---|
+| `Http\PublicController`, `ComposeController` | Leseseiten, Profile, Suche, Listen, neues Thema, Antwort und Bearbeiten unter `/forum`; Keyset-/Cursor-Navigation, `ReadScope`, JSON-LD auf öffentlichen ersten Themenseiten |
+| `Http\ApiController`, `AttachmentController` | Nur-POST-Interaktionen unter `/forum/api/{aktion}` (CSRF mit dauerhaftem Token) sowie geschützte Auslieferung privater Anhänge |
+| `Service\CommunityAccess` | einzige fail-closed Rechteentscheidung; Modul, Konto/E-Mail, Sperren, sechs Capabilities, Forumrechte, Vertrauensstufe, Moderationsbereich, Zustände und Filter |
+| `Service\WriteGate`, `ContentGuard`, `CaptchaGate` | Schreibprüfung, Wortfilter/Spam/Rate-Limits/IP-HMAC sowie lokale Captchas (`pow`, `image`, `math`); der Filter darf Captcha nur verschärfen |
+| `Service\DraftService` | Server-Entwürfe je Mitglied und Ziel; Laden/Speichern nur nach `can('read')`, Verwerfen nach erfolgreichem Absenden |
+| `Support\ReadScope`, `Cursor` | Memoisierung pro Leseanforderung und Cursor-Keyset (`Y-m-d H:i:s UTC` + ID), keine `OFFSET`-Paginierung der Community-Listen |
+| `Service\AttachmentService` | privater Dateispeicher, MIME-/Namens-/Bildprüfung, Limits, sichere Zuordnung und Auslieferungsprüfung |
+| `Service\CounterBook`, `TopicTrashService`, `CommunityContentProvider` | atomare Zähler nach S1 und zentraler Papierkorb für Themen (`status = deleted`), Wiederherstellen/endgültiges Löschen |
+| `CommunityPrivacy`, `CommunityRetention`, `CommunityLegal` | DSGVO-Export/Löschung, Aufbewahrungsregeln und dynamischer Abschnitt 8a der Datenschutzerklärung |
 
 ### Routing (`CMS\Routing`)
 

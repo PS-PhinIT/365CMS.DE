@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Medienverwaltung
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/media` | **Capability:** `manage_media` | **CSRF-Aktion:** `admin_media`
 
 ## English (summary)
@@ -11,7 +11,7 @@ The media manager at `/admin/media` (`CMS/admin/media.php` → `CMS/admin/module
 - Actions: `upload`, `replace_item`, `replace_items`, `create_folder`, `rename_item`, `move_item`, `delete_item`, `bulk_items`, `assign_category`, `add_category`, `delete_category`, `save_settings`, `start/process/cancel_media_processing_job`.
 - Upload batch: max. 20 files and 100 MB per request, file names max. 180 characters.
 - Delivery of protected files goes through `GET /media-file?path=…` (`MediaDeliveryService`).
-- `strip_exif` (default on) removes EXIF/GPS, XMP, IPTC and comments from JPEG, PNG and WebP on every upload path. Preserved originals (library, member uploads, replace, Editor.js images) are cleaned without re-encoding (`ImageMetadataStripper`, pixels unchanged, only colour profile and orientation remain); other paths re-encode with GD. Every GD output applies the EXIF orientation (`ImageOrientation`, all eight values) and keeps PNG transparency.
+- `strip_exif` (default on) removes EXIF/GPS, XMP, IPTC and comments from JPEG, PNG and WebP on every upload path. Preserved originals (library, member uploads, replace, Editor.js images) are cleaned without re-encoding (`ImageMetadataStripper`, encoded pixels unchanged, ICC profile and orientation retained); other JPEG/PNG paths may re-encode with GD, while WebP is still cleaned without re-encoding. Every GD output applies JPEG EXIF orientation (`ImageOrientation`, all eight values) and keeps alpha. GD's EXIF reader is JPEG-only.
 - Optional AVIF derivatives (`auto_avif`, `AvifDerivativeService`) with `<picture>` output (`display: contents`), deleting an image also removes its generated sizes/WebP/AVIF, and a persistent usage index (`media_usage`, `MediaUsageIndex`, extensible via `cms_register_media_reference_extractors`).
 
 ## Deutsch
@@ -89,18 +89,18 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 
 ### Metadaten, Ausrichtung und Transparenz
 
-`strip_exif` („Metadaten entfernen (EXIF, GPS, XMP, IPTC)“, Standard an; in *Performance → Medien* als `perf_strip_exif`) gilt für JPEG, PNG und WebP auf allen Upload-Wegen. Wie entfernt wird, hängt davon ab, ob der Weg das Original erhält (seit 3.0.8):
+`strip_exif` („Metadaten entfernen (EXIF, GPS, XMP, IPTC)“, Standard an; in *Performance → Medien* als `perf_strip_exif`) gilt für JPEG, PNG und WebP auf allen Upload-Wegen. Wie entfernt wird, hängt davon ab, ob der Weg das Original erhält:
 
 | Upload-Weg | Original | Mit `strip_exif` |
 |---|---|---|
 | Mediathek (`uploadManagedFile()`), Mitgliederbereich (`FileUploadService`), Bild ersetzen (`replaceManagedFile()`), Editor.js-Bildblock (`uploadFile(…, true)`) | bleibt erhalten | Metadaten werden ohne Neukodierung entfernt (`Media\ImageMetadataStripper`). Die komprimierten Bilddaten bleiben Byte für Byte gleich, Qualität und Farbtiefe ändern sich nicht. |
-| Theme-Logos (`uploadFile($file, 'theme-logos')`), Editor.js-Dateianhänge und andere Aufrufe von `uploadFile()` ohne Originalschutz | wird neu geschrieben | JPEG und PNG werden mit GD neu kodiert (aufrecht gedreht, Transparenz erhalten, ohne Metadaten). WebP und Dateien, die GD nicht lesen kann, werden wie oben ohne Neukodierung bereinigt. |
+| Theme-Logos (`uploadFile($file, 'theme-logos')`), Editor.js-Dateianhänge und andere Aufrufe von `uploadFile()` ohne Originalschutz | wird neu geschrieben | JPEG und PNG werden mit GD neu kodiert (aufrecht gedreht, Transparenz erhalten, ohne Metadaten). WebP sowie JPEG/PNG, die GD nicht lesen oder schreiben kann, werden wie oben ohne Neukodierung bereinigt. |
 
-Entfernt werden EXIF (Kamera, Aufnahmezeit, GPS, eingebettetes Vorschaubild), XMP, IPTC, Kommentare, PNG-Textblöcke (`tEXt`, `zTXt`, `iTXt`, `tIME`) und an die Datei angehängte Daten (z. B. Zusatzbilder oder Bewegtbilder nach dem Bildende). Es bleiben ICC-Farbprofil, Gamma und Farbraum, Pixeldichte, Alphakanal und Animation. Ist eine EXIF-Ausrichtung ungleich 1 gesetzt, bleibt im erhaltenen Original genau dieses Tag stehen, damit Browser das Bild weiter aufrecht zeigen. Urheber und Copyright liest die Vorbelegung (`UploadHandler`) vorher aus. Ist `strip_exif` aus, bleiben erhaltene Originale unverändert.
+`ImageMetadataStripper` arbeitet an JPEG-Markern und PNG-/WebP-Blöcken statt mit GD. Entfernt werden EXIF (Kamera, Aufnahmezeit, GPS, eingebettetes Vorschaubild), XMP, IPTC, Kommentare, PNG-Textblöcke (`tEXt`, `zTXt`, `iTXt`, `tIME`, `eXIf`) und Daten nach JPEG-EOI, PNG-IEND oder dem RIFF-Block. Darstellungsrelevant bleiben ICC-Farbprofil, Gamma/Farbraum, Pixeldichte, Alphakanal, Animation und die **komprimierten Bilddaten selbst**. Bei einer Ausrichtung 2–8 wird aus dem EXIF nur ein minimales Ausrichtungs-Tag wieder eingesetzt, damit das nicht neu kodierte Original weiter aufrecht dargestellt werden kann. Urheber und Copyright liest die Vorbelegung (`UploadHandler`) vor der Bereinigung aus. Ist `strip_exif` aus, bleiben erhaltene Originale unverändert.
 
-**Ausrichtung:** GD verwirft beim Kodieren alle Metadaten. Vor jedem Neukodieren, Skalieren und vor dem Erzeugen von WebP-, AVIF- und Vorschaubildern wendet `Media\ImageOrientation` die EXIF-Ausrichtung eines JPEG auf die Pixel an (alle acht Werte, auch gespiegelte; gelesen mit `exif_read_data`, also nur mit `ext-exif`). Hochformat-Fotos vom Smartphone erscheinen dadurch in allen Fassungen aufrecht, Maximalmaße gelten für das aufrecht angezeigte Bild. `ImageService` (`autoOrient()`, Konvertierung nach WebP unter *Performance → Medien*) wendet die Ausrichtung ebenso an. Eine Ausrichtung in PNG (`eXIf`) oder WebP liest PHP nicht; sie wirkt dort nur im Original.
+**Ausrichtung:** GD verwirft beim Kodieren alle Metadaten. Vor jedem Neukodieren, Skalieren und vor dem Erzeugen von WebP-, AVIF- und Vorschaubildern wendet `Media\ImageOrientation` die EXIF-Ausrichtung eines **JPEG** auf die Pixel an. `read()` prüft die JPEG-Signatur und nutzt `exif_read_data`, daher nur mit `ext-exif`; ohne Erweiterung oder bei Fehlern gilt Orientierung 1. `apply()` bildet alle acht Werte ab, einschließlich horizontaler/vertikaler Spiegelungen und der Drehungen; Werte 5–8 tauschen Breite und Höhe. Hochformat-Fotos erscheinen dadurch in allen neu kodierten Fassungen aufrecht und ihre Maximalmaße gelten nach der Korrektur. `ImageService`, `ImageProcessor` und `AvifDerivativeService` verwenden denselben Dienst. GD bzw. `exif_read_data` lesen in diesem Weg weder PNG-`eXIf` noch WebP-EXIF; dort kann nur das unbehandelte, erhaltene Original auf sein Ausrichtungs-Tag vertrauen.
 
-**Transparenz:** Vor dem Speichern setzt die Verarbeitung `imagealphablending(false)` und `imagesavealpha(true)`. RGBA-PNGs wie Logos bleiben transparent, auch in halbtransparenten Bereichen; Palettenbilder behalten ihren transparenten Index.
+**Transparenz:** Vor dem Speichern setzt die Verarbeitung `imagesavealpha(true)`; der gemeinsame Neu-Kodierpfad deaktiviert zusätzlich `imagealphablending`. RGBA-PNGs wie Logos bleiben transparent, auch nach Drehen, Skalieren oder Bildersatz. Halbtransparente Pixel bleiben erhalten; Palettenbilder behalten ihren transparenten Index. Dasselbe Alpha-Setup wird beim WebP-/AVIF-Derivat angewendet.
 
 ### Nachträgliche Bildverarbeitung
 
@@ -120,3 +120,12 @@ Entfernt werden EXIF (Kamera, Aufnahmezeit, GPS, eingebettetes Vorschaubild), XM
 ### Verwandte Dokumente
 
 [README.md](README.md) · [../performance/PERFORMANCE.md](../performance/PERFORMANCE.md) · [../../workflow/MEDIA-UPLOAD-WORKFLOW.md](../../workflow/MEDIA-UPLOAD-WORKFLOW.md)
+
+### Tests
+
+```bash
+php TESTS/media-images/run.php
+php TESTS/community-uploads/run.php
+```
+
+Die Tests prüfen unter anderem alle acht EXIF-Orientierungen, den JPEG/PNG/WebP-Verlustfrei-Stripper, JPEG-only-EXIF-Lesen, ICC-/Ausrichtungserhalt, Pixelbytegleichheit, Uploadpfade und Alpha nach Neu-Kodierung, Skalierung, Rotation und Bildersatz.

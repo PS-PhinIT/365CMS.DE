@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Core: Architektur
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **PHP:** ≥ 8.4.1
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Schema:** v27 | **PHP:** ≥ 8.4.1
 
 ## English (summary)
 
@@ -62,7 +62,7 @@ Der Modus steht als `CMS_MODE` zur Verfügung; zusätzlich wird `cms_init_<modus
 ### Bootstrap im Detail (`Bootstrap::initializeCore()`)
 
 1. **Konstanten** sicherstellen (`ensureConstants()`), Plattformprüfung der gebündelten Bibliotheken (`validateBundledPhpPlatform()` liest Mindest-PHP-Versionen aus den Vendor-Manifests).
-2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()`: läuft nur, bis `SCHEMA_VERSION = v25` erreicht ist (Flag-Datei `cache/db_schema_v25.flag`). Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
+2. **Datenbank** (`Database::instance()`), danach `MigrationManager::run()`: führt auf `SCHEMA_VERSION = v27` (4.2.0) und verwendet die dazugehörige Flag-Datei. Seit 4.0.0 folgt `migrateStoredSecrets()`: verschlüsselte Einstellungen und TOTP-Secrets werden einmal je Code- und Schlüsselstand auf das aktuelle Format und den aktuellen Schlüssel gebracht (`Database::runSchemaOnce()` mit der Schlüsselring-ID als Variante; Flag `cache/db_runtime_stored_secrets_<prefix><crc>_<keyRingId>.flag`, das Flag des vorherigen Schlüsselstands wird entfernt).
 3. **Security** (`Security::init()`): CSP-Nonce, Sicherheitsheader, Session-Start.
 4. **Auth** (`Auth::instance()`): Session-Benutzer laden, Rollen-Lebensdauer prüfen.
 5. **Firewall** (`SecurityRuntimeService::handleRequest()`), nicht im CLI.
@@ -104,6 +104,15 @@ Plugins ergänzen Routen im Hook `register_routes` (`$router->addRoute('GET', '/
 
 `Router::prepareRenderableContent()` wandelt gespeicherte Inhalte in HTML: Editor.js-JSON → `EditorJsRenderer`, Shortcodes (`[site-table]`, `[hub-site]`), Inhaltsverzeichnis (`TableOfContents`), Bild-Lazy-Loading. Themes erhalten fertiges HTML und Metadaten.
 
+### Gemeinsame Slugs
+
+`CMS\Slug::fromText()` ist in 4.2.0 die gemeinsame Quelle für Beiträge, Seiten, Sprachkopien und Community-Themen. Vor der Filterung werden deutsche Umlaute ausdrücklich (`ä/ö/ü/ß` → `ae/oe/ue/ss`) und Buchstaben ohne Unicode-Akzentzerlegung (`ł, ø, æ, œ, þ, đ, ð, ı`) lesbar umgeschrieben. Anschließend entfernt die Unicode-Kompatibilitätszerlegung kombinierende Akzente (`é` → `e`); ohne `intl` deckt eine lokale Akzenttabelle häufige Zeichen ab. Übrig bleiben klein geschriebene `[a-z0-9-]`, zusammengefasste/abgeschnittene Bindestriche und optional eine ASCII-Längenkürzung. Bereits ASCII-geformte gespeicherte Slugs bleiben beim erneuten Durchlauf stabil; Schrift ohne Umschrift kann einen leeren Slug ergeben.
+
+### Sicherheits- und Medienbausteine (4.2.0)
+
+- `Security\CaptchaService` ist eine gemeinsame, lokale Aufgabe für Formulare (`FormSpamGuard`), Registrierung (`PublicRouter`) und Community (`CaptchaGate`). Anbieter `pow` (ALTCHA-Prinzip), `image` (GD) und `math` fallen bei Nichtverfügbarkeit auf `math`; `CaptchaStore` bindet sie zwei Stunden an Sitzung und Kontext und verbraucht sie einmalig. Theme-Helfer sind `cms_captcha_field()` und `cms_captcha_asset_tags()`.
+- `Media\ImageMetadataStripper` entfernt JPEG-/PNG-/WebP-Metadaten aus Containersegmenten, ohne kodierte Pixel neu zu berechnen; ICC, Farbraum, Alpha, Animation und bei Bedarf das minimale Orientation-Tag bleiben. Neu kodierte GD-Ausgaben laufen über `ImageOrientation` (alle acht JPEG-EXIF-Werte) und setzen vor dem Speichern den Alphakanal.
+
 ### Mehrsprachigkeit
 
 Zwei Inhaltssprachen (DE als Standard, EN unter `/en/…`): Inhalte führen `*_en`-Spalten, Slugs je Sprache, Archiv-Basen je Sprache. `ContentLocalizationService::buildLocalizedPath()` erzeugt Links, Hreflang-Gruppen verbinden Übersetzungen ([../admin/seo/SEO.md](../admin/seo/SEO.md)). Die Admin-Oberfläche ist deutsch; Übersetzungsdateien liegen unter `CMS/lang/`.
@@ -122,3 +131,12 @@ Fehler in optionalen Teilen (Plugin-Callback, Admin-View, Firewall, Hub-Auflösu
 ### Verwandte Dokumente
 
 [CORE-CLASSES.md](CORE-CLASSES.md) · [SERVICES.md](SERVICES.md) · [SECURITY.md](SECURITY.md) · [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) · [STRUCTURE.md](STRUCTURE.md)
+
+Gezielte Regressionstests:
+
+```bash
+php TESTS/captcha/run.php
+php TESTS/community-captcha/run.php
+php TESTS/media-images/run.php
+php TESTS/slugs/run.php
+```

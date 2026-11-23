@@ -1,6 +1,6 @@
 # 365CMS: Admin: Medien-Werkzeuge und Urheberangaben
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/media-tools` | **Capability:** `manage_media`
 
 ## English (summary)
@@ -10,7 +10,7 @@ in the current sizes, as a background job with progress, cancel and continuation
 closed. The page also holds the output switches for image credits (credit line in captions, Schema.org
 `ImageObject`, prefill from EXIF/IPTC on upload). Author, license, source and “AI-generated” are maintained per image in
 the media library. A second job regenerates AVIF versions (steps of 20 images, kept only if smaller than
-the WebP version of the same size); uploads create them when *Also create AVIF* is on under *Media → Settings*.
+the WebP version of the same size); uploads create them when *Also create AVIF* is on under *Media → Settings*. Regeneration uses the common orientation and alpha paths: JPEG EXIF orientation is applied for all eight values before GD reencoding, and `imagesavealpha(true)` preserves transparency. The source originals are not reencoded by thumbnail regeneration.
 
 ## Deutsch
 
@@ -89,3 +89,9 @@ Größen und WebP-Fassungen.
 `CMS/core/Services/Media/AvifDerivativeService.php`, `CMS/core/Services/Media/AvifRegenerationService.php`,
 `CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php`,
 `CMS/core/Services/Media/MediaLicenseService.php`, `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php`
+
+### Tests
+
+```bash
+php TESTS/media-images/run.php
+```
