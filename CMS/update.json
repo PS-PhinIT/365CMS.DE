@@ -2,13 +2,13 @@
   "slug": "365cms-core",
   "name": "365CMS",
   "type": "core",
-  "version": "4.1.8",
+  "version": "4.2.0",
   "min_php": "8.4.1",
-  "released": "2026-11-15",
-  "schema_version": "v26",
-  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.1.8-update.zip",
+  "released": "2026-11-23",
+  "schema_version": "v27",
+  "download_url": "https://365cms.de/marketplace/core/365cms/365CMS-4.2.0-update.zip",
   "changelog_url": "https://raw.githubusercontent.com/PS-PhinIT/365CMS.DE/main/Changelog.md",
-  "checksum_sha256": "b661190884040e4aeda6f0e372771555b9504644f1d7815974a8c4aa126ab5fc",
-  "notes": "WICHTIG beim Update von 3.5.x: Der Updater von 3.5.x ersetzt die Ordner plugins/ und themes/ vollständig – nachinstallierte Plugins und eigene Themes vorher sichern und danach wieder hochladen (ab 4.0.0 bleiben sie erhalten); die Daten der Plugins cms-contact, cms-downloads, cms-feed, cms-newsletter und cms-knowledgebase werden automatisch in den Core übernommen. Release 4.1.8 (15.11.2026): kumulatives Patch-Release 4.1.1 bis 4.1.8 aus der Release-Prüfung 4.1.0 – Sicherheitskorrekturen (u. a. Entra-ID-Sitzung, Zugriffsprüfungen), Datenbank- und Upgrade-Pfad, Funktionskorrekturen, PHP 8.4/8.5, Performance und Caching (Monitor-Seiten, Cache-Invalidierung, cachebare Beitragsseiten), Medien (Fassungen beim Verschieben, AVIF nach dem Upload) delegierbare Rechte für Zahlungen, Rechnungen, Block-Vorlagen und Webhooks sowie Zahlungen (Erstattung und Rückbuchung mit Stornorechnung, Kündigung beim Anbieter bei Tarifwechsel und durch Mitglieder; bei Stripe die Webhook-Ereignisse charge.refunded und charge.dispute.created ergänzen). Schema bleibt v26, kein manuelles Datenbank-Update nötig. Wer von 4.0.x kommt: nach dem Update unter Admin > Updates das Datenbank-Update auf v26 ausführen; den Cron mindestens stündlich laufen lassen. Neue Rechte aus 4.1.0 hat zunächst nur die Rolle admin (unter Benutzer > Rollen vergeben).",
-  "critical": true
+  "checksum_sha256": "2f8d4319684c452991bca1aa96e43ebeee7899c92b7f67e52a0c4d24000e512c",
+  "notes": "WICHTIG beim Update von 3.5.x: Der Updater von 3.5.x ersetzt die Ordner plugins/ und themes/ vollständig – nachinstallierte Plugins und eigene Themes vorher sichern und danach wieder hochladen (ab 4.0.0 bleiben sie erhalten); die Daten der Plugins cms-contact, cms-downloads, cms-feed, cms-newsletter und cms-knowledgebase werden automatisch in den Core übernommen. Release 4.2.0 (23.11.2026): neues Kernmodul Community (Forum unter /forum, abschaltbar, löst das Plugin cms-forum ab; Schema v27 mit den Tabellen des Moduls), lokaler Captcha-Dienst des Core (Proof-of-Work, Bild, Rechenaufgabe) für Community-Formulare, Formulare der Antispam-Stufe hoch und die Registrierung, Weiterleitungen im Admin mit 250 Einträgen je Seite. Nach dem Update unter Admin > Updates das Datenbank-Update auf v27 ausführen. Rollen: subscriber, contributor und eigene Rollen erhalten community.view und community.participate nicht automatisch (unter Benutzer > Rollen vergeben); die Rolle moderator ist neu. Stand die Entra-Standardrolle auf einer eigenen Rolle moderator, gilt ab 4.2.0 member. Das Theme cms-phinit bringt die Theme-Anbindung selbst mit.",
+  "critical": false
 }

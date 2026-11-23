@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Core: Datenbank & Schema
 
-> **Stand:** 2026-11-19 | **Version:** 4.1.8 (veröffentlicht), 4.2.0 in Entwicklung | **Schema:** `v27` (Entwicklungsstand; die veröffentlichten Releases 4.1.x nutzen `v26`) | **Status:** Stable bis v26
+> **Stand:** 2026-11-19 | **Version:** 4.2.0 (veröffentlicht) | **Schema:** `v27` (die Releases 4.1.x nutzen `v26`) | **Status:** Stable bis v26
 
 ## English (summary)
 

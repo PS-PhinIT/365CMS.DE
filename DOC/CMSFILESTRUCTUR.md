@@ -162,7 +162,7 @@ Root-Klassen in `CMS/core/`:
 - `ThemeManager.php`
 - `Totp.php`
 - `VendorRegistry.php`
-- `Version.php` (`CURRENT = '4.1.8'`)
+- `Version.php` (`CURRENT = '4.2.0'`)
 - `WP_Error.php`
 
 Subdirectories:
