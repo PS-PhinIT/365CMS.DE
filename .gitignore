@@ -87,16 +87,11 @@ secrets/
 .htpasswd
 .htaccess.local
 .gitlog_365cms.txt
-/ASSETS/
-/TEST/
 CMS/tmp-seo-test/pages.xml
 CMS/tmp-seo-test/sitemap.xml
 /DOC/assets/VENDOR-NETWORK-PATHS.md
 CMS/tmp*.php
 CMS/tmp-hub-template-dump.php
-AUDIT/*
-AUDIT*
-AUDIT
 # TESTS/ ist vollständig versioniert. Keine Regel für /tests/: Auf Dateisystemen ohne Groß-/Kleinschreibung
 # (Windows, macOS) träfe sie auch TESTS/ und würde neue Suiten stillschweigend ausschließen.
 /STAGING/tests/
@@ -109,7 +104,5 @@ cache/*
 /CMS/cache
 /CMS/data
 /RELEASE/.build-*
-/TEST/*.*
-/TEST/*
 *.bak
 CMS/assets/*/Test/*
