@@ -137,6 +137,51 @@ final class PaymentService
         return $modifier === null ? null : (int) (new \DateTimeImmutable('@' . $base))->modify($modifier)->getTimestamp();
     }
 
+    /**
+     * Audit 4.2.0 (DB-420-01): vorläufige Bestellnummer für den INSERT. Die endgültige Nummer hängt an der echten ID
+     * (`formatOrderNumber()`); `information_schema.TABLES.AUTO_INCREMENT` ist unter MySQL 8 bis zu 24 h zwischengespeichert
+     * und unter Last nicht eindeutig, die eindeutige Spalte `order_number` ließ Folgebestellungen sonst scheitern.
+     *
+     * @param \Closure(int): string|null $bytes Standard `random_bytes()`
+     */
+    public static function provisionalOrderNumber(?\Closure $bytes = null): string
+    {
+        return 'TMP-' . bin2hex(($bytes ?? static fn (int $n): string => random_bytes($n))(16));
+    }
+
+    /**
+     * Audit 4.2.0 (DB-420-01): Bestellnummer aus dem Format (`{Y}`, `{M}`, `{D}`, `{ID}`, `{R}`) und der echten ID der Zeile.
+     * Ohne `{ID}` im Format wird `-{ID}` angehängt (sonst wäre die Nummer nicht eindeutig); `{R}` sind vier Hex-Zeichen aus
+     * `random_bytes()`. Erlaubt sind Buchstaben, Ziffern, `-`, `_`, `.` und `/`; zu lange oder leere Ergebnisse fallen auf
+     * `BST{Y}{M}-{ID}` zurück (Spalte höchstens 64 Zeichen, Verlängerungen hängen `-Vxxxxxx` an).
+     *
+     * @param \Closure(int): string|null $bytes Standard `random_bytes()`
+     */
+    public static function formatOrderNumber(string $format, int $orderId, int $timestamp, ?\Closure $bytes = null): string
+    {
+        $bytes ??= static fn (int $n): string => random_bytes($n);
+        $id = str_pad((string) max(1, $orderId), 4, '0', STR_PAD_LEFT);
+        $build = static function (string $pattern) use ($id, $timestamp, $bytes): string {
+            if (!str_contains($pattern, '{ID}')) {
+                $pattern .= '-{ID}';
+            }
+
+            return strtr($pattern, [
+                '{Y}' => date('Y', $timestamp),
+                '{M}' => date('m', $timestamp),
+                '{D}' => date('d', $timestamp),
+                '{ID}' => $id,
+                '{R}' => strtoupper(bin2hex($bytes(2))),
+            ]);
+        };
+        $number = $build(trim($format));
+        if (preg_match('#^[A-Za-z0-9][A-Za-z0-9._/\-]{0,55}$#D', $number) !== 1) {
+            $number = $build('BST{Y}{M}-{ID}');
+        }
+
+        return $number;
+    }
+
     public static function interval(string $cycle): string
     {
         return match ($cycle) {
@@ -406,7 +451,7 @@ final class PaymentService
         // `async_payment_succeeded`) aktivieren das Abo sonst doppelt. Nur die Anfrage, die die Zeile umstellt, fährt fort.
         $changed = $this->db->execute(
             "UPDATE {$this->prefix}orders SET status = 'paid', paid_at = ?, payment_ref = ? WHERE id = ? AND status IN ('pending', 'failed')",
-            [gmdate('Y-m-d H:i:s', $now), mb_substr((string) $event['payment_ref'], 0, 200) ?: null, $orderId]
+            [self::localTime($now), mb_substr((string) $event['payment_ref'], 0, 200) ?: null, $orderId]
         )->rowCount();
         if ($changed !== 1) {
             return ['status' => 'ignored', 'order_id' => $orderId];
@@ -545,10 +590,12 @@ final class PaymentService
         $periodEnd = $event['period_end'] !== null && (int) $event['period_end'] > $now
             ? (int) $event['period_end']
             : (self::periodEnd(max($current, $now), $cycle) ?? $now);
-        $end = gmdate('Y-m-d H:i:s', $periodEnd);
+        // DB-420-02: `current_period_end` in UTC (Anbieter-Periode); `end_date`/`next_billing_date` wie `SubscriptionManager`
+        // in Ortszeit, weil die Leser sie mit NOW() der Sitzung (Zeitzone von PHP) vergleichen.
+        $end = self::localTime($periodEnd);
         $this->db->update('user_subscriptions', [
             'status' => 'active',
-            'current_period_end' => $end,
+            'current_period_end' => gmdate('Y-m-d H:i:s', $periodEnd),
             'end_date' => $end,
             'next_billing_date' => $end,
         ], ['id' => (int) $subscription['id']]);
@@ -621,9 +668,9 @@ final class PaymentService
             'provider' => $provider,
             'provider_checkout_id' => mb_substr((string) $event['payment_ref'], 0, 255) ?: null,
             'payment_ref' => mb_substr((string) $event['payment_ref'], 0, 200) ?: null,
-            'paid_at' => gmdate('Y-m-d H:i:s', $now),
+            'paid_at' => self::localTime($now),
             'notes' => 'Automatische Verlängerung',
-            'created_at' => gmdate('Y-m-d H:i:s', $now),
+            'created_at' => self::localTime($now),
         ]);
 
         return (int) $id;
@@ -660,7 +707,7 @@ final class PaymentService
         }
         $this->db->update('user_subscriptions', [
             'status' => 'cancelled',
-            'cancelled_at' => $this->now(),
+            'cancelled_at' => self::localTime(($this->clock)()),
         ], ['id' => (int) $subscription['id']]);
         Hooks::doAction('cms_subscription_ended', (int) $subscription['id'], (int) $subscription['user_id'], $provider);
 
@@ -735,8 +782,8 @@ final class PaymentService
             }
             $this->db->update('user_subscriptions', [
                 'status' => 'cancelled',
-                'cancelled_at' => $this->now(),
-                'end_date' => $this->now(),
+                'cancelled_at' => self::localTime(($this->clock)()),
+                'end_date' => self::localTime(($this->clock)()),
                 'next_billing_date' => null,
             ], ['id' => (int) $subscription['id']]);
             Hooks::doAction('cms_subscription_ended', (int) $subscription['id'], $userId, $provider);
@@ -794,7 +841,7 @@ final class PaymentService
     {
         $row = $this->db->get_row(
             "SELECT * FROM {$this->prefix}user_subscriptions WHERE user_id = ? AND status = 'active' AND (end_date IS NULL OR end_date > ?) ORDER BY id DESC LIMIT 1",
-            [$userId, $this->now()]
+            [$userId, self::localTime(($this->clock)())]
         );
         if ($row === null) {
             return ['success' => false, 'error' => 'Kein aktives Abo.'];
@@ -811,7 +858,7 @@ final class PaymentService
             return ['success' => false, 'error' => 'Die Kündigung beim Zahlungsanbieter ist fehlgeschlagen. Bitte versuche es später erneut oder wende dich an uns.'];
         }
         $this->db->update('user_subscriptions', [
-            'cancelled_at' => $this->now(),
+            'cancelled_at' => self::localTime(($this->clock)()),
             'next_billing_date' => null,
         ], ['id' => (int) $subscription['id']]);
         Hooks::doAction('cms_subscription_cancelled_by_member', (int) $subscription['id'], $userId);
@@ -847,9 +894,19 @@ final class PaymentService
         return $row !== null ? (array) $row : null;
     }
 
+    /** Zeitstempel der Tabelle `payment_events` (UTC). */
     private function now(): string
     {
         return gmdate('Y-m-d H:i:s', ($this->clock)());
+    }
+
+    /**
+     * Audit 4.2.0 (DB-420-02): Zeit für Spalten, die der übrige Core in Ortszeit schreibt und mit NOW() vergleicht
+     * (`orders.paid_at`/`created_at`, `user_subscriptions.end_date`/`next_billing_date`/`cancelled_at`).
+     */
+    private static function localTime(int $timestamp): string
+    {
+        return date('Y-m-d H:i:s', $timestamp);
     }
 
     /**
