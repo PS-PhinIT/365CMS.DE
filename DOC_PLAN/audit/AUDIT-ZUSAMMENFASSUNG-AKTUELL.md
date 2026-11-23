@@ -20,7 +20,7 @@
    aktuellen Importpfad reproduzieren.
 
 Alle weiteren alten Aufgaben bleiben nur als Evidenz sichtbar. Details:
-[OFFENE-BEFUNDE.md](OFFENE-BEFUNDE.md).
+[Offene Befunde](audits/README.md#offene-befunde).
 
 ## 4.2-Prüfschwerpunkt
 

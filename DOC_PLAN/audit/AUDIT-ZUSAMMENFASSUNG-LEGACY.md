@@ -4,15 +4,20 @@
 
 ## Erhaltene Beweisdateien
 
-Die drei detaillierten Code-Audits bleiben unter `old_audits/`:
+Als Einzeldateien erhalten ist nur das Gesamtaudit 2026-10-14 im Ordner `audit_2026-10-14/`
+(Index: [audits/README.md](audits/README.md)):
 
-- `AUDIT-CORE-2026-06-10.md`
-- `AUDIT-ADMIN-2026-06-10.md`
-- `AUDIT-MEMBER-INCLUDES-VIEWS-2026-06-10.md`
+- Hauptbericht: [GESAMTAUDIT-2026-10-14.md](audit_2026-10-14/GESAMTAUDIT-2026-10-14.md), Folgeaudit desselben Tages:
+  [Readme.md](audit_2026-10-14/Readme.md)
+- Teilberichte: [Sicherheit](audit_2026-10-14/FOLGEAUDIT-SICHERHEIT-2026-10-14.md),
+  [Geschwindigkeit/Last](audit_2026-10-14/FOLGEAUDIT-PERFORMANCE-2026-10-14.md),
+  [Funktionen/Verweise](audit_2026-10-14/FOLGEAUDIT-FUNKTIONEN-2026-10-14.md),
+  [GUI/Barrierefreiheit](audit_2026-10-14/FOLGEAUDIT-BARRIEREFREIHEIT-2026-10-14.md),
+  [Prüfkatalog/Methodik](audit_2026-10-14/FOLGEAUDIT-PRUEFKATALOG-2026-10-14.md)
 
-Sie dokumentieren getrennte Teilbereiche und sind auf den damaligen Stand
-3.3.47 bezogen. Ihre Scores, Fundzahlen und Empfehlungen sind keine aktuelle
-Freigabeaussage.
+Die detaillierten Code-Audits vom 2026-06-10 (`core/`, `admin/`, `member/`/`includes/`/`views/`, Stand 3.3.47) sowie
+die früheren Rohlisten wurden entfernt; ihre Themen sind in der Tabelle unten verdichtet. Die Oktober-Berichte beziehen
+sich auf 3.5.0. Scores, Fundzahlen und Empfehlungen aller Altberichte sind keine aktuelle Freigabeaussage.
 
 ## Zusammengefasster Altinhalt
 
@@ -52,4 +57,4 @@ Evidence erhalten.
 - Community: vorhandene P2/P3-Roadmap.
 
 Maßgeblich sind [../STATUS.md](../STATUS.md) und
-[OFFENE-BEFUNDE.md](OFFENE-BEFUNDE.md).
+[Offene Befunde](audits/README.md#offene-befunde).

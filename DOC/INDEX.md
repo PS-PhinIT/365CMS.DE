@@ -35,7 +35,7 @@ Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code is
 | Installation | [INSTALLATION.md](INSTALLATION.md) |
 | Root README | [../README.md](../README.md) |
 | Changelog | [../Changelog.md](../Changelog.md) |
-| Status / known gaps | [core/STATUS.md](core/STATUS.md), [audit/README.md](audit/README.md) |
+| Status / known gaps | [core/STATUS.md](core/STATUS.md), [audit/audits/README.md](../DOC_PLAN/audit/audits/README.md) |
 
 ---
 
@@ -208,7 +208,7 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 | Area / Bereich | Documents / Dokumente |
 |---|---|
 | Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md) |
-| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions, backups, status displays): [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md); release audit 4.1.0: [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
+| Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit_2026-10-14/GESAMTAUDIT-2026-10-14.md](../DOC_PLAN/audit/audit_2026-10-14/GESAMTAUDIT-2026-10-14.md), follow-up audit: [audit_2026-10-14/Readme.md](../DOC_PLAN/audit/audit_2026-10-14/Readme.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions, backups, status displays): [audit/audits/FOLGEAUDIT-2026-11-08.md](../DOC_PLAN/audit/audits/FOLGEAUDIT-2026-11-08.md); release audit 4.1.0: [audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md](../DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
 
 ---
 
@@ -349,14 +349,14 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 
 **`audit/`**
 
-- [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md): Release-Prüfung 4.1.0
-- [audit/FOLGEAUDIT-2026-11-09.md](audit/FOLGEAUDIT-2026-11-09.md): Folgeaudit 2026-11-09
-- [audit/FOLGEAUDIT-2026-11-12.md](audit/FOLGEAUDIT-2026-11-12.md): Folgeaudit 2026-11-12
-- [audit/FUNKTIONEN-VERWEISE.md](audit/FUNKTIONEN-VERWEISE.md): 365CMS, Gesamtaudit 2026-10-14 | Funktionen und Verweise
-- [audit/GUI-BARRIEREFREIHEIT.md](audit/GUI-BARRIEREFREIHEIT.md): 365CMS, Gesamtaudit 2026-10-14 | GUI und Barrierefreiheit
-- [audit/PERFORMANCE-LAST.md](audit/PERFORMANCE-LAST.md): 365CMS, Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
-- [audit/PRUEFKATALOG.md](audit/PRUEFKATALOG.md): 365CMS, Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
-- [audit/SICHERHEIT.md](audit/SICHERHEIT.md): 365CMS, Gesamtaudit 2026-10-14 | Sicherheit
+- [audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md](../DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md): Release-Prüfung 4.1.0
+- [audit/audits/FOLGEAUDIT-2026-11-09.md](../DOC_PLAN/audit/audits/FOLGEAUDIT-2026-11-09.md): Folgeaudit 2026-11-09
+- [audit/audits/FOLGEAUDIT-2026-11-12.md](../DOC_PLAN/audit/audits/FOLGEAUDIT-2026-11-12.md): Folgeaudit 2026-11-12
+- [audit_2026-10-14/FOLGEAUDIT-FUNKTIONEN-2026-10-14.md](../DOC_PLAN/audit/audit_2026-10-14/FOLGEAUDIT-FUNKTIONEN-2026-10-14.md): 365CMS, Gesamtaudit 2026-10-14 | Funktionen und Verweise
+- [audit_2026-10-14/FOLGEAUDIT-BARRIEREFREIHEIT-2026-10-14.md](../DOC_PLAN/audit/audit_2026-10-14/FOLGEAUDIT-BARRIEREFREIHEIT-2026-10-14.md): 365CMS, Gesamtaudit 2026-10-14 | GUI und Barrierefreiheit
+- [audit_2026-10-14/FOLGEAUDIT-PERFORMANCE-2026-10-14.md](../DOC_PLAN/audit/audit_2026-10-14/FOLGEAUDIT-PERFORMANCE-2026-10-14.md): 365CMS, Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
+- [audit_2026-10-14/FOLGEAUDIT-PRUEFKATALOG-2026-10-14.md](../DOC_PLAN/audit/audit_2026-10-14/FOLGEAUDIT-PRUEFKATALOG-2026-10-14.md): 365CMS, Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
+- [audit_2026-10-14/FOLGEAUDIT-SICHERHEIT-2026-10-14.md](../DOC_PLAN/audit/audit_2026-10-14/FOLGEAUDIT-SICHERHEIT-2026-10-14.md): 365CMS, Gesamtaudit 2026-10-14 | Sicherheit
 ---
 
 ## Task shortcuts | Direktlinks für häufige Aufgaben

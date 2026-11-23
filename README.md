@@ -40,7 +40,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 - 🛡️ **Security & Hardening by Default:** Strict Content Security Policy (CSP) with request nonces and **Trusted Types** runtime, authenticated encryption (`XChaCha20-Poly1305`), Passkeys (WebAuthn), TOTP MFA, LDAP/Active Directory, SSRF-protected HTTP client, and an integrated Security Audit suite.
 - 🇪🇺 **Privacy, GDPR & Accessibility Native:** Consent-gated analytics (GA4, GTM, Matomo), local WOFF2 font hosting, automated data retention rules with dry-run previews, GDPR self-export/deletion workflows, and a WCAG 2.1 AA / EN 301 549 accessibility statement generator.
 - 🆕 **New in 4.2.0:** Community forum module (`/forum`, switchable core module, schema `v27`): categories and forums with a permission matrix, topics and posts with Markdown and a visual editor (uploads, drafts, preview), reactions, subscriptions, reports and moderation, search and SEO (structured data), member area and public profile, GDPR export/erasure and retention rules; local captcha service for forms and registration.
-- 🛠️ **4.1.1 – 4.1.8:** patch releases from the 4.1.0 release audit (security, database/upgrade path, functional fixes, PHP 8.4/8.5 regressions, performance and caching); see [`DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`](DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
+- 🛠️ **4.1.1 – 4.1.8:** patch releases from the 4.1.0 release audit (security, database/upgrade path, functional fixes, PHP 8.4/8.5 regressions, performance and caching); see [`DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`](DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md).
 - 🆕 **New in 4.1.0:** Microsoft Entra ID single sign-on (OIDC/PKCE), configurable password policy and role-based MFA enforcement, AVIF derivatives with `<picture>` output and a media usage index, four-eyes review with expiring preview links, reusable EditorJS block templates, content expiry & review reminders, S3-compatible offsite backups, outbound webhooks and online payments (Stripe, Mollie). Details: [`Changelog.md`](Changelog.md) · [`DOC/README.md`](DOC/README.md).
 - 🧱 **Modern Editorial Experience:** Powered by a heavily customized **Editor.js** canvas with block-level revisions & diffs, enforced publish checklists, distraction-free focus mode, editorial calendar, native DE/EN content workflows, and optional admin-only AI assistance.
 
@@ -133,7 +133,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Admin Guide & Menu Profiles** | [`DOC/admin/GUIDE.md`](DOC/admin/GUIDE.md) · [`DOC/admin/ADMIN-MENU.md`](DOC/admin/ADMIN-MENU.md) |
 | **Plugin & Theme Development** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operational Workflows** | [`DOC_PLAN/`](DOC_PLAN/) |
-| **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) |
+| **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC_PLAN/audit/audits/README.md) |
 | **Releases & Changelog** | [`RELEASE/README-4.2.0.md`](RELEASE/README-4.2.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community module (4.2.0, schema `v27`)](DOC_PLAN/v4.2/README.md) · [CLI & alerting (4.3.0)](DOC_PLAN/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Community Guidelines** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
@@ -161,7 +161,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 - 🛡️ **Sicherheit ab Werk (Security-First):** Strikte Content Security Policy (CSP) mit Request-Nonces und **Trusted Types**, authentifizierte Verschlüsselung (`XChaCha20-Poly1305`), Passkeys (WebAuthn), TOTP-MFA, LDAP/Active Directory, SSRF-geschützter HTTP-Client und ein integriertes Sicherheits-Audit.
 - 🇪🇺 **DSGVO- & Barrierefreiheits-nativ:** Einwilligungsgesteuerte Analytics (GA4, GTM, Matomo), lokales WOFF2-Font-Hosting, automatisierte Löschfristen mit Probelauf, DSGVO-Selbstauskunft/-Löschung und Generator für Barrierefreiheitserklärungen (WCAG 2.1 AA / EN 301 549).
 - 🆕 **Neu in 4.2.0:** Community-Modul (Forum unter `/forum`, abschaltbares Kernmodul, Schema `v27`): Kategorien und Foren mit Rechte-Matrix, Themen und Beiträge mit Markdown und visuellem Editor (Upload, Entwürfe, Vorschau), Reaktionen, Abos, Meldungen und Moderation, Suche und SEO (strukturierte Daten), Mitgliederbereich und öffentliches Profil, DSGVO-Auskunft und -Löschung mit Löschfristen; lokaler Captcha-Dienst für Formulare und Registrierung.
-- 🛠️ **4.1.1 – 4.1.8:** Patch-Releases aus der Release-Prüfung 4.1.0 (Sicherheit, Datenbank/Upgrade-Pfad, Funktionen, Regressionen unter PHP 8.4/8.5, Performance und Caching); siehe [`DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`](DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
+- 🛠️ **4.1.1 – 4.1.8:** Patch-Releases aus der Release-Prüfung 4.1.0 (Sicherheit, Datenbank/Upgrade-Pfad, Funktionen, Regressionen unter PHP 8.4/8.5, Performance und Caching); siehe [`DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`](DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md).
 - 🆕 **Neu in 4.1.0:** Anmeldung mit Microsoft Entra ID (OIDC/PKCE), konfigurierbare Passwort-Richtlinie und rollenbasierter MFA-Zwang, AVIF-Fassungen mit `<picture>`-Ausgabe und Medien-Verwendungsnachweis, Vier-Augen-Prinzip mit zeitlich begrenzten Vorschau-Links, wiederverwendbare EditorJS Block Vorlagen, Ablaufdatum und Wiedervorlage für Inhalte, S3-kompatible Offsite-Backups, ausgehende Webhooks und Online-Zahlungen (Stripe, Mollie). Details: [`Changelog.md`](Changelog.md) · [`DOC/README.md`](DOC/README.md).
 - 🧱 **Moderne Redaktion:** Angepasster **Editor.js**-Blockeditor mit Block-Revisionen & Diff-Ansicht, erzwungener Veröffentlichungs-Checkliste, ablenkungsfreiem Fokusmodus, Redaktionskalender, nativer DE/EN-Mehrsprachigkeit sowie optionaler Admin-KI.
 
@@ -254,7 +254,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Admin-Leitfaden & Menü-Profile** | [`DOC/admin/GUIDE.md`](DOC/admin/GUIDE.md) · [`DOC/admin/ADMIN-MENU.md`](DOC/admin/ADMIN-MENU.md) |
 | **Plugin- & Theme-Entwicklung** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operative Workflows** | [`DOC_PLAN/`](DOC_PLAN/) |
-| **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC/audit/README.md) |
+| **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC_PLAN/audit/audits/README.md) |
 | **Release-Pakete & Changelog** | [`RELEASE/README-4.2.0.md`](RELEASE/README-4.2.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community-Modul (4.2.0, Schema `v27`)](DOC_PLAN/v4.2/README.md) · [CLI & Alerting (4.3.0)](DOC_PLAN/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Verhaltenskodex** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |

@@ -52,7 +52,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 ### Release- und Prüfstatus
 
 - **4.2.0 / v27** ist veröffentlicht. Der ausgelieferte Stand des Community-Moduls ist in [admin/community/README.md](admin/community/README.md), [member/COMMUNITY.md](member/COMMUNITY.md), [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) und [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) dokumentiert.
-- Frühere Versionen und ihre Korrekturen sind historische Einträge in [../Changelog.md](../Changelog.md) und den datierten Dokumenten unter [audit/](audit/), nicht der aktuelle Produktstand.
+- Frühere Versionen und ihre Korrekturen sind historische Einträge in [../Changelog.md](../Changelog.md) und den datierten Dokumenten unter [audit/](../DOC_PLAN/audit/audits/), nicht der aktuelle Produktstand.
 - Nicht angekündigte Folgefunktionen werden nicht als zugesagter Roadmap-Stand geführt.
 - Tests werden nicht anhand einer festen Summe dokumentiert: `php TESTS/run-all.php` entdeckt laufend alle `TESTS/<suite>/run.php`. Eine einzelne Suite läuft mit `php TESTS/<suite>/run.php [-v]`; der gemeinsame Runner gibt Einleitung und Entdeckungslogik aus.
 
@@ -61,7 +61,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 - **Konfiguration:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Eigene Konstanten deshalb in `config/app.php` pflegen und nach jedem Installer-Lauf prüfen.
 - **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar.
 - **Offene Punkte:** [core/STATUS.md](core/STATUS.md) (Abschnitt „Offene Punkte“).
-- **Audits:** Prüfberichte unter [audit/README.md](audit/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
+- **Audits:** Prüfberichte unter [audit/README.md](../DOC_PLAN/audit/audits/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
 - **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei; der Codezustand in `CMS/` und das Schema in `SchemaManager` haben Vorrang gegenüber älteren Planungsnotizen.
 
 ### Verwandte Einstiege

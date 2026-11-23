@@ -2,7 +2,7 @@
 
 
 <!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
-> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../../STATUS.md) und die Releasekataloge geführt.
 > **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/` (dort nur Versionen und bekannte Schwachstellen), Theme `cms-default`, Plugin `cms-importer`, `TESTS/`, `Changelog.md` | Übersicht: [README.md](README.md) | Vorheriges Audit: [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md)
 
 > **Historischer Snapshot:** Versions-, Test- und Befundangaben gelten für den Prüfstand 2026-11-12. Aktuelle Suiten werden ausschließlich durch `php TESTS/run-all.php` entdeckt.
@@ -41,8 +41,8 @@ All changes are documented under the existing `4.0.0` heading in `Changelog.md`;
 | 3 | Fehlende Funktionen und unvollständige Logik | FUN-63 … FUN-94 | #122 | erledigt, FUN-86 offen (Entscheidung) |
 | 4 | Fehlende oder falsche Verweise | REF-16 … REF-39 | #123 | erledigt |
 | 5 | Falsche Funktionen, veraltete PHP-/SQL-Konstrukte | FUN-95 … FUN-124 | #136 | erledigt |
-| 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | nicht als eigener Bereich durchgeführt; aufgegangen im Prüfbereich PR #5 des [Release-Audits 4.1.0](RELEASE-AUDIT-4.1.0-2026-11-15.md) (PERF-410-01 … -49) |
-| 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | nicht durchgeführt; Altlasten und Regressionen deckt das [Release-Audit 4.1.0](RELEASE-AUDIT-4.1.0-2026-11-15.md) ab (PR #4), ein PSR-12-Lauf und die Prüfung von Beispielkonfiguration und Sicherheits-Headern stehen aus |
+| 6 | Geschwindigkeit (PHP, MySQL/MariaDB, Frontend) | PERF | PR 6 | nicht als eigener Bereich durchgeführt; aufgegangen im Prüfbereich PR #5 des [Release-Audits 4.1.0](RELEASEAUDIT-2026-11-15_4.1.0.md) (PERF-410-01 … -49) |
+| 7 | Best Practices, Code-Qualität, Abschlussprüfung | BP | PR 7 | nicht durchgeführt; Altlasten und Regressionen deckt das [Release-Audit 4.1.0](RELEASEAUDIT-2026-11-15_4.1.0.md) ab (PR #4), ein PSR-12-Lauf und die Prüfung von Beispielkonfiguration und Sicherheits-Headern stehen aus |
 
 ### 1. Changelog 4.0.0
 

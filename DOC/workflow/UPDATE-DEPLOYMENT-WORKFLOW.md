@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Update und Deployment
-> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Statusquelle:** [STATUS.md](STATUS.md)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Statusquelle:** [STATUS.md](../../DOC_PLAN/STATUS.md)
 > **Quellen:** `CMS/admin/updates.php`, `CMS/admin/modules/system/UpdatesModule.php`, `CMS/core/Services/UpdateService.php`, `CMS/core/Services/BackupService.php`, `CMS/core/Services/OpcacheWarmupService.php`, `CMS/core/SchemaManager.php`, `CMS/install.php`, `CMS/install/`, `CMS/update.json`
 
 ## English (summary)
@@ -18,7 +18,7 @@ Recommended order for every release: **backup → check → core → database �
 ### A) Update über das Admin-Panel
 
 1. **Backup:** `/admin/backups` → „Vollständiges Backup“ (`create_full`), anschließend `validate`.
-2. **Prüfen:** `/admin/updates` → `check_updates` (erzwingt eine neue Abfrage statt des 1-Stunden-Caches). Release-Notizen und [Changelog](../Changelog.md) lesen; `critical: true` beachten.
+2. **Prüfen:** `/admin/updates` → `check_updates` (erzwingt eine neue Abfrage statt des 1-Stunden-Caches). Release-Notizen und [Changelog](../../Changelog.md) lesen; `critical: true` beachten.
 3. **Core installieren** (`install_core`): Preflight → Download (nur erlaubte Hosts) → SHA-256-Prüfung → Entpacken in Staging → Austausch. Geschützt bleiben `backups/`, `cache/`, `config/`, `config.php`, `logs/`, `marketplace/`, `private/`, `uploads/`. Marketplace-Hosts sichern `marketplace/` vor dem Update von 4.0.0, weil dort noch der alte Updater läuft. In `plugins/` und `themes/` werden ab 4.0.0 nur die mitgelieferten Ordner (`cms-importer`, `cms-default`) ersetzt, nachinstallierte Plugins und eigene Themes bleiben. Beim Update von 3.x auf 4.0.0 läuft noch der alte Updater, der beide Ordner vollständig ersetzt: zusätzliche Plugins und Themes vorher sichern.
 4. **Datenbank aktualisieren** (`run_database_update`): `DatabaseUpdateRunner` führt die Migrationen erneut aus und schreibt `installed_cms_version`, `installed_cms_schema_version`, `db_schema_version`. Ein Downgrade (Datenbank neuer als Code) wird nicht automatisch durchgeführt.
 5. **Plugins/Theme** (`install_plugin`, `install_theme`) in dieser Reihenfolge aktualisieren.
@@ -48,11 +48,11 @@ rsync -av --delete \
 ssh user@server 'rm -f /var/www/365cms/cache/.update.lock'
 ```
 
-> **Achtung `config/app.php`:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Wird `config/app.php` durch ein Deployment ersetzt oder vom Installer neu erzeugt, gehen eigene Konstanten verloren. Eigene Werte daher dokumentieren und nach jedem Installer-Lauf prüfen (siehe [core/STATUS.md](../DOC/core/STATUS.md)). Das gilt besonders für `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` und `CMS_BACKUP_PATH`.
+> **Achtung `config/app.php`:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Wird `config/app.php` durch ein Deployment ersetzt oder vom Installer neu erzeugt, gehen eigene Konstanten verloren. Eigene Werte daher dokumentieren und nach jedem Installer-Lauf prüfen (siehe [core/STATUS.md](../core/STATUS.md)). Das gilt besonders für `CMS_ENCRYPTION_KEY`, `CMS_ENCRYPTION_KEYS_PREVIOUS` und `CMS_BACKUP_PATH`.
 
 ### C) Neuinstallation
 
-`/install.php` führt durch PHP-/Erweiterungsprüfung, Datenbankzugang, Admin-Konto und schreibt `config/app.php` (siehe [INSTALLATION.md](../DOC/INSTALLATION.md)). Ist bereits eine Konfiguration vorhanden, legt der Installer eine Lock-Datei an und blockiert weitere Aufrufe mit HTTP 403.
+`/install.php` führt durch PHP-/Erweiterungsprüfung, Datenbankzugang, Admin-Konto und schreibt `config/app.php` (siehe [INSTALLATION.md](../INSTALLATION.md)). Ist bereits eine Konfiguration vorhanden, legt der Installer eine Lock-Datei an und blockiert weitere Aufrufe mit HTTP 403.
 
 ### D) Rückfall (Rollback)
 
@@ -62,7 +62,7 @@ ssh user@server 'rm -f /var/www/365cms/cache/.update.lock'
 
 ### E) Cron nach dem Update
 
-Prüfen, ob der Cron-Aufruf weiterläuft (`php CMS/cron.php --task=all` bzw. die konfigurierte Variante). Unterstützte Tasks: `all`, `mail-queue`, `hourly`, `daily`, `feeds` sowie generische `cms_cron_*`-Hooks. Details: [admin/system-settings/SYSTEM.md](../DOC/admin/system-settings/SYSTEM.md).
+Prüfen, ob der Cron-Aufruf weiterläuft (`php CMS/cron.php --task=all` bzw. die konfigurierte Variante). Unterstützte Tasks: `all`, `mail-queue`, `hourly`, `daily`, `feeds` sowie generische `cms_cron_*`-Hooks. Details: [admin/system-settings/SYSTEM.md](../admin/system-settings/SYSTEM.md).
 
 ### Checkliste
 
@@ -75,5 +75,5 @@ Prüfen, ob der Cron-Aufruf weiterläuft (`php CMS/cron.php --task=all` bzw. die
 
 ## Verwandte Dokumente
 
-- [admin/system-settings/UPDATES.md](../DOC/admin/system-settings/UPDATES.md) · [admin/system-settings/BACKUP.md](../DOC/admin/system-settings/BACKUP.md) · [admin/plugins/UPDATES.md](../DOC/admin/plugins/UPDATES.md)
-- [INSTALLATION.md](../DOC/INSTALLATION.md) · [core/DATABASE-SCHEMA.md](../DOC/core/DATABASE-SCHEMA.md)
+- [admin/system-settings/UPDATES.md](../admin/system-settings/UPDATES.md) · [admin/system-settings/BACKUP.md](../admin/system-settings/BACKUP.md) · [admin/plugins/UPDATES.md](../admin/plugins/UPDATES.md)
+- [INSTALLATION.md](../INSTALLATION.md) · [core/DATABASE-SCHEMA.md](../core/DATABASE-SCHEMA.md)

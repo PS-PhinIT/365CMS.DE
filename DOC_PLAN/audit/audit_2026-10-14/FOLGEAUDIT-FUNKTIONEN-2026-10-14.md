@@ -2,8 +2,8 @@
 
 
 <!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
-> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
-> Übersicht: [README.md](README.md)
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../../STATUS.md) und die Releasekataloge geführt.
+> Übersicht: [GESAMTAUDIT-2026-10-14.md](GESAMTAUDIT-2026-10-14.md)
 
 > **Historischer Snapshot:** Ergebnisse des Gesamtaudits vom 2026-10-14; nicht als aktueller Funktionsstatus von 4.2.0 lesen.
 
@@ -56,7 +56,7 @@
 
 ### Zunächst offene Empfehlungen (umgesetzt in 3.5.0)
 
-Siehe [README.md](README.md):
+Siehe [GESAMTAUDIT-2026-10-14.md](GESAMTAUDIT-2026-10-14.md):
 
 - OFFEN-07: gelesene, aber nicht einstellbare Optionen. ✅ umgesetzt in 3.5.0.
 - OFFEN-08: tote private Methoden. ✅ umgesetzt in 3.5.0.

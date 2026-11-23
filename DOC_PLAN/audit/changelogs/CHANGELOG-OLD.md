@@ -4,7 +4,7 @@
 
 > **Archivstand (23.11.2026):** Dieser Changelog dokumentiert ausschließlich die
 > 2.x-Linie bis 2.9.788. Er ist weder aktueller Release- noch offener Befundstand.
-> Maßgeblich ist [Changelog.md](../../../Changelog.md); Auditstatus: [README.md](../README.md).
+> Maßgeblich ist [Changelog.md](../../../Changelog.md); Auditstatus: [README.md](../audits/README.md).
 
 ## 📋 Legende
 

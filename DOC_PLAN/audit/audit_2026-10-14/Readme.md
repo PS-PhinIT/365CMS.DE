@@ -2,8 +2,8 @@
 
 
 <!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
-> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
-> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne gebündelte Drittbibliotheken, Theme `cms-default`, Plugin `cms-importer`, `README.md`, `DOC/`, `RELEASE/` | Übersicht: [README.md](README.md)
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../../STATUS.md) und die Releasekataloge geführt.
+> **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne gebündelte Drittbibliotheken, Theme `cms-default`, Plugin `cms-importer`, `README.md`, `DOC/`, `RELEASE/` | Übersicht: [GESAMTAUDIT-2026-10-14.md](GESAMTAUDIT-2026-10-14.md) · [Audit-Index](../audits/README.md)
 
 > **Historischer Snapshot:** Befunde und Status beziehen sich ausdrücklich auf 2026-10-14. Für den aktuellen Produktstand 4.2.0 gelten Code, `Changelog.md` und Release-Hinweise 4.2.0.
 

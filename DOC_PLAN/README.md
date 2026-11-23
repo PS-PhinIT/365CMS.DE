@@ -20,11 +20,11 @@ verwendet werden.
 
 | Dokument | Zweck |
 |---|---|
-| [API-Integration](API-INTEGRATION-WORKFLOW.md) | Core-API verwenden und eigene Plugin-Endpunkte bereitstellen |
-| [Content Management](CONTENT-MANAGEMENT-WORKFLOW.md) | Seiten und Beiträge anlegen, prüfen, planen und veröffentlichen |
-| [Medien-Upload](MEDIA-UPLOAD-WORKFLOW.md) | Uploadwege, Validierung, Nachverarbeitung und Auslieferung |
-| [Marketplace](MARKETPLACE-WORKFLOW.md) | Plugins/Themes installieren oder veröffentlichen |
-| [Update und Deployment](UPDATE-DEPLOYMENT-WORKFLOW.md) | Backup, Core-/Datenbank-Update, Deployment und Rollback |
+| [API-Integration](../DOC/workflow/API-INTEGRATION-WORKFLOW.md) | Core-API verwenden und eigene Plugin-Endpunkte bereitstellen |
+| [Content Management](../DOC/workflow/CONTENT-MANAGEMENT-WORKFLOW.md) | Seiten und Beiträge anlegen, prüfen, planen und veröffentlichen |
+| [Medien-Upload](../DOC/workflow/MEDIA-UPLOAD-WORKFLOW.md) | Uploadwege, Validierung, Nachverarbeitung und Auslieferung |
+| [Marketplace](../DOC/workflow/MARKETPLACE-WORKFLOW.md) | Plugins/Themes installieren oder veröffentlichen |
+| [Update und Deployment](../DOC/workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) | Backup, Core-/Datenbank-Update, Deployment und Rollback |
 
 ## Übergreifende Spezifikationen
 

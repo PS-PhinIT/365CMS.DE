@@ -2,8 +2,8 @@
 
 
 <!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
-> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
-> Übersicht: [README.md](README.md)
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../../STATUS.md) und die Releasekataloge geführt.
+> Übersicht: [GESAMTAUDIT-2026-10-14.md](GESAMTAUDIT-2026-10-14.md)
 
 > **Historischer Snapshot:** Methodik und Prüfkatalog des Gesamtaudits vom 2026-10-14. Aktuelle Prüfungen werden über die vorhandenen `TESTS/<suite>/run.php` ausgewählt.
 
@@ -48,7 +48,7 @@ Legende: ✅ geprüft · ➖ nicht anwendbar oder außerhalb des Umfangs (Begrü
 
 | Prüfpunkt | Abdeckung | Ergebnis |
 |---|---|---|
-| Abfragen je Request, N+1, wiederholte Abfragen | ✅ (MySQL-General-Log) | PERF-07 bis PERF-10, Messwerte in [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) |
+| Abfragen je Request, N+1, wiederholte Abfragen | ✅ (MySQL-General-Log) | PERF-07 bis PERF-10, Messwerte in [FOLGEAUDIT-PERFORMANCE-2026-10-14.md](FOLGEAUDIT-PERFORMANCE-2026-10-14.md) |
 | DDL oder Metadaten-Abfragen im Request-Pfad | ✅ | PERF-07 |
 | Zusätzliche Verbindungen, Session-Sperren | ✅ | PERF-08, LAST-06 |
 | `SELECT *` und große Spalten in Listen | ✅ | PERF-11, OFFEN-02 |
@@ -93,7 +93,7 @@ Legende: ✅ geprüft · ➖ nicht anwendbar oder außerhalb des Umfangs (Begrü
 
 | Prüfpunkt | Abdeckung | Ergebnis |
 |---|---|---|
-| Webserver-Konfiguration (Apache und nginx) | ✅ | SEC-19, Doku in [DOC/INSTALLATION.md](../../DOC/INSTALLATION.md) |
+| Webserver-Konfiguration (Apache und nginx) | ✅ | SEC-19, Doku in [DOC/INSTALLATION.md](../../../DOC/INSTALLATION.md) |
 | Backups (Upload-Pfad) | ✅ | REF-10 |
 | Datensparsamkeit und Löschfristen (DSGVO Art. 5) | ✅ | LAST-05, OFFEN-13 |
 | CI-Sicherheitsprüfungen | ✅ | SEC-26 |
@@ -108,5 +108,5 @@ Legende: ✅ geprüft · ➖ nicht anwendbar oder außerhalb des Umfangs (Begrü
    - Optionen: Lesezugriffe gegen Admin-Felder.
    - DDL im Request-Pfad.
 2. **Verifikation:** Jeder Treffer wurde manuell am Code bestätigt; Fehlalarme sind nicht aufgenommen.
-3. **Laufzeit:** Neuinstallation auf MySQL 8.0, danach Abfragezählung, Rate-Limit-Tests, Speichertests im Admin und Seitenaufrufe aller betroffenen Admin-Seiten. Details in [README.md](README.md).
+3. **Laufzeit:** Neuinstallation auf MySQL 8.0, danach Abfragezählung, Rate-Limit-Tests, Speichertests im Admin und Seitenaufrufe aller betroffenen Admin-Seiten. Details in [GESAMTAUDIT-2026-10-14.md](GESAMTAUDIT-2026-10-14.md).
 4. **Umsetzung:** in kleinen Schritten, nach jedem Schritt `php -l` und ein erneuter Laufzeittest.
