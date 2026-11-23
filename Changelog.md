@@ -14,14 +14,23 @@
 
 ---
 
-### v4.2.1 — in Entwicklung (Stand 23.11.2026) - Patch Release
+### v4.2.2 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-02)
 
-Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **jedes Arbeitspaket (AP) ist eine Unterversion `4.2.1 - <AP>`** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
-| **4.2.1 - 01** | 🛡️ security | AP-01 Anmeldung und Sitzung | **Passwort-Hashes mit alten Kosten werden beim Login aufgefrischt** (`Security::passwordNeedsRehash()`, Compare-and-Swap auf `users.password`, ein gleichzeitiger Passwortwechsel wird nicht überschrieben); der Rehash läuft erst nach bestandener MFA-Weiche und Statusprüfung, weil der Sitzungs- und Token-Fingerprint am Hash hängt und ein Rehash alle anderen Sitzungen und API-Tokens des Kontos beendet (Nachprüfung, bisher schon vor der MFA). **TOTP-Verbrauch:** Kann `AuthManager::claimTotpCode()` den Verbrauch nicht bestätigen (Speicherfehler), gilt der Code als abgelehnt und der Fehler wird ohne Code und Hash protokolliert (vorher: Anmeldung ohne Replay-Sperre). Bericht: [FOLGEAUDIT-AP-01](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-01-2026-11-23.md). |
-| **4.2.1 - 02** | 🛡️ security | AP-02 Autorisierung, Rollen, Objektzugriff | **Rollen löschen:** Als Ersatzrolle sind `admin` und `moderator` serverseitig nicht erlaubt (`RolesModule::deleteRole()`), damit das Löschen einer Rolle nicht still eine ganze Gruppe zu Administratoren oder Moderatoren macht; das Auswahlfeld zeigt beide nicht mehr. Nachprüfung: alle 43 dünnen Admin-Einstiege laden einen der sechs gemeinsamen Rahmen mit Admin-, Capability- und CSRF-Prüfung. Bericht: [FOLGEAUDIT-AP-02](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-02-2026-11-23.md). |
+| **4.2.2** | 🛡️ security | AP-02 Autorisierung, Rollen, Objektzugriff | **Rollen löschen:** Als Ersatzrolle sind `admin` und `moderator` serverseitig nicht erlaubt (`RolesModule::deleteRole()`), damit das Löschen einer Rolle nicht still eine ganze Gruppe zu Administratoren oder Moderatoren macht; das Auswahlfeld zeigt beide nicht mehr. Nachprüfung: alle 43 dünnen Admin-Einstiege laden einen der sechs gemeinsamen Rahmen mit Admin-, Capability- und CSRF-Prüfung. Bericht: [FOLGEAUDIT-AP-02](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-02-2026-11-23.md). |
+
+---
+
+### v4.2.1 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-01)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.1** | 🛡️ security | AP-01 Anmeldung und Sitzung | **Passwort-Hashes mit alten Kosten werden beim Login aufgefrischt** (`Security::passwordNeedsRehash()`, Compare-and-Swap auf `users.password`, ein gleichzeitiger Passwortwechsel wird nicht überschrieben); der Rehash läuft erst nach bestandener MFA-Weiche und Statusprüfung, weil der Sitzungs- und Token-Fingerprint am Hash hängt und ein Rehash alle anderen Sitzungen und API-Tokens des Kontos beendet (Nachprüfung, bisher schon vor der MFA). **TOTP-Verbrauch:** Kann `AuthManager::claimTotpCode()` den Verbrauch nicht bestätigen (Speicherfehler), gilt der Code als abgelehnt und der Fehler wird ohne Code und Hash protokolliert (vorher: Anmeldung ohne Replay-Sperre). Bericht: [FOLGEAUDIT-AP-01](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-01-2026-11-23.md). |
 
 ---
 
