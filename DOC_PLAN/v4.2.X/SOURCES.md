@@ -27,4 +27,5 @@ Vergleichskatalog für echte Folgefunktionen liegt unter
 3. `v4.2/` beschreibt den historischen Lieferumfang und Restbestand.
 4. Ein Abgleich zwischen 2 und 3 wird in `42X-07` oder als klarer Regressionstest
    entschieden.
-5. Neue Fähigkeiten ohne 4.2-Verletzung gehen nach 4.3.
+5. Neue Betriebsfähigkeiten ohne 4.2-Verletzung gehen nach 4.3; Custom Fields,
+   N-Sprachen, Live Preview und Managed API nach 4.4.

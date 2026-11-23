@@ -202,6 +202,9 @@ Text, Mehrzeilig, Rich-Text (Editor.js-light), Zahl, Datum, Datum+Uhrzeit, Ja/Ne
 
 ### B.7 Offene Entscheidungen
 
+Für die Umsetzung ist [v4.4/DECISIONS.md](v4.4/DECISIONS.md) maßgeblich;
+die historische Variantenliste unten bleibt als Ausgangspunkt erhalten.
+
 - Typen per Oberfläche **und** per Code (Plugin-API) definierbar? Vorschlag: beides; Code-Definitionen sind schreibgeschützt in der Oberfläche.
 - Kommentare für eigene Typen? Vorschlag: über `supports.comments`, Umsetzung in B3.
 
@@ -209,7 +212,7 @@ Text, Mehrzeilig, Rich-Text (Editor.js-light), Zahl, Datum, Datum+Uhrzeit, Ja/Ne
 
 ## C. Beliebig viele Inhaltssprachen
 
-> **Status 4.2.0: 🔴 nicht begonnen.** Die produktive Speicherung bleibt auf Deutsch plus feste `*_en`-Spalten bzw. DE/EN-JSON beschränkt; die folgende Architektur ist ein Migrationsplan.
+> **Ziel 4.4.0: 🔴 nicht begonnen.** Die produktive Speicherung bleibt auf Deutsch plus feste `*_en`-Spalten bzw. DE/EN-JSON beschränkt; die folgende Architektur ist ein Migrationsplan. Der konsolidierte Sprach-, Security- und Liefervertrag liegt in [v4.4/CATALOG.md](v4.4/CATALOG.md) und [v4.4/ROADMAP.md](v4.4/ROADMAP.md).
 
 ### C.1 Ist-Stand
 
@@ -286,6 +289,9 @@ Abgewogen gegen „weitere Spalten je Sprache“ (heutiges Muster, `*_{locale}`)
 | C5 | Funktionsbereiche (Formulare, Downloads, KB, Newsletter, Feeds) | je 1–2 Tage |
 
 ### C.7 Offene Entscheidungen
+
+Die verbindlichen 4.4-Entscheidungen zu Identität, Slugs, Migration und
+Rückwärtskompatibilität stehen in [v4.4/DECISIONS.md](v4.4/DECISIONS.md).
 
 - Bleibt Deutsch fest die Hauptsprache (Originaltexte in `posts`/`pages`) oder wird die Standardsprache frei wählbar? Vorschlag: frei wählbar erst nach C3; bis dahin ist die Hauptsprache die der Grundtabellen.
 - Eigene Domains je Sprache: über MultiSites (vorhanden) statt eigener Lösung.

@@ -53,7 +53,7 @@ während die Community-Roadmap Umfragen weiterhin unter P2 führt. Vor einem
 
 Fehlt nur eine Doku-Zeile, wird 42X-07 als erledigt dokumentiert. Fehlt produktiver
 Code, wird es als 4.2.x-Bug bewertet, wenn die bereits angekündigte 4.2.0-Funktion
-betroffen ist; sonst wandert der Umfang nach 4.3/P2.
+betroffen ist; sonst wandert der Umfang in die separat priorisierte Community-P2.
 
 ## C. Regressionsschutz für ausgelieferte 4.2.0-Verträge
 
@@ -82,6 +82,6 @@ Folgende Punkte sind **nicht** Bestandteil von 4.2.x:
 - neue CLI und `alert.raised`;
 - eigene Feldgruppen, Inhaltstypen oder beliebige Sprachen;
 - Community-P2/P3;
-- Config-as-Code, OpenAPI-generierte Verträge oder neue API-Schlüsseltypen;
+- Config-as-Code, Managed API, OpenAPI oder neue API-Schlüsseltypen;
 - neue Medien-Speichertreiber, Low-Code-Automationen oder große Schema-Migrationen;
 - Marktvergleichs-Wünsche ohne 4.2-Vertragsbruch.

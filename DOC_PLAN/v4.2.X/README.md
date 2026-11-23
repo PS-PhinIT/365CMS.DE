@@ -4,7 +4,8 @@
 
 `v4.2.X/` ist die Sammelstelle für **Regressionskorrekturen, Sicherheitsnacharbeiten und
 abgrenzbare Abnahmereste der 4.2-Linie**. Neue Funktionen, Schemastruktur-Änderungen und
-Architekturvorhaben gehören nach [`../v4.3/`](../v4.3/README.md).
+Architekturvorhaben gehören nach [`../v4.3/`](../v4.3/README.md) oder
+[`../v4.4/`](../v4.4/README.md).
 
 ## Aufnahmegrenzen
 
@@ -15,9 +16,9 @@ Ein Punkt gehört in 4.2.x, wenn mindestens eine der folgenden Bedingungen erfü
 3. ein ausdrücklich offener P1-Abnahmeschritt ohne neue Produktfunktion nachholbar ist;
 4. die Änderung mit v27, bestehenden APIs, Themes und Plugins rückwärtskompatibel ist.
 
-Nicht hierher gehören neue Inhaltstypen, beliebig viele Sprachen, eine zentrale CLI,
-konzeptionell neue Integrationen oder Community-P2/P3. Dafür ist
-[der 4.3-Katalog](../v4.3/CATALOG.md) maßgeblich.
+Nicht hierher gehören CLI/Alerting sowie neue Inhaltstypen, beliebig viele Sprachen,
+Live Preview, Managed API oder Community-P2/P3. Dafür sind die Kataloge
+[4.3](../v4.3/CATALOG.md) und [4.4](../v4.4/CATALOG.md) maßgeblich.
 
 ## Status und Priorität
 
@@ -33,7 +34,7 @@ konzeptionell neue Integrationen oder Community-P2/P3. Dafür ist
 |---|---|
 | [CATALOG.md](CATALOG.md) | geordneter Katalog aller 4.2.x-Kandidaten |
 | [VALIDATION.md](VALIDATION.md) | Eintrittskriterien, Tests und Release-Gates |
-| [SOURCES.md](SOURCES.md) | lokale Evidenz und Abgrenzung gegenüber 4.3 |
+| [SOURCES.md](SOURCES.md) | lokale Evidenz und Abgrenzung gegenüber 4.3/4.4 |
 
 ## Verbindliche Regel
 

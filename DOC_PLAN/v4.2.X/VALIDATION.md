@@ -12,7 +12,7 @@ Jeder Eintrag muss vor Aufnahme mindestens folgendes enthalten:
 4. Rechte-/Datenschutz-/Sicherheitswirkung;
 5. betroffene Tests oder ein neuer fokussierter Regressionstest;
 6. Rückwärtskompatibilitäts- und Rollback-Prüfung;
-7. dokumentierte Entscheidung, ob `patch`, `4.3` oder `out of scope`.
+7. dokumentierte Entscheidung, ob `patch`, `4.3`, `4.4` oder `out of scope`.
 
 ## Pflicht-Gates für 4.2.x
 
