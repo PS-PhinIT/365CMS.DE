@@ -1,5 +1,5 @@
 # CommonMark-Bündel (`CMS/assets/commonmark/`)
-> **Stand:** 2026-11-20 | **Version:** 4.2.0 | **Status:** Aktuell
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Aktuell
 
 Markdown-Renderer der Community (`CMS\Services\Community\Support\ContentRenderer`, PR #2b). Entscheidung A1 des Auftraggebers vom
 2026-11-19: league/commonmark mit seinen Abhängigkeiten als **eine gescopte Bündeldatei** statt als Ordnerkopie (2 statt 250 bis 385

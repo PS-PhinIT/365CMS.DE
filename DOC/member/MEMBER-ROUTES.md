@@ -1,7 +1,7 @@
 # 365CMS Projektdokumentation | Mitglieder-Routen
 
 > **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Kurzbeschreibung:** Routenreferenz für authentifizierte Member-Seiten, Theme-Overrides, Plugin-Dispatch, Weiterleitungen, Nutzungs-Tracking und 404-Fallbacks. Sie entspricht dem Stand von `MemberRouter.php` in Version 4.1.0.
+> **Kurzbeschreibung:** Routenreferenz für authentifizierte Member-Seiten, Theme-Overrides, Plugin-Dispatch, Weiterleitungen, Nutzungs-Tracking und 404-Fallbacks. Sie entspricht dem Stand von `MemberRouter.php` in Version 4.2.0.
 
 # 365CMS Member Routes
 

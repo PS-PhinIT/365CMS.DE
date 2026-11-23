@@ -1,7 +1,7 @@
 # 365CMS Projektdokumentation | Mitglieder-Dashboard
 
 > **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
-> **Kurzbeschreibung:** Referenz für Dashboard-Runtime, Bereiche, Widgets, Reihenfolge, Plugin-Integration, Benachrichtigungen, Favoriten und Sprachtexte des Core-Mitgliederbereichs in Version 4.1.0.
+> **Kurzbeschreibung:** Referenz für Dashboard-Runtime, Bereiche, Widgets, Reihenfolge, Plugin-Integration, Benachrichtigungen, Favoriten und Sprachtexte des Core-Mitgliederbereichs in Version 4.2.0.
 
 # 365CMS Member Dashboard
 
