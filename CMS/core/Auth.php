@@ -450,6 +450,30 @@ class Auth
             return 'Ungültige Anmeldedaten.';
         }
 
+        if (Security::passwordNeedsRehash((string) $user->password)) {
+            $storedHash = (string) $user->password;
+            $newHash = $security->hashPassword($password);
+            $updated = $db->execute(
+                "UPDATE {$db->getPrefix()}users SET password = ? WHERE id = ? AND password = ?",
+                [$newHash, (int) $user->id, $storedHash]
+            )->rowCount();
+
+            if ($updated === 1) {
+                $user->password = $newHash;
+            } else {
+                // Ein gleichzeitiger Login kann denselben Hash bereits aktualisiert haben. Eine parallele
+                // Passwortänderung darf dagegen nicht durch diesen Login wieder überschrieben werden.
+                $currentHash = $db->get_var(
+                    "SELECT password FROM {$db->getPrefix()}users WHERE id = ? LIMIT 1",
+                    [(int) $user->id]
+                );
+                if (!is_string($currentHash) || !$security->verifyPassword($password, $currentHash)) {
+                    return 'Ungültige Anmeldedaten.';
+                }
+                $user->password = $currentHash;
+            }
+        }
+
         $this->clearAccountLoginFailures($accountKey);
         
         if ($user->status === EmailVerificationService::STATUS_UNVERIFIED) {

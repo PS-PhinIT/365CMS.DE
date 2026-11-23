@@ -540,11 +540,14 @@ final class AuthManager
             }
 
             return $claimed;
-        } catch (\Throwable) {
-            // Ohne Speicher keine Replay-Sperre, Anmeldung aber nicht blockieren.
-        }
+        } catch (\Throwable $e) {
+            \CMS\Logger::instance()->withChannel('auth')->error(
+                'TOTP replay protection could not confirm code consumption.',
+                ['user_id' => $userId, 'exception_class' => $e::class]
+            );
 
-        return true;
+            return false;
+        }
     }
 
     // ── Provider-Status ──────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ if (!class_exists('CMS\\Hooks')) {
     }');
 }
 require_once $root . 'core/Services/Security/PasswordPolicyService.php';
+require_once $root . 'core/Security.php';
 
 use CMS\Services\Security\PasswordPolicyService;
 
@@ -147,9 +148,26 @@ T::run('Hook bei Änderung', static function () use ($make, $hash): void {
     T::same([['cms_password_changed', [11, 'member']]], \CMS\Hooks::$actions, 'cms_password_changed mit Benutzer-ID und Quelle');
 });
 
+T::run('Passwort-Hashes werden nach erfolgreichem Login aktualisiert', static function (): void {
+    $password = 'Legacy-Passwort-123!';
+    $legacyHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 4]);
+    $currentHash = \CMS\Security::hashPassword($password);
+
+    T::check(\CMS\Security::passwordNeedsRehash($legacyHash), 'älterer Hash erfüllt die aktuelle Kostenrichtlinie nicht');
+    T::same(false, \CMS\Security::passwordNeedsRehash($currentHash), 'aktueller Hash benötigt kein Rehash');
+    T::check(password_verify($password, $legacyHash), 'Rehash wird erst nach gültiger Passwortprüfung benötigt');
+});
+
 T::run('Einbindung (statisch)', static function () use ($root): void {
     $read = static fn(string $file): string => (string) file_get_contents($root . $file);
     $auth = $read('core/Auth.php');
+    $loginStart = strpos($auth, 'public function login(');
+    $loginEnd = strpos($auth, 'public function hasCapability(', $loginStart ?: 0);
+    $login = $loginStart !== false
+        ? substr($auth, $loginStart, $loginEnd !== false ? $loginEnd - $loginStart : null)
+        : '';
+    T::check(str_contains($login, 'Security::passwordNeedsRehash((string) $user->password)') && str_contains($login, 'WHERE id = ? AND password = ?'), 'Login aktualisiert alte Hashes atomar per Compare-and-Swap');
+    T::check(str_contains($login, '$user->password = $newHash;') && str_contains($login, '!$security->verifyPassword($password, $currentHash)'), 'aktualisierter Hash bindet die Sitzung; paralleler Passwortwechsel bleibt erhalten');
     T::check(!str_contains($auth, 'PASSWORD_POLICY_MIN_LENGTH'), 'Auth: keine festen Policy-Konstanten mehr');
     T::check(str_contains($auth, 'PasswordPolicyService::getInstance()->validate($password, $userId)'), 'Auth::validatePasswordPolicy delegiert inkl. Benutzer-ID');
     T::check(str_contains($auth, "recordChange((int) \$userId, \$passwordHash, 'register')"), 'Registrierung schreibt Historie');
