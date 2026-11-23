@@ -501,6 +501,7 @@ $renderCapabilityDiffList = static function (array $groupedCapabilities) use ($g
                         <label class="form-label" for="fallback_role">Ersatzrolle</label>
                         <select class="form-select" id="fallback_role" name="fallback_role">
                             <?php foreach ($roles as $role): ?>
+                                <?php if (in_array($role, ['admin', 'moderator'], true)) { continue; } ?>
                                 <option value="<?php echo htmlspecialchars($role); ?>" <?php echo $role === 'member' ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($roleLabels[$role] ?? $formatLabel($role)); ?>
                                 </option>

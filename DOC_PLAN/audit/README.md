@@ -76,7 +76,7 @@ in [STATUS.md](../../STATUS.md).
 
 ### Prüfberichte (chronologisch)
 
-**Laufendes Audit:** [AP-01 – Anmeldung und Sitzung, 23.11.2026](../audit_2026-11-23/FOLGEAUDIT-AP-01-2026-11-23.md). Der Teilbericht trennt statische Befunde von offenen Laufzeitprüfungen; er ist noch keine Release-Abnahme.
+**Laufendes Audit:** [AP-01 – Anmeldung und Sitzung, 23.11.2026](../audit_2026-11-23/FOLGEAUDIT-AP-01-2026-11-23.md) und [AP-02 – Autorisierung, Rollen, Objektzugriff, 23.11.2026](../audit_2026-11-23/FOLGEAUDIT-AP-02-2026-11-23.md). Die Teilberichte trennen statische Befunde von offenen Laufzeitprüfungen; sie sind noch keine Release-Abnahme.
 
 | Datum | Dokument | Stand | Inhalt |
 |---|---|---|---|

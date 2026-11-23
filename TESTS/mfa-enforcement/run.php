@@ -220,6 +220,15 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
 
     $authManager = (string) file_get_contents($root . 'core/Auth/AuthManager.php');
     T::check(str_contains($authManager, '($authenticatorFlags & 0x04) !== 0') && str_contains($authManager, 'markUserVerified('), 'Passkey-Login mit UV markiert Bestandspasskey');
+    $claimStart = strpos($authManager, 'private function claimTotpCode(');
+    $claimEnd = $claimStart !== false
+        ? strpos($authManager, 'Provider-Status', $claimStart)
+        : false;
+    $claim = $claimStart !== false && $claimEnd !== false
+        ? substr($authManager, $claimStart, $claimEnd - $claimStart)
+        : '';
+    T::check(str_contains($claim, "catch (\\Throwable \$e)") && str_contains($claim, "return false;"), 'TOTP-Code wird bei nicht bestätigtem Replay-Schutz abgelehnt');
+    T::check(str_contains($claim, 'TOTP replay protection could not confirm code consumption.') && str_contains($claim, "'exception_class' => \$e::class"), 'Fehler des TOTP-Replay-Schutzes wird ohne Code protokolliert');
 
     $tab = (string) file_get_contents($root . 'admin/settings-tabs/security.php');
     T::check(str_contains($tab, "CMS_ADMIN_MFA_POLICY_CSRF_ACTION = 'admin_mfa_policy'") && str_contains($tab, 'verifyToken((string) ($_POST[\'csrf_token\'] ?? \'\'), CMS_ADMIN_MFA_POLICY_CSRF_ACTION)'), 'Admin: eigenes CSRF-Token');
@@ -235,6 +244,38 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
             T::check(str_contains($yaml, "\"{$key}\":"), "{$lang}: {$key}");
         }
     }
+});
+
+T::run('TOTP-Replay-Schutz verweigert Anmeldung bei Datenbankfehler', static function () use ($root): void {
+    if (!class_exists('CMS\\Database')) {
+        eval('namespace CMS; final class Database {
+            public static function instance(): self { return new self(); }
+            public function getPrefix(): string { return "cms_"; }
+            public function get_var(string $query, array $params = []): mixed { throw new \RuntimeException("simulierter Speicherfehler"); }
+        }');
+    }
+    if (!class_exists('CMS\\Logger')) {
+        eval('namespace CMS; final class Logger {
+            public static array $errors = [];
+            public static function instance(): self { return new self(); }
+            public function withChannel(string $channel): self { return $this; }
+            public function error(string $message, array $context = []): void { self::$errors[] = [$message, $context]; }
+        }');
+    }
+
+    require_once $root . 'core/Auth/AuthManager.php';
+    $reflection = new ReflectionClass(\CMS\Auth\AuthManager::class);
+    $manager = $reflection->newInstanceWithoutConstructor();
+    $claim = $reflection->getMethod('claimTotpCode');
+    $result = $claim->invoke($manager, 42, '123456');
+
+    T::same(false, $result, 'Speicherfehler bestätigt keinen TOTP-Verbrauch');
+    T::same(
+        'TOTP replay protection could not confirm code consumption.',
+        \CMS\Logger::$errors[0][0] ?? null,
+        'Fehler wird protokolliert'
+    );
+    T::same(RuntimeException::class, \CMS\Logger::$errors[0][1]['exception_class'] ?? null, 'Protokoll enthält Ausnahmeklasse statt Code oder Geheimnis');
 });
 
 T::finish();

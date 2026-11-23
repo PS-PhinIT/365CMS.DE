@@ -633,6 +633,16 @@ function urhBehaviour(string $backend, string $label): void
         $result = $f->roles->deleteRole(['role_slug' => 'partner', 'fallback_role' => 'editor']);
         $same([true, [[1, 'partner', 'editor', 'role_deleted']], [1 => 'editor', 2 => 'member']], [$result['success'] ?? null, $f->events(), $f->accountRoles()], 'bestehende Ersatzrolle: Ereignis nennt sie');
 
+        foreach (['admin', 'Admin', 'moderator'] as $privileged) {
+            $f = new UrhFixture($backend, [1 => 'partner', 2 => 'member'], ['partner']);
+            $result = $f->roles->deleteRole(['role_slug' => 'partner', 'fallback_role' => $privileged]);
+            $same(
+                [false, [], [1 => 'partner', 2 => 'member'], ['partner']],
+                [$result['success'] ?? null, $f->events(), $f->accountRoles(), $f->permissionRoles()],
+                'Ersatzrolle „' . $privileged . '“ wird abgelehnt: keine Umstellung, kein Ereignis, Rolle bleibt bestehen'
+            );
+        }
+
         foreach (['', 'partner2', 'gibt-es-nicht'] as $fallback) {
             $f = new UrhFixture($backend, [1 => 'partner2', 2 => 'member'], ['partner2']);
             $result = $f->roles->deleteRole(['role_slug' => 'partner2', 'fallback_role' => $fallback]);

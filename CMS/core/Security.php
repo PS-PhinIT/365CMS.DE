@@ -600,6 +600,14 @@ class Security
     {
         return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
     }
+
+    /**
+     * Prüft, ob ein gespeicherter Passwort-Hash den aktuellen Algorithmus und die Kosten nutzt.
+     */
+    public static function passwordNeedsRehash(string $hash): bool
+    {
+        return password_needs_rehash($hash, PASSWORD_BCRYPT, ['cost' => 12]);
+    }
     
     /**
      * Verify password (static wrapper)
