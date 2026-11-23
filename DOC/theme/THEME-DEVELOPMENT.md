@@ -128,7 +128,7 @@ Health-Check beim Aktivieren (`ThemeManager::healthCheckTheme()`): `style.css` v
 
 - `theme.json`, `update.json` (`min_cms_version` muss zum verwendeten Kern passen; `cms-default` nutzt aktuell `4.0.0`), `style.css` und die Versionskonstante in `functions.php` (bei `cms-default`: `MERIDIAN_THEME_VERSION`) tragen dieselbe Version.
 - Auslieferung als ZIP mit dem Theme-Ordner auf oberster Ebene; für den Marketplace mit SHA-256-Prüfsumme ([../admin/themes-design/MARKETPLACE.md](../admin/themes-design/MARKETPLACE.md)).
-- Statischer Vertragsprüfer: `php TESTS/theme-contract/run.php` (aus der CMS-Wurzel). Weitere Theme-Wurzelverzeichnisse können als Argumente folgen.
+- Die automatischen Prüfungen des Repositories prüfen jedes Theme unter `CMS/themes/` auf diesen Vertrag (CSP-Runtime im Header, `body_end` vor `</body>`, kein eigener Seitenrahmen in Templates, Nonces, keine Inline-Handler, `javascript:`-URLs oder `eval()`, gleiche Version in `theme.json`, `update.json`, `style.css` und `functions.php`).
 
 ### 9. Änderungen für Themes in 4.2.0
 
@@ -141,13 +141,6 @@ Health-Check beim Aktivieren (`ThemeManager::healthCheckTheme()`): `style.css` v
 - **Captcha in eigenen Formularen.** Für beliebige Formulare gilt derselbe Vertrag: zuerst ein stabiler, eindeutiger Kontext, dann im Formular `cms_captcha_field($context, $provider)` und serverseitig `CaptchaService::instance()->verify($_POST, $context)`. Verfahren: `pow`, `image` oder `math`; nicht verfügbare Auswahl fällt auf `math`. Details: [../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md).
 - **Bilder in eigenen Vorlagen.** Der Core entfernt Metadaten erhaltener Originale ohne Reencode. Für eigene GD-Verarbeitung gilt: JPEG-EXIF wird nur aus JPEG gelesen, alle acht Orientierungen vor dem Speichern auf Pixel anwenden (`ImageOrientation::orient()`) und `imagesavealpha(true)` setzen. PNG-`eXIf`/WebP-EXIF wird nicht über diesen GD-Leser ausgewertet.
 
-### Theme-Tests
-
-```bash
-php TESTS/theme-contract/run.php
-php TESTS/captcha/run.php
-php TESTS/media-images/run.php
-```
 
 ### Verwandte Dokumente
 

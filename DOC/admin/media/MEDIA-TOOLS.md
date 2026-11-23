@@ -89,9 +89,3 @@ Größen und WebP-Fassungen.
 `CMS/core/Services/Media/AvifDerivativeService.php`, `CMS/core/Services/Media/AvifRegenerationService.php`,
 `CMS/core/Services/Media/MediaUsageIndex.php`, `CMS/core/Services/Media/MediaUsageRebuildService.php`,
 `CMS/core/Services/Media/MediaLicenseService.php`, `CMS/core/Services/FeatureHooks/MediaFeatureHooks.php`
-
-### Tests
-
-```bash
-php TESTS/media-images/run.php
-```

@@ -102,11 +102,4 @@ Das Sicherheits-Audit ([SECURITY-AUDIT.md](SECURITY-AUDIT.md)) prüft, ob aktive
 
 ### Tests
 
-Aus dem CMS-Installationsverzeichnis:
-
-```bash
-php TESTS/captcha/run.php
-php TESTS/community-captcha/run.php
-```
-
-Die Läufe decken Anbieter und Fallback, Browser-Proof-of-Work, Sitzung, Ablauf, Kontext, Ausgabe sowie die Integrationen in Formulare, Registrierung und Community ab.
+Automatische Tests decken Anbieter und Fallback, Browser-Proof-of-Work, Sitzung, Ablauf, Kontext, Ausgabe sowie die Integrationen in Formulare, Registrierung und Community ab.

@@ -25,4 +25,4 @@ Weitere medienbezogene Seiten:
 
 Downloads (eigene Route `/admin/downloads`): [DOWNLOADS.md](DOWNLOADS.md). Ausführliche Beschreibung des Upload- und Bildpfads: [MEDIA.md](MEDIA.md).
 
-Der 4.2.0-Vertrag ist: erhaltene Originale verlieren Metadaten ohne Bild-Neukodierung (`ImageMetadataStripper`), neu kodierte JPEG-Fassungen wenden alle acht EXIF-Ausrichtungen an (`ImageOrientation`) und GD-Speicherpfade erhalten Alpha über `imagesavealpha(true)`. Prüfung: `php TESTS/media-images/run.php`.
+Der 4.2.0-Vertrag ist: erhaltene Originale verlieren Metadaten ohne Bild-Neukodierung (`ImageMetadataStripper`), neu kodierte JPEG-Fassungen wenden alle acht EXIF-Ausrichtungen an (`ImageOrientation`) und GD-Speicherpfade erhalten Alpha über `imagesavealpha(true)`. Der Vertrag ist durch automatische Tests abgesichert.

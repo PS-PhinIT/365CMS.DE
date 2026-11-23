@@ -1007,7 +1007,11 @@ T::run('Dokumentation: Quellen in HOOKS-REFERENCE.md', static function (): void 
                 $absent[] = $source;
             }
         }
-        foreach (['$userId, $fromRole, $toRole, $source', 'UserService::updateUser()', 'UserService::bulkAction()', 'RolesModule', 'nie bei unveränderter Rolle'] as $phrase) {
+        // Signatur mit oder ohne Typangaben (`int $userId, string $fromRole, …` seit der Überarbeitung der Referenz 4.2.0).
+        if (preg_match('/(?:int )?\$userId, (?:string )?\$fromRole, (?:string )?\$toRole, (?:string )?\$source/', $text) !== 1) {
+            $absent[] = '$userId, $fromRole, $toRole, $source';
+        }
+        foreach (['UserService::updateUser()', 'UserService::bulkAction()', 'RolesModule', 'nie bei unveränderter Rolle'] as $phrase) {
             if (!str_contains($text, $phrase)) {
                 $absent[] = $phrase;
             }

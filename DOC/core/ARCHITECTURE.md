@@ -131,12 +131,3 @@ Fehler in optionalen Teilen (Plugin-Callback, Admin-View, Firewall, Hub-Auflösu
 ### Verwandte Dokumente
 
 [CORE-CLASSES.md](CORE-CLASSES.md) · [SERVICES.md](SERVICES.md) · [SECURITY.md](SECURITY.md) · [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) · [STRUCTURE.md](STRUCTURE.md)
-
-Gezielte Regressionstests:
-
-```bash
-php TESTS/captcha/run.php
-php TESTS/community-captcha/run.php
-php TESTS/media-images/run.php
-php TESTS/slugs/run.php
-```

@@ -91,7 +91,6 @@ Nach dem Erstellen geht eine Mail mit dem PDF als Anhang an die E-Mail der Beste
 - Tabellen `cms_invoice_sequences` (`sequence_key`, `next_number`, `updated_at`) und `cms_invoices` (Nummer, Kreis, laufende Nummer, Typ, Bestellung, Konto, Storno-Verweis, Datum, Leistungszeitraum, Beträge, Steuermodus, Snapshot, PDF-Pfad, SHA-256, Ersteller, Sperrvermerk).
 - Hook `cms_invoice_created(int $invoiceId, string $type, int $orderId, int $userId)` nach dem Erstellen (`type` = `invoice` | `cancellation`).
 - Seiten: `CMS/admin/invoices.php` → `CMS/admin/views/subscriptions/invoices.php`, `CMS/member/invoices.php`.
-- Tests: `php TESTS/invoices/run.php [-v]`.
 - Nicht enthalten: E-Rechnung (ZUGFeRD/XRechnung).
 
 ### Verwandte Dokumente

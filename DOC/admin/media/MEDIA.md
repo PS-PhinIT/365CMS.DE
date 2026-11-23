@@ -123,9 +123,4 @@ Eigene Kategorien anlegen/löschen (Name und Slug max. 80 Zeichen). Systemkatego
 
 ### Tests
 
-```bash
-php TESTS/media-images/run.php
-php TESTS/community-uploads/run.php
-```
-
-Die Tests prüfen unter anderem alle acht EXIF-Orientierungen, den JPEG/PNG/WebP-Verlustfrei-Stripper, JPEG-only-EXIF-Lesen, ICC-/Ausrichtungserhalt, Pixelbytegleichheit, Uploadpfade und Alpha nach Neu-Kodierung, Skalierung, Rotation und Bildersatz.
+Automatische Tests prüfen unter anderem alle acht EXIF-Orientierungen, den JPEG/PNG/WebP-Verlustfrei-Stripper, JPEG-only-EXIF-Lesen, ICC-/Ausrichtungserhalt, Pixelbytegleichheit, Uploadpfade und Alpha nach Neu-Kodierung, Skalierung, Rotation und Bildersatz.
