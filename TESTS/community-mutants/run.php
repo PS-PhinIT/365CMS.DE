@@ -57,7 +57,8 @@ const CM_LEGACY_SUITES = ['community-repositories', 'community-access', 'communi
 const CM_EXCLUDED_SUITES = ['community-mutants', 'community-settings', 'community-admin', 'community-editor', 'community-a11y'];
 
 /** Weitere Suiten mit Mutanten-Haken (`Mutant::load`) außerhalb des Musters `community-*`. */
-const CM_EXTRA_SUITES = ['captcha'];
+/** `payments`: Audit 4.2.0 (AP-08, Bestellnummer und Zeitzone der Zahlungen). */
+const CM_EXTRA_SUITES = ['captcha', 'payments'];
 
 /**
  * Zieldateien außerhalb von `core/Services/Community/` (Vertrag DESIGN-2b §6 W0, GK2): die Core-Dateien, auf denen das Modul aufbaut
@@ -72,6 +73,8 @@ const CM_ALLOWED_CORE_FILES = [
     'core/Services/Security/Captcha/MathChallenge.php', 'core/Services/Security/Captcha/ImageProvider.php',
     // PR #190 (Einbindung in Formulare und Registrierung, Suite `captcha`)
     'core/Services/Forms/FormSpamGuard.php', 'core/Services/Forms/FormRenderer.php', 'core/Services/CmsAuthPageService.php',
+    // Audit 4.2.0 (AP-08, Suite `payments`)
+    'core/Services/Payments/PaymentService.php',
 ];
 
 /**

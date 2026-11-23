@@ -16,13 +16,16 @@ define('LOG_LEVEL', 'emergency');
 define('LOG_PATH', sys_get_temp_dir() . '/cms-tests-logs/');
 define('SITE_URL', 'https://shop.example');
 
+// Gegenprobe-Haken (TESTS/lib/Mutant.php, Audit 4.2.0): mit CMS_TEST_MUTANT=<name> lädt der Autoloader eine Mutante.
+require_once dirname(__DIR__) . '/lib/Mutant.php';
+
 spl_autoload_register(static function (string $class): void {
     if (!str_starts_with($class, 'CMS\\')) {
         return;
     }
     $file = ABSPATH . 'core/' . str_replace('\\', '/', substr($class, 4)) . '.php';
     if (is_file($file)) {
-        require $file;
+        Mutant::load($file);
     }
 });
 
@@ -550,6 +553,71 @@ T::run('FUN-410-38: fehlgeschlagene Verlängerung nennt die Bestellung', static 
     $fail = pyStripeBody('evt_f38', 'invoice.payment_failed', ['id' => 'in_f38', 'subscription' => 'sub_fail38', 'amount_due' => 1199, 'amount_paid' => 0, 'currency' => 'eur']);
     $f['service']->handleWebhook('stripe', pyStripeHeaders($fail), $fail);
     T::same([[$id, true]], $seen->getArrayCopy(), 'cms_payment_failed mit der Bestellung des Abos und renewal=true');
+});
+
+T::run('Audit 4.2.0: Bestellnummer aus der echten ID (DB-420-01)', static function (): void {
+    $ts = 1763200000; // 2025-11-15
+    $fixed = static fn (int $n): string => str_repeat("\xAB", $n);
+    T::same('BST' . date('Ym', $ts) . '-0042', P::formatOrderNumber('BST{Y}{M}-{ID}', 42, $ts, $fixed), 'Standardformat mit der echten ID');
+    T::same('BST' . date('Ym', $ts) . '-123456', P::formatOrderNumber('BST{Y}{M}-{ID}', 123456, $ts, $fixed), 'lange IDs werden nicht gekürzt');
+    T::same('X' . date('d', $ts) . 'ABAB-0042', P::formatOrderNumber('X{D}{R}', 42, $ts, $fixed), 'ohne {ID} wird -{ID} angehängt; {R} aus random_bytes');
+    T::check(P::formatOrderNumber('BST{Y}{M}-{ID}', 7, $ts) !== P::formatOrderNumber('BST{Y}{M}-{ID}', 8, $ts), 'verschiedene IDs ergeben verschiedene Nummern');
+    T::same('BST' . date('Ym', $ts) . '-0042', P::formatOrderNumber("<b>{ID}\n", 42, $ts, $fixed), 'unzulässige Zeichen: Rückfall auf das Standardformat');
+    T::same('BST' . date('Ym', $ts) . '-0042', P::formatOrderNumber(str_repeat('A', 60) . '{ID}', 42, $ts, $fixed), 'zu lang (Spalte 64, Verlängerung -Vxxxxxx): Rückfall');
+    T::same('BST' . date('Ym', $ts) . '-0042', P::formatOrderNumber('   ', 42, $ts, $fixed), 'leeres Format: Rückfall');
+    $tmp = P::provisionalOrderNumber($fixed);
+    T::same('TMP-' . str_repeat('ab', 16), $tmp, 'vorläufige Nummer: TMP- und 32 Hex-Zeichen');
+    T::check(P::provisionalOrderNumber() !== P::provisionalOrderNumber(), 'vorläufige Nummern sind zufällig');
+
+    // Ablauf wie orders.php gegen eine Tabelle mit eindeutiger order_number: zwei Bestellungen hintereinander.
+    $db = pyDatabase();
+    $numbers = [];
+    foreach ([1, 2] as $unused) {
+        $id = $db->insert('orders', ['order_number' => P::provisionalOrderNumber(), 'plan_id' => 3, 'status' => 'pending']);
+        T::check(is_int($id) && $id > 0, 'Einfügen mit vorläufiger Nummer gelingt');
+        $final = P::formatOrderNumber('BST{Y}{M}-{ID}', (int) $id, $ts);
+        $db->update('orders', ['order_number' => $final], ['id' => (int) $id]);
+        $numbers[] = (string) $db->get_var('SELECT order_number FROM cms_orders WHERE id = ?', [(int) $id]);
+    }
+    T::same(['BST' . date('Ym', $ts) . '-0001', 'BST' . date('Ym', $ts) . '-0002'], $numbers, 'zweite Bestellung scheitert nicht an der eindeutigen Nummer');
+
+    $orders = pySource('orders.php');
+    T::check(!str_contains($orders, 'FROM information_schema') && !str_contains($orders, 'uniqid('), 'orders.php: keine Nummer aus information_schema oder uniqid()');
+    T::check(str_contains($orders, 'PaymentService::provisionalOrderNumber()') && str_contains($orders, 'PaymentService::formatOrderNumber($format, (int) $orderId, time())'), 'orders.php: vorläufige Nummer, dann endgültige aus der ID');
+    T::check(preg_match('/if \(!\$success\) \{\s*\/\/[^\n]*\n\s*\$error = /', $orders) === 1, 'orders.php: gescheitertes Einfügen zeigt eine Fehlermeldung');
+});
+
+T::run('Audit 4.2.0: Formularfelder des Checkouts (SEC-420-01)', static function (): void {
+    $orders = pySource('orders.php');
+    T::check(!preg_match('/trim\(\$_POST\[/', $orders) && !preg_match('/htmlspecialchars\(\$_POST\[/', $orders), 'kein trim()/htmlspecialchars() direkt auf $_POST (Array → TypeError)');
+    T::check(str_contains($orders, "function cms_checkout_post_string(string \$key, int \$maxLength = 190): string") && str_contains($orders, 'if (!is_string($value)) {'), 'Helfer nimmt nur Zeichenketten an');
+    T::check(str_contains($orders, "cms_checkout_post_string('zip', 20)") && str_contains($orders, "cms_checkout_post_string('email', 190)"), 'Längengrenzen je Feld');
+    T::check(str_contains($orders, "verifyToken(is_string(\$_POST['csrf_token'] ?? null) ? \$_POST['csrf_token'] : '', 'checkout_process')"), 'CSRF-Token nur als Zeichenkette');
+});
+
+T::run('Audit 4.2.0: Zeitzone der Abo-Spalten (DB-420-02)', static function (): void {
+    $previous = date_default_timezone_get();
+    date_default_timezone_set('Europe/Berlin');
+    try {
+        $f = pyFixture();
+        $id = pyOrder($f['db'], ['provider' => 'stripe', 'provider_checkout_id' => 'cs_tz']);
+        $paid = pyStripeBody('evt_tz', 'checkout.session.completed', ['id' => 'cs_tz', 'payment_status' => 'paid', 'amount_total' => 1199, 'currency' => 'eur', 'metadata' => ['order_id' => (string) $id], 'subscription' => 'sub_tz']);
+        $f['service']->handleWebhook('stripe', pyStripeHeaders($paid), $paid);
+        T::same(date('Y-m-d H:i:s', PY_NOW), (string) pyOrderRow($f['db'], $id)['paid_at'], 'paid_at in Ortszeit wie created_at aus orders.php');
+        $f['clock']['now'] = PY_NOW + 86400 * 30;
+        $end = PY_NOW + 86400 * 61;
+        $cycle = pyStripeBody('evt_tz2', 'invoice.paid', ['id' => 'in_tz', 'billing_reason' => 'subscription_cycle', 'subscription' => 'sub_tz', 'amount_paid' => 1199, 'currency' => 'eur',
+            'lines' => ['data' => [['period' => ['end' => $end]]]]]);
+        $f['service']->handleWebhook('stripe', pyStripeHeaders($cycle, PY_NOW + 86400 * 30), $cycle);
+        $sub = (array) $f['db']->get_row('SELECT * FROM cms_user_subscriptions WHERE provider_subscription_id = ?', ['sub_tz']);
+        T::same(gmdate('Y-m-d H:i:s', $end), (string) $sub['current_period_end'], 'current_period_end bleibt UTC (Anbieter-Periode)');
+        T::same([date('Y-m-d H:i:s', $end), date('Y-m-d H:i:s', $end)], [(string) $sub['end_date'], (string) $sub['next_billing_date']], 'end_date und next_billing_date in Ortszeit (Leser vergleichen mit NOW())');
+        T::check((string) $sub['end_date'] !== (string) $sub['current_period_end'], 'in Europe/Berlin weichen Ortszeit und UTC ab (Test greift)');
+        $copy = (array) $f['db']->get_row("SELECT * FROM cms_orders WHERE notes = 'Automatische Verlängerung'");
+        T::same([date('Y-m-d H:i:s', PY_NOW + 86400 * 30), date('Y-m-d H:i:s', PY_NOW + 86400 * 30)], [(string) ($copy['paid_at'] ?? ''), (string) ($copy['created_at'] ?? '')], 'Folgebestellung in Ortszeit');
+    } finally {
+        date_default_timezone_set($previous);
+    }
 });
 
 T::finish();

@@ -152,6 +152,21 @@ function cms_checkout_send_confirmation(string $email, string $orderNumber, stri
     return $sent;
 }
 
+/**
+ * Audit 4.2.0 (SEC-420-01): Formularfeld als Zeichenkette (Arrays wie `first_name[]=x` ergaben unter strict_types einen
+ * TypeError und eine Fehlerseite), ohne Steuerzeichen, auf `$maxLength` Zeichen gekürzt.
+ */
+function cms_checkout_post_string(string $key, int $maxLength = 190): string
+{
+    $value = $_POST[$key] ?? '';
+    if (!is_string($value)) {
+        return '';
+    }
+    $value = trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value));
+
+    return mb_substr($value, 0, $maxLength);
+}
+
 /** @return list<string> */
 function cms_checkout_available_payment_methods(string $setting): array
 {
@@ -318,7 +333,7 @@ $planBasePrice = (float) (($billing === 'yearly') ? ($plan['price_yearly'] ?? 0)
 $pricingTotals = cms_checkout_calculate_totals($planBasePrice, $taxRate, $taxIncluded);
 $selectedPaymentMethod = cms_checkout_normalize_payment_method($_POST['payment_method'] ?? $defaultPaymentMethod, $paymentMethods, $defaultPaymentMethod);
 $countryOptions = ['DE' => 'Deutschland', 'AT' => 'Österreich', 'CH' => 'Schweiz'];
-$selectedCountry = strtoupper(trim((string) ($_POST['country'] ?? 'DE')));
+$selectedCountry = strtoupper(cms_checkout_post_string('country', 10) ?: 'DE');
 if (!isset($countryOptions[$selectedCountry])) {
     $selectedCountry = 'DE';
 }
@@ -331,7 +346,7 @@ $confirmationSent = false;
 $clientIp = Security::getClientIp();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!Security::instance()->verifyToken($_POST['csrf_token'] ?? '', 'checkout_process')) {
+    if (!Security::instance()->verifyToken(is_string($_POST['csrf_token'] ?? null) ? $_POST['csrf_token'] : '', 'checkout_process')) {
         $error = 'Sicherheitsüberprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.';
     } elseif (!Security::checkDbRateLimit($clientIp, 'checkout_order', 5, 3600)) {
         // Öffentlicher Checkout ohne Limit erlaubte beliebig viele Bestellungen (DB-Wachstum, Spam).
@@ -339,15 +354,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         // Validate inputs
         $contactData = [
-            'first_name' => trim($_POST['first_name'] ?? ''),
-            'last_name' => trim($_POST['last_name'] ?? ''),
-            'company' => trim($_POST['company'] ?? ''),
-            'address' => trim($_POST['address'] ?? ''),
-            'zip' => trim($_POST['zip'] ?? ''),
-            'city' => trim($_POST['city'] ?? ''),
+            'first_name' => cms_checkout_post_string('first_name', 100),
+            'last_name' => cms_checkout_post_string('last_name', 100),
+            'company' => cms_checkout_post_string('company', 150),
+            'address' => cms_checkout_post_string('address', 190),
+            'zip' => cms_checkout_post_string('zip', 20),
+            'city' => cms_checkout_post_string('city', 100),
             'country' => $selectedCountry,
-            'email' => trim($_POST['email'] ?? ''),
-            'phone' => trim($_POST['phone'] ?? ''),
+            'email' => cms_checkout_post_string('email', 190),
+            'phone' => cms_checkout_post_string('phone', 50),
         ];
 
         if (empty($contactData['last_name']) || empty($contactData['email']) || empty($contactData['address'])) {
@@ -359,28 +374,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!in_array($selectedPaymentMethod, $paymentMethods, true)) {
             $error = 'Bitte wählen Sie eine gültige Zahlungsmethode.';
         } else {
-            // Generate Order Number
-            // Fetch format from settings or default
-            $format = $db->get_var("SELECT option_value FROM {$db->getPrefix()}settings WHERE option_name = 'setting_order_number_format'") ?: 'BST{Y}{M}-{ID}';
-            
-            // We need a temporary ID or just use a random string and update later if ID is needed for format
-            // Simple generation for now:
-            $nextId = $db->get_var("SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$db->getPrefix()}orders'");
-            if (!$nextId) {
-                // Fallback if permission denied
-                $maxId = $db->get_var("SELECT MAX(id) FROM {$db->getPrefix()}orders");
-                $nextId = ($maxId ? $maxId : 0) + 1;
-            }
-
-            $placeholders = [
-                '{Y}' => date('Y'),
-                '{M}' => date('m'),
-                '{D}' => date('d'),
-                '{ID}' => str_pad((string)$nextId, 4, '0', STR_PAD_LEFT),
-                '{R}' => strtoupper(substr(uniqid(), -4))
-            ];
-            
-            $orderNumber = str_replace(array_keys($placeholders), array_values($placeholders), $format);
+            // Audit 4.2.0 (DB-420-01): Bestellnummer aus der echten ID der Zeile. Früher aus information_schema.AUTO_INCREMENT
+            // (MySQL 8: bis zu 24 h zwischengespeichert, unter Last doppelt): die eindeutige Spalte order_number ließ jede
+            // weitere Bestellung scheitern. Zuerst mit vorläufiger Nummer einfügen, dann die endgültige setzen.
+            $format = (string) ($db->get_var("SELECT option_value FROM {$db->getPrefix()}settings WHERE option_name = 'setting_order_number_format'") ?: 'BST{Y}{M}-{ID}');
+            $orderNumber = \CMS\Services\Payments\PaymentService::provisionalOrderNumber();
 
             // Price calculation
             $totals = cms_checkout_calculate_totals($planBasePrice, $taxRate, $taxIncluded);
@@ -413,9 +411,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'payment_method' => $selectedPaymentMethod,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-                
+
+                if ($orderId) {
+                    $finalNumber = \CMS\Services\Payments\PaymentService::formatOrderNumber($format, (int) $orderId, time());
+                    if ($db->update('orders', ['order_number' => $finalNumber], ['id' => (int) $orderId])) {
+                        $orderNumber = $finalNumber;
+                    } else {
+                        Logger::instance()->withChannel('orders.checkout')->warning('Bestellnummer konnte nicht gesetzt werden; vorläufige Nummer bleibt.', [
+                            'order_id' => (int) $orderId,
+                        ]);
+                    }
+                }
+
                 $success = (bool) $orderId;
                 Security::recordDbRateLimitAttempt($clientIp, 'checkout_order');
+                if (!$success) {
+                    // Früher ohne Meldung: das Formular erschien erneut, als wäre nichts geschehen.
+                    $error = 'Die Bestellung konnte gerade nicht abgeschlossen werden. Bitte versuchen Sie es erneut.';
+                }
 
                 // 4.1.0 (5a): Online-Zahlung → gehosteter Checkout des Anbieters. Bezahlt ist erst nach dem Webhook.
                 if ($success && isset(\CMS\Services\Payments\PaymentService::METHOD_PROVIDER[$selectedPaymentMethod])) {
@@ -513,32 +526,32 @@ ob_start();
                     <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
                         <div class="form-group">
                             <label for="checkout-first-name" style="display: block; margin-bottom: 5px; font-weight: 500;">Vorname</label>
-                            <input id="checkout-first-name" autocomplete="given-name" type="text" name="first_name" class="form-control" value="<?php echo htmlspecialchars($_POST['first_name'] ?? ($user->first_name ?? '')); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <input id="checkout-first-name" autocomplete="given-name" type="text" name="first_name" class="form-control" value="<?php echo htmlspecialchars(isset($_POST['first_name']) ? cms_checkout_post_string('first_name') : (string) ($user->first_name ?? '')); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                         </div>
                         <div class="form-group">
                             <label for="checkout-last-name" style="display: block; margin-bottom: 5px; font-weight: 500;">Nachname *</label>
-                            <input id="checkout-last-name" autocomplete="family-name" type="text" name="last_name" class="form-control" required value="<?php echo htmlspecialchars($_POST['last_name'] ?? ($user->last_name ?? '')); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <input id="checkout-last-name" autocomplete="family-name" type="text" name="last_name" class="form-control" required value="<?php echo htmlspecialchars(isset($_POST['last_name']) ? cms_checkout_post_string('last_name') : (string) ($user->last_name ?? '')); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                         </div>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="checkout-company" style="display: block; margin-bottom: 5px; font-weight: 500;">Firma</label>
-                        <input id="checkout-company" autocomplete="organization" type="text" name="company" class="form-control" value="<?php echo htmlspecialchars($_POST['company'] ?? ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <input id="checkout-company" autocomplete="organization" type="text" name="company" class="form-control" value="<?php echo htmlspecialchars(isset($_POST['company']) ? cms_checkout_post_string('company') : (string) ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="checkout-address" style="display: block; margin-bottom: 5px; font-weight: 500;">Adresse *</label>
-                        <input id="checkout-address" autocomplete="street-address" type="text" name="address" class="form-control" required value="<?php echo htmlspecialchars($_POST['address'] ?? ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <input id="checkout-address" autocomplete="street-address" type="text" name="address" class="form-control" required value="<?php echo htmlspecialchars(isset($_POST['address']) ? cms_checkout_post_string('address') : (string) ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
 
                     <div class="form-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 15px;">
                         <div class="form-group">
                             <label for="checkout-zip" style="display: block; margin-bottom: 5px; font-weight: 500;">PLZ *</label>
-                            <input id="checkout-zip" autocomplete="postal-code" type="text" name="zip" class="form-control" required value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <input id="checkout-zip" autocomplete="postal-code" type="text" name="zip" class="form-control" required value="<?php echo htmlspecialchars(isset($_POST['zip']) ? cms_checkout_post_string('zip') : (string) ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                         </div>
                         <div class="form-group">
                             <label for="checkout-city" style="display: block; margin-bottom: 5px; font-weight: 500;">Stadt *</label>
-                            <input id="checkout-city" autocomplete="address-level2" type="text" name="city" class="form-control" required value="<?php echo htmlspecialchars($_POST['city'] ?? ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <input id="checkout-city" autocomplete="address-level2" type="text" name="city" class="form-control" required value="<?php echo htmlspecialchars(isset($_POST['city']) ? cms_checkout_post_string('city') : (string) ''); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                         </div>
                     </div>
 
@@ -553,7 +566,7 @@ ob_start();
 
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="checkout-email" style="display: block; margin-bottom: 5px; font-weight: 500;">E-Mail Adresse *</label>
-                        <input id="checkout-email" autocomplete="email" type="email" name="email" class="form-control" required value="<?php echo htmlspecialchars($_POST['email'] ?? ($user->email ?? '')); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <input id="checkout-email" autocomplete="email" type="email" name="email" class="form-control" required value="<?php echo htmlspecialchars(isset($_POST['email']) ? cms_checkout_post_string('email') : (string) ($user->email ?? '')); ?>" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
