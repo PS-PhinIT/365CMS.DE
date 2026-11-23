@@ -23,6 +23,8 @@ class RolesModule
     // 4.2.0: „moderator“ ist Standardrolle (Community, capabilities_v27) und damit nicht umbenenn- oder löschbar.
     private const ROLES = ['admin', 'editor', 'author', 'member', 'moderator'];
     // Spaltenbreiten: users.role VARCHAR(20), role_permissions.capability VARCHAR(100)
+    /** Rollen, auf die beim Löschen einer Rolle nicht umgehängt wird (keine stille Massen-Rechteausweitung). */
+    private const PRIVILEGED_ROLES = ['admin', 'moderator'];
     private const MAX_ROLE_SLUG_LENGTH = 20;
     private const MAX_CAPABILITY_LENGTH = 100;
 
@@ -391,6 +393,10 @@ class RolesModule
 
         if (!$this->roleExists($role)) {
             return ['success' => false, 'error' => 'Die ausgewählte Rolle existiert nicht mehr.'];
+        }
+
+        if (in_array($fallbackRole, self::PRIVILEGED_ROLES, true)) {
+            return ['success' => false, 'error' => 'Als Ersatzrolle sind Administrator und Moderator nicht erlaubt. Rollen bitte einzeln in der Benutzerverwaltung vergeben.'];
         }
 
         if ($fallbackRole === '' || $fallbackRole === $role) {
