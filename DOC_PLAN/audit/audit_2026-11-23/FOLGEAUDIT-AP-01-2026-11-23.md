@@ -58,3 +58,25 @@ und `pdo_sqlite`. Geänderte PHP-Dateien zusätzlich mit `php -l` geprüft. Kein
 LF-Checkout wiederholen. Zusätzlich die Rehash-Konkurrenz mit MariaDB/Testkonten prüfen. Danach zuerst 01.1 und 01.6 gemeinsam prüfen: parallele Sitzungen über Rollenwechsel und
 SSO-Richtlinienwechsel hinweg beobachten. Testfehler ohne bestätigten Produktpfad sind nicht als neue
 Sicherheitsbefunde gezählt.
+
+## Nachprüfung unter Linux (Claude Sonnet 5.5, 23.11.2026)
+
+Quellstand `main` nach `8679a05` (PHP 8.3.6 CLI, LF-Checkout, ohne Datenbank), `php TESTS/run-all.php`.
+
+| Suite | Ergebnis auf Linux | Einordnung |
+|---|---|---|
+| `password-policy`, `mfa-enforcement`, `login-showcase` | grün | wie im Bericht |
+| `sso-entra` | **grün** | der rote Textvergleich in 01.6 war ein Zeilenumbruch-Artefakt des Windows-Checkouts, kein Produktfehler |
+| `user-role-hook` | **grün** (inklusive Mutanten-Gegenprobe) | die 13 Windows-Fehler in AP-02 sind dasselbe Artefakt (Zeilenumbrüche, `/dev/null`) |
+| `security` | rot, 1 Prüfung: `CMS_ASSETS/suneditor-3.4.3.zip` fehlt | Folge des Umzugs von `CMS_ASSETS/` in ein privates Repository, kein Anmeldeproblem; kein Abbruch durch `emailLinkMethod()` unter Linux |
+
+Alle übrigen Suiten sind grün (66 Suiten, nur `security` rot).
+
+### TMP-K02a-3 · Rehash beendet fremde Sitzungen schon vor der MFA (LOW, umgesetzt)
+
+- **Befund:** Der Sitzungs- und Token-Fingerprint ist `HMAC(Passwort-Hash [+ Token-Version])` (`CMS/core/Auth.php:309–317`, geprüft in `:129–136` und `:966`). Der Rehash aus TMP-K02a-1 stand in `Auth::login()` **vor** Status-, Sperr- und MFA-Prüfung. Ein Konto mit altem Hash (Kosten unter 12) verlor damit beim ersten Passwortnachweis alle anderen Sitzungen und alle API-Tokens, auch wenn die MFA danach scheiterte.
+- **Wer kann auslösen:** Wer das Passwort kennt, aber keinen zweiten Faktor hat, kann den Rehash einmalig auslösen und so die Sitzungen des Inhabers beenden. Es entsteht kein Zugriff auf das Konto; Wirkung: einmaliger Abmeldeeffekt je Konto.
+- **Korrektur:** Der Rehash steht jetzt unmittelbar vor `completeAuthenticatedSession()`, also nach Status- und Sperrprüfung und nach der MFA-Weiche. Konten mit aktiver MFA behalten ihren alten Hash bis zur nächsten Passwortänderung (dort wird ohnehin mit Kosten 12 gehasht). Die Compare-and-Swap-Logik bleibt unverändert.
+- **Regression:** `TESTS/password-policy/run.php` prüft die Reihenfolge (Rehash nach `MFA_REQUIRED` und Statusprüfung, vor dem Sitzungsaufbau); ohne die Korrektur schlägt der Test fehl. **Konfidenz:** hoch (Ablauf aus dem Code, kein Datenbanklauf).
+- **Offen (mit MariaDB):** Rehash-Wettlauf zweier gleichzeitiger Logins mit Testkonto.
+
