@@ -518,9 +518,15 @@ function initGlobalEmptyTablePattern() {
                     '<path d="M5 12l0 .01"></path>' +
                     '<path d="M5 18l0 .01"></path>' +
                 '</svg>' +
-                '<div class="fw-bold">Keine ' + entity + ' vorhanden.</div>' +
+                '<div class="fw-bold" data-empty-title></div>' +
                 '<div class="text-secondary small">Sobald neue Daten vorliegen, erscheinen sie hier automatisch.</div>' +
             '</div>';
+        // Audit 4.2.0 (AP-04): `entity` stammt aus dem Text der Zelle und kann Zeichen aus Suchbegriffen oder Inhalten enthalten.
+        // Als Text setzen, nie als HTML (der Zellentext ist nach `textContent` bereits entmaskiert).
+        var emptyTitle = cell.querySelector('[data-empty-title]');
+        if (emptyTitle) {
+            emptyTitle.textContent = 'Keine ' + entity + ' vorhanden.';
+        }
     });
 }
 

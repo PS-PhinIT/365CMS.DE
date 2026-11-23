@@ -14,7 +14,7 @@
 
 ---
 
-### v4.2.3 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-03)
+### v4.2.4 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-04)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
 
