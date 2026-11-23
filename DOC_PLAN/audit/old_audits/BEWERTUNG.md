@@ -4,7 +4,7 @@
 <!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
 > **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 > **⏱️ Historischer Snapshot (April 2026).** Dieses Dokument hält den Snyk-/Bewertungsstand vom **April 2026** (CMS-Stand ~2.8.x) fest und bleibt als Delta-Referenz erhalten. **Für die aktuelle First-Party-Code-Sicherheit gelten die internen Code-Audits vom 2026-06-10:**
-> [../AUDIT_core_2026-06-10.md](AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](AUDIT_member-includes-views_2026-06-10.md) — Ergebnis: **0 kritische Funde**, alle Defense-in-Depth-Härtungen übernommen (CMS-Stand 3.3.47).
+> [../AUDIT-CORE-2026-06-10.md](AUDIT-CORE-2026-06-10.md) · [../AUDIT-ADMIN-2026-06-10.md](AUDIT-ADMIN-2026-06-10.md) · [../AUDIT-MEMBER-INCLUDES-VIEWS-2026-06-10.md](AUDIT-MEMBER-INCLUDES-VIEWS-2026-06-10.md) — Ergebnis: **0 kritische Funde**, alle Defense-in-Depth-Härtungen übernommen (CMS-Stand 3.3.47).
 
 > Strukturhinweis: Die frühere Verteilung auf `AdminAudit-*.md`, `AssetAudit-*.md`, `PRÜFUNG.MD` sowie einzelne Snyk-/Live-Audit-Dateien wurde in sechs Sammelaudits unter `DOC/audit/Audit-*.md` konsolidiert. Diese Datei bleibt die führende Bewertungs- und Delta-Referenz.
 

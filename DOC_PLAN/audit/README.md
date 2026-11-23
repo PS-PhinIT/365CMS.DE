@@ -3,7 +3,7 @@
 > **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml`
 
 > **Archivstatus (23.11.2026):** Dieses Verzeichnis ist ein Audit-Archiv und kein aktueller Backlog. Für den laufenden 4.2.0-Stand und Folgearbeit gelten [../STATUS.md](../STATUS.md), die Kataloge [../v4.2.X/](../v4.2.X/README.md), [../v4.3/](../v4.3/README.md) und [../v4.4/](../v4.4/README.md) sowie der Abschnitt 4.2.0 in [Changelog.md](../../Changelog.md).
-> Die einzige verdichtete Restliste steht in [OPEN-FINDINGS.md](OPEN-FINDINGS.md).
+> Die einzige verdichtete Restliste steht in [OFFENE-BEFUNDE.md](OFFENE-BEFUNDE.md).
 
 ## Aktuelle Einordnung
 
@@ -41,9 +41,9 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 |---|---|
 | [PRUEFKATALOG.md](PRUEFKATALOG.md) | Prüfkatalog mit Quellen aus dem Internet, Abdeckung je Prüfpunkt, Methodik |
 | [Changelog.md](../../Changelog.md), Abschnitt 4.2.0 | Aktueller Releaseumfang, inklusive Community, Captcha, Schema v27, Medien- und Admin-Änderungen |
-| [changelogs/Changelog_old.md](changelogs/Changelog_old.md) | Archivierter 2.x-Changelog bis 2.9.788; kein aktueller Backlog |
+| [changelogs/CHANGELOG-OLD.md](changelogs/CHANGELOG-OLD.md) | Archivierter 2.x-Changelog bis 2.9.788; kein aktueller Backlog |
 | [old_audits/README.md](old_audits/README.md) | Index der historischen Vorprüfungen und Checklisten; offene Häkchen dort sind nicht automatisch offene Aufgaben |
-| [OPEN-FINDINGS.md](OPEN-FINDINGS.md) | die zwei tatsächlich noch offenen Auditpunkte und ihre korrekte Releasezuordnung |
+| [OFFENE-BEFUNDE.md](OFFENE-BEFUNDE.md) | die zwei tatsächlich noch offenen Auditpunkte und ihre korrekte Releasezuordnung |
 | [RELEASE/README-4.2.0.md](../../RELEASE/README-4.2.0.md) | Paketinhalt und Update-Hinweise des freigegebenen 4.2.0-Standes |
 | [SICHERHEIT.md](SICHERHEIT.md) | Sicherheitsbefunde SEC-16 bis SEC-27 |
 | [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) | Geschwindigkeit (PERF-07 bis PERF-11) und Massenanfragen/Bot-Last (LAST-01 bis LAST-06) inkl. Messwerten |

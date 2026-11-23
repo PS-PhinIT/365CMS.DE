@@ -5,7 +5,7 @@
 > **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 ## Ziel
 
-Diese Datei protokolliert die inkrementelle Abarbeitung des konsolidierten Audit-Backlogs aus `DOC/audit/Audit-Backlog.md`.
+Diese Datei protokolliert die inkrementelle Abarbeitung des konsolidierten Audit-Backlogs aus `DOC_PLAN/audit/old_audits/AUDIT-BACKLOG.md`.
 Jeder Schritt dokumentiert:
 
 - geprüften Scope
@@ -15,7 +15,7 @@ Jeder Schritt dokumentiert:
 
 > Hinweis zur Struktur: Der frühere Detail-Prüfplan aus `PRÜFUNG.MD` sowie die verteilten Admin-/Asset-Indizes wurden in die Sammelstruktur unter `Audit-*.md` überführt. Die Verlaufshistorie bleibt hier bestehen.
 
-## Gesamtstand aus `Audit-Backlog.md`
+## Gesamtstand aus `AUDIT-BACKLOG.md`
 
 - Gesamtpunkte im Prüfplan: **444**
 - Priorität **kritisch**: **31**

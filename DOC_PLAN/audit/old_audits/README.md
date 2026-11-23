@@ -3,17 +3,17 @@
 <!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
 > **Historischer Altbestand:** Diese Dateien dokumentieren Prüfstände bis 2026-06-10
 > sowie ältere Checklisten. Sie sind weder aktuelle Produktangaben noch ein
-> Aufgaben-Backlog. Maßgeblich: [OPEN-FINDINGS.md](../OPEN-FINDINGS.md),
+> Aufgaben-Backlog. Maßgeblich: [OFFENE-BEFUNDE.md](../OFFENE-BEFUNDE.md),
 > [../STATUS.md](../../STATUS.md) und die Releasekataloge.
 
 ## Reifegrad der Unterlagen
 
 | Gruppe | Dateien | Nutzung |
 |---|---|---|
-| technische Prüfung Juni 2026 | `365cms-technical-audit-report.md`, `AUDIT_core_2026-06-10.md`, `AUDIT_admin_2026-06-10.md`, `AUDIT_member-includes-views_2026-06-10.md` | historische Code-/Bewertungsbasis; Scores nicht als aktuellen Stand lesen |
-| konsolidierte Audits April | `Audit-Backlog.md`, `Audit-Content-Platform.md`, `Audit-Design-Media.md`, `Audit-Live-External.md`, `Audit-System-Security.md`, `Audit-Users-Commerce.md` | alte Befundmengen und Prioritäten; nur nach Reproduktion übernehmen |
-| Bewertungen/Checklisten | `BEWERTUNG.md`, `Baukasten-CHECKLISTE.md`, `MustHave-CHECKLISTE.md`, `NiceToHave-CHECKLISTE.md`, `ToDoPrüfung.md` | historische Produkt-/Qualitätskriterien, keine aktuellen Task-Marker |
-| Themenprüfungen | `ai-ki-module.md`, `bugs-stabilitaet.md`, `funktionsvollstaendigkeit.md`, `performance.md`, `seo.md`, `sicherheit.md`, `unvollstaendige-implementierungen.md`, `wartbarkeit.md` | wiederholbare Prüfdimensionen, aber veralteter Ist-Stand |
+| technische Prüfung Juni 2026 | `365CMS-TECHNICAL-AUDIT-REPORT.md`, `AUDIT-CORE-2026-06-10.md`, `AUDIT-ADMIN-2026-06-10.md`, `AUDIT-MEMBER-INCLUDES-VIEWS-2026-06-10.md` | historische Code-/Bewertungsbasis; Scores nicht als aktuellen Stand lesen |
+| konsolidierte Audits April | `AUDIT-BACKLOG.md`, `AUDIT-CONTENT-PLATFORM.md`, `AUDIT-DESIGN-MEDIA.md`, `AUDIT-LIVE-EXTERNAL.md`, `AUDIT-SYSTEM-SECURITY.md`, `AUDIT-USERS-COMMERCE.md` | alte Befundmengen und Prioritäten; nur nach Reproduktion übernehmen |
+| Bewertungen/Checklisten | `BEWERTUNG.md`, `BAUKASTEN-CHECKLISTE.md`, `MUST-HAVE-CHECKLISTE.md`, `NICE-TO-HAVE-CHECKLISTE.md`, `TODO-PRUEFUNG.md` | historische Produkt-/Qualitätskriterien, keine aktuellen Task-Marker |
+| Themenprüfungen | `AI-KI-MODUL.md`, `BUGS-STABILITAET.md`, `FUNKTIONSVOLLSTAENDIGKEIT.md`, `PERFORMANCE.md`, `SEO.md`, `SICHERHEIT.md`, `UNVOLLSTAENDIGE-IMPLEMENTIERUNGEN.md`, `WARTBARKEIT.md` | wiederholbare Prüfdimensionen, aber veralteter Ist-Stand |
 | Begleitdaten | `365cms-technical-audit-report.html`, `dependency-governance.json`, `.last-audit-run` | Beweisdokumente; nicht als aktuelle Version oder aktuelle Prüfausführung ausgeben |
 
 ## Regel für die Wiederverwendung
