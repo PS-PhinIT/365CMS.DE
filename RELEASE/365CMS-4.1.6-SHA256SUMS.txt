@@ -1,2 +1,0 @@
-6465ccb1a3b67e3b8f36ba56fe2bbcf60f500dc468e8a0a95166e75ba9f203e1  365CMS-4.1.6-update.zip
-fbb91caeb18ef2e2242b341209c90bf22e6940ce4d7b2f1b2d61694fdbdc7fdc  365CMS-4.1.6-full.zip
