@@ -109,6 +109,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | `SecurityRuntimeService` | Firewall und Rate-Limit je Request |
 | `SecurityAlertService` | Alarm-Scans (Brute Force, Spam, Firewall) |
 | `AntispamService` | Formular-Spamprüfung |
+| `Security\CaptchaService` (+ `Captcha\PowProvider`, `ImageProvider`, `MathProvider`, `CaptchaStore`) | lokale, drittanbieterfreie Captchas für Formulare, Registrierung und Community; `pow` (ALTCHA-Prinzip), `image` (GD/PNG) und immer verfügbare barrierearme Alternative `math`. Aufgaben sind an Sitzung und Kontext gebunden, laufen nach zwei Stunden ab und werden bei jeder Prüfung verbraucht. Nicht bekannte/nicht verfügbare/einwilligungspflichtige Auswahl fällt auf `math`; Theme-Helfer `cms_captcha_field()` und `cms_captcha_asset_tags()`. Filter: `cms_captcha_providers` ([ANTISPAM.md](../admin/security/ANTISPAM.md)) |
 | `CookieConsentService` | Consent-Banner, Zustimmungsabfrage |
 | `CoreModuleService` | Feature-Module an/aus ([../admin/system-settings/MODULES.md](../admin/system-settings/MODULES.md)). Bekannte Slugs verwenden ihren Standard oder gespeicherten Zustand; unbekannte Slugs bleiben aus Kompatibilitätsgründen aktiv. `community` wird deshalb ausschließlich über `CommunityModule::isEnabled()` abgefragt: der Wrapper prüft den bekannten Slug und liefert bei jeder Ausnahme `false` (fail-closed) |
 | `SettingsService` | gruppierte, optional verschlüsselte Einstellungen (Secrets über `CryptoService`) |

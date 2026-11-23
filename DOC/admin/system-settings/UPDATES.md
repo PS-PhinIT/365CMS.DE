@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Updates
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/updates` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_updates`
 
 ## English (summary)
@@ -13,8 +13,8 @@
 
 | Bereich | Inhalt |
 |---|---|
-| Core | installierte Version (`CMS\Version::CURRENT`, derzeit `4.1.0`), verfügbare Version laut Update-Quelle, Release-Notizen, kritisch ja/nein (bei `"critical": true` roter Hinweis „Kritisches Update verfügbar“) |
-| Datenbank | installierte und Ziel-Schema-Version (`SchemaManager::SCHEMA_VERSION = v26`), Downgrade-Erkennung |
+| Core | installierte Version (`CMS\Version::CURRENT`, derzeit `4.2.0`), verfügbare Version laut Update-Quelle, Release-Notizen, kritisch ja/nein (bei `"critical": true` roter Hinweis „Kritisches Update verfügbar“) |
+| Datenbank | installierte und Ziel-Schema-Version (`SchemaManager::SCHEMA_VERSION = v27`), Downgrade-Erkennung |
 | Plugins | installierte vs. verfügbare Versionen aus der Plugin-Registry |
 | Theme | aktives Theme vs. Marktplatz-Version |
 | Systemvoraussetzungen | PHP-Version, MySQL/MariaDB-Version, Erweiterungen (`pdo`, `pdo_mysql`, `mbstring`, `json`, `curl`, `gd`, `zip`), Schreibrechte (`uploads`, `cache`, `logs`, Backup-Verzeichnis: `backups` bzw. seit 4.0.0 `CMS_BACKUP_PATH` –, `assets`), freier Speicherplatz |
@@ -79,4 +79,4 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
 
 ### Verwandte Dokumente
 
-[BACKUP.md](BACKUP.md) · [../plugins/UPDATES.md](../plugins/UPDATES.md) · [../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md)
+[BACKUP.md](BACKUP.md) · [../plugins/UPDATES.md](../plugins/UPDATES.md) · [../../INSTALLATION.md](../../INSTALLATION.md)

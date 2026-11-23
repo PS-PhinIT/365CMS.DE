@@ -386,7 +386,7 @@ Geladen durch `PluginManager` aus `CMS/plugins/<slug>/`. Derzeit installiert: nu
 
 Canonical `DOC/` files: `README.md`, `INDEX.md`, `INSTALLATION.md`, `DEVLIST.md`, `FILELIST.md`, `FILESTRUCTUR.md`, `CMSFILESTRUCTUR.md`.
 
-Subfolders: `admin/`, `ai/`, `assets/`, `audit/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
+Subfolders: `admin/`, `ai/`, `assets/`, `audit/`, `core/`, `member/`, `plugins/`, `theme/`.
 
 Asset Markdown is under `DOC/assets/`. The audit reports are in `DOC/audit/`; open gaps are tracked in `core/STATUS.md`.
 
@@ -394,7 +394,7 @@ Asset Markdown is under `DOC/assets/`. The audit reports are in `DOC/audit/`; op
 
 Kanonische `DOC/`-Dateien: `README.md`, `INDEX.md`, `INSTALLATION.md`, `DEVLIST.md`, `FILELIST.md`, `FILESTRUCTUR.md`, `CMSFILESTRUCTUR.md`.
 
-Unterordner: `admin/`, `ai/`, `assets/`, `audit/`, `core/`, `member/`, `plugins/`, `theme/`, `workflow/`.
+Unterordner: `admin/`, `ai/`, `assets/`, `audit/`, `core/`, `member/`, `plugins/`, `theme/`.
 
 Asset-Markdown liegt unter `DOC/assets/`. Die Prüfberichte liegen unter `DOC/audit/`; offene Lücken stehen in `core/STATUS.md`.
 

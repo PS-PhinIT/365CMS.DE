@@ -25,7 +25,7 @@ Inventory of the classes directly under `CMS/core/` and the implemented Communit
 | `AuditLogger` | `core/AuditLogger.php` | Audit-Log in `cms_audit_log` | `log()`, `loginSuccess()`, `loginFailed()`, `pluginAction()`, `themeSwitch()`, `userRoleChange()`, `backupAction()`, `getRecent()` |
 | `Debug` | `core/Debug.php` | Checkpoints und Query-Telemetrie bei `CMS_DEBUG` | `checkpoint()`, `query()` |
 | `Json` | `core/Json.php` | sichere JSON-Hilfen | `decodeArray()` u. a. |
-| `Slug` | `core/Slug.php` | URL-Slugs für Beiträge, Kategorien, Tags und Seiten: Umlaut-Umschrift (ä → ae, ß → ss), Akzente entfernt, dann `[a-z0-9-]` | `fromText()`, `transliterate()` |
+| `Slug` | `core/Slug.php` | gemeinsame URL-Slug-Erzeugung für Beiträge, Kategorien, Tags, Seiten und Community: `ä/ö/ü/ß` → `ae/oe/ue/ss`; `ł, ø, æ, œ, þ, đ, ð, ı` werden explizit transliteriert; zusammengesetzte oder zerlegte Akzente werden normalisiert bzw. über die lokale Akzenttabelle entfernt. Anschließend bleiben nur `[a-z0-9-]`, Bindestriche werden zusammengefasst/getrimmt und optional auf eine ASCII-Länge gekürzt. Nicht transliterierbare Schriften können einen leeren Slug ergeben. | `fromText()`, `transliterate()` |
 | `Version` | `core/Version.php` | `CURRENT = '4.2.0'`, `RELEASE_DATE = '2026-11-23'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
 | `VendorRegistry` | `core/VendorRegistry.php` | Inventar und Laden gebündelter Bibliotheken | `loadAssetsAutoloader()`, `loadPackage()`, `getDiagnostics()` |
 | `WP_Error` | `core/WP_Error.php` | WordPress-kompatibles Fehlerobjekt | `get_error_code()`, `get_error_message()`, `get_error_data()`, `add()` |
