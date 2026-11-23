@@ -57,7 +57,7 @@
 | **4.2.0** | 🔴 fix | Community / Barrierefreiheit (WCAG) | Behobene Axe-Core-Befunde: vollständige `aria-label`-Texte für Reaktionen, Entfernung doppelter `<main>`-Landmarks, lesbare Hell-/Dunkelmodus-Kontraste, unterstrichene Links im Beitragstext, responsives Suchfeld (320 px), Fokus-Rückgabe nach Dialogen und min. 28 px Klickflächen. |
 | **4.2.0** | 🟠 perf | Community / Abfrageoptimierung | Anfragebezogener Cache (`ReadScope`), Vorladen von Beitragsseiten, Sammelabfragen im Mitgliederbereich (Reduktion von bis zu 54 auf 5–23 Abfragen) sowie zweistufiges Keyset-Paging in großen Foren (Reduktion von > 6.000 auf ~53 Lesezugriffe). |
 | **4.2.0** | 🔵 docs | Dokumentation & Update-Hinweise | Audit-Katalog & Bericht (`AUDIT-4.2.0-2026-11-23.md`), `HANDOFF-PR2-PR5.md`, Aktualisierung von `DATABASE-SCHEMA.md`, `RBAC.md`, `SSO-ENTRA.md`, `HOOKS-REFERENCE.md` und `MEDIA.md` sowie Migrationshinweise für bestehende `moderator`-Rollen und Rechtetemplates. |
-| **4.2.0** | ⬜ chore | Tests, Marketplace & Release | Erweiterung auf 66 Test-Suiten (u. a. `schema-v27`, `captcha`, `community-*`, `media-images`, `slugs`, Umbenennung zu `release-package`) inkl. Mutanten-Tests. Entfernung statischer Feeds aus `CMS/marketplace/` und Paketierung von **v4.2.0** (`365CMS-4.2.0-update.zip` & `-full.zip`). |
+| **4.2.0** | ⬜ chore | Tests, Marketplace & Release | Erweiterung auf 66 Test-Suiten (u. a. `schema-v27`, `captcha`, `community-*`, `media-images`, `slugs`, Umbenennung zu `release-package`) inkl. Mutanten-Tests; `php TESTS/run-all.php` führt 66 Suiten aus. Entfernung statischer Feeds aus `CMS/marketplace/` und Paketierung von **v4.2.0** (`365CMS-4.2.0-update.zip` & `-full.zip`). |
 
 ### v4.1.9 — 17.11.2026 - Patch Release
 

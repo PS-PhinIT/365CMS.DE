@@ -71,7 +71,6 @@ Mit 4.1.0 werden `posts.publish` und `pages.publish` erstmals geprüft. Damit ni
 | `FeatureHooks\ContentWorkflowHooks` | Badges, Aufräumen der Vorschau-Links |
 | Tabellen | `cms_content_workflow_events`, `cms_content_preview_links` ([DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md)) |
 | Hooks | `cms_content_submitted`, `cms_content_approved`, `cms_content_returned`, `cms_content_withdrawn` ([HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md)) |
-| Tests | `php TESTS/content-workflow/run.php` |
 
 ### Verwandte Dokumente
 

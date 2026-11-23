@@ -40,7 +40,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 - 🛡️ **Security & Hardening by Default:** Strict Content Security Policy (CSP) with request nonces and **Trusted Types** runtime, authenticated encryption (`XChaCha20-Poly1305`), Passkeys (WebAuthn), TOTP MFA, LDAP/Active Directory, SSRF-protected HTTP client, and an integrated Security Audit suite.
 - 🇪🇺 **Privacy, GDPR & Accessibility Native:** Consent-gated analytics (GA4, GTM, Matomo), local WOFF2 font hosting, automated data retention rules with dry-run previews, GDPR self-export/deletion workflows, and a WCAG 2.1 AA / EN 301 549 accessibility statement generator.
 - 🆕 **New in 4.2.0:** Community forum module (`/forum`, switchable core module, schema `v27`): categories and forums with a permission matrix, topics and posts with Markdown and a visual editor (uploads, drafts, preview), reactions, subscriptions, reports and moderation, search and SEO (structured data), member area and public profile, GDPR export/erasure and retention rules; local captcha service for forms and registration.
-- 🛠️ **4.1.1 – 4.1.8:** patch releases from the 4.1.0 release audit (security, database/upgrade path, functional fixes, PHP 8.4/8.5 regressions, performance and caching); see [`DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`](DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md).
+- 🛠️ **4.1.1 – 4.1.8:** patch releases from the 4.1.0 release audit (security, database/upgrade path, functional fixes, PHP 8.4/8.5 regressions, performance and caching); see [`DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md`](DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md).
 - 🆕 **New in 4.1.0:** Microsoft Entra ID single sign-on (OIDC/PKCE), configurable password policy and role-based MFA enforcement, AVIF derivatives with `<picture>` output and a media usage index, four-eyes review with expiring preview links, reusable EditorJS block templates, content expiry & review reminders, S3-compatible offsite backups, outbound webhooks and online payments (Stripe, Mollie). Details: [`Changelog.md`](Changelog.md) · [`DOC/README.md`](DOC/README.md).
 - 🧱 **Modern Editorial Experience:** Powered by a heavily customized **Editor.js** canvas with block-level revisions & diffs, enforced publish checklists, distraction-free focus mode, editorial calendar, native DE/EN content workflows, and optional admin-only AI assistance.
 
@@ -56,7 +56,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Architecture** | Modular DI container (`CMS\Container`), specialized routers (`Web`, `Admin`, `Member`, `API`, `CLI`), event-driven hooks |
 | **Frontend & Admin UI** | Tabler-based responsive admin shell, zero-build ES modules (`admin-shell/`, `post-editor/`, `editor-blocks/`), local WOFF2 fonts |
 | **Shipped Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML Importer*) |
-| **Quality Assurance** | 32 database-free automated test suites (`php TESTS/run-all.php`) + CI security scanning |
+| **Quality Assurance** | Automated test suites without database + CI security scanning |
 
 ---
 
@@ -116,8 +116,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 │   └── themes/           # Installed themes (ships with cms-default / Meridian)
 ├── DOC/                  # Comprehensive bilingual documentation & audit reports
 ├── RELEASE/              # Official release ZIPs (-full, -update) & SHA-256 checksums
-├── SCREENSHOTS/          # UI & dashboard screenshots
-└── TESTS/                # 32 database-free test suites (php TESTS/run-all.php)
+└── SCREENSHOTS/          # UI & dashboard screenshots
 ```
 
 ---
@@ -133,7 +132,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 | **Admin Guide & Menu Profiles** | [`DOC/admin/GUIDE.md`](DOC/admin/GUIDE.md) · [`DOC/admin/ADMIN-MENU.md`](DOC/admin/ADMIN-MENU.md) |
 | **Plugin & Theme Development** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operational Workflows** | [`DOC_PLAN/`](DOC_PLAN/) |
-| **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC_PLAN/audit/audits/README.md) |
+| **Security & Audit Reports** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC_PLAN/audit/README.md`](DOC_PLAN/audit/README.md) |
 | **Releases & Changelog** | [`RELEASE/README-4.2.0.md`](RELEASE/README-4.2.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community module (4.2.0, schema `v27`)](DOC_PLAN/v4.2/README.md) · [CLI & alerting (4.3.0)](DOC_PLAN/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Community Guidelines** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
@@ -142,7 +141,7 @@ Most traditional CMS platforms either drown in legacy plugin dependencies and bl
 
 ### 🤝 Contributing & Security Policy
 
-- **Contributing:** Keep pull requests focused, document behavioral changes in [`DOC/`](DOC/) and [`Changelog.md`](Changelog.md), and run both `php -l` and the test suite (`php TESTS/run-all.php`) before opening a PR. Please adhere to our [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+- **Contributing:** Keep pull requests focused, document behavioral changes in [`DOC/`](DOC/) and [`Changelog.md`](Changelog.md), and run both `php -l` and the test suite before opening a PR. Please adhere to our [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 - **Security Disclosures:** Please report security vulnerabilities **privately** to the maintainers instead of publishing exploit details in public issues.
 
 ---
@@ -161,7 +160,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 - 🛡️ **Sicherheit ab Werk (Security-First):** Strikte Content Security Policy (CSP) mit Request-Nonces und **Trusted Types**, authentifizierte Verschlüsselung (`XChaCha20-Poly1305`), Passkeys (WebAuthn), TOTP-MFA, LDAP/Active Directory, SSRF-geschützter HTTP-Client und ein integriertes Sicherheits-Audit.
 - 🇪🇺 **DSGVO- & Barrierefreiheits-nativ:** Einwilligungsgesteuerte Analytics (GA4, GTM, Matomo), lokales WOFF2-Font-Hosting, automatisierte Löschfristen mit Probelauf, DSGVO-Selbstauskunft/-Löschung und Generator für Barrierefreiheitserklärungen (WCAG 2.1 AA / EN 301 549).
 - 🆕 **Neu in 4.2.0:** Community-Modul (Forum unter `/forum`, abschaltbares Kernmodul, Schema `v27`): Kategorien und Foren mit Rechte-Matrix, Themen und Beiträge mit Markdown und visuellem Editor (Upload, Entwürfe, Vorschau), Reaktionen, Abos, Meldungen und Moderation, Suche und SEO (strukturierte Daten), Mitgliederbereich und öffentliches Profil, DSGVO-Auskunft und -Löschung mit Löschfristen; lokaler Captcha-Dienst für Formulare und Registrierung.
-- 🛠️ **4.1.1 – 4.1.8:** Patch-Releases aus der Release-Prüfung 4.1.0 (Sicherheit, Datenbank/Upgrade-Pfad, Funktionen, Regressionen unter PHP 8.4/8.5, Performance und Caching); siehe [`DOC/audit/RELEASE-AUDIT-4.1.0-2026-11-15.md`](DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md).
+- 🛠️ **4.1.1 – 4.1.8:** Patch-Releases aus der Release-Prüfung 4.1.0 (Sicherheit, Datenbank/Upgrade-Pfad, Funktionen, Regressionen unter PHP 8.4/8.5, Performance und Caching); siehe [`DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md`](DOC_PLAN/audit/audits/RELEASEAUDIT-2026-11-15_4.1.0.md).
 - 🆕 **Neu in 4.1.0:** Anmeldung mit Microsoft Entra ID (OIDC/PKCE), konfigurierbare Passwort-Richtlinie und rollenbasierter MFA-Zwang, AVIF-Fassungen mit `<picture>`-Ausgabe und Medien-Verwendungsnachweis, Vier-Augen-Prinzip mit zeitlich begrenzten Vorschau-Links, wiederverwendbare EditorJS Block Vorlagen, Ablaufdatum und Wiedervorlage für Inhalte, S3-kompatible Offsite-Backups, ausgehende Webhooks und Online-Zahlungen (Stripe, Mollie). Details: [`Changelog.md`](Changelog.md) · [`DOC/README.md`](DOC/README.md).
 - 🧱 **Moderne Redaktion:** Angepasster **Editor.js**-Blockeditor mit Block-Revisionen & Diff-Ansicht, erzwungener Veröffentlichungs-Checkliste, ablenkungsfreiem Fokusmodus, Redaktionskalender, nativer DE/EN-Mehrsprachigkeit sowie optionaler Admin-KI.
 
@@ -177,7 +176,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Architektur** | Modularer DI-Container (`CMS\Container`), spezialisierte Router (`Web`, `Admin`, `Member`, `API`, `CLI`), Event-Hooks |
 | **Admin- & Frontend-UI** | Responsive Tabler-Admin-Shell, ES-Module ohne Build-Schritt (`admin-shell/`, `post-editor/`, `editor-blocks/`), lokale WOFF2-Schriften |
 | **Standard-Theme & Plugin** | `cms-default` (*Meridian CMS Default*) & `cms-importer` (*WordPress XML-Importer*) |
-| **Qualitätssicherung** | 32 datenbankfreie Test-Suiten (`php TESTS/run-all.php`) + automatisierte CI-Sicherheitsprüfungen |
+| **Qualitätssicherung** | Automatisierte Tests ohne Datenbank + automatisierte CI-Sicherheitsprüfungen |
 
 ---
 
@@ -237,8 +236,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 │   └── themes/           # Installierte Themes (inkl. cms-default / Meridian)
 ├── DOC/                  # Umfassende zweisprachige Dokumentation & Audit-Berichte
 ├── RELEASE/              # Offizielle Release-Pakete (-full, -update) & SHA-256-Prüfsummen
-├── SCREENSHOTS/          # UI- & Dashboard-Screenshots
-└── TESTS/                # 32 datenbankfreie Test-Suiten (php TESTS/run-all.php)
+└── SCREENSHOTS/          # UI- & Dashboard-Screenshots
 ```
 
 ---
@@ -254,7 +252,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 | **Admin-Leitfaden & Menü-Profile** | [`DOC/admin/GUIDE.md`](DOC/admin/GUIDE.md) · [`DOC/admin/ADMIN-MENU.md`](DOC/admin/ADMIN-MENU.md) |
 | **Plugin- & Theme-Entwicklung** | [`DOC/plugins/PLUGIN-DEVELOPMENT.md`](DOC/plugins/PLUGIN-DEVELOPMENT.md) · [`DOC/theme/THEME-DEVELOPMENT.md`](DOC/theme/THEME-DEVELOPMENT.md) |
 | **Operative Workflows** | [`DOC_PLAN/`](DOC_PLAN/) |
-| **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC/audit/README.md`](DOC_PLAN/audit/audits/README.md) |
+| **Sicherheit & Audit-Berichte** | [`DOC/core/SECURITY.md`](DOC/core/SECURITY.md) · [`DOC_PLAN/audit/README.md`](DOC_PLAN/audit/README.md) |
 | **Release-Pakete & Changelog** | [`RELEASE/README-4.2.0.md`](RELEASE/README-4.2.0.md) · [`Changelog.md`](Changelog.md) |
 | **Roadmap 4.2.0 / 4.3.0** | [Community-Modul (4.2.0, Schema `v27`)](DOC_PLAN/v4.2/README.md) · [CLI & Alerting (4.3.0)](DOC_PLAN/v4.1/06-CLI-ALERTING.md) · [`DOC/DEVLIST.md`](DOC/DEVLIST.md) |
 | **Verhaltenskodex** | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) |
@@ -263,7 +261,7 @@ Klassische CMS-Systeme leiden häufig unter aufgeblähten Plugin-Abhängigkeiten
 
 ### 🤝 Mitwirken & Sicherheit
 
-- **Mitwirken:** Bitte Änderungen fokussiert halten, Verhaltensänderungen in [`DOC/`](DOC/) und [`Changelog.md`](Changelog.md) dokumentieren sowie vor einem Pull Request sowohl die PHP-Syntax (`php -l`) als auch die Test-Suite (`php TESTS/run-all.php`) ausführen. Es gilt der [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+- **Mitwirken:** Bitte Änderungen fokussiert halten, Verhaltensänderungen in [`DOC/`](DOC/) und [`Changelog.md`](Changelog.md) dokumentieren sowie vor einem Pull Request sowohl die PHP-Syntax (`php -l`) als auch die Test-Suite ausführen. Es gilt der [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 - **Sicherheitslücken melden:** Bitte melden Sie Sicherheitsprobleme **privat** an die Maintainer, statt Exploit-Details in einem öffentlichen Issue zu veröffentlichen.
 
 ---
