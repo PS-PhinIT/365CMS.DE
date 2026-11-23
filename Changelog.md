@@ -14,13 +14,53 @@
 
 ---
 
+### v4.2.5 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-05)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.5** | 🛡️ security | AP-05 CSRF, Header, Cookies, Browser-Schutz / Apache-Konfiguration | **Header-Fallback überschrieb den Core** (`.htaccess`): `X-Frame-Options` und `Referrer-Policy` standen als `Header always set` und ersetzten auf Apache die Werte, die der Core je Route bewusst abweichend sendet (`SAMEORIGIN` für die Newsletter-Vorschau im Admin und die Einbettungsseite des Aggregators, `no-referrer` auf Seiten mit Token in der URL). Beide Direktiven sind jetzt `setifempty` (wie CSP und HSTS): Der Core bestimmt den Wert, der Fallback ergänzt nur Antworten ohne Header. Außerdem nennt die `Permissions-Policy` des Core dieselben vier Verbote wie der Fallback (`payment=()` ergänzt). Bericht: [FOLGEAUDIT-AP-05](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-05-2026-11-23.md). |
+
+---
+
 ### v4.2.4 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-04)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
+| **4.2.4** | 🛡️ security | AP-04 Ausgabe: XSS, CSP, Vorlagen / Admin-Oberfläche | **Leerzustand von Tabellen** (`initGlobalEmptyTablePattern()` in `assets/js/admin.js`): Der aus einer `colspan`-Zelle gelesene Text („Keine … vorhanden“) wurde per `innerHTML` wieder eingesetzt; nach `textContent` sind darin enthaltene spitze Klammern entmaskiert und wären als HTML ausgewertet worden. Der HTML-Baustein ist jetzt fest, die Beschriftung wird per `textContent` gesetzt. Ein Weg mit ungefiltertem Fremdtext in einer solchen Zelle wurde nicht gefunden (Härtung; zusätzlich schützen CSP und Trusted Types). Alle übrigen Prüfpunkte (Escaping, Bereinigung beim Ausgeben, CSP, JSON-LD, Dateiauslieferung, Fehlerausgaben) ohne Befund. Bericht: [FOLGEAUDIT-AP-04](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-04-2026-11-23.md). |
+
+---
+
+### v4.2.3 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-03)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
 | **4.2.3** | 🛡️ security | AP-03 Eingaben: Injection, Traversal, SSRF / HTTP-Client | **Zieladressen-Prüfung** (`Http\Client::isNonPublicIp()`, genutzt von Client, Feeds, Update und Webhooks): In IPv6 eingebettete IPv4-Adressen in Hex-Schreibweise (IPv4-kompatibel `::7f00:1`, IPv4-übersetzt `::ffff:0:7f00:1`, 6to4 `2002:7f00:1::`) und Multicast (`224.0.0.0/4`, `ff00::/8`) passierten den Filter, obwohl sie eine interne IPv4-Adresse enthalten bzw. nicht unicastfähig sind. Die Prüfung entpackt die eingebettete Adresse jetzt unabhängig von der Schreibweise und prüft sie erneut; öffentliche eingebettete Adressen bleiben erlaubt. Keine Ausnutzung belegt (setzt einen Übersetzer auf dem Server voraus). Alle übrigen Prüfpunkte (SQL, Pfade, Prozesse, Einbindung, Weiterleitung, Header, XML/CSV, Regex, Host-Header) ohne Befund. Bericht: [FOLGEAUDIT-AP-03](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-03-2026-11-23.md). |
+
+---
+
+### v4.2.2 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-02)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.2** | 🛡️ security | AP-02 Autorisierung, Rollen, Objektzugriff | **Rollen löschen:** Als Ersatzrolle sind `admin` und `moderator` serverseitig nicht erlaubt (`RolesModule::deleteRole()`), damit das Löschen einer Rolle nicht still eine ganze Gruppe zu Administratoren oder Moderatoren macht; das Auswahlfeld zeigt beide nicht mehr. Nachprüfung: alle 43 dünnen Admin-Einstiege laden einen der sechs gemeinsamen Rahmen mit Admin-, Capability- und CSRF-Prüfung. Bericht: [FOLGEAUDIT-AP-02](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-02-2026-11-23.md). |
+
+---
+
+### v4.2.1 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-01)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.1** | 🛡️ security | AP-01 Anmeldung und Sitzung | **Passwort-Hashes mit alten Kosten werden beim Login aufgefrischt** (`Security::passwordNeedsRehash()`, Compare-and-Swap auf `users.password`, ein gleichzeitiger Passwortwechsel wird nicht überschrieben); der Rehash läuft erst nach bestandener MFA-Weiche und Statusprüfung, weil der Sitzungs- und Token-Fingerprint am Hash hängt und ein Rehash alle anderen Sitzungen und API-Tokens des Kontos beendet (Nachprüfung, bisher schon vor der MFA). **TOTP-Verbrauch:** Kann `AuthManager::claimTotpCode()` den Verbrauch nicht bestätigen (Speicherfehler), gilt der Code als abgelehnt und der Fehler wird ohne Code und Hash protokolliert (vorher: Anmeldung ohne Replay-Sperre). Bericht: [FOLGEAUDIT-AP-01](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-01-2026-11-23.md). |
 
 ---
 
