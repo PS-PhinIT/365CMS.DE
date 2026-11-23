@@ -67,10 +67,10 @@ Quellstand `main` nach `8679a05` (PHP 8.3.6 CLI, LF-Checkout, ohne Datenbank), `
 |---|---|---|
 | `password-policy`, `mfa-enforcement`, `login-showcase` | grün | wie im Bericht |
 | `sso-entra` | **grün** | der rote Textvergleich in 01.6 war ein Zeilenumbruch-Artefakt des Windows-Checkouts, kein Produktfehler |
-| `user-role-hook` | **grün** (inklusive Mutanten-Gegenprobe) | die 13 Windows-Fehler in AP-02 sind dasselbe Artefakt (Zeilenumbrüche, `/dev/null`) |
+| `user-role-hook` | **grün** (inklusive Mutanten-Gegenprobe), mit den Korrekturen aus PR #194; auf `main` allein 2 rote Doku-Prüfungen (Signaturzeile von `user_role_changed` in der Hook-Referenz, Pfade nach dem Umbau nach `DOC_PLAN`) | die Windows-Fehler in AP-02 sind Zeilenumbruch- und `/dev/null`-Artefakte, die Verhaltensprüfungen bestanden schon dort |
 | `security` | rot, 1 Prüfung: `CMS_ASSETS/suneditor-3.4.3.zip` fehlt | Folge des Umzugs von `CMS_ASSETS/` in ein privates Repository, kein Anmeldeproblem; kein Abbruch durch `emailLinkMethod()` unter Linux |
 
-Alle übrigen Suiten sind grün (66 Suiten, nur `security` rot).
+Gemessen auf `main` plus PR #194: alle übrigen Suiten sind grün (66 Suiten, nur `security` rot). Auf `main` allein sind zusätzlich `functions`, `schema-v27`, `release-4.1.0`, `user-role-hook` und `community-mutants` rot; die Ursachen liegen in der Doku (Umbau nach `DOC_PLAN`), nicht im Anmeldecode.
 
 ### TMP-K02a-3 · Rehash beendet fremde Sitzungen schon vor der MFA (LOW, umgesetzt)
 

@@ -65,8 +65,9 @@ die Suiten `member-area`, `security` und `community-access` wurden in diesem Lau
 
 ## Nachprüfung unter Linux (Claude Sonnet 5.5, 23.11.2026)
 
-- **Tests:** `admin-menu` und `user-role-hook` sind auf Linux grün (PHP 8.3.6, LF-Checkout). Die 13 Fehler des Windows-Laufs
-  sind Zeilenumbruch- und `/dev/null`-Artefakte; die Verhaltensprüfungen der Ersatzrolle bestehen unverändert.
+- **Tests:** `admin-menu` ist auf Linux grün (PHP 8.3.6, LF-Checkout), `user-role-hook` mit den Korrekturen aus PR #194 (auf `main` allein
+  zwei rote Doku-Prüfungen, siehe Bericht AP-01). Die 13 Fehler des Windows-Laufs sind Zeilenumbruch- und `/dev/null`-Artefakte; die
+  Verhaltensprüfungen der Ersatzrolle bestehen unverändert.
 - **02.1 skriptgestützt bestätigt:** Von 140 Einstiegsdateien unter `CMS/admin/*.php` haben alle den `ABSPATH`-Wächter. 43 enthalten
   keine eigene Rechteprüfung; sie sind ausschließlich dünne Wrapper, die genau sechs gemeinsame Rahmen laden (`ai-page.php`,
   `logs-page.php`, `member-dashboard-page.php`, `performance-page.php`, `seo-page.php`, `system-monitor-page.php`). Alle sechs
