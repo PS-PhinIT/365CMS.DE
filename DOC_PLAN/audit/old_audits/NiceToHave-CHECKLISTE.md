@@ -1,5 +1,8 @@
 # 365CMS – Offene Nice-to-haves · Konsolidierte Restliste
-> **Stand:** 2026-05-14 | **Quelle:** PRUEF-CHECKLISTE.md | **Scope:** ohne Plugins und ohne weitere Theme-Erweiterungen
+
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.> **Stand:** 2026-05-14 | **Quelle:** PRUEF-CHECKLISTE.md | **Scope:** ohne Plugins und ohne weitere Theme-Erweiterungen
 
 ## Zweck
 

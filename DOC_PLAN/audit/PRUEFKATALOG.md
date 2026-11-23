@@ -1,5 +1,8 @@
 # 365CMS: Gesamtaudit 2026-10-14 | Prüfkatalog und Methodik
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
 > Übersicht: [README.md](README.md)
 
 > **Historischer Snapshot:** Methodik und Prüfkatalog des Gesamtaudits vom 2026-10-14. Aktuelle Prüfungen werden über die vorhandenen `TESTS/<suite>/run.php` ausgewählt.
@@ -90,7 +93,7 @@ Legende: ✅ geprüft · ➖ nicht anwendbar oder außerhalb des Umfangs (Begrü
 
 | Prüfpunkt | Abdeckung | Ergebnis |
 |---|---|---|
-| Webserver-Konfiguration (Apache und nginx) | ✅ | SEC-19, Doku in [../INSTALLATION.md](../INSTALLATION.md) |
+| Webserver-Konfiguration (Apache und nginx) | ✅ | SEC-19, Doku in [DOC/INSTALLATION.md](../../DOC/INSTALLATION.md) |
 | Backups (Upload-Pfad) | ✅ | REF-10 |
 | Datensparsamkeit und Löschfristen (DSGVO Art. 5) | ✅ | LAST-05, OFFEN-13 |
 | CI-Sicherheitsprüfungen | ✅ | SEC-26 |

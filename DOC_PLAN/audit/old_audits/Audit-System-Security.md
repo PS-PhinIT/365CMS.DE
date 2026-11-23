@@ -1,8 +1,11 @@
 # 365CMS – Audit System, Security & Operations
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 Stand: 2026-04-11  
 
-> **⏱️ Historischer Audit-Snapshot (April 2026).** Aktuelle First-Party-Code-Audits (Stand 3.3.47, 2026-06-10): [../AUDIT_core_2026-06-10.md](../AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](../AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](../AUDIT_member-includes-views_2026-06-10.md).
+> **⏱️ Historischer Audit-Snapshot (April 2026).** Aktuelle First-Party-Code-Audits (Stand 3.3.47, 2026-06-10): [../AUDIT_core_2026-06-10.md](AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](AUDIT_member-includes-views_2026-06-10.md).
 Zweck: Konsolidierter Audit-Stand für Security, Legal/Consent, Performance, Plugins, System, Info und Diagnose.
 
 ## Übernommene Altdateien

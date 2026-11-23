@@ -6,7 +6,10 @@
 
 ## English (summary)
 
-Security and quality audit of 365CMS 3.5.6, released as 4.0.0. The audit covered security (known exploits and vulnerable bundled libraries), bugs, missing functions or values, speed and best practice. 44 findings were recorded and all are fixed in 4.0.0. Eight recommendations (OFFEN-20 … OFFEN-27) remain open because they need a migration or a product decision.
+Security and quality audit of 365CMS 3.5.6, released as 4.0.0. This is the
+pre-implementation snapshot of 2026-11-08. The 44 findings were fixed in 4.0.0.
+OFFEN-20 … OFFEN-26 were implemented and verified on 2026-11-09; only OFFEN-27
+remains open in current release planning.
 
 A second pass followed a concrete report: the security audit claimed that no backup existed although backups were present. The check looked only for `backups/*.sql*` files, while the backup service writes `full_backup_<time>/` and `database_backup_<time>/` directories with a manifest. The pass then looked for other status displays that report a wrong state and for weaknesses in backup and restore.
 
@@ -186,7 +189,7 @@ Zweiter Durchgang (Backups und Statusanzeigen):
 | BP-09 | Flag-Datei für `antispam_blacklist` angelegt; die Schemaprüfung läuft nur noch einmal je Code-Stand |
 | Admin | 91 Seiten ohne PHP-Fehler, PHP-Fehlerprotokoll leer |
 
-### Empfehlungen (offen)
+### Empfehlungen (Stand vor Umsetzung am 2026-11-08)
 
 | ID | Bereich | Empfehlung |
 |---|---|---|

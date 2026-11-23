@@ -2,7 +2,17 @@
 
 > **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/`, Standard-Theme `cms-default`, Plugin `cms-importer`, CI-Workflow `.github/workflows/security.yml`
 
-> **Historischer Snapshot:** Dieses Auditverzeichnis dokumentiert Prüfstände von 3.5.0 bis zur 4.1-Linie. Für den aktuellen 4.2.0-Stand ist [RELEASE/README-4.2.0.md](../../RELEASE/README-4.2.0.md) und der Abschnitt 4.2.0 in [Changelog.md](../../Changelog.md) maßgeblich. Nicht vorhandene 4.2-Auditdateien werden nicht als Quelle verlinkt.
+> **Archivstatus (23.11.2026):** Dieses Verzeichnis ist ein Audit-Archiv und kein aktueller Backlog. Für den laufenden 4.2.0-Stand und Folgearbeit gelten [../STATUS.md](../STATUS.md), die Kataloge [../v4.2.X/](../v4.2.X/README.md), [../v4.3/](../v4.3/README.md) und [../v4.4/](../v4.4/README.md) sowie der Abschnitt 4.2.0 in [Changelog.md](../../Changelog.md).
+> Die einzige verdichtete Restliste steht in [OPEN-FINDINGS.md](OPEN-FINDINGS.md).
+
+## Aktuelle Einordnung
+
+| Punkt | Heutiger Status | Zielort |
+|---|---|---|
+| OFFEN-20 … OFFEN-26 aus dem Audit 2026-11-08 | in 4.0.0 behoben und am 2026-11-09 erneut geprüft | historischer Nachweis in [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) / [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md) |
+| OFFEN-27: Signierte Core-Updatepakete | weiterhin offen | [v4.2.X 42X-06](../v4.2.X/CATALOG.md#42x-06--signierte-update-pakete) |
+| PERF-410-49: WXR-Import in einem Request | weiterhin offen, aber kein 4.2.0-Releaseblocker | historischer Befund im [Release-Audit 4.1](RELEASE-AUDIT-4.1.0-2026-11-15.md); neu priorisieren nur nach aktueller Reproduktion |
+| Community P1/P2/P3, CLI, Custom Fields, Sprachen, Preview und API | Planungs-/Featureumfang, kein ungelöster Sicherheitsbefund | [STATUS.md](../STATUS.md) und die jeweiligen Releasekataloge |
 
 ## English (summary)
 
@@ -19,7 +29,7 @@ Full audit of 365CMS on 2026-10-14 covering security, speed, behaviour under mas
 
 A follow-up audit on the same day ([FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md)) recorded 43 more findings, all fixed in 3.5.0; the parts first left open (recommendations OFFEN-14 … OFFEN-19) were implemented in 3.5.0 as well. The most important fixes were the never-loaded importer service, SSRF filter gaps for IPv4-mapped IPv6, path traversal when renaming member folders, and JWT revocation on password change.
 
-A further follow-up audit of 3.5.6 on 2026-11-08 ([FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md)) recorded 44 findings (security, bundled libraries, functions, backups, false status displays, best practice). All are fixed in 4.0.0; eight recommendations (OFFEN-20 … OFFEN-27) remain open.
+A further follow-up audit of 3.5.6 on 2026-11-08 ([FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md)) recorded 44 findings. OFFEN-20 … OFFEN-26 were implemented in 4.0.0 and verified on 2026-11-09; OFFEN-27 remains open and is tracked as 42X-06.
 
 Runtime tests against MySQL 8.0 show the number of queries per request dropping from 61 to 15 (home page), 63 to 17 (blog) and 89 to 17 (404 page).
 
@@ -31,18 +41,21 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 |---|---|
 | [PRUEFKATALOG.md](PRUEFKATALOG.md) | Prüfkatalog mit Quellen aus dem Internet, Abdeckung je Prüfpunkt, Methodik |
 | [Changelog.md](../../Changelog.md), Abschnitt 4.2.0 | Aktueller Releaseumfang, inklusive Community, Captcha, Schema v27, Medien- und Admin-Änderungen |
+| [changelogs/Changelog_old.md](changelogs/Changelog_old.md) | Archivierter 2.x-Changelog bis 2.9.788; kein aktueller Backlog |
+| [old_audits/README.md](old_audits/README.md) | Index der historischen Vorprüfungen und Checklisten; offene Häkchen dort sind nicht automatisch offene Aufgaben |
+| [OPEN-FINDINGS.md](OPEN-FINDINGS.md) | die zwei tatsächlich noch offenen Auditpunkte und ihre korrekte Releasezuordnung |
 | [RELEASE/README-4.2.0.md](../../RELEASE/README-4.2.0.md) | Paketinhalt und Update-Hinweise des freigegebenen 4.2.0-Standes |
 | [SICHERHEIT.md](SICHERHEIT.md) | Sicherheitsbefunde SEC-16 bis SEC-27 |
 | [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) | Geschwindigkeit (PERF-07 bis PERF-11) und Massenanfragen/Bot-Last (LAST-01 bis LAST-06) inkl. Messwerten |
 | [FUNKTIONEN-VERWEISE.md](FUNKTIONEN-VERWEISE.md) | Fehlende oder unvollständige Funktionen (FUN-21 bis FUN-25) und fehlerhafte Verweise (REF-06 bis REF-11) |
 | [GUI-BARRIEREFREIHEIT.md](GUI-BARRIEREFREIHEIT.md) | Fehler in der Oberfläche und Barrierefreiheit (GUI-01 bis GUI-07) |
 | [FOLGEAUDIT-2026-10-14.md](FOLGEAUDIT-2026-10-14.md) | Folgeaudit zu 3.5.0: SEC-28 bis SEC-31, FUN-26 bis FUN-34, REF-12 bis REF-15, BP-01 bis BP-05, PERF-12 bis PERF-22, GUI-08 bis GUI-16, Empfehlungen OFFEN-14 bis OFFEN-19 (umgesetzt in 3.5.0) |
-| [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) | Folgeaudit zu 3.5.6 vom 2026-11-08: SEC-32 bis SEC-47, Bibliotheken DEP-01 bis DEP-04, FUN-35 bis FUN-54 (u. a. E-Mail-Verifizierung, Benutzer anlegen, Kennzeichnung kritischer Updates, Backup-Prüfung im Audit, Wiederherstellung, falsche Statusanzeigen, Firewall-Rate-Limit), BP-06 bis BP-09 (behoben in 4.0.0), Empfehlungen OFFEN-20 bis OFFEN-27 (offen) |
+| [FOLGEAUDIT-2026-11-08.md](FOLGEAUDIT-2026-11-08.md) | historischer Vor-Umsetzungsstand: SEC-32 bis SEC-47, DEP-01 bis DEP-04, FUN-35 bis FUN-54, BP-06 bis BP-09; OFFEN-20 … OFFEN-26 wurden am 2026-11-09 verifiziert, OFFEN-27 blieb offen |
 | [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md) | Folgeaudit vom 2026-11-09: Umsetzung OFFEN-20 bis OFFEN-26, Regressionsprüfung (SEC-48, FUN-55 bis FUN-62, BP-10) |
 | [FOLGEAUDIT-2026-11-12.md](FOLGEAUDIT-2026-11-12.md) | Prüfprotokoll der Code-, Sicherheits- und Architekturprüfung des Stands 4.0.0: Changelog (CL-001 bis CL-233), weitere Prüfbereiche je Pull Request |
 | [RELEASE-AUDIT-4.1.0-2026-11-15.md](RELEASE-AUDIT-4.1.0-2026-11-15.md) | Release- und Code-Abnahmeprüfung 4.1.0 (Linie 3.5.0 → 4.1.0, Schema v23 → v26), je Prüfbereich ein Pull Request: SEC-410 (Sicherheit), DB-410, FUN-410, PERF-410, DOC-410. Abgeschlossen am 2026-11-17: 145 Befunde, 136 behoben, 4 verworfen, 3 akzeptiert, 1 dokumentiert, 1 offen (PERF-410-49, WXR-Import); Abschlussbilanz im Abschnitt „PR #6“ |
 
-Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Offene Empfehlungen tragen `OFFEN-xx`.
+Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (SEC, PERF, FUN, REF). `LAST` (Massenanfragen) und `GUI` sind neu. Empfehlungen mit `OFFEN-xx` behalten ihre historische Bedeutung; ihr heutiger Status steht nur in der Tabelle „Aktuelle Einordnung“ oder in den Releasekatalogen.
 
 ### Methodik (Kurzfassung)
 
@@ -71,7 +84,7 @@ Die IDs setzen die Nummerierung der Audits vom 2026-10-03 und 2026-10-07 fort (S
 |---|---|---|
 | Sicherheit | **gut** (nach Fixes) | Die Grundlagen sind solide (Prepared Statements, CSRF, CSP mit Nonce und Trusted Types, bcrypt). Lücken gab es beim zweiten Faktor, bei der fehlenden Re-Authentifizierung, bei privaten Upload-Pfaden und bei der uneinheitlichen Ermittlung der Client-IP. |
 | Geschwindigkeit | **gut** (vorher befriedigend) | Am meisten kosteten Schema-Prüfungen und eine zweite DB-Verbindung in **jedem** Request. Nach den Fixes sind es 15–17 Abfragen je Seite. |
-| Massenanfragen / Bots | **befriedigend** (vorher mangelhaft) | Über Suche, 404-Protokoll und Web-Vitals-Endpunkt ließen sich Schreib- und CPU-Last vervielfachen; die Analytik-Tabellen wuchsen unbegrenzt. Jetzt gibt es Rate-Limits, Obergrenzen und eine tägliche Bereinigung. Offen: Für jeden anonymen Besucher wird eine Session gestartet. |
+| Massenanfragen / Bots | **befriedigend** (vorher mangelhaft) | Historischer Stand des 10/14-Audits: Suche, 404-Protokoll und Web-Vitals-Endpunkt hatten Schreib-/CPU-Lastgrenzen; die Session-Erzeugung für anonyme Besucher wurde in diesem Bericht als Einschränkung notiert und ist kein Teil der heutigen Audit-Restliste. |
 | Funktionsumfang | **befriedigend** | Mehrere Einstellungen und Formularfelder hatten keine Wirkung (Kommentare global, `robots.txt`, Beschreibungen von Kategorien und Tags). Behoben. |
 | Verweise | **befriedigend** | Fünf Aufrufe nicht existierender Klassen oder Methoden in Fehlerpfaden führten zu einem Fatal Error statt einer Meldung. Behoben. |
 | GUI | **gut** | Vier Admin-Ansichten hatten Inline-Skripte ohne CSP-Nonce, deren Funktionen der Browser blockierte. Außerdem fehlten Bestätigungen vor destruktiven Aktionen, und es gab ASCII-Umlaute. Behoben. |
@@ -171,8 +184,8 @@ Schweregrad: 🔴 hoch · 🟠 mittel · 🟡 niedrig · ⚪ Hinweis
   - Ohne Einstellung gilt `cloudflare`: Cloudflare wird automatisch erkannt. Hinter einem lokalen Reverse Proxy, Docker oder Load Balancer `private` (bzw. `auto`) setzen, wenn dieser `X-Forwarded-For` selbst ergänzt oder überschreibt.
   - **Host-CDN mit unbekannten Adressen (z. B. Hostinger):** Unter *Sicherheit → Firewall → Proxy / CDN & Client-IP* erscheinen erkannte Proxy-Netze. Das Netz, über das Ihr eigener Seitenaufruf kam, ist als **Ihre Anfrage** markiert, mit **Vertrauen** übernehmen. Das Sicherheits-Audit warnt in diesem Fall. Andere Netze nur nach Bestätigung durch den Hoster übernehmen (Header-Angaben sind fälschbar). Alternativ `*` setzen, wenn der Server **nur** über das CDN erreichbar ist.
   - Erscheint dort kein Kandidat und zeigt die Diagnose bereits unterschiedliche Besucher-IPs, schreibt der Webserver (z. B. LiteSpeed) die echte IP schon selbst in `REMOTE_ADDR`, dann ist nichts zu tun.
-  - `CMS_TRUSTED_PROXIES` in `config/app.php` hat Vorrang vor der Admin-Einstellung; Schlüsselwörter und Header-Reihenfolge in [../core/SECURITY.md](../core/SECURITY.md) (Abschnitt 7a).
-- **nginx:** Die `.htaccess`-Regeln greifen hier nicht. Die Sperren für `uploads/member`, `uploads/import` und die Importer-Verzeichnisse stehen in [../INSTALLATION.md](../INSTALLATION.md).
+  - `CMS_TRUSTED_PROXIES` in `config/app.php` hat Vorrang vor der Admin-Einstellung; Schlüsselwörter und Header-Reihenfolge in [core/SECURITY.md](../../DOC/core/SECURITY.md) (Abschnitt 7a).
+- **nginx:** Die `.htaccess`-Regeln greifen hier nicht. Die Sperren für `uploads/member`, `uploads/import` und die Importer-Verzeichnisse stehen in [DOC/INSTALLATION.md](../../DOC/INSTALLATION.md).
 - **Checkout:** Lifetime-Tarife werden nur noch im Admin vergeben.
 - **Seiten-Cache (ab 3.5.0):** Anonyme Seiten kommen ohne Session-Cookie und mit `Cache-Control: public, max-age=300`. Ein CDN darf sie damit zwischenspeichern; Seiten mit Formularen schalten automatisch auf `private`.
 - **Protokoll-Aufbewahrung (ab 3.5.0):** Aktivitäts- und Audit-Protokoll werden weiterhin nicht automatisch gelöscht, solange unter *Sicherheit → Sicherheits-Audit* keine Frist gesetzt ist. Gewählte Frist ins Verarbeitungsverzeichnis übernehmen.

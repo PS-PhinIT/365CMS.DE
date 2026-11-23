@@ -1,8 +1,11 @@
 # 365CMS – Audit-Backlog
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 Stand: 2026-04-11  
 
-> **⏱️ Historischer Audit-Snapshot (April 2026).** Aktuelle First-Party-Code-Audits (Stand 3.3.47, 2026-06-10): [../AUDIT_core_2026-06-10.md](../AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](../AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](../AUDIT_member-includes-views_2026-06-10.md).
+> **⏱️ Historischer Audit-Snapshot (April 2026).** Aktuelle First-Party-Code-Audits (Stand 3.3.47, 2026-06-10): [../AUDIT_core_2026-06-10.md](AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](AUDIT_member-includes-views_2026-06-10.md).
 Zweck: Konsolidierter Prüf- und Priorisierungsrahmen als Nachfolger von `PRÜFUNG.MD` sowie der früheren Admin-/Asset-Indizes.
 
 ## Konsolidierungsrahmen
@@ -20,7 +23,7 @@ Zweck: Konsolidierter Prüf- und Priorisierungsrahmen als Nachfolger von `PRÜFU
 | `Audit-Users-Commerce.md` | `AdminAudit-Benutzer.md`, `AdminAudit-Gruppen.md`, `AdminAudit-Member.md`, `AdminAudit-Abos.md`, `AssetAudit-Benutzer.md`, `AssetAudit-Gruppen.md`, `AssetAudit-Member.md`, `AssetAudit-Abos.md` | Benutzer, Gruppen/RBAC, Member-Runtime, Pakete/Bestellungen |
 | `Audit-Design-Media.md` | `AdminAudit-Medien.md`, `AdminAudit-Themes.md`, `AdminAudit-Design.md`, `AdminAudit-Hub.md`, `AdminAudit-Tabellen.md`, `AssetAudit-Medien.md`, `AssetAudit-Design.md`, `AssetAudit-Hub.md`, `AssetAudit-Tabellen.md`, `AssetAudit-Grid.md`, `AssetAudit-Themes.md`, `AssetAudit-Marketplace.md` | Medien, Themes, Design, Hub, Tabellen, Grid- und Theme-/Marketplace-Assets |
 | `Audit-System-Security.md` | `AdminAudit-Sicherheit.md`, `AdminAudit-Performance.md`, `AdminAudit-Recht.md`, `AdminAudit-Plugins.md`, `AdminAudit-System.md`, `AdminAudit-Info.md`, `AdminAudit-Diagnose.md`, `AssetAudit-Performance.md`, `AssetAudit-Recht.md` | Security, Legal, Performance, Plugins, System, Diagnose, Doku-Sync |
-| `Audit-Live-External.md` | `Snyk_Audit_04042026.md`, `LiveAudit_365CMS.md`, `PHINIT-LIVE-AUDIT-2026-04-03.md`, `PHINIT-LIVE-LOCALIZATION-2026-04-03.md`, `PHINIT-LIVE-SEARCH-ARCHIVE-2026-04-03.md` | Snyk-Snapshot, Live-Sites, Produktionsbefunde |
+| `Audit-Live-External.md` | `Snyk_Audit_04042026.md`, `LiveAudit_365CMS.md`, `PHINIT-LIVE-AUDIT-2026-04-03.md`, `PHINIT-LIVE-LOCALIZATION-2026-04-03.md`, `PHINIT-LIVE-SEARCH-ARCHIVE-2026-04-03.md` | historische Herkunftsdateien; im aktuellen Repository nicht enthalten, daher nicht als offener Dateibestand |
 | `Audit-Backlog.md` | `PRÜFUNG.MD`, `AdminAudit-INDEX.md`, `AssetAudit-INDEX.md`, `_admin_pruefung_preview.md` | Priorisierung, Reihenfolge, Restarbeiten, Steuerung |
 
 ## Aktueller Arbeitsstand

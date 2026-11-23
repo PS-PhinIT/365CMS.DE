@@ -1,6 +1,10 @@
 ﻿﻿**Version:** 2.9.788
 
-# 365CMS Changelog
+# 365CMS Changelog – historisches 2.x-Archiv
+
+> **Archivstand (23.11.2026):** Dieser Changelog dokumentiert ausschließlich die
+> 2.x-Linie bis 2.9.788. Er ist weder aktueller Release- noch offener Befundstand.
+> Maßgeblich ist [Changelog.md](../../../Changelog.md); Auditstatus: [README.md](../README.md).
 
 ## 📋 Legende
 

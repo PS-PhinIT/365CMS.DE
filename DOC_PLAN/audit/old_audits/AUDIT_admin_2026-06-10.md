@@ -1,5 +1,8 @@
 # 365CMS — Security & Code-Audit: `admin/`
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 **Datum:** 2026-06-10
 **Scope:** Verzeichnis `admin/` (276 Dateien, ~94.500 Zeilen): `admin/(root)`-Entry-Files (100), `admin/modules/` (53), `admin/views/` (111 Templates), `admin/partials/` (7), `admin/logs/` (5).
 **Methode:** Pattern-Scan über **alle** admin-Dateien (eval/system/`unserialize`/dynamische `include`, SQL-Interpolation mit Request-Vars, `ORDER BY`-Interpolation, reflected XSS via `echo $_GET/$_POST`, CSRF-Abdeckung, Output-Escaping in Views, JSON-in-`<script>`-Breakout, File-Operationen/Path-Traversal, Redirects/Open-Redirect, ZIP-Extraktion/Zip-Slip, Autorisierung/Privilege-Escalation) + Tiefenlesen der Treffer und der kritischen Module/Partials.

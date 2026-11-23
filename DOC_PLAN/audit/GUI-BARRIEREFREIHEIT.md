@@ -1,5 +1,8 @@
 # 365CMS: Gesamtaudit 2026-10-14 | GUI und Barrierefreiheit
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
 > Übersicht: [README.md](README.md)
 
 > **Historischer Snapshot:** Ergebnisse des Gesamtaudits vom 2026-10-14; spätere UI- und A11y-Änderungen sind nicht Teil dieses Protokolls.

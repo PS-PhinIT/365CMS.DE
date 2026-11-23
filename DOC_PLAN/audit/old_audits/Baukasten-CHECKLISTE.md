@@ -1,3 +1,9 @@
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Diese Baukasten-Checkliste ist kein
+> freigegebener 4.x-Backlog. Ungeprüfte Häkchen werden erst nach einem
+> produktspezifischen Beschluss und Abgleich mit [STATUS.md](../../STATUS.md)
+> zu einer Aufgabe.
+
 ## 1. Webbaukasten – Systemmodul als Theme-Alternative
 
 ### 1.1 Modul-Grundlage

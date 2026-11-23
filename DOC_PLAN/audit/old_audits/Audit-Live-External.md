@@ -1,14 +1,21 @@
 # 365CMS – Audit Live & External Snapshots
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 Stand: 2026-04-11  
 
-> **⏱️ Historischer Audit-Snapshot (April 2026).** Aktuelle First-Party-Code-Audits (Stand 3.3.47, 2026-06-10): [../AUDIT_core_2026-06-10.md](../AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](../AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](../AUDIT_member-includes-views_2026-06-10.md).
+> **⏱️ Historischer Audit-Snapshot (April 2026).** Aktuelle First-Party-Code-Audits (Stand 3.3.47, 2026-06-10): [../AUDIT_core_2026-06-10.md](AUDIT_core_2026-06-10.md) · [../AUDIT_admin_2026-06-10.md](AUDIT_admin_2026-06-10.md) · [../AUDIT_member-includes-views_2026-06-10.md](AUDIT_member-includes-views_2026-06-10.md).
 Zweck: Konsolidierter Sammelbericht für externe Prüfsichten – Snyk-Code-/SCA-Snapshots und produktive Live-Site-Audits.
 
 ## Übernommene Altdateien
 
 - `Snyk_Audit_04042026.md`
 - `LiveAudit_365CMS.md`
+
+> **Archivhinweis:** Die beiden Quelldateien sind im aktuellen Repository nicht
+> mehr enthalten. Ihre Erwähnung beschreibt den damaligen Herkunftsnachweis und
+> erzeugt keine offene Dokumentationsaufgabe.
 - `PHINIT-LIVE-AUDIT-2026-04-03.md`
 - `PHINIT-LIVE-LOCALIZATION-2026-04-03.md`
 - `PHINIT-LIVE-SEARCH-ARCHIVE-2026-04-03.md`

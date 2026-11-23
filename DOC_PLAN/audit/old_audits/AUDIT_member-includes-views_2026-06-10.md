@@ -1,5 +1,8 @@
 # 365CMS — Security & Code-Audit: `member/`, `includes/`, `marketplace/`, `views/`
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 **Datum:** 2026-06-10
 **Scope:** `member/` (17 Dateien, ~3.450 Z., user-facing Mitgliederbereich), `includes/` (10 Dateien, ~2.770 Z., globale Helfer: Escaping, Roles, Redirects/Auth, Options-Runtime), `marketplace/` (nur 3 JSON-Manifeste, **kein Code**), `views/` (1 Datei: `views/auth/cms-auth.php`, Login/Register/Reset-UI).
 **Methode:** Pattern-Scan über alle PHP-Dateien (eval/system/`unserialize`/dynamische `include`, SQL-Interpolation mit Request-Vars, reflected XSS, CSRF, Redirects/Open-Redirect, File-Ops) + Tiefenlesen der Security-Helfer und der Auth-View.

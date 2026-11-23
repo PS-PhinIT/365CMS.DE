@@ -1,5 +1,8 @@
 # 365CMS — Security & Code-Audit: `core/`
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Historischer Altbestand (23.11.2026):** Dieser Bericht oder diese Checkliste ist zeitgebundene Evidenz. Offene Häkchen und Bewertungen sind nicht automatisch offene Aufgaben; jeder noch relevante Punkt muss gegen aktuellen Code, Tests und [STATUS.md](../../STATUS.md) neu belegt und danach in einen Releasekatalog übernommen werden.
 **Datum:** 2026-06-10
 **Scope:** Verzeichnis `core/` (142 Dateien, ~Kern-Framework). `vendor/` und die Drittbibliotheken unter `assets/` (HTMLPurifier, LdapRecord, Carbon, Mailer …) waren ausgeschlossen.
 **Methode:** Pattern-Scan über **alle** 142 core-Dateien (SQL-Konkatenation, ungeprüfte Ausgaben, `unserialize`, dynamische `include`, lose `==` in Auth-Kontexten, `mail()`-Header, Redirects, Datei-Operationen, Deprecations, ReDoS) + zeilenweises Lesen der sicherheitskritischen Dateien (`Database`, `Auth`, `Security`, `Router`, `Api`, `Bootstrap`, `Routing/*`, `Services/FileUploadService`, `Services/MediaService`, `Services/MailService`, `Services/EditorJsRenderer`, `Services/EditorJs/EditorJsHtmlSanitizer`, `CacheManager`, `Debug`).

@@ -3,6 +3,8 @@
 > **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Prüfumfang:** Umsetzung der Empfehlungen OFFEN-20 bis OFFEN-26 aus dem [Folgeaudit vom 2026-11-08](FOLGEAUDIT-2026-11-08.md), Regressionsprüfung der Korrekturen aus den Audits vom 2026-10-14 und 2026-11-08, `CMS/` inkl. Theme `cms-default` | Übersicht: [README.md](README.md)
 
 > **Historischer Snapshot:** Dieses Protokoll beschreibt den Stand 4.0.0 am 2026-11-09. Offene Punkte späterer Releases sind nur aus dem jeweils datierten Dokument abzuleiten.
+>
+> **Heutige Einordnung (23.11.2026):** OFFEN-20 … OFFEN-26 sind im Bericht als umgesetzt belegt. OFFEN-27 wird separat als [v4.2.X 42X-06](../v4.2.X/CATALOG.md#42x-06--signierte-update-pakete) fortgeführt.
 
 ## English (summary)
 
@@ -118,7 +120,7 @@ Diese Fehler steckten in den Änderungen für OFFEN-20 bis OFFEN-26 und wurden v
 | OFFEN-23 | Falsches Passwort abgelehnt. Mit Passwort: zweite Sitzung abgemeldet, eigene bleibt, `auth_token_version` erhöht, Audit `sessions_revoked`. Vorher ausgestelltes Refresh-Token → 401; neues Token aus der eigenen Sitzung → 200 |
 | OFFEN-24 | Registrierung mit vorhandener Adresse (auch in anderer Schreibweise) → gleiche Erfolgsmeldung, kein neues Konto, Hinweis-Mail in der Warteschlange, Audit `register_existing_email`. Vergebener Benutzername → Fehlermeldung wie bisher. `theme_register_user()` verhält sich gleich |
 | OFFEN-25 | Acht Fehlversuche nacheinander: Wartezeiten 0, 0, 0, 0, 0, 1, 2 und 4 s. Richtiges Passwort setzt den Zähler zurück. Unbekannter Benutzername gleiches Verhalten |
-| OFFEN-26 | Verschlüsseltes Datenbank-Backup (`.sql.gz.enc` + Manifest): Prüfung, Wiederherstellung und Löschen OK. Download bleibt verschlüsselt; der in [BACKUP.md](../admin/system-settings/BACKUP.md) beschriebene Befehl entschlüsselt ihn. `CMS_BACKUP_PATH` außerhalb des Webroots → Voll-Backup OK, Prüfung 8/8, Audit „außerhalb des Webroots“. Pfad im CMS außerhalb von `backups/` → Fehlermeldung, kein Verzeichnis angelegt (FUN-58) |
+| OFFEN-26 | Verschlüsseltes Datenbank-Backup (`.sql.gz.enc` + Manifest): Prüfung, Wiederherstellung und Löschen OK. Download bleibt verschlüsselt; der in [BACKUP.md](../../DOC/admin/system-settings/BACKUP.md) beschriebene Befehl entschlüsselt ihn. `CMS_BACKUP_PATH` außerhalb des Webroots → Voll-Backup OK, Prüfung 8/8, Audit „außerhalb des Webroots“. Pfad im CMS außerhalb von `backups/` → Fehlermeldung, kein Verzeichnis angelegt (FUN-58) |
 | FUN-55, FUN-56, FUN-61 | Test-`sendmail`, direkt und über die Warteschlange: `Content-Transfer-Encoding: quoted-printable`, Zeilen höchstens 76 Zeichen, Umlaute nach dem Dekodieren korrekt, Betreff `=?UTF-8?B?…?=`, CRLF. Klartext-Mails mit `text/plain` |
 | FUN-57 | Dashboard mit deaktivierten Core-Modulen: kein Link führt auf die Startseite |
 | FUN-62 | `/member/plugin-section` → 404 ohne PHP-Warnung; `/member/profile` und `/member/security` → 200 |

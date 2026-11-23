@@ -1,5 +1,8 @@
 # 365CMS: Gesamtaudit 2026-10-14 | Geschwindigkeit und Massenanfragen
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
 > Übersicht: [README.md](README.md)
 
 > **Historischer Snapshot:** Messwerte und Befunde stammen vom 2026-10-14; sie sind keine aktuelle Leistungszusage für 4.2.0.

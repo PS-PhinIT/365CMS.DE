@@ -1,5 +1,8 @@
 # Release- und Code-Abnahmeprüfung 365CMS 4.1.0 (2026-11-15)
 
+
+<!-- AUDIT-ARCHIVE-CLASSIFIED-2026-11-23 -->
+> **Archivklasse (23.11.2026):** Historischer Prüfbericht. Der Tabellenstatus gilt nur für den im Dokument genannten Tag/Release; aktuelle Arbeit wird ausschließlich über [STATUS.md](../STATUS.md) und die Releasekataloge geführt.
 > **Historischer Snapshot:** Dieses Protokoll schließt die 4.1-Linie ab. Aktueller Produktstand ist 4.2.0 / Schema v27; Aussagen zu 4.1.8 oder ungepackter 4.1.9 bezeichnen ausschließlich den damaligen Prüfzeitpunkt. Aktuelle Tests werden mit `php TESTS/run-all.php` dynamisch entdeckt.
 
 Prüfgegenstand ist die Entwicklungslinie `3.5.0 → 3.5.x → 4.0.0 → 4.1.0`, Schema `v23 → v25 → v26`. Jeder Prüfbereich wird in einem eigenen Pull Request bearbeitet. Dieses Protokoll führt alle Befunde mit ID, Schweregrad, Fundstelle und Status.
