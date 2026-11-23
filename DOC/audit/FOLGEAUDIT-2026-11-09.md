@@ -2,6 +2,8 @@
 
 > **Stand:** 2026-11-09 | **Version:** 4.0.0 | **Prüfumfang:** Umsetzung der Empfehlungen OFFEN-20 bis OFFEN-26 aus dem [Folgeaudit vom 2026-11-08](FOLGEAUDIT-2026-11-08.md), Regressionsprüfung der Korrekturen aus den Audits vom 2026-10-14 und 2026-11-08, `CMS/` inkl. Theme `cms-default` | Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Dieses Protokoll beschreibt den Stand 4.0.0 am 2026-11-09. Offene Punkte späterer Releases sind nur aus dem jeweils datierten Dokument abzuleiten.
+
 ## English (summary)
 
 Second pass on 4.0.0. It implements the open recommendations of the follow-up audit of 2026-11-08 and re-checks the earlier fixes for regressions.

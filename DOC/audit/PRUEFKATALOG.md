@@ -2,6 +2,8 @@
 
 > Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Methodik und Prüfkatalog des Gesamtaudits vom 2026-10-14. Aktuelle Prüfungen werden über die vorhandenen `TESTS/<suite>/run.php` ausgewählt.
+
 ## English (summary)
 
 The audit checklist combines OWASP Top 10:2025 with current website and CMS audit checklists. Each item below lists what was checked in 365CMS and where the result is documented. Items that need production data or external services (field data, uptime, penetration test, legal review) are marked as out of scope.

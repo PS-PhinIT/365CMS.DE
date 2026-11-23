@@ -2,6 +2,8 @@
 
 > Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Ergebnisse des Gesamtaudits vom 2026-10-14; spätere UI- und A11y-Änderungen sind nicht Teil dieses Protokolls.
+
 ## English (summary)
 
 Seven GUI findings, all fixed:

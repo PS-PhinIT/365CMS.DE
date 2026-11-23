@@ -2,6 +2,8 @@
 
 > **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Prüfumfang:** `CMS/` ohne `CMS/vendor/` und gebündelte Drittbibliotheken unter `CMS/assets/` (dort nur Versionen und bekannte Schwachstellen), Theme `cms-default`, Plugin `cms-importer`, `TESTS/`, `Changelog.md` | Übersicht: [README.md](README.md) | Vorheriges Audit: [FOLGEAUDIT-2026-11-09.md](FOLGEAUDIT-2026-11-09.md)
 
+> **Historischer Snapshot:** Versions-, Test- und Befundangaben gelten für den Prüfstand 2026-11-12. Aktuelle Suiten werden ausschließlich durch `php TESTS/run-all.php` entdeckt.
+
 ## English (summary)
 
 Code, security and architecture audit of the 4.0.0 code base. The work is split into seven pull requests, one per topic. This file is the audit log: every pull request adds its findings here and sets their status.

@@ -1,6 +1,6 @@
 # 365CMS: Admin: Anmeldung mit Microsoft Entra ID (SSO)
 
-> **Stand:** 2026-11-18 | **Version:** 4.1.0, Rolle `moderator` seit 4.2.0 (Entwicklung) | **Status:** Stable | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Community-Systemrolle:** `moderator` wird vom Auto-Link/Standardrollenpfad ausgeschlossen | **Spezifikation:** [01-IDENTITY.md §1c](../../workflow/specs/v4.1/01-IDENTITY.md)
 
 ## English (summary)
 
@@ -49,7 +49,7 @@ abgelaufenes Secret.
 ### 3. Kontozuordnung
 
 1. **Bestehende Bindung** (`user_identities`: Anbieter `entra`, Tenant-ID, Objekt-ID) → dieses Konto. Gesperrte oder inaktive Konten werden abgelehnt und nie reaktiviert.
-2. **Automatische Verknüpfung** nur, wenn alles gilt: Einstellung an, Single-Tenant, Claim `email` mit `xms_edov = true`, Domain in der Liste, genau ein aktives Konto mit dieser Adresse, dessen Adresse lokal bestätigt ist, und dessen Rolle weder `admin`, `editor`, `author`, `moderator` (seit 4.2.0) noch eine Rolle mit MFA-Zwang ist. `preferred_username` und `upn` werden nie verwendet.
+2. **Automatische Verknüpfung** nur, wenn alles gilt: Einstellung an, Single-Tenant, Claim `email` mit `xms_edov = true`, Domain in der Liste, genau ein aktives Konto mit dieser Adresse, dessen Adresse lokal bestätigt ist, und dessen Rolle nicht `admin`, `editor`, `author` oder `moderator` und auch keine Rolle mit MFA-Zwang ist. `moderator` wird trotz fehlendem `/admin`-Zugang als privilegierte Community-Rolle ausgeschlossen (`IdentityLinker::PRIVILEGED_ROLES`). `preferred_username` und `upn` werden nie verwendet.
 3. **Kein Konto mit dieser Adresse** → mit „Neue Konten anlegen“ ein neues Konto, sonst „Kein Konto verknüpft“.
 4. **Konto mit gleicher Adresse, aber Bedingungen aus 2. nicht erfüllt** → Ablehnung und Audit-Eintrag `sso_link_conflict`. Die Person meldet sich mit Passwort an und verknüpft unter *Mitgliederbereich → Sicherheit → Microsoft-Konto* („Mit Microsoft verknüpfen“, aktuelles Passwort nötig). Trennen geht dort ebenfalls nur mit Passwort.
 

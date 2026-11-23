@@ -2,6 +2,8 @@
 
 > Übersicht: [README.md](README.md) · Prüfkatalog: [PRUEFKATALOG.md](PRUEFKATALOG.md) · Bezug: OWASP Top 10:2025 (A01 Broken Access Control, A02 Security Misconfiguration, A03 Software Supply Chain Failures, A05 Injection, A06 Insecure Design, A07 Authentication Failures)
 
+> **Historischer Snapshot:** Sicherheitsbefunde des Gesamtaudits vom 2026-10-14; der aktuelle 4.2.0-Code ist maßgeblich.
+
 ## English (summary)
 
 Twelve security findings, all fixed in `3.4.25`:

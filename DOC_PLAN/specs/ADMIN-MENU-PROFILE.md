@@ -1,10 +1,10 @@
 # 365CMS Projektdokumentation | Workflow: Spec: Admin-Sidebar-Menü mit Profilen
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** In Umsetzung | **Update:** 2026-11-10
+> **Stand:** 2026-11-23 | **Basis:** 4.0.0–4.2.0 | **Status:** ✅ umgesetzt | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
 > **Verbindliche Abweichungen:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
 
 ## English (summary)
 
-Data-driven admin sidebar with three profiles (classic, structured, custom), a menu registry, builder, installer step, settings tab and a visual menu editor. The binding final trees for both profiles are in the section "Finale Struktur (verbindlich)". The original requirement text is reproduced unchanged below. Where it conflicts with
+Data-driven admin sidebar with three profiles (classic, structured, custom), a menu registry, builder, installer step, settings tab and a visual menu editor. It shipped across 4.0.0 and 4.1.0 and remains the active menu model in 4.2.0. The binding final trees are in the section "Finale Struktur (verbindlich)". The former phase markers below are historical; no planned admin page remains in `TESTS/admin-menu/run.php::RESERVED_FILES`. The original requirement text is reproduced below. Where it conflicts with
 [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md) (single 4.0.0 release, dark sidebar, no site assignment for content,
 hub-site rules), the clarifications take precedence.
 
@@ -20,11 +20,12 @@ Originaltext der Anforderung (unverändert). Bei Widersprüchen gelten die
 ### Finale Struktur (verbindlich)
 
 Diese Bäume setzen der Katalog und die Profile unter `CMS/core/Services/AdminMenu/` genau um. Grundlage sind die Rückmeldungen in [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md) §7.
+Die früheren Kennzeichnungen `*B`, `*WP1` bis `*WP4` dokumentieren nur die Lieferreihenfolge; alle so markierten Seiten sind inzwischen im Produktivkatalog vorhanden.
 
 | Zeichen | Bedeutung |
 |---|---|
 | 🔒 | gesperrt: immer sichtbar, im Editor weder ausblendbar noch entfernbar |
-| `*B`, `*WP1` … `*WP4` | vorgeplant: Der Eintrag erscheint erst, wenn seine Seite in Phase B bzw. im Arbeitspaket entsteht. Eine Gruppe ohne sichtbare Einträge bleibt ausgeblendet. |
+| `*B`, `*WP1` … `*WP4` | historische Lieferphase; im Stand 4.2.0 ist die Seite umgesetzt |
 | `opt. <Modul>` | nur sichtbar, wenn das Core-Modul aktiv ist |
 | `Mkt.` | nur sichtbar, wenn der Marketplace aktiviert ist |
 | `[Kacheln]` | Kachelseite: ein Sidebar-Link, die Einträge erscheinen als Kacheln, gegliedert nach Kategorie |
@@ -56,7 +57,7 @@ Medien
   │                                              /admin/downloads
   ├─ Medien-Werkzeuge *WP4                       /admin/media-tools
   └─ Einstellungen                               /admin/media?tab=settings
-Bausteine              (für Seiten und Beiträge, 4.1.0)
+Bausteine              (für Seiten und Beiträge)
   ├─ EditorJS Block Vorlagen                     /admin/reusable-blocks
   ├─ Knowledgebase *B                            /admin/knowledgebase
   ├─ Hub-Sites                                   /admin/hub-sites

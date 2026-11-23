@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Content Management
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Statusquelle:** [STATUS.md](STATUS.md)
 > **Quellen:** `CMS/admin/pages.php`, `CMS/admin/posts.php`, `CMS/admin/modules/pages/PagesModule.php`, `CMS/admin/modules/posts/PostsModule.php`, `CMS/admin/views/pages/`, `CMS/admin/views/posts/`, `CMS/core/PageManager.php`, `CMS/core/Services/EditorJsService.php`, `CMS/core/Services/PostPublishChecklistService.php`, `CMS/core/Services/PostRevisionService.php`, `CMS/includes/functions/options-runtime.php`
 
 ## English (summary)
@@ -15,7 +15,7 @@ Pages (`/admin/pages`, capability `manage_pages`) and posts (`/admin/posts`, `ed
 | Seiten anlegen/bearbeiten/löschen | `manage_pages` |
 | Alle Beiträge, Kategorien, Tags | `edit_all_posts` |
 | Nur eigene Beiträge | `edit_own_posts` |
-| Kommentare ansehen/moderieren/löschen | `comments.view`, `comments.moderate`, `comments.delete` (siehe [admin/pages-posts/COMMENTS.md](../admin/pages-posts/COMMENTS.md)) |
+| Kommentare ansehen/moderieren/löschen | `comments.view`, `comments.moderate`, `comments.delete` (siehe [admin/pages-posts/COMMENTS.md](../DOC/admin/pages-posts/COMMENTS.md)) |
 
 Der Adminbereich setzt zusätzlich die Rolle `admin` voraus (`Auth::isAdmin()`); Redakteure ohne Admin-Rolle haben keinen Zugriff auf `/admin`.
 
@@ -29,7 +29,7 @@ Der Adminbereich setzt zusätzlich die Rolle `admin` voraus (`Auth::isAdmin()`);
 6. **Englische Fassung (optional):** Sprachumschalter DE/EN (`switch_locale`, rendert ohne Speichern neu) oder „DE → EN kopieren“ (`copy_de_to_en`, nach dem ersten Speichern). KI-Übersetzung über `/admin/ai-translate-editorjs`, wenn das Modul `ai_services` aktiv ist.
 7. **Speichern als Entwurf** (`status = draft`): jede manuelle Speicherung legt einen Eintrag in `cms_post_revisions` an (unveränderte Stände werden nicht doppelt gespeichert). Nach dem ersten Speichern sichert der Editor automatisch: Entwürfe höchstens jede Minute (Kopfleiste „Gespeichert um HH:MM“), veröffentlichte und geplante Beiträge nur als Revision, ohne den Live-Stand zu ändern. Eine Autosave-Revision entsteht höchstens alle 10 Minuten, je Beitrag bleiben die letzten 30 Revisionen erhalten.
 8. **Vorschau/Prüfung:** Revisionsvergleich im Editor (Panel „Revisionen“ → „Vergleichen“, „Diese Version wiederherstellen“), Medien-Check (`/admin/media?tab=check`) für fehlende Beitragsbilder. Der Fokusmodus (Strg+Umschalt+F bzw. Cmd+Umschalt+F) blendet Seitenleiste und Einstellungsspalte aus.
-9. **Veröffentlichen:** Status `published`. Für eine geplante Veröffentlichung `published_at` in die Zukunft setzen („Planen“), die Liste zeigt den Beitrag dann unter „Geplant“. Seit 4.0.0 müssen dafür alle Punkte der Veröffentlichungs-Checkliste erfüllt sein: Beitragsbild gesetzt, Meta-Beschreibung mit 120–160 Zeichen, Kategorie gesetzt. Der Server lehnt Veröffentlichen/Planen sonst ab, ebenso die Sammelaktion `publish` für unvollständige Beiträge (Details: [admin/pages-posts/POSTS.md](../admin/pages-posts/POSTS.md#veröffentlichungs-checkliste)).
+9. **Zur Prüfung oder Veröffentlichen:** Ohne passendes Veröffentlichungsrecht wird der Status `pending` gesetzt und der Inhalt an Prüfende übergeben. Mit Veröffentlichungsrecht steht `published` zur Verfügung. Für eine geplante Veröffentlichung `published_at` in die Zukunft setzen („Planen“), die Liste zeigt den Beitrag dann unter „Geplant“. Die Veröffentlichungs-Checkliste verlangt Beitragsbild, Meta-Beschreibung mit 120–160 Zeichen und Kategorie; der Server lehnt Veröffentlichen/Planen sonst ab (Details: [admin/pages-posts/POSTS.md](../DOC/admin/pages-posts/POSTS.md#veröffentlichungs-checkliste)).
 10. **Pflege:** „Inhalt aktualisiert am“ (`content_updated_at`) setzen, wenn sich Inhalte wesentlich ändern.
 
 ### Ablauf: neue Seite
@@ -54,7 +54,7 @@ Pro Anfrage höchstens 200 IDs; unbekannte IDs werden übersprungen. Mit `edit_o
 
 ### Löschen und Wiederherstellen
 
-Es gibt keinen Papierkorb: `delete` entfernt Datensätze endgültig. Vor Sammel-Löschungen ein Backup anlegen ([admin/system-settings/BACKUP.md](../admin/system-settings/BACKUP.md)). Inhalte älterer Fassungen lassen sich über die Revisionsansicht manuell zurückkopieren.
+Seiten und Beiträge werden zuerst in den Papierkorb verschoben und können unter `/admin/trash` wiederhergestellt werden. Das endgültige Löschen ist davon getrennt; vor Sammel-Löschungen trotzdem ein Backup anlegen ([admin/system-settings/BACKUP.md](../DOC/admin/system-settings/BACKUP.md)). Ältere Inhaltsstände bleiben zusätzlich über die Revisionsansicht erreichbar.
 
 ### Typische Fehler
 
@@ -68,6 +68,6 @@ Es gibt keinen Papierkorb: `delete` entfernt Datensätze endgültig. Vor Sammel-
 
 ## Verwandte Dokumente
 
-- [admin/pages-posts/PAGES.md](../admin/pages-posts/PAGES.md) · [admin/pages-posts/POSTS.md](../admin/pages-posts/POSTS.md) · [admin/pages-posts/SETTINGS.md](../admin/pages-posts/SETTINGS.md)
-- [admin/seo/SEO.md](../admin/seo/SEO.md) · [ai/AI-SERVICES.md](../ai/AI-SERVICES.md)
+- [admin/pages-posts/PAGES.md](../DOC/admin/pages-posts/PAGES.md) · [admin/pages-posts/POSTS.md](../DOC/admin/pages-posts/POSTS.md) · [admin/pages-posts/SETTINGS.md](../DOC/admin/pages-posts/SETTINGS.md)
+- [admin/seo/SEO.md](../DOC/admin/seo/SEO.md) · [ai/AI-SERVICES.md](../DOC/ai/AI-SERVICES.md)
 - [MEDIA-UPLOAD-WORKFLOW.md](MEDIA-UPLOAD-WORKFLOW.md)

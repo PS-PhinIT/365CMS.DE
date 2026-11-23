@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: API-Integration
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Statusquelle:** [STATUS.md](STATUS.md)
 > **Quellen:** `CMS/core/Routing/ApiRouter.php`, `CMS/core/Api.php`, `CMS/core/Router.php`, `CMS/core/Bootstrap.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/JwtService.php`
 
 ## English (summary)
@@ -12,7 +12,7 @@ This workflow describes how to consume the shipped JSON endpoints and how a plug
 
 | Methode | Route | Zugriff |
 |---|---|---|
-| GET | `/api/v1/status` | öffentlich: `{"status":"ok","version":"3.5.0"}` |
+| GET | `/api/v1/status` | öffentlich: `{"status":"ok","version":"4.2.0"}` (Wert aus `Version::CURRENT`) |
 | GET | `/api/v1/pages?q=…`, `/api/v1/pages/:slug` | angemeldet |
 | POST | `/api/v1/analytics/web-vitals` | gleiche Herkunft, max. 8 KB |
 | GET | `/api/v1/admin/posts`, `/pages`, `/users`, `/mail/logs` | Admin + Capability |
@@ -20,7 +20,7 @@ This workflow describes how to consume the shipped JSON endpoints and how a plug
 | POST | `/api/upload` | angemeldet + CSRF `media_action` |
 | GET/POST | `/api/media` | Editor.js-Token `editorjs_media` |
 
-Vollständige Parameterlisten: [core/API-REFERENCE.md](../core/API-REFERENCE.md).
+Vollständige Parameterlisten: [core/API-REFERENCE.md](../DOC/core/API-REFERENCE.md).
 
 **Ablauf für einen Browser-Client (gleiche Domain):**
 
@@ -109,5 +109,5 @@ function my_events_api_rsvp(string $id): void
 
 ## Verwandte Dokumente
 
-- [core/API-REFERENCE.md](../core/API-REFERENCE.md) · [core/SECURITY.md](../core/SECURITY.md) · [core/HOOKS-REFERENCE.md](../core/HOOKS-REFERENCE.md)
-- [admin/ADMIN-API-AJAX.md](../admin/ADMIN-API-AJAX.md) · [plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md)
+- [core/API-REFERENCE.md](../DOC/core/API-REFERENCE.md) · [core/SECURITY.md](../DOC/core/SECURITY.md) · [core/HOOKS-REFERENCE.md](../DOC/core/HOOKS-REFERENCE.md)
+- [admin/ADMIN-API-AJAX.md](../DOC/admin/ADMIN-API-AJAX.md) · [plugins/PLUGIN-DEVELOPMENT.md](../DOC/plugins/PLUGIN-DEVELOPMENT.md)

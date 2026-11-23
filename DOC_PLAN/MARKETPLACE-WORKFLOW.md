@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Marketplace
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Statusquelle:** [STATUS.md](STATUS.md)
 > **Quellen:** `CMS/admin/plugin-marketplace.php`, `CMS/admin/modules/plugins/PluginMarketplaceModule.php`, `CMS/admin/theme-marketplace.php`, `CMS/core/Services/UpdateService.php`, `CMS/marketplace/`
 
 ## English (summary)
@@ -22,7 +22,7 @@ Two roles meet in the marketplace: **operators** install packages from `/admin/p
 
 ### Betreiber: Theme installieren
 
-Themes werden über den Theme-Marketplace bzw. `/admin/updates` (`install_theme`) mit derselben Integritätslogik installiert und unter *Themes* aktiviert. Details: [admin/themes-design/MARKETPLACE.md](../admin/themes-design/MARKETPLACE.md).
+Themes werden über den Theme-Marketplace bzw. `/admin/updates` (`install_theme`) mit derselben Integritätslogik installiert und unter *Themes* aktiviert. Details: [admin/themes-design/MARKETPLACE.md](../DOC/admin/themes-design/MARKETPLACE.md).
 
 ### Betreiber: Registry-Quelle ändern
 
@@ -30,7 +30,7 @@ Themes werden über den Theme-Marketplace bzw. `/admin/updates` (`install_theme`
 
 ### Anbieter: Plugin veröffentlichen
 
-1. Plugin nach [plugins/PLUGIN-DEVELOPMENT.md](../plugins/PLUGIN-DEVELOPMENT.md) bauen; Header mit `Version`, `Requires CMS`, `Requires PHP`.
+1. Plugin nach [plugins/PLUGIN-DEVELOPMENT.md](../DOC/plugins/PLUGIN-DEVELOPMENT.md) bauen; Header mit `Version`, `Requires CMS`, `Requires PHP`.
 2. ZIP erzeugen, dessen Wurzel genau den Ordner `<slug>/` mit `<slug>.php` enthält:
 
    ```bash
@@ -40,7 +40,7 @@ Themes werden über den Theme-Marketplace bzw. `/admin/updates` (`install_theme`
    ```
 
 3. ZIP auf einem erlaubten Host veröffentlichen (z. B. GitHub-Release).
-4. Registry-Eintrag ergänzen (`slug`, `name`, `version`, `requires_cms`, `requires_php`, `download_url`, `sha256`, `package_size`, optional `docs_url`, `changelog_url`, `is_paid`, `purchase_url`). Beispiel in [plugins/PLUGIN-MARKETPLACE.md](../plugins/PLUGIN-MARKETPLACE.md).
+4. Registry-Eintrag ergänzen (`slug`, `name`, `version`, `requires_cms`, `requires_php`, `download_url`, `sha256`, `package_size`, optional `docs_url`, `changelog_url`, `is_paid`, `purchase_url`). Beispiel in [plugins/PLUGIN-MARKETPLACE.md](../DOC/plugins/PLUGIN-MARKETPLACE.md).
 5. Grenzen einhalten: ZIP ≤ 100 MiB, ≤ 2.000 Einträge, ≤ 50 MiB entpackt, keine Pfade mit `..` oder absoluten Pfaden.
 6. Testinstallation auf einer Staging-Instanz; danach Update-Pfad testen (`/admin/updates` vergleicht installierte mit Registry-Version).
 
@@ -56,5 +56,5 @@ Themes werden über den Theme-Marketplace bzw. `/admin/updates` (`install_theme`
 
 ## Verwandte Dokumente
 
-- [plugins/PLUGIN-MARKETPLACE.md](../plugins/PLUGIN-MARKETPLACE.md) · [admin/plugins/MARKETPLACE.md](../admin/plugins/MARKETPLACE.md) · [admin/plugins/PLUGINS.md](../admin/plugins/PLUGINS.md)
+- [plugins/PLUGIN-MARKETPLACE.md](../DOC/plugins/PLUGIN-MARKETPLACE.md) · [admin/plugins/MARKETPLACE.md](../DOC/admin/plugins/MARKETPLACE.md) · [admin/plugins/PLUGINS.md](../DOC/admin/plugins/PLUGINS.md)
 - [UPDATE-DEPLOYMENT-WORKFLOW.md](UPDATE-DEPLOYMENT-WORKFLOW.md)

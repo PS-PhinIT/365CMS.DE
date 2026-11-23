@@ -12,10 +12,12 @@ Members read and write in the forum under `/forum` (English `/en/forum`), react,
 ### Lesen und Schreiben
 
 - **Startseite** `/forum` zeigt Kategorien und Foren, **Forum** `/forum/{forum}` die Themen (angeheftete zuerst), **Thema** `/forum/thema/{id}-{titel}` die Beiträge in Seiten. Globale Listen: `/forum/neu`, `/forum/aktiv`, `/forum/unbeantwortet`, Suche `/forum/suche`.
-- **Neues Thema, Antworten, Zitieren, Bearbeiten:** Schaltflächen im Forum bzw. am Beitrag. Beiträge sind Markdown; der visuelle Editor (SunEditor) wechselt zwischen Ansicht und Markdown. Bearbeiten ist im Bearbeitungsfenster (`edit_window_minutes`) möglich, frühere Fassungen bleiben erhalten.
-- **Anhänge:** Datei wählen, ins Fenster ziehen oder einfügen (Bilder aus der Zwischenablage). Erlaubte Typen und Größe legt die Verwaltung fest. Nicht abgeschickte Anhänge werden nach 24 Stunden gelöscht.
-- **Entwürfe:** Ihr Text wird laufend im Browser gesichert (30 Tage) und beim Neuen Thema und bei Antworten auch auf dem Server. Beim erneuten Öffnen der Seite erscheint der Entwurf wieder; abschicken oder verwerfen löscht ihn.
+- **Blättern:** Foren- und Themenlisten verwenden einen Cursor (`?nach=…`, Keyset). Sie überspringen keine sich verändernden Seiten über SQL-`OFFSET`; lange Listen bleiben damit stabiler.
+- **Neues Thema, Antworten, Zitieren, Bearbeiten:** Schaltflächen im Forum bzw. am Beitrag. Beiträge werden als Markdown gespeichert. Der lokal gebündelte **SunEditor** ist eine progressive Eingabehilfe; `md-bridge.js` wandelt nur den unterstützten HTML-Umfang in dieselbe Markdown-Quelle. Tabellen, eingebettete Bilder, Roh-HTML und andere nicht verlustfrei darstellbare Konstrukte bleiben in der Markdown-Ansicht. Fällt SunEditor aus, bleibt das Textfeld verwendbar. Bearbeiten ist im Bearbeitungsfenster (`edit_window_minutes` bzw. länger für vertrauenswürdige Mitglieder) möglich; frühere Fassungen bleiben erhalten.
+- **Anhänge:** Datei wählen, ins Fenster ziehen oder einfügen (Bilder aus der Zwischenablage). Erlaubte Typen und Größe legt die Verwaltung fest. Anhänge liegen außerhalb des Webroots im privaten Speicher und werden unter `/forum/anhang/{id}` bzw. `/forum/anhang/{id}/vorschau` nur nach erneuter Leserechteprüfung ausgeliefert. Nicht abgeschickte Anhänge werden nach 24 Stunden gelöscht.
+- **Entwürfe:** Ihr Text wird laufend im Browser gesichert. Zusätzlich speichert `DraftService` für neue Themen je Forum und für Antworten je Thema einen Server-Entwurf (`/forum/api/entwurf`); nur Mitglieder mit Leserecht auf das Ziel dürfen ihn laden oder speichern. Ein Leerstand löscht den Entwurf, erfolgreiches Absenden oder „Verwerfen“ entfernt ihn; die Aufbewahrungsregel löscht alte Server-Entwürfe nach 30 Tagen.
 - **Vorschau:** zeigt den Beitrag so, wie er veröffentlicht wird (gereinigt, ohne Skripte).
+- **Captcha:** Für neue Themen und Antworten kann die Verwaltung eine Prüfung verlangen (`aus`, erster veröffentlichter Beitrag, Vertrauensstufe 0 oder immer); globale Moderation und das Bearbeiten sind ausgenommen. `CaptchaGate` nutzt nur lokale Verfahren des Cores: Proof-of-Work, ein mit GD erzeugtes Bild oder eine Rechenaufgabe. Bild und Proof-of-Work stellen eine Rechenaufgabe als Alternative bereit; Bild fällt ohne GD auf Rechenaufgabe zurück. Es gibt keine Datenübertragung an einen Captcha-Drittanbieter.
 
 ### Reagieren, Abonnieren, Melden
 
@@ -35,7 +37,13 @@ Das öffentliche Profil `/forum/mitglieder/{id}` zeigt Anzeigename, Rang, Beitr�
 
 ### Datenschutz
 
-Gespeichert werden Beiträge, Reaktionen, Abos, Lesestatus, Entwürfe und eine gekürzte, nicht umkehrbare Kennung der IP-Adresse (nur für Spam-Abwehr, 30 Tage). Über die Datenschutz-Anfrage erhalten Sie einen Datenexport. Bei der Kontolöschung werden Beiträge je nach Einstellung anonymisiert (Anzeige „Gelöschtes Mitglied“) oder gelöscht. Die Datenschutzerklärung der Website nennt Fristen und Zwecke im Abschnitt „Forum (Community)“.
+Gespeichert werden Beiträge, Reaktionen, Abos, Lesestatus, Entwürfe und – wenn konfiguriert – eine gekürzte, mit HMAC geschützte Kennung der IP-Adresse (nur für Spam-Abwehr/Moderation, Standard 30 Tage). Die Community speichert alle fachlichen Zeitwerte in UTC. Über die Datenschutz-Anfrage bzw. die Selbstauskunft erhalten Sie einen Export; der HMAC-Wert selbst ist nicht Teil des Exports, nur die Zahl betroffener Beiträge.
+
+Bei der Kontolöschung gilt eine von zwei Einstellungen: `anonymize` (Standard) entfernt die Kontobezüge und erhält Inhalte als „Gelöschtes Mitglied“; `delete` leert zusätzlich Text und HTML-Cache eigener Beiträge, markiert `deleted_at`, löscht frühere Fassungen, löst Anhänge vom Beitrag, entfernt diese Beiträge aus der Community-Suche und lässt die Dateien durch die 24-Stunden-Regel für verwaiste Uploads aufräumen. Themen-Titel und unveränderte Zitate anderer Mitglieder bleiben. Die Datenschutzerklärung enthält die wirksamen Fristen und den Löschmodus im generierten Abschnitt **„8a. Forum (Community)“**.
+
+### API und Suchmaschinen
+
+Die Browseraktionen für Reaktionen, Abos, Meldungen, Vorschau, Moderation, Lösung, Upload, Verwerfen, Server-Entwurf und „Alles gelesen“ verwenden ausschließlich `POST /forum/api/*` (englisch entsprechend unter `/en/forum/api/*`). Die Ausgabe ist JSON mit CSRF-Prüfung; Rechte und Gründe bleiben in den Diensten, nicht im JavaScript. Öffentliche, veröffentlichte Themen der ersten Seite erhalten JSON-LD (`DiscussionForumPosting`; in Q&A-Foren `QAPage` mit `Question` und ggf. `Answer`). Interne oder nicht öffentliche Foren werden nicht so ausgezeichnet.
 
 ### Barrierefreiheit
 

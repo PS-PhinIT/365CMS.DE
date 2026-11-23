@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: DSGVO-Anfragen (Auskunft & Löschung)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/data-requests` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_data_requests` | **Core-Modul:** `legal`
 
 ## English (summary)
@@ -10,7 +10,7 @@
 - **Access/export (Art. 15 GDPR)**: type `export`, module `PrivacyRequestsModule`; actions `process`, `complete`, `reject`, `escalate`, `delete`.
 - **Erasure (Art. 17 GDPR)**: type `deletion`, module `DeletionRequestsModule`; actions `process`, `execute`, `reject`, `escalate`, `delete`. See [DELETION-REQUESTS.md](DELETION-REQUESTS.md).
 
-Both use a 30-day deadline with a warning 7 days before it expires. Members can download their own data immediately at `/member/privacy` and file an erasure request there.
+Both use a 30-day deadline with a warning 7 days before it expires. Members can download their own data immediately at `/member/privacy` and file an erasure request there. The Community participates through `dsgvo_export_data`, `dsgvo_delete_data`, `cms_member_export_data`, and `cms_user_deleted`, even while its module switch is off.
 
 ## Deutsch
 
@@ -44,6 +44,14 @@ Both use a 30-day deadline with a warning 7 days before it expires. Members can 
 ### Aktionen: Löschung (`scope=deletion`)
 
 Siehe [DELETION-REQUESTS.md](DELETION-REQUESTS.md).
+
+### Community-Daten
+
+- **Auskunft:** `CommunityPrivacy::collect()` liefert Themen, Beiträge, Revisionen, Anhänge-Metadaten, Entwürfe, Reaktionen, Abos, Lesestatus, Stimmen, Ignorierliste, Abzeichen, Meldungen, Verwarnungen, Sperren, Moderationsaktionen und Community-Profil. Je Bereich werden höchstens 20 000 Zeilen exportiert (`MAX_ROWS`); die Selbstauskunft begrenzt je Bereich auf 500 und kennzeichnet Kürzungen. Der `ip_hash` selbst wird nicht ausgegeben, nur die Zahl der Beiträge mit gespeicherter Kennung.
+- Admin-Auskunftsdateien liegen privat unter `community/privacy-exports/`, lassen sich in *Community → Einstellungen* verwalten und werden nach 30 Tagen entfernt.
+- **`erase_mode = anonymize` (Standard):** Kontobezüge werden auf `NULL` gesetzt, Inhalte bleiben unter „Gelöschtes Mitglied“. IP-Kennung, Abos, Lesestatus, Entwürfe, Reaktionen, Stimmen, Ignorierbeziehungen, Abzeichen, Warnungen/Sperren des Kontos, Statistik und Profileinstellungen werden entfernt bzw. anonymisiert.
+- **`erase_mode = delete`:** zusätzlich werden Text/HTML-Cache eigener Beiträge geleert, `deleted_at` gesetzt, frühere Fassungen gelöscht, Anhänge vom Beitrag gelöst, deren Dateien von der 24-Stunden-Waisenregel entfernt und die Beiträge aus der Community-Suche genommen. Themen-Titel sowie Zitate in fremden Beiträgen bleiben unverändert.
+- Die generierte Datenschutzerklärung der Website nennt diese Verarbeitung in **„8a. Forum (Community)“** und übernimmt die wirksamen Fristen, Gast-Sichtbarkeit, Captcha, Benachrichtigungen und den Löschmodus aus den Community-Einstellungen. Der Text ist eine prüfpflichtige Vorlage, keine Rechtsberatung.
 
 ### Tabelle `cms_privacy_requests`
 

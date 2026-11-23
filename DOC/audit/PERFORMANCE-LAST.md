@@ -2,6 +2,8 @@
 
 > Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Messwerte und Befunde stammen vom 2026-10-14; sie sind keine aktuelle Leistungszusage für 4.2.0.
+
 ## English (summary)
 
 Before this audit, every request ran idempotent schema checks (`SHOW TABLES`, `CREATE TABLE IF NOT EXISTS`, `SHOW INDEX`, `SHOW COLUMNS`) and opened a second PDO connection just to read the session lifetime. Now:

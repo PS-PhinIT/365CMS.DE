@@ -2,6 +2,8 @@
 
 > Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Ergebnisse des Gesamtaudits vom 2026-10-14; nicht als aktueller Funktionsstatus von 4.2.0 lesen.
+
 ## English (summary)
 
 **Functions:** Five settings or form fields had no effect, and all five are fixed:

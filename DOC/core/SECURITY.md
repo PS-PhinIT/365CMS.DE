@@ -100,16 +100,6 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - **Sichere Weiterleitungen**: `Router::redirect()` und Login-Redirects lassen nur interne/erlaubte Ziele zu.
 - **Ausgehende Requests** (`Http\Client`): Host-Allowlists für Updates/Marketplace/KI, HTTPS-Pflicht für Cloud-Ziele, keine privaten Netze außer explizit freigegebenen (Ollama).
 
-### 7b. Lokales Captcha (`CaptchaService`, 4.2.0)
-
-- **Keine Drittanbieter:** Standardverfahren sind `pow` (ALTCHA-Prinzip, SHA-256/Web Crypto), `image` (lokales GD-PNG) und `math` (keine Abhängigkeit). `pow` und `image` enthalten die Rechenaufgabe als barrierefreie Alternative. Unbekannte oder nicht verfügbare Anbieter fallen auf `math`; Schutz wird nie still abgeschaltet.
-- **Lebenszyklus:** `CaptchaStore` hält bis zu acht offene Aufgaben unter `$_SESSION['cms_captcha']`. Die 32-stellige ID ist zufällig, private Daten bleiben in der Sitzung, das Ablaufdatum ist höchstens 7200 Sekunden entfernt. `verify()` verbraucht die Aufgabe und prüft danach Ablauf, gespeicherten Kontext und Anbieter. Ergebnis: `ok`, `missing`, `expired`, `context`, `invalid` oder `unavailable`.
-- **Sitzungen:** aktiv oder durch die Lazy-Session-Infrastruktur verzögert ist ausreichend. Ohne eine speicherbare Sitzung wird kein vertrauenswürdiger Schutz erzeugt; das Fragment zeigt einen Hinweis und die Prüfung scheitert.
-- **Formulare:** `FormSpamGuard::captchaHtml()`/`verifyCaptcha()` gelten bei Antispam-Stufe `high` mit Kontext `forms.<formKey>`. Das Verfahren kann über `cms_forms_captcha_provider` je Formular gewählt werden; Standard ist `pow`. `FormRenderer` lädt `captcha.css` und das ES-Modul nur bei Bedarf.
-- **Registrierung:** `register_captcha` ist standardmäßig aus. Ist es an, rendert die Core- und Standardvorlage `pow` mit Kontext `register`; `PublicRouter` prüft vor dem Konto-Anlegen. `cms_captcha_field()` und `cms_captcha_asset_tags()` sind der verbindliche Theme-Helfer. Ein eigenes Theme darf bei aktivierter Option das Fragment nicht weglassen.
-- **Community:** `CaptchaGate` schützt nur `create_topic`/`reply` mit Kontext `community.compose`, nach `captcha_mode` (`off`, `first_post`, `trust0`, `always`) und `captcha_provider` (`pow`, `image`, `math`). Gäste schreiben nicht, Bearbeiten ist frei und globale Moderation ausgenommen; `cms_community_captcha_required` kann nur verschärfen.
-- **Erweiterung:** `cms_captcha_providers` akzeptiert nur gültige `CaptchaProvider`-Instanzen. Die Rechenaufgabe bleibt stets registriert; Anbieter mit Einwilligung werden nie automatisch gewählt. Vollständige Entwicklerdokumentation: [../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md).
-
 ### 7a. Client-IP hinter Proxy oder CDN (`TrustedProxyService`, seit 3.5.0)
 
 - `Security::getClientIp()` liefert die IP aus `TrustedProxyService::clientIp()`. Weiterleitungs-Header werden **nur** ausgewertet, wenn `REMOTE_ADDR` vertrauenswürdig ist.
@@ -119,6 +109,16 @@ Rollen- und Rechtemodell: [../admin/users-groups/RBAC.md](../admin/users-groups/
 - **Unbekannte CDN-Adressen (z. B. Hostinger-CDN):** Kommt eine Anfrage mit Weiterleitungs-Headern von einer nicht vertrauenswürdigen Adresse (öffentlich oder privat), merkt sich das CMS deren Netz (IPv4 /24, IPv6 /48) samt Anzahl Beobachtungen und anonymisierter Client-Stichprobe in `cache/trusted_proxy_candidates.json` (max. 30 Netze, 14 Tage, Schreibzugriff höchstens einmal pro Minute). Die Firewall-Seite zeigt die Kandidaten; **Vertrauen** übernimmt das Netz mit einem Klick. Verlässliches Signal ist nur die eigene Admin-Anfrage: Kam sie über ein solches Netz, ist es als **Ihre Anfrage** markiert und das Sicherheits-Audit warnt. Beobachtungen und Client-Anzahl stammen aus Request-Headern und sind fälschbar; sie lösen keine Empfehlung aus. Eine automatische Übernahme gibt es bewusst nicht, weil gefälschte Header sonst Rate-Limits aushebeln würden.
 - Ersetzt der Webserver `REMOTE_ADDR` bereits selbst (z. B. LiteSpeed mit „Use Client IP in Header“), entstehen keine Kandidaten; die Diagnose auf der Firewall-Seite zeigt `REMOTE_ADDR`, Header und die ermittelte IP der aktuellen Anfrage.
 - Länder-Header (`CF-IPCountry`, `X-Country-Code`, …) für die Firewall-Regel `block_country` gelten nur bei Anfragen über einen vertrauenswürdigen Proxy (`TrustedProxyService::countryCode()`).
+
+### 7b. Lokales Captcha (`CaptchaService`, 4.2.0)
+
+- **Keine Drittanbieter:** Standardverfahren sind `pow` (ALTCHA-Prinzip, SHA-256/Web Crypto), `image` (lokales GD-PNG) und `math` (keine Abhängigkeit). `pow` und `image` enthalten die Rechenaufgabe als barrierefreie Alternative. Unbekannte oder nicht verfügbare Anbieter fallen auf `math`; Schutz wird nie still abgeschaltet.
+- **Lebenszyklus:** `CaptchaStore` hält bis zu acht offene Aufgaben unter `$_SESSION['cms_captcha']`. Die 32-stellige ID ist zufällig, private Daten bleiben in der Sitzung, das Ablaufdatum ist höchstens 7200 Sekunden entfernt. `verify()` verbraucht die Aufgabe und prüft danach Ablauf, gespeicherten Kontext und Anbieter. Ergebnis: `ok`, `missing`, `expired`, `context`, `invalid` oder `unavailable`.
+- **Sitzungen:** aktiv oder durch die Lazy-Session-Infrastruktur verzögert ist ausreichend. Ohne eine speicherbare Sitzung wird kein vertrauenswürdiger Schutz erzeugt; das Fragment zeigt einen Hinweis und die Prüfung scheitert.
+- **Formulare:** `FormSpamGuard::captchaHtml()`/`verifyCaptcha()` gelten bei Antispam-Stufe `high` mit Kontext `forms.<formKey>`. Das Verfahren kann über `cms_forms_captcha_provider` je Formular gewählt werden; Standard ist `pow`. `FormRenderer` lädt `captcha.css` und das ES-Modul nur bei Bedarf.
+- **Registrierung:** `register_captcha` ist standardmäßig aus. Ist es an, rendert die Core- und Standardvorlage `pow` mit Kontext `register`; `PublicRouter` prüft vor dem Konto-Anlegen. `cms_captcha_field()` und `cms_captcha_asset_tags()` sind der verbindliche Theme-Helfer. Ein eigenes Theme darf bei aktivierter Option das Fragment nicht weglassen.
+- **Community:** `CaptchaGate` schützt nur `create_topic`/`reply` mit Kontext `community.compose`, nach `captcha_mode` (`off`, `first_post`, `trust0`, `always`) und `captcha_provider` (`pow`, `image`, `math`). Gäste schreiben nicht, Bearbeiten ist frei und globale Moderation ausgenommen; `cms_community_captcha_required` kann nur verschärfen.
+- **Erweiterung:** `cms_captcha_providers` akzeptiert nur gültige `CaptchaProvider`-Instanzen. Die Rechenaufgabe bleibt stets registriert; Anbieter mit Einwilligung werden nie automatisch gewählt. Vollständige Entwicklerdokumentation: [../admin/security/ANTISPAM.md](../admin/security/ANTISPAM.md).
 
 ### 8. Daten
 

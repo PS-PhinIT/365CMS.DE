@@ -1,6 +1,6 @@
 # 365CMS: Admin: Löschfristen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 
 ## English (summary)
 
@@ -27,9 +27,20 @@ where the data lives; comment IP retention is configured on this page.
 | Kommentar-IP-Adressen | `comment_ips` | nie | Kürzen (letzter Block 0) oder entfernen | diese Seite |
 | Mail-Queue (erledigte Jobs) | `mail_queue` | 30 Tage | Löschen (nur versendet oder endgültig fehlgeschlagen, offene Jobs bleiben) | Filter `cms_mail_retention_days` |
 | Mail-Protokoll | `mail_log` | 90 Tage | Löschen | Filter `cms_mail_retention_days` |
+| Community: IP-Kennung | `community.ip_hash` | `ip_hash_days`, Standard 30 | Anonymisieren (`ip_hash = NULL`) | Community → Einstellungen |
+| Community: Lesestatus | `community.read_states` | 180 Tage | Löschen | Community |
+| Community: verwaiste Uploads | `community.orphan_uploads` | 24 Stunden | Zeile und Datei löschen | Community |
+| Community: Server-Entwürfe | `community.drafts` | 30 Tage | Löschen | Community |
+| Community: erledigte Meldungen | `community.reports` | 365 Tage | Löschen | Community |
+| Community: Moderationsprotokoll | `community.moderation_log` | 365 Tage | Löschen | Community |
+| Community: Verwarnungen | `community.warnings` | 730 Tage nach Ablauf; ohne Ablauf 1825 Tage nach Anlage | Löschen | Community |
+| Community: Sperren | `community.bans` | 365 Tage nach Aufheben/Ablauf; dauerhaft bis zur Aufhebung | Löschen | Community |
+| Community: Bearbeitungsverlauf | `community.revisions` | 365 Tage | Löschen, jüngste Fassung bleibt | Community |
 
 Gelöscht wird in Blöcken zu 5 000 Zeilen: je Tabelle und Lauf mindestens 40 Blöcke, danach weiter, solange das
 Zeitbudget von 20 Sekunden reicht (höchstens 2 000 Blöcke). Große Rückstände werden so in wenigen Läufen abgebaut.
+
+Die Community-Regeln registriert `CommunityRetention::registerAll()` unabhängig vom aktuellen Modulschalter: Das Abschalten hält Datenzugriff und -löschung auseinander, daher laufen Fristen weiter. Ihre Verarbeitung nutzt eigene Blöcke (`500` Zeilen, höchstens `20` Durchgänge) und UTC-Grenzen. `0` deaktiviert eine betroffene Community-Regel; Werte aus `cms_community_retention_days` werden auf 7–3650 Tage begrenzt, `orphan_uploads` bleibt fest bei 24 Stunden. Lesemarken der Foren, Abos, Reaktionen, Stimmen, Ignorierliste und Abzeichen haben keine eigene Frist, sondern werden mit dem Konto gelöscht. Das Thema im zentralen Papierkorb folgt seiner Core-Frist; offene Meldungen verhindern das automatische endgültige Löschen.
 
 ### Seite `/admin/data-retention`
 

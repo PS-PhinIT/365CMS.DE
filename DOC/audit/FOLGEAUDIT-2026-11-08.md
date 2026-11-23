@@ -2,6 +2,8 @@
 
 > **Stand:** 2026-11-08 | **Version:** 4.0.0 (Basis 3.5.6) | **Prüfumfang:** `CMS/` inkl. Theme `cms-default` und Plugin `cms-importer`, gebündelte Bibliotheken unter `CMS/assets/` (Versionsabgleich gegen bekannte Sicherheitslücken) | Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Befunde und Status beziehen sich ausdrücklich auf 2026-11-08. Spätere Releases und das spätere Auditdatum sind keine Fortsetzung dieses Tabellenstands.
+
 ## English (summary)
 
 Security and quality audit of 365CMS 3.5.6, released as 4.0.0. The audit covered security (known exploits and vulnerable bundled libraries), bugs, missing functions or values, speed and best practice. 44 findings were recorded and all are fixed in 4.0.0. Eight recommendations (OFFEN-20 … OFFEN-27) remain open because they need a migration or a product decision.

@@ -1,6 +1,6 @@
 # 365CMS: Paritäts-Checkliste der in den Core integrierten Plugins
 
-> **Stand:** 2026-11-12 | **Version:** 4.0.0 | **Gehört zu:** [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md)
+> **Stand:** 2026-11-23 | **Auslieferung:** 4.0.0 | **Status:** ✅ Paritätsabgleich abgeschlossen, historischer Nachweis | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
 
 ## English (summary)
 

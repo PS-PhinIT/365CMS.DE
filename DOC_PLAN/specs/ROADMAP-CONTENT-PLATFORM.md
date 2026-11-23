@@ -1,20 +1,20 @@
 # 365CMS: Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
 
-> **Stand:** 2026-11-12 | **Ziel-Version:** 4.1 / 4.2 | **Status:** vorbereitet (Spezifikation, Bestandsaufnahme) · **Fortschritt:** PROGRESS.md, Arbeitspaket 5
+> **Stand:** 2026-11-23 | **A:** ✅ 4.1.0 | **B:** 🔴 offen | **C:** 🔴 offen | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
 
 ## English (summary)
 
-Specification for the three largest functional gaps compared with WordPress, Drupal and TYPO3: (1) an editorial approval workflow, (2) custom content types and custom fields, (3) any number of content languages. Each part starts with an inventory of the current code (file references, counts), then defines the target, data model, migration path, permissions, UI, phases with effort and open decisions. Key findings: the capabilities `posts.publish`/`pages.publish` already exist but are never checked, and no default role has them; content languages are stored as fixed `*_en` columns in 8 tables and handled in about 70 files, although `ContentLocalizationService` already has a locale filter and a `*_{locale}` fallback. Recommended order: workflow first (smallest, prerequisite for the others), then fields on existing types, then custom types, then languages.
+Specification and delivery record for the three largest content-platform gaps: (1) editorial approval, (2) custom fields and content types, and (3) any number of content languages. Part A shipped in 4.1.0, including `pending`, permission enforcement, review history, preview links and review notifications. Parts B and C remain open. The inventories and proposed data models below are therefore retained as implementation baselines, not as a statement that all three parts are current gaps.
 
 ## Deutsch
 
-Reihenfolge der Umsetzung: **A Freigabe-Ablauf → B Felder und Inhaltstypen → C Sprachen.** A ist am kleinsten und wird von B und C gebraucht (neue Inhaltstypen und Übersetzungen sollen denselben Status- und Freigabeweg nutzen). C ist der größte Umbau und profitiert davon, dass B schon ein allgemeines Inhaltsmodell mitbringt.
+Reihenfolge: **A Freigabe-Ablauf (✅ 4.1.0) → B Felder und Inhaltstypen (🔴 offen) → C Sprachen (🔴 offen).** B soll den vorhandenen Workflow aus A verwenden; C setzt das allgemeine Modell aus B voraus.
 
 ---
 
 ## A. Freigabe-Ablauf (Redaktions-Workflow)
 
-### A.1 Ist-Stand (12.11.2026)
+### A.1 Geliefert in 4.1.0; Ist-Stand als Ausgangsbasis
 
 | Punkt | Befund |
 |---|---|
@@ -26,7 +26,7 @@ Reihenfolge der Umsetzung: **A Freigabe-Ablauf → B Felder und Inhaltstypen →
 | Revisionen | `post_revisions`, `page_revisions` mit `created_by`; Übersicht *Letzte Änderungen* (`ContentChangesService`) |
 | Benachrichtigungen | Mail-Dienst und Admin-Hinweise (`AdminNoticeService`) vorhanden; keine Redaktions-Benachrichtigungen |
 
-### A.2 Ziel
+### A.2 Gelieferter Umfang
 
 1. Neuer Status **„Zur Prüfung“** (`pending`) für Beiträge und Seiten.
 2. Wer `posts.publish` bzw. `pages.publish` nicht hat, kann nur speichern oder **zur Prüfung einreichen**. „Veröffentlichen“ und „Planen“ sind dann gesperrt, serverseitig, nicht nur in der Oberfläche.
@@ -86,7 +86,7 @@ Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes E
 - Listen *Beiträge*/*Seiten*: Filter „Zur Prüfung“, Sammelaktion „Freigeben“.
 - Dashboard-Widget „Wartet auf meine Prüfung“; Redaktionskalender zeigt `pending` farbig.
 
-### A.7 Phasen und Aufwand
+### A.7 Ursprüngliche Phasen und Aufwand
 
 | Phase | Inhalt | Aufwand |
 |---|---|---|
@@ -95,14 +95,16 @@ Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes E
 | A3 | Vorschau-Links | 1–2 Tage |
 | A4 | mehrstufige Freigaben je Inhaltstyp (optional) | 3–5 Tage |
 
-### A.8 Offene Entscheidungen
+### A.8 Nach dem Release verbleibend
 
-- ~~Dürfen Autoren nach der Freigabe noch ändern (neue Prüfung nötig?)~~, **entschieden (15.11.2026, 4.1.0):** ja, ohne neue Prüfung; veröffentlichte Inhalte bleiben beim Bearbeiten veröffentlicht. Eine „Revision zur Prüfung“ wird nicht gebaut.
-- Gilt der Ablauf auch für Downloads, Knowledgebase, Newsletter-Kampagnen? Vorschlag: zunächst nur Beiträge, Seiten und eigene Inhaltstypen.
+- Autorenänderungen nach Freigabe: entschieden, keine erneute Prüfung; veröffentlichte Inhalte bleiben veröffentlicht.
+- Erweiterung auf Downloads, Knowledgebase und Newsletter-Kampagnen bleibt **offen** und ist keine 4.1-Regressionslücke.
 
 ---
 
 ## B. Eigene Felder und Inhaltstypen
+
+> **Status 4.2.0: 🔴 nicht begonnen.** Die vorhandene Provider-Infrastruktur ist wiederverwendbar, aber es existieren noch keine produktiven Tabellen `content_types`, `field_groups`, `content_entries` oder `field_values`.
 
 ### B.1 Ist-Stand
 
@@ -207,6 +209,8 @@ Text, Mehrzeilig, Rich-Text (Editor.js-light), Zahl, Datum, Datum+Uhrzeit, Ja/Ne
 
 ## C. Beliebig viele Inhaltssprachen
 
+> **Status 4.2.0: 🔴 nicht begonnen.** Die produktive Speicherung bleibt auf Deutsch plus feste `*_en`-Spalten bzw. DE/EN-JSON beschränkt; die folgende Architektur ist ein Migrationsplan.
+
 ### C.1 Ist-Stand
 
 | Punkt | Befund |
@@ -296,4 +300,12 @@ Abgewogen gegen „weitere Spalten je Sprache“ (heutiges Muster, `*_{locale}`)
 | B Felder und Inhaltstypen | A1 (Status), für Freigabe A2 | 15–21 Tage (ohne B4) |
 | C Sprachen | A1; B1/B2, damit eigene Typen und Felder gleich mehrsprachig sind | 19–25 Tage (ohne C5) |
 
-Vor jeder Phase: Tests in `TESTS/` (Statusübergänge und Rechte als reine Logik-Tests wie `ContentEditPermission`; Migrationen mit Neuinstallation **und** Update geprüft, wie bei Schema v25).
+### Offene Lieferliste
+
+- [ ] B1: Feldgruppen und Feldwerte an Beiträgen/Seiten.
+- [ ] B2: eigene Inhaltstypen, Editor, Routing, Vorlagen und Provider.
+- [ ] B3: Block „Inhaltsliste“, Sitemap und Feeds.
+- [ ] B4: Wiederholgruppen, Rückverweise und CSV-Import.
+- [ ] C0–C5: Sprachmodell, Migration, Editor, Routing, Suche, Übersetzung und Funktionsbereiche.
+
+Vor jeder Phase: Tests in `TESTS/` (Statusübergänge und Rechte als reine Logik-Tests wie `ContentEditPermission`; Migrationen mit Neuinstallation **und** Update prüfen). Die nächstfolgende Schema-Marke ist erst bei tatsächlicher Umsetzung festzulegen.

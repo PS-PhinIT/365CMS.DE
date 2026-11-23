@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Rollen & Rechte (RBAC)
 
-> **Stand:** 2026-11-18 | **Version:** 4.1.8, Rolle `moderator` und Gruppe „Community“ seit 4.2.0 (Entwicklung, Schema v27) | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0, Schema v27 | **Rolle:** `moderator` (Community-Systemrolle) | **Status:** Stable
 > **Route:** `/admin/roles` (Alt-Route `/admin/rbac` leitet um) | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_roles`
 
 ## English (summary)

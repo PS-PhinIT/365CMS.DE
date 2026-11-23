@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Benutzer
 
-> **Stand:** 2026-11-18 | **Version:** 4.1.0, Rolle `moderator` seit 4.2.0 (Entwicklung) | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Rolle:** `moderator` als Community-Systemrolle | **Status:** Stable
 > **Route:** `/admin/users` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_users`
 
 ## English (summary)
@@ -12,7 +12,7 @@ User accounts are managed at `/admin/users` (`CMS/admin/users.php` → `CMS/admi
 - Since 4.0.0, a changed e-mail address takes effect only after the user opens the confirmation link sent to the new address and presses the button on that page (`/cms-confirm-email-change`, valid 48 hours; opening the link alone changes nothing). The old address is notified and stays active until then. The checkbox *Neue Adresse ohne Bestätigung übernehmen* (`email_skip_confirmation`) applies the address immediately; `cancel_email_change` discards a pending change.
 - *Überall abmelden* (`revoke_sessions`) signs the user out on all devices and invalidates all issued API tokens without changing the password.
 - Statuses: `active`, `inactive`, `banned`, `unverified` (e-mail address not confirmed yet, since 4.0.0; see [AUTH-SETTINGS.md](AUTH-SETTINGS.md#e-mail-verifizierung)).
-- Deleting is **permanent** (single delete and both bulk delete variants call `UserService::deleteUser($id, true)`). Use `deactivate` to keep the account.
+- Single-item delete and bulk `hard_delete` are permanent; bulk `delete` is a soft delete that sets the account inactive. Use `deactivate` explicitly to keep the account inactive as an account-management action.
 - The own account can never be deleted or changed by a bulk action. Since 4.0.0, the edit form also refuses to demote, deactivate or ban it.
 - New accounts get a display name from first and last name, otherwise the username. Before 4.0.0, creating users failed on MySQL/MariaDB in strict mode.
 
@@ -55,7 +55,7 @@ Der eigene Account wird bei Sammelaktionen immer übersprungen; nicht (mehr) exi
 | Rolle (`role`) | `admin`, `editor`, `author`, `member`, seit 4.2.0 die Systemrolle `moderator` (Community-Moderation, kein Zugang zu `/admin`, nie als Registrierungsrolle wählbar, siehe [RBAC.md](RBAC.md#community-rechte-und-rolle-moderator-seit-420)) sowie eigene Rollen aus [RBAC.md](RBAC.md); unbekannte Werte werden zu `member` |
 | Status (`status`) | `active`, `inactive`, `banned`, `unverified` („E-Mail unbestätigt“: Anmeldung erst nach Bestätigungslink, siehe [AUTH-SETTINGS.md](AUTH-SETTINGS.md#e-mail-verifizierung)); unbekannte Werte werden beim Anlegen zu `active` und beim Bearbeiten ignoriert |
 
-Die Bearbeitungsansicht zeigt zusätzlich Gruppen, Abo, MFA-/Passkey-Status und letzte Aktivitäten.
+Die Bearbeitungsansicht zeigt zusätzlich Gruppen, Abo, MFA-/Passkey-Status und letzte Aktivitäten. Die Community-Systemrolle `moderator` ist im Rollen-Auswahldialog zulässig, aber nie als Registrierungsrolle: Sie erhält Mitgliedsrechte plus `community.moderate`, keinen Adminzugang und keine befristungsfreie Sperrgewalt (`community.ban` bleibt bei `admin`). Entra SSO vergibt `moderator` nicht als Standardrolle und schließt bestehende Moderatorenkonten von der automatischen E-Mail-Verknüpfung aus; die Rolle ist nur über eine ausdrückliche Mapping-Regel erreichbar.
 
 ### E-Mail-Adresse ändern
 
@@ -74,7 +74,7 @@ Umgesetzt in `CMS/core/Services/EmailChangeService.php`.
 
 ### Löschen
 
-Beim endgültigen Löschen werden Benutzer und Metadaten (per `ON DELETE CASCADE`) entfernt; offene DSGVO-Löschanträge des Benutzers werden aufgeräumt. Inhalte (Beiträge, Seiten) bleiben erhalten. Für DSGVO-konforme Löschungen mit Nachweis den Weg über [../legal/DELETION-REQUESTS.md](../legal/DELETION-REQUESTS.md) nutzen.
+Beim endgültigen Löschen werden Benutzer und Metadaten (per `ON DELETE CASCADE`) entfernt; offene DSGVO-Löschanträge des Benutzers werden aufgeräumt. Allgemeine Seiten und Beiträge bleiben erhalten. Community-Daten werden durch `CommunityPrivacy` zusätzlich über den Hook `cms_user_deleted` behandelt: Standard ist Anonymisieren, alternativ können eigene Beitragsinhalte nach `erase_mode = delete` entleert und aus der Community-Suche entfernt werden. Für DSGVO-konforme Löschungen mit Nachweis den Weg über [../legal/DELETION-REQUESTS.md](../legal/DELETION-REQUESTS.md) nutzen.
 
 Alle Änderungen werden im Audit-Log protokolliert (`user_deleted`, `user_deactivated` u. a.).
 

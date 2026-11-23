@@ -1,12 +1,12 @@
 # 365CMS Projektdokumentation | Workflow: Klarstellungen zu den Specs
-> **Stand:** 2026-11-10 | **Version:** 4.0.0 | **Status:** Verbindlich | **Update:** 2026-11-10
+> **Stand:** 2026-11-23 | **Basis:** 4.0.0 | **Status:** Historisch und weiterhin verbindlich | **Gesamtstatus:** [../STATUS.md](../STATUS.md)
 > **Gilt für:** [ADMIN-MENU-PROFILE.md](ADMIN-MENU-PROFILE.md) · [PLUGIN-PARITY.md](PLUGIN-PARITY.md) · [ROADMAP-CONTENT-PLATFORM.md](ROADMAP-CONTENT-PLATFORM.md)
 
 ## English (summary)
 
 Binding clarifications that override the original spec texts:
 
-- Everything ships as release 4.0.0, with one schema bump (v24 → v25) and idempotent migrations.
+- The original scope shipped in release 4.0.0 with schema v25 and idempotent migrations. Version 4.2.0, now on schema v27, preserves the architectural decisions below.
 - The darker admin sidebar stays.
 - MultiSite remains an admin context only: there is no site assignment for content.
 - Hub sites take part in the trash and in export/import, but not in the search index, revisions, editorial calendar or translation status.
@@ -20,8 +20,8 @@ zur Umsetzung und werden hier fortgeschrieben.
 
 ### 1. Version und Schema
 
-- Alles gehört zu **Release 4.0.0** (ein großes Release). Versionsangaben in den Specs werden ignoriert, z. B. „4.1.0“, „next minor version“ oder „eine Version pro Arbeitspaket/PR“.
-- Schema-Änderungen laufen sauber über `SchemaManager` und `MigrationManager`, mit **einem** neuen Schema-Stand **v25**. Die Migrationen sind idempotent, d. h. ein erneuter Lauf erzeugt keine Duplikate.
+- Der ursprüngliche Umfang gehört zu **Release 4.0.0** mit Schema **v25**. Spätere Releases 4.1/4.2 ergänzen eigene, dokumentierte Schema-Stände; die damalige 4.0-Festlegung ist keine Aussage über den aktuellen `SCHEMA_VERSION`.
+- Schema-Änderungen laufen über `SchemaManager` und `MigrationManager` idempotent. Der aktuelle Stand ist seit 4.2.0 **v27**.
 - Der Changelog-Abschnitt `### v4.0.0` wird ergänzt. Die RELEASE-Pakete 4.0.0 werden neu gebaut, inklusive SHA-256 in beiden `update.json`.
 
 ### 2. Admin-Sidebar

@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Core-Module (Feature-Schalter)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/modules` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_modules`
 
 ## English (summary)
@@ -18,7 +18,7 @@
 | `security` | Sicherheit | `antispam`, `firewall`, `security-audit` | – | – |
 | `legal` | Recht | `legal-sites`, `cookie-manager`, `data-requests`, `privacy-requests`, `deletion-requests` | – | – |
 | `member_dashboard` | Member Dashboard | alle `member-dashboard*`-Seiten | – | `member_dashboard_enabled` |
-| `community` | Community | – (folgen mit dem Admin-Bereich des Moduls) | – | – |
+| `community` | Community | `community`, `community-structure`, `community-topics`, `community-queue`, `community-reports`, `community-sanctions`, `community-log`, `community-permissions`, `community-ranks`, `community-settings` | – | – |
 | `performance` | Performance | `performance`, `performance-cache`, `-media`, `-database`, `-settings`, `-sessions` | – | – |
 | `subscriptions` | Aboverwaltung Core | – | – | `subscription_enabled` |
 | `subscription_admin_packages` | Pakete & Abo-Einstellungen | `packages` | `subscriptions` | – |
@@ -40,7 +40,7 @@ Alle Module sind standardmäßig **aktiv**, mit einer Ausnahme: `community` (For
    - `ai_services` aus → keine KI-Buttons im Editor, Endpunkte gesperrt,
    - `legal` aus → kein Cookie-Banner,
    - `subscription_ordering` aus → Checkout leitet auf `/` um,
-   - `community` aus → `CommunityAccess::can()` lehnt jede Aktion mit `module_disabled` ab (auch für Administratoren), die Community-Listener (`FeatureHooks\CommunityHooks`) werden nicht angemeldet; bei Störung der Modulabfrage gilt das Modul als aus.
+   - `community` aus → `CommunityAccess::can()` lehnt jede Aktion mit `module_disabled` ab (auch für Administratoren); Community-Routen, Papierkorb, Datenschutz und Rechts-Hooks werden durch ihre jeweiligen Listener/Provider kontrolliert. Daten bleiben erhalten. Bei Störung der Community-Modulabfrage gilt das Modul als aus.
 4. Daten bleiben erhalten; beim Wiedereinschalten ist alles wie vorher.
 
 ### Abfrage im Code
@@ -53,7 +53,7 @@ if (CoreModuleService::getInstance()->isModuleEnabled('seo')) {
 }
 ```
 
-Unbekannte Slugs gelten als aktiv (`isModuleEnabled()` liefert `true`). Das Community-Modul fragt deshalb über `CMS\Services\Community\Support\CommunityModule::isEnabled()` ab: Es kennt den Slug an einer Stelle und liefert bei jeder Störung `false`.
+Unbekannte Slugs gelten in `CoreModuleService::isModuleEnabled()` aus Kompatibilitätsgründen als aktiv. Die Community fragt deshalb ausschließlich über `CMS\Services\Community\Support\CommunityModule::isEnabled()` ab: Es kennt den erlaubten Slug an einer Stelle, ruft den `CoreModuleService` und liefert bei jeder Ausnahme `false`. Damit ist der Community-Schalter fail-closed, ohne das etablierte „unbekannte Slugs aktiv“-Verhalten anderer Aufrufer global zu verändern.
 
 ### Verwandte Dokumente
 

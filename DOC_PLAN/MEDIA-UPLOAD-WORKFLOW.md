@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Workflow: Medien-Upload
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Statusquelle:** [STATUS.md](STATUS.md)
 > **Quellen:** `CMS/admin/media.php`, `CMS/admin/modules/media/MediaModule.php`, `CMS/core/Services/MediaService.php`, `CMS/core/Services/Media/UploadHandler.php`, `CMS/core/Services/Media/ImageProcessor.php`, `CMS/core/Services/Media/ImageOrientation.php`, `CMS/core/Services/Media/ImageMetadataStripper.php`, `CMS/core/Services/FileUploadService.php`, `CMS/core/Services/MediaDeliveryService.php`, `CMS/core/Services/EditorJsService.php`
 
 ## English (summary)
@@ -56,7 +56,7 @@ Fehler liefern `{"error":"…","new_token":"…"}` und werden über den Logger p
 
 ### Nachverarbeitung
 
-Metadaten entfernen (`strip_exif`; erhaltene Originale ohne Neukodierung, sonst mit GD neu kodiert, siehe [MEDIA.md](../admin/media/MEDIA.md), Abschnitt „Metadaten, Ausrichtung und Transparenz“). `ImageProcessor` wendet die EXIF-Ausrichtung an und skaliert auf `max_width`/`max_height` (Standard 2560 px) skalieren, JPEG-Qualität (85), WebP-Variante (`auto_webp`), Vorschaubilder (`generate_thumbnails`: 150×150, 300×300, 1024×1024, 1200×400). Bestehende Dateien lassen sich nachträglich über den Verarbeitungsjob der Medienseite (Modi `all`, `webp`, `thumbnails`; 5 Dateien je Schritt, max. 1000 Kandidaten, Dateien > 1 MB werden übersprungen) bearbeiten.
+Metadaten entfernen (`strip_exif`; auch bei erhaltenen Originalen ohne Neukodierung, siehe [MEDIA.md](../DOC/admin/media/MEDIA.md), Abschnitt „Metadaten, Ausrichtung und Transparenz“). `ImageProcessor` wendet alle acht EXIF-Ausrichtungen an, erhält PNG-Transparenz und skaliert auf `max_width`/`max_height` (Standard 2560 px), JPEG-Qualität (85), WebP-Variante (`auto_webp`) und Vorschaubilder (`generate_thumbnails`: 150×150, 300×300, 1024×1024, 1200×400). Bestehende Dateien lassen sich nachträglich über den Verarbeitungsjob der Medienseite bearbeiten (Modi `all`, `webp`, `thumbnails`; 5 Dateien je Schritt, max. 1000 Kandidaten).
 
 ### Auslieferung
 
@@ -73,10 +73,10 @@ Metadaten entfernen (`strip_exif`; erhaltene Originale ohne Neukodierung, sonst 
 
 ### Bekannter Hinweis
 
-Das Mitglieder-Medienmodul unter `/member/media` erzeugt sein Upload-Token seit 3.4.12 mit der Aktion `media_action`, die `/api/upload` prüft (vorher scheiterte der erste Upload mit `upload.invalid_csrf`; siehe [member/MEMBER-SECURITY.md](../member/MEMBER-SECURITY.md)). Uploads mit Doppelendungen wie `datei.php.jpg` werden seit 3.4.12 abgelehnt.
+Das Mitglieder-Medienmodul unter `/member/media` erzeugt sein Upload-Token mit der Aktion `media_action`, die `/api/upload` prüft (siehe [member/MEMBER-SECURITY.md](../DOC/member/MEMBER-SECURITY.md)). Uploads mit Doppelendungen wie `datei.php.jpg` werden abgelehnt.
 
 ## Verwandte Dokumente
 
-- [admin/media/MEDIA.md](../admin/media/MEDIA.md) · [admin/media/README.md](../admin/media/README.md)
-- [core/API-REFERENCE.md](../core/API-REFERENCE.md) · [core/SECURITY.md](../core/SECURITY.md)
+- [admin/media/MEDIA.md](../DOC/admin/media/MEDIA.md) · [admin/media/README.md](../DOC/admin/media/README.md)
+- [core/API-REFERENCE.md](../DOC/core/API-REFERENCE.md) · [core/SECURITY.md](../DOC/core/SECURITY.md)
 - [CONTENT-MANAGEMENT-WORKFLOW.md](CONTENT-MANAGEMENT-WORKFLOW.md)

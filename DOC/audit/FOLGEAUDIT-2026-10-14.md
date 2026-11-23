@@ -2,6 +2,8 @@
 
 > **Stand:** 2026-10-14 | **Version:** 3.5.0 | **Prüfumfang:** `CMS/` ohne gebündelte Drittbibliotheken, Theme `cms-default`, Plugin `cms-importer`, `README.md`, `DOC/`, `RELEASE/` | Übersicht: [README.md](README.md)
 
+> **Historischer Snapshot:** Befunde und Status beziehen sich ausdrücklich auf 2026-10-14. Für den aktuellen Produktstand 4.2.0 gelten Code, `Changelog.md` und Release-Hinweise 4.2.0.
+
 ## English (summary)
 
 Second pass over release 3.5.0 after the full audit of the same day. It covered security, speed, best practice, bugs, broken references and the GUI. 43 findings were recorded, and all of them are fixed in 3.5.0. At first, 38 were fixed completely, 3 in part (PERF-12, PERF-17, PERF-22) and 2 stayed open (FUN-34, PERF-18). The remaining parts were listed as recommendations OFFEN-14 … OFFEN-19 and have since been implemented in 3.5.0 as well. One finding (SEC-30) changes behaviour for API clients: JWTs are now bound to the password, and tokens issued before 3.5.0 must be fetched again. Such tokens are now rejected with a clear hint (`WWW-Authenticate` header, error text on refresh).
