@@ -63,7 +63,7 @@ Lokaler Windows-Checkout, PHP **8.4.28 CLI (NTS, x64)** mit geladenem `mbstring`
 die in der Matrix genannten Laufzeitprüfungen mit Testkonten je Rolle durchführen (02.1, 02.2, 02.7);
 die Suiten `member-area`, `security` und `community-access` wurden in diesem Lauf nicht ausgeführt.
 
-## Nachprüfung unter Linux (Claude Sonnet 5.5, 23.11.2026)
+## Nachprüfung unter Linux (23.11.2026)
 
 - **Tests:** `admin-menu` ist auf Linux grün (PHP 8.3.6, LF-Checkout), `user-role-hook` mit den Korrekturen aus PR #194 (auf `main` allein
   zwei rote Doku-Prüfungen, siehe Bericht AP-01). Die 13 Fehler des Windows-Laufs sind Zeilenumbruch- und `/dev/null`-Artefakte; die

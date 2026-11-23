@@ -692,7 +692,7 @@ T::run('Sitzung: frische SSO-Anmeldung, Zwischenseite', static function (): void
 });
 
 T::run('Audit 4.1.0: SSO-Sitzung nach lokaler Code-Abfrage, Trennen, API-Tokens', static function () use ($root): void {
-    $read = static fn (string $file): string => (string) file_get_contents($root . $file);
+    $read = static fn (string $file): string => str_replace("\r\n", "\n", (string) file_get_contents($root . $file));
 
     // SEC-410-01: Entra + lokales TOTP → Sitzung bleibt SSO-Sitzung.
     $_SESSION = [EntraSsoService::SESSION_SSO_PENDING => 7, 'password_change_required' => true];
@@ -725,7 +725,7 @@ T::run('Audit 4.1.0: SSO-Sitzung nach lokaler Code-Abfrage, Trennen, API-Tokens'
 });
 
 T::run('Einbindung (statisch)', static function () use ($root): void {
-    $read = static fn (string $file): string => (string) file_get_contents($root . $file);
+    $read = static fn (string $file): string => str_replace("\r\n", "\n", (string) file_get_contents($root . $file));
 
     $router = $read('core/Router.php');
     T::check(str_contains($router, "str_starts_with(\$this->requestUri, '/cms-login/sso/')") && str_contains($router, "loadRouteModule('SsoRouter')"), 'Router lädt SsoRouter für /cms-login/sso/');
