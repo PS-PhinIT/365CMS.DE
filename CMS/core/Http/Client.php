@@ -401,11 +401,50 @@ final class Client
             return true;
         }
 
+        // Audit 4.2.0 (AP-03, 03.5): Eingebettete IPv4-Adressen und Multicast. FILTER_FLAG_GLOBAL_RANGE lässt IPv4-kompatible
+        // (::a.b.c.d), IPv4-übersetzte (::ffff:0:a.b.c.d) und 6to4-Adressen (2002::/16) sowie Multicast durch, auch wenn die
+        // eingebettete IPv4-Adresse intern ist. Das wird über inet_pton() unabhängig von der Schreibweise (Hex oder Punktform) geprüft.
+        $packed = @inet_pton($ip);
+        if ($packed !== false && strlen($packed) === 4 && ord($packed[0]) >= 224) {
+            return true;
+        }
+        if ($packed !== false && strlen($packed) === 16) {
+            if (ord($packed[0]) === 0xFF) {
+                return true;
+            }
+            $embedded = self::embeddedIpv4($packed);
+            if ($embedded !== null) {
+                return self::isNonPublicIp($embedded);
+            }
+        }
+
         // FILTER_FLAG_GLOBAL_RANGE schließt neben privaten/reservierten Netzen auch
         // Shared Address Space (100.64.0.0/10), Dokumentations- und Benchmark-Netze aus.
         return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) === false;
     }
 
+
+    /**
+     * In einer IPv6-Adresse (16 Byte) eingebettete IPv4-Adresse: IPv4-kompatibel (::/96), IPv4-übersetzt (::ffff:0:0:0/96),
+     * IPv4-abgebildet (::ffff:0:0/96) und 6to4 (2002::/16). `::` und `::1` gehören nicht dazu. Sonst null.
+     */
+    private static function embeddedIpv4(string $packed): ?string
+    {
+        $head = substr($packed, 0, 12);
+        $tail = substr($packed, 12, 4);
+        $zeros = str_repeat("\0", 12);
+        $isEmbedded = ($head === $zeros && $tail !== "\0\0\0\0" && $tail !== "\0\0\0\1")
+            || $head === str_repeat("\0", 10) . "\xFF\xFF"
+            || $head === str_repeat("\0", 8) . "\xFF\xFF\0\0";
+        if ($isEmbedded) {
+            return inet_ntop($tail) ?: null;
+        }
+        if (str_starts_with($packed, "\x20\x02")) {
+            return inet_ntop(substr($packed, 2, 4)) ?: null;
+        }
+
+        return null;
+    }
 
     /**
      * @param-out string $blockReason '' | 'dns' | 'private'

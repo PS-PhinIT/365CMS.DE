@@ -62,3 +62,19 @@ Lokaler Windows-Checkout, PHP **8.4.28 CLI (NTS, x64)** mit geladenem `mbstring`
 **Nächster Schritt:** `user-role-hook` auf demselben Commit in Linux mit LF-Checkout wiederholen. Dann
 die in der Matrix genannten Laufzeitprüfungen mit Testkonten je Rolle durchführen (02.1, 02.2, 02.7);
 die Suiten `member-area`, `security` und `community-access` wurden in diesem Lauf nicht ausgeführt.
+
+## Nachprüfung unter Linux (Claude Sonnet 5.5, 23.11.2026)
+
+- **Tests:** `admin-menu` ist auf Linux grün (PHP 8.3.6, LF-Checkout), `user-role-hook` mit den Korrekturen aus PR #194 (auf `main` allein
+  zwei rote Doku-Prüfungen, siehe Bericht AP-01). Die 13 Fehler des Windows-Laufs sind Zeilenumbruch- und `/dev/null`-Artefakte; die
+  Verhaltensprüfungen der Ersatzrolle bestehen unverändert.
+- **02.1 skriptgestützt bestätigt:** Von 140 Einstiegsdateien unter `CMS/admin/*.php` haben alle den `ABSPATH`-Wächter. 43 enthalten
+  keine eigene Rechteprüfung; sie sind ausschließlich dünne Wrapper, die genau sechs gemeinsame Rahmen laden (`ai-page.php`,
+  `logs-page.php`, `member-dashboard-page.php`, `performance-page.php`, `seo-page.php`, `system-monitor-page.php`). Alle sechs
+  prüfen `isAdmin()`, Capability und CSRF (`section-page-shell.php:305–386`). Keine Einstiegsdatei mit POST-Verarbeitung ohne
+  CSRF-Bezug.
+- **02.3 bestätigt:** Die Ersatzrollen-Sperre in `RolesModule::deleteRole()` greift serverseitig nach `sanitizeRoleSlug()` (Groß-/
+  Kleinschreibung egal) und vor jeder Schreiboperation; das Ausblenden im Auswahlfeld ist nur Komfort. Kein Umgehungsweg über die
+  Umbenennung (Systemrollen sind nicht umbenennbar).
+- **Kein neuer Befund** in AP-02.
+

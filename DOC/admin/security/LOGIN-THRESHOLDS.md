@@ -70,5 +70,5 @@ Vorher/Nachher). Standard: keine Rolle.
   Passwort (nur Sicherheitsseite mit Aktion `password_change`), dann MFA-Zwang.
 - **Erweiterungen** können den Zwang über den Filter `cms_mfa_enforcement_required` zusätzlich einschalten, aber für eine
   gewählte Rolle nicht aufheben.
-- Dienst: `CMS\Services\Security\MfaEnforcementService`; Tests: `TESTS/mfa-enforcement`; Spezifikation:
+- Dienst: `CMS\Services\Security\MfaEnforcementService`; Spezifikation:
   [01-IDENTITY.md](../../../DOC_PLAN/v4.1/01-IDENTITY.md) §1b.

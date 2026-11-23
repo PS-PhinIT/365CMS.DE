@@ -35,7 +35,7 @@ Dieser Index führt zu den kanonischen Dokumenten. Die Produktversion im Code is
 | Installation | [INSTALLATION.md](INSTALLATION.md) |
 | Root README | [../README.md](../README.md) |
 | Changelog | [../Changelog.md](../Changelog.md) |
-| Status / known gaps | [core/STATUS.md](core/STATUS.md), [audit/audits/README.md](../DOC_PLAN/audit/audits/README.md) |
+| Status / known gaps | [core/STATUS.md](core/STATUS.md), [DOC_PLAN/audit/README.md](../DOC_PLAN/audit/README.md) |
 
 ---
 
@@ -184,11 +184,13 @@ Die Runtime lädt Themes aus `CMS/themes/` (`cms-default`) und Plugins aus `CMS/
 | Document / Dokument | Purpose / Zweck |
 |---|---|
 | [theme/README.md](theme/README.md) | Theme system |
+| [theme/LEITFADEN.md](theme/LEITFADEN.md) | Theme development step by step (start here) |
 | [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) | Theme creation |
 | [theme/DEVELOPMENT.md](theme/DEVELOPMENT.md) | Theme development notes |
 | [theme/DESIGN-SYSTEM.md](theme/DESIGN-SYSTEM.md) | Design system |
 | [theme/COMPONENTS.md](theme/COMPONENTS.md) | Components |
 | [theme/JAVASCRIPT.md](theme/JAVASCRIPT.md) | Theme JavaScript |
+| [plugins/LEITFADEN.md](plugins/LEITFADEN.md) | Plugin development step by step (start here) |
 | [plugins/GUIDE.md](plugins/GUIDE.md) | Plugin quick start |
 | [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) | Full plugin guide |
 | [plugins/PLUGIN-MARKETPLACE.md](plugins/PLUGIN-MARKETPLACE.md) | Plugin marketplace |
@@ -377,8 +379,8 @@ Häufige Aufgaben und das Dokument, das zuerst geöffnet werden sollte.
 | Member area | [member/README.md](member/README.md) |
 | Login / reset / registration branding | [admin/themes-design/CMS-LOGINPAGE.md](admin/themes-design/CMS-LOGINPAGE.md) |
 | Secure uploads | [admin/media/MEDIA.md](admin/media/MEDIA.md) |
-| Plugin development | [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) |
-| Theme development | [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) |
+| Plugin development | [plugins/LEITFADEN.md](plugins/LEITFADEN.md) → [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) |
+| Theme development | [theme/LEITFADEN.md](theme/LEITFADEN.md) → [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) |
 | Hooks | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) |
 | Security (CSRF / XSS) | [core/SECURITY.md](core/SECURITY.md) |
 | Asset status | [assets/README.md](assets/README.md) |

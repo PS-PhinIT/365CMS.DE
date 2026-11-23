@@ -68,7 +68,6 @@ Im Block gibt es außerdem:
 | `assets/js/editor-blocks/reusable-block.js` | Editor-Werkzeug „Vorlagen“ |
 | `/admin/post-editor-api` | `reusable_block_choices` (Auswahl), `reusable_block_content` (Umwandeln), `block_preview` (Vorschau) |
 | Hooks | `cms_reusable_block_saved`, `cms_reusable_block_deleted`, `cms_reusable_block_changed` ([HOOKS-REFERENCE.md](../../core/HOOKS-REFERENCE.md)) |
-| Tests | `php TESTS/reusable-blocks/run.php` |
 
 ### Verwandte Dokumente
 

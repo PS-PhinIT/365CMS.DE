@@ -45,7 +45,7 @@ Empfänger prüfen: `hex(HMAC-SHA256(geheimnis, timestamp + "." + body)) == sign
 
 ### Technik
 
-`CMS\Services\Webhooks\WebhookService`, `FeatureHooks\WebhookHooks`, Tabellen `cms_webhook_endpoints`, `cms_webhook_deliveries` ([DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md)), Löschfrist `webhooks.deliveries` (30 Tage, nur zugestellte und aufgegebene), Tests `php TESTS/webhooks/run.php`.
+`CMS\Services\Webhooks\WebhookService`, `FeatureHooks\WebhookHooks`, Tabellen `cms_webhook_endpoints`, `cms_webhook_deliveries` ([DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md)), Löschfrist `webhooks.deliveries` (30 Tage, nur zugestellte und aufgegebene),
 
 ### Verwandte Dokumente
 
