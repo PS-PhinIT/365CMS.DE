@@ -14,6 +14,16 @@
 
 ---
 
+### v4.2.4 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-04)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.4** | 🛡️ security | AP-04 Ausgabe: XSS, CSP, Vorlagen / Admin-Oberfläche | **Leerzustand von Tabellen** (`initGlobalEmptyTablePattern()` in `assets/js/admin.js`): Der aus einer `colspan`-Zelle gelesene Text („Keine … vorhanden“) wurde per `innerHTML` wieder eingesetzt; nach `textContent` sind darin enthaltene spitze Klammern entmaskiert und wären als HTML ausgewertet worden. Der HTML-Baustein ist jetzt fest, die Beschriftung wird per `textContent` gesetzt. Ein Weg mit ungefiltertem Fremdtext in einer solchen Zelle wurde nicht gefunden (Härtung; zusätzlich schützen CSP und Trusted Types). Alle übrigen Prüfpunkte (Escaping, Bereinigung beim Ausgeben, CSP, JSON-LD, Dateiauslieferung, Fehlerausgaben) ohne Befund. Bericht: [FOLGEAUDIT-AP-04](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-04-2026-11-23.md). |
+
+---
+
 ### v4.2.0 — Feature Release (Stand 23.11.2026)
 
 #### Highlights & Neuerungen im Überblick
