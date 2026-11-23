@@ -68,9 +68,3 @@ Die Übersicht warnt bei weniger als 1 GB freiem Speicher (kritisch < 512 MB) un
 ### Verwandte Dokumente
 
 [README.md](README.md) · [../media/MEDIA.md](../media/MEDIA.md) · [../diagnose/DIAGNOSE.md](../diagnose/DIAGNOSE.md) · [../../core/SERVICES.md](../../core/SERVICES.md)
-
-### Regressionstest der Bildpfade
-
-```bash
-php TESTS/media-images/run.php
-```

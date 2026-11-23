@@ -34,7 +34,7 @@ Practical workflow for building or changing a theme: start from `cms-default` (c
 - [ ] Mobile Navigation (≤ 720 px) und Tastaturbedienung geprüft.
 - [ ] Versionsnummer in `style.css`, `theme.json`, `update.json`, `functions.php` identisch; Changelog in `update.json` ergänzt.
 - [ ] Sicherheits-Audit ohne neue Befunde zu Fremd-Assets.
-- [ ] `php TESTS/theme-contract/run.php` ist erfolgreich; bei Captcha-/Medienänderungen zusätzlich `php TESTS/captcha/run.php` bzw. `php TESTS/media-images/run.php`.
+- [ ] Die automatischen Tests des Repositories sind grün (sie prüfen den Theme-Vertrag für jedes Theme unter `CMS/themes/`).
 
 ### 4. Auslieferung
 

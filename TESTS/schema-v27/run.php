@@ -340,7 +340,7 @@ T::run('Struktur entspricht dem Snapshot golden.json (Definition, Snapshot, Doku
     T::check(is_array($golden), 'golden.json lesbar (Neu erzeugen: CMS_TEST_DB_HOST=localhost CMS_TEST_DB_USER=root php TESTS/schema-v27/dump-golden.php)');
     $golden = is_array($golden) ? $golden : [];
     T::same(V27_TABLES, array_keys($golden), 'der Snapshot enthält genau die 28 Tabellen in der Reihenfolge von FEATURE_TABLES_V27');
-    $handoff = (string) @file_get_contents(dirname($root) . '/DOC/workflow/specs/community/HANDOFF-PR2-PR5.md');
+    $handoff = (string) @file_get_contents(dirname($root) . '/DOC_PLAN/v4.2/HANDOFF-PR2-PR5.md');
     $totalIndexes = 0;
     foreach (V27_TABLES as $table) {
         $expected = $golden[$table] ?? ['columns' => [], 'primary' => [], 'indexes' => []];
@@ -707,7 +707,7 @@ T::run('Einbindung (Quelltext)', static function () use ($src, $migrationSource,
 
 T::run('Dokumentation stimmt mit dem Schema überein', static function () use ($root, $queries): void {
     $repo = dirname($root);
-    $handoff = (string) @file_get_contents($repo . '/DOC/workflow/specs/community/HANDOFF-PR2-PR5.md');
+    $handoff = (string) @file_get_contents($repo . '/DOC_PLAN/v4.2/HANDOFF-PR2-PR5.md');
     $schemaDoc = (string) @file_get_contents($repo . '/DOC/core/DATABASE-SCHEMA.md');
     T::check($handoff !== '', 'HANDOFF-PR2-PR5.md vorhanden');
     foreach (V27_TABLES as $table) {
@@ -728,8 +728,9 @@ T::run('Dokumentation stimmt mit dem Schema überein', static function () use ($
     }
     T::check(str_contains($handoff, '`' . Caps::MARKER . '`') && str_contains($handoff, '`moderator`'), 'HANDOFF nennt den Marker capabilities_v27 und die Rolle moderator');
     T::check(str_contains($schemaDoc, 'The base schema (118 tables)'), 'DATABASE-SCHEMA.md nennt 118 Tabellen');
+    // Die Dokumentation nennt keine Test-Suiten (Vorgabe 2026-11-23); die Inventare führen auch diese Suite nicht.
     foreach (['FILELIST.md', 'FILESTRUCTUR.md'] as $inventory) {
-        T::check(str_contains((string) file_get_contents($repo . '/DOC/' . $inventory), '`TESTS/schema-v27/`'), "DOC/{$inventory} nennt TESTS/schema-v27");
+        T::check(!str_contains((string) file_get_contents($repo . '/DOC/' . $inventory), 'TESTS/'), "DOC/{$inventory} nennt keine Test-Suite");
     }
 });
 

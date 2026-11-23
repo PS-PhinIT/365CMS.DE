@@ -168,6 +168,14 @@ T::run('Einbindung (statisch)', static function () use ($root): void {
         : '';
     T::check(str_contains($login, 'Security::passwordNeedsRehash((string) $user->password)') && str_contains($login, 'WHERE id = ? AND password = ?'), 'Login aktualisiert alte Hashes atomar per Compare-and-Swap');
     T::check(str_contains($login, '$user->password = $newHash;') && str_contains($login, '!$security->verifyPassword($password, $currentHash)'), 'aktualisierter Hash bindet die Sitzung; paralleler Passwortwechsel bleibt erhalten');
+    // Nachprüfung AP-01: Der Hash ändert den Sitzungs-Fingerprint (alle anderen Sitzungen und API-Tokens enden). Das darf erst nach
+    // vollständig bestandener Anmeldung geschehen: nach den Prüfungen von Status und Sperre „Lokale Anmeldung“ und nach der MFA-Weiche.
+    $posRehash = strpos($login, 'Security::passwordNeedsRehash(');
+    $posMfa = strpos($login, "return 'MFA_REQUIRED';");
+    $posStatus = strpos($login, "return 'Ihr Konto ist deaktiviert.';");
+    $posComplete = strpos($login, '$this->completeAuthenticatedSession($user, $remember);');
+    T::check($posRehash !== false && $posMfa !== false && $posStatus !== false && $posComplete !== false, 'login(): Rehash, MFA-Weiche, Statusprüfung und Sitzungsaufbau gefunden');
+    T::check($posRehash > $posMfa && $posRehash > $posStatus && $posRehash < $posComplete, 'Rehash erst nach MFA-Weiche und Statusprüfung, unmittelbar vor dem Sitzungsaufbau (kein Sitzungsende durch bloß bekanntes Passwort)');
     T::check(!str_contains($auth, 'PASSWORD_POLICY_MIN_LENGTH'), 'Auth: keine festen Policy-Konstanten mehr');
     T::check(str_contains($auth, 'PasswordPolicyService::getInstance()->validate($password, $userId)'), 'Auth::validatePasswordPolicy delegiert inkl. Benutzer-ID');
     T::check(str_contains($auth, "recordChange((int) \$userId, \$passwordHash, 'register')"), 'Registrierung schreibt Historie');

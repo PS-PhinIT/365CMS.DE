@@ -17,8 +17,8 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | den Release-/Qualitätsstand und bekannte Lücken sucht | [core/STATUS.md](core/STATUS.md) |
 | das Admin-Panel nutzt | [admin/README.md](admin/README.md) · [admin/GUIDE.md](admin/GUIDE.md) |
 | den Mitgliederbereich betreut | [member/README.md](member/README.md) |
-| Plugins entwickelt | [plugins/GUIDE.md](plugins/GUIDE.md) → [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) |
-| Themes entwickelt | [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) |
+| Plugins entwickelt | [plugins/LEITFADEN.md](plugins/LEITFADEN.md) → [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) |
+| Themes entwickelt | [theme/LEITFADEN.md](theme/LEITFADEN.md) → [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) |
 | die API oder eigene Endpunkte nutzt | [core/API-REFERENCE.md](core/API-REFERENCE.md) |
 | Hooks sucht | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) |
 | Tabellen sucht | [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) |
@@ -31,6 +31,7 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 ### Eckdaten 4.2.0
 
 - Version `4.2.0` (Release `2026-11-23`), Schema `v27`, PHP `8.4.1+`, Tabellenpräfix `cms_`
+- `CMS/core/Version.php`: `CURRENT = '4.2.0'`, `RELEASE_DATE = '2026-11-23'`, `STATUS = 'stable'`; `SchemaManager::SCHEMA_VERSION = 'v27'`
 - Das vollständige Community-Modul ist im Core enthalten, standardmäßig deaktiviert; Konfiguration und Betrieb sind unter [admin/community/README.md](admin/community/README.md) und [member/COMMUNITY.md](member/COMMUNITY.md) beschrieben.
 - Konfiguration: `CMS/config/app.php` (vom Installer erzeugt); `CMS/config.php` ist nur ein Stub
 - Bootstrap-Modi `cli`, `api`, `admin`, `web`; je Request wird nur die passende Routengruppe geladen
@@ -54,14 +55,14 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 - **4.2.0 / v27** ist veröffentlicht. Der ausgelieferte Stand des Community-Moduls ist in [admin/community/README.md](admin/community/README.md), [member/COMMUNITY.md](member/COMMUNITY.md), [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) und [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) dokumentiert.
 - Frühere Versionen und ihre Korrekturen sind historische Einträge in [../Changelog.md](../Changelog.md) und den datierten Dokumenten unter [audit/](../DOC_PLAN/audit/audits/), nicht der aktuelle Produktstand.
 - Nicht angekündigte Folgefunktionen werden nicht als zugesagter Roadmap-Stand geführt.
-- Tests werden nicht anhand einer festen Summe dokumentiert: `php TESTS/run-all.php` entdeckt laufend alle `TESTS/<suite>/run.php`. Eine einzelne Suite läuft mit `php TESTS/<suite>/run.php [-v]`; der gemeinsame Runner gibt Einleitung und Entdeckungslogik aus.
+- Automatisierte Tests sind im Repository versioniert und laufen in der CI; die Dokumentation nennt keine einzelnen Test-Suiten.
 
 ### Wichtige Hinweise
 
 - **Konfiguration:** `CMS/index.php` lädt `config/app.php` vor `config.php`. Eigene Konstanten deshalb in `config/app.php` pflegen und nach jedem Installer-Lauf prüfen.
 - **Wartungsmodus:** Seit 3.4.12 liefert der Router Besuchern HTTP 503; Admins und Login-Routen bleiben erreichbar.
 - **Offene Punkte:** [core/STATUS.md](core/STATUS.md) (Abschnitt „Offene Punkte“).
-- **Audits:** Prüfberichte unter [audit/README.md](../DOC_PLAN/audit/audits/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
+- **Audits:** Prüfberichte unter [audit/README.md](../DOC_PLAN/audit/README.md); Laufzeit-Sicherheitsprüfungen über `/admin/security-audit` ([admin/security/](admin/security/)).
 - **Release-Änderungen:** [../Changelog.md](../Changelog.md) ist die führende Datei; der Codezustand in `CMS/` und das Schema in `SchemaManager` haben Vorrang gegenüber älteren Planungsnotizen.
 
 ### Verwandte Einstiege

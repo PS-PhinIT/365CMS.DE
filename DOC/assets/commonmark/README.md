@@ -50,17 +50,17 @@ ausgeblendet; PHP ≥ 8.4).
    ```
    Das Skript bricht ab, wenn Version oder dist-Referenz eines Pakets im Vendor-Verzeichnis von der Lockdatei abweicht, eine Quelle ohne
    `declare(strict_types=1)` ist oder Klassennamen als Zeichenkette enthält. Zwei Läufe ergeben dieselben Bytes.
-3. Reproduzierbarkeit prüfen, ohne zu schreiben: derselbe Aufruf mit `--verify` (Exit 0 = byte-gleich). In der Testsuite:
-   `CMS_TEST_COMMONMARK_VENDOR=<verzeichnis>/vendor php TESTS/security/run.php` (ohne die Variable nur ein Hinweis).
-4. Prüfsummen und Bytes oben eintragen; `ContentRenderer::VERSION` erhöhen und den Fingerabdruck in `TESTS/community-render/run.php`
-   (`CR_FINGERPRINTS`) ergänzen, denn das HTML im Cache hängt vom Bündel ab.
+3. Reproduzierbarkeit prüfen, ohne zu schreiben: derselbe Aufruf mit `--verify` (Exit 0 = byte-gleich). Die automatischen Tests prüfen das
+   ebenfalls, wenn `CMS_TEST_COMMONMARK_VENDOR=<verzeichnis>/vendor` gesetzt ist (sonst nur ein Hinweis).
+4. Prüfsummen und Bytes oben eintragen; `ContentRenderer::VERSION` erhöhen und den Fingerabdruck der Render-Tests (`CR_FINGERPRINTS`)
+   ergänzen, denn das HTML im Cache hängt vom Bündel ab.
 5. Bei einem Versionswechsel zusätzlich die Pins in `.github/deps/composer.json` und die Lockdatei
    (`composer update --no-install --ignore-platform-reqs league/commonmark league/config dflydev/dot-access-data nette/schema nette/utils`
    in `.github/deps/`), die Zeilen in `DOC/assets/README.md` und `ASSET.md` sowie die Tabelle oben anpassen.
 
-Geprüft wird das Bündel von `TESTS/security/dependencies.php` (Pins, `replace`, Kopfzeilen = Lockdatei, Prüfsummen, genau zwei Dateien,
-nur Namensräume `CMS\Vendor\…`, Lizenz nennt alle fünf Pakete, `.gitattributes`) und von `TESTS/community-render` (Laden über den
-Assets-Autoloader, keine globalen Klassen, jede Einfuhr vorhanden, Konfiguration im Schema) sowie `TESTS/community-xss`.
+Automatisch geprüft werden am Bündel: Pins, `replace`, Kopfzeilen = Lockdatei, Prüfsummen, genau zwei Dateien, nur Namensräume
+`CMS\Vendor\…`, Lizenz nennt alle fünf Pakete, `.gitattributes`; dazu Laden über den Assets-Autoloader, keine globalen Klassen, jede
+Einfuhr vorhanden, Konfiguration im Schema und der XSS-Korpus des Renderers.
 
 `.gitattributes` führt `CMS/assets/commonmark/* -text`: Git schreibt die Zeilenenden der generierten Dateien nie um; die Tests
 normalisieren CRLF zusätzlich.

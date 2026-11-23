@@ -450,30 +450,6 @@ class Auth
             return 'Ungültige Anmeldedaten.';
         }
 
-        if (Security::passwordNeedsRehash((string) $user->password)) {
-            $storedHash = (string) $user->password;
-            $newHash = $security->hashPassword($password);
-            $updated = $db->execute(
-                "UPDATE {$db->getPrefix()}users SET password = ? WHERE id = ? AND password = ?",
-                [$newHash, (int) $user->id, $storedHash]
-            )->rowCount();
-
-            if ($updated === 1) {
-                $user->password = $newHash;
-            } else {
-                // Ein gleichzeitiger Login kann denselben Hash bereits aktualisiert haben. Eine parallele
-                // Passwortänderung darf dagegen nicht durch diesen Login wieder überschrieben werden.
-                $currentHash = $db->get_var(
-                    "SELECT password FROM {$db->getPrefix()}users WHERE id = ? LIMIT 1",
-                    [(int) $user->id]
-                );
-                if (!is_string($currentHash) || !$security->verifyPassword($password, $currentHash)) {
-                    return 'Ungültige Anmeldedaten.';
-                }
-                $user->password = $currentHash;
-            }
-        }
-
         $this->clearAccountLoginFailures($accountKey);
         
         if ($user->status === EmailVerificationService::STATUS_UNVERIFIED) {
@@ -514,6 +490,34 @@ class Auth
             $_SESSION['mfa_failed_attempts'] = 0;
             unset($_SESSION[\CMS\Auth\SSO\EntraSsoService::SESSION_SSO_PENDING]);
             return 'MFA_REQUIRED';
+        }
+
+        // Audit 4.2.0 (Nachprüfung AP-01): Alte Hashes erst nach vollständig bestandener Anmeldung auffrischen. Der Sitzungs- und
+        // Token-Fingerprint hängt am Hash (`passwordFingerprint()`): ein Rehash beendet alle anderen Sitzungen und API-Tokens des
+        // Kontos. Davor (Passwort richtig, MFA offen) darf das nicht möglich sein, sonst könnte ein Dritter mit bekanntem
+        // Passwort die Sitzungen des Inhabers beenden. Konten mit MFA behalten den alten Hash bis zur nächsten Passwortänderung.
+        if (Security::passwordNeedsRehash((string) $user->password)) {
+            $storedHash = (string) $user->password;
+            $newHash = $security->hashPassword($password);
+            $updated = $db->execute(
+                "UPDATE {$db->getPrefix()}users SET password = ? WHERE id = ? AND password = ?",
+                [$newHash, (int) $user->id, $storedHash]
+            )->rowCount();
+
+            if ($updated === 1) {
+                $user->password = $newHash;
+            } else {
+                // Ein gleichzeitiger Login kann denselben Hash bereits aktualisiert haben. Eine parallele
+                // Passwortänderung darf dagegen nicht durch diesen Login wieder überschrieben werden.
+                $currentHash = $db->get_var(
+                    "SELECT password FROM {$db->getPrefix()}users WHERE id = ? LIMIT 1",
+                    [(int) $user->id]
+                );
+                if (!is_string($currentHash) || !$security->verifyPassword($password, $currentHash)) {
+                    return 'Ungültige Anmeldedaten.';
+                }
+                $user->password = $currentHash;
+            }
         }
 
         $this->completeAuthenticatedSession($user, $remember);

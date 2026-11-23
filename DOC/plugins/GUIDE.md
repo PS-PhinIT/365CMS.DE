@@ -1,6 +1,7 @@
 # 365CMS Projektdokumentation | Plugins: Quick Start
 > **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Update:** 2026-11-23
 > **Kurzbeschreibung:** Beginner-friendly and technical quick start for creating, loading, activating, and maintaining a 365CMS plugin in the current runtime.
+> **Ausführlicher Einstieg auf Deutsch:** [LEITFADEN.md](LEITFADEN.md) (was wo liegt, wann welcher Hook feuert, vollständiges Beispiel-Plugin, Rezepte, häufige Fehler).
 
 ## English
 
