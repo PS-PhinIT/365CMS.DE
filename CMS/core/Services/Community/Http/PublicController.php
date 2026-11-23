@@ -257,6 +257,10 @@ final class PublicController
             'prev' => $page > 1 ? Urls::topic((int) $topic['id'], (string) $topic['slug'], $locale, $page - 1) : null,
             'next' => $page < $pages ? Urls::topic((int) $topic['id'], (string) $topic['slug'], $locale, $page + 1) : null,
         ];
+        // Strukturierte Daten (schema.org) nur für die erste Seite eines öffentlichen, veröffentlichten Themas
+        if ($page === 1 && empty($this->meta['noindex'])) {
+            $this->meta['jsonld'] = self::structuredData($topic, $forum, $items, $accounts, $canonical);
+        }
         $access = CommunityAccess::instance();
         $canReply = $viewer === null || $access->can($viewer, 'reply', ['topic_id' => (int) $topic['id']])->allowed;
         $editable = [];
@@ -522,6 +526,72 @@ final class PublicController
         return rtrim($cut, " \t.,;:–-") . '…';
     }
 
+    /**
+     * schema.org-Daten einer Themenseite: `QAPage` mit `Question` in Q&A-Foren, sonst `DiscussionForumPosting`. Nur Angaben, die die Seite selbst
+     * öffentlich zeigt (Titel, Anfang des ersten Beitrags, Datum, Anzeigename, Zahl der Antworten); eine als Lösung markierte Antwort nur, wenn sie
+     * auf dieser Seite steht (keine zusätzliche Abfrage). Kein Konto, keine ID, keine IP-Kennung. `null`, wenn der erste Beitrag nicht im Volltext steht.
+     *
+     * @param array<string, mixed> $topic
+     * @param array<string, mixed>|null $forum
+     * @param list<array<string, mixed>> $items
+     * @param array<int, array<string, mixed>> $accounts
+     * @return array<string, mixed>|null
+     */
+    private static function structuredData(array $topic, ?array $forum, array $items, array $accounts, string $canonical): ?array
+    {
+        $first = null;
+        foreach ($items as $item) {
+            if (($item['view'] ?? '') === 'full' && !empty($item['is_first_post'])) {
+                $first = $item;
+                break;
+            }
+        }
+        if ($first === null) {
+            return null;
+        }
+        $iso = static fn (mixed $utc): ?string => is_string($utc) && $utc !== '' ? str_replace(' ', 'T', $utc) . 'Z' : null;
+        $author = static function (array $post) use ($accounts): ?array {
+            $account = $accounts[(int) ($post['user_id'] ?? 0)] ?? null;
+            $name = $account === null ? '' : (string) ($account['display_name'] ?: $account['username']);
+
+            return $name === '' ? null : ['@type' => 'Person', 'name' => $name];
+        };
+        $url = Urls::absolute($canonical);
+        $replies = max(0, (int) ($topic['reply_count'] ?? 0));
+        $question = array_filter([
+            '@type' => $forum !== null && ($forum['type'] ?? '') === 'qa' ? 'Question' : 'DiscussionForumPosting',
+            'name' => (string) $topic['title'],
+            'headline' => (string) $topic['title'],
+            'url' => $url,
+            'text' => self::excerpt((string) ($first['html'] ?? ''), 500),
+            'datePublished' => $iso($first['created_at'] ?? $topic['created_at'] ?? null),
+            'dateModified' => $iso($topic['last_post_at'] ?? null),
+            'author' => $author($first),
+            'commentCount' => $replies,
+            'answerCount' => $replies,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+        if (($question['@type'] ?? '') === 'Question') {
+            unset($question['headline'], $question['commentCount']);
+            $solutionId = (int) ($topic['solution_post_id'] ?? 0);
+            foreach ($items as $item) {
+                if ($solutionId > 0 && (int) ($item['id'] ?? 0) === $solutionId && ($item['view'] ?? '') === 'full') {
+                    $question['acceptedAnswer'] = array_filter([
+                        '@type' => 'Answer',
+                        'text' => self::excerpt((string) ($item['html'] ?? ''), 500),
+                        'url' => Urls::absolute(Urls::post($solutionId, 'de')),
+                        'dateCreated' => $iso($item['created_at'] ?? null),
+                        'author' => $author($item),
+                    ], static fn (mixed $value): bool => $value !== null && $value !== '');
+                }
+            }
+
+            return ['@context' => 'https://schema.org', '@type' => 'QAPage', 'mainEntity' => $question];
+        }
+        unset($question['name'], $question['answerCount']);
+
+        return ['@context' => 'https://schema.org'] + $question;
+    }
+
     private function siteTitle(string $locale): string
     {
         return $locale === 'en' ? 'Community' : 'Community';
@@ -603,6 +673,13 @@ final class PublicController
         if (!empty($meta['captcha'])) {
             $out .= '<link rel="stylesheet" href="' . $e(cms_asset_url(CaptchaService::assetPaths()['css'])) . '">' . "\n";
             $out .= '<script type="module" src="' . $e(cms_asset_url(CaptchaService::assetPaths()['js'])) . '"></script>' . "\n";
+        }
+        if (is_array($meta['jsonld'] ?? null) && empty($meta['noindex'])) {
+            // Datenblock (kein Skript): das CSP des CMS führt ihn nicht aus; `<`, `>` und `&` sind maskiert, ein `</script>` im Text bricht nicht aus
+            $json = json_encode($meta['jsonld'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            if (is_string($json)) {
+                $out .= '<script type="application/ld+json">' . $json . '</script>' . "\n";
+            }
         }
         if (!empty($meta['description']) && empty($meta['noindex'])) {
             $out .= '<meta name="description" content="' . $e((string) $meta['description']) . '">' . "\n";

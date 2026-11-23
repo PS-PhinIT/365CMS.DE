@@ -56,7 +56,7 @@ Legende wie in [PLUGIN-PARITY.md](../PLUGIN-PARITY.md): ✅ gleichwertig oder er
 | Abos | Thema/Forum, `notify_email` | Modi sofort/täglich/wöchentlich/nur In-App | 🟡 sofort und aus (`SubscriptionService::P1_MODES`); täglich/wöchentlich warten auf die Zusammenfassungs-Mails (WP-C15) |
 | Benachrichtigungen | eigener `NotificationService` | Core `notifications` + Mail-Warteschlange | ✅ `NotificationDispatcher` (`community_notify_queue`, Core-Mail-Tor) |
 | Gelesen-Status | `cmsforum_read_tracking` (Zeitstempel) | `community_read_states` (letzter Beitrag) + Forum-Marken | ✅ `ReadStateService`, „Alles gelesen“ je Forum und global (seit 4.2.0) |
-| Lösung markieren | `accepted_post_id` | `solution_post_id` + `QAPage` | 🟡 `solution_post_id` und Kennzeichnung; strukturierte Daten `QAPage` fehlen |
+| Lösung markieren | `accepted_post_id` | `solution_post_id` + `QAPage` | ✅ `solution_post_id`, Kennzeichnung und strukturierte Daten (`QAPage` mit `acceptedAnswer`, sonst `DiscussionForumPosting`; nur Seite 1 indexierbarer Themen) |
 | Ähnliche Themen | `/forum/api/similar-threads` | gleiches Verhalten, Suchindex | ⬜ WP-C15 |
 | Moderationsprotokoll | `cmsforum_mod_log` (mit IP) | `community_moderation_log` (ohne IP) | ✅ `ModerationLogRepository`, `/admin/community-log` |
 | Mitgliederbereich | `/member/plugin/forum` | `/member/plugin/community`; alt → 301 | ✅ `CommunityMemberSection` mit Signatur (seit 4.2.0); alte Adresse ➖ (E6) |
