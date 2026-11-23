@@ -14,6 +14,16 @@
 
 ---
 
+### v4.2.3 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-03)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.3** | 🛡️ security | AP-03 Eingaben: Injection, Traversal, SSRF / HTTP-Client | **Zieladressen-Prüfung** (`Http\Client::isNonPublicIp()`, genutzt von Client, Feeds, Update und Webhooks): In IPv6 eingebettete IPv4-Adressen in Hex-Schreibweise (IPv4-kompatibel `::7f00:1`, IPv4-übersetzt `::ffff:0:7f00:1`, 6to4 `2002:7f00:1::`) und Multicast (`224.0.0.0/4`, `ff00::/8`) passierten den Filter, obwohl sie eine interne IPv4-Adresse enthalten bzw. nicht unicastfähig sind. Die Prüfung entpackt die eingebettete Adresse jetzt unabhängig von der Schreibweise und prüft sie erneut; öffentliche eingebettete Adressen bleiben erlaubt. Keine Ausnutzung belegt (setzt einen Übersetzer auf dem Server voraus). Alle übrigen Prüfpunkte (SQL, Pfade, Prozesse, Einbindung, Weiterleitung, Header, XML/CSV, Regex, Host-Header) ohne Befund. Bericht: [FOLGEAUDIT-AP-03](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-03-2026-11-23.md). |
+
+---
+
 ### v4.2.0 — Feature Release (Stand 23.11.2026)
 
 #### Highlights & Neuerungen im Überblick
