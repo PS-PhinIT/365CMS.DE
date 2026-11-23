@@ -31,9 +31,9 @@ Datenübernahme abgelöst (E6: kein Migrator, keine Weiterleitungen der Plugin-A
 | [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) | Bedrohungsmodell, Schutzmaßnahmen (XSS, CSRF, SQL, Uploads, Spam, Bots), DSGVO, Löschfristen |
 | [THEME-UI.md](THEME-UI.md) | Vorlagen, Theme-Overrides, Komponenten, Mobile-First, Barrierefreiheit, SEO, Auswirkungen auf `cms-phinit` |
 | [MIGRATION-CMS-FORUM.md](MIGRATION-CMS-FORUM.md) | Funktions-Referenz des Plugins (Paritäts-Checkliste Plugin → Core); Datenübernahme und Plugin-Weiterleitungen entfallen (E6) |
-| [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übergabe nach PR #1 und PR #2a**: umgesetzter Stand von Schema v27 (Tabellen, Spalten, Indizes), Capabilities und Rolle `moderator`, Fundament der Dienste (Festlegungen §2a), Aufgaben je Pull Request (PR #2b bis #5), Abweichungen von den Plänen und offene Entscheidungen |
-| [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Umsetzungsfahrplan 4.2.0**: Ausgangslage nach 4.1.0, Arbeitspakete P1 mit Lieferumfang, Sicherheits-Gate und Tests, Tabellen v27, Capabilities, Datenschutz-/Moderationsregeln, CSP-/Security-Vorgaben, Freigabe-Kriterien |
-| [ROADMAP.md](ROADMAP.md) | Phasen, Arbeitspakete mit Abhängigkeiten und Aufwand, Fortschritts-Checkliste |
+| [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Historische Übergabe nach PR #1/#2a**: damaliger Schema-, Dienst- und Aufgabenstand; keine aktuelle Fortschrittsquelle mehr |
+| [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) | **Historischer Umsetzungsfahrplan 4.2.0**: Arbeitspakete, Sicherheits-Gates und Freigabekriterien |
+| [ROADMAP.md](ROADMAP.md) | Aktueller Auslieferungsstand sowie P2/P3- und Abnahme-Restumfang |
 | [TEST-PLAN.md](TEST-PLAN.md) | Test-Suiten, Prüffälle, Gegenproben, Laufzeit- und Browserprüfungen |
 
 Lesereihenfolge für die Umsetzung: README → **IMPLEMENTATION-PLAN** → FEATURES → ARCHITECTURE → DATA-MODEL → PERMISSIONS-MODERATION →

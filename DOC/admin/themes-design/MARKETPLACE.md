@@ -55,4 +55,4 @@ Danach erscheint das Theme unter `/admin/themes` und kann aktiviert werden.
 
 ### Verwandte Dokumente
 
-[../plugins/MARKETPLACE.md](../plugins/MARKETPLACE.md) · [../../workflow/MARKETPLACE-WORKFLOW.md](../../workflow/MARKETPLACE-WORKFLOW.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md)
+[../plugins/MARKETPLACE.md](../plugins/MARKETPLACE.md) · [../../workflow/MARKETPLACE-WORKFLOW.md](../../../DOC_PLAN/MARKETPLACE-WORKFLOW.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md)

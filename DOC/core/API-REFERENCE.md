@@ -65,7 +65,7 @@ const res = await fetch('/api/upload', { method: 'POST', body, credentials: 'sam
 
 ### Eigene Endpunkte
 
-Plugins registrieren Routen im Hook `register_routes`. Für JSON-Endpunkte unter `/api/…` gilt: Modus `api` (no-store), eigene Authentifizierung/Capability-Prüfung, CSRF für schreibende Browser-Requests, Antwort mit `json_encode(…, JSON_UNESCAPED_UNICODE)`. Siehe [../admin/ADMIN-API-AJAX.md](../admin/ADMIN-API-AJAX.md) und [../workflow/API-INTEGRATION-WORKFLOW.md](../workflow/API-INTEGRATION-WORKFLOW.md).
+Plugins registrieren Routen im Hook `register_routes`. Für JSON-Endpunkte unter `/api/…` gilt: Modus `api` (no-store), eigene Authentifizierung/Capability-Prüfung, CSRF für schreibende Browser-Requests, Antwort mit `json_encode(…, JSON_UNESCAPED_UNICODE)`. Siehe [../admin/ADMIN-API-AJAX.md](../admin/ADMIN-API-AJAX.md) und [../workflow/API-INTEGRATION-WORKFLOW.md](../../DOC_PLAN/API-INTEGRATION-WORKFLOW.md).
 
 ### JWT-Anmeldung (seit 3.4.13)
 

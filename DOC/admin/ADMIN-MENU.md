@@ -1,7 +1,7 @@
 # 365CMS Projektdokumentation | Admin: Admin-Menü (Profile, Editor, Plugin-Plätze)
 
 > **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
-> **Verbindliche Bäume:** [ADMIN-MENU-PROFILE.md](../workflow/specs/ADMIN-MENU-PROFILE.md) · **Entscheidungen:** [KLARSTELLUNGEN.md §7](../workflow/specs/KLARSTELLUNGEN.md)
+> **Verbindliche Bäume:** [ADMIN-MENU-PROFILE.md](../../DOC_PLAN/ADMIN-MENU-PROFILE.md) · **Entscheidungen:** [KLARSTELLUNGEN.md §7](../../DOC_PLAN/KLARSTELLUNGEN.md)
 
 ## English (summary)
 
@@ -66,7 +66,7 @@ Ein Eintrag ist sichtbar, wenn die Seitendatei existiert, das Core-Modul aktiv i
 
 1. Seitendatei mit Zugriffsprüfung anlegen. Prüft die Seite ihre Capability als String-Literal oder als Konstante in derselben Datei, vergleicht der Test sie automatisch mit dem Katalog. Andernfalls (Bereichs-Map, Closure, gemeinsamer Renderer) einen kommentierten Eintrag in `MANUAL_ACCESS` in `TESTS/admin-menu/run.php` ergänzen.
 2. Katalogzeile ergänzen, mit denselben Capabilities wie die Seite.
-3. Die ID in **beiden** Profilen platzieren (`ProfileLayouts::classic()` und `structured()`) und die Bäume in [ADMIN-MENU-PROFILE.md](../workflow/specs/ADMIN-MENU-PROFILE.md) nachziehen. Menügruppen haben höchstens 8 Einträge (Ausnahme: SEO); größere Bereiche werden Kachelseiten. Beides prüft der Test.
+3. Die ID in **beiden** Profilen platzieren (`ProfileLayouts::classic()` und `structured()`) und die Bäume in [ADMIN-MENU-PROFILE.md](../../DOC_PLAN/ADMIN-MENU-PROFILE.md) nachziehen. Menügruppen haben höchstens 8 Einträge (Ausnahme: SEO); größere Bereiche werden Kachelseiten. Beides prüft der Test.
 4. Entsteht die Seite erst später, die Datei in `RESERVED_FILES` eintragen. Seitendateien, die bewusst nicht im Menü stehen (Aliasse, JSON-Endpunkte, Renderer), gehören in `NOT_IN_MENU`.
 5. `php TESTS/admin-menu/run.php` ausführen.
 
@@ -81,7 +81,7 @@ Plugins registrieren ihre Menüs unverändert im Hook `cms_admin_menu` mit `add_
 
 Unzulässige Zeichen im Slug werden durch `-` ersetzt. Administratoren können Plugin-Einträge im Editor platzieren, umbenennen und ausblenden. Die IDs bleiben stabil, solange sich die Slugs nicht ändern. Layouts behalten Plugin-IDs auch dann, wenn das Plugin gerade deaktiviert ist.
 
-**Abschnitt „Aktive Plugins“** (Nutzerentscheidung, [KLARSTELLUNGEN.md §7](../workflow/specs/KLARSTELLUNGEN.md)):
+**Abschnitt „Aktive Plugins“** (Nutzerentscheidung, [KLARSTELLUNGEN.md §7](../../DOC_PLAN/KLARSTELLUNGEN.md)):
 
 - Alle Seiten aktiver Plugins, die das Layout nicht selbst platziert, stehen in jedem Profil gesammelt im letzten Abschnitt der Seitenleiste, auch die früher unter *Plugins* bzw. *Erweitern* einsortierten.
 - Der Abschnitt ist standardmäßig **eingeklappt** und zeigt im Kopf die Zahl seiner Einträge. Er öffnet sich, wenn die aktuelle Seite darin liegt, bei „Alle aufklappen“ oder wenn der Benutzer ihn aufgeklappt hat (gespeichert unter `g:_active-plugins`).

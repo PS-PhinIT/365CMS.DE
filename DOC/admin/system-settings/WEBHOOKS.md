@@ -29,7 +29,7 @@ Menü *Einstellungen → Webhooks* (Kacheln) bzw. `/admin/webhooks`:
 | `invoice.created` | Rechnung oder Storno-Rechnung erstellt (Bereich 5b) | `invoice_id`, `type`, `order_id` |
 | `order.paid`, `order.failed`, `subscription.renewed` | Zahlung bestätigt, fehlgeschlagen, Abo verlängert (Bereich 5a) | `order_id`, `provider` bzw. `subscription_id`, `order_id`, `period_end` |
 
-**Nicht enthalten:** Das Ereignis `alert.raised` (Echtzeit-Alerting) gehört zu Bereich 6 und kommt mit **4.3.0** ([06-CLI-ALERTING.md](../../workflow/specs/v4.1/06-CLI-ALERTING.md)). Ein Test-Ereignis `webhook.test` sendet der Knopf „Test senden“.
+**Nicht enthalten:** Das Ereignis `alert.raised` (Echtzeit-Alerting) gehört zu Bereich 6 und kommt mit **4.3.0** ([06-CLI-ALERTING.md](../../../DOC_PLAN/v4.1/06-CLI-ALERTING.md)). Ein Test-Ereignis `webhook.test` sendet der Knopf „Test senden“.
 
 Weitere Ereignisse liefern Plugins über den Filter `cms_webhook_event` (`['bereich.aktion' => 'Bezeichnung']`) und lösen sie mit `WebhookService::getInstance()->dispatch('bereich.aktion', [...])` aus.
 

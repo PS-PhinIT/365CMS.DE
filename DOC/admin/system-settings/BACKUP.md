@@ -115,4 +115,4 @@ Ablauf: Nach jedem erfolgreichen Backup (Hook `cms_backup_created`) werden die *
 
 ### Verwandte Dokumente
 
-[UPDATES.md](UPDATES.md) · [../security/SECURITY-AUDIT.md](../security/SECURITY-AUDIT.md) · [../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md)
+[UPDATES.md](UPDATES.md) · [../security/SECURITY-AUDIT.md](../security/SECURITY-AUDIT.md) · [../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md)

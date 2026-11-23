@@ -72,4 +72,4 @@ Im Block gibt es außerdem:
 
 ### Verwandte Dokumente
 
-[POSTS.md](POSTS.md) · [PAGES.md](PAGES.md) · [../../core/DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md) · [Spezifikation 3b](../../workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md)
+[POSTS.md](POSTS.md) · [PAGES.md](PAGES.md) · [../../core/DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md) · [Spezifikation 3b](../../../DOC_PLAN/v4.1/03-CONTENT-WORKFLOWS.md)

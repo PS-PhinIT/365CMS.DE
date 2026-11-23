@@ -245,7 +245,7 @@ Subfolders (all present):
 | `DOC/member/` | member documentation |
 | `DOC/plugins/` | plugin documentation |
 | `DOC/theme/` | theme documentation |
-| `DOC/workflow/` | operational workflows |
+| `DOC_PLAN/` | operational workflows |
 
 Broken historical links (do **not** use):
 
@@ -279,7 +279,7 @@ Unterordner (alle vorhanden):
 | `DOC/member/` | Member-Dokumentation |
 | `DOC/plugins/` | Plugin-Dokumentation |
 | `DOC/theme/` | Theme-Dokumentation |
-| `DOC/workflow/` | operative Workflows |
+| `DOC_PLAN/` | operative Workflows |
 
 Historisch kaputte Links (nicht verwenden):
 

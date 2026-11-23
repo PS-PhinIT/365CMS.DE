@@ -221,4 +221,4 @@ Bei Erfolg lautet die Meldung „Plugin "<slug>" installiert. Aktiviere es unter
 
 - [GUIDE.md](GUIDE.md) · [PLUGIN-DEVELOPMENT.md](PLUGIN-DEVELOPMENT.md)
 - [admin/plugins/MARKETPLACE.md](../admin/plugins/MARKETPLACE.md) · [admin/system-settings/UPDATES.md](../admin/system-settings/UPDATES.md)
-- [workflow/MARKETPLACE-WORKFLOW.md](../workflow/MARKETPLACE-WORKFLOW.md)
+- [workflow/MARKETPLACE-WORKFLOW.md](../../DOC_PLAN/MARKETPLACE-WORKFLOW.md)

@@ -67,4 +67,4 @@ Abmelden über das Benutzermenü im Fußbereich der Seitenleiste (Klick auf den 
 
 ### Verwandte Dokumente
 
-[README.md](README.md) · [PRUEF-CHECKLISTE.md](PRUEF-CHECKLISTE.md) · [../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)
+[README.md](README.md) · [PRUEF-CHECKLISTE.md](PRUEF-CHECKLISTE.md) · [../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../DOC_PLAN/CONTENT-MANAGEMENT-WORKFLOW.md)

@@ -37,7 +37,7 @@ Die Sidebar zeigt das aktive **Sidebar-Profil**. Es wird über die Einstellung `
 - *Strukturiert* (aufgabenorientiert),
 - ein eigenes Layout aus dem Sidebar-Editor, global oder je Site.
 
-Katalog, Editor, Kachelseiten und die Plätze von Plugin-Menüs beschreibt [ADMIN-MENU.md](ADMIN-MENU.md). Die verbindlichen Bäume beider Profile stehen in [ADMIN-MENU-PROFILE.md](../workflow/specs/ADMIN-MENU-PROFILE.md).
+Katalog, Editor, Kachelseiten und die Plätze von Plugin-Menüs beschreibt [ADMIN-MENU.md](ADMIN-MENU.md). Die verbindlichen Bäume beider Profile stehen in [ADMIN-MENU-PROFILE.md](../../DOC_PLAN/ADMIN-MENU-PROFILE.md).
 
 Von oben nach unten folgen Site-Umschalter, Menübaum und Benutzerbereich.
 

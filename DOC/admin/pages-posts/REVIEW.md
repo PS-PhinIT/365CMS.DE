@@ -75,4 +75,4 @@ Mit 4.1.0 werden `posts.publish` und `pages.publish` erstmals geprüft. Damit ni
 
 ### Verwandte Dokumente
 
-[POSTS.md](POSTS.md) · [PAGES.md](PAGES.md) · [SETTINGS.md](SETTINGS.md) · [Spezifikation 3a](../../workflow/specs/v4.1/03-CONTENT-WORKFLOWS.md)
+[POSTS.md](POSTS.md) · [PAGES.md](PAGES.md) · [SETTINGS.md](SETTINGS.md) · [Spezifikation 3a](../../../DOC_PLAN/v4.1/03-CONTENT-WORKFLOWS.md)

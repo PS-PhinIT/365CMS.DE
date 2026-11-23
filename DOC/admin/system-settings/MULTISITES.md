@@ -27,7 +27,7 @@ Eine 365CMS-Installation kann mehrere Domains administrieren, z. B. eine Hauptsi
 - Plugin-Menüs
 - Admin-Menü-Layout
 
-Eine Site-Zuordnung für Inhalte gibt es bewusst nicht ([KLARSTELLUNGEN.md §3](../../workflow/specs/KLARSTELLUNGEN.md)):
+Eine Site-Zuordnung für Inhalte gibt es bewusst nicht ([KLARSTELLUNGEN.md §3](../../../DOC_PLAN/KLARSTELLUNGEN.md)):
 
 - Seiten, Beiträge, Hub-Sites, Medien, Menüs und Formulare gehören zur Installation, nicht zu einer Site. Inhalte für eine weitere Domain laufen über die bestehende Hub-Site.
 - Inhaltstabellen haben keine `site_id`-Spalte. Kalender, Revisionen, Übersetzungen, Suchindex, Export/Import und Statistiken kennen keine Site-Dimension.

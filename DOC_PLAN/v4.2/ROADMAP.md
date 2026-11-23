@@ -7,7 +7,7 @@ Delivery plan for the Community module in three phases: P1 foundation and parity
 release, plugin can be retired), P2 community build-out (trust levels, warnings, merge/split, mentions, drafts,
 digests, polls, statistics), P3 extensions (reputation, badges, tags, group conversations, webhooks, AI signals).
 Work packages (WP-C0 … WP-C16) list dependencies, deliverables, linked feature IDs and a rough effort in person-days.
-The progress table at the end is the checklist; every item starts as ⬜ and is ticked only with test evidence.
+The progress table is the delivery record: P1 is released in 4.2.0, while P2/P3 and named external acceptance checks remain open.
 
 ## Deutsch
 
@@ -82,10 +82,10 @@ flowchart LR
 | WP | Status | Ergebnis / Nachweis |
 |---|---|---|
 | Planung (dieses Dokument-Set) | ✅ | `DOC_PLAN/v4.2/` (14.11.2026), Umsetzungsfahrplan [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) (15.11.2026) |
-| WP-C0 Entscheidungen & Bibliotheken | ⬜ | |
-| WP-C1 Modul-Gerüst & Schema v27 | 🟡 | PR #1 (17.11.2026): Schema v27 mit allen 27 Tabellen (`TESTS/schema-v27`, `TESTS/schema-upgrade`: Neuinstallation = Update von v25/v26 gegen MariaDB 10.11), Capabilities `community.*`, Rolle `moderator`, Update-Schritt `capabilities_v27` ([HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md)); Nachlauf: zwei Indizes für `community_topics`, `community_badges.description_en` (HANDOFF §2 Nr. 9). PR #2a (#178, 18.11.2026): `CoreModuleService`-Eintrag (standardmäßig aus), `CommunityHooks`, `Support/Settings`, Sprachschlüssel `community.access.*`/`community.error.*`, Core-Hook `user_role_changed` auch außerhalb des SSO-Pfads (`TESTS/community-settings`, `TESTS/user-role-hook`). Offen: Admin-Katalog (PR #3) |
+| WP-C0 Entscheidungen & Bibliotheken | ✅ | Entscheidungen E1–E12 und lokale Bibliotheken im 4.2.0-Release abgeschlossen |
+| WP-C1 Modul-Gerüst & Schema v27 | ✅ | Schema v27, 28 `community_*`-Tabellen, Capabilities, Rolle `moderator`, Modul, Einstellungen, Sprachschlüssel und Admin-Katalog ausgeliefert (`TESTS/schema-v27`, `TESTS/community-settings`, `TESTS/user-role-hook`) |
 | WP-C2 Struktur & Rechte | ✅ | PR #2a (#178): `CommunityAccess` (Rechte je Forum mit Vererbung, Forum-Moderatoren, Sperren, Vertrauensstufen P1), Repositories für Kategorien und Foren (`TESTS/community-access`, `TESTS/community-repositories`, Gegenprobe `TESTS/community-mutants`). PR #3 und 4.2.0: Admin „Struktur“ mit Ziehen und Pfeiltasten, Löschen leerer Kategorien und Foren, Benutzergruppen als Subjekt der Rechte-Matrix (`TESTS/community-admin`) |
-| WP-C3 Themen, Beiträge, Gelesen-Status | 🟡 | PR #2a (#178): `TopicService`, `PostService` (anlegen, antworten, bearbeiten mit Verlauf, weich löschen, atomare Zähler, Position und Seite), `QuoteService`, `ReadStateService`, Keyset-Listen ohne `OFFSET` (`TESTS/community-content`, `TESTS/community-db` gegen MariaDB). Offen: Startseite, Forum- und Themenseiten, Listen „Neu/Aktiv/Unbeantwortet“, Permalinks als Routen (PR #4) |
+| WP-C3 Themen, Beiträge, Gelesen-Status | ✅ | Dienste, Keyset-Listen, öffentliche Routen, Permalinks und Gelesen-Status in 4.2.0 ausgeliefert (`TESTS/community-content`, `TESTS/community-frontend`) |
 | WP-C4 Editor & Rendering | 🟡 | PR #2b (Renderer, `PurifierService`-Profil `community`, Vorschau), PR #4 (visueller Editor: SunEditor mit Markdown-Brücke). 4.2.0: Upload per Auswahl, Ziehen und Einfügen, Live-Vorschau, lokale und Server-Entwürfe (`compose.js`, `DraftService`). Offen: Bilder im visuellen Editor (Einbettung in der Markdown-Ansicht) |
 | WP-C5 Sicherheit, Spam, Captcha, Warteschlange | ✅ | PR #2b (`ContentGuard`: Antispam-Schichten, Wortfilter, Raten, Freigabe-Warteschlange; `TESTS/community-spam`). PR #188: `Security\CaptchaService` (E7) mit `Service\CaptchaGate`; PR #189: `WriteGate` verdrahtet `ContentGuard` im Schreibweg (`TESTS/captcha`, `TESTS/community-captcha`) |
 | WP-C6 Moderation & Meldungen | ✅ | PR #2b und #3 (`ModerationService`, `ReportService`, `BanService`, Admin-Seiten; `TESTS/community-moderation`, `community-sanctions`, `community-admin`) |
@@ -95,7 +95,16 @@ flowchart LR
 | WP-C10 Frontend & Theme-PR | 🟡 | PR #4 (Routen, Vorlagen, `community.css`, JS-Module; `TESTS/community-frontend`, `community-api`, `community-member`, `community-editor`). PR #5: Barrierefreiheit (`TESTS/community-a11y`: axe-core ohne ernste oder kritische Verstöße, Tastatur, Fokus, Reflow) und Lighthouse mobil 100/100/100/100 (`TESTS/community-lighthouse`). Offen: Theme-PR `cms-phinit` (anderes Repository) und die Prüfung gegen das echte Theme |
 | WP-C11 DSGVO & Löschfristen | ✅ | PR #5: Löschfristen und DSGVO (`TESTS/community-privacy`), Papierkorb-Provider (`TESTS/community-trash`). PR #190: Legal-Baustein „8a. Forum (Community)“, Admin-Liste der Exportdateien; 4.2.0: Löschmodus „Beiträge löschen“ (Einstellung `erase_mode`, `community_posts.deleted_at`) |
 | WP-C12 Übernahme cms-forum | ➖ | entfällt (E6) |
-| WP-C13 Leistung, Abnahme, Release P1 | 🟡 | Leistung: Abfragebudget je Seite, Lesebereich `ReadScope`, keine N+1-Abfragen, EXPLAIN (`TESTS/community-performance`); Lighthouse und Barrierefreiheit siehe WP-C10; strukturierte Daten; Doku `DOC/admin/community/README.md`, `DOC/member/COMMUNITY.md`, `Changelog.md`. Offen: Lasttest 10.000 Themen / 500.000 Beiträge gegen MariaDB, MariaDB-Lauf in der CI, Screenreader-Stichprobe, Release (`Version::CURRENT`, `update.json`, Pakete) |
+| WP-C13 Leistung, Abnahme, Release P1 | 🟡 | P1 ist veröffentlicht; Abfragebudget, `ReadScope`, EXPLAIN, Lighthouse, Barrierefreiheit, Dokumentation und Release-Pakete sind vorhanden. Offen bleiben der Lasttest 10.000/500.000 gegen MariaDB, der MariaDB-CI-Lauf und die dokumentierte Screenreader-Stichprobe. |
 | WP-C14 P2 Moderation | ⬜ | |
 | WP-C15 P2 Interaktion | ⬜ | |
 | WP-C16 P3 Erweiterungen | ⬜ | |
+
+### 6. Eindeutig offener Restumfang
+
+- [ ] WP-C4: Bild-Einbettung im visuellen Editor prüfen bzw. ergänzen.
+- [ ] WP-C10: Core-Vorlagen gegen das externe `cms-phinit`-Theme integrieren und abnehmen.
+- [ ] WP-C13: MariaDB-Lasttest, CI-Lauf und manuelles Screenreader-Sampling.
+- [ ] WP-C14: P2-Moderation (Vertrauensstufen, Verwarnungen, Zusammenführen/Teilen).
+- [ ] WP-C15: P2-Interaktion (unter anderem Umfragen, Digests, Erwähnungen, Lesezeichen, Ignorieren, Online-Status).
+- [ ] WP-C16: separat priorisierte P3-Erweiterungen.

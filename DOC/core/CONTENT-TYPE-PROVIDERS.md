@@ -10,7 +10,7 @@ Trash, content export/import and the search index never contain special cases fo
 
 ### Zweck
 
-Papierkorb, Inhalts-Export/-Import und Suchindex kennen nur Schnittstellen. Welche Inhaltstypen sie bedienen, bestimmen die angemeldeten Provider. Damit gibt es in diesen Funktionen keine Abfragen wie „falls Hub-Site, dann …“ ([KLARSTELLUNGEN.md §5](../workflow/specs/KLARSTELLUNGEN.md)). Plugins können eigene Inhaltstypen auf dieselbe Weise anschließen.
+Papierkorb, Inhalts-Export/-Import und Suchindex kennen nur Schnittstellen. Welche Inhaltstypen sie bedienen, bestimmen die angemeldeten Provider. Damit gibt es in diesen Funktionen keine Abfragen wie „falls Hub-Site, dann …“ ([KLARSTELLUNGEN.md §5](../../DOC_PLAN/KLARSTELLUNGEN.md)). Plugins können eigene Inhaltstypen auf dieselbe Weise anschließen.
 
 | Fähigkeit | Schnittstelle | Genutzt von |
 |---|---|---|

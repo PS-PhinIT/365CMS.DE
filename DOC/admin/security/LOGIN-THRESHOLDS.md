@@ -49,7 +49,7 @@ Die Standardwerte entsprechen dem Verhalten bis 4.0.0.
 - **Erweiterungen** können die Richtlinie über den Filter `cms_password_policy` nur verschärfen; jede Änderung löst
   `cms_password_changed` aus.
 - Dienst: `CMS\Services\Security\PasswordPolicyService`; Spezifikation:
-  [workflow/specs/v4.1/01-IDENTITY.md](../../workflow/specs/v4.1/01-IDENTITY.md) §1a.
+  [workflow/specs/v4.1/01-IDENTITY.md](../../../DOC_PLAN/v4.1/01-IDENTITY.md) §1a.
 
 ## MFA-Zwang je Rolle
 
@@ -71,4 +71,4 @@ Vorher/Nachher). Standard: keine Rolle.
 - **Erweiterungen** können den Zwang über den Filter `cms_mfa_enforcement_required` zusätzlich einschalten, aber für eine
   gewählte Rolle nicht aufheben.
 - Dienst: `CMS\Services\Security\MfaEnforcementService`; Tests: `TESTS/mfa-enforcement`; Spezifikation:
-  [01-IDENTITY.md](../../workflow/specs/v4.1/01-IDENTITY.md) §1b.
+  [01-IDENTITY.md](../../../DOC_PLAN/v4.1/01-IDENTITY.md) §1b.

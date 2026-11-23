@@ -530,13 +530,13 @@ Einstieg: `CMS/cron.php`. Services: `CronRunnerService`, `CronExpressionAdapter`
 
 `MediaService`, `MediaDeliveryService`, `FileUploadService`, `ImageService`, `ElfinderService`, `ContentMediaPlacementService`. Admin: `CMS/admin/media.php`. Member: `CMS/member/media.php`.
 
-Uploads land in `CMS/uploads/`. Executable uploads must stay blocked. Docs: [admin/media/README.md](admin/media/README.md), [workflow/MEDIA-UPLOAD-WORKFLOW.md](workflow/MEDIA-UPLOAD-WORKFLOW.md).
+Uploads land in `CMS/uploads/`. Executable uploads must stay blocked. Docs: [admin/media/README.md](admin/media/README.md), [workflow/MEDIA-UPLOAD-WORKFLOW.md](../DOC_PLAN/MEDIA-UPLOAD-WORKFLOW.md).
 
 **Deutsch**
 
 `MediaService`, `MediaDeliveryService`, `FileUploadService`, `ImageService`, `ElfinderService`, `ContentMediaPlacementService`. Admin: `CMS/admin/media.php`. Member: `CMS/member/media.php`.
 
-Uploads landen in `CMS/uploads/`. Ausführbare Uploads müssen blockiert bleiben. Doku: [admin/media/README.md](admin/media/README.md), [workflow/MEDIA-UPLOAD-WORKFLOW.md](workflow/MEDIA-UPLOAD-WORKFLOW.md).
+Uploads landen in `CMS/uploads/`. Ausführbare Uploads müssen blockiert bleiben. Doku: [admin/media/README.md](admin/media/README.md), [workflow/MEDIA-UPLOAD-WORKFLOW.md](../DOC_PLAN/MEDIA-UPLOAD-WORKFLOW.md).
 
 ---
 
@@ -716,14 +716,14 @@ Versionsquelle: `CMS/core/Version.php` (`4.1.0`). `CMS/update.json`, `CMS/market
 
 **English**
 
-- **4.1.0** (schema `v26`, 90 tables) is released (2026-11-15) with areas 1–5, including invoices ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)).
-- **4.2.0: Community module** (schema `v27`, +27 `community_*` tables → 117): core module `community` under `core/Services/Community/`, routes under `/forum`, capabilities `community.*`, role `moderator`, Markdown renderer with Purifier profile, local captcha, privacy rules and 14 test suites. Executable plan with work packages WP-C0 … WP-C13 (≈ 89 person-days): [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); details in the other files of [workflow/specs/community/](workflow/specs/community/README.md).
-- **4.3.0: CLI and alerting:** central CLI `CMS/cli.php`, real-time alerting with cooldown, webhook event `alert.raised`, hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- **4.1.0** (schema `v26`, 90 tables) is released (2026-11-15) with areas 1–5, including invoices ([workflow/specs/v4.1/PROGRESS.md](../DOC_PLAN/v4.1/PROGRESS.md)).
+- **4.2.0: Community module** (schema `v27`, +27 `community_*` tables → 117): core module `community` under `core/Services/Community/`, routes under `/forum`, capabilities `community.*`, role `moderator`, Markdown renderer with Purifier profile, local captcha, privacy rules and 14 test suites. Executable plan with work packages WP-C0 … WP-C13 (≈ 89 person-days): [workflow/specs/community/IMPLEMENTATION-PLAN.md](../DOC_PLAN/v4.2/IMPLEMENTATION-PLAN.md); details in the other files of [workflow/specs/community/](../DOC_PLAN/v4.2/README.md).
+- **4.3.0: CLI and alerting:** central CLI `CMS/cli.php`, real-time alerting with cooldown, webhook event `alert.raised`, hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](../DOC_PLAN/v4.1/06-CLI-ALERTING.md)).
 - Contracts for new modules stay as in sections 17 (hooks), 11 (services) and 8 (database): one table definition in `SchemaManager::getSchemaQueries()` used by install, update and runtime check; hooks via `FeatureHooks\Registry`; tests under `TESTS/<suite>/run.php`.
 
 **Deutsch**
 
-- **4.1.0** (Schema `v26`, 90 Tabellen) ist veröffentlicht (2026-11-15) mit den Bereichen 1–5 einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](workflow/specs/v4.1/PROGRESS.md)).
-- **4.2.0: Community-Modul** (Schema `v27`, +27 `community_*`-Tabellen → 117): Core-Modul `community` unter `core/Services/Community/`, Routen unter `/forum`, Capabilities `community.*`, Rolle `moderator`, Markdown-Renderer mit Purifier-Profil, lokales Captcha, Datenschutzregeln und 14 Test-Suiten. Umsetzungsfahrplan mit Arbeitspaketen WP-C0 … WP-C13 (≈ 89 Personentage): [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md); Details in den übrigen Dateien unter [workflow/specs/community/](workflow/specs/community/README.md).
-- **4.3.0: CLI und Alerting:** zentrale CLI `CMS/cli.php`, Echtzeit-Alerting mit Cooldown, Webhook-Ereignis `alert.raised`, Hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](workflow/specs/v4.1/06-CLI-ALERTING.md)).
+- **4.1.0** (Schema `v26`, 90 Tabellen) ist veröffentlicht (2026-11-15) mit den Bereichen 1–5 einschließlich Rechnungen ([workflow/specs/v4.1/PROGRESS.md](../DOC_PLAN/v4.1/PROGRESS.md)).
+- **4.2.0: Community-Modul** (Schema `v27`, +27 `community_*`-Tabellen → 117): Core-Modul `community` unter `core/Services/Community/`, Routen unter `/forum`, Capabilities `community.*`, Rolle `moderator`, Markdown-Renderer mit Purifier-Profil, lokales Captcha, Datenschutzregeln und 14 Test-Suiten. Umsetzungsfahrplan mit Arbeitspaketen WP-C0 … WP-C13 (≈ 89 Personentage): [workflow/specs/community/IMPLEMENTATION-PLAN.md](../DOC_PLAN/v4.2/IMPLEMENTATION-PLAN.md); Details in den übrigen Dateien unter [workflow/specs/community/](../DOC_PLAN/v4.2/README.md).
+- **4.3.0: CLI und Alerting:** zentrale CLI `CMS/cli.php`, Echtzeit-Alerting mit Cooldown, Webhook-Ereignis `alert.raised`, Hook `cms_alert_raised` ([workflow/specs/v4.1/06-CLI-ALERTING.md](../DOC_PLAN/v4.1/06-CLI-ALERTING.md)).
 - Verträge für neue Module bleiben wie in den Abschnitten 17 (Hooks), 11 (Services) und 8 (Datenbank): eine Tabellendefinition in `SchemaManager::getSchemaQueries()` für Installation, Update und Laufzeitprüfung; Hooks über `FeatureHooks\Registry`; Tests unter `TESTS/<suite>/run.php`.

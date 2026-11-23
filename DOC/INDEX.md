@@ -209,18 +209,18 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 |---|---|
 | Assets | [assets/ASSET.md](assets/ASSET.md), [assets/README.md](assets/README.md) |
 | Audits | Full audit 2026-10-14 (security, speed, mass requests, functions, references, GUI): [audit/README.md](audit/README.md), follow-up audit: [audit/FOLGEAUDIT-2026-10-14.md](audit/FOLGEAUDIT-2026-10-14.md); follow-up audit 2026-11-08 (3.5.6 → 4.0.0: security, libraries, functions, backups, status displays): [audit/FOLGEAUDIT-2026-11-08.md](audit/FOLGEAUDIT-2026-11-08.md); release audit 4.1.0: [audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](audit/RELEASE-AUDIT-4.1.0-2026-11-15.md); runtime check: `/admin/security-audit` ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)); open gaps: [core/STATUS.md](core/STATUS.md) |
-| Workflows | [workflow/](workflow/) |
+| Workflows | [workflow/](../DOC_PLAN) |
 
 ### Workflows
 
 | File / Datei | Description / Beschreibung |
 |---|---|
-| [CONTENT-MANAGEMENT-WORKFLOW.md](workflow/CONTENT-MANAGEMENT-WORKFLOW.md) | Create content, SEO, publish |
-| [MEDIA-UPLOAD-WORKFLOW.md](workflow/MEDIA-UPLOAD-WORKFLOW.md) | Native upload pipeline, member root, bulk / rename / move |
-| [UPDATE-DEPLOYMENT-WORKFLOW.md](workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) | CMS update, SHA-256 verification, deployment |
-| [MARKETPLACE-WORKFLOW.md](workflow/MARKETPLACE-WORKFLOW.md) | Install plugin / theme from marketplace |
-| [API-INTEGRATION-WORKFLOW.md](workflow/API-INTEGRATION-WORKFLOW.md) | JSON endpoints, custom routes via `register_routes`, JWT note |
-| [specs/community/](workflow/specs/community/README.md) | Released Community module (forum): implemented features, architecture, data model, permissions & moderation, workflows, security, privacy, UI and verification |
+| [CONTENT-MANAGEMENT-WORKFLOW.md](../DOC_PLAN/CONTENT-MANAGEMENT-WORKFLOW.md) | Create content, SEO, publish |
+| [MEDIA-UPLOAD-WORKFLOW.md](../DOC_PLAN/MEDIA-UPLOAD-WORKFLOW.md) | Native upload pipeline, member root, bulk / rename / move |
+| [UPDATE-DEPLOYMENT-WORKFLOW.md](../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md) | CMS update, SHA-256 verification, deployment |
+| [MARKETPLACE-WORKFLOW.md](../DOC_PLAN/MARKETPLACE-WORKFLOW.md) | Install plugin / theme from marketplace |
+| [API-INTEGRATION-WORKFLOW.md](../DOC_PLAN/API-INTEGRATION-WORKFLOW.md) | JSON endpoints, custom routes via `register_routes`, JWT note |
+| [specs/community/](../DOC_PLAN/v4.2/README.md) | Released Community module (forum): implemented features, architecture, data model, permissions & moderation, workflows, security, privacy, UI and verification |
 
 ---
 
@@ -236,9 +236,9 @@ Asset-Dokumente liegen unter [`assets/`](assets/), nicht in der `DOC/`-Wurzel. F
 
 | Document / Dokument | Purpose / Zweck |
 |---|---|
-| [workflow/specs/community/IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) | Implemented Community delivery plan for 4.2.0 (schema `v27`) |
-| [workflow/specs/community/README.md](workflow/specs/community/README.md) | Community module 4.2.0 (schema `v27`): planning set entry point, decisions E1–E12 |
-| [workflow/specs/community/ROADMAP.md](workflow/specs/community/ROADMAP.md) | Delivery checklist with code-verified completion |
+| [workflow/specs/community/IMPLEMENTATION-PLAN.md](../DOC_PLAN/v4.2/IMPLEMENTATION-PLAN.md) | Implemented Community delivery plan for 4.2.0 (schema `v27`) |
+| [workflow/specs/community/README.md](../DOC_PLAN/v4.2/README.md) | Community module 4.2.0 (schema `v27`): planning set entry point, decisions E1–E12 |
+| [workflow/specs/community/ROADMAP.md](../DOC_PLAN/v4.2/ROADMAP.md) | Delivery checklist with code-verified completion |
 | [DEVLIST.md](DEVLIST.md) | Architecture contracts and development list (incl. 4.2.0 plan) |
 
 ---
@@ -371,15 +371,15 @@ Complete list of all documents not linked above (area READMEs link their sub-pag
 
 
 **`workflow/specs/community/`**
-- [workflow/specs/community/ARCHITECTURE.md](workflow/specs/community/ARCHITECTURE.md): Community, Architektur
-- [workflow/specs/community/DATA-MODEL.md](workflow/specs/community/DATA-MODEL.md): Community, Datenmodell
-- [workflow/specs/community/FEATURES.md](workflow/specs/community/FEATURES.md): Community, Funktionskatalog
-- [workflow/specs/community/MIGRATION-CMS-FORUM.md](workflow/specs/community/MIGRATION-CMS-FORUM.md): Community, Übernahme aus cms-forum
-- [workflow/specs/community/PERMISSIONS-MODERATION.md](workflow/specs/community/PERMISSIONS-MODERATION.md): Community, Rechte & Moderation
-- [workflow/specs/community/SECURITY-PRIVACY.md](workflow/specs/community/SECURITY-PRIVACY.md): Community, Sicherheit & Datenschutz
-- [workflow/specs/community/TEST-PLAN.md](workflow/specs/community/TEST-PLAN.md): Community, Testplan
-- [workflow/specs/community/THEME-UI.md](workflow/specs/community/THEME-UI.md): Community, Theme, Oberfläche & SEO
-- [workflow/specs/community/WORKFLOWS.md](workflow/specs/community/WORKFLOWS.md): Community, Abläufe
+- [workflow/specs/community/ARCHITECTURE.md](../DOC_PLAN/v4.2/ARCHITECTURE.md): Community, Architektur
+- [workflow/specs/community/DATA-MODEL.md](../DOC_PLAN/v4.2/DATA-MODEL.md): Community, Datenmodell
+- [workflow/specs/community/FEATURES.md](../DOC_PLAN/v4.2/FEATURES.md): Community, Funktionskatalog
+- [workflow/specs/community/MIGRATION-CMS-FORUM.md](../DOC_PLAN/v4.2/MIGRATION-CMS-FORUM.md): Community, Übernahme aus cms-forum
+- [workflow/specs/community/PERMISSIONS-MODERATION.md](../DOC_PLAN/v4.2/PERMISSIONS-MODERATION.md): Community, Rechte & Moderation
+- [workflow/specs/community/SECURITY-PRIVACY.md](../DOC_PLAN/v4.2/SECURITY-PRIVACY.md): Community, Sicherheit & Datenschutz
+- [workflow/specs/community/TEST-PLAN.md](../DOC_PLAN/v4.2/TEST-PLAN.md): Community, Testplan
+- [workflow/specs/community/THEME-UI.md](../DOC_PLAN/v4.2/THEME-UI.md): Community, Theme, Oberfläche & SEO
+- [workflow/specs/community/WORKFLOWS.md](../DOC_PLAN/v4.2/WORKFLOWS.md): Community, Abläufe
 
 ---
 
@@ -400,7 +400,7 @@ Häufige Aufgaben und das Dokument, das zuerst geöffnet werden sollte.
 | Media management | [admin/media/README.md](admin/media/README.md) |
 | Member area | [member/README.md](member/README.md) |
 | Login / reset / registration branding | [admin/themes-design/CMS-LOGINPAGE.md](admin/themes-design/CMS-LOGINPAGE.md) |
-| Secure uploads | [workflow/MEDIA-UPLOAD-WORKFLOW.md](workflow/MEDIA-UPLOAD-WORKFLOW.md) |
+| Secure uploads | [workflow/MEDIA-UPLOAD-WORKFLOW.md](../DOC_PLAN/MEDIA-UPLOAD-WORKFLOW.md) |
 | Plugin development | [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) |
 | Theme development | [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) |
 | Hooks | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) |
@@ -412,4 +412,4 @@ Häufige Aufgaben und das Dokument, das zuerst geöffnet werden sollte.
 | Mail / SMTP / Graph | [admin/system-settings/MAIL.md](admin/system-settings/MAIL.md) |
 | Enable / disable modules | [admin/system-settings/MODULES.md](admin/system-settings/MODULES.md) |
 | Plugin marketplace | [plugins/PLUGIN-MARKETPLACE.md](plugins/PLUGIN-MARKETPLACE.md) |
-| Update / deployment | [workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) |
+| Update / deployment | [workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md) |

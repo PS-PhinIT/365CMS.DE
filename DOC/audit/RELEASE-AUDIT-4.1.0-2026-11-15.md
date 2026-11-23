@@ -91,7 +91,7 @@ Querverweise in andere Prüfbereiche:
 | DB-410-01 | – | `CMS/core/MigrationManager.php:297` → `CMS/core/Services/Content/ContentWorkflow.php:743` | Upgrade gibt `author` das Recht `posts.publish`, Neuinstallation angeblich nicht | Verworfen in PR #2 (Laufzeittest: beide Wege identisch, siehe unten) |
 | DOC-410-02 | HIGH | `RELEASE/365CMS-4.1.0-full.zip`, `RELEASE/365CMS-4.1.0-update.zip` | Bereits gepackte 4.1.0-Pakete enthalten u. a. DB-410-02; nach PR #1–#5 neu packen (SHA-256, `update.json`, `RELEASE/365CMS-4.1.0-update.json`, `-SHA256SUMS.txt`) | [x] Behoben in PR #5 ([#166](https://github.com/PS-PhinIT/365CMS.DE/pull/166)): neue Pakete 4.1.5 mit Manifest und Prüfsummen; die 4.1.0-Pakete bleiben zur Nachvollziehbarkeit liegen |
 | DOC-410-01 | LOW | `Changelog.md` (v4.1.0, „Tests“) | Changelog und `run-all.php` trugen widersprüchliche Suitenstände; `DOC/FILESTRUCTUR.md` wurde in PR #2 korrigiert | [x] Behoben in 4.1.6 ([#167](https://github.com/PS-PhinIT/365CMS.DE/pull/167)); aktuelle Dokumentation verwendet dynamische Discovery statt fester Summen |
-| DOC-410-03 | LOW | `DOC/workflow/specs/v4.1/SCHEMA-v26.md:20`, `01-IDENTITY.md:254`, `02-MEDIA.md:92`, `Changelog.md` (v4.1.0, „Hinweise zum Update“) | Spezifikation und Changelog versprachen, `capabilities_v26` vergebe `security.sso` und `media.tools` an Standardrollen (mit Marker in `settings`). Umgesetzt ist nur die Übernahme von `posts.publish`/`pages.publish` (ohne Marker); `media.tools` gibt es nicht, die übrigen neuen Rechte hat bewusst nur „admin“ | [x] Behoben in 4.1.9 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)): Dokumente an das Verhalten angepasst, Kommentar im `MigrationManager` korrigiert |
+| DOC-410-03 | LOW | `DOC_PLAN/v4.1/SCHEMA-v26.md:20`, `01-IDENTITY.md:254`, `02-MEDIA.md:92`, `Changelog.md` (v4.1.0, „Hinweise zum Update“) | Spezifikation und Changelog versprachen, `capabilities_v26` vergebe `security.sso` und `media.tools` an Standardrollen (mit Marker in `settings`). Umgesetzt ist nur die Übernahme von `posts.publish`/`pages.publish` (ohne Marker); `media.tools` gibt es nicht, die übrigen neuen Rechte hat bewusst nur „admin“ | [x] Behoben in 4.1.9 ([#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174)): Dokumente an das Verhalten angepasst, Kommentar im `MigrationManager` korrigiert |
 
 ### Details
 
@@ -655,7 +655,7 @@ Abschluss-Pull-Request [#174](https://github.com/PS-PhinIT/365CMS.DE/pull/174); 
 
 ### Vorgehen
 
-1. Alle Protokolle (`RELEASE-AUDIT-4.1.0`, `FOLGEAUDIT-2026-10-14`, `-11-08`, `-11-09`, `-11-12`) und `DOC/workflow/specs/v4.1/PROGRESS.md` nach `[ ] Offen`, `OFFEN-xx` und „ausstehend“ durchsucht; jeden Treffer am Code geprüft.
+1. Alle Protokolle (`RELEASE-AUDIT-4.1.0`, `FOLGEAUDIT-2026-10-14`, `-11-08`, `-11-09`, `-11-12`) und `DOC_PLAN/v4.1/PROGRESS.md` nach `[ ] Offen`, `OFFEN-xx` und „ausstehend“ durchsucht; jeden Treffer am Code geprüft.
 2. Protokollstand gegen `main` abgeglichen. FUN-410-10, -33, -37 und -38 waren am 16.11.2026 bereits umgesetzt (PR [#170](https://github.com/PS-PhinIT/365CMS.DE/pull/170) bis [#173](https://github.com/PS-PhinIT/365CMS.DE/pull/173)); Protokoll und Changelog führten sie noch als offen.
 3. Die zwei verbliebenen Funktionslücken umgesetzt (FUN-410-07, FUN-410-28), je mit Regressionstest und Laufzeitprüfung (MariaDB 10.11 bzw. Chromium).
 4. Schema-Marke v26 und Rechte-Übernahme `capabilities_v26` geprüft; die dabei gefundene Abweichung zwischen Spezifikation und Umsetzung als DOC-410-03 korrigiert.

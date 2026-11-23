@@ -63,4 +63,4 @@ Die Download-URL muss auf einem erlaubten Host liegen. Details zum Paketformat: 
 
 ### Verwandte Dokumente
 
-[PLUGINS.md](PLUGINS.md) · [UPDATES.md](UPDATES.md) · [../themes-design/MARKETPLACE.md](../themes-design/MARKETPLACE.md) · [../../workflow/MARKETPLACE-WORKFLOW.md](../../workflow/MARKETPLACE-WORKFLOW.md)
+[PLUGINS.md](PLUGINS.md) · [UPDATES.md](UPDATES.md) · [../themes-design/MARKETPLACE.md](../themes-design/MARKETPLACE.md) · [../../workflow/MARKETPLACE-WORKFLOW.md](../../../DOC_PLAN/MARKETPLACE-WORKFLOW.md)

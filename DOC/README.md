@@ -12,14 +12,14 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | Wenn ihr … | dann startet hier |
 |---|---|
 | das System neu aufsetzt | [INSTALLATION.md](INSTALLATION.md) |
-| ein Update oder Deployment plant | [workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](workflow/UPDATE-DEPLOYMENT-WORKFLOW.md) |
+| ein Update oder Deployment plant | [workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md) |
 | die Architektur verstehen wollt | [core/ARCHITECTURE.md](core/ARCHITECTURE.md) |
 | den Release-/Qualitätsstand und bekannte Lücken sucht | [core/STATUS.md](core/STATUS.md) |
 | das Admin-Panel nutzt | [admin/README.md](admin/README.md) · [admin/GUIDE.md](admin/GUIDE.md) |
 | den Mitgliederbereich betreut | [member/README.md](member/README.md) |
 | Plugins entwickelt | [plugins/GUIDE.md](plugins/GUIDE.md) → [plugins/PLUGIN-DEVELOPMENT.md](plugins/PLUGIN-DEVELOPMENT.md) |
 | Themes entwickelt | [theme/THEME-DEVELOPMENT.md](theme/THEME-DEVELOPMENT.md) |
-| die API oder eigene Endpunkte nutzt | [core/API-REFERENCE.md](core/API-REFERENCE.md) · [workflow/API-INTEGRATION-WORKFLOW.md](workflow/API-INTEGRATION-WORKFLOW.md) |
+| die API oder eigene Endpunkte nutzt | [core/API-REFERENCE.md](core/API-REFERENCE.md) · [workflow/API-INTEGRATION-WORKFLOW.md](../DOC_PLAN/API-INTEGRATION-WORKFLOW.md) |
 | Hooks sucht | [core/HOOKS-REFERENCE.md](core/HOOKS-REFERENCE.md) |
 | Tabellen sucht | [core/DATABASE-SCHEMA.md](core/DATABASE-SCHEMA.md) |
 | Sicherheitsmechanismen prüft | [core/SECURITY.md](core/SECURITY.md) · [member/MEMBER-SECURITY.md](member/MEMBER-SECURITY.md) |
@@ -46,13 +46,13 @@ This folder is the public documentation tree for 365CMS; runtime code lives in [
 | [`member/`](member/) | Mitgliederbereich: Routen, Dashboard, Plugin-Registry, Sicherheit |
 | [`theme/`](theme/) | Theme-Entwicklung, Templates, JavaScript, Komponenten, Design-System |
 | [`plugins/`](plugins/) | Quick Start, Entwicklerhandbuch, Marketplace |
-| [`workflow/`](workflow/) | Schritt-für-Schritt-Abläufe: Inhalte, Medien-Upload, API, Marketplace, Update/Deployment, Integrationsfahrpläne Newsletter, Planung des Community-Moduls (Forum) unter [`workflow/specs/community/`](workflow/specs/community/README.md) |
+| [`workflow/`](../DOC_PLAN) | Schritt-für-Schritt-Abläufe: Inhalte, Medien-Upload, API, Marketplace, Update/Deployment, Integrationsfahrpläne Newsletter, Planung des Community-Moduls (Forum) unter [`workflow/specs/community/`](../DOC_PLAN/v4.2/README.md) |
 | [`ai/`](ai/) | AI Services, Provider, Assets |
 | [`assets/`](assets/) | Gebündelte Bibliotheken unter `CMS/assets/` und `CMS/vendor/dompdf/` |
 
 ### Release- und Prüfstatus
 
-- **4.2.0 / v27** ist veröffentlicht. Der Umsetzungsstand des Community-Moduls ist in [workflow/specs/community/README.md](workflow/specs/community/README.md) zusammengefasst; [IMPLEMENTATION-PLAN.md](workflow/specs/community/IMPLEMENTATION-PLAN.md) und [ROADMAP.md](workflow/specs/community/ROADMAP.md) dokumentieren die erledigten Lieferpakete.
+- **4.2.0 / v27** ist veröffentlicht. Der Umsetzungsstand des Community-Moduls ist in [workflow/specs/community/README.md](../DOC_PLAN/v4.2/README.md) zusammengefasst; [IMPLEMENTATION-PLAN.md](../DOC_PLAN/v4.2/IMPLEMENTATION-PLAN.md) und [ROADMAP.md](../DOC_PLAN/v4.2/ROADMAP.md) dokumentieren die erledigten Lieferpakete.
 - Frühere Versionen und ihre Korrekturen sind historische Einträge in [../Changelog.md](../Changelog.md) und den datierten Dokumenten unter [audit/](audit/), nicht der aktuelle Produktstand.
 - Nicht angekündigte Folgefunktionen werden nicht als zugesagter Roadmap-Stand geführt.
 - Tests werden nicht anhand einer festen Summe dokumentiert: `php TESTS/run-all.php` entdeckt laufend alle `TESTS/<suite>/run.php`. Eine einzelne Suite läuft mit `php TESTS/<suite>/run.php [-v]`; der gemeinsame Runner gibt Einleitung und Entdeckungslogik aus.

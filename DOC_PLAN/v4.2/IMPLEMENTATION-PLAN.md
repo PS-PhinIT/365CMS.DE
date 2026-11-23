@@ -1,7 +1,7 @@
 # 365CMS Projektdokumentation | Community: Umsetzungsfahrplan 4.2.0
 > **Stand:** 2026-11-23 | **Auslieferung:** 4.2.0 | **Status:** ✅ historischer Umsetzungsplan vollständig eingepflegt | **Aktueller Fortschritt:** [ROADMAP.md](ROADMAP.md)
 
-> **Stand:** 2026-11-18 | **Ziel-Version:** 4.2.0 · Schema **v27** | **Status:** PR #1 geliefert (Schema v27, `capabilities_v27`, Rolle `moderator`), PR #2a geliefert (Fundament der Dienste: Modul, Einstellungen, `CommunityAccess`, Themen und Beiträge, Lesestatus), PR #2b bis #5 offen; Abweichungen von diesem Plan: Übergabe §7 · Übergabe: [HANDOFF-PR2-PR5.md](HANDOFF-PR2-PR5.md) | **Übersicht:** [README.md](README.md)
+> **Historischer Zwischenstand:** Die PR- und Paketplanung 2026-11-18 ist hier als Entwurfsnachweis erhalten. PR #1 bis #5 wurden vollständig in 4.2.0 eingepflegt; aktuelle Restpunkte stehen in [ROADMAP.md](ROADMAP.md).
 > **Quellen:** [ROADMAP.md](ROADMAP.md) · [DATA-MODEL.md](DATA-MODEL.md) · [PERMISSIONS-MODERATION.md](PERMISSIONS-MODERATION.md) · [SECURITY-PRIVACY.md](SECURITY-PRIVACY.md) · [TEST-PLAN.md](TEST-PLAN.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## English (summary)
@@ -14,7 +14,7 @@ Single entry point for building the **Community module** (forum) in release **4.
 
 | Punkt | Stand |
 |---|---|
-| Core | 365CMS **4.1.0**, Schema **v26** (90 Tabellen, `SchemaManager::FEATURE_TABLES_V26`), PHP ≥ 8.4.1; `Version::CURRENT = '4.1.0'`, `SCHEMA_VERSION = 'v26'` ([../../../core/STATUS.md](../../DOC/core/STATUS.md)). |
+| Historische Ausgangslage | 365CMS **4.1.0**, Schema **v26** (90 Tabellen), PHP ≥ 8.4.1; aktueller Produktstand ist 4.2.0 / v27 ([../STATUS.md](../STATUS.md)). |
 | Schema v27 | Eigener Stand **v27** für alle Community-Tabellen; Definitionen nur in `SchemaManager::getSchemaQueries()`, Anlage über `MigrationManager::run()` und `ensureFeatureSchema()` (idempotent, wie v25/v26). |
 | Release 4.2.0 | Phase **P1** (WP-C0 … WP-C13, ≈ 89 PT). P2 und P3 folgen in Folgereleases. |
 | Nicht Teil von 4.2.0 | CLI und Echtzeit-Alerting (→ **4.3.0**), Datenübernahme aus `cms-forum` (entfällt, E6), Mandanten/`site_id` (E10). |

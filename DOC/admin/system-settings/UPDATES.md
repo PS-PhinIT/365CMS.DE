@@ -79,4 +79,4 @@ Erlaubte Hosts: `365cms.de`, `www.365cms.de`, `365network.de`, `www.365network.d
 
 ### Verwandte Dokumente
 
-[BACKUP.md](BACKUP.md) · [../plugins/UPDATES.md](../plugins/UPDATES.md) · [../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md)
+[BACKUP.md](BACKUP.md) · [../plugins/UPDATES.md](../plugins/UPDATES.md) · [../../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md)

@@ -1,6 +1,6 @@
 # 365CMS: Admin: Anmeldung mit Microsoft Entra ID (SSO)
 
-> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Community-Systemrolle:** `moderator` wird vom Auto-Link/Standardrollenpfad ausgeschlossen | **Spezifikation:** [01-IDENTITY.md §1c](../../../DOC_PLAN/specs/v4.1/01-IDENTITY.md)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Community-Systemrolle:** `moderator` wird vom Auto-Link/Standardrollenpfad ausgeschlossen | **Spezifikation:** [01-IDENTITY.md §1c](../../../DOC_PLAN/v4.1/01-IDENTITY.md)
 
 ## English (summary)
 

@@ -230,7 +230,7 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 | CL-145 | `Changelog.md:33` | 🟡 | Korrektur an nie veröffentlichtem Code: Der fix-Eintrag zum Zähltext betraf die erst in 4.0.0 neue Seite und nannte mit „Recht → Löschfristen“ einen nicht existierenden Menüpfad; er entfällt zugunsten eines feat-Eintrags. | [x] Behoben in PR #120 |
 | CL-146 | `Changelog.md:41` | 🟡 | Korrektur an nie veröffentlichtem Code: Der fix-Eintrag zu fehlenden Sprachschlüsseln betraf nur in 4.0.0 neue Bereiche (und nannte mit „rund 330“ statt 387 eine falsche Zahl); er entfällt, die Funktionen haben eigene feat-Einträge. | [x] Behoben in PR #120 |
 | CL-147 | `Changelog.md:124` | 🟡 | Korrektur an nie veröffentlichtem Code: Der fix-Eintrag (zudem mit falschem Symbol 🟡) betraf nur 4.0.0-Entwicklungscode; übernommen ist allein die Verhaltensänderung gegenüber 3.5.6 in den Revisions-Eintrag (Beitrag wird trotz fehlgeschlagener Revision gespeichert und eine Warnung angezeigt, 3.5.6 brach das Speichern ab), der Systemhinweis-Teil gehört in den Systemhinweis-Eintrag. | [x] Behoben in PR #120 |
-| CL-148 | `Changelog.md:132` | 🟡 | Korrektur an nie veröffentlichtem Code: Interne Arbeitsunterlagen unter `DOC/workflow/specs/` (PROGRESS, KLARSTELLUNGEN) und die wirkungslosen „Plugin-Wunschplätze“ sind nicht mehr als Release-Inhalt genannt; die Gliederung „angepasst … Neu … Ergänzt“ entfällt. | [x] Behoben in PR #120 |
+| CL-148 | `Changelog.md:132` | 🟡 | Korrektur an nie veröffentlichtem Code: Interne Arbeitsunterlagen unter `DOC_PLAN/` (PROGRESS, KLARSTELLUNGEN) und die wirkungslosen „Plugin-Wunschplätze“ sind nicht mehr als Release-Inhalt genannt; die Gliederung „angepasst … Neu … Ergänzt“ entfällt. | [x] Behoben in PR #120 |
 | CL-149 | `Changelog.md:27, 98` | 🟡 | Redundanz: Zwei getrennte Installer-Einträge mit unterschiedlichen Bereichsnamen („Neuinstallation“, „Installer“) wurden zu einem Eintrag „Installer“ zusammengeführt. | [x] Behoben in PR #120 |
 | CL-150 | `Changelog.md:30, 92, 96` | 🟡 | Redundanz: Drei verstreute Dashboard-Korrekturen (Bereich „Dashboard“ mehrfach, plus Dashboard-Teil des Sammeleintrags Z. 30) sind in einem Eintrag „Admin / Dashboard“ gebündelt. | [x] Behoben in PR #120 |
 | CL-151 | `Changelog.md:30, 99, 102` | 🟡 | Redundanz: Drei kosmetische Einzeleinträge (Kippschalter und Vorschaubilder, Bestätigungsdialog, Editor-Schnellleiste) sind zu einem Sammeleintrag „Admin / Oberfläche“ zusammengeführt; Dateiangaben ohne Nutzen für Leser (`partials/footer.php`, CSS-Selektor) sind entfallen. | [x] Behoben in PR #120 |
@@ -618,7 +618,7 @@ Die Fundstelle nennt die Zeilen von `Changelog.md` vor der Überarbeitung (Stand
 **Update-Sperre** (aus dem Produktionsprotokoll)
 
 - Während eines Core-Updates oder solange `CMS/cache/.update.lock` existiert, antworten Website, Admin, API, Cron und `orders.php` mit 503 und `Retry-After` statt mit Fatal Errors. Die Prüfung läuft vor dem Bootstrap, ohne Datenbank und Sitzung.
-- Für das Einspielen per FTP genügt das Anlegen einer leeren Datei; sie gilt höchstens 60 Minuten. Ablauf in `DOC/workflow/UPDATE-DEPLOYMENT-WORKFLOW.md`.
+- Für das Einspielen per FTP genügt das Anlegen einer leeren Datei; sie gilt höchstens 60 Minuten. Ablauf in `DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md`.
 - Das erste Update auf diesen Stand ist noch ungeschützt, weil die bisherige `index.php` die Sperre nicht kennt.
 
 **Grenzen der Umsetzung**

@@ -48,4 +48,4 @@ Customizer-Werte bleiben beim Update erhalten (Datenbank). Dateiänderungen auf 
 
 ### Verwandte Dokumente
 
-[THEME-DEVELOPMENT.md](THEME-DEVELOPMENT.md) · [COMPONENTS.md](COMPONENTS.md) · [../admin/themes-design/MARKETPLACE.md](../admin/themes-design/MARKETPLACE.md) · [../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md)
+[THEME-DEVELOPMENT.md](THEME-DEVELOPMENT.md) · [COMPONENTS.md](COMPONENTS.md) · [../admin/themes-design/MARKETPLACE.md](../admin/themes-design/MARKETPLACE.md) · [../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md)

@@ -39,4 +39,4 @@ Details und Seitenbezug: [POSTS.md](POSTS.md#gültigkeit-ablauf-und-wiedervorlag
 
 ### Verwandte Dokumente
 
-[README.md](README.md) · [POSTS.md](POSTS.md) · [PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [../../core/DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md)
+[README.md](README.md) · [POSTS.md](POSTS.md) · [PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [../../core/DATABASE-SCHEMA.md](../../core/DATABASE-SCHEMA.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../../DOC_PLAN/CONTENT-MANAGEMENT-WORKFLOW.md)

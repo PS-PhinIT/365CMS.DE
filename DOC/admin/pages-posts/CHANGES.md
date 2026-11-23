@@ -33,7 +33,7 @@ Filter: Typ, Benutzer, Art der Änderung, Zeitraum (von/bis). 50 Einträge je Se
 - Anlegen: `created_at` der Beiträge und Seiten.
 
 Inhalte im Papierkorb erscheinen weiterhin mit ihrer Historie. Keine Site-Dimension, Hub-Sites sind nicht enthalten
-([KLARSTELLUNGEN.md](../../workflow/specs/KLARSTELLUNGEN.md)).
+([KLARSTELLUNGEN.md](../../../DOC_PLAN/KLARSTELLUNGEN.md)).
 
 ### Rechte
 
