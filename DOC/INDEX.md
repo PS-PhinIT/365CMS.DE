@@ -109,6 +109,7 @@ Die Admin-Dokumente folgen `CMS/admin/` (PHP-Einstiege, `modules/`, `views/`, `p
 | Online payments Stripe / Mollie | [admin/subscription/PAYMENTS.md](admin/subscription/PAYMENTS.md) |
 | Invoices and credit notes | [admin/subscription/INVOICES.md](admin/subscription/INVOICES.md) |
 | Roles and capabilities (RBAC) | [admin/users-groups/RBAC.md](admin/users-groups/RBAC.md) |
+| Community (forum): structure, permissions, moderation, privacy / Community (Forum): Struktur, Rechte, Moderation, Datenschutz | [admin/community/README.md](admin/community/README.md) |
 | Performance | [admin/performance/PERFORMANCE.md](admin/performance/PERFORMANCE.md) |
 | System & maintenance | [admin/system-settings/README.md](admin/system-settings/README.md) |
 | Toolbar: cache & maintenance mode | [admin/system-settings/TOOLBAR.md](admin/system-settings/TOOLBAR.md) |
@@ -162,6 +163,7 @@ Die Member-Dokumentation ist **nicht** nur in einer README gebündelt. Diese Dat
 |---|---|
 | [member/README.md](member/README.md) | `/member` overview |
 | [member/MEMBER-DASHBOARD.md](member/MEMBER-DASHBOARD.md) | Member dashboard |
+| [member/COMMUNITY.md](member/COMMUNITY.md) | Community (forum) for members: writing, editor, drafts, subscriptions, profile / Community (Forum) für Mitglieder |
 | [member/MEMBER-ROUTES.md](member/MEMBER-ROUTES.md) | Member routes |
 | [member/MEMBER-SECURITY.md](member/MEMBER-SECURITY.md) | Member security |
 

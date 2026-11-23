@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Community: Roadmap & Fortschritt
-> **Stand:** 2026-11-18 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** WP-C1 bis WP-C3 teilweise geliefert (PR #1, PR #2a) | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
+> **Stand:** 2026-11-23 | **Ziel-Version:** 4.2.0 · Schema v27 | **Status:** WP-C1 bis WP-C3 teilweise geliefert (PR #1, PR #2a) | **Übersicht:** [README.md](README.md) · **Umsetzungsfahrplan:** [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)
 
 ## English (summary)
 
@@ -92,10 +92,10 @@ flowchart LR
 | WP-C7 Interaktion & Mitgliederbereich | ✅ | PR #2b und #4 (Abos, Benachrichtigungen, Reaktionen, Lösung, Ränge, Mitgliederbereich `/member/plugin/community`). 4.2.0: öffentliches Profil `/forum/mitglieder/{id}` (`ProfileService`), Signaturen, „Alles als gelesen markieren“ |
 | WP-C8 Anhänge | ✅ | PR #2b und #4 (`AttachmentService`, `Http\AttachmentController`; `TESTS/community-uploads`) |
 | WP-C9 Suche & SEO | ✅ | PR #2b (`CommunitySearch`, Sitemap, `noindex`-Regeln; `TESTS/community-search-seo`) |
-| WP-C10 Frontend & Theme-PR | 🟡 | PR #4 (Routen, Vorlagen, `community.css`, JS-Module; `TESTS/community-frontend`, `community-api`, `community-member`, `community-editor`). Offen: Barrierefreiheits- und Lighthouse-Prüfung (PR #5), Theme-PR `cms-phinit` |
+| WP-C10 Frontend & Theme-PR | 🟡 | PR #4 (Routen, Vorlagen, `community.css`, JS-Module; `TESTS/community-frontend`, `community-api`, `community-member`, `community-editor`). PR #5: Barrierefreiheit (`TESTS/community-a11y`: axe-core ohne ernste oder kritische Verstöße, Tastatur, Fokus, Reflow) und Lighthouse mobil 100/100/100/100 (`TESTS/community-lighthouse`). Offen: Theme-PR `cms-phinit` (anderes Repository) und die Prüfung gegen das echte Theme |
 | WP-C11 DSGVO & Löschfristen | ✅ | PR #5: Löschfristen und DSGVO (`TESTS/community-privacy`), Papierkorb-Provider (`TESTS/community-trash`). PR #190: Legal-Baustein „8a. Forum (Community)“, Admin-Liste der Exportdateien; 4.2.0: Löschmodus „Beiträge löschen“ (Einstellung `erase_mode`, `community_posts.deleted_at`) |
 | WP-C12 Übernahme cms-forum | ➖ | entfällt (E6) |
-| WP-C13 Leistung, Abnahme, Release P1 | ⬜ | |
+| WP-C13 Leistung, Abnahme, Release P1 | 🟡 | Leistung: Abfragebudget je Seite, Lesebereich `ReadScope`, keine N+1-Abfragen, EXPLAIN (`TESTS/community-performance`); Lighthouse und Barrierefreiheit siehe WP-C10; strukturierte Daten; Doku `DOC/admin/community/README.md`, `DOC/member/COMMUNITY.md`, `Changelog.md`. Offen: Lasttest 10.000 Themen / 500.000 Beiträge gegen MariaDB, MariaDB-Lauf in der CI, Screenreader-Stichprobe, Release (`Version::CURRENT`, `update.json`, Pakete) |
 | WP-C14 P2 Moderation | ⬜ | |
 | WP-C15 P2 Interaktion | ⬜ | |
 | WP-C16 P3 Erweiterungen | ⬜ | |

@@ -26,7 +26,7 @@ Inventory of the classes directly under `CMS/core/` (namespace `CMS\`) and its s
 | `Debug` | `core/Debug.php` | Checkpoints und Query-Telemetrie bei `CMS_DEBUG` | `checkpoint()`, `query()` |
 | `Json` | `core/Json.php` | sichere JSON-Hilfen | `decodeArray()` u. a. |
 | `Slug` | `core/Slug.php` | URL-Slugs für Beiträge, Kategorien, Tags und Seiten: Umlaut-Umschrift (ä → ae, ß → ss), Akzente entfernt, dann `[a-z0-9-]` | `fromText()`, `transliterate()` |
-| `Version` | `core/Version.php` | `CURRENT = '4.1.8'`, `RELEASE_DATE = '2026-11-15'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
+| `Version` | `core/Version.php` | `CURRENT = '4.2.0'`, `RELEASE_DATE = '2026-11-23'`, `STATUS = 'stable'` | `current()`, `releaseDate()` |
 | `VendorRegistry` | `core/VendorRegistry.php` | Inventar und Laden gebündelter Bibliotheken | `loadAssetsAutoloader()`, `loadPackage()`, `getDiagnostics()` |
 | `WP_Error` | `core/WP_Error.php` | WordPress-kompatibles Fehlerobjekt | `get_error_code()`, `get_error_message()`, `get_error_data()`, `add()` |
 | `Api` | `core/Api.php` | generische JSON-API (Rate-Limit, `pages`, `users`) | `handleRequest()` |

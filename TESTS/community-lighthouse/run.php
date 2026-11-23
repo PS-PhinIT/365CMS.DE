@@ -98,7 +98,7 @@ T::run('Seiten: Gewicht, Kopf, nichts blockiert die Darstellung, keine fremden A
             T::check($elements <= $elementsMax, $label . ': ' . $elements . ' Elemente (höchstens ' . $elementsMax . ')');
             $x = xpath($html);
             T::check($x->query('//head//link[@rel="stylesheet"]')->length <= 2, $label . ': höchstens zwei Stylesheets im Kopf (Theme-Stil, community.css)');
-            T::same(0, $x->query('//script[not(@src)]')->length, $label . ': keine Inline-Skripte');
+            T::same(0, $x->query('//script[not(@src)][not(@type="application/ld+json")]')->length, $label . ': keine Inline-Skripte (Datenblöcke für Suchmaschinen ausgenommen)');
             T::same(0, $x->query('//script[@src][not(@type="module")]')->length, $label . ': Skripte nur als type="module" (deferred)');
             T::check($x->query('//script[@src]')->length <= 1, $label . ': höchstens ein Skript im Kopf');
             T::same(0, $x->query('//img[not(@loading)]')->length, $label . ': Bilder laden verzögert (loading) oder es gibt keine');
@@ -175,6 +175,37 @@ T::run('SEO (Lighthouse-Kategorie): Titel, Beschreibung, kanonische Adresse, noi
         T::same(count($descriptions), count(array_unique($descriptions)), 'jede indexierbare Seite hat eine eigene Beschreibung');
         T::check(str_contains($descriptions['forum'], 'Technik'), 'Forum: die Beschreibung nennt das Forum');
         T::check(str_contains($descriptions['thema'], 'ich suche Tipps zur Einrichtung'), 'Thema: die Beschreibung ist der Anfang des ersten Beitrags (ohne Markup)');
+
+        // Strukturierte Daten (schema.org): Thema = DiscussionForumPosting, Q&A-Forum = QAPage mit Lösung; nur Seite 1 und nur indexierbare Seiten
+        $ld = static function (string $html): ?array {
+            if (preg_match('~<script type="application/ld\+json">(.*?)</script>~s', $html, $m) !== 1) {
+                return null;
+            }
+
+            return json_decode($m[1], true);
+        };
+        $topicPath = '/forum/thema/' . $w->ids['long'] . '-langer-austausch';
+        $data = $ld($w->html($w->request($topicPath)));
+        T::same('DiscussionForumPosting', $data['@type'] ?? null, 'Thema: DiscussionForumPosting');
+        T::same(['https://schema.org', 'Langer Austausch über Netzwerke', 40], [$data['@context'] ?? null, $data['headline'] ?? null, $data['commentCount'] ?? null], 'Thema: Kontext, Überschrift, Zahl der Antworten');
+        T::check(str_starts_with((string) ($data['url'] ?? ''), 'https://example.test/forum/thema/') && ($data['author']['name'] ?? '') === 'Jonas Autor' && str_contains((string) ($data['text'] ?? ''), 'ich suche Tipps'), 'Thema: absolute Adresse, Autor mit Anzeigename, Textanfang');
+        T::check(isset($data['datePublished']) && preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/', (string) $data['datePublished']) === 1, 'Thema: Veröffentlichungsdatum als ISO 8601 (UTC)');
+        T::same(null, $ld($w->html($w->request($topicPath . '/seite-2'))), 'Seite 2 eines Themas: keine strukturierten Daten');
+        T::same(null, $ld($w->html($w->request('/forum/technik'))), 'Forum: keine strukturierten Daten');
+        T::same(null, $ld($w->html($w->request('/forum/suche', null, ['q' => 'Einrichtung']))), 'Suche: keine strukturierten Daten');
+        // Q&A-Forum mit Lösung auf der Seite
+        $w->db->execute("UPDATE cms_community_forums SET type = 'qa' WHERE id = ?", [$w->ids['forum']]);
+        $qa = $ld($w->html($w->request('/forum/thema/' . $w->ids['solved_topic'] . '-frage-3')));
+        T::same(['QAPage', 'Question', 'Answer'], [$qa['@type'] ?? null, $qa['mainEntity']['@type'] ?? null, $qa['mainEntity']['acceptedAnswer']['@type'] ?? null], 'Q&A-Forum: QAPage mit Question und akzeptierter Antwort');
+        T::check(!isset($qa['mainEntity']['headline']) && ($qa['mainEntity']['answerCount'] ?? null) === 6 && str_contains((string) ($qa['mainEntity']['acceptedAnswer']['url'] ?? ''), '/forum/beitrag/'), 'QAPage: name statt headline, Zahl der Antworten, Adresse der Antwort');
+        T::same('QAPage', $ld($w->html($w->request('/forum/thema/' . $w->ids['first_topic'] . '-frage-1')))['@type'] ?? null, 'Q&A-Forum ohne Lösung: QAPage ohne acceptedAnswer');
+        $w->db->execute("UPDATE cms_community_forums SET type = 'discussion' WHERE id = ?", [$w->ids['forum']]);
+        // Titel mit Skript-Ende: im Datenblock maskiert, kein Ausbruch
+        $w->db->execute('UPDATE cms_community_topics SET title = ? WHERE id = ?', ['Titel </script><script>alert(1)</script> & "x"', $w->ids['long']]);
+        $html = $w->html($w->request($topicPath));
+        preg_match('~<script type="application/ld\+json">(.*?)</script>~s', $html, $block);
+        T::check(!str_contains($html, '<script>alert(1)') && str_contains((string) ($block[1] ?? ''), '\\u003C/script\\u003E') && !str_contains((string) ($block[1] ?? ''), '<'), 'Datenblock: </script> im Titel bricht nicht aus (maskiert)');
+        T::same('Titel </script><script>alert(1)</script> & "x"', $ld($html)['headline'] ?? null, 'Datenblock: der Titel bleibt beim Dekodieren erhalten');
 
         // Folgeseite des Forums (Cursor): nicht indexieren, also auch keine Beschreibung
         $next = (string) ($w->request('/forum/technik')['vars']['next'] ?? '');

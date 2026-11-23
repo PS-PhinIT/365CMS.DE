@@ -48,7 +48,7 @@ Verified top-level entries of this repository:
 | `CMS/` | directory | **productive runtime** (web root in typical deployments) |
 | `CMS_ASSETS/` | directory | source archives of the bundled third-party libraries |
 | `DOC/` | directory | public project documentation |
-| `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8) |
+| `RELEASE/` | directory | release packages and checksums (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; currently 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8, 4.2.0) |
 | `SCREENSHOTS/` | directory | screenshots |
 | `TESTS/admin-menu/` | directory | versioned admin menu test (catalog, static access check, profiles, validator, registry, builder, sidebar model, installer step): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/admin-redirects/` | directory | admin redirects page test (250 rules per page, no background refresh): `php TESTS/admin-redirects/run.php [-v]` |
@@ -75,7 +75,7 @@ Verified top-level entries of this repository:
 | `TESTS/mfa-enforcement/` | directory | Role-based MFA enforcement and account gate: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | directory | newsletter in the member area: widget states, consent, double opt-in, rate limit, PRG of plugin sections, escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | directory | password policy (release 4.1.0): limits, Unicode character classes, history, expiry, filter, integration: `php TESTS/password-policy/run.php [-v]` |
-| `TESTS/release-3.4.0/` | directory | install/update contract since 3.4.0 (schema version, update swap, packages and SHA-256 of the current release): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/release-package/` | directory | install/update contract (schema version, update swap, packages and SHA-256 of the current release; formerly `release-3.4.0`): `php TESTS/release-package/run.php` |
 | `TESTS/release-4.1.0/` | directory | regressions of the 4.1.0 release audit without a database (FUN-410-xx and later findings): `php TESTS/release-4.1.0/run.php [-v]` |
 | `TESTS/reusable-blocks/` | directory | EditorJS block templates: block data, usage index, rendering, recursion, history: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | directory | offsite backups: SigV4, S3 client, multipart, retention: `php TESTS/s3-backup/run.php [-v]` |
@@ -137,7 +137,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `CMS/` | Verzeichnis | **produktive Runtime** (in typischen Deployments das Webroot) |
 | `CMS_ASSETS/` | Verzeichnis | Quellarchive der gebündelten Drittbibliotheken |
 | `DOC/` | Verzeichnis | öffentliche Projektdokumentation |
-| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8) |
+| `RELEASE/` | Verzeichnis | Release-Pakete und Prüfsummen (`365CMS-<version>-full.zip`, `-update.zip`, `-update.json`, `-SHA256SUMS.txt`, `README-<version>.md`; aktuell 4.0.0, 4.1.0, 4.1.5, 4.1.6, 4.1.7, 4.1.8, 4.2.0) |
 | `SCREENSHOTS/` | Verzeichnis | Screenshots |
 | `TESTS/admin-menu/` | Verzeichnis | versionierter Admin-Menü-Test (Katalog, statische Zugriffsprüfung, Profile, Validator, Registry, Builder, Sidebar-Modell, Installer-Schritt): `php TESTS/admin-menu/run.php [-v]` |
 | `TESTS/admin-redirects/` | Verzeichnis | Test der Admin-Seite Weiterleitungen (250 Regeln je Seite, keine Aktualisierung im Hintergrund): `php TESTS/admin-redirects/run.php [-v]` |
@@ -164,7 +164,7 @@ Verifizierte Top-Level-Einträge dieses Repositories:
 | `TESTS/mfa-enforcement/` | Verzeichnis | Rollenbasierter MFA-Zwang und Konto-Weiche: `php TESTS/mfa-enforcement/run.php` |
 | `TESTS/newsletter-member/` | Verzeichnis | Newsletter im Mitgliederbereich: Widget-Zustände, Einwilligung, Double-Opt-In, Rate-Limit, PRG der Plugin-Bereiche, Escaping: `php TESTS/newsletter-member/run.php [-v]` |
 | `TESTS/password-policy/` | Verzeichnis | Passwort-Richtlinie (Release 4.1.0): Grenzen, Unicode-Zeichenklassen, Historie, Ablauf, Filter, Einbindung: `php TESTS/password-policy/run.php [-v]` |
-| `TESTS/release-3.4.0/` | Verzeichnis | Install-/Update-Vertrag seit 3.4.0 (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases): `php TESTS/release-3.4.0/run.php` |
+| `TESTS/release-package/` | Verzeichnis | Install-/Update-Vertrag (Schema-Version, Update-Tausch, Pakete und SHA-256 des aktuellen Releases; früher `release-3.4.0`): `php TESTS/release-package/run.php` |
 | `TESTS/release-4.1.0/` | Verzeichnis | Regressionen der Release-Prüfung 4.1.0 ohne Datenbank (FUN-410-xx und folgende Befunde): `php TESTS/release-4.1.0/run.php [-v]` |
 | `TESTS/reusable-blocks/` | Verzeichnis | EditorJS Block Vorlagen: Blockdaten, Nutzungsindex, Rendern, Rekursion, Verlauf: `php TESTS/reusable-blocks/run.php [-v]` |
 | `TESTS/s3-backup/` | Verzeichnis | Offsite-Backups: SigV4, S3-Client, Multipart, Aufbewahrung: `php TESTS/s3-backup/run.php [-v]` |

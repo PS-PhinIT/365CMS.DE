@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Core: Implementierungsstatus
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Schema:** v27 | **Status:** Stable
 
 ## English (summary)
 
@@ -12,8 +12,8 @@ Snapshot of the runtime state verified against the source code on 2026-10-02 and
 
 | Merkmal | Wert | Quelle |
 |---|---|---|
-| Core-Version | `4.1.0`, Release `2026-11-15`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
-| Schema | `v26` (90 Tabellen: 76 bis `v25` plus 14 neu in `v26`) | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION`, `SchemaManager::FEATURE_TABLES_V26`, [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
+| Core-Version | `4.2.0`, Release `2026-11-23`, Status `stable` | `CMS/core/Version.php`, `CMS/update.json` |
+| Schema | `v27` (118 Tabellen: 90 bis `v26` plus 28 des Community-Moduls, `FEATURE_TABLES_V27`) | `SchemaManager::SCHEMA_VERSION`, `MigrationManager::SCHEMA_VERSION`, `SchemaManager::FEATURE_TABLES_V26`, `SchemaManager::FEATURE_TABLES_V27`, [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) |
 | PHP | ≥ 8.4.1 | `CMS_MIN_PHP_VERSION` in `CMS/config.php` und `CMS\Version::MIN_PHP` (es zählt das Maximum, `Version::minimumPhp()`), `min_php` in `update.json` |
 | Datenbank | MySQL ≥ 5.7 / MariaDB (empfohlen MySQL 8.0+ / MariaDB 10.6+) | Update-Preflight |
 | Standard-Theme | `cms-default` 1.1.0 („Meridian CMS Default“) | `CMS/themes/cms-default/theme.json` |

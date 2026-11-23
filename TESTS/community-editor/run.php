@@ -26,7 +26,7 @@ T::run('Vorlage, Controller und Module (Quelltext)', static function () use ($re
     T::check(preg_match('/<\?php if \(!empty\(\$editor\)\): \?> data-cc-editor=/', $compose) === 1, 'compose: Editor-Attribute nur mit $editor (Gäste und Hinweisseiten ohne)');
     T::check(str_contains($compose, 'id="cc-body"') && str_contains($compose, 'name="body"') && str_contains($compose, 'required'), 'compose: das Markdown-Textfeld bleibt (ohne JavaScript bedienbar)');
     T::check(str_contains($controller, "'mode' => (\$vars['mode'] ?? '') === 'edit' ? 'markdown' : 'visual'"), 'Controller: neu und Antwort visuell, Bearbeiten zuerst Markdown (verlustfrei)');
-    T::check(str_contains($controller, "cms_asset_url('suneditor/suneditor.min.js')") && !str_contains($controller, 'cdn') && !str_contains($controller, 'https://'), 'Controller: SunEditor nur lokal (kein CDN)');
+    T::check(str_contains($controller, "cms_asset_url('suneditor/suneditor.min.js')") && !str_contains($controller, 'cdn') && !str_contains(str_replace('https://schema.org', '', $controller), 'https://'), 'Controller: SunEditor nur lokal (kein CDN; einzige Adresse im Quelltext ist der Namensraum schema.org der strukturierten Daten)');
     T::check(str_contains($controller, "js/community/editor.js") && str_contains($controller, "empty(\$vars['readonly'])"), 'Controller: Editor-Modul nur auf Formularseiten ohne Hinweisansicht');
     T::check(is_file(ABSPATH . 'assets/suneditor/suneditor.min.js') && is_file(ABSPATH . 'assets/suneditor/css/suneditor.min.css') && is_file(ABSPATH . 'assets/suneditor/lang/de.js'), 'SunEditor-Dateien liegen lokal im Repository');
 
