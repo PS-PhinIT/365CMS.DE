@@ -11,6 +11,7 @@
 | [../v4.1/06-CLI-ALERTING.md](../v4.1/06-CLI-ALERTING.md) | CLI-/Alerting-Spezifikation |
 | [../v4.2/ROADMAP.md](../v4.2/ROADMAP.md) | Community P1, P2/P3 und Abnahmerest |
 | [../v4.2.X/CATALOG.md](../v4.2.X/CATALOG.md) | nicht nach 4.3 umzuetikettierende Patcharbeit |
+| [../v4.4/README.md](../v4.4/README.md) | Folgeplanung für Custom Fields, Sprachen, Preview und Managed API |
 | [../../DOC/core/STATUS.md](../../DOC/core/STATUS.md) | Laufzeitstand 4.2.0 |
 | [../../DOC/core/DATABASE-SCHEMA.md](../../DOC/core/DATABASE-SCHEMA.md) | Schema-v27-Vertrag |
 | [../../Changelog.md](../../Changelog.md) | ausgelieferte Funktionen und Korrekturen |

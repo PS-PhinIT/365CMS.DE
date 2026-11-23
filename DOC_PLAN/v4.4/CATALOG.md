@@ -140,7 +140,8 @@ Capability-Prüfung, Rate-Limits.
 
 1. Admin-Verwaltung für maschinenlesbare Integrationen: Name, Beschreibung,
    Scope, Ablaufdatum, Status, letzter Zugriff.
-2. API-Schlüssel werden nur einmal angezeigt und danach als salted/peut-KDF-Hash
+2. API-Schlüssel werden nur einmal angezeigt und danach mit Salt und einem starken
+   Passwort-Hash/KDF
    gespeichert; ein nichtgeheimer Präfixteil dient dem Lookup.
 3. Client-Credentials-Endpunkt tauscht `client_id`/`client_secret` gegen einen
    kurzlebigen JWT; direkter API-Key wird optional nur für einfache,

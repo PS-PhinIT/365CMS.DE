@@ -12,6 +12,9 @@ verwendet werden.
 2. [Roadmap Inhaltsplattform](ROADMAP-CONTENT-PLATFORM.md) – Freigabe-Workflow, eigene Felder/Typen und weitere Sprachen
 3. [Release 4.1](v4.1/README.md) – ausgelieferte Bereiche 1–5 und der nach 4.3.0 verschobene Bereich 6
 4. [Release 4.2: Community](v4.2/README.md) – ausgeliefertes Community-Modul, P2/P3- und Abnahmerest
+5. [Release 4.2.x](v4.2.X/README.md) – Patches und P1-Abnahmereste
+6. [Release 4.3](v4.3/README.md) – CLI und Alerting
+7. [Release 4.4](v4.4/README.md) – Custom Fields/Typen, N Sprachen, Live Preview und Managed API
 
 ## Operative Workflows
 
@@ -51,6 +54,22 @@ Details und Liefernachweise: [v4.1/PROGRESS.md](v4.1/PROGRESS.md)
 - 🟡 Community P2/P3 und externe Abnahmepunkte
 
 Details und Restumfang: [v4.2/ROADMAP.md](v4.2/ROADMAP.md)
+
+### 4.3.0
+
+- 🟡 CLI und Echtzeit-Alerting
+- 🟡 gemeinsamer Preflight-/Worker-Betriebsvertrag
+
+Details: [v4.3/README.md](v4.3/README.md)
+
+### 4.4.0
+
+- 🔴 Custom Fields und eigene Inhaltstypen
+- 🔴 normalisiertes Modell für beliebig viele Sprachen
+- 🔴 Live-Splitscreen-Vorschau
+- 🔴 Managed Public API mit Client Credentials/API-Keys und OpenAPI
+
+Details: [v4.4/README.md](v4.4/README.md)
 
 ## Pflegehinweise
 

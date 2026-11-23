@@ -12,12 +12,11 @@ Aus den bestehenden Plänen sind für 4.3 bereits verbindlich angelegt:
 
 1. zentrale CLI;
 2. Echtzeit-Alerting mit sicheren Kanälen und `alert.raised`;
-3. Inhaltsplattform B: Feldgruppen, Feldtypen und eigene Inhaltstypen;
-4. Inhaltsplattform C: beliebige Sprachen, erst nach B;
-5. Community P2/P3 nach separater Priorisierung.
+3. gemeinsamer Preflight-/Worker-Vertrag für CLI, Cron und Admin;
+4. optionale, unabhängige Community-P2-Nacharbeiten.
 
-Neue Kandidaten aus dem Vergleich mit anderen CMS werden nur aufgenommen, wenn 365CMS
-die jeweilige Fähigkeit nicht bereits hat oder eine klar begründete Erweiterung fehlt.
+Custom Fields, beliebig viele Sprachen, Live Preview und Managed API sind verbindlich
+nach [Release 4.4](../v4.4/README.md) verschoben.
 
 ## Prioritäten
 
@@ -48,8 +47,8 @@ Bereits ausgeliefert und deshalb nicht als 4.3-Neuentwicklung zu führen:
 - MultiSite-Grundlage, feste DE/EN-Lokalisierung, Sitemaps, Suche und Feed-Pfade;
 - Community P1 und Schema v27.
 
-Erweiterungen dieser Bereiche müssen den vorhandenen Vertrag benennen und begründen,
-warum 4.3 ein neues Architektur- oder Bedienproblem löst.
+Erweiterungen dieser Bereiche werden für 4.4 geplant. 4.3 enthält dafür keine
+vorbereitende Schema- oder Routenänderung, sofern sie nicht für CLI/Alerting nötig ist.
 
 ## Schnittstelle zur 4.2.x-Linie
 

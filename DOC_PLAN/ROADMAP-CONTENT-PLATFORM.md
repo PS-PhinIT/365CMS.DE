@@ -1,14 +1,14 @@
 # 365CMS: Spezifikation: Freigabe-Ablauf, eigene Inhaltstypen und Felder, beliebig viele Sprachen
 
-> **Stand:** 2026-11-23 | **A:** ✅ 4.1.0 | **B:** 🔴 offen | **C:** 🔴 offen | **Gesamtstatus:** [STATUS.md](STATUS.md)
+> **Stand:** 2026-11-23 | **A:** ✅ 4.1.0 | **B:** 🔴 4.4 geplant | **C:** 🔴 4.4 nach B | **Gesamtstatus:** [STATUS.md](STATUS.md) | **4.4-Katalog:** [v4.4/README.md](v4.4/README.md)
 
 ## English (summary)
 
-Specification and delivery record for the three largest content-platform gaps: (1) editorial approval, (2) custom fields and content types, and (3) any number of content languages. Part A shipped in 4.1.0, including `pending`, permission enforcement, review history, preview links and review notifications. Parts B and C remain open. The inventories and proposed data models below are therefore retained as implementation baselines, not as a statement that all three parts are current gaps.
+Specification and delivery record for the three largest content-platform gaps: (1) editorial approval, (2) custom fields and content types, and (3) any number of content languages. Part A shipped in 4.1.0. Parts B and C are planned for 4.4.0; the detailed successor plan is `v4.4/`.
 
 ## Deutsch
 
-Reihenfolge: **A Freigabe-Ablauf (✅ 4.1.0) → B Felder und Inhaltstypen (🔴 offen) → C Sprachen (🔴 offen).** B soll den vorhandenen Workflow aus A verwenden; C setzt das allgemeine Modell aus B voraus.
+Reihenfolge: **A Freigabe-Ablauf (✅ 4.1.0) → B Felder und Inhaltstypen (🔴 4.4) → C Sprachen (🔴 4.4 nach B).** B soll den vorhandenen Workflow aus A verwenden; C setzt das allgemeine Modell aus B voraus.
 
 ---
 
@@ -104,7 +104,7 @@ Weil heute keine Rolle `posts.publish`/`pages.publish` hat, würde ein bloßes E
 
 ## B. Eigene Felder und Inhaltstypen
 
-> **Status 4.2.0: 🔴 nicht begonnen.** Die vorhandene Provider-Infrastruktur ist wiederverwendbar, aber es existieren noch keine produktiven Tabellen `content_types`, `field_groups`, `content_entries` oder `field_values`.
+> **Ziel 4.4.0: 🔴 nicht begonnen.** Die vorhandene Provider-Infrastruktur ist wiederverwendbar, aber es existieren noch keine produktiven Tabellen für Definitionen, eigene Typen oder Custom-Field-Werte. Der verbindliche Folgeplan steht in [v4.4/README.md](v4.4/README.md).
 
 ### B.1 Ist-Stand
 

@@ -14,12 +14,14 @@ sie dürfen nicht als aktueller Auslieferungsstatus gelesen werden.
 | Admin-Menü/Profile | ✅ ausgeliefert | Regressionsprüfung bei neuen Admin-Seiten |
 | Integrierte Plugins | ✅ 4.0.0-Parität hergestellt | Abweichungen nur als neue Anforderung behandeln |
 | v4.1 Bereiche 1–5 | ✅ in 4.1.0 ausgeliefert | v26 bleibt historische Schema-Basis |
-| v4.1 Bereich 6: CLI/Alerting | 🟡 auf 4.3.0 verschoben | Zentrale CLI und `alert.raised` |
+| v4.1 Bereich 6: CLI/Alerting | 🟡 für 4.3.0 eingeplant | Zentrale CLI und `alert.raised` |
 | Community P1 | ✅ in 4.2.0 ausgeliefert, Schema v27 | Fehlerbehebungen und Abnahme fortführen |
 | Community P2/P3 | 🟡 offen | Siehe Community-Roadmap |
 | Freigabe-Ablauf (Inhaltsplattform A) | ✅ in 4.1.0 ausgeliefert | Wartung und Erweiterung |
-| Felder/Typen (Inhaltsplattform B) | 🔴 nicht begonnen | Architektur und erster Lieferumfang freigeben |
-| Mehrsprachigkeit (Inhaltsplattform C) | 🔴 nicht begonnen | Architektur erst nach B |
+| Felder/Typen (Inhaltsplattform B) | 🔴 für 4.4.0 eingeplant | Custom-Field- und Typ-Vertrag freigeben |
+| Mehrsprachigkeit (Inhaltsplattform C) | 🔴 für 4.4.0 eingeplant | Architektur erst nach B |
+| Live Editor Preview | 🔴 für 4.4.0 eingeplant | CSP-sichere Split-View im Editor |
+| Managed Public API | 🔴 für 4.4.0 eingeplant | Client Credentials/API-Keys, Scopes und OpenAPI |
 
 ## Noch offene Punkte
 
@@ -38,6 +40,15 @@ sie dürfen nicht als aktueller Auslieferungsstatus gelesen werden.
 - [ ] Teil C: Sprachmodell und Migration von festen `*_en`-Spalten auf beliebige Sprachen.
 - [ ] Teil C: Sprachverwaltung, Routing, Sitemaps, Suche und Übersetzungsstatus je Sprache.
 - [ ] Teil C: Funktionsbereiche Formulare, Downloads, Knowledgebase, Newsletter und Feeds migrieren.
+
+Diese Punkte sind für 4.4 in [v4.4/README.md](v4.4/README.md) zusammengeführt.
+
+### Release 4.4.0
+
+- [ ] Custom Fields für Bestands- und eigene Inhaltstypen.
+- [ ] N-Sprachen-Modell mit DE/EN-Kompatibilität.
+- [ ] Live-Splitscreen-Vorschau im Redaktionseditor.
+- [ ] Managed Public REST API mit Client Credentials/API-Keys und OpenAPI.
 
 ### Community nach P1
 
@@ -61,4 +72,6 @@ sie dürfen nicht als aktueller Auslieferungsstatus gelesen werden.
 - [v4.1 Übersicht](v4.1/README.md) und [v4.1 Fortschritt](v4.1/PROGRESS.md)
 - [Community-Roadmap](v4.2/ROADMAP.md) und [Community-Übersicht](v4.2/README.md)
 - [Roadmap Inhaltsplattform](ROADMAP-CONTENT-PLATFORM.md)
+- [Release 4.3](v4.3/README.md)
+- [Release 4.4](v4.4/README.md)
 - [Admin-Menü-Profile](ADMIN-MENU-PROFILE.md)
