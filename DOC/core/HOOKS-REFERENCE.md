@@ -57,6 +57,7 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `site_favicon_default` | Filter | `$relativePath` | Standard-Favicon |
 | `local_font_slugs` | Filter | `$slugs` | lokal ausgelieferte Schriften |
 | `cms_csp_prepare` | Action | – | vor dem Senden der CSP: zusätzliche Quellen mit `Security::allowCspSources()` |
+| `main_nav` | Action | `string $context` (`desktop` \| `mobile`) | Standard-Theme: Einträge an die Hauptnavigation anhängen (z. B. Wissensdatenbank) |
 
 ### Inhalte (Admin)
 
@@ -136,6 +137,8 @@ Verhalten: Callbacks werden je Tag nach Priorität sortiert und in Registrierung
 | `performance_cache_purged` | Action | `'all', $report` |
 | `performance_cdn_purge_requested` | Action | `$payload` (CDN-Purge durch Plugin) |
 | `cms_data_retention_days` | Filter | `$days`: Tage je Bereich (`page_views`, `core_web_vitals`, `not_found_logs`, `log_files`, `activity_log`, `audit_log`); 0 = nicht löschen, sonst mindestens 7 Tage (Protokolle 90), höchstens 3650 (`DataRetentionService::getRetentionDays()`) |
+| `cms_mail_retention_days` | Filter | `array{mail_queue:int, mail_log:int} $days` | Löschfristen der Mail-Warteschlange (Standard 30 Tage) und des Mail-Protokolls (Standard 90 Tage) für `MailRetention`; 0 = nicht löschen, sonst 7 bis 3650 Tage |
+| `cms_feature_usage_retention_days` | Filter | `int $days` | Löschfrist der Nutzungsstatistik (`FeatureUsageService`, Standard 180 Tage); 0 = nie, sonst 7 bis 3650 Tage |
 | `theme_customizer_save` | Action | `$themeSlug, $tab, $sections, $context` |
 | `cms_register_content_type_providers` (`ContentTypeRegistry::REGISTER_ACTION`) | Action | `ContentTypeRegistry $registry`: Inhaltstyp-Provider für Papierkorb, Export/Import und Suchindex anmelden; einmal beim ersten Zugriff auf die Registry ausgelöst ([CONTENT-TYPE-PROVIDERS.md](CONTENT-TYPE-PROVIDERS.md)) |
 
@@ -257,12 +260,15 @@ Vorgesehen, in 4.2.0 nicht ausgelöst (P2): Name, Konstante und Signatur stehen 
 | `cms_payment_failed` | Aktion | `int $orderId` (bei fehlgeschlagener Abo-Verlängerung seit 4.1.9 die letzte Bestellung des Abos, nur ohne Vorlage 0), `string $provider, array $event` (bei Verlängerungen mit `renewal => true`, `subscription_row_id`) |
 | `cms_subscription_renewed` | Aktion | `int $subscriptionRowId, int $userId, int $renewalOrderId, int $periodEnd` |
 | `cms_subscription_ended` | Aktion | `int $subscriptionRowId, int $userId, string $provider`; Abo beim Anbieter beendet |
+| `cms_payment_refunded` | Aktion | `int $orderId, string $provider, array $event`; Bestellung erstattet oder zurückgebucht (nach dem Beenden des zugehörigen Abos, `cms_subscription_ended` kommt vorher) |
 | `cms_subscription_renewal_unbilled` | Aktion | `int $subscriptionRowId, int $userId, string $provider, array $event`; Verlängerung verbucht, aber keine Folgebestellung/Rechnung möglich (keine bezahlte oder erstattete Vorlagebestellung; seit 4.1.9) |
 | `cms_subscription_cancelled_by_member` | Aktion | `int $subscriptionRowId, int $userId`; Mitglied hat gekündigt, Zugang bis Periodenende (seit 4.1.7) |
 | `cms_invoice_created` | Aktion | `int $invoiceId, string $type, int $orderId, int $userId`; nach dem Erstellen einer Rechnung (`invoice`) bzw. Storno-Rechnung (`cancellation`), PDF liegt vor |
 | `cms_user_deleted` | Aktion | `int $userId`; nach dem endgültigen Löschen eines Kontos (`UserService::deleteUser(…, true)`), z. B. Sperrvermerk für Rechnungen |
 | `cms_webhook_endpoint_disabled` | Action | `int $endpointId, string $reason`; Empfänger automatisch deaktiviert (410 oder 20 Fehlschläge) |
 | `cms_cron_feeds` / `cms_cron_<name>` | Action |: (über `cron.php --task=…`) |
+| `cms_importer_content_reset` | Action | –; Plugin `cms-importer`: nach „Zurücksetzen“ (Beiträge/Seiten samt abhängiger Daten gelöscht, seit 4.1.9) |
+| `cms_importer_image_budget_seconds` | Filter | `float $seconds`; Plugin `cms-importer`: Zeitbudget für das Laden entfernter Bilder je Importlauf (Standard 120 s, seit 4.1.6) |
 
 ### Beispiele
 
