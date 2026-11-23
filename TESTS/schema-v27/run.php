@@ -201,6 +201,8 @@ T::run('Die 28 Tabellen', static function () use ($queries, $migrationSource, $s
     preg_match_all('/"ALTER TABLE[^"\n]*community_[^"\n]*"/', $schemaSource, $alters);
     T::same([
         '"ALTER TABLE {$this->prefix}community_badges ADD COLUMN description_en VARCHAR(255) NULL AFTER description"',
+        // Löschmodus „Beiträge löschen“ (4.2.0): Zeitpunkt des Löschens für den Papierkorb und die Löschfrist
+        '"ALTER TABLE {$this->prefix}community_posts ADD COLUMN deleted_at DATETIME NULL AFTER ip_hash"',
     ], $alters[0], 'SchemaManager: ALTER-Schritte für community_* nur für die Nachträge nach PR #1 (Indizes über REQUIRED_INDEXES und ensureRequiredIndexes())');
 });
 

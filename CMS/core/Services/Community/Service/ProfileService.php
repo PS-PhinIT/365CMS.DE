@@ -59,7 +59,7 @@ final class ProfileService
      */
     public function __construct(?Database $db = null, ?\Closure $clock = null, ?\Closure $readable = null, ?\Closure $filter = null)
     {
-        $db ??= Database::instance();
+        $db = $db ?? Database::instance();
         $this->members = new MemberRepository($db);
         $this->stats = new UserStatsRepository($db);
         $this->topics = new TopicRepository($db);

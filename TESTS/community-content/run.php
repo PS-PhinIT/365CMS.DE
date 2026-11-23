@@ -2128,6 +2128,8 @@ const CC_CLOCK_MAP = [
     'Service/ReportService.php' => 1, 'Service/BanService.php' => 1, 'Service/NotificationDispatcher.php' => 1, 'Service/SubscriptionService.php' => 1,
     'Service/ReactionService.php' => 1, 'Service/RankService.php' => 1, 'Service/AttachmentService.php' => 1, 'Service/CommunitySearch.php' => 1,
     'Service/CommunityMediaExtractor.php' => 0, 'Service/TopicTrashService.php' => 1, 'Service/WriteGate.php' => 0, 'Service/CaptchaGate.php' => 0,
+    // 4.2.0 (P1-Rest): Server-Entwürfe und öffentliches Profil
+    'Service/DraftService.php' => 1, 'Service/ProfileService.php' => 1,
     'Support/ContentRenderer.php' => 0, 'Support/IpHash.php' => 0,
 ];
 

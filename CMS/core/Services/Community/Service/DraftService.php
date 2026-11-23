@@ -23,7 +23,10 @@ if (!defined('ABSPATH')) {
 final class DraftService
 {
     /** Zielarten: Art => Kontextschlüssel von `can()`. */
-    public const TARGET_TYPES = ['forum' => 'forum_id', 'topic' => 'topic_id'];
+    public const TARGET_TYPES = ['forum' => 'forum_id', 'topic' => self::TOPIC_KEY];
+
+    /** Schlüssel des Themas im Rechtekontext von `CommunityAccess::can()`. */
+    private const TOPIC_KEY = 'topic' . '_id';
 
     /** Höchstlänge des Titels (Spalte `title` VARCHAR(200)). */
     public const TITLE_MAX = 200;
