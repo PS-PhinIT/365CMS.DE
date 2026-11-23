@@ -19,7 +19,7 @@ Originaltext der Anforderung (unverändert). Bei Widersprüchen gelten die
 
 ### Finale Struktur (verbindlich)
 
-Diese Bäume setzen der Katalog und die Profile unter `CMS/core/Services/AdminMenu/` genau um. Grundlage sind die Rückmeldungen in [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md) §7.
+Diese Bäume bildet der Katalog unter `CMS/core/Services/AdminMenu/` ab. Grundlage sind die Rückmeldungen in [KLARSTELLUNGEN.md](KLARSTELLUNGEN.md) §7.
 Die früheren Kennzeichnungen `*B`, `*WP1` bis `*WP4` dokumentieren nur die Lieferreihenfolge; alle so markierten Seiten sind inzwischen im Produktivkatalog vorhanden.
 
 | Zeichen | Bedeutung |

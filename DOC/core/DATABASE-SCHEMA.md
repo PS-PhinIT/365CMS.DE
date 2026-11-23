@@ -193,7 +193,7 @@ Sechs neue Capabilities (`community.view`, `community.participate`, `community.m
 
 #### Tabellen aus `FEATURE_TABLES_V26`
 
-Spezifikation: [workflow/specs/v4.1/SCHEMA-v26.md](../workflow/specs/v4.1/SCHEMA-v26.md). Gesamtstand der veröffentlichten Releases 4.1.x: **90 Tabellendefinitionen** in `SchemaManager::getSchemaQueries()` (76 bis `v25`, 14 neu in `v26`, darunter `invoice_sequences` und `invoices`). Neuinstallationen erhalten sie über `getSchemaQueries()`, Updates über den `MigrationManager` (Schritt `v26`) und zusätzlich über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()` (idempotent, `CREATE TABLE IF NOT EXISTS`). Die Konstanten `SchemaManager::SCHEMA_VERSION` und `MigrationManager::SCHEMA_VERSION` stehen auf `v26`.
+Spezifikation: [DOC_PLAN/specs/v4.1/SCHEMA-v26.md](../../DOC_PLAN/specs/v4.1/SCHEMA-v26.md). Gesamtstand der Releases 4.1.x: **90 Tabellendefinitionen** in `SchemaManager::getSchemaQueries()` (76 bis `v25`, 14 neu in `v26`, darunter `invoice_sequences` und `invoices`). Neuinstallationen erhalten sie über `getSchemaQueries()`, Updates über den `MigrationManager` (Schritt `v26`) und zusätzlich über die Laufzeitprüfung `SchemaManager::ensureFeatureSchema()` (idempotent, `CREATE TABLE IF NOT EXISTS`). In 4.1.x standen die Konstanten `SchemaManager::SCHEMA_VERSION` und `MigrationManager::SCHEMA_VERSION` auf `v26`; 4.2.0 erhöht sie auf `v27`.
 
 | Tabelle / Spalte | Spalten | Zweck |
 |---|---|---|

@@ -42,7 +42,7 @@ Runtime snapshot verified against 4.2.0 on 2026-11-23. The Community module is i
 | KI-Dienste | produktiv (nur Admin, keine Auto-Veröffentlichung) | [../ai/AI-SERVICES.md](../ai/AI-SERVICES.md) |
 | Backups, Updates, Monitoring, Cron | produktiv, mit S3-Offsite-Kopien | [../admin/system-settings/](../admin/system-settings/README.md) |
 | Ausgehende Webhooks | produktiv | [../admin/system-settings/WEBHOOKS.md](../admin/system-settings/WEBHOOKS.md) |
-| Zentrale CLI (`CMS/cli.php`), Echtzeit-Alerting (`alert.raised`) | **geplant für 4.3.0** (Bereich 6, nicht Teil von 4.1.0) | [../workflow/specs/v4.1/06-CLI-ALERTING.md](../workflow/specs/v4.1/06-CLI-ALERTING.md) |
+| Zentrale CLI (`CMS/cli.php`), Echtzeit-Alerting (`alert.raised`) | **geplant für 4.3.0** | [../../DOC_PLAN/specs/v4.1/06-CLI-ALERTING.md](../../DOC_PLAN/specs/v4.1/06-CLI-ALERTING.md) |
 | Community-Modul (Forum, Moderation, Anhänge, Benachrichtigungen) | produktiv; Kernmodul `community`, Schema `v27`, standardmäßig deaktiviert | [../member/COMMUNITY.md](../member/COMMUNITY.md), [../admin/community/README.md](../admin/community/README.md) |
 | JSON-API | lesend + Admin-Listen, Session oder optional Bearer-Token (`JWT_SECRET`) | [API-REFERENCE.md](API-REFERENCE.md) |
 
@@ -51,7 +51,7 @@ Runtime snapshot verified against 4.2.0 on 2026-11-23. The Community module is i
 | Punkt | Stand | Weiterführend |
 |---|---|---|
 | Signierte Update-Pakete (OFFEN-27) | offen; Prüfsumme (SHA-256) wird bereits erzwungen | [../audit/FOLGEAUDIT-2026-11-09.md](../audit/FOLGEAUDIT-2026-11-09.md) |
-| Zentrale CLI und Echtzeit-Alerting | Release 4.3.0 | [../workflow/specs/v4.1/06-CLI-ALERTING.md](../workflow/specs/v4.1/06-CLI-ALERTING.md) |
+| Zentrale CLI und Echtzeit-Alerting | Release 4.3.0 | [../../DOC_PLAN/specs/v4.1/06-CLI-ALERTING.md](../../DOC_PLAN/specs/v4.1/06-CLI-ALERTING.md) |
 | E-Rechnung (ZUGFeRD/XRechnung) | nicht enthalten | [../admin/subscription/INVOICES.md](../admin/subscription/INVOICES.md) |
 
 Behobene Befunde früherer Prüfungen stehen im [Changelog](../../Changelog.md) und in den Berichten unter [../audit/](../audit/README.md); das Prüfprotokoll des aktuellen Releases ist [../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md](../audit/RELEASE-AUDIT-4.1.0-2026-11-15.md).
