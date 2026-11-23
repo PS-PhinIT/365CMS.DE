@@ -14,6 +14,16 @@
 
 ---
 
+### v4.2.5 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-05)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.5** | 🛡️ security | AP-05 CSRF, Header, Cookies, Browser-Schutz / Apache-Konfiguration | **Header-Fallback überschrieb den Core** (`.htaccess`): `X-Frame-Options` und `Referrer-Policy` standen als `Header always set` und ersetzten auf Apache die Werte, die der Core je Route bewusst abweichend sendet (`SAMEORIGIN` für die Newsletter-Vorschau im Admin und die Einbettungsseite des Aggregators, `no-referrer` auf Seiten mit Token in der URL). Beide Direktiven sind jetzt `setifempty` (wie CSP und HSTS): Der Core bestimmt den Wert, der Fallback ergänzt nur Antworten ohne Header. Außerdem nennt die `Permissions-Policy` des Core dieselben vier Verbote wie der Fallback (`payment=()` ergänzt). Bericht: [FOLGEAUDIT-AP-05](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-05-2026-11-23.md). |
+
+---
+
 ### v4.2.0 — Feature Release (Stand 23.11.2026)
 
 #### Highlights & Neuerungen im Überblick

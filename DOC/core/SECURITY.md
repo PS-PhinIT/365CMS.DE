@@ -23,7 +23,7 @@ Runtime-URLs (`cms_runtime_base_url()`, Asset-, Theme- und Script-URLs) nutzen n
 
 ### 2. Sicherheitsheader (`Security::setSecurityHeaders()`)
 
-`X-Content-Type-Options: nosniff`, `X-Frame-Options` (Standard `DENY`), `X-XSS-Protection: 0`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(), microphone=(), camera=()`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-site`, `Strict-Transport-Security` (bei HTTPS). Admin und API zusätzlich `Cache-Control: no-store`, `Pragma: no-cache`, `X-Robots-Tag: noindex, nofollow`.
+`X-Content-Type-Options: nosniff`, `X-Frame-Options` (Standard `DENY`), `X-XSS-Protection: 0`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-site`, `Strict-Transport-Security` (bei HTTPS). Admin und API zusätzlich `Cache-Control: no-store`, `Pragma: no-cache`, `X-Robots-Tag: noindex, nofollow`. Unter Apache ergänzt `CMS/.htaccess` dieselben Header nur dort, wo der Core keinen gesendet hat (`setifempty`); Routen mit abweichendem Wert, etwa `X-Frame-Options: SAMEORIGIN` für die Newsletter-Vorschau, behalten ihren Wert.
 
 ### 3. Content-Security-Policy
 
