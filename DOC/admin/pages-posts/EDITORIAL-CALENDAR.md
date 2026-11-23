@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Redaktionskalender
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/editorial-calendar` | **Capability:** `view_editorial_calendar` | **CSRF-Aktion:** `admin_editorial_calendar` | **JSON-Endpunkt:** `/admin/editorial-calendar-api`
 
 ## English (summary)

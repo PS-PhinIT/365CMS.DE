@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Core: Übersicht
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Schema:** v26 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Schema:** v27 | **Status:** Stable
 
 ## English (summary)
 

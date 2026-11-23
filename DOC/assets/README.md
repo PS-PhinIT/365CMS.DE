@@ -278,7 +278,7 @@ Diese Kandidaten benötigen vor einer Aufnahme:
 3. Security-/Rate-Limit-/Provider-Konzept
 4. dokumentierte Entscheidung, ob lokales Bundling überhaupt sinnvoll ist
 
-Die ausführliche Bewertungsdoku steht in [ASSETS_NEW.md](ASSETS_NEW.md). Die kanonische AI-Konzeption liegt zusätzlich in [../ai/AI-SERVICES.md](../ai/AI-SERVICES.md), ergänzt um den Admin-Kontext unter [../admin/system-settings/AI-SERVICES.md](../admin/system-settings/AI-SERVICES.md). Die Roadmap für Eigenersatz und Wrapper-Strategien steht in [ASSETS_OwnAssets.md](ASSETS_OwnAssets.md).
+Die kanonische AI-Konzeption liegt in [../ai/AI-SERVICES.md](../ai/AI-SERVICES.md), ergänzt um den Admin-Kontext unter [../admin/system-settings/AI-SERVICES.md](../admin/system-settings/AI-SERVICES.md). Eigenersatz und Wrapper werden nur dokumentiert, wenn dafür ein produktiver Service- oder Asset-Vertrag existiert.
 
 ---
 

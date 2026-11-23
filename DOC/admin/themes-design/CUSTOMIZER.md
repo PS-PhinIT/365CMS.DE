@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Theme-Customizer
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/theme-editor` (Menü „Theme-Editor“) | **Capability:** `manage_settings` | **CSRF-Aktion (Theme):** `theme_customizer`
 
 ## English (summary)

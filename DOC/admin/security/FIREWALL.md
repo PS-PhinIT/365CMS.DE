@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Firewall
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/firewall` (Alt-Route `/admin/cms-firewall` leitet um) | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_firewall` | **Core-Modul:** `security`
 
 ## English (summary)

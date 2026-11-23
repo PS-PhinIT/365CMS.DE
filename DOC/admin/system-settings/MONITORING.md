@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Monitoring, Cron & Benachrichtigungen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/monitor-response-time`, `/admin/monitor-cron-status`, `/admin/monitor-disk-usage`, `/admin/monitor-scheduled-tasks`, `/admin/monitor-health-check`, `/admin/monitor-email-alerts`, `/admin/monitor-warnings` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_system_info`
 
 ## English (summary)

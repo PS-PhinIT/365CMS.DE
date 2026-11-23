@@ -1,6 +1,6 @@
 # Symfony Mime
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **English summary:** Symfony Mime builds the e-mail objects, headers and attachments for the local mail transport. Details in German below.
 
 ## Kurzbeschreibung

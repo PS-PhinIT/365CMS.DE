@@ -1,6 +1,6 @@
 # PSR-Interfaces
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **English summary:** `CMS/assets/psr/` contains the official PHP-FIG interface packages so the bundled libraries work without Composer. Details in German below.
 
 ## Kurzbeschreibung

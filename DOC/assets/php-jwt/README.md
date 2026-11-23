@@ -1,6 +1,6 @@
 # firebase/php-jwt
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **English summary:** firebase/php-jwt is used for API authentication and token processing (`JwtService`). Details in German below.
 
 ## Kurzbeschreibung

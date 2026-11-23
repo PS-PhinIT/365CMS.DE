@@ -2,7 +2,7 @@
 
 > **English summary:** DOMPurify sanitizes HTML in the browser and backs the Trusted Types `default` policy required by the production CSP. Details in German below.
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Aktiv
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Aktiv
 
 ## Kurzbeschreibung
 

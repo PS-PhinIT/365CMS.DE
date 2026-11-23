@@ -1,6 +1,6 @@
 # Interne CSS-Assets
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **English summary:** `CMS/assets/css/` holds internal 365CMS stylesheets for the admin, system pages and member area, no third-party library. Details in German below.
 
 ## Kurzbeschreibung

@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Benutzer- & Auth-Einstellungen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/user-settings` | **Capability:** `manage_users` | **CSRF-Aktion:** `admin_user_settings`
 
 ## English (summary)

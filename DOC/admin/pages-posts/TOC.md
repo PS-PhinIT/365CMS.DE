@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Inhaltsverzeichnis (TOC)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/table-of-contents` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_toc`
 
 ## English (summary)

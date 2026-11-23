@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Sicherheits-Audit
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/security-audit` | **Capability:** `manage_settings` | **Core-Modul:** `security`
 
 ## English (summary)

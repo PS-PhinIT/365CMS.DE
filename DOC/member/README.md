@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Mitgliederbereich
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Vollständige Referenz des privaten Member-Bereichs mit Seiten, Routing, Einstellungen, Erweiterungspunkten, Sicherheit und Fallbacks. Die Angaben entsprechen dem Code-Stand von Version 4.1.0.
 
 # 365CMS Member Area

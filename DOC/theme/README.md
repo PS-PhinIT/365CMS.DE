@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Theme-Entwicklung: Übersicht
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Referenz-Theme:** `cms-default` 1.1.0
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Referenz-Theme:** `cms-default` 1.1.0
 
 ## English (summary)
 

@@ -1,6 +1,6 @@
 # Cron Library (poliander/cron 3.3.1)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **English summary:** poliander/cron parses and evaluates cron expressions for the scheduler (`cron.php`, `CronExpressionAdapter`). Details in German below.
 
 Diese Runtime-Library wird in `CMS/assets/cron/` gebuendelt und ueber `CMS/assets/autoload.php` per PSR-4 (`Poliander\Cron\`) geladen.

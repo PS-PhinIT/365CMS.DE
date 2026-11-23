@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Beiträge, Kategorien und Tags
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/posts`, `/admin/post-categories`, `/admin/post-tags`, `/admin/post-editor-api` (JSON) | **CSRF-Aktionen:** `admin_posts`, `admin_post_editor` (Editor-API)
 
 ## English (summary)

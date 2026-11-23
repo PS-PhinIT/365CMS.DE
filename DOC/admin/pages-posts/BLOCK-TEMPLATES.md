@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: EditorJS Block Vorlagen
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** veröffentlicht
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** veröffentlicht
 > **Route:** `/admin/reusable-blocks` | **Capability:** `blocks.reusable` | **CSRF-Aktion:** `admin_reusable_blocks` | **Editor.js-Block:** „Vorlagen“ (`reusableBlock`)
 
 ## English (summary)

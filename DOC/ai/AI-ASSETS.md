@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | KI-Assets
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** User and technical reference for the AI-related JavaScript, the bundled Symfony AI Platform library, autoloading, licensing, and asset maintenance boundaries.
 
 # 365CMS AI: Assets and Platform Library

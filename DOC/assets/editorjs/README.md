@@ -1,6 +1,6 @@
 # Editor.js
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **English summary:** Editor.js is the block editor for content editing in 365CMS, including the custom block tools. Details in German below.
 
 ## Kurzbeschreibung

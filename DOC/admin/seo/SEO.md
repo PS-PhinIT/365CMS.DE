@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: SEO-Suite
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/seo-dashboard`, `/admin/seo-audit`, `/admin/seo-meta`, `/admin/seo-social`, `/admin/seo-schema`, `/admin/seo-sitemap`, `/admin/seo-search-engines`, `/admin/seo-technical` | **Capability:** `manage_settings` | **CSRF-Aktion:** `admin_seo_suite` | **Core-Modul:** `seo`
 
 ## English (summary)

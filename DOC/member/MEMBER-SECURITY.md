@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Mitglieder-Sicherheit
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Sicherheitsreferenz für Authentifizierung, CSRF, Capabilities, privates Caching, benutzerbezogene Medien, sichere Ausgabe und die Trennung von Member- und Admin-Bereich. Sie entspricht der Implementierung von Version 4.1.0.
 
 # 365CMS Member Security

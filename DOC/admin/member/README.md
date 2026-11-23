@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Mitglieder-Dashboard
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Route:** `/admin/member-dashboard` (+ Unterseiten) | **Capabilities:** `manage_settings` bzw. `manage_users` | **CSRF-Aktion:** `admin_member_dashboard`
 
 ## English (summary)

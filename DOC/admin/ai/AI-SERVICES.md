@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: KI-Dienste (AI Services)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/ai-services`, `/admin/ai-translation`, `/admin/ai-content-creator`, `/admin/ai-seo-creator`, `/admin/ai-settings` | **Core-Modul:** `ai_services` | **CSRF-Aktion:** `admin_ai_services`
 
 ## English (summary)

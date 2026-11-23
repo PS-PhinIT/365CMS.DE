@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Admin-Menü (Profile, Editor, Plugin-Plätze)
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Verbindliche Bäume:** [ADMIN-MENU-PROFILE.md](../../DOC_PLAN/ADMIN-MENU-PROFILE.md) · **Entscheidungen:** [KLARSTELLUNGEN.md §7](../../DOC_PLAN/KLARSTELLUNGEN.md)
 
 ## English (summary)

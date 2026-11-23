@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Admin: Plugin-Verwaltung
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable
 > **Routen:** `/admin/plugins`, `/admin/plugin-assignment` | **Capability:** `manage_settings` | **CSRF-Aktionen:** `admin_plugins`, `admin_plugin_assignment`
 
 ## English (summary)

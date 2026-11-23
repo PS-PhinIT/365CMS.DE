@@ -103,8 +103,7 @@ Empfohlener Ablauf pro Update:
 5. Doku synchron halten:
    - `DOC/assets/ASSET.md`
    - `DOC/assets/README.md`
-   - `DOC/assets/ASSETS_OwnAssets.md`
-   - `DOC/assets/ASSETS_NEW.md` für neue Kandidaten außerhalb der Runtime
+   - bereichsspezifische `DOC/assets/<paket>/README.md`
 6. Spiegel-Manifeste für Dependabot/Trivy nachziehen: `.github/deps/composer.json` + `composer.lock` (PHP) bzw. `.github/deps/package.json` + `package-lock.json` (JS), Ablauf siehe [`README.md`](README.md#versionsüberwachung-dependabot--trivy); `php TESTS/run-all.php` prüft den Abgleich Manifest ↔ Bundle ↔ Doku
 
 ---
@@ -150,9 +149,9 @@ Zusätzlich wichtig im aktuellen Stand:
 
 - Das zuvor mitgeführte Paket `stichoza/google-translate-php` wurde **bewusst aus `/ASSETS` entfernt** und wird nicht weiter als aktiver Integrationskandidat geführt.
 - Die früheren Beobachtungskandidaten `guzzlehttp/guzzle`, `adhocore/jwt`, `monolog-bundle` und `msgraph-sdk-php` lagen nur im alten Staging-Ordner `ASSETS/`, der nicht mehr im Repository ist. Sie werden nicht weiter geführt; der Graph-Mailversand nutzt eigene HTTP-Aufrufe (`AzureMailTokenProvider`). Die zugehörigen Staging-/Referenz-Einträge in `CMS/core/VendorRegistry.php` sind seit 3.4.19 entfernt.
-- Für Übersetzungs- und Rewrite-Funktionen ist stattdessen ein **providerbasierter AI-Services-Ansatz** vorgesehen; Details siehe [ASSETS_NEW.md](ASSETS_NEW.md), [ai/AI-SERVICES.md](../ai/AI-SERVICES.md) und den Admin-Kontext unter [admin/system-settings/AI-SERVICES.md](../admin/system-settings/AI-SERVICES.md).
+- Für Übersetzungs- und Rewrite-Funktionen gilt der **providerbasierte AI-Services-Ansatz**; Details stehen in [ai/AI-SERVICES.md](../ai/AI-SERVICES.md) und im Admin-Kontext unter [admin/system-settings/AI-SERVICES.md](../admin/system-settings/AI-SERVICES.md).
 
-Die ausführliche Bewertungs- und Integrationsdoku dazu liegt in [ASSETS_NEW.md](ASSETS_NEW.md).
+Die produktiven Verträge werden in den jeweiligen Service- und Asset-Dokumenten gepflegt.
 
 ---
 

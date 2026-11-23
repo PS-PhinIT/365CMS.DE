@@ -1,6 +1,6 @@
 # 365CMS Projektdokumentation | Plugin-Entwicklung
 
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Website:** [365CMS.DE](https://365cms.de/)
 > **Kurzbeschreibung:** Complete development reference for 365CMS plugins, covering lifecycle, hooks, admin and member integration, persistence, security, assets, routing, testing, and release quality.
 
 # 365CMS Plugin Development

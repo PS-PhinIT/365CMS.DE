@@ -1,5 +1,5 @@
 # 365CMS Projektdokumentation | Plugins: Marketplace
-> **Stand:** 2026-11-15 | **Version:** 4.1.0 | **Status:** Stable | **Update:** 2026-11-15
+> **Stand:** 2026-11-23 | **Version:** 4.2.0 | **Status:** Stable | **Update:** 2026-11-23
 > **Kurzbeschreibung:** User and technical reference for the 365CMS plugin marketplace, registry sources, catalog validation, automatic installation, integrity checks, and manual-install fallbacks.
 > **Quellen:** `CMS/admin/plugin-marketplace.php`, `CMS/admin/modules/plugins/PluginMarketplaceModule.php`, `CMS/admin/views/plugins/marketplace.php`, `CMS/core/Services/UpdateService.php`, `CMS/marketplace/plugins/index.json`
 
