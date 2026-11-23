@@ -53,4 +53,4 @@ Checklist for reviewing a change to the administration (core page, module, view 
 
 ### Verwandte Dokumente
 
-[README.md](README.md) · [GUIDE.md](GUIDE.md) · [security/SECURITY-AUDIT.md](security/SECURITY-AUDIT.md) · [../workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md)
+[README.md](README.md) · [GUIDE.md](GUIDE.md) · [security/SECURITY-AUDIT.md](security/SECURITY-AUDIT.md) · [system-settings/UPDATES.md](system-settings/UPDATES.md)

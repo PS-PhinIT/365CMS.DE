@@ -176,4 +176,4 @@ Gilt für Beiträge und Seiten (Panel *Veröffentlichung*, Gruppe „Gültigkeit
 
 ### Verwandte Dokumente
 
-[PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md) · [COMMENTS.md](COMMENTS.md) · [SETTINGS.md](SETTINGS.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md) · [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../../DOC_PLAN/CONTENT-MANAGEMENT-WORKFLOW.md)
+[PAGES.md](PAGES.md) · [REVIEW.md](REVIEW.md) · [BLOCK-TEMPLATES.md](BLOCK-TEMPLATES.md) · [COMMENTS.md](COMMENTS.md) · [SETTINGS.md](SETTINGS.md) · [../../theme/THEME-DEVELOPMENT.md](../../theme/THEME-DEVELOPMENT.md)

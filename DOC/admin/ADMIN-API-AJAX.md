@@ -72,4 +72,4 @@ Die Plugin-Zuweisung (`/admin/plugin-assignment`, `manage_settings`, CSRF `admin
 
 ### Verwandte Dokumente
 
-[PANEL-INTEGRATION.md](PANEL-INTEGRATION.md) · [../core/API-REFERENCE.md](../core/API-REFERENCE.md) · [../workflow/API-INTEGRATION-WORKFLOW.md](../../DOC_PLAN/API-INTEGRATION-WORKFLOW.md) · [../core/SECURITY.md](../core/SECURITY.md)
+[PANEL-INTEGRATION.md](PANEL-INTEGRATION.md) · [../core/API-REFERENCE.md](../core/API-REFERENCE.md) · [../core/SECURITY.md](../core/SECURITY.md)

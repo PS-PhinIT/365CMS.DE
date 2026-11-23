@@ -38,4 +38,4 @@ This folder documents the sidebar entry **Pages & Posts** (*Seiten & Beiträge*,
 - SEO-Felder im Editor: [../seo/SEO.md](../seo/SEO.md)
 - Medien und Beitragsbilder: [../media/MEDIA.md](../media/MEDIA.md)
 - KI-Übersetzung und SEO-Metadaten: [../ai/AI-SERVICES.md](../ai/AI-SERVICES.md)
-- Ablauf von Entwurf bis Veröffentlichung: [../../workflow/CONTENT-MANAGEMENT-WORKFLOW.md](../../../DOC_PLAN/CONTENT-MANAGEMENT-WORKFLOW.md)
+- Ablauf von Entwurf bis Veröffentlichung: [REVIEW.md](REVIEW.md) und [EDITORIAL-CALENDAR.md](EDITORIAL-CALENDAR.md)

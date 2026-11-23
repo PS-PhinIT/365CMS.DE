@@ -627,4 +627,4 @@ Weiterführend:
 - **Mindest-PHP:** `CMS_MIN_PHP_VERSION = 8.4.1` (Prüfung im Willkommensschritt).
 - **Cron:** `php CMS/cron.php --task=all` (CLI) oder HTTP-Aufruf mit Token (`?token=…&task=…`); Tasks `all`, `mail-queue`, `hourly`, `daily`, `feeds`, `cms_cron_*`. Details: [admin/system-settings/SYSTEM.md](admin/system-settings/SYSTEM.md).
 - **Nach der Installation:** Mailversand testen ([admin/system-settings/MAIL.md](admin/system-settings/MAIL.md)), erstes Backup anlegen ([admin/system-settings/BACKUP.md](admin/system-settings/BACKUP.md)), Sicherheits-Audit ausführen ([admin/security/SECURITY-AUDIT.md](admin/security/SECURITY-AUDIT.md)).
-- **Updates und Deployments:** [workflow/UPDATE-DEPLOYMENT-WORKFLOW.md](../DOC_PLAN/UPDATE-DEPLOYMENT-WORKFLOW.md).
+- **Updates und Deployments:** [admin/system-settings/UPDATES.md](admin/system-settings/UPDATES.md).
