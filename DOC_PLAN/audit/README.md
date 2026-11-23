@@ -44,6 +44,11 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 | [changelogs/CHANGELOG-OLD.md](changelogs/CHANGELOG-OLD.md) | Archivierter 2.x-Changelog bis 2.9.788; kein aktueller Backlog |
 | [old_audits/README.md](old_audits/README.md) | Index der historischen Vorprüfungen und Checklisten; offene Häkchen dort sind nicht automatisch offene Aufgaben |
 | [OFFENE-BEFUNDE.md](OFFENE-BEFUNDE.md) | die zwei tatsächlich noch offenen Auditpunkte und ihre korrekte Releasezuordnung |
+| [AUDIT-KATALOG-4.2.0.md](AUDIT-KATALOG-4.2.0.md) | gemeinsame 20-Punkte-Prüfliste für Delta- und Vollaudit |
+| [AUDIT-ABLAUF-PLAN-DELTA.md](AUDIT-ABLAUF-PLAN-DELTA.md) | nur Änderungen seit `V4.2.0` und abhängige Oberflächen |
+| [AUDIT-ABLAUF-PLAN-VOLLAUDIT.md](AUDIT-ABLAUF-PLAN-VOLLAUDIT.md) | vollständiger Auditablauf AP-01 bis AP-20 |
+| [AUDIT-ZUSAMMENFASSUNG-AKTUELL.md](AUDIT-ZUSAMMENFASSUNG-AKTUELL.md) | konsolidierter Stand der Prüfreihen 2026-10 bis 4.2.0 |
+| [AUDIT-ZUSAMMENFASSUNG-LEGACY.md](AUDIT-ZUSAMMENFASSUNG-LEGACY.md) | konsolidierte Alt-Audits; ersetzt die früheren redundanten Rohlisten |
 | [RELEASE/README-4.2.0.md](../../RELEASE/README-4.2.0.md) | Paketinhalt und Update-Hinweise des freigegebenen 4.2.0-Standes |
 | [SICHERHEIT.md](SICHERHEIT.md) | Sicherheitsbefunde SEC-16 bis SEC-27 |
 | [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) | Geschwindigkeit (PERF-07 bis PERF-11) und Massenanfragen/Bot-Last (LAST-01 bis LAST-06) inkl. Messwerten |

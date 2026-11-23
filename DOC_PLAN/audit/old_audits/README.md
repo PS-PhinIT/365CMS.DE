@@ -6,15 +6,16 @@
 > Aufgaben-Backlog. Maßgeblich: [OFFENE-BEFUNDE.md](../OFFENE-BEFUNDE.md),
 > [../STATUS.md](../../STATUS.md) und die Releasekataloge.
 
-## Reifegrad der Unterlagen
+## Erhaltene Unterlagen
 
 | Gruppe | Dateien | Nutzung |
 |---|---|---|
-| technische Prüfung Juni 2026 | `365CMS-TECHNICAL-AUDIT-REPORT.md`, `AUDIT-CORE-2026-06-10.md`, `AUDIT-ADMIN-2026-06-10.md`, `AUDIT-MEMBER-INCLUDES-VIEWS-2026-06-10.md` | historische Code-/Bewertungsbasis; Scores nicht als aktuellen Stand lesen |
-| konsolidierte Audits April | `AUDIT-BACKLOG.md`, `AUDIT-CONTENT-PLATFORM.md`, `AUDIT-DESIGN-MEDIA.md`, `AUDIT-LIVE-EXTERNAL.md`, `AUDIT-SYSTEM-SECURITY.md`, `AUDIT-USERS-COMMERCE.md` | alte Befundmengen und Prioritäten; nur nach Reproduktion übernehmen |
-| Bewertungen/Checklisten | `BEWERTUNG.md`, `BAUKASTEN-CHECKLISTE.md`, `MUST-HAVE-CHECKLISTE.md`, `NICE-TO-HAVE-CHECKLISTE.md`, `TODO-PRUEFUNG.md` | historische Produkt-/Qualitätskriterien, keine aktuellen Task-Marker |
-| Themenprüfungen | `AI-KI-MODUL.md`, `BUGS-STABILITAET.md`, `FUNKTIONSVOLLSTAENDIGKEIT.md`, `PERFORMANCE.md`, `SEO.md`, `SICHERHEIT.md`, `UNVOLLSTAENDIGE-IMPLEMENTIERUNGEN.md`, `WARTBARKEIT.md` | wiederholbare Prüfdimensionen, aber veralteter Ist-Stand |
-| Begleitdaten | `365cms-technical-audit-report.html`, `dependency-governance.json`, `.last-audit-run` | Beweisdokumente; nicht als aktuelle Version oder aktuelle Prüfausführung ausgeben |
+| detaillierte Code-Audits Juni 2026 | `AUDIT-CORE-2026-06-10.md`, `AUDIT-ADMIN-2026-06-10.md`, `AUDIT-MEMBER-INCLUDES-VIEWS-2026-06-10.md` | historische Teilprüfungen; Scores und Fundstatus nicht als aktuellen Stand lesen |
+| konsolidierte Zusammenfassung | [AUDIT-ZUSAMMENFASSUNG-LEGACY.md](../AUDIT-ZUSAMMENFASSUNG-LEGACY.md) | Themen, wiederzuprüfende Residuen und Zuordnung zu 4.2.X/4.3/4.4 |
+
+Die früheren Rohlisten, Bewertungs-, Live-, Checklisten-, Fach- und HTML-/JSON-
+Begleitdateien wurden nach der Konsolidierung entfernt. Ihre Erkenntnisse sind
+in der Legacy-Zusammenfassung nach Themen gruppiert.
 
 ## Regel für die Wiederverwendung
 
