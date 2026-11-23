@@ -31,7 +31,7 @@ Runtime tests against MySQL 8.0 show the number of queries per request dropping 
 |---|---|
 | [PRUEFKATALOG.md](PRUEFKATALOG.md) | Prüfkatalog mit Quellen aus dem Internet, Abdeckung je Prüfpunkt, Methodik |
 | [AUDIT-KATALOG-4.2.0.md](AUDIT-KATALOG-4.2.0.md) | **Arbeitsanweisung für das nächste Audit (4.2.0)**: Methode, Befundformat, 20 Arbeitspakete mit Prüfpunkten (Sicherheit, Fehler, Verweise, Leistung, Best Practice, Community-Modul), Umsetzungsregeln, Auftrag für Claude Opus |
-| [AUDIT-4.2.0-2026-11-23.md](AUDIT-4.2.0-2026-11-23.md) | Audit 4.2.0, erster Durchgang nach dem Katalog: DB-420-01 (Bestellnummer, MEDIUM), SEC-420-01, DB-420-02, FUN-420-01, FUN-420-02 (LOW, alle umgesetzt), Hinweise BP-420-01 bis BP-420-04; Liste der noch nicht geprüften Arbeitspakete mit Vorgehen |
+| [AUDIT-4.2.0-2026-11-23.md](AUDIT-4.2.0-2026-11-23.md) | Audit 4.2.0, erster Durchgang nach dem Katalog: DB-420-01 (Bestellnummer, MEDIUM), SEC-420-01, DB-420-02, FUN-420-01, FUN-420-02 (LOW, alle umgesetzt), Hinweise BP-420-02 bis BP-420-04; Liste der noch nicht geprüften Arbeitspakete mit Vorgehen |
 | [SICHERHEIT.md](SICHERHEIT.md) | Sicherheitsbefunde SEC-16 bis SEC-27 |
 | [PERFORMANCE-LAST.md](PERFORMANCE-LAST.md) | Geschwindigkeit (PERF-07 bis PERF-11) und Massenanfragen/Bot-Last (LAST-01 bis LAST-06) inkl. Messwerten |
 | [FUNKTIONEN-VERWEISE.md](FUNKTIONEN-VERWEISE.md) | Fehlende oder unvollständige Funktionen (FUN-21 bis FUN-25) und fehlerhafte Verweise (REF-06 bis REF-11) |
