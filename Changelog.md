@@ -14,6 +14,16 @@
 
 ---
 
+### v4.2.20 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-20)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.20** | 🔎 audit | AP-20 Integrationen und Austausch | **Prüfbericht ohne Codeänderung:** SMTP-Verschlüsselung und Zeitlimits, CSV-Formelschutz in allen Exporten und Sitemaps nur mit veröffentlichten, indexierbaren Inhalten ohne Befund; Hinweise zu SMTP ohne Auto-TLS bei „keine Verschlüsselung“ und zu fünf verschiedenen CSV-Schutzfunktionen. Bericht: [FOLGEAUDIT-AP-20](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-20-2026-11-23.md). |
+
+---
+
 ### v4.2.19 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-19)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
@@ -24,6 +34,26 @@ Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbei
 
 ---
 
+### v4.2.18 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-18)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.18** | 🔎 audit | AP-18 Betrieb, Härtung, Wiederherstellung | **Prüfbericht, eine Schutzprüfung neu:** Webserver-Sperren (`.htaccess`, nginx-Beispiel), `ABSPATH`-Schutz in 997 von 1 001 PHP-Dateien, `cron.php` und `update.php` ohne Befund; die Mindest-PHP-Version steht in `config.php`, Installer und `Version::MIN_PHP` und wird jetzt per Test gleich gehalten. Sicherung und Wiederherstellung wurden nicht praktisch getestet. Bericht: [FOLGEAUDIT-AP-18](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-18-2026-11-23.md). |
+
+---
+
+### v4.2.17 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-17)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.17** | 🛡️ security | AP-17 Datenschutz und Compliance / Konten, 404-Monitor | **Zwei Datenschutz-Befunde:** (1) Der 404-Monitor speicherte die volle Client-IP, ohne sie irgendwo zu verwenden; sie wird jetzt wie bei Seitenaufrufen und Kommentaren gekürzt (IPv4 letztes Oktett, IPv6 48 Bit). (2) Beim endgültigen Löschen eines Kontos blieben Sitzungsregister, Passkeys, SSO-Verknüpfungen, Passwort-Verlauf, Abos samt Nutzung, Gruppenzuordnung und KI-Nutzung stehen, weil nur `user_meta`, `favorites` und `notifications` per Fremdschlüssel mitgehen. Neue Klasse `UserDataEraser` löscht diese acht Tabellen im Zweig „endgültig löschen“ (Bestellungen, Rechnungen, Protokolle und Inhalte bleiben). Bericht: [FOLGEAUDIT-AP-17](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-17-2026-11-23.md). |
+
+---
+
 ### v4.2.16 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-16)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
@@ -31,6 +61,36 @@ Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbei
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.2.16** | 🔎 audit | AP-16 Drittbibliotheken und Lieferkette | **Prüfbericht ohne Codeänderung:** Der Sicherheits-Workflow (nur Leserechte, Actions auf Commit-SHA gepinnt, keine Secrets) und die Bundles ohne feste externe Aufrufe wurden ohne Befund geprüft; Inventar, Abgleich mit Upstream und Parser-Bibliotheken stehen offen. Bericht: [FOLGEAUDIT-AP-16](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-16-2026-11-23.md). |
+
+---
+
+### v4.2.14 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-14)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.14** | 🔎 audit | AP-14 Barrierefreiheit und Oberfläche | **Prüfbericht ohne Codeänderung:** Ohne laufende Seite und Browser sind nur Skriptsuchen möglich (kein `tabindex` größer 0, `lang`-Attribute, `alt` in Vorlagen); axe-core, Tastatur, Kontrast und Reflow stehen offen. Bericht: [FOLGEAUDIT-AP-14](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-14-2026-11-23.md). |
+
+---
+
+### v4.2.13 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-13)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.13** | 🔎 audit | AP-13 Fehlende Funktionen, Verweise, Konsistenz | **Prüfbericht, Doku ergänzt:** Hook-Referenz (139 Namen, 8 ohne Eintrag und begründet), Sprachdateien (3 950 Schlüssel, deckungsgleich), `use`-Verweise und Platzhalter ohne Befund. `Media/ImagePixelLimit` steht jetzt in `FILELIST.md` und `CMSFILESTRUCTUR.md`, `CMS_MAX_IMAGE_PIXELS` in `INSTALLATION.md`. Bericht: [FOLGEAUDIT-AP-13](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-13-2026-11-23.md). |
+
+---
+
+### v4.2.12 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-12)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.12** | 🔎 audit | AP-12 Geschwindigkeit, Skalierung, Missbrauchslast | **Prüfbericht ohne Codeänderung:** Drosselung von Suche, Anmeldung, Registrierung, Kommentaren, Formularen, Newsletter, Web-Vitals und Community, Größenkappung und Aufräumen des 404-Monitors sowie die Paginierung des Redirect-Managers ohne Befund; Abfragen, Indizes, Cache, Cron und Lighthouse stehen offen. Bericht: [FOLGEAUDIT-AP-12](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-12-2026-11-23.md). |
 
 ---
 
