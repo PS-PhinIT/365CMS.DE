@@ -5,18 +5,18 @@ MariaDB 10.11 lokal, Chromium über Playwright, axe-core 4.10.2 mit den Regeln W
 PHP-Mindestversion (PHP 8.3.6 statt 8.4.1); das Repository blieb unverändert. Maßstab: [Audit-Katalog, AP-14](../AUDIT-KATALOG-4.2.0.md#ap-14-barrierefreiheit-und-oberflaeche).
 Der Bericht betrifft nur AP-14; er ist keine Freigabe der gesamten Oberfläche. Fundstellen sind relativ zur Repository-Wurzel.
 
-**Ergebnis:** Drei Befunde (MEDIUM bis LOW, umgesetzt): zu geringer Farbkontrast im Admin und in den Mitgliederseiten (151 Stellen auf 25 Seiten), horizontales
-Scrollen der Mitgliederseiten bei 320 px und ein Link auf der Kontaktseite. Nach den Korrekturen meldet axe auf allen gemessenen Seiten keine Verstöße mehr.
-Tastatur, Fokusführung und Bildschirmleser sind weiter nicht geprüft.
+**Ergebnis:** Vier Befunde (MEDIUM bis LOW, umgesetzt): zu geringer Farbkontrast im Admin und in den Mitgliederseiten (151 Stellen auf 25 Seiten), horizontales
+Scrollen der Mitgliederseiten bei 320 px, ein Link auf der Kontaktseite und 27 von 32 Dialogen im Admin ohne zugänglichen Namen. Nach den Korrekturen meldet axe auf allen
+gemessenen Seiten keine Verstöße mehr. Die Tastaturführung ist auf zehn Seiten ohne Befund; Bildschirmleser sind nicht geprüft.
 
 ## Prüfpunktmatrix
 
 | ID | Status | Nachweis | Fehlender Nachweis / Folgeschritt |
 |---|---|---|---|
 | 14.1 axe-core | ja (Teil) | Alle WCAG-2.x-A/AA-Regeln auf 7 öffentlichen Seiten (Start, Anmeldung, Registrierung, Passwort vergessen, 404, Suche, Kontakt) und 8 Admin-Seiten (Übersicht, Beiträge, Seiten, Benutzer, Medien, Einstellungen, Kommentare, Formulare): vor den Korrekturen nur `color-contrast` auffällig. Die Regel `color-contrast` zusätzlich auf weiteren Admin-Seiten (Plugins, Themes, SEO, Analyse, Newsletter, Downloads, Weiterleitungen, Sicherungen, Protokolle, Rollen, Gruppen, Bestellungen) und drei Mitgliederseiten (Übersicht, Profil, Sicherheit): insgesamt 151 Stellen auf 25 Seiten; nach den Korrekturen 0 Stellen auf 23 Seiten, öffentlich 0 Verstöße. | Alle Regeln auf den übrigen Admin- und Mitgliederseiten, Beitrag und Seite mit Inhalt, Editor, Dialoge. |
-| 14.2 Tastatur | offen | Skriptsuche: kein `tabindex` größer 0. | Reihenfolge, Fokusführung der Dialoge, Alternative zum Ziehen und Ablegen im Browser. |
+| 14.2 Tastatur | ja, mit Befund | Tabulator-Lauf auf Start, Anmeldung, Registrierung, Kontakt, Admin (Übersicht, Beiträge, Einstellungen, Benutzer) und Mitgliederbereich (Übersicht, Profil): 17 bis 70 Fokusstopps je Seite, **alle sichtbar und mit erkennbarem Fokus** (Umriss, Schatten, Rand-, Hintergrund- oder Textfarbe ändert sich gegenüber dem Ruhezustand); kein `tabindex` größer 0; die Reihenfolge folgt dem Aufbau (Logo bzw. Seitenleiste zuerst; einen Sprunglink „Zum Inhalt springen“ hat der Admin, axe meldet keine fehlende Umgehung). Dialoge: „Neuer Ordner“ (Medien), „Neue Rolle“, „Neue Gruppe“ öffnen mit dem Fokus im Dialog, der Tabulator bleibt im Dialog (die Umlaufstelle ist die Adressleiste), Esc schließt und gibt den Fokus an den Auslöser zurück; Befund TMP-AP14-4: kein Name. | Weitere Dialoge (nur 3 von 32 haben einen sichtbaren Auslöser ohne Daten), Drag-and-Drop-Alternativen, Editor.js-Werkzeugleiste, Kontrast des Fokusrahmens. |
 | 14.3 Formulare | offen (Teil) | axe meldet auf Anmeldung und Registrierung keine fehlenden Beschriftungen. | `role=alert` bei Fehlern, Pflichtfelder, Zeitlimit des Captchas. |
-| 14.4 Kontrast, Reflow | ja, mit Befunden | Befunde TMP-AP14-1 bis 3; Reflow bei 320 px auf Start, Anmeldung, Admin und zehn Mitgliederseiten gemessen. | Zoom 200 %, Textabstände, Dunkelmodus, `outline: none`-Regeln (11 Stellen) im Browser auf sichtbaren Fokus. |
+| 14.4 Kontrast, Reflow | ja, mit Befunden | Befunde TMP-AP14-1 bis 3; Reflow bei 320 px auf Start, Anmeldung, Admin und zehn Mitgliederseiten gemessen. | Zoom 200 %, Textabstände, Dunkelmodus, Fokus bei den 11 `outline: none`-Regeln ist auf den zehn geprüften Seiten sichtbar (siehe 14.2). |
 | 14.5 Sprache | ja (Teil) | Kein `<html>` ohne `lang`; geprüfte `<img>` mit `alt`. | Feste Texte im Code, Datums- und Zahlenformate. |
 
 ## Abweichungen
@@ -41,6 +41,13 @@ Tastatur, Fokusführung und Bildschirmleser sind weiter nicht geprüft.
 - **Fundstelle:** `CMS/themes/cms-default/contact.php:69` (eingebettetes Stylesheet): `.contact-aside dd a{color:var(--accent)}`; der Akzent `#c0862a` hat auf `#f2f1ec` nur 2,77:1, die Theme-Variable `--accent-text` (`#8f5f15`) ist dafür vorgesehen.
 - **Korrektur:** `--accent-text` und Unterstreichung wie bei den übrigen Textlinks des Themes. **Regression:** Prüfung in `TESTS/functions/a11y-contrast.php`; Nachmessung 0 Verstöße. **Status:** umgesetzt.
 
+### TMP-AP14-4 · Dialoge ohne zugänglichen Namen (LOW, umgesetzt)
+
+- **Fundstelle:** `CMS/admin/views/**` (32 Bootstrap-Dialoge `.modal`, 27 davon ohne `aria-label` und `aria-labelledby`, in 17 Dateien, z. B. `users/roles.php` 6, `media/library.php` 4), `CMS/assets/js/admin.js`.
+- **Messung:** Beim Öffnen setzt Bootstrap `role="dialog"` und `aria-modal="true"`, aber keinen Namen; im Browser lieferten alle drei geprüften Dialoge `benannt=false`. Bildschirmleser sagen dann nur „Dialog“ (WCAG 4.1.2).
+- **Korrektur:** `initModalAccessibleNames()` in `admin.js` setzt beim Ereignis `show.bs.modal` für Dialoge ohne eigenen Namen `aria-labelledby` auf den `.modal-title` (und vergibt dessen `id`, falls nötig); vorhandene Namen bleiben unberührt. Nachmessung: alle drei Dialoge `benannt=true`.
+- **Regression:** `TESTS/functions/a11y-dialogs.php` (Quelltextvertrag auf die Funktion, den Aufruf beim Laden und darauf, dass jeder Dialog in `admin/views` einen Namen oder einen `.modal-title` hat); die Mutante ohne Aufruf schlägt fehl. **Status:** umgesetzt.
+
 ## Hinweise ohne Änderung
 
 - **INFO-1:** Die Theme-Seiten (Start, Anmeldung, Registrierung, 404, Suche) hatten schon vorher keine Verstöße; der Core-Teil (Theme `cms-default`) erfüllt axe auf den gemessenen Seiten.
@@ -50,4 +57,4 @@ Tastatur, Fokusführung und Bildschirmleser sind weiter nicht geprüft.
 
 Browserlauf mit Playwright 1.x und axe-core 4.10.2 gegen PHP-Entwicklungsserver und MariaDB 10.11; `php TESTS/run-all.php` grün.
 
-**Offen:** 14.2 (Tastatur, Fokus), 14.3 im Einzelnen, Zoom 200 %, `outline: none`-Regeln, weitere Seiten mit Inhalt.
+**Offen:** 14.3 im Einzelnen (`role=alert`, Pflichtfelder), Zoom 200 %, Bildschirmleser, weitere Seiten mit Inhalt, Kontrast des Fokusrahmens.

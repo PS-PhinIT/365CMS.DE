@@ -871,6 +871,26 @@ function initTaxonomySlideovers() {
     });
 }
 
+// ── Dialoge: zugänglicher Name (Audit 4.2.0, AP-14, Punkt 14.2) ───────────────────────────
+// Bootstrap-Dialoge setzen beim Öffnen role="dialog" und aria-modal="true", aber keinen Namen. 27 von 32 Dialogen im Admin
+// hatten weder aria-label noch aria-labelledby; Bildschirmleser sagten nur „Dialog“. Der Titel (.modal-title) wird zum Namen.
+function initModalAccessibleNames() {
+    document.addEventListener('show.bs.modal', function (event) {
+        var modal = event.target;
+        if (!(modal instanceof HTMLElement) || modal.hasAttribute('aria-label') || modal.hasAttribute('aria-labelledby')) {
+            return;
+        }
+        var title = modal.querySelector('.modal-title');
+        if (!title) {
+            return;
+        }
+        if (!title.id) {
+            title.id = (modal.id || 'cms-modal') + '-title';
+        }
+        modal.setAttribute('aria-labelledby', title.id);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     cleanupStaleGlobalOverlays();
     
@@ -894,6 +914,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    initModalAccessibleNames();
     initPostCategoryDeleteFlow();
     initPostTagDeleteFlow();
     initReplacementCategoryBulkDeleteFlow();
