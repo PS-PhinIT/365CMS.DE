@@ -541,6 +541,11 @@ class MediaService {
             }
         }
 
+        // Dekompressionsbombe: Maße stehen im Dateikopf, die Prüfung kostet kein Dekodieren.
+        if ($this->isImageExtension($ext) && !Media\ImagePixelLimit::allowsFile($tmpName)) {
+            return new WP_Error('image_too_large', sprintf('Das Bild hat zu viele Pixel (Grenze: %s).', number_format(Media\ImagePixelLimit::maxPixels(), 0, ',', '.')));
+        }
+
         if (($settings['validate_image_content'] ?? false) && $this->isImageExtension($ext) && $this->readImageSize($tmpName, 'upload_validation') === null) {
             return new WP_Error('invalid_image', 'Die Datei enthält keine gültigen Bilddaten.');
         }
@@ -1353,6 +1358,10 @@ class MediaService {
         };
 
         if ($loader === null || !function_exists($loader) || !is_file($path) || !is_readable($path)) {
+            return false;
+        }
+
+        if (!Media\ImagePixelLimit::allowsFile($path)) {
             return false;
         }
 

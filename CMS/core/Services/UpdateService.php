@@ -1241,7 +1241,7 @@ class UpdateService
      *  5. Temporäre Artefakte löschen
      *
      * @param  string $downloadUrl  HTTPS-URL zur ZIP-Datei
-     * @param  string $sha256       Erwartete SHA-256-Prüfsumme (leer = Warnung, kein Abbruch)
+     * @param  string $sha256       Erwartete SHA-256-Prüfsumme (Pflicht: ohne gültigen Wert bricht die Installation ab)
      * @param  string $targetDir    Absoluter Ziel-Pfad (z. B. PLUGIN_PATH . 'my-plugin/')
      * @param  string $type         'plugin' | 'theme' | 'core' für Logging
      * @param  string $name         Name des Pakets für Logging

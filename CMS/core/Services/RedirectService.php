@@ -166,7 +166,9 @@ final class RedirectService
         $values = [
             'request_method' => $this->limitString((string)($context['request_method'] ?? 'GET'), 10),
             'referrer_url' => $this->limitString((string)($context['referrer_url'] ?? ''), 500),
-            'ip_address' => $this->limitString((string)($context['ip_address'] ?? ''), 64),
+            // Datenminimierung: Die Adresse wird nirgends angezeigt; wie bei Seitenaufrufen und Kommentaren gekürzt speichern
+            // (IPv4 letztes Oktett 0, IPv6 nur die ersten 48 Bit).
+            'ip_address' => $this->limitString(TrackingService::anonymizeIp((string)($context['ip_address'] ?? '')), 64),
             'user_agent' => $this->limitString((string)($context['user_agent'] ?? ''), 500),
         ];
 

@@ -9183,3 +9183,33 @@ body.admin-body .admin-section-toolbar__actions {
 .cms-editorjs-form-block__preview .cms-form__hp {
     display: none;
 }
+
+/* ═══ Barrierefreiheit: Mindestkontrast 4,5:1 (Audit 4.2.0, AP-14, Punkt 14.4) ═══════════════════════════
+   Gemessen mit axe-core 4.10 (WCAG 2.1 AA, Regel color-contrast) auf Admin-Seiten: Hilfstexte in #94a3b8, #9ca3af,
+   #737373, #6b7280 und #64748b auf hellen Flächen (2,4:1 bis 4,4:1). Die Tokens `--color-text-secondary` und
+   `--color-text-tertiary` waren nirgends definiert (alle Stellen nutzten den Rückfallwert); jetzt gelten sie. Der Admin hat
+   keinen Dunkelmodus; die Werte gelten für helle Flächen (#f1f0ee ist die dunkelste). Abzeichen und Buttons: a11y-contrast.css. */
+:root {
+    --color-text-secondary: #4b5563;
+    --color-text-tertiary: #596373;
+}
+
+.text-muted,
+.form-hint,
+.dashboard-empty-hint,
+.dashboard-primary-metric-empty,
+.dashboard-section-label,
+.content-listing-header__meta,
+.content-listing-header__meta > span,
+.content-listing-header__meta a,
+.content-listing-toolbar__label,
+.content-listing-table-footer__summary,
+.media-constraints-inline span,
+#postsRangeSummary {
+    color: var(--cms-a11y-muted, #596373);
+}
+
+.nav-tabs .nav-link:not(.active):not(.disabled),
+.nav-pills .nav-link:not(.active):not(.disabled) {
+    color: var(--cms-a11y-muted, #596373);
+}

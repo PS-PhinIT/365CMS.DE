@@ -393,7 +393,13 @@ class UserService {
                 // Altinstallationen können die Tabelle noch nicht haben.
             }
             
-            // Meta-Daten werden durch CASCADE gelöscht
+            // Meta-Daten, Favoriten und Benachrichtigungen werden durch CASCADE gelöscht; alles Übrige mit Personenbezug
+            // und ohne Fremdschlüssel (Passkeys, SSO-Verknüpfungen, Passwort-Verlauf, Abos, Sitzungsregister …) hier.
+            try {
+                UserDataEraser::erase($this->db->getPdo(), $this->prefix, $user_id);
+            } catch (\Throwable) {
+                // Die Konto-Löschung selbst ist erfolgt; Reste bereinigt der nächste Aufruf bzw. die Datenaufbewahrung.
+            }
             $this->logAction('user_deleted', $user_id, ['hard_delete' => true]);
             // 4.1.0: z. B. Rechnungen erhalten einen Sperrvermerk statt gelöscht zu werden (Aufbewahrungspflicht).
             \CMS\Hooks::doAction('cms_user_deleted', $user_id);

@@ -82,6 +82,7 @@ Container-Aliase: `db`, `logger`, `cache`, `purifier`, `mail`, `settings`, `mail
 | Service | Aufgabe |
 |---|---|
 | `UserService` | Benutzer-CRUD, Sammelaktionen, Rollen, Statistik |
+| `UserDataEraser` | Räumt beim endgültigen Löschen eines Kontos die Tabellen ohne Fremdschlüssel auf (Sitzungsregister, Passkeys, SSO-Verknüpfungen, Passwort-Verlauf, Abos samt Nutzung, Gruppen, KI-Nutzung); Bestellungen, Rechnungen, Protokolle und Inhalte bleiben |
 | `MemberContentService` | Inhalte eines Mitglieds: `getContentStats()`, `getRecentComments()`, `getFavoritePosts()`, `isFavorite()`, `toggleFavorite()`, `removeFavorite()` |
 | `MemberService` | Profil, Privatsphäre, Datenexport, Löschantrag, Sicherheitsempfehlungen; Request-Cache für `getUserMeta()` (`flushUserMetaCache()`), `getRecentActivity()`, `getMemberOrders()`, `resolveMessageRecipientId()`, `setUserMeta()` |
 | `MessageService` | Nachrichten zwischen Mitgliedern; legt beim Senden eine Benachrichtigung `message` für den Empfänger an |

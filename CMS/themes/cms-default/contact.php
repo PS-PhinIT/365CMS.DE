@@ -66,7 +66,7 @@ $esc = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES, 
 .contact-aside dl{margin:0;font-size:.88rem;line-height:1.7}
 .contact-aside dt{font-weight:600;color:var(--ink-soft);margin-top:.75rem}
 .contact-aside dd{margin:0;color:var(--ink-muted)}
-.contact-aside dd a{color:var(--accent)}
+.contact-aside dd a{color:var(--accent-text,var(--accent));text-decoration:underline}
 .contact-aside__empty{color:var(--ink-ghost);font-style:italic}
 .contact-aside__legal{border-top:1px solid var(--rule);margin:1.5rem 0 0;padding-top:1rem;font-size:.78rem;color:var(--ink-ghost)}
 .contact-aside__legal a{color:var(--ink-muted);text-decoration:none}

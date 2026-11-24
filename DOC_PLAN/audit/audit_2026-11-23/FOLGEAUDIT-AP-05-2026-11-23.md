@@ -52,6 +52,15 @@ oder als offen mit Prüfvorgehen geführt.
 - 304-Antworten ohne neue CSP, damit zwischengespeicherte Nonces passen (`CacheManager.php:742–747`).
 - Cron-Aufruf bevorzugt den Kopf vor dem Parameter `token` (`CMS/cron.php:78–91`).
 
+## Nachprüfung zur Laufzeit (24.11.2026)
+
+Mit laufender Seite (PHP-Entwicklungsserver, MariaDB 10.11, Chromium; ohne Apache) gemessen:
+
+- **Header (05.3, 05.5):** Start, Anmeldung, Mitglied, Admin, API und 404 senden `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()` (mit der Angleichung aus TMP-AP05-2), `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-site` und eine CSP mit Nonce (`script-src 'self' 'nonce-…'`). Anmeldung, Mitglied, Admin und API: `Cache-Control: private, no-store` (bzw. `no-store, private`); öffentliche Seiten `public, max-age=300`. Die CSP und die Trusted Types blockieren das Nachladen eines Skripts per `addScriptTag` (erwartetes Verhalten).
+- **Cookies (05.6):** `PHPSESSID` `HttpOnly`, `SameSite=Strict`, Pfad `/`, host-only; `Secure` nur unter HTTPS (der Test lief unter HTTP). Nach der Anmeldung wird die Sitzungs-ID erneuert; mit „angemeldet bleiben“ hat das Cookie eine Laufzeit, `cms_device` ebenso (`HttpOnly`, `SameSite=Strict`).
+- **Abmelden mit falschem Token (05.2):** `GET /logout?csrf_token=falsch` meldet nicht ab.
+- **CSP-Verletzungen:** Auf Start, Anmeldung, Registrierung, Passwort vergessen, 404, Suche, Kontakt und 23 Admin- und Mitgliederseiten wurden keine `securitypolicyviolation`-Ereignisse und keine JavaScript-Fehler gemeldet.
+
 ## Testlauf und Übergabe
 
 PHP 8.3.6 CLI unter Linux. `php TESTS/security/run.php`: neue Prüfungen grün; die bekannte Rotprüfung des Quellarchivs `CMS_ASSETS`

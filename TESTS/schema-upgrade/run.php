@@ -155,6 +155,13 @@ try {
         $zip->extractTo($tmp . '/v40');
         $zip->close();
         $sources['4.0.0 (v25)'] = $tmp . '/v40/365CMS-4.0.0/CMS';
+    } elseif (trim((string) shell_exec('git -C ' . escapeshellarg($repo) . ' rev-parse -q --verify V4.0.0 2>/dev/null')) !== '') {
+        // Das Paket liegt nicht mehr unter RELEASE/ (nur der aktuelle Stand wird dort gehalten): Ausgangsstand aus dem Git-Tag.
+        @mkdir($tmp . '/v40tag', 0755, true);
+        shell_exec('git -C ' . escapeshellarg($repo) . ' archive V4.0.0 CMS | tar -x -C ' . escapeshellarg($tmp . '/v40tag'));
+        if (is_dir($tmp . '/v40tag/CMS')) {
+            $sources['4.0.0 (v25)'] = $tmp . '/v40tag/CMS';
+        }
     }
     // Schritt v26 → v27 (Community-Modul): das zuletzt ausgelieferte Paket vor der Schema-Anhebung.
     if ($zip->open($repo . '/RELEASE/365CMS-4.1.8-full.zip') === true) {
@@ -276,11 +283,23 @@ try {
     // Nur die Laufzeitprüfung (ensureFeatureSchema): Tabelle notifications aus 4.0.0 (Standardkollation des Servers), die Marke steht schon
     // auf der Zielmarke, MigrationManager::run() überspringt den Schritt also.
     T::run('Laufzeitprüfung: notifications aus 4.0.0, Marke schon ' . $target, static function () use ($createDb, $step, $tmp, $prefix, $pdo, $sources, $target, $expectedNotificationColumns, $notificationColumns): void {
+        if (!isset($sources['4.0.0 (v25)'])) {
+            T::info('übersprungen: Ausgangsstand 4.0.0 steht weder als Paket unter RELEASE/ noch als Git-Tag V4.0.0 zur Verfügung');
+
+            return;
+        }
         $db = $prefix . 'runtime';
         $createDb($db);
         $old = $step($sources['4.0.0 (v25)'], $db, 'install');
         T::same([], $old['install_errors'] ?? ['?'], '4.0.0: Ausgangsstand installiert');
         $tableCollation = (string) $pdo->query("SELECT TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = " . $pdo->quote($db) . " AND TABLE_NAME = 'cms_notifications'")->fetchColumn();
+        if ($tableCollation === 'utf8mb4_unicode_ci') {
+            // Der Git-Tag V4.0.0 legt die Tabelle schon mit utf8mb4_unicode_ci an; die Ausgangslage des ausgelieferten Pakets (Standardkollation
+            // des Servers) lässt sich daraus nicht herstellen. Ohne diese Voraussetzung sagt der Rest dieser Prüfung nichts aus.
+            T::info('übersprungen: Ausgangslage mit Standardkollation nicht herstellbar (Quelle ist nicht das ausgelieferte Paket 4.0.0)');
+
+            return;
+        }
         T::check(str_starts_with($tableCollation, 'utf8mb4_') && $tableCollation !== 'utf8mb4_unicode_ci', 'Ausgangslage: notifications aus 4.0.0 mit der Standardkollation des Servers (MariaDB utf8mb4_general_ci, MySQL 8 utf8mb4_0900_ai_ci), nicht utf8mb4_unicode_ci', $tableCollation);
         $pdo->exec("UPDATE `{$db}`.cms_settings SET option_value = " . $pdo->quote($target) . " WHERE option_name = 'db_schema_version'");
         $boot = $step($tmp . '/v41', $db, 'boot');
@@ -497,6 +516,11 @@ try {
     // Updater ohne Funktionsdateien (CMS/update.php lädt includes/functions nicht), role_permissions fehlt (4.0.0 legt sie erst
     // beim ersten Lesen an): Beide Rechte-Schritte (v26 und v27) legen die Tabelle selbst an und laufen ohne Fehler im Log durch.
     T::run('Update ohne Funktionsdateien und ohne role_permissions (CMS/update.php)', static function () use ($createDb, $step, $tmp, $prefix, $pdo, $sources, $compareGolden, $communityCapabilities, $expectedNotificationColumns, $notificationColumns): void {
+        if (!isset($sources['4.0.0 (v25)'])) {
+            T::info('übersprungen: Ausgangsstand 4.0.0 steht weder als Paket unter RELEASE/ noch als Git-Tag V4.0.0 zur Verfügung');
+
+            return;
+        }
         $db = $prefix . 'nofn';
         $createDb($db);
         $old = $step($sources['4.0.0 (v25)'], $db, 'install');

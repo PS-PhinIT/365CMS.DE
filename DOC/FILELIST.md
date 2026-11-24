@@ -190,12 +190,12 @@ Root classes, Auth, Routing, and the service list are inventoried in [CMSFILESTR
 | System | `AdminToolbarService` (cache, maintenance), `LoginThrottleSettings`, `EnvironmentInfoService`, `DataRetentionService` + `Retention/` |
 | Extension points | `FeatureHooks\Registry`, `BatchJobService`, `PrivateStorageService`, `IntegratedPluginService`, `PluginMigration\PluginMigrator`, `Retention\RetentionRule`, `EditorJs\EditorJsBlockRegistry`, `ContentTypes\ContentTypeRegistry` ([core/CONTENT-TYPE-PROVIDERS.md](core/CONTENT-TYPE-PROVIDERS.md)) |
 | Identity & security | `Security/PasswordPolicyService`, `Security/MfaEnforcementService`, `Auth/SSO/` (Entra ID), `Routing/SsoRouter` |
-| Media | `Media/AvifDerivativeService`, `Media/AvifRegenerationService`, `Media/ImageOrientation`, `Media/ImageMetadataStripper`, `Media/MediaUsageIndex`, `Media/MediaReferenceExtractor`, `Media/Usage/` |
+| Media | `Media/AvifDerivativeService`, `Media/AvifRegenerationService`, `Media/ImageOrientation`, `Media/ImagePixelLimit`, `Media/ImageMetadataStripper`, `Media/MediaUsageIndex`, `Media/MediaReferenceExtractor`, `Media/Usage/` |
 | Editorial | `Content/ContentStatus`, `Content/ContentWorkflow`, `Content/ContentExpiryService`, `ReusableBlocks/ReusableBlockService` |
 | Operations | `Backup/OffsiteBackupService` (+ `S3Client`, `SigV4Signer`), `Webhooks/WebhookService`, `Payments/PaymentService` (Stripe, Mollie), `Routing/PaymentRouter` |
 | Landing | `LandingPageService` + `Services/Landing/` |
 | AI | `Services/AI/` (admin-only in 3.5.0) |
-| Member | `MemberService`, `MessageService` |
+| Member | `MemberService`, `MessageService`, `UserDataEraser` (Aufräumen beim endgültigen Löschen eines Kontos) |
 | Ops | `BackupService`, `UpdateService`, `StatusService`, `SystemService` |
 
 ---

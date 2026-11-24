@@ -39,6 +39,21 @@ Alle übrigen Prüfpunkte sind auf den gelesenen Pfaden erfüllt oder als offen 
 - Alle JSON-LD-Blöcke, Dateiauslieferung (Medien, Downloads, Anhänge), Fehlerausgabe, Server-Bereinigung von Beiträgen, Seiten und Landingtexten.
 - Keine Inline-Skripte oder Ereignis-Attribute in den geprüften Vorlagen (Prüfung `theme-contract`).
 
+## Nachprüfung zur Laufzeit (24.11.2026)
+
+Mit laufender Seite (PHP-Entwicklungsserver, MariaDB 10.11, Chromium) geprüft: Zwei veröffentlichte Beiträge und zwei freigegebene Kommentare mit Angriffsinhalten in allen
+Feldern, die auf der Seite erscheinen. Beitrag 1 im Format Editor.js mit elf Blöcken (Absatz, Überschrift, Liste mit verschachteltem Eintrag, Zitat mit Quelle, Code, Tabelle, Bild mit
+Adresse `javascript:`, Linkkarte, Einbettung, Roh-HTML, Schaltfläche), Beitrag 2 als rohes HTML (ältere Inhalte); dazu Titel, Auszug, Meta-Titel, Meta-Beschreibung, Autorname und
+Autoradresse (`javascript:`), Kommentarname und -text. Die Nutzlasten: `<img onerror>`, `<svg onload>`, `javascript:`-Links, `<script>`, `<iframe srcdoc>`, `<details ontoggle>`,
+`<style>@import`, Formular mit `javascript:`-Ziel, Mutations-XSS (`math`/`mglyph`/`style`), `data:text/html`-Link, `<object data=javascript:>`, `<meta http-equiv=refresh>`, `<base>`,
+`<link rel=stylesheet>` auf fremden Host, `autofocus onfocus`, Ausbruch aus Attribut und Skript (`"><script>`).
+
+- **Ergebnis auf `/blog/xss-test`, `/blog/xss-html` und `/blog`:** kein Flag `window.__x*` gesetzt (nichts ausgeführt), keine Elemente mit `on…`-Attribut, keine URLs mit `javascript:`, `vbscript:` oder `data:text/html`, kein `<iframe>`, `<object>`, `<base>`, `<meta http-equiv>`, keine fremde Stylesheet-Einbindung, **keine Anfrage an fremde Hosts**, keine `securitypolicyviolation`-Ereignisse. Im Roh-HTML steht kein `<img … onerror` mehr.
+- **Kopfbereich (04.8):** Titel, Beschreibung, Open-Graph- und Twitter-Felder enthalten die Eingabe als `&quot;&gt;&lt;script&gt;…`; das JSON-LD ist gültiges JSON, enthält kein rohes `<` oder `>` und nutzt `\u003C` (eigener Skript-Block, der Ausbruch über `</script>` gelingt nicht).
+- **Kommentare:** Name und Text erscheinen als Text, `<b>` und `<img>` nicht als Markup.
+- **Wirkung:** 04.1 (Escaping), 04.2 (Bereinigung beim Ausgeben) und 04.8 (Datenblöcke) sind damit nicht nur im Quelltext, sondern am gerenderten Ergebnis bestätigt.
+- **Nicht geprüft:** Block-Vorschau im Editor, `/preview/<token>` und die Vorschau der Newsletter-Kampagne (04.10), weil dafür Entwürfe mit Vorschau-Link und der Editor nötig sind.
+
 ## Testlauf und Übergabe
 
 PHP 8.3.6 CLI unter Linux, `node --check` für `admin.js`. `php TESTS/security/run.php`: neue Prüfung grün; die bekannte Rotprüfung

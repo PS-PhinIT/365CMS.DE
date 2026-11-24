@@ -13,6 +13,9 @@ if (!defined('ABSPATH')) {
 
 final class InstallerService
 {
+    /** Rechte von config/app.php und ihren Sicherungskopien: Eigentümer lesen/schreiben, Gruppe lesen, sonst nichts. */
+    private const CONFIG_FILE_MODE = 0640;
+
     /**
      * @var array<string, string>
      */
@@ -545,10 +548,20 @@ final class InstallerService
 
         if (file_exists($configPath)) {
             $backupPath = $configDir . '/app.backup-' . date('Y-m-d_H-i-s') . '.php';
-            copy($configPath, $backupPath);
+            if (copy($configPath, $backupPath)) {
+                // Die Kopie enthält Datenbankpasswort und Schlüssel: nicht für alle lesbar (wie im Einstellungsmodul).
+                @chmod($backupPath, self::CONFIG_FILE_MODE);
+            }
         }
 
         $content = $this->buildConfigContent($data);
+
+        // Rechte vor dem Schreiben der Geheimnisse setzen: Datenbankpasswort, AUTH_KEY, SECURE_AUTH_KEY und JWT_SECRET
+        // dürfen nie kurz oder dauerhaft mit Standardrechten (meist 0644, für alle lesbar) auf der Platte liegen.
+        if (!is_file($configPath)) {
+            @touch($configPath);
+        }
+        @chmod($configPath, self::CONFIG_FILE_MODE);
 
         if (file_put_contents($configPath, $content) === false) {
             return 'Fehler beim Schreiben von config/app.php';

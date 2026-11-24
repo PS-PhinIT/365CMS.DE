@@ -65,6 +65,7 @@ foreach (array_unique(array_map('intval', (array) ($memberProgressValues ?? []))
     <title><?= $e($pageTitle) ?> – <?= $e($siteName) ?></title>
     <link rel="stylesheet" href="<?= $e(cms_asset_url('tabler/css/tabler.min.css')) ?>">
     <link rel="stylesheet" href="<?= $e(cms_asset_url('css/member-dashboard.css')) ?>">
+    <link rel="stylesheet" href="<?= $e(cms_asset_url('css/a11y-contrast.css')) ?>">
     <?php foreach ((array) ($pageAssets['css'] ?? []) as $css): ?>
         <link rel="stylesheet" href="<?= $e((string) $css) ?>">
     <?php endforeach; ?>
