@@ -64,6 +64,16 @@ Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbei
 
 ---
 
+### v4.2.15 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-15)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.15** | 🔎 audit | AP-15 Best Practice und Codequalität | **Prüfbericht, drei Dateien entfernt:** Keine implizit nullable Parameter, `strict_types` fast überall; die leeren, nirgends eingebundenen Dateien `admin/views/security/.in.audit.php`, `admin/views/seo/.in.analytics.php` und `admin/views/system/.in.info.php` sind aus dem Paket entfernt. Bericht: [FOLGEAUDIT-AP-15](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-15-2026-11-23.md). |
+
+---
+
 ### v4.2.14 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-14)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
@@ -91,6 +101,26 @@ Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbei
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
 | **4.2.12** | 🔎 audit | AP-12 Geschwindigkeit, Skalierung, Missbrauchslast | **Prüfbericht ohne Codeänderung:** Drosselung von Suche, Anmeldung, Registrierung, Kommentaren, Formularen, Newsletter, Web-Vitals und Community, Größenkappung und Aufräumen des 404-Monitors sowie die Paginierung des Redirect-Managers ohne Befund; Abfragen, Indizes, Cache, Cron und Lighthouse stehen offen. Bericht: [FOLGEAUDIT-AP-12](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-12-2026-11-23.md). |
+
+---
+
+### v4.2.11 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-11)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.11** | 🔎 audit | AP-11 Community-Modul | **Prüfbericht ohne Codeänderung:** Alle 24 `community-*`-Suiten laufen gegen MariaDB 10.11 grün; die Konto-Löschung mit den Community-Hooks wurde gemessen. Eine eigene Durchsicht der 15 Prüfpunkte steht aus. Bericht: [FOLGEAUDIT-AP-11](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-11-2026-11-23.md). |
+
+---
+
+### v4.2.10 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-10)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.10** | 🔎 audit | AP-10 Datenbank: Schema, Migration, Konsistenz, Wettläufe | **Erstmals gegen MariaDB 10.11 geprüft:** alle 66 Suiten grün, frisches Schema mit 119 InnoDB-Tabellen durchgängig in `utf8mb4_unicode_ci`, Löschkaskaden und Aufräumregeln gemessen. Testcode: `schema-upgrade` stürzte mit gesetzten Datenbank-Variablen ab, weil die alten Release-Pakete fehlen; der Ausgangsstand 4.0.0 kommt jetzt aus dem Git-Tag `V4.0.0`, fehlende Quellen überspringen die Prüfung mit Hinweis. Bericht: [FOLGEAUDIT-AP-10](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-10-2026-11-23.md). |
 
 ---
 
