@@ -46,7 +46,7 @@
 	font-weight: 400;
 	letter-spacing: 0.05em;
 	text-transform: uppercase;
-	color: var(--tblr-secondary, #667085);
+	color: var(--color-text-tertiary, #596373);
 }
 
 .dashboard-section .card-title,

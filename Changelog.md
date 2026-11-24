@@ -80,7 +80,7 @@ Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbei
 
 | Version | Typ | Bereich | Beschreibung |
 |---------|-----|---------|--------------|
-| **4.2.14** | 🔎 audit | AP-14 Barrierefreiheit und Oberfläche | **Prüfbericht ohne Codeänderung:** Ohne laufende Seite und Browser sind nur Skriptsuchen möglich (kein `tabindex` größer 0, `lang`-Attribute, `alt` in Vorlagen); axe-core, Tastatur, Kontrast und Reflow stehen offen. Bericht: [FOLGEAUDIT-AP-14](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-14-2026-11-23.md). |
+| **4.2.14** | ♿ accessibility | AP-14 Barrierefreiheit und Oberfläche / Admin, Mitgliederbereich, Theme | **Erstmals mit laufender Seite und axe-core gemessen.** (1) Farbkontrast: Hilfstexte (`#94a3b8`, `#9ca3af`, `#737373`, `#6b7280`) und helle Abzeichen `bg-*-lt` erreichten 1,8:1 bis 4,4:1 statt 4,5:1 (151 Stellen auf 25 Seiten); die Tokens `--color-text-secondary` und `--color-text-tertiary` waren nirgends definiert und sind es jetzt; neue gemeinsame Datei `assets/css/a11y-contrast.css`. (2) Mitgliederseiten scrollten bei 320 px um 4 px seitlich (Gutter `g-4` gegen 8 px Containerrand). (3) Link auf der Kontaktseite mit 2,8:1 nutzt jetzt `--accent-text`. Nachmessung: 0 axe-Verstöße auf 23 Seiten. Bericht: [FOLGEAUDIT-AP-14](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-14-2026-11-23.md). |
 
 ---
 

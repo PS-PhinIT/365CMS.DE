@@ -1,0 +1,43 @@
+/**
+ * Barrierefreiheit: Mindestkontrast 4,5:1 für Abzeichen, Umriss-Buttons und Statusfarben auf hellen Flächen
+ * (Audit 4.2.0, AP-14, Punkt 14.4). Gemeinsam für Admin und Mitgliederbereich; beide laden Tabler, dessen Abzeichen
+ * `bg-*-lt` mit `!important` die Farbe der Variante auf eine Fläche mit 10 % Tönung setzen (1,8:1 bis 4,4:1).
+ */
+:root {
+    --cms-a11y-muted: #596373;
+}
+
+/* Helle Abzeichen: Text aus der Farbe der Variante, zu 55 % mit Schwarz gemischt (6:1 und besser auf der Tönung). */
+.bg-blue-lt { color: color-mix(in srgb, var(--tblr-blue) 55%, #000) !important; }
+.bg-azure-lt { color: color-mix(in srgb, var(--tblr-azure) 55%, #000) !important; }
+.bg-indigo-lt { color: color-mix(in srgb, var(--tblr-indigo) 55%, #000) !important; }
+.bg-purple-lt { color: color-mix(in srgb, var(--tblr-purple) 55%, #000) !important; }
+.bg-pink-lt { color: color-mix(in srgb, var(--tblr-pink) 55%, #000) !important; }
+.bg-red-lt { color: color-mix(in srgb, var(--tblr-red) 55%, #000) !important; }
+.bg-orange-lt { color: color-mix(in srgb, var(--tblr-orange) 55%, #000) !important; }
+.bg-yellow-lt { color: color-mix(in srgb, var(--tblr-yellow) 55%, #000) !important; }
+.bg-lime-lt { color: color-mix(in srgb, var(--tblr-lime) 55%, #000) !important; }
+.bg-green-lt { color: color-mix(in srgb, var(--tblr-green) 55%, #000) !important; }
+.bg-teal-lt { color: color-mix(in srgb, var(--tblr-teal) 55%, #000) !important; }
+.bg-cyan-lt { color: color-mix(in srgb, var(--tblr-cyan) 55%, #000) !important; }
+.bg-success-lt { color: color-mix(in srgb, var(--tblr-success) 55%, #000) !important; }
+.bg-warning-lt { color: color-mix(in srgb, var(--tblr-warning) 55%, #000) !important; }
+.bg-danger-lt { color: color-mix(in srgb, var(--tblr-danger) 55%, #000) !important; }
+.bg-info-lt { color: color-mix(in srgb, var(--tblr-info) 55%, #000) !important; }
+.bg-primary-lt { color: color-mix(in srgb, var(--tblr-primary) 55%, #000) !important; }
+.bg-secondary-lt { color: color-mix(in srgb, var(--tblr-secondary) 55%, #000) !important; }
+
+/* Statusfarben als Text auf Weiß (Tabler: #2fb344 = 2,7:1). */
+.text-success,
+.text-green {
+    color: color-mix(in srgb, var(--tblr-success) 62%, #000) !important;
+}
+
+/* Umriss-Buttons im Ruhezustand; Hover, Fokus und aktiv behalten die gefüllte Darstellung von Tabler. */
+.btn-outline-warning:not(:hover):not(:focus):not(:active):not(.active) {
+    color: color-mix(in srgb, var(--tblr-warning) 55%, #000);
+}
+
+.btn-outline-danger:not(:hover):not(:focus):not(:active):not(.active) {
+    color: color-mix(in srgb, var(--tblr-danger) 80%, #000);
+}

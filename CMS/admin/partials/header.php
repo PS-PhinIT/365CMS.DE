@@ -91,6 +91,7 @@ foreach (['cms-admin/' => 'js/admin-shell', 'cms-editor/' => 'js/post-editor'] a
 
     <!-- 365CMS Admin Overrides -->
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_asset_url('css/admin.css'), ENT_QUOTES) ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(cms_asset_url('css/a11y-contrast.css'), ENT_QUOTES) ?>">
 
     <!-- 365CMS Admin-Shell: Layout, Seitenleiste, Topbar, Drawer (Tokens: admin-tabler.css) -->
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_asset_url('css/admin-shell.css'), ENT_QUOTES) ?>">

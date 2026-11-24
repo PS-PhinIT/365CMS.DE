@@ -60,7 +60,7 @@ Versionierte Dateien je Bereich (`git ls-files CMS/<bereich>`; erzeugte Uploads 
 | `CMS/config/` | 3 |
 | `CMS/lang/` | 2 |
 | `CMS/views/` | 30 |
-| `CMS/assets/css/` | 35 stylesheets |
+| `CMS/assets/css/` | 36 stylesheets |
 | `CMS/assets/js/` | 60 scripts + 27 ES modules (`admin-shell/`, `captcha/`, `community/`, `editor-blocks/`, `member/`, `post-editor/`) |
 
 ---
@@ -328,6 +328,7 @@ Das einzige installierte Runtime-Theme in diesem Baum ist `cms-default`.
 
 ### CSS (`CMS/assets/css/`)
 
+- `a11y-contrast.css`
 - `admin-configuration.css`
 - `admin-dashboard.css`
 - `admin-downloads.css`

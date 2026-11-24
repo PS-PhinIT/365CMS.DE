@@ -410,3 +410,13 @@ body.member-shell {
         transform: none;
     }
 }
+
+/* Reflow bei 320 px (WCAG 1.4.10, Audit 4.2.0, AP-14, Punkt 14.4): Das Zeilen-Gutter `g-4` (1,5 rem) lässt die Zeile 12 px
+   in den Containerrand ragen, der Rand ist auf schmalen Schirmen nur 8 px breit; die Seite bekam 4 px horizontales Scrollen. */
+@media (max-width: 575.98px) {
+    .container-xl > .row.g-4,
+    .member-dashboard > .row.g-4 {
+        --tblr-gutter-x: 1rem;
+        --bs-gutter-x: 1rem;
+    }
+}
