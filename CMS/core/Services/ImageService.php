@@ -591,6 +591,10 @@ final class ImageService
      */
     private function loadImage(string $path): ?\GdImage
     {
+        if (!Media\ImagePixelLimit::allowsFile($path)) {
+            return null;
+        }
+
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         $image = match ($ext) {

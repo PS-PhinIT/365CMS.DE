@@ -14,6 +14,36 @@
 
 ---
 
+### v4.2.8 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-08)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.8** | 🔎 audit | AP-08 Zahlungen, Abos, Bestellungen, Webhooks | **Prüfbericht ohne Codeänderung:** Signaturprüfung der Anbieter-Callbacks, Idempotenz je Ereignis-ID, Betrags- und Währungsabgleich, Rechnungs-Nummernkreis und Webhook-Zustellung wurden im gelesenen Umfang ohne Befund geprüft; Zustandsautomat, Bestellnummern, Zeitzonen und Modus-Trennung stehen offen. Bericht: [FOLGEAUDIT-AP-08](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-08-2026-11-23.md). |
+
+---
+
+### v4.2.7 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-07)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.7** | 🛡️ security | AP-07 Kryptografie, Geheimnisse, Konfiguration / Installer | **Konfiguration mit Standardrechten:** Der Installer legte `config/app.php` (Datenbankpasswort, `AUTH_KEY`, `SECURE_AUTH_KEY`, `JWT_SECRET`) und die Sicherungskopie `config/app.backup-*.php` bei üblicher Umask mit 0644 an, also für alle Konten des Servers lesbar. Beide Dateien werden jetzt vor dem Schreiben der Geheimnisse auf 0640 gesetzt, wie es das Einstellungsmodul beim späteren Schreiben schon tat. Bericht: [FOLGEAUDIT-AP-07](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-07-2026-11-23.md). |
+
+---
+
+### v4.2.6 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-06)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.6** | 🛡️ security | AP-06 Uploads, Medien, Dateien, Backups / Bildverarbeitung | **Pixelgrenze gegen Dekompressionsbomben:** Rasterbilder wurden nach der Größenprüfung in Bytes ohne Grenze der Pixelzahl dekodiert; ein 420 KB großes PNG mit 12 000 × 12 000 Pixeln belegte 993 MB (außerhalb des PHP-Speicherlimits, GD). Der Upload lehnt Bilder über 50 Megapixel ab (`CMS_MAX_IMAGE_PIXELS` änderbar), und alle vier Bild-Lader (`ImageProcessor`, `ImageService`, `MediaService`) prüfen den Dateikopf vor dem Dekodieren. Bericht: [FOLGEAUDIT-AP-06](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-06-2026-11-23.md). |
+
+---
+
 ### v4.2.5 — in Entwicklung (Stand 23.11.2026) - Patch Release (Audit AP-05)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.

@@ -87,6 +87,10 @@ final class ImageProcessor
             return new WP_Error('invalid_image', 'Ungültige Bilddatei');
         }
 
+        if (!ImagePixelLimit::allows((int) ($imageInfo[0] ?? 0), (int) ($imageInfo[1] ?? 0))) {
+            return new WP_Error('image_too_large', 'Das Bild hat zu viele Pixel (Grenze: ' . number_format(ImagePixelLimit::maxPixels(), 0, ',', '.') . ').');
+        }
+
         $mimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
         $source = $this->createImageResource($filePath, $mimeType);
 
@@ -143,6 +147,10 @@ final class ImageProcessor
             return new WP_Error('invalid_image_dimensions', 'Ungültige Bilddimensionen');
         }
 
+        if (!ImagePixelLimit::allows($sourceWidth, $sourceHeight)) {
+            return new WP_Error('image_too_large', 'Das Bild hat zu viele Pixel (Grenze: ' . number_format(ImagePixelLimit::maxPixels(), 0, ',', '.') . ').');
+        }
+
         // Maximalmaße gelten für das aufrecht angezeigte Bild (EXIF-Ausrichtung 5–8 vertauscht Breite und Höhe).
         $mimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
         $orientation = $mimeType === 'image/jpeg' ? ImageOrientation::read($filePath) : ImageOrientation::NORMAL;
@@ -188,6 +196,10 @@ final class ImageProcessor
      */
     private function createImageResource(string $filePath, string $mimeType, ?int $orientation = null)
     {
+        if (!ImagePixelLimit::allowsFile($filePath)) {
+            return false;
+        }
+
         $image = match ($mimeType) {
             'image/jpeg' => $this->createImageFromJpeg($filePath),
             'image/png' => $this->createImageFromPng($filePath),
