@@ -14,6 +14,36 @@
 
 ---
 
+### v4.2.19 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-19)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.19** | 🔎 audit | AP-19 KI-Funktionen | **Prüfbericht ohne Codeänderung:** Anbieter-Aufrufe laufen über den SSRF-sicheren HTTP-Client mit Zeitlimit; Prompt-Injection, Quoten und Datenschutz-Richtlinie sind nicht geprüft und im Bericht offen geführt. Bericht: [FOLGEAUDIT-AP-19](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-19-2026-11-23.md). |
+
+---
+
+### v4.2.16 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-16)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.16** | 🔎 audit | AP-16 Drittbibliotheken und Lieferkette | **Prüfbericht ohne Codeänderung:** Der Sicherheits-Workflow (nur Leserechte, Actions auf Commit-SHA gepinnt, keine Secrets) und die Bundles ohne feste externe Aufrufe wurden ohne Befund geprüft; Inventar, Abgleich mit Upstream und Parser-Bibliotheken stehen offen. Bericht: [FOLGEAUDIT-AP-16](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-16-2026-11-23.md). |
+
+---
+
+### v4.2.9 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-09)
+
+Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
+
+| Version | Typ | Bereich | Beschreibung |
+|---------|-----|---------|--------------|
+| **4.2.9** | 🔎 audit | AP-09 Installation, Update, Marketplace, Plugins, Themes | **Prüfbericht, nur ein Kommentar angepasst:** Installer-Sperre, Pflicht-Prüfsumme und Host-Liste beim Update, Downgrade-Schutz, Marketplace-Prüfsummen und das Release-Paket (Prüfsummen, keine Geheimnisse) ohne Befund; der Docblock von `UpdateService::downloadAndInstallUpdate()` nennt die Prüfsumme jetzt als Pflicht, wie es der Code schon verlangt. Bericht: [FOLGEAUDIT-AP-09](DOC_PLAN/audit/audit_2026-11-23/FOLGEAUDIT-AP-09-2026-11-23.md). |
+
+---
+
 ### v4.2.8 — in Entwicklung (Stand 24.11.2026) - Patch Release (Audit AP-08)
 
 Audit 4.2.0 nach [Audit-Katalog](DOC_PLAN/audit/AUDIT-KATALOG-4.2.0.md): **Arbeitspaket n ist Version 4.2.n** und ein eigener Pull Request. `Version::CURRENT` bleibt bis zum Release-Schnitt bei 4.2.0.
